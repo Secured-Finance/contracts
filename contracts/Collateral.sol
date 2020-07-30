@@ -2,20 +2,25 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+import "./Market.sol";
+
 contract Collateral {
+
     event Registration(address indexed sender);
 
-    enum State {EMPTY, NEW, IN_USE, MARGINCALL, LIQUIDATION}
+    enum CcyPair { FILETH }
+    enum State { EMPTY, NEW, IN_USE, MARGINCALL, LIQUIDATION }
 
-    uint256 constant PCT = 100;
+    uint constant PCT = 100;
+    uint constant FXMULT = 1000;
 
     struct UserItem {
         string id; // DID, email
         address addrETH;
         string addrFIL;
-        uint256 amtETH;
-        uint256 amtFIL;
-        uint256 valueFIL; // evaluated in ETH
+        uint amtETH;
+        uint amtFIL;
+        uint valueFIL; // evaluated in ETH
         bool isAvailable;
         State state;
     }
@@ -28,18 +33,22 @@ contract Collateral {
     mapping(address => UserItem) private userMap;
     address[] private users;
 
-    function inputToItem(UserInput memory input)
-        private
-        view
-        returns (UserItem memory)
-    {
+    MoneyMarket moneyMarket;
+    FXMarket fxMarket;
+
+    function setMarketAddr(address moneyAddr, address fxAddr) public {
+        moneyMarket = MoneyMarket(moneyAddr);
+        fxMarket = FXMarket(fxAddr);
+    }
+
+    function inputToItem(UserInput memory input) private view returns (UserItem memory) {
         UserItem memory item;
         item.id = input.id;
         item.addrETH = msg.sender;
         item.addrFIL = input.addrFIL;
         item.amtETH = 500; // TODO - reset to 0 in production
         item.amtFIL = 100000;
-        item.valueFIL = 500;
+        item.valueFIL = 500; // value in ETH
         item.isAvailable = true;
         item.state = State.EMPTY;
         return item;
@@ -63,26 +72,26 @@ contract Collateral {
 
     function getAllUserItems() public view returns (UserItem[] memory) {
         UserItem[] memory allUsers = new UserItem[](users.length);
-        for (uint256 i = 0; i < users.length; i++) {
+        for (uint i = 0; i < users.length; i++) {
             allUsers[i] = userMap[users[i]];
         }
         return allUsers;
     }
 
-    function getCoverageETH(uint256 amt, address addr)
-        public
-        view
-        returns (uint256)
-    {
-        return (PCT * amt) / userMap[addr].amtETH;
+    function getCoverageALL(uint amt, address addr) public view returns (uint) {
+        return PCT * amt / (userMap[addr].amtETH + userMap[addr].valueFIL);
     }
 
-    function getCoverageFIL(uint256 amt, address addr)
-        public
-        view
-        returns (uint256)
-    {
-        // TODO - get FILETH from FXMarket contract
-        return (PCT * amt) / userMap[addr].valueFIL;
+    function updateValueFIL() public {
+        uint fxRate = getFILETH();
+        for (uint i = 0; i < users.length; i++) {
+            userMap[users[i]].valueFIL = userMap[users[i]].amtFIL * fxRate / FXMULT;
+        }
     }
+
+    function getFILETH() public view returns (uint) {
+        uint [1] memory rates = fxMarket.getMidRates();
+        return rates[uint(CcyPair.FILETH)];
+    }
+
 }

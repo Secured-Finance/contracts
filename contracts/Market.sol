@@ -135,11 +135,11 @@ contract MoneyMarket {
 contract FXMarket {
 
     enum Ccy { ETH, FIL }
-    enum CcyPair { ETHFIL }
+    enum CcyPair { FILETH }
 
     uint constant NUMCCY = 2;
     uint constant NUMPAIR = 1;
-    uint[NUMPAIR] MULTIPLIER = [1000];
+    uint[NUMPAIR] FXMULT = [1000];
 
     struct FXBook {
         FXItem[NUMPAIR] offers;
@@ -166,7 +166,7 @@ contract FXMarket {
         uint amtSell;
     }
 
-    // FXBook [0] for ETHFIL
+    // FXBook [0] for FILETH
     mapping(address => FXBook) private fxMap;
     address[] private marketMakers;
     FXBook private bestBook;
@@ -178,7 +178,7 @@ contract FXMarket {
         item.ccySell = input.ccySell;
         item.amtBuy = input.amtBuy;
         item.amtSell = input.amtSell;
-        item.rate = MULTIPLIER[uint(pair)] * input.amtSell / input.amtBuy;
+        item.rate = FXMULT[uint(pair)] * input.amtSell / input.amtBuy;
         item.goodtil = goodtil;
         item.isAvailable = true;
         item.addr = msg.sender;
