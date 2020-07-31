@@ -90,7 +90,7 @@ contract Collateral {
     }
 
     function getFILETH() public view returns (uint) {
-        uint [1] memory rates = fxMarket.getMidRates();
+        uint[1] memory rates = fxMarket.getMidRates();
         return rates[uint(CcyPair.FILETH)];
     }
 
