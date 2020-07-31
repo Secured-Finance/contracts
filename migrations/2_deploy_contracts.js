@@ -20,7 +20,7 @@ module.exports = function (deployer, network, accounts) {
     const collateral = await deployer.deploy(Collateral);
 
     let input = sample.MoneyMarket;
-    await moneyMarket.setLoans(
+    await moneyMarket.setLoanBook(
       input.ccy,
       input.lenders,
       input.borrowers,

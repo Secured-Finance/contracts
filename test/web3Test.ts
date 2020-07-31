@@ -7,7 +7,7 @@ const accountPriv = process.env.PRIVATE_KEY;
 import * as CompiledToken from '../contracts/MoneyMarket.json';
 const ABI = CompiledToken.abi;
 const BYTECODE = CompiledToken.bytecode;
-const CONTRACT_ADDR = '0x69A010d8ffB7faA0cf8B94C6022420EDe8274811';
+const CONTRACT_ADDR = '0x69A010d8ffB7faA0cf8B94C6022420EDe8274811'; // change
 
 const web3Service = new Web3Service();
 
@@ -33,7 +33,7 @@ async function send_test() {
   const nonce = await web3Service.getPendingTxCount(accountAddr);
   console.log('pending txCount is', nonce);
 
-  const methodName = 'setLoans';
+  const methodName = 'setLoanBook';
   const inputs = sample.MoneyMarket;
   const txHash = await web3Service.send(
     instance,
