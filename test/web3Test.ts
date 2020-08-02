@@ -33,7 +33,7 @@ async function send_test() {
   const nonce = await web3Service.getPendingTxCount(accountAddr);
   console.log('pending txCount is', nonce);
 
-  const methodName = 'setLoanBook';
+  const methodName = 'setMoneyMarketBook';
   const inputs = sample.MoneyMarket;
   const txHash = await web3Service.send(
     instance,
@@ -49,7 +49,12 @@ async function send_test() {
 
 async function call_test() {
   const instance = web3Service.getInstance(ABI, CONTRACT_ADDR);
-  const rates = await web3Service.call(instance, 'getMidRates', {}, accountAddr);
+  const rates = await web3Service.call(
+    instance,
+    'getMidRates',
+    {},
+    accountAddr,
+  );
   console.log('mid rates', rates);
 }
 call_test();

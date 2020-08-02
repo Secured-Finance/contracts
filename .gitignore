@@ -1,2 +1,13 @@
+# Dependency directory
 node_modules
+
+.npm
 .env
+/dist
+
+*.bak
+contracts/*.json
+.DS_Store
+.vscode
+.gitattributes
+package-lock.json

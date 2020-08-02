@@ -3,8 +3,8 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 contract MoneyMarket {
-    event SetLoanBook(address indexed sender);
-    event DelLoanBook(address indexed sender);
+    event SetMoneyMarketBook(address indexed sender);
+    event DelMoneyMarketBook(address indexed sender);
     event DelOneItem(address indexed sender);
 
     enum Ccy {ETH, FIL}
@@ -14,13 +14,13 @@ contract MoneyMarket {
     uint256 constant NUMCCY = 2;
     uint256 constant NUMTERM = 6;
 
-    struct LoanBook {
-        LoanItem[NUMTERM][NUMCCY] lenders;
-        LoanItem[NUMTERM][NUMCCY] borrowers;
+    struct MoneyMarketBook {
+        MoneyMarketItem[NUMTERM][NUMCCY] lenders;
+        MoneyMarketItem[NUMTERM][NUMCCY] borrowers;
         bool isValue;
     }
 
-    struct LoanItem {
+    struct MoneyMarketItem {
         Term term;
         uint256 amt;
         uint256 rate; // bps
@@ -29,24 +29,24 @@ contract MoneyMarket {
         address addr;
     }
 
-    struct LoanInput {
+    struct MoneyMarketInput {
         Term term;
         uint256 amt;
         uint256 rate;
     }
 
     // keeps all the records
-    // LoanBook [0] for ETH, [1] for FIL
-    mapping(address => LoanBook) private loanMap;
+    // MoneyMarketBook [0] for ETH, [1] for FIL
+    mapping(address => MoneyMarketBook) private loanMap;
     address[] private marketMakers;
 
-    // helper to convert input data to LoanItem
-    function inputToItem(LoanInput memory input, uint256 goodtil)
+    // helper to convert input data to MoneyMarketItem
+    function inputToItem(MoneyMarketInput memory input, uint256 goodtil)
         private
         view
-        returns (LoanItem memory)
+        returns (MoneyMarketItem memory)
     {
-        LoanItem memory item;
+        MoneyMarketItem memory item;
         item.term = input.term;
         item.amt = input.amt;
         item.rate = input.rate;
@@ -57,19 +57,19 @@ contract MoneyMarket {
     }
 
     // to be called by market makers for booking
-    function setLoanBook(
+    function setMoneyMarketBook(
         Ccy ccy,
-        LoanInput[] memory lenders,
-        LoanInput[] memory borrowers,
+        MoneyMarketInput[] memory lenders,
+        MoneyMarketInput[] memory borrowers,
         uint256 effectiveSec
     ) public {
         // TODO - check if collateral covers borrowers amt
-        LoanBook storage book = loanMap[msg.sender];
-        LoanItem[NUMTERM] storage lenderTerms = book.lenders[uint256(ccy)];
-        LoanItem[NUMTERM] storage borrowerTerms = book.borrowers[uint256(ccy)];
+        MoneyMarketBook storage book = loanMap[msg.sender];
+        MoneyMarketItem[NUMTERM] storage lenderTerms = book.lenders[uint256(ccy)];
+        MoneyMarketItem[NUMTERM] storage borrowerTerms = book.borrowers[uint256(ccy)];
         for (uint256 i = 0; i < lenders.length; i++) {
             Term term = lenders[i].term;
-            LoanItem memory newItem = inputToItem(
+            MoneyMarketItem memory newItem = inputToItem(
                 lenders[i],
                 now + effectiveSec
             );
@@ -77,7 +77,7 @@ contract MoneyMarket {
         }
         for (uint256 i = 0; i < borrowers.length; i++) {
             Term term = borrowers[i].term;
-            LoanItem memory newItem = inputToItem(
+            MoneyMarketItem memory newItem = inputToItem(
                 borrowers[i],
                 now + effectiveSec
             );
@@ -85,16 +85,16 @@ contract MoneyMarket {
         }
         if (!loanMap[msg.sender].isValue) marketMakers.push(msg.sender);
         book.isValue = true;
-        emit SetLoanBook(msg.sender);
+        emit SetMoneyMarketBook(msg.sender);
     }
 
-    function delLoanBook() public {
-        require(loanMap[msg.sender].isValue == true, 'loanBook not found');
+    function delMoneyMarketBook() public {
+        require(loanMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
         delete loanMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
         } // marketMakers.length no change
-        emit DelLoanBook(msg.sender);
+        emit DelMoneyMarketBook(msg.sender);
     }
 
     // TODO - [internal] delete from loan contract. require(loanMap[marketMaker] == true)
@@ -104,7 +104,7 @@ contract MoneyMarket {
         Ccy ccy,
         Term term
     ) public {
-        require(loanMap[msg.sender].isValue == true, 'loanBook not found');
+        require(loanMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
         if (side == Side.LEND)
             delete loanMap[addr].lenders[uint256(ccy)][uint256(term)];
         else delete loanMap[addr].borrowers[uint256(ccy)][uint256(term)];
@@ -117,18 +117,18 @@ contract MoneyMarket {
         Side side,
         Ccy ccy,
         Term term
-    ) public view returns (LoanItem memory) {
+    ) public view returns (MoneyMarketItem memory) {
         if (side == Side.LEND)
             return loanMap[addr].lenders[uint256(ccy)][uint256(term)];
         else return loanMap[addr].borrowers[uint256(ccy)][uint256(term)];
     }
 
-    function getOneBook(address addr) public view returns (LoanBook memory) {
+    function getOneBook(address addr) public view returns (MoneyMarketBook memory) {
         return loanMap[addr];
     }
 
-    function getAllBooks() public view returns (LoanBook[] memory) {
-        LoanBook[] memory allBooks = new LoanBook[](marketMakers.length);
+    function getAllBooks() public view returns (MoneyMarketBook[] memory) {
+        MoneyMarketBook[] memory allBooks = new MoneyMarketBook[](marketMakers.length);
         for (uint256 i = 0; i < marketMakers.length; i++) {
             allBooks[i] = loanMap[marketMakers[i]];
         }
@@ -137,10 +137,10 @@ contract MoneyMarket {
 
     // priority on lower lend rate, higher borrow rate, larger amt
     function betterItem(
-        LoanItem memory a,
-        LoanItem memory b,
+        MoneyMarketItem memory a,
+        MoneyMarketItem memory b,
         Side side
-    ) private pure returns (LoanItem memory) {
+    ) private pure returns (MoneyMarketItem memory) {
         if (!a.isAvailable) return b;
         if (!b.isAvailable) return a;
         if (a.rate == b.rate) return a.amt > b.amt ? a : b;
@@ -148,8 +148,8 @@ contract MoneyMarket {
         return a.rate > b.rate ? a : b; // Side.BORROW
     }
 
-    function getBestBook() public view returns (LoanBook memory) {
-        LoanBook memory book;
+    function getBestBook() public view returns (MoneyMarketBook memory) {
+        MoneyMarketBook memory book;
         for (uint256 i = 0; i < NUMCCY; i++) {
             for (uint256 j = 0; j < NUMTERM; j++) {
                 for (uint256 k = 0; k < marketMakers.length; k++) {
@@ -174,7 +174,7 @@ contract MoneyMarket {
         view
         returns (uint256[NUMTERM][NUMCCY] memory)
     {
-        LoanBook memory bestBook = getBestBook();
+        MoneyMarketBook memory bestBook = getBestBook();
         uint256[NUMTERM][NUMCCY] memory rates;
         for (uint256 i = 0; i < NUMCCY; i++) {
             for (uint256 j = 0; j < NUMTERM; j++) {
@@ -189,7 +189,7 @@ contract MoneyMarket {
         view
         returns (uint256[NUMTERM][NUMCCY] memory)
     {
-        LoanBook memory bestBook = getBestBook();
+        MoneyMarketBook memory bestBook = getBestBook();
         uint256[NUMTERM][NUMCCY] memory rates;
         for (uint256 i = 0; i < NUMCCY; i++) {
             for (uint256 j = 0; j < NUMTERM; j++) {
@@ -205,7 +205,7 @@ contract MoneyMarket {
         view
         returns (uint256[NUMTERM][NUMCCY] memory)
     {
-        LoanBook memory bestBook = getBestBook();
+        MoneyMarketBook memory bestBook = getBestBook();
         uint256[NUMTERM][NUMCCY] memory rates;
         for (uint256 i = 0; i < NUMCCY; i++) {
             for (uint256 j = 0; j < NUMTERM; j++) {

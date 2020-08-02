@@ -28,38 +28,38 @@ module.exports = function (deployer, network, accounts) {
     console.log('collateral addr is', collateral.address);
 
     // Init MoneyMarket with sample data
-      let input = sample.MoneyMarket;
-      await moneyMarket.setLoanBook(
-        input.ccy,
-        input.lenders,
-        input.borrowers,
-        input.effectiveSec,
-      );
+    let input = sample.MoneyMarket;
+    await moneyMarket.setMoneyMarketBook(
+      input.ccy,
+      input.lenders,
+      input.borrowers,
+      input.effectiveSec,
+    );
 
-      // Init FXMarket with sample data
-      input = sample.FXMarket;
-      await fxMarket.setFXBook(
-        input.pair,
-        input.offerInput,
-        input.bidInput,
-        input.effectiveSec,
-      );
+    // Init FXMarket with sample data
+    input = sample.FXMarket;
+    await fxMarket.setFXBook(
+      input.pair,
+      input.offerInput,
+      input.bidInput,
+      input.effectiveSec,
+    );
 
-      // Init Collateral with sample data
-      // await collateral.setMarketAddr(moneyMarket.address, fxMarket.address);
-      input = sample.Collateral;
-      await collateral.setColBook(input[0].id, input[0].addrFIL, {
-        from: accounts[0],
-      });
-      await collateral.setColBook(input[1].id, input[1].addrFIL, {
-        from: accounts[1],
-      });
-      await collateral.setColBook(input[2].id, input[2].addrFIL, {
-        from: accounts[2],
-      });
-      await collateral.registerFILCustodyAddr('cid_custody_FIL_0', accounts[0]);
-      await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
-      await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
+    // Init Collateral with sample data
+    // await collateral.setMarketAddr(moneyMarket.address, fxMarket.address);
+    input = sample.Collateral;
+    await collateral.setColBook(input[0].id, input[0].addrFIL, {
+      from: accounts[0],
+    });
+    await collateral.setColBook(input[1].id, input[1].addrFIL, {
+      from: accounts[1],
+    });
+    await collateral.setColBook(input[2].id, input[2].addrFIL, {
+      from: accounts[2],
+    });
+    await collateral.registerFILCustodyAddr('cid_custody_FIL_0', accounts[0]);
+    await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
+    await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
   });
 };
 
