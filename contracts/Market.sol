@@ -63,9 +63,7 @@ contract MoneyMarket {
         LoanInput[] memory borrowers,
         uint256 effectiveSec
     ) public {
-        // TODO - check if collateral covers borrowers amts
-        // TODO - emit event for notice
-        // TODO - handle goodtill -- require(now >= goodtill)
+        // TODO - check if collateral covers borrowers amt
         LoanBook storage book = loanMap[msg.sender];
         LoanItem[NUMTERM] storage lenderTerms = book.lenders[uint256(ccy)];
         LoanItem[NUMTERM] storage borrowerTerms = book.borrowers[uint256(ccy)];
@@ -100,7 +98,6 @@ contract MoneyMarket {
     }
 
     // TODO - [internal] delete from loan contract. require(loanMap[marketMaker] == true)
-
     function delOneItem(
         address addr,
         Side side,
@@ -114,6 +111,7 @@ contract MoneyMarket {
         emit DelOneItem(msg.sender);
     }
 
+    // TODO - handle goodtill -- require(now >= goodtill)
     function getOneItem(
         address addr,
         Side side,
