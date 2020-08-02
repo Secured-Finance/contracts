@@ -67,7 +67,7 @@ const sample = {
   MoneyMarket: {
     ccy: 1,
     lenders: [
-      // [term, size, rate] (1% = 100bps)
+      // [term, amt, rate] (1% = 100bps)
       [0, 100000, 500], // [_3m, 100000FIL, 500bps is 5%]
       [1, 110000, 600], // [_6m, 110000FIL, 600bps is 6%]
       [2, 120000, 900],

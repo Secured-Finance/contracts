@@ -22,7 +22,7 @@ contract MoneyMarket {
 
     struct LoanItem {
         Term term;
-        uint256 size;
+        uint256 amt;
         uint256 rate; // bps
         uint256 goodtil;
         bool isAvailable;
@@ -31,7 +31,7 @@ contract MoneyMarket {
 
     struct LoanInput {
         Term term;
-        uint256 size;
+        uint256 amt;
         uint256 rate;
     }
 
@@ -48,7 +48,7 @@ contract MoneyMarket {
     {
         LoanItem memory item;
         item.term = input.term;
-        item.size = input.size;
+        item.amt = input.amt;
         item.rate = input.rate;
         item.goodtil = goodtil;
         item.isAvailable = true;
@@ -63,7 +63,7 @@ contract MoneyMarket {
         LoanInput[] memory borrowers,
         uint256 effectiveSec
     ) public {
-        // TODO - check if collateral covers borrowers sizes
+        // TODO - check if collateral covers borrowers amts
         // TODO - emit event for notice
         // TODO - handle goodtill -- require(now >= goodtill)
         LoanBook storage book = loanMap[msg.sender];
@@ -137,7 +137,7 @@ contract MoneyMarket {
         return allBooks;
     }
 
-    // priority on lower lend rate, higher borrow rate, larger size
+    // priority on lower lend rate, higher borrow rate, larger amt
     function betterItem(
         LoanItem memory a,
         LoanItem memory b,
@@ -145,7 +145,7 @@ contract MoneyMarket {
     ) private pure returns (LoanItem memory) {
         if (!a.isAvailable) return b;
         if (!b.isAvailable) return a;
-        if (a.rate == b.rate) return a.size > b.size ? a : b;
+        if (a.rate == b.rate) return a.amt > b.amt ? a : b;
         if (side == Side.LEND) return a.rate < b.rate ? a : b;
         return a.rate > b.rate ? a : b; // Side.BORROW
     }
@@ -301,7 +301,7 @@ contract FXMarket {
         FXInput memory bidInput,
         uint256 effectiveSec
     ) public {
-        // TODO - check if collateral covers borrowers sizes
+        // TODO - check if collateral covers borrowers amts
         // TODO - emit event for notice
         FXBook storage book = fxMap[msg.sender];
         FXItem memory newOffer = inputToItem(
@@ -358,7 +358,7 @@ contract FXMarket {
         return allBooks;
     }
 
-    // priority on lower offer rate, higher bid rate, larger size
+    // priority on lower offer rate, higher bid rate, larger amt
     function betterItem(
         FXItem memory a,
         FXItem memory b,
