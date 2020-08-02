@@ -37,7 +37,7 @@ contract MoneyMarket {
 
     // keeps all the records
     // MoneyMarketBook [0] for ETH, [1] for FIL
-    mapping(address => MoneyMarketBook) private loanMap;
+    mapping(address => MoneyMarketBook) private moneyMarketMap;
     address[] private marketMakers;
 
     // helper to convert input data to MoneyMarketItem
@@ -64,7 +64,7 @@ contract MoneyMarket {
         uint256 effectiveSec
     ) public {
         // TODO - check if collateral covers borrowers amt
-        MoneyMarketBook storage book = loanMap[msg.sender];
+        MoneyMarketBook storage book = moneyMarketMap[msg.sender];
         MoneyMarketItem[NUMTERM] storage lenderTerms = book.lenders[uint256(ccy)];
         MoneyMarketItem[NUMTERM] storage borrowerTerms = book.borrowers[uint256(ccy)];
         for (uint256 i = 0; i < lenders.length; i++) {
@@ -83,31 +83,31 @@ contract MoneyMarket {
             );
             borrowerTerms[uint256(term)] = newItem;
         }
-        if (!loanMap[msg.sender].isValue) marketMakers.push(msg.sender);
+        if (!moneyMarketMap[msg.sender].isValue) marketMakers.push(msg.sender);
         book.isValue = true;
         emit SetMoneyMarketBook(msg.sender);
     }
 
     function delMoneyMarketBook() public {
-        require(loanMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
-        delete loanMap[msg.sender];
+        require(moneyMarketMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
+        delete moneyMarketMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
         } // marketMakers.length no change
         emit DelMoneyMarketBook(msg.sender);
     }
 
-    // TODO - [internal] delete from loan contract. require(loanMap[marketMaker] == true)
+    // TODO - [internal] delete from loan contract. require(moneyMarketMap[marketMaker] == true)
     function delOneItem(
         address addr,
         Side side,
         Ccy ccy,
         Term term
     ) public {
-        require(loanMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
+        require(moneyMarketMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
         if (side == Side.LEND)
-            delete loanMap[addr].lenders[uint256(ccy)][uint256(term)];
-        else delete loanMap[addr].borrowers[uint256(ccy)][uint256(term)];
+            delete moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
+        else delete moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
         emit DelOneItem(msg.sender);
     }
 
@@ -119,18 +119,18 @@ contract MoneyMarket {
         Term term
     ) public view returns (MoneyMarketItem memory) {
         if (side == Side.LEND)
-            return loanMap[addr].lenders[uint256(ccy)][uint256(term)];
-        else return loanMap[addr].borrowers[uint256(ccy)][uint256(term)];
+            return moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
+        else return moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
     }
 
     function getOneBook(address addr) public view returns (MoneyMarketBook memory) {
-        return loanMap[addr];
+        return moneyMarketMap[addr];
     }
 
     function getAllBooks() public view returns (MoneyMarketBook[] memory) {
         MoneyMarketBook[] memory allBooks = new MoneyMarketBook[](marketMakers.length);
         for (uint256 i = 0; i < marketMakers.length; i++) {
-            allBooks[i] = loanMap[marketMakers[i]];
+            allBooks[i] = moneyMarketMap[marketMakers[i]];
         }
         return allBooks;
     }
@@ -155,12 +155,12 @@ contract MoneyMarket {
                 for (uint256 k = 0; k < marketMakers.length; k++) {
                     book.lenders[i][j] = betterItem(
                         book.lenders[i][j],
-                        loanMap[marketMakers[k]].lenders[i][j],
+                        moneyMarketMap[marketMakers[k]].lenders[i][j],
                         Side.LEND
                     );
                     book.borrowers[i][j] = betterItem(
                         book.borrowers[i][j],
-                        loanMap[marketMakers[k]].borrowers[i][j],
+                        moneyMarketMap[marketMakers[k]].borrowers[i][j],
                         Side.LEND
                     );
                 }
