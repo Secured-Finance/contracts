@@ -32,7 +32,6 @@ contract Collateral {
         State state;
     }
 
-    // TODO - constructor to set MarketAddr
     // TODO - modify inuseETH after loan is executed
     // TODO - update loan mtm condition and change state
 
@@ -44,13 +43,21 @@ contract Collateral {
     // keeps all the records
     mapping(address => ColBook) private colMap;
     address[] private users;
+    address private owner;
 
     // Contracts
     MoneyMarket moneyMarket;
     FXMarket fxMarket;
 
-    // Init market contracts to interact
+    constructor (address moneyAddr, address fxAddr) public {
+        owner = msg.sender;
+        moneyMarket = MoneyMarket(moneyAddr);
+        fxMarket = FXMarket(fxAddr);
+    }
+
+    // reset market contracts to interact
     function setMarketAddr(address moneyAddr, address fxAddr) public {
+        require(msg.sender == owner, 'only owner');
         moneyMarket = MoneyMarket(moneyAddr);
         fxMarket = FXMarket(fxAddr);
     }
@@ -153,8 +160,7 @@ contract Collateral {
         uint256 fxRate = getFILETH();
         for (uint256 i = 0; i < users.length; i++) {
             colMap[users[i]].valueFIL =
-                (colMap[users[i]].amtFIL * fxRate) /
-                FXMULT;
+                (colMap[users[i]].amtFIL * fxRate) / FXMULT;
         }
     }
 
