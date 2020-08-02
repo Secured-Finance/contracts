@@ -19,7 +19,7 @@ contract MoneyMarket {
     struct LoanItem {
         Term term;
         uint256 size;
-        uint256 rate;
+        uint256 rate; // bps
         uint256 goodtil;
         bool isAvailable;
         address addr;
@@ -58,6 +58,7 @@ contract MoneyMarket {
     ) public {
         // TODO - check if collateral covers borrowers sizes
         // TODO - emit event for notice
+        // TODO - handle goodtill -- require(now >= goodtill)
         LoanBook storage book = loanMap[msg.sender];
         LoanItem[NUMTERM] storage lenderTerms = book.lenders[uint256(ccy)];
         LoanItem[NUMTERM] storage borrowerTerms = book.borrowers[uint256(ccy)];
@@ -82,6 +83,7 @@ contract MoneyMarket {
     }
 
     function delLoanBook() public {
+        require(loanMap[msg.sender].isValue == true, 'loanBook not found');
         delete loanMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
@@ -94,6 +96,7 @@ contract MoneyMarket {
         Ccy ccy,
         Term term
     ) public {
+        require(loanMap[msg.sender].isValue == true, 'loanBook not found');
         if (side == Side.LEND)
             delete loanMap[addr].lenders[uint256(ccy)][uint256(term)];
         else delete loanMap[addr].borrowers[uint256(ccy)][uint256(term)];
@@ -247,6 +250,8 @@ contract FXMarket {
     mapping(address => FXBook) private fxMap;
     address[] private marketMakers;
 
+    event DEBUG(uint amtBuy, uint amtSell, uint fxRate);
+
     function inputToItem(
         CcyPair pair,
         FXInput memory input,
@@ -258,7 +263,12 @@ contract FXMarket {
         item.ccySell = input.ccySell;
         item.amtBuy = input.amtBuy;
         item.amtSell = input.amtSell;
-        item.rate = (FXMULT[uint256(pair)] * input.amtSell) / input.amtBuy;
+        uint fxRate;
+        if (input.ccySell == Ccy.FIL) // ETH buy FIL sell
+            fxRate = (FXMULT[uint256(pair)] * input.amtBuy) / input.amtSell;
+        else // ETH sell FIL buy
+            fxRate = (FXMULT[uint256(pair)] * input.amtSell) / input.amtBuy;
+        item.rate = fxRate;
         item.goodtil = goodtil;
         item.isAvailable = true;
         item.addr = msg.sender;
@@ -287,6 +297,7 @@ contract FXMarket {
     }
 
     function delFXBook() public {
+        require(fxMap[msg.sender].isValue == true, 'fxBook not found');
         delete fxMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
@@ -298,6 +309,7 @@ contract FXMarket {
         Side side,
         CcyPair pair
     ) public {
+        require(fxMap[msg.sender].isValue == true, 'fxBook not found');
         if (side == Side.BID) delete fxMap[addr].bids[uint256(pair)];
         else delete fxMap[addr].offers[uint256(pair)];
     }
