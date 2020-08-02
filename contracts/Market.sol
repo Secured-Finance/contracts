@@ -6,6 +6,7 @@ contract MoneyMarket {
     event SetMoneyMarketBook(address indexed sender);
     event DelMoneyMarketBook(address indexed sender);
     event DelOneItem(address indexed sender);
+    event TakeOneItem(address indexed sender);
 
     enum Ccy {ETH, FIL}
     enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
@@ -104,14 +105,13 @@ contract MoneyMarket {
         Ccy ccy,
         Term term
     ) public {
-        require(moneyMarketMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
+        require(moneyMarketMap[addr].isValue == true, 'MoneyMarketBook not found');
         if (side == Side.LEND)
             delete moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
         else delete moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
-        emit DelOneItem(msg.sender);
+        emit DelOneItem(addr);
     }
 
-    // TODO - handle goodtill -- require(now >= goodtill)
     function getOneItem(
         address addr,
         Side side,
@@ -121,6 +121,34 @@ contract MoneyMarket {
         if (side == Side.LEND)
             return moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
         else return moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
+    }
+
+    // to be called from Loan
+    // take a deal, update amount, and return rates
+    function takeOneItem(
+        address addr,
+        Side side,
+        Ccy ccy,
+        Term term,
+        uint256 amt
+    ) public returns (uint rate) {
+        MoneyMarketBook memory book = moneyMarketMap[addr];
+        require(book.isValue == true, 'MoneyMarketBook not found');
+        MoneyMarketItem storage item;
+        if (side == Side.LEND)
+            item = moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
+        else item = moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
+        if (item.goodtil < now) {
+            delOneItem(addr, side, ccy, term);
+            revert("Item expired");
+        }
+        if (item.amt < amt) {
+            revert ("Amount too large");
+        } else {
+            item.amt -= amt; // update amount
+        }
+        emit TakeOneItem(msg.sender);
+        return item.rate;
     }
 
     function getOneBook(address addr) public view returns (MoneyMarketBook memory) {
@@ -329,10 +357,10 @@ contract FXMarket {
         Side side,
         CcyPair pair
     ) public {
-        require(fxMap[msg.sender].isValue == true, 'fxBook not found');
+        require(fxMap[addr].isValue == true, 'fxBook not found');
         if (side == Side.BID) delete fxMap[addr].bids[uint256(pair)];
         else delete fxMap[addr].offers[uint256(pair)];
-        emit DelOneItem(msg.sender);
+        emit DelOneItem(addr);
     }
 
     function getOneItem(
