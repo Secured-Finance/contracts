@@ -13,7 +13,7 @@ contract Collateral {
     event RegisterFILCustodyAddr(address indexed requester);
 
     enum CcyPair {FILETH}
-    enum State {EMPTY, NEW, IN_USE, MARGINCALL, LIQUIDATION}
+    enum State {EMPTY, AVAILABLE, IN_USE, MARGINCALL, LIQUIDATION}
 
     uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000;
@@ -76,7 +76,7 @@ contract Collateral {
         book.amtFIL = 100000; // TODO - reset to 0 in production
         book.valueFIL = 0; // value in ETH
         book.isAvailable = true;
-        book.state = msg.value > 0 ? State.NEW : State.EMPTY;
+        book.state = msg.value > 0 ? State.AVAILABLE : State.EMPTY;
         return book;
     }
 
@@ -103,7 +103,7 @@ contract Collateral {
         require(colMap[msg.sender].isAvailable == true, 'user not found');
         // TODO - check FIL network
         colMap[msg.sender].amtFIL += amtFIL;
-        colMap[msg.sender].state = State.NEW;
+        colMap[msg.sender].state = State.AVAILABLE;
         emit UpSizeFIL(msg.sender);
     }
 
