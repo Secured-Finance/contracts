@@ -3,6 +3,10 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 contract MoneyMarket {
+    event SetLoanBook(address indexed sender);
+    event DelLoanBook(address indexed sender);
+    event DelOneItem(address indexed sender);
+
     enum Ccy {ETH, FIL}
     enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
     enum Side {LEND, BORROW}
@@ -31,10 +35,12 @@ contract MoneyMarket {
         uint256 rate;
     }
 
+    // keeps all the records
     // LoanBook [0] for ETH, [1] for FIL
     mapping(address => LoanBook) private loanMap;
     address[] private marketMakers;
 
+    // helper to convert input data to LoanItem
     function inputToItem(LoanInput memory input, uint256 goodtil)
         private
         view
@@ -50,6 +56,7 @@ contract MoneyMarket {
         return item;
     }
 
+    // to be called by market makers for booking
     function setLoanBook(
         Ccy ccy,
         LoanInput[] memory lenders,
@@ -80,6 +87,7 @@ contract MoneyMarket {
         }
         if (!loanMap[msg.sender].isValue) marketMakers.push(msg.sender);
         book.isValue = true;
+        emit SetLoanBook(msg.sender);
     }
 
     function delLoanBook() public {
@@ -88,7 +96,10 @@ contract MoneyMarket {
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
         } // marketMakers.length no change
+        emit DelLoanBook(msg.sender);
     }
+
+    // TODO - [internal] delete from loan contract. require(loanMap[marketMaker] == true)
 
     function delOneItem(
         address addr,
@@ -100,6 +111,7 @@ contract MoneyMarket {
         if (side == Side.LEND)
             delete loanMap[addr].lenders[uint256(ccy)][uint256(term)];
         else delete loanMap[addr].borrowers[uint256(ccy)][uint256(term)];
+        emit DelOneItem(msg.sender);
     }
 
     function getOneItem(
@@ -189,6 +201,7 @@ contract MoneyMarket {
         return rates;
     }
 
+    // to be called by Loan or Collateral for valuation
     function getMidRates()
         public
         view
@@ -213,6 +226,10 @@ contract MoneyMarket {
 }
 
 contract FXMarket {
+    event SetFXBook(address indexed sender);
+    event DelFXBook(address indexed sender);
+    event DelOneItem(address indexed sender);
+
     enum Ccy {ETH, FIL}
     enum CcyPair {FILETH}
     enum Side {BID, OFFER}
@@ -246,12 +263,14 @@ contract FXMarket {
         uint256 amtSell;
     }
 
+    // keeps all the records
     // FXBook [0] for FILETH
     mapping(address => FXBook) private fxMap;
     address[] private marketMakers;
 
     event DEBUG(uint amtBuy, uint amtSell, uint fxRate);
 
+    // helper to convert input to FXItem
     function inputToItem(
         CcyPair pair,
         FXInput memory input,
@@ -275,6 +294,7 @@ contract FXMarket {
         return item;
     }
 
+    // to be called by market makers for booking
     function setFXBook(
         CcyPair pair,
         FXInput memory offerInput,
@@ -294,6 +314,7 @@ contract FXMarket {
         book.bids[uint256(pair)] = newBid;
         if (!fxMap[msg.sender].isValue) marketMakers.push(msg.sender);
         book.isValue = true;
+        emit SetFXBook(msg.sender);
     }
 
     function delFXBook() public {
@@ -302,6 +323,7 @@ contract FXMarket {
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
         } // marketMakers.length no change
+        emit DelFXBook(msg.sender);
     }
 
     function delOneItem(
@@ -312,6 +334,7 @@ contract FXMarket {
         require(fxMap[msg.sender].isValue == true, 'fxBook not found');
         if (side == Side.BID) delete fxMap[addr].bids[uint256(pair)];
         else delete fxMap[addr].offers[uint256(pair)];
+        emit DelOneItem(msg.sender);
     }
 
     function getOneItem(
@@ -385,6 +408,7 @@ contract FXMarket {
         return rates;
     }
 
+
     function getMidRates() public view returns (uint256[NUMPAIR] memory) {
         FXBook memory bestBook = getBestBook();
         uint256[NUMPAIR] memory rates;
@@ -394,6 +418,7 @@ contract FXMarket {
         return rates;
     }
 
+    // to be called by Loan or Collateral for valuation
     function getMarketMakers() public view returns (address[] memory) {
         return marketMakers;
     }

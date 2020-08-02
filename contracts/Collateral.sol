@@ -32,6 +32,7 @@ contract Collateral {
         State state;
     }
 
+    // TODO - constructor to set MarketAddr
     // TODO - modify inuseETH after loan is executed
     // TODO - update loan mtm condition and change state
 
@@ -40,6 +41,7 @@ contract Collateral {
         string addrFIL;
     }
 
+    // keeps all the records
     mapping(address => ColBook) private colMap;
     address[] private users;
 
@@ -53,6 +55,7 @@ contract Collateral {
         fxMarket = FXMarket(fxAddr);
     }
 
+    // helper to convert input data to ColBook
     function inputToBook(ColInput memory input)
         private
         view
@@ -97,6 +100,7 @@ contract Collateral {
         emit UpSizeFIL(msg.sender);
     }
 
+    // to be called from market maker
     function delColBook() public {
         require(colMap[msg.sender].isAvailable == true, 'user not found');
         uint256 amtETH = colMap[msg.sender].amtETH;
@@ -138,23 +142,28 @@ contract Collateral {
         return (PCT * amt) / (colMap[addr].amtETH + colMap[addr].valueFIL);
     }
 
-    function updateValueFIL() public {
-        uint256 fxRate = getFILETH();
-        for (uint256 i = 0; i < users.length; i++) {
-            colMap[users[i]].valueFIL =
-                (colMap[users[i]].amtFIL * fxRate) / FXMULT;
-        }
-    }
-
+    // helper to get fx mid rate for valuation
     function getFILETH() public view returns (uint256) {
         uint256[1] memory rates = fxMarket.getMidRates();
         return rates[uint256(CcyPair.FILETH)];
     }
 
+    // to be called relularly
+    function updateValueFIL() public {
+        uint256 fxRate = getFILETH();
+        for (uint256 i = 0; i < users.length; i++) {
+            colMap[users[i]].valueFIL =
+                (colMap[users[i]].amtFIL * fxRate) /
+                FXMULT;
+        }
+    }
+
+    // to be called by market makers
     function requestFILCustodyAddr() public {
         emit RequestFILCustodyAddr(msg.sender);
     }
 
+    // to be called by whitelisted scheduler
     function registerFILCustodyAddr(string memory addrFIL, address requester)
         public
     {
@@ -163,7 +172,7 @@ contract Collateral {
         emit RegisterFILCustodyAddr(requester);
     }
 
-    // helper
+    // helper to check empty string
     function isEmptyStr(string memory str) private pure returns (bool) {
         bytes memory byteStr = bytes(str);
         return byteStr.length == 0;
@@ -209,6 +218,7 @@ contract Collateral {
             keccak256(abi.encodePacked(b)));
     }
 
+    // to be called by market makers
     // ramdomly pick a FILCustoryAddr to verify FIL balance for others
     function getRandFILCustodyAddr(uint256 seed)
         public
