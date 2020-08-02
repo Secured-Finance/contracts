@@ -70,24 +70,54 @@ module.exports = function (deployer, network, accounts) {
     await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
 
     // Loan test
-    input = sample.Loan;
-    let beforeLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term
-    );
+    // input = sample.Loan;
+    // let beforeLoan = await moneyMarket.getOneItem(
+    //   input.makerAddr,
+    //   input.side,
+    //   input.ccy,
+    //   input.term
+    // );
 
-    // Init Loan with sample data
-    await loan.makeLoanDeal(input.makerAddr, input.side, input.ccy, input.term, input.amt);
+    // // Init Loan with sample data
+    // await loan.makeLoanDeal(
+    //   input.makerAddr,
+    //   input.side,
+    //   input.ccy,
+    //   input.term,
+    //   input.amt,
+    //   {
+    //     from: accounts[1],
+    //   },
+    // );
 
-    let afterLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term
-    );
-    console.log('before amt', beforeLoan.amt, 'after amt', afterLoan.amt);
+    // let afterLoan = await moneyMarket.getOneItem(
+    //   input.makerAddr,
+    //   input.side,
+    //   input.ccy,
+    //   input.term
+    // );
+    // console.log('before amt', beforeLoan.amt, 'after amt', afterLoan.amt);
+    // let book = await loan.getAllBooks();
+    // console.log('loan is', book[0].loans[0]);
+
+    // getSchedule test
+    // const toDate = (timestamp) => {
+    //   const dateObject = new Date(timestamp * 1000);
+    //   return dateObject.toLocaleString();
+    // };
+
+    // const printDate = (arr) => {
+    //   let rv = [];
+    //   arr.forEach((element) => {
+    //     rv.push(toDate(element));
+    //   });
+    //   console.log(rv);
+    // };
+
+    // let sched = await loan.getSchedule(4, 10000, 500);
+    // console.log('sched is', sched);
+    // printDate(sched.notices);
+    // printDate(sched.payments);
   });
 
   const sample = {

@@ -11,7 +11,7 @@ contract Loan {
     // 2. Check collateral coverage and state
     // 3. If loan size is ok, delete one item from MoneyMarket
     // 4. loan state REGISTERED (prev: DEPLOYED)
-    // 5. Emit message LoanDeployed or UpSize
+    // 5. Emit message MakeLoanDeal or revert (prev: UpSize)
     // 6. Input FIL txHash and emit FIL FundArrived
     // 7. Taker manually check Filecoin network
     // 8. Taker confirmLoanAmount and make loan state BEGIN and emit LoanBegin
@@ -39,8 +39,53 @@ contract Loan {
     uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000; // convert FILETH = 0.085 to 85
     uint256 constant BP = 10000; // basis point
-    uint256 constant PAYFREQ = 3; // quarterly
-    uint256 constant NOTICE = 2; // weeks
+    uint256 constant PAYFREQ = 1; // annualy
+    uint256 constant NOTICE = 2 weeks;
+    uint256 constant NUMTERM = 6;
+    uint256 constant MAXYEAR = 5; // years
+    uint256 constant MAXPAYNUM = PAYFREQ * MAXYEAR;
+
+    // for end date
+    uint256[NUMTERM] DAYS = [
+        90 days,
+        180 days,
+        365 days,
+        365 days * 2,
+        365 days * 3,
+        365 days * 5
+    ];
+    // for coupon calc (in basis points)
+    uint256[NUMTERM] DAYCOUNTFRACTIONS = [
+        (BP * 90) / 360,
+        (BP * 180) / 360,
+        BP * 1,
+        BP * 1,
+        BP * 1,
+        BP * 1
+    ];
+    // for payments and notices
+    uint256[MAXPAYNUM] sched_3m = [90 days];
+    uint256[MAXPAYNUM] sched_6m = [180 days];
+    uint256[MAXPAYNUM] sched_1y = [365 days];
+    uint256[MAXPAYNUM] sched_2y = [365 days, 365 days * 2];
+    uint256[MAXPAYNUM] sched_3y = [365 days, 365 days * 2, 365 days * 3];
+    uint256[MAXPAYNUM] sched_5y = [
+        365 days,
+        365 days * 2,
+        365 days * 3,
+        365 days * 4,
+        365 days * 5
+    ];
+    uint256[MAXPAYNUM][NUMTERM] SCHEDULES = [
+        sched_3m,
+        sched_6m,
+        sched_1y,
+        sched_2y,
+        sched_3y,
+        sched_5y
+    ];
+
+    uint256[NUMTERM] PAYNUMS = [1, 1, 1, 2, 3, 5];
 
     struct LoanBook {
         LoanItem[] loans;
@@ -55,10 +100,18 @@ contract Loan {
         MoneyMarket.Term term;
         uint256 amt;
         uint256 rate;
-        uint256 freq;
-        uint256 notice;
+        Schedule schedule;
+        uint256 pv; // valuation in ETH
         bool isAvailable;
         State state;
+    }
+
+    struct Schedule {
+        uint256 start;
+        uint256 end;
+        uint256[MAXYEAR] notices;
+        uint256[MAXYEAR] payments;
+        uint256[MAXYEAR] amounts;
     }
 
     struct LoanInput {
@@ -88,6 +141,32 @@ contract Loan {
         collateral = Collateral(colAddr);
     }
 
+    // helper to generate payment schedule dates
+    function getSchedule(
+        MoneyMarket.Term term,
+        uint256 amt,
+        uint256 rate
+    ) public view returns (Schedule memory) {
+        uint256[MAXYEAR] memory notices = SCHEDULES[uint256(term)];
+        uint256[MAXYEAR] memory payments = SCHEDULES[uint256(term)];
+        uint256[MAXYEAR] memory amounts = SCHEDULES[uint256(term)];
+        for (uint256 i = 0; i < PAYNUMS[uint256(term)]; i++) {
+            notices[i] += now - NOTICE;
+            payments[i] += now;
+            amounts[i] =
+                (amt * rate * DAYCOUNTFRACTIONS[uint256(term)]) /
+                (BP * BP);
+        }
+        return
+            Schedule(
+                now,
+                now + DAYS[uint256(term)],
+                notices,
+                payments,
+                amounts
+            );
+    }
+
     function inputToItem(LoanInput memory input, uint256 rate)
         private
         view
@@ -105,8 +184,7 @@ contract Loan {
         item.term = input.term;
         item.amt = input.amt;
         item.rate = rate;
-        item.freq = PAYFREQ;
-        item.notice = NOTICE;
+        item.schedule = getSchedule(input.term, input.amt, rate);
         item.isAvailable = true;
         item.state = State.REGISTERED;
         return item;
@@ -120,6 +198,7 @@ contract Loan {
         MoneyMarket.Term term,
         uint256 amt
     ) public {
+        require(makerAddr != msg.sender, 'Same person deal is not allowed');
         uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
         LoanBook storage book = loanMap[msg.sender];
         LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
