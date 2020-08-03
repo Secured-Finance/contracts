@@ -264,7 +264,7 @@ contract MoneyMarket {
     }
 
     // helper to generate DF
-    function genDF(uint256[NUMDF] memory rates) private view returns (DiscountFactor memory) {
+    function genDF(uint256[NUMDF] memory rates) private pure returns (DiscountFactor memory) {
         DiscountFactor memory df;
         // bootstrap in BasisPoint scale
         df.df3m = BP * BP / (BP + rates[0] * 90 / 360);

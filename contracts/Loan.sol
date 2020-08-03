@@ -67,23 +67,29 @@ contract Loan {
         365 days * 3,
         365 days * 5
     ];
-    // for coupon calc
-    uint256[NUMTERM] DAYCOUNTFRACTIONS = [
-        BP * 90 / 360,
-        BP * 180 / 360,
+    // day count fractions for coupon calc (basis point based)
+    uint256[NUMTERM] DCFRAC = [
+        (BP * 90) / 360,
+        (BP * 180) / 360,
         BP * 1,
         BP * 1,
         BP * 1,
         BP * 1
     ];
     // for payments and notices
-    uint [MAXPAYNUM] sched_3m = [90 days];
-    uint [MAXPAYNUM] sched_6m = [180 days];
-    uint [MAXPAYNUM] sched_1y = [365 days];
-    uint [MAXPAYNUM] sched_2y = [365 days, 365 days * 2];
-    uint [MAXPAYNUM] sched_3y = [365 days, 365 days * 2, 365 days * 3];
-    uint [MAXPAYNUM] sched_5y = [365 days, 365 days * 2, 365 days * 3, 365 days * 4, 365 days * 5];
-    uint[MAXPAYNUM][NUMTERM] SCHEDULES = [
+    uint256[MAXPAYNUM] sched_3m = [90 days];
+    uint256[MAXPAYNUM] sched_6m = [180 days];
+    uint256[MAXPAYNUM] sched_1y = [365 days];
+    uint256[MAXPAYNUM] sched_2y = [365 days, 365 days * 2];
+    uint256[MAXPAYNUM] sched_3y = [365 days, 365 days * 2, 365 days * 3];
+    uint256[MAXPAYNUM] sched_5y = [
+        365 days,
+        365 days * 2,
+        365 days * 3,
+        365 days * 4,
+        365 days * 5
+    ];
+    uint256[MAXPAYNUM][NUMTERM] SCHEDULES = [
         sched_3m,
         sched_6m,
         sched_1y,
@@ -92,7 +98,18 @@ contract Loan {
         sched_5y
     ];
     // for generate payments and notices schedules
-    uint[NUMTERM] PAYNUMS = [1, 1, 1, 2, 3, 5];
+    uint256[NUMTERM] PAYNUMS = [1, 1, 1, 2, 3, 5];
+
+    // seconds in DFTERM
+    uint256[NUMDF] SECONDS = [
+        86400 * 90,
+        86400 * 180,
+        86400 * 365,
+        86400 * 365 * 2,
+        86400 * 365 * 3,
+        86400 * 365 * 4,
+        86400 * 365 * 5
+    ];
 
     struct LoanBook {
         LoanItem[] loans;
@@ -154,16 +171,27 @@ contract Loan {
     }
 
     // helper to generate payment schedule dates
-    function getSchedule(MoneyMarket.Term term, uint amt, uint rate) public view returns (Schedule memory) {
-        uint[MAXYEAR] memory notices = SCHEDULES[uint(term)];
-        uint[MAXYEAR] memory payments = SCHEDULES[uint(term)];
-        uint[MAXYEAR] memory amounts = SCHEDULES[uint(term)];
-        for (uint i = 0; i < PAYNUMS[uint(term)]; i++) {
+    function getSchedule(
+        MoneyMarket.Term term,
+        uint256 amt,
+        uint256 rate
+    ) public view returns (Schedule memory) {
+        uint256[MAXYEAR] memory notices = SCHEDULES[uint256(term)];
+        uint256[MAXYEAR] memory payments = SCHEDULES[uint256(term)];
+        uint256[MAXYEAR] memory amounts = SCHEDULES[uint256(term)];
+        for (uint256 i = 0; i < PAYNUMS[uint256(term)]; i++) {
             notices[i] += now - NOTICE;
             payments[i] += now;
-            amounts[i] = amt * rate * DAYCOUNTFRACTIONS[uint(term)] / BP / BP;
+            amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
         }
-        return Schedule(now, now + DAYS[uint(term)], notices, payments, amounts);
+        return
+            Schedule(
+                now,
+                now + DAYS[uint256(term)],
+                notices,
+                payments,
+                amounts
+            );
     }
 
     function inputToItem(LoanInput memory input, uint256 rate)
@@ -184,7 +212,7 @@ contract Loan {
         item.amt = input.amt;
         item.rate = rate;
         item.schedule = getSchedule(input.term, input.amt, rate);
-        item.pv = 0; // TODO
+        item.pv = input.amt; // updated by MtM
         item.asOf = now;
         item.isAvailable = true;
         item.state = State.REGISTERED;
@@ -222,10 +250,63 @@ contract Loan {
         return allBooks;
     }
 
-    // Helper to take a loan item and update its net present value
-    function getLoanPV(LoanItem memory item) public view returns (uint256) {
-        // MoneyMarket.DiscountFactor[NUMCCY] memory dfs = moneyMarket.getDiscountFactors();
+    // For Mark to Market
+    function updateAllPV() public {
+        for (uint256 i = 0; i < users.length; i++) {
+            LoanItem[] storage loans = loanMap[users[i]].loans;
+            for (uint256 j = 0; j < loans.length; j++) {
+                updateOnePV(loans[j]);
+                // loans[j].pv = getLoanPV(loans[j]);
+                loans[j].asOf = now;
+            }
+        }
+    }
+
+    // helper to get actual discount factors
+    function calcDF(uint256[NUMDF] memory dfArr, uint256 date)
+        private
+        view
+        returns (uint256)
+    {
+        if (date == 0) return BP;
+        uint256 time = date - now;
+        if (time <= SECONDS[0]) return (dfArr[0] * SECONDS[0]) / time;
+        for (uint256 i = 1; i < NUMDF; i++) {
+            if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
+                uint256 left = time - SECONDS[i - 1];
+                uint256 right = SECONDS[i] - time;
+                uint256 total = SECONDS[i] - SECONDS[i - 1];
+                return (dfArr[i - 1] * right + dfArr[i] * left) / total;
+            }
+        }
+    }
+
+    // helper to take a loan item and update its net present value
+    function updateOnePV(LoanItem storage item) private {
+        MoneyMarket.DiscountFactor[NUMCCY] memory dfList = moneyMarket
+            .getDiscountFactors();
+        MoneyMarket.DiscountFactor memory df = dfList[uint256(item.ccy)];
+        uint256[NUMDF] memory dfArr = [
+            df.df3m,
+            df.df6m,
+            df.df1y,
+            df.df2y,
+            df.df3y,
+            df.df4y,
+            df.df5y
+        ];
+        uint256[MAXPAYNUM] memory schedDate = item.schedule.payments;
+        uint256[MAXPAYNUM] memory schedAmt = item.schedule.amounts;
+        uint256[MAXPAYNUM] memory schedDf;
         uint256 pv = 0;
-        return pv;
+        for (uint256 i = 0; i < PAYNUMS[uint256(item.term)]; i++) {
+            uint256 d = calcDF(dfArr, schedDate[i]);
+            schedDf[i] = d;
+            pv += (schedAmt[i] * d) / BP;
+        }
+        uint256 lastIndex = PAYNUMS[uint256(item.term)] - 1;
+        pv += (item.amt * schedDf[lastIndex]) / BP;
+        item.pv = pv;
+        item.asOf = now;
     }
 }

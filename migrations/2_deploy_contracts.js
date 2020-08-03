@@ -69,48 +69,43 @@ module.exports = function (deployer, network, accounts) {
     await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
     await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
 
-    // // Loan test
-    // input = sample.Loan;
-    // let beforeLoan = await moneyMarket.getOneItem(
-    //   input.makerAddr,
-    //   input.side,
-    //   input.ccy,
-    //   input.term
-    // );
+    // Loan test
+    input = sample.Loan;
+    let beforeLoan = await moneyMarket.getOneItem(
+      input.makerAddr,
+      input.side,
+      input.ccy,
+      input.term,
+    );
 
-    // // Init Loan with sample data
-    // let taker = accounts[3];
-    // await loan.makeLoanDeal(
-    //   input.makerAddr,
-    //   input.side,
-    //   input.ccy,
-    //   input.term,
-    //   input.amt,
-    //   {
-    //     from: taker,
-    //   },
-    // );
+    // Init Loan with sample data
+    let taker = accounts[3];
+    await loan.makeLoanDeal(
+      input.makerAddr,
+      input.side,
+      input.ccy,
+      input.term,
+      input.amt,
+      {
+        from: taker,
+      },
+    );
 
-    // let afterLoan = await moneyMarket.getOneItem(
-    //   input.makerAddr,
-    //   input.side,
-    //   input.ccy,
-    //   input.term
-    // );
-    // console.log('before amt', beforeLoan.amt, 'after amt', afterLoan.amt);
-    // let book = await loan.getOneBook(taker);
-    // let sched = book.loans[0].schedule;
-    // // console.log('loan is', book.loans[0]);
-    // printDate(sched.notices);
-    // printDate(sched.payments);
-    // console.log(sched.amounts);
+    let afterLoan = await moneyMarket.getOneItem(
+      input.makerAddr,
+      input.side,
+      input.ccy,
+      input.term,
+    );
+    console.log('before amt', beforeLoan.amt, 'after amt', afterLoan.amt);
 
-    // getSchedule test
-    // let sched = await loan.getSchedule(0, 10000, 500);
-    // console.log('sched is', sched);
-    // printDate(sched.notices);
-    // printDate(sched.payments);
-    // console.log(sched.amounts);
+    // loan item test
+    let book = await loan.getOneBook(taker);
+    let loanItem = book.loans[0];
+    // console.log(loanItem);
+    printDate(loanItem.schedule.notices);
+    printDate(loanItem.schedule.payments);
+    console.log(loanItem.schedule.amounts);
 
     // discount factor test
     let df = await moneyMarket.getDiscountFactors();
@@ -123,21 +118,38 @@ module.exports = function (deployer, network, accounts) {
       ccy: 1,
       lenders: [
         // [term, amt, rate] (1% = 100bps)
-        [0, 100000, 500], // [_3m, 100000FIL, 500bps is 5%]
-        [1, 110000, 600], // [_6m, 110000FIL, 600bps is 6%]
-        [2, 120000, 900],
-        [3, 130000, 1200],
-        [4, 140000, 1500],
-        [5, 150000, 1800], // [_5y, 150000FIL, 1800bps is 18%]
-      ],
-      borrowers: [
         [0, 100000, 400], // [_3m, 100000FIL, 400bps is 4%]
         [1, 110000, 500], // [_6m, 110000FIL, 500bps is 5%]
-        [2, 120000, 800],
-        [3, 130000, 1000],
-        [4, 140000, 1300],
-        [5, 150000, 1600], // [_5y, 150000FIL, 1600bps is 16%]
+        [2, 120000, 700],
+        [3, 130000, 800],
+        [4, 140000, 900],
+        [5, 150000, 1000],
       ],
+      borrowers: [
+        [0, 100000, 300],
+        [1, 110000, 400],
+        [2, 120000, 600],
+        [3, 130000, 700],
+        [4, 140000, 800],
+        [5, 150000, 900],
+      ],
+      // lenders: [
+      //   // [term, amt, rate] (1% = 100bps)
+      //   [0, 100000, 500], // [_3m, 100000FIL, 500bps is 5%]
+      //   [1, 110000, 600], // [_6m, 110000FIL, 600bps is 6%]
+      //   [2, 120000, 900],
+      //   [3, 130000, 1200],
+      //   [4, 140000, 1500],
+      //   [5, 150000, 1800], // [_5y, 150000FIL, 1800bps is 18%]
+      // ],
+      // borrowers: [
+      //   [0, 100000, 400], // [_3m, 100000FIL, 400bps is 4%]
+      //   [1, 110000, 500], // [_6m, 110000FIL, 500bps is 5%]
+      //   [2, 120000, 800],
+      //   [3, 130000, 1000],
+      //   [4, 140000, 1300],
+      //   [5, 150000, 1600], // [_5y, 150000FIL, 1600bps is 16%]
+      // ],
       effectiveSec: 36000, // 10 hrs
     },
     FXMarket: {
@@ -191,4 +203,4 @@ const printNum = (arr) => {
     rv.push(Number(element));
   });
   console.log(rv);
-}
+};
