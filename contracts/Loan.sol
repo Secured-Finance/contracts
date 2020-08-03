@@ -256,8 +256,6 @@ contract Loan {
             LoanItem[] storage loans = loanMap[users[i]].loans;
             for (uint256 j = 0; j < loans.length; j++) {
                 updateOnePV(loans[j]);
-                // loans[j].pv = getLoanPV(loans[j]);
-                loans[j].asOf = now;
             }
         }
     }
