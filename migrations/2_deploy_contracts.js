@@ -69,7 +69,7 @@ module.exports = function (deployer, network, accounts) {
     await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
     await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
 
-    // Loan test
+    // // Loan test
     // input = sample.Loan;
     // let beforeLoan = await moneyMarket.getOneItem(
     //   input.makerAddr,
@@ -79,6 +79,7 @@ module.exports = function (deployer, network, accounts) {
     // );
 
     // // Init Loan with sample data
+    // let taker = accounts[3];
     // await loan.makeLoanDeal(
     //   input.makerAddr,
     //   input.side,
@@ -86,7 +87,7 @@ module.exports = function (deployer, network, accounts) {
     //   input.term,
     //   input.amt,
     //   {
-    //     from: accounts[1],
+    //     from: taker,
     //   },
     // );
 
@@ -97,27 +98,24 @@ module.exports = function (deployer, network, accounts) {
     //   input.term
     // );
     // console.log('before amt', beforeLoan.amt, 'after amt', afterLoan.amt);
-    // let book = await loan.getAllBooks();
-    // console.log('loan is', book[0].loans[0]);
+    // let book = await loan.getOneBook(taker);
+    // let sched = book.loans[0].schedule;
+    // // console.log('loan is', book.loans[0]);
+    // printDate(sched.notices);
+    // printDate(sched.payments);
+    // console.log(sched.amounts);
 
     // getSchedule test
-    // const toDate = (timestamp) => {
-    //   const dateObject = new Date(timestamp * 1000);
-    //   return dateObject.toLocaleString();
-    // };
-
-    // const printDate = (arr) => {
-    //   let rv = [];
-    //   arr.forEach((element) => {
-    //     rv.push(toDate(element));
-    //   });
-    //   console.log(rv);
-    // };
-
-    // let sched = await loan.getSchedule(4, 10000, 500);
+    // let sched = await loan.getSchedule(0, 10000, 500);
     // console.log('sched is', sched);
     // printDate(sched.notices);
     // printDate(sched.payments);
+    // console.log(sched.amounts);
+
+    // discount factor test
+    let df = await moneyMarket.getDiscountFactors();
+    printNum(df[0]);
+    printNum(df[1]);
   });
 
   const sample = {
@@ -165,9 +163,32 @@ module.exports = function (deployer, network, accounts) {
     Loan: {
       makerAddr: accounts[0],
       side: 1, // BORROW
-      ccy: 1,
+      ccy: 1, // FIL
       term: 5, // _5y
       amt: 150000 - 9999,
     },
   };
 };
+
+// helper to convert timestamp to human readable date
+const toDate = (timestamp) => {
+  const dateObject = new Date(timestamp * 1000);
+  return dateObject.toLocaleString();
+};
+
+// helper to print timestamp array
+const printDate = (arr) => {
+  let rv = [];
+  arr.forEach((element) => {
+    rv.push(toDate(element));
+  });
+  console.log(rv);
+};
+
+const printNum = (arr) => {
+  let rv = [];
+  arr.forEach((element) => {
+    rv.push(Number(element));
+  });
+  console.log(rv);
+}

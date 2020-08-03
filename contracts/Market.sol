@@ -14,6 +14,8 @@ contract MoneyMarket {
 
     uint256 constant NUMCCY = 2;
     uint256 constant NUMTERM = 6;
+    uint256 constant NUMDF = 7; // numbef of discount factors
+    uint256 constant BP = 10000; // basis point
 
     struct MoneyMarketBook {
         MoneyMarketItem[NUMTERM][NUMCCY] lenders;
@@ -36,10 +38,25 @@ contract MoneyMarket {
         uint256 rate;
     }
 
+    // For mark to market
+    struct DiscountFactor{
+        uint256 df3m;
+        uint256 df6m;
+        uint256 df1y;
+        uint256 df2y;
+        uint256 df3y;
+        uint256 df4y;
+        uint256 df5y;
+    }
+
     // keeps all the records
     // MoneyMarketBook [0] for ETH, [1] for FIL
     mapping(address => MoneyMarketBook) private moneyMarketMap;
     address[] private marketMakers;
+
+    function getMarketMakers() public view returns (address[] memory) {
+        return marketMakers;
+    }
 
     // helper to convert input data to MoneyMarketItem
     function inputToItem(MoneyMarketInput memory input, uint256 goodtil)
@@ -246,8 +263,29 @@ contract MoneyMarket {
         return rates;
     }
 
-    function getMarketMakers() public view returns (address[] memory) {
-        return marketMakers;
+    // helper to generate DF
+    function genDF(uint256[NUMDF] memory rates) private view returns (DiscountFactor memory) {
+        DiscountFactor memory df;
+        // bootstrap in BasisPoint scale
+        df.df3m = BP * BP / (BP + rates[0] * 90 / 360);
+        df.df6m = BP * BP / (BP + rates[1] * 180 / 360);
+        df.df1y = BP * BP / (BP + rates[2]);
+        df.df2y = BP * (BP - rates[3] * df.df1y / BP) / (BP + rates[3]);
+        df.df3y = BP * (BP - rates[4] * (df.df1y + df.df2y) / BP ) / (BP + rates[4]);
+        df.df4y = BP * (BP - rates[5] * (df.df1y + df.df2y + df.df3y) / BP ) / (BP + rates[5]);
+        df.df5y = BP * (BP - rates[6] * (df.df1y + df.df2y + df.df3y + df.df4y) / BP ) / (BP + rates[6]);
+        return df;
+    }
+
+    function getDiscountFactors() public view returns (DiscountFactor[NUMCCY] memory) {
+        uint256[NUMTERM][NUMCCY] memory mkt = getMidRates();
+        uint256[NUMDF][NUMCCY] memory rates = [
+            [mkt[0][0], mkt[0][1], mkt[0][2], mkt[0][3], mkt[0][4], (mkt[0][4] + mkt[0][5])/2, mkt[0][5]],
+            [mkt[1][0], mkt[1][1], mkt[1][2], mkt[1][3], mkt[1][4], (mkt[1][4] + mkt[1][5])/2, mkt[1][5]]
+        ];
+        DiscountFactor memory dfETH = genDF(rates[0]);
+        DiscountFactor memory dfFIL = genDF(rates[1]);
+        return [dfETH, dfFIL];
     }
 }
 
@@ -294,7 +332,10 @@ contract FXMarket {
     mapping(address => FXBook) private fxMap;
     address[] private marketMakers;
 
-    event DEBUG(uint amtBuy, uint amtSell, uint fxRate);
+    // to be called by Loan or Collateral for valuation
+    function getMarketMakers() public view returns (address[] memory) {
+        return marketMakers;
+    }
 
     // helper to convert input to FXItem
     function inputToItem(
@@ -442,10 +483,5 @@ contract FXMarket {
             rates[i] = (bestBook.offers[i].rate + bestBook.bids[i].rate) / 2;
         }
         return rates;
-    }
-
-    // to be called by Loan or Collateral for valuation
-    function getMarketMakers() public view returns (address[] memory) {
-        return marketMakers;
     }
 }
