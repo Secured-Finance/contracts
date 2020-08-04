@@ -117,9 +117,8 @@ module.exports = function (deployer, network, accounts) {
     MoneyMarket: {
       ccy: 1,
       lenders: [
-        // [term, amt, rate] (1% = 100bps)
-        [0, 100000, 400], // [_3m, 100000FIL, 400bps is 4%]
-        [1, 110000, 500], // [_6m, 110000FIL, 500bps is 5%]
+        [0, 100000, 400],
+        [1, 110000, 500],
         [2, 120000, 700],
         [3, 130000, 800],
         [4, 140000, 900],

@@ -14,10 +14,10 @@ Contracts written in Solidity will be placed in `./contracts` directory. (see tr
 
 - Migrations.sol: This is provided by Truffle and used for deployment by `truffle migrate`.
 - Market.sol: This file contains MoneyMarket contract and FXMarket contract.
-- Collateral.sol: This is a collateral manager.
-- Loan.sol: This is a template for a loan contract. (TBD)
+- Collateral.sol: This is a collateral manager to control funds ownership based on its states `EMPTY`, `AVAILABLE`, `IN_USE`, `MARGINCALL`, `LIQUIDATION`.
+- Loan.sol: This is a loan manager for payment scheduling and mark to markets for margin call, and update its states `REGISTERED`, `BEGIN`, `CLOSED`, `TERMINATED`.
 
-## Environment variables
+## Environment variables``
 
 Please refer to `.env.sample` and create `.env` to provide secret info such as private keys, Infura ID.
 
