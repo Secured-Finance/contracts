@@ -14,8 +14,8 @@ Contracts written in Solidity will be placed in `./contracts` directory. (see tr
 
 - Migrations.sol: This is provided by Truffle and used for deployment by `truffle migrate`.
 - Market.sol: This file contains MoneyMarket contract and FXMarket contract.
-- Collateral.sol: This is a collateral manager to control funds ownership based on its states `EMPTY`, `AVAILABLE`, `IN_USE`, `MARGINCALL`, `LIQUIDATION`.
-- Loan.sol: This is a loan manager for payment scheduling and mark to markets for margin call, and update its states `REGISTERED`, `BEGIN`, `CLOSED`, `TERMINATED`.
+- Collateral.sol: This is a collateral manager to control funds ownership based on its states `EMPTY`, `AVAILABLE`, `IN_USE`, `MARGIN_CALL`, `PARTIAL_LIQUIDATION`, `LIQUIDATION`.
+- Loan.sol: This is a loan manager for payment scheduling and mark to markets for margin call, and update its states `REGISTERED`, `WORKING`, `DUE`, `PAST_DUE`, `CLOSED`, `TERMINATED`.
 
 ## Environment variables``
 

@@ -35,6 +35,7 @@ module.exports = function (deployer, network, accounts) {
     console.log('fxMarket addr is', fxMarket.address);
     console.log('collateral addr is', collateral.address);
     console.log('loan addr is', loan.address);
+    console.log('\n');
 
     // Init MoneyMarket with sample data
     let input = sample.MoneyMarket;
@@ -69,7 +70,21 @@ module.exports = function (deployer, network, accounts) {
     await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
     await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
 
-    // Loan test
+    // upSize test
+    let colBook = await collateral.getOneBook(accounts[2]);
+    await collateral.upSizeETH({
+      from: accounts[2],
+      value: 1000000000000000000, // 1 ETH in wei
+    });
+    let colBook2 = await collateral.getOneBook(accounts[2]);
+    console.log(
+      'Before upSize state',
+      colBook.state,
+      'After upSize state',
+      colBook2.state,
+    );
+
+    // makeLoanDeal test
     input = sample.Loan;
     let beforeLoan = await moneyMarket.getOneItem(
       input.makerAddr,
@@ -77,7 +92,6 @@ module.exports = function (deployer, network, accounts) {
       input.ccy,
       input.term,
     );
-
     // Init Loan with sample data
     let taker = accounts[3];
     await loan.makeLoanDeal(
@@ -90,7 +104,6 @@ module.exports = function (deployer, network, accounts) {
         from: taker,
       },
     );
-
     let afterLoan = await moneyMarket.getOneItem(
       input.makerAddr,
       input.side,

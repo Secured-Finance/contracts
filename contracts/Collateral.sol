@@ -17,7 +17,7 @@ contract Collateral {
         EMPTY,
         AVAILABLE,
         IN_USE,
-        MARGINCALL,
+        MARGIN_CALL,
         PARTIAL_LIQUIDATION,
         LIQUIDATION
     }
@@ -30,13 +30,14 @@ contract Collateral {
     struct ColBook {
         string id; // DID, email
         address addrETH;
-        string addrFIL;
-        string custodyAddrFIL;
-        uint256 inuseETH;
-        uint256 inuseFIL;
-        uint256 amtETH;
-        uint256 amtFIL;
-        uint256 valueFIL; // evaluated in ETH
+        string addrFIL; // custody
+        string userAddrFIL;
+        uint256 amtETH; // custody amount
+        uint256 amtFIL; // custody amount
+        uint256 amtFILValue; // custody FIL amt evaluated in ETH
+        uint256 inuseETH; // total PV of ETH loans
+        uint256 inuseFIL; // total PV of FIL loans
+        uint256 inuseFILValue; // total PV of FIL loans
         bool isAvailable;
         State state;
     }
@@ -45,8 +46,8 @@ contract Collateral {
     // TODO - update loan mtm condition and change state
 
     struct ColInput {
-        string id;
-        string addrFIL;
+        string id; // DID, email
+        string userAddrFIL;
     }
 
     // keeps all the records
@@ -71,6 +72,19 @@ contract Collateral {
         fxMarket = FXMarket(fxAddr);
     }
 
+    // register an user
+    function setColBook(string memory id, string memory userAddrFIL)
+        public
+        payable
+    {
+        require(!colMap[msg.sender].isAvailable, 'user already exists'); // one-time
+        ColInput memory input = ColInput(id, userAddrFIL);
+        ColBook memory newBook = inputToBook(input);
+        colMap[msg.sender] = newBook;
+        users.push(msg.sender);
+        emit SetColBook(msg.sender);
+    }
+
     // helper to convert input data to ColBook
     function inputToBook(ColInput memory input)
         private
@@ -80,41 +94,67 @@ contract Collateral {
         ColBook memory book;
         book.id = input.id;
         book.addrETH = msg.sender;
-        book.addrFIL = input.addrFIL;
+        book.addrFIL; // blank until FIL custody address requested
+        book.userAddrFIL = input.userAddrFIL;
         book.amtETH = msg.value;
-        book.amtFIL = 100000; // TODO - reset to 0 in production
-        book.valueFIL = 0; // value in ETH
+        book.amtFIL = 0; // TODO - P2P oracle will update
+        book.amtFILValue = 0;
+        book.inuseETH = 0; // updated by ETH loan
+        book.inuseFIL = 0; // updated by FIL loan
+        book.inuseFILValue = 0;
         book.isAvailable = true;
         book.state = msg.value > 0 ? State.AVAILABLE : State.EMPTY;
         return book;
     }
 
-    function setColBook(string memory id, string memory addrFIL)
-        public
-        payable
-    {
-        require(!colMap[msg.sender].isAvailable, 'user already exists'); // one-time
-        ColInput memory input = ColInput(id, addrFIL);
-        ColBook memory newBook = inputToBook(input);
-        colMap[msg.sender] = newBook;
-        users.push(msg.sender);
-        emit SetColBook(msg.sender);
+    // helper to calc coverage in PCT
+    function getCoverage(address addr) public view returns (uint256) {
+        ColBook memory book = colMap[addr];
+        uint256 totalUse = book.inuseETH + book.inuseFILValue;
+        if (totalUse == 0) return 0; // no update
+        uint256 totalAmt = book.amtETH + book.amtFILValue;
+        uint256 coverage = (PCT * totalAmt) / totalUse;
+        return coverage;
     }
 
+    // update state by coverage
+    function updateState(address addr) public {
+        updateValueFIL();
+        ColBook storage book = colMap[addr];
+        uint256 totalUse = book.inuseETH + book.inuseFILValue;
+        uint256 totalAmt = book.amtETH + book.amtFILValue;
+        if (totalUse == 0) {
+            if (totalAmt == 0) book.state = State.EMPTY;
+            if (totalAmt > 0) book.state = State.AVAILABLE;
+        } else if (totalUse > 0) {
+            uint256 coverage = (PCT * totalAmt) / totalUse;
+            if (totalAmt > 0 && coverage > MARGINLEVEL)
+                book.state = State.IN_USE;
+            if (totalAmt > 0 && coverage > AUTOLQLEVEL)
+                book.state = State.MARGIN_CALL;
+            if (totalAmt > 0 && coverage <= AUTOLQLEVEL)
+                book.state = State.LIQUIDATION;
+        }
+    }
+
+    // collateralize ETH
     function upSizeETH() public payable {
         require(colMap[msg.sender].isAvailable == true, 'user not found');
-
-        // TODO - check collateral coverage
-
         colMap[msg.sender].amtETH += msg.value;
+        updateState(msg.sender);
+        if (
+            (colMap[msg.sender].state != State.AVAILABLE) &&
+            (colMap[msg.sender].state != State.IN_USE)
+        ) revert('Collateral not enough');
         emit UpSizeETH(msg.sender);
     }
 
+    // collateralize FIL
     function upSizeFIL(uint256 amtFIL) public payable {
         require(colMap[msg.sender].isAvailable == true, 'user not found');
-        // TODO - check FIL network
         colMap[msg.sender].amtFIL += amtFIL;
-        colMap[msg.sender].state = State.AVAILABLE;
+        // TODO - check FIL network by other peers to verify amtFIL
+        updateState(msg.sender);
         emit UpSizeFIL(msg.sender);
     }
 
@@ -152,14 +192,6 @@ contract Collateral {
         return colMap[addr].state;
     }
 
-    function getCoverageALL(uint256 amt, address addr)
-        public
-        view
-        returns (uint256)
-    {
-        return (PCT * amt) / (colMap[addr].amtETH + colMap[addr].valueFIL);
-    }
-
     // helper to get fx mid rate for valuation
     function getFILETH() public view returns (uint256) {
         uint256[1] memory rates = fxMarket.getMidRates();
@@ -170,8 +202,11 @@ contract Collateral {
     function updateValueFIL() public {
         uint256 fxRate = getFILETH();
         for (uint256 i = 0; i < users.length; i++) {
-            colMap[users[i]].valueFIL =
+            colMap[users[i]].amtFILValue =
                 (colMap[users[i]].amtFIL * fxRate) /
+                FXMULT;
+            colMap[users[i]].inuseFILValue =
+                (colMap[users[i]].inuseFIL * fxRate) /
                 FXMULT;
         }
     }
@@ -186,7 +221,7 @@ contract Collateral {
         public
     {
         require(colMap[requester].isAvailable == true, 'Requester not found');
-        colMap[requester].custodyAddrFIL = addrFIL;
+        colMap[requester].addrFIL = addrFIL;
         emit RegisterFILCustodyAddr(requester);
     }
 
@@ -200,7 +235,7 @@ contract Collateral {
         string[] memory addrList = new string[](users.length);
         uint256 j = 0;
         for (uint256 i = 0; i < users.length; i++) {
-            string memory addrFIL = colMap[users[i]].custodyAddrFIL;
+            string memory addrFIL = colMap[users[i]].addrFIL;
             if (!isEmptyStr(addrFIL)) addrList[j++] = addrFIL;
         }
         return addrList;
@@ -245,7 +280,7 @@ contract Collateral {
     {
         string[] memory addrList = getAllFILCustodyAddr();
         uint256 rand = getRandom(users.length + seed) % addrList.length;
-        if (isEqualStr(addrList[rand], colMap[msg.sender].custodyAddrFIL))
+        if (isEqualStr(addrList[rand], colMap[msg.sender].addrFIL))
             return getRandFILCustodyAddr(seed + 1); // avoid verify balance myself
         return addrList[rand];
     }
