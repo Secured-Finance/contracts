@@ -14,7 +14,7 @@ contract Loan {
     // 5. Emit message MakeLoanDeal or revert (prev: UpSize)
     // 6. TODO - Input FIL txHash and emit FIL FundArrived
     // 7. Taker manually check Filecoin network
-    // 8. Taker confirmLoanAmount and make loan state BEGIN and emit LoanBegin
+    // 8. Taker confirmLoanAmount and make loan state WORKING and emit LoanBegin
     // 9. Change collateral state to IN_USE and emit message CollateralInUse
 
     // (Liquidation)
@@ -41,7 +41,7 @@ contract Loan {
 
     event SetLoanBook(address indexed sender);
 
-    enum State {REGISTERED, BEGIN, CLOSED, TERMINATED}
+    enum State {REGISTERED, WORKING, DUE, CLOSED, TERMINATED}
     enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}
 
     uint256 constant BP = 10000; // basis point
@@ -194,6 +194,7 @@ contract Loan {
             );
     }
 
+    // helper to convert input data to LoanItem
     function inputToItem(LoanInput memory input, uint256 rate)
         private
         view
@@ -228,6 +229,9 @@ contract Loan {
         uint256 amt
     ) public {
         require(makerAddr != msg.sender, 'Same person deal is not allowed');
+
+        // TODO - check collateral coverage if taking LEND to BORROW
+
         uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
         LoanBook storage book = loanMap[msg.sender];
         LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
@@ -236,6 +240,27 @@ contract Loan {
         book.isValue = true;
         users.push(msg.sender);
         emit SetLoanBook(msg.sender);
+    }
+
+    function notifyFILPayment() public {
+        // TODO - input txHash for FIL and emit message 'Fund Arrived'
+        // used for initial, coupon, redemption, liquidation
+    }
+
+    function confirmFILPayment() public {
+        // TODO - confirm the loan amount in FIL
+        // used for initial, coupon, redemption, liquidation
+        // release Collateral
+    }
+
+    function notifyETHPayment() public {
+        // TODO - confirm the loan amount in FIL
+    }
+
+    function confirmETHPayment() public {
+        // TODO - confirm and notify for ETH
+        // Loan state: WORKING
+        // Collateral state: IN_USE
     }
 
     function getOneBook(address addr) public view returns (LoanBook memory) {
@@ -257,6 +282,14 @@ contract Loan {
             for (uint256 j = 0; j < loans.length; j++) {
                 updateOnePV(loans[j]);
             }
+        }
+    }
+
+    // After Upsize Collateral
+    function updateUserPV(address addr) public {
+        LoanItem[] storage loans = loanMap[addr].loans;
+        for (uint256 j = 0; j < loans.length; j++) {
+            updateOnePV(loans[j]);
         }
     }
 

@@ -13,10 +13,19 @@ contract Collateral {
     event RegisterFILCustodyAddr(address indexed requester);
 
     enum CcyPair {FILETH}
-    enum State {EMPTY, AVAILABLE, IN_USE, MARGINCALL, LIQUIDATION}
+    enum State {
+        EMPTY,
+        AVAILABLE,
+        IN_USE,
+        MARGINCALL,
+        PARTIAL_LIQUIDATION,
+        LIQUIDATION
+    }
 
     uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000;
+    uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
+    uint256 constant AUTOLQLEVEL = 125; // 125% auto liquidation
 
     struct ColBook {
         string id; // DID, email
@@ -49,7 +58,7 @@ contract Collateral {
     MoneyMarket moneyMarket;
     FXMarket fxMarket;
 
-    constructor (address moneyAddr, address fxAddr) public {
+    constructor(address moneyAddr, address fxAddr) public {
         owner = msg.sender;
         moneyMarket = MoneyMarket(moneyAddr);
         fxMarket = FXMarket(fxAddr);
@@ -94,7 +103,9 @@ contract Collateral {
 
     function upSizeETH() public payable {
         require(colMap[msg.sender].isAvailable == true, 'user not found');
+
         // TODO - check collateral coverage
+
         colMap[msg.sender].amtETH += msg.value;
         emit UpSizeETH(msg.sender);
     }
@@ -160,7 +171,8 @@ contract Collateral {
         uint256 fxRate = getFILETH();
         for (uint256 i = 0; i < users.length; i++) {
             colMap[users[i]].valueFIL =
-                (colMap[users[i]].amtFIL * fxRate) / FXMULT;
+                (colMap[users[i]].amtFIL * fxRate) /
+                FXMULT;
         }
     }
 
@@ -173,7 +185,7 @@ contract Collateral {
     function registerFILCustodyAddr(string memory addrFIL, address requester)
         public
     {
-        require(colMap[requester].isAvailable == true);
+        require(colMap[requester].isAvailable == true, 'Requester not found');
         colMap[requester].custodyAddrFIL = addrFIL;
         emit RegisterFILCustodyAddr(requester);
     }
