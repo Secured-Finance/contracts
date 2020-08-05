@@ -30,6 +30,7 @@ module.exports = function (deployer, network, accounts) {
       fxMarket.address,
       collateral.address,
     );
+    await collateral.setLoanAddr(loan.address); // set Loan address
 
     console.log('moneyMarket addr is', moneyMarket.address);
     console.log('fxMarket addr is', fxMarket.address);
@@ -59,9 +60,11 @@ module.exports = function (deployer, network, accounts) {
     input = sample.Collateral;
     await collateral.setColBook(input[0].id, input[0].addrFIL, {
       from: accounts[0],
+      value: 10000
     });
     await collateral.setColBook(input[1].id, input[1].addrFIL, {
       from: accounts[1],
+      value: 10000
     });
     await collateral.setColBook(input[2].id, input[2].addrFIL, {
       from: accounts[2],
@@ -74,7 +77,8 @@ module.exports = function (deployer, network, accounts) {
     let colBook = await collateral.getOneBook(accounts[2]);
     await collateral.upSizeETH({
       from: accounts[2],
-      value: 1000000000000000000, // 1 ETH in wei
+      value: 212000,
+      // value: 1000000000000000000, // 1 ETH in wei
     });
     let colBook2 = await collateral.getOneBook(accounts[2]);
     console.log(
@@ -83,6 +87,9 @@ module.exports = function (deployer, network, accounts) {
       'After upSize state',
       colBook2.state,
     );
+
+    let cover = await collateral.getCoverage(140001, accounts[2], { from: accounts[2] });
+    console.log('coverage is', Number(cover));
 
     // makeLoanDeal test
     input = sample.Loan;
@@ -93,7 +100,7 @@ module.exports = function (deployer, network, accounts) {
       input.term,
     );
     // Init Loan with sample data
-    let taker = accounts[3];
+    let taker = accounts[2];
     await loan.makeLoanDeal(
       input.makerAddr,
       input.side,
@@ -112,18 +119,18 @@ module.exports = function (deployer, network, accounts) {
     );
     console.log('before amt', beforeLoan.amt, 'after amt', afterLoan.amt);
 
-    // loan item test
-    let book = await loan.getOneBook(taker);
-    let loanItem = book.loans[0];
-    // console.log(loanItem);
-    printDate(loanItem.schedule.notices);
-    printDate(loanItem.schedule.payments);
-    console.log(loanItem.schedule.amounts);
+    // // loan item test
+    // let book = await loan.getOneBook(taker);
+    // let loanItem = book.loans[0];
+    // // console.log(loanItem);
+    // printDate(loanItem.schedule.notices);
+    // printDate(loanItem.schedule.payments);
+    // console.log(loanItem.schedule.amounts);
 
-    // discount factor test
-    let df = await moneyMarket.getDiscountFactors();
-    printNum(df[0]);
-    printNum(df[1]);
+    // // discount factor test
+    // let df = await moneyMarket.getDiscountFactors();
+    // printNum(df[0]);
+    // printNum(df[1]);
   });
 
   const sample = {
@@ -186,7 +193,8 @@ module.exports = function (deployer, network, accounts) {
     ],
     Loan: {
       makerAddr: accounts[0],
-      side: 1, // BORROW
+      // side: 1, // BORROW
+      side: 0, // LEND
       ccy: 1, // FIL
       term: 5, // _5y
       amt: 150000 - 9999,

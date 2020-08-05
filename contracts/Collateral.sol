@@ -3,14 +3,17 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import './Market.sol';
+import './Loan.sol';
 
 contract Collateral {
     event SetColBook(address indexed sender);
     event UpSizeETH(address indexed sender);
     event UpSizeFIL(address indexed sender);
     event DelColBook(address indexed sender);
+    event PartialLiquidation(address indexed addr);
     event RequestFILCustodyAddr(address indexed sender);
     event RegisterFILCustodyAddr(address indexed requester);
+    event DEBUG(address addr);
 
     enum CcyPair {FILETH}
     enum State {
@@ -24,6 +27,7 @@ contract Collateral {
 
     uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000;
+    uint256 constant LQLEVEL = 120; // 120% for liquidation price
     uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
     uint256 constant AUTOLQLEVEL = 125; // 125% auto liquidation
 
@@ -58,11 +62,18 @@ contract Collateral {
     // Contracts
     MoneyMarket moneyMarket;
     FXMarket fxMarket;
+    Loan loan;
 
     constructor(address moneyAddr, address fxAddr) public {
         owner = msg.sender;
         moneyMarket = MoneyMarket(moneyAddr);
         fxMarket = FXMarket(fxAddr);
+    }
+
+    // called after Loan contract is deployed
+    function setLoanAddr(address loanAddr) public {
+        require(msg.sender == owner, 'only owner');
+        loan = Loan(loanAddr);
     }
 
     // reset market contracts to interact
@@ -107,11 +118,27 @@ contract Collateral {
         return book;
     }
 
-    // helper to calc coverage in PCT
-    function getCoverage(address addr) public view returns (uint256) {
+    // helper to check collateral coverage
+    function isCovered(uint256 amt, address addr) public view returns (bool) {
+        require(colMap[addr].isAvailable, 'not registered yet');
+        if (amt == 0) return true;
         ColBook memory book = colMap[addr];
-        uint256 totalUse = book.inuseETH + book.inuseFILValue;
-        if (totalUse == 0) return 0; // no update
+        uint256 totalUse = book.inuseETH + book.inuseFILValue + amt;
+        uint256 totalAmt = book.amtETH + book.amtFILValue;
+        uint256 coverage = (PCT * totalAmt) / totalUse;
+        return coverage > MARGINLEVEL;
+    }
+
+    // helper to calc coverage in PCT
+    function getCoverage(uint256 amt, address addr)
+        public
+        view
+        returns (uint256)
+    {
+        require(colMap[addr].isAvailable, 'not registered yet');
+        if (amt == 0) return 0;
+        ColBook memory book = colMap[addr];
+        uint256 totalUse = book.inuseETH + book.inuseFILValue + amt;
         uint256 totalAmt = book.amtETH + book.amtFILValue;
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage;
@@ -119,8 +146,9 @@ contract Collateral {
 
     // update state by coverage
     function updateState(address addr) public {
-        updateValueFIL();
         ColBook storage book = colMap[addr];
+        if (book.state == State.PARTIAL_LIQUIDATION) return;
+        updateFILValue(msg.sender);
         uint256 totalUse = book.inuseETH + book.inuseFILValue;
         uint256 totalAmt = book.amtETH + book.amtFILValue;
         if (totalUse == 0) {
@@ -136,6 +164,58 @@ contract Collateral {
                 book.state = State.LIQUIDATION;
         }
     }
+
+    // update state all
+    function updateAllState() public {
+        for (uint256 i = 0; i < users.length; i++) {
+            updateState(users[i]);
+        }
+    }
+
+    // to be called from Loan for coupon cover up
+    // TODO - handle ETH lending case
+    function partialLiquidation(address borrower, uint256 amount) public {
+        require(msg.sender == address(loan), 'only Loan contract can call');
+        ColBook storage book = colMap[borrower];
+        if (book.state == State.IN_USE || book.state == State.MARGIN_CALL) {
+            book.state = State.PARTIAL_LIQUIDATION;
+        }
+        // TODO - nominate liquidation provider, calc payment amount
+        emit PartialLiquidation(borrower);
+    }
+
+    // TODO
+    function liquiadtion(address borrower, uint256 amount) public {}
+
+    // to be called from Loan to pay liquidation provider
+    function recoverPartialLiquidation(
+        address borrower,
+        address liquidProvider,
+        uint256 amount
+    ) public {
+        require(msg.sender == address(loan), 'only Loan contract can call');
+        ColBook storage book = colMap[borrower];
+        require(
+            book.state == State.PARTIAL_LIQUIDATION,
+            'expecting PARTIAL_LIQUIDATION state'
+        );
+        uint256 recoverAmount = (amount * LQLEVEL) / PCT;
+        // TODO - handle ETH lending case
+        book.inuseFIL -= amount;
+        book.amtFIL -= recoverAmount;
+        book.state = State.IN_USE;
+        updateState(borrower);
+    }
+
+    // function confirmFILPayment(address addr) public {
+    //     // TODO - only called by Lender (maybe move to Loan)
+    //     ColBook storage book = colMap[addr];
+    //     if (book.state == State.PARTIAL_LIQUIDATION) {
+    //         book.state = State.IN_USE;
+    //         // TODO - release Collateral
+    //     }
+    //     updateState(addr);
+    // }
 
     // collateralize ETH
     function upSizeETH() public payable {
@@ -198,8 +278,15 @@ contract Collateral {
         return rates[uint256(CcyPair.FILETH)];
     }
 
+    // update for one user
+    function updateFILValue(address addr) public {
+        uint256 fxRate = getFILETH();
+        colMap[addr].amtFILValue = (colMap[addr].amtFIL * fxRate) / FXMULT;
+        colMap[addr].inuseFILValue = (colMap[addr].inuseFIL * fxRate) / FXMULT;
+    }
+
     // to be called relularly
-    function updateValueFIL() public {
+    function updateAllFILValue() public {
         uint256 fxRate = getFILETH();
         for (uint256 i = 0; i < users.length; i++) {
             colMap[users[i]].amtFILValue =

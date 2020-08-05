@@ -229,9 +229,9 @@ contract Loan {
         uint256 amt
     ) public {
         require(makerAddr != msg.sender, 'Same person deal is not allowed');
-
-        // TODO - check collateral coverage if taking LEND to BORROW
-
+        // check collateral coverage if taking LEND to BORROW
+        if (side == MoneyMarket.Side.LEND && !collateral.isCovered(amt, msg.sender))
+            revert('Please upsize collateral');
         uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
         LoanBook storage book = loanMap[msg.sender];
         LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
@@ -242,7 +242,24 @@ contract Loan {
         emit SetLoanBook(msg.sender);
     }
 
-    function notifyFILPayment() public {
+    function updateState(address addr) public {
+        // coupon
+        // WORKING -> DUE
+        // DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
+
+        // redemption
+        // WORKING -> DUE
+        // DUE -> PAST_DUE, IN_USE -> LIQUIDATION
+
+        // margin call
+        // IN_USE -> MARGINCALL (Collateral.sol) -> IN_USE or LIQUIDATION
+    }
+
+    function updateAllState() public {
+
+    }
+
+    function notifyFILPayment(string memory txHash) public {
         // TODO - input txHash for FIL and emit message 'Fund Arrived'
         // used for initial, coupon, redemption, liquidation
     }
@@ -250,7 +267,21 @@ contract Loan {
     function confirmFILPayment() public {
         // TODO - confirm the loan amount in FIL
         // used for initial, coupon, redemption, liquidation
-        // release Collateral
+
+        // initial
+        // REGISTERED -> WORKING
+        // AVAILABLE -> IN_USE
+
+        // coupon
+        // DUE -> WORKING
+        // PAST_DUE->WORKING, PARTIAL_LIQUIATION -> IN_USE
+
+        // redemption
+        // DUE -> CLOSED, IN_USE -> AVAILABLE
+        // PAST_DUE -> TERMINATED, LIQUIDATION -> EMPTY
+
+        // margin call
+        // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
     }
 
     function notifyETHPayment() public {
