@@ -57,7 +57,7 @@ contract Loan {
 
     /** @dev
         DAYCOUNTS CONVENTION TABLE for PAYMENTS and NOTICES
-    */
+     */
     // for end date
     uint256[NUMTERM] DAYS = [
         90 days,
@@ -166,32 +166,30 @@ contract Loan {
         collateral = Collateral(colAddr);
     }
 
-    function getAllUsers() public view returns (address[] memory) {
-        return users;
-    }
+    /**@dev
+        Create a loan deal
+     */
 
-    // helper to generate payment schedule dates
-    function getSchedule(
+    // to be called by market takers to register loan
+    function makeLoanDeal(
+        address makerAddr,
+        MoneyMarket.Side side,
+        MoneyMarket.Ccy ccy,
         MoneyMarket.Term term,
-        uint256 amt,
-        uint256 rate
-    ) public view returns (Schedule memory) {
-        uint256[MAXYEAR] memory notices = SCHEDULES[uint256(term)];
-        uint256[MAXYEAR] memory payments = SCHEDULES[uint256(term)];
-        uint256[MAXYEAR] memory amounts = SCHEDULES[uint256(term)];
-        for (uint256 i = 0; i < PAYNUMS[uint256(term)]; i++) {
-            notices[i] += now - NOTICE;
-            payments[i] += now;
-            amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
-        }
-        return
-            Schedule(
-                now,
-                now + DAYS[uint256(term)],
-                notices,
-                payments,
-                amounts
-            );
+        uint256 amt
+    ) public {
+        require(makerAddr != msg.sender, 'Same person deal is not allowed');
+        // check collateral coverage if taking LEND to BORROW
+        if (side == MoneyMarket.Side.LEND && !collateral.isCovered(amt, msg.sender))
+            revert('Please upsize collateral');
+        uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
+        LoanBook storage book = loanMap[msg.sender];
+        LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
+        LoanItem memory newItem = inputToItem(input, rate);
+        book.loans.push(newItem);
+        book.isValue = true;
+        users.push(msg.sender);
+        emit SetLoanBook(msg.sender);
     }
 
     // helper to convert input data to LoanItem
@@ -220,27 +218,51 @@ contract Loan {
         return item;
     }
 
-    // to be called by market takers to register loan
-    function makeLoanDeal(
-        address makerAddr,
-        MoneyMarket.Side side,
-        MoneyMarket.Ccy ccy,
+    // helper to generate payment schedule dates
+    function getSchedule(
         MoneyMarket.Term term,
-        uint256 amt
-    ) public {
-        require(makerAddr != msg.sender, 'Same person deal is not allowed');
-        // check collateral coverage if taking LEND to BORROW
-        if (side == MoneyMarket.Side.LEND && !collateral.isCovered(amt, msg.sender))
-            revert('Please upsize collateral');
-        uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
-        LoanBook storage book = loanMap[msg.sender];
-        LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
-        LoanItem memory newItem = inputToItem(input, rate);
-        book.loans.push(newItem);
-        book.isValue = true;
-        users.push(msg.sender);
-        emit SetLoanBook(msg.sender);
+        uint256 amt,
+        uint256 rate
+    ) public view returns (Schedule memory) {
+        uint256[MAXYEAR] memory notices = SCHEDULES[uint256(term)];
+        uint256[MAXYEAR] memory payments = SCHEDULES[uint256(term)];
+        uint256[MAXYEAR] memory amounts = SCHEDULES[uint256(term)];
+        for (uint256 i = 0; i < PAYNUMS[uint256(term)]; i++) {
+            notices[i] += now - NOTICE;
+            payments[i] += now;
+            amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
+        }
+        return
+            Schedule(
+                now,
+                now + DAYS[uint256(term)],
+                notices,
+                payments,
+                amounts
+            );
     }
+
+    function getOneBook(address addr) public view returns (LoanBook memory) {
+        return loanMap[addr];
+    }
+
+    function getAllBooks() public view returns (LoanBook[] memory) {
+        LoanBook[] memory allBooks = new LoanBook[](users.length);
+        for (uint256 i = 0; i < users.length; i++) {
+            allBooks[i] = loanMap[users[i]];
+        }
+        return allBooks;
+    }
+
+    function getAllUsers() public view returns (address[] memory) {
+        return users;
+    }
+
+    /**@dev
+        State Management Section
+        1. update states
+        2. notify - confirm method to change states
+     */
 
     function updateState(address addr) public {
         // coupon
@@ -290,21 +312,14 @@ contract Loan {
 
     function confirmETHPayment() public {
         // TODO - confirm and notify for ETH
-        // Loan state: WORKING
-        // Collateral state: IN_USE
     }
 
-    function getOneBook(address addr) public view returns (LoanBook memory) {
-        return loanMap[addr];
-    }
-
-    function getAllBooks() public view returns (LoanBook[] memory) {
-        LoanBook[] memory allBooks = new LoanBook[](users.length);
-        for (uint256 i = 0; i < users.length; i++) {
-            allBooks[i] = loanMap[users[i]];
-        }
-        return allBooks;
-    }
+    /**@dev
+        Mark to Market Section
+        1. get discount factors from moneyMarket
+        2. get PV for each scheduled cashflow
+        3. update LoanItem with total value of PV
+     */
 
     // For Mark to Market
     function updateAllPV() public {

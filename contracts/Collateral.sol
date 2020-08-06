@@ -46,9 +46,6 @@ contract Collateral {
         State state;
     }
 
-    // TODO - modify inuseETH after loan is executed
-    // TODO - update loan mtm condition and change state
-
     struct ColInput {
         string id; // DID, email
         string userAddrFIL;
@@ -70,18 +67,22 @@ contract Collateral {
         fxMarket = FXMarket(fxAddr);
     }
 
+    // reset market contracts to interact if needed
+    function setMarketAddr(address moneyAddr, address fxAddr) public {
+        require(msg.sender == owner, 'only owner');
+        moneyMarket = MoneyMarket(moneyAddr);
+        fxMarket = FXMarket(fxAddr);
+    }
+
     // called after Loan contract is deployed
     function setLoanAddr(address loanAddr) public {
         require(msg.sender == owner, 'only owner');
         loan = Loan(loanAddr);
     }
 
-    // reset market contracts to interact
-    function setMarketAddr(address moneyAddr, address fxAddr) public {
-        require(msg.sender == owner, 'only owner');
-        moneyMarket = MoneyMarket(moneyAddr);
-        fxMarket = FXMarket(fxAddr);
-    }
+    /**@dev
+        Register a user and make a collateral book
+     */
 
     // register an user
     function setColBook(string memory id, string memory userAddrFIL)
@@ -143,6 +144,15 @@ contract Collateral {
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage;
     }
+
+    /**@dev
+        State Management Section
+        1. update states
+        2. notify - confirm method to change states
+
+        // TODO - modify inuseETH after loan is executed
+        // TODO - update loan mtm condition and change state
+     */
 
     // update state by coverage
     function updateState(address addr) public {
@@ -272,6 +282,13 @@ contract Collateral {
         return colMap[addr].state;
     }
 
+    /**dev
+        Update FIL Value in ETH Section
+        1. get the latest FILETH currency rate from fxMarket
+        2. apply FILETH rate to amtFIL and inuseFIL
+        3. update amtFILValue and inuseFILValue as ETH value
+     */
+
     // helper to get fx mid rate for valuation
     function getFILETH() public view returns (uint256) {
         uint256[1] memory rates = fxMarket.getMidRates();
@@ -297,6 +314,16 @@ contract Collateral {
                 FXMULT;
         }
     }
+
+    /**@dev
+        FIL Custody Address Section
+        1. emit message to request FIL custody address
+        2. register FIL custody address for the requester
+        3. random number can be generated from our market oracle
+        4. pick random FIL custody address and let others to input its balance
+        5. random verification updates FIL custody balance decentralized way
+        6. this is used when market makers want to set their bit/offer quote
+     */
 
     // to be called by market makers
     function requestFILCustodyAddr() public {
