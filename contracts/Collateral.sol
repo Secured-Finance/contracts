@@ -42,6 +42,7 @@ contract Collateral {
         uint256 inuseETH; // total PV of ETH loans
         uint256 inuseFIL; // total PV of FIL loans
         uint256 inuseFILValue; // total PV of FIL loans
+        uint256 coverage; // in PCT
         bool isAvailable;
         State state;
     }
@@ -114,17 +115,40 @@ contract Collateral {
         book.inuseETH = 0; // updated by ETH loan
         book.inuseFIL = 0; // updated by FIL loan
         book.inuseFILValue = 0;
+        book.coverage = 0;
         book.isAvailable = true;
-        book.state = msg.value > 0 ? State.AVAILABLE : State.EMPTY;
+        book.state = State.EMPTY;
+        // book.state = msg.value > 0 ? State.AVAILABLE : State.EMPTY;
         return book;
     }
 
+    // helper to make loan deal to check coverage and update ColBook
+    function useCollateral(
+        MoneyMarket.Ccy ccy,
+        uint256 amt,
+        address addr
+    ) public {
+        require(isCovered(amt, ccy, addr), 'Please upsize collateral');
+        ColBook storage book = colMap[addr];
+        if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH += amt;
+        if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL += amt;
+        updateFILValue(addr);
+    }
+
     // helper to check collateral coverage
-    function isCovered(uint256 amt, address addr) public view returns (bool) {
+    function isCovered(
+        uint256 amt,
+        MoneyMarket.Ccy ccy, // ETH or FIL
+        address addr
+    ) public view returns (bool) {
         require(colMap[addr].isAvailable, 'not registered yet');
         if (amt == 0) return true;
         ColBook memory book = colMap[addr];
-        uint256 totalUse = book.inuseETH + book.inuseFILValue + amt;
+        uint256 FILETH = getFILETH();
+        uint256 toBeUsed = ccy == MoneyMarket.Ccy.ETH
+            ? amt
+            : (amt * FILETH) / FXMULT;
+        uint256 totalUse = book.inuseETH + book.inuseFILValue + toBeUsed;
         uint256 totalAmt = book.amtETH + book.amtFILValue;
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage > MARGINLEVEL;
@@ -154,7 +178,22 @@ contract Collateral {
         // TODO - update loan mtm condition and change state
      */
 
-    // update state by coverage
+    // DEBUG
+    function addressToString(address _addr) public pure returns (string memory) {
+        bytes32 value = bytes32(uint256(_addr));
+        bytes memory alphabet = '0123456789abcdef';
+
+        bytes memory str = new bytes(51);
+        str[0] = '0';
+        str[1] = 'x';
+        for (uint256 i = 0; i < 20; i++) {
+            str[2 + i * 2] = alphabet[uint256(uint8(value[i + 12] >> 4))];
+            str[3 + i * 2] = alphabet[uint256(uint8(value[i + 12] & 0x0f))];
+        }
+        return string(str);
+    }
+
+    // update state and coverage
     function updateState(address addr) public {
         ColBook storage book = colMap[addr];
         if (book.state == State.PARTIAL_LIQUIDATION) return;
@@ -166,12 +205,13 @@ contract Collateral {
             if (totalAmt > 0) book.state = State.AVAILABLE;
         } else if (totalUse > 0) {
             uint256 coverage = (PCT * totalAmt) / totalUse;
-            if (totalAmt > 0 && coverage > MARGINLEVEL)
-                book.state = State.IN_USE;
-            if (totalAmt > 0 && coverage > AUTOLQLEVEL)
-                book.state = State.MARGIN_CALL;
+            book.coverage = coverage;
             if (totalAmt > 0 && coverage <= AUTOLQLEVEL)
                 book.state = State.LIQUIDATION;
+            if (totalAmt > 0 && coverage > AUTOLQLEVEL)
+                book.state = State.MARGIN_CALL;
+            if (totalAmt > 0 && coverage > MARGINLEVEL)
+                book.state = State.IN_USE;
         }
     }
 

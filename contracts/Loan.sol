@@ -39,7 +39,8 @@ contract Loan {
     // 24. Update Collateral Status
     // 25. Emit MARGIN_CALL or LIQUIDATION message
 
-    event SetLoanBook(address indexed sender);
+    event MakeLoanDeal(address indexed sender);
+    event NoitfyFILPayment(address indexed, string indexed txHash);
 
     enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
     enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}
@@ -113,10 +114,12 @@ contract Loan {
 
     struct LoanBook {
         LoanItem[] loans;
+        uint256 loanNum;
         bool isValue;
     }
 
     struct LoanItem {
+        uint256 loanId;
         address lender;
         address borrower;
         MoneyMarket.Side side;
@@ -179,26 +182,26 @@ contract Loan {
         uint256 amt
     ) public {
         require(makerAddr != msg.sender, 'Same person deal is not allowed');
-        // check collateral coverage if taking LEND to BORROW
-        if (side == MoneyMarket.Side.LEND && !collateral.isCovered(amt, msg.sender))
-            revert('Please upsize collateral');
+        if (side == MoneyMarket.Side.LEND)
+            collateral.useCollateral(ccy, amt, msg.sender);
         uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
         LoanBook storage book = loanMap[msg.sender];
         LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
-        LoanItem memory newItem = inputToItem(input, rate);
+        LoanItem memory newItem = inputToItem(input, rate, book.loanNum++);
         book.loans.push(newItem);
         book.isValue = true;
         users.push(msg.sender);
-        emit SetLoanBook(msg.sender);
+        emit MakeLoanDeal(msg.sender);
     }
 
     // helper to convert input data to LoanItem
-    function inputToItem(LoanInput memory input, uint256 rate)
-        private
-        view
-        returns (LoanItem memory)
-    {
+    function inputToItem(
+        LoanInput memory input,
+        uint256 rate,
+        uint256 loanId
+    ) private view returns (LoanItem memory) {
         LoanItem memory item;
+        item.loanId = loanId;
         item.lender = input.side == MoneyMarket.Side.LEND
             ? input.makerAddr
             : msg.sender;
@@ -242,6 +245,11 @@ contract Loan {
             );
     }
 
+    function getLoanItem(uint256 loanId) public returns (LoanItem memory) {
+        LoanBook memory book = getOneBook(msg.sender);
+        return book.loans[loanId];
+    }
+
     function getOneBook(address addr) public view returns (LoanBook memory) {
         return loanMap[addr];
     }
@@ -268,31 +276,37 @@ contract Loan {
         // coupon
         // WORKING -> DUE
         // DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
-
         // redemption
         // WORKING -> DUE
         // DUE -> PAST_DUE, IN_USE -> LIQUIDATION
-
         // margin call
         // IN_USE -> MARGINCALL (Collateral.sol) -> IN_USE or LIQUIDATION
     }
 
-    function updateAllState() public {
+    function updateAllState() public {}
 
-    }
-
+    // to be used by makers
     function notifyFILPayment(string memory txHash) public {
-        // TODO - input txHash for FIL and emit message 'Fund Arrived'
         // used for initial, coupon, redemption, liquidation
+        emit NoitfyFILPayment(msg.sender, txHash);
     }
 
-    function confirmFILPayment() public {
+    // to be used by takers
+    function confirmFILPayment(uint256 loanId) public {
         // TODO - confirm the loan amount in FIL
         // used for initial, coupon, redemption, liquidation
+
+        LoanBook storage book = loanMap[msg.sender];
+        LoanItem storage item = book.loans[loanId];
 
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
+        if (item.state == State.REGISTERED) {
+            require(msg.sender == item.borrower, 'borrower must confirm');
+            item.state = State.WORKING;
+            collateral.updateState(msg.sender);
+        }
 
         // coupon
         // DUE -> WORKING
