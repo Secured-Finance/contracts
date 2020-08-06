@@ -41,6 +41,7 @@ contract Loan {
 
     event MakeLoanDeal(address indexed sender);
     event NoitfyFILPayment(address indexed, string indexed txHash);
+    event ConfirmFILPayment(address indexed);
 
     enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
     enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}
@@ -245,10 +246,17 @@ contract Loan {
             );
     }
 
-    function getLoanItem(uint256 loanId) public returns (LoanItem memory) {
-        LoanBook memory book = getOneBook(msg.sender);
-        return book.loans[loanId];
-    }
+    // function getLoanState(uint256 loanId, address addr) public returns (uint256) {
+    //     // require(loanMap[msg.sender].isValue, 'no loan item found');
+    //     LoanBook memory book = getOneBook(addr);
+    //     return uint256(book.loans[loanId].state);
+    // }
+
+    // function getLoanItem(uint256 loanId) public returns (LoanItem memory) {
+    //     require(loanMap[msg.sender].isValue, 'no loan item found');
+    //     LoanBook memory book = getOneBook(msg.sender);
+    //     return book.loans[loanId];
+    // }
 
     function getOneBook(address addr) public view returns (LoanBook memory) {
         return loanMap[addr];
@@ -272,7 +280,18 @@ contract Loan {
         2. notify - confirm method to change states
      */
 
-    function updateState(address addr) public {
+    function updateState(uint256 loanId) public {
+        LoanBook storage book = loanMap[msg.sender];
+        LoanItem storage item = book.loans[loanId];
+        // initial
+        // REGISTERED -> WORKING
+        // AVAILABLE -> IN_USE
+        if (item.state == State.REGISTERED) {
+            require(msg.sender == item.borrower, 'borrower must confirm');
+            item.state = State.WORKING;
+            collateral.updateState(msg.sender);
+        }
+
         // coupon
         // WORKING -> DUE
         // DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
@@ -295,18 +314,14 @@ contract Loan {
     function confirmFILPayment(uint256 loanId) public {
         // TODO - confirm the loan amount in FIL
         // used for initial, coupon, redemption, liquidation
-
-        LoanBook storage book = loanMap[msg.sender];
-        LoanItem storage item = book.loans[loanId];
+        // LoanBook storage book = loanMap[msg.sender];
+        // LoanItem storage item = book.loans[loanId];
 
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
-        if (item.state == State.REGISTERED) {
-            require(msg.sender == item.borrower, 'borrower must confirm');
-            item.state = State.WORKING;
-            collateral.updateState(msg.sender);
-        }
+        updateState(loanId);
+        emit ConfirmFILPayment(msg.sender);
 
         // coupon
         // DUE -> WORKING

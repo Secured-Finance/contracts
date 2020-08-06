@@ -73,16 +73,16 @@ module.exports = function (deployer, network, accounts) {
     await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
     await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
 
+    /* Loan Execution Test */
+
     // Collateralize test
-    let colBook = await collateral.getOneBook(accounts[2]);
-    printCol(colBook, 'Registered');
+    await printCol(collateral, accounts[2], 'Registered');
     await collateral.upSizeETH({
       from: accounts[2],
       value: 20000, // 20000 ETH can cover about 244000 FIL
       // value: 1000000000000000000, // 1 ETH in wei
     });
-    colBook = await collateral.getOneBook(accounts[2]);
-    printCol(colBook, 'upSizeETH (ETH 21200 added)');
+    await printCol(collateral, accounts[2], 'upSizeETH (ETH 21200 added)');
 
     // makeLoanDeal test
     input = sample.Loan;
@@ -105,15 +105,24 @@ module.exports = function (deployer, network, accounts) {
         from: taker,
       },
     );
-    colBook = await collateral.getOneBook(taker);
-    printCol(colBook, 'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)');
+    await printCol(
+      collateral,
+      accounts[2],
+      'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
+    );
+    await printLoan(loan, accounts[2], '');
 
     // confirm FIL payment test
     await loan.confirmFILPayment(0, {
       from: accounts[2],
     });
-    colBook = await collateral.getOneBook(taker);
-    printCol(colBook, 'confirmFILPayment (coverage 174%())');
+
+    await printCol(
+      collateral,
+      accounts[2],
+      'confirmFILPayment (coverage 174%())',
+    );
+    await printLoan(loan, accounts[2], '');
 
     let afterLoan = await moneyMarket.getOneItem(
       input.makerAddr,
@@ -121,9 +130,14 @@ module.exports = function (deployer, network, accounts) {
       input.ccy,
       input.term,
     );
-    console.log('FIL loan market before', beforeLoan.amt, 'FIL loan market after', afterLoan.amt);
+    console.log(
+      'FIL loan market before',
+      beforeLoan.amt,
+      'FIL loan market after',
+      afterLoan.amt,
+    );
 
-    // // loan item test
+    // loan item test
     // let book = await loan.getOneBook(taker);
     // let loanItem = book.loans[0];
     // printDate(loanItem.schedule.notices);
@@ -228,7 +242,8 @@ const printNum = (arr) => {
   console.log(rv);
 };
 
-const printCol = (book, msg) => {
+const printCol = async (col, addr, msg) => {
+  let book = await col.getOneBook(addr);
   let states = [
     'EMPTY',
     'AVAILABLE',
@@ -245,4 +260,23 @@ const printCol = (book, msg) => {
     `\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILVale ${book.inuseFILValue}`,
   );
   console.log(`\tcoverage ${book.coverage}\tstate ${states[book.state]}\n`);
+};
+
+const printLoan = async (loan, addr, msg) => {
+  let book = await loan.getOneBook(addr);
+  let item = book.loans[0];
+  let states = [
+    'REGISTERED',
+    'WORKING',
+    'DUE',
+    'PAST_DUE',
+    'CLOSED',
+    'TERMINATED',
+  ];
+  if (msg.length > 0) console.log(msg);
+  console.log(
+    `\tloan ${item.amt}\trate ${item.rate / 100}%\tstate ${
+      states[item.state]
+    }\n`,
+  );
 };
