@@ -1,5 +1,7 @@
 # Secured Finance Smart Contracts
 
+[![badge](https://img.shields.io/badge/submit%20for-HackFS-blue)](https://hack.ethglobal.co/showcase/secured-finance-recTkx6c1RDoLeaQm)
+
 This contains Solidity smartcontracts to deploy to Ethereum network using Truffle framework or Web3.js.
 
 ## Quick Start

@@ -75,67 +75,67 @@ module.exports = function (deployer, network, accounts) {
 
     /* Loan Execution Test */
 
-    // Collateralize test
-    await printCol(collateral, accounts[2], 'Registered');
-    await collateral.upSizeETH({
-      from: accounts[2],
-      value: 20000, // 20000 ETH can cover about 244000 FIL
-      // value: 1000000000000000000, // 1 ETH in wei
-    });
-    await printCol(collateral, accounts[2], 'upSizeETH (ETH 21200 added)');
+    // // Collateralize test
+    // await printCol(collateral, accounts[2], 'Registered');
+    // await collateral.upSizeETH({
+    //   from: accounts[2],
+    //   value: 20000, // 20000 ETH can cover about 244000 FIL
+    //   // value: 1000000000000000000, // 1 ETH in wei
+    // });
+    // await printCol(collateral, accounts[2], 'upSizeETH (ETH 21200 added)');
 
-    // makeLoanDeal test
-    input = sample.Loan;
-    let beforeLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-    );
+    // // makeLoanDeal test
+    // input = sample.Loan;
+    // let beforeLoan = await moneyMarket.getOneItem(
+    //   input.makerAddr,
+    //   input.side,
+    //   input.ccy,
+    //   input.term,
+    // );
 
-    // Init Loan with sample data
-    let taker = accounts[2];
-    await loan.makeLoanDeal(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-      input.amt,
-      {
-        from: taker,
-      },
-    );
-    await printCol(
-      collateral,
-      accounts[2],
-      'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
-    );
-    await printLoan(loan, accounts[2], '');
+    // // Init Loan with sample data
+    // let taker = accounts[2];
+    // await loan.makeLoanDeal(
+    //   input.makerAddr,
+    //   input.side,
+    //   input.ccy,
+    //   input.term,
+    //   input.amt,
+    //   {
+    //     from: taker,
+    //   },
+    // );
+    // await printCol(
+    //   collateral,
+    //   accounts[2],
+    //   'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
+    // );
+    // await printLoan(loan, accounts[2], '');
 
-    // confirm FIL payment test
-    await loan.confirmFILPayment(0, {
-      from: accounts[2],
-    });
+    // // confirm FIL payment test
+    // await loan.confirmFILPayment(0, {
+    //   from: accounts[2],
+    // });
 
-    await printCol(
-      collateral,
-      accounts[2],
-      'confirmFILPayment (coverage 174%())',
-    );
-    await printLoan(loan, accounts[2], '');
+    // await printCol(
+    //   collateral,
+    //   accounts[2],
+    //   'confirmFILPayment (coverage 174%())',
+    // );
+    // await printLoan(loan, accounts[2], '');
 
-    let afterLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-    );
-    console.log(
-      'FIL loan market before',
-      beforeLoan.amt,
-      'FIL loan market after',
-      afterLoan.amt,
-    );
+    // let afterLoan = await moneyMarket.getOneItem(
+    //   input.makerAddr,
+    //   input.side,
+    //   input.ccy,
+    //   input.term,
+    // );
+    // console.log(
+    //   'FIL loan market before',
+    //   beforeLoan.amt,
+    //   'FIL loan market after',
+    //   afterLoan.amt,
+    // );
 
     // loan item test
     // let book = await loan.getOneBook(taker);

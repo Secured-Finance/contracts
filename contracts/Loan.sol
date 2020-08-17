@@ -121,8 +121,8 @@ contract Loan {
 
     struct LoanItem {
         uint256 loanId;
-        address lender;
-        address borrower;
+        address lender; // ETH
+        address borrower; // ETH
         MoneyMarket.Side side;
         MoneyMarket.Ccy ccy;
         MoneyMarket.Term term;
