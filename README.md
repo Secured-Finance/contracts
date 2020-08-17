@@ -19,7 +19,7 @@ Contracts written in Solidity will be placed in `./contracts` directory. (see tr
 - Collateral.sol: This is a collateral manager to control funds ownership based on its states `EMPTY`, `AVAILABLE`, `IN_USE`, `MARGIN_CALL`, `PARTIAL_LIQUIDATION`, `LIQUIDATION`.
 - Loan.sol: This is a loan manager for payment scheduling and mark to markets for margin call, and update its states `REGISTERED`, `WORKING`, `DUE`, `PAST_DUE`, `CLOSED`, `TERMINATED`.
 
-## Environment variables``
+## Environment variables
 
 Please refer to `.env.sample` and create `.env` to provide secret info such as private keys, Infura ID.
 
