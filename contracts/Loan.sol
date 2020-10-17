@@ -374,9 +374,11 @@ contract Loan {
         view
         returns (uint256)
     {
-        if (date == 0) return BP;
+        // if (date == 0) return BP;
+        if (date <= now) return 0;
         uint256 time = date - now;
-        if (time <= SECONDS[0]) return (dfArr[0] * SECONDS[0]) / time;
+        if (time <= SECONDS[0]) return (dfArr[0] * time) / SECONDS[0];
+        // if (time <= SECONDS[0]) return (dfArr[0] * SECONDS[0]) / time;
         for (uint256 i = 1; i < NUMDF; i++) {
             if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
                 uint256 left = time - SECONDS[i - 1];
