@@ -1,7 +1,7 @@
 {
-  "name": "hello-token",
-  "version": "0.0.1",
-  "description": "simple smart contract environment",
+  "name": "secured-finance",
+  "version": "0.0.2",
+  "description": "peer-to-peer financial transaction platform",
   "directories": {
     "test": "test"
   },
@@ -19,7 +19,8 @@
     "eslint": "^7.5.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "prettier": "^2.0.5",
+    "prettier": "^2.1.2",
+    "prettier-plugin-solidity": "^1.0.0-alpha.59",
     "truffle": "^5.1.35"
   }
 }

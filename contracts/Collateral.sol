@@ -179,7 +179,11 @@ contract Collateral {
      */
 
     // DEBUG
-    function addressToString(address _addr) public pure returns (string memory) {
+    function addressToString(address _addr)
+        public
+        pure
+        returns (string memory)
+    {
         bytes32 value = bytes32(uint256(_addr));
         bytes memory alphabet = '0123456789abcdef';
 
