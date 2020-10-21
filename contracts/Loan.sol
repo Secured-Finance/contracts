@@ -41,7 +41,7 @@ contract Loan {
 
     event MakeLoanDeal(address indexed sender);
     event NoitfyFILPayment(address indexed, string indexed txHash);
-    event ConfirmFILPayment(address indexed);
+    event ConfirmFILPayment(address indexed sender);
 
     enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
     enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}

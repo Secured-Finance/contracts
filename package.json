@@ -6,19 +6,23 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npx ts-node ./test/web3Test"
+    "test": "mocha --exit --recursive",
+    "test2": "npx ts-node ./test/web3Test"
   },
   "author": "Senshi",
   "license": "ISC",
-  "dependencies": {
-    "web3": "^1.2.11"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@openzeppelin/test-environment": "^0.1.5",
+    "@openzeppelin/test-helpers": "^0.5.7",
     "@truffle/hdwallet-provider": "^1.0.39",
+    "babel-eslint": "^10.1.0",
+    "chai": "^4.2.0",
     "dotenv": "^8.2.0",
     "eslint": "^7.5.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.4",
+    "mocha": "^8.2.0",
     "prettier": "^2.1.2",
     "prettier-plugin-solidity": "^1.0.0-alpha.59",
     "truffle": "^5.1.35"

@@ -8,9 +8,10 @@
         "useTabs": false,
         "singleQuote": true,
         "bracketSpacing": false,
-        "explicitTypes": "always",
-        "trailingComma": "all"
+        "explicitTypes": "always"
       }
     }
-  ]
+  ],
+  "singleQuote": true,
+  "trailingComma": "all"
 }
