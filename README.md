@@ -44,3 +44,8 @@ There are two ways to deploy. By A) Truffle or B) Web3.js.
 A sample test file `./test/web3Test.ts` is provided. It uses `./src/services/web3/web3.service.ts` library.
 
 The web3.service is created to deploy smart contracts, send transactions, and interact with smart contracts.
+
+## Unit Test
+ `npx mocha --exit` to run test/test.js
+
+ 
