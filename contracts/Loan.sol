@@ -41,7 +41,7 @@ contract Loan {
 
     event MakeLoanDeal(address indexed sender);
     event NoitfyFILPayment(address indexed, string indexed txHash);
-    event ConfirmFILPayment(address indexed);
+    event ConfirmFILPayment(address indexed sender);
 
     enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
     enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}
@@ -374,9 +374,11 @@ contract Loan {
         view
         returns (uint256)
     {
-        if (date == 0) return BP;
+        // if (date == 0) return BP;
+        if (date <= now) return 0;
         uint256 time = date - now;
-        if (time <= SECONDS[0]) return (dfArr[0] * SECONDS[0]) / time;
+        if (time <= SECONDS[0]) return (dfArr[0] * time) / SECONDS[0];
+        // if (time <= SECONDS[0]) return (dfArr[0] * SECONDS[0]) / time;
         for (uint256 i = 1; i < NUMDF; i++) {
             if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
                 uint256 left = time - SECONDS[i - 1];

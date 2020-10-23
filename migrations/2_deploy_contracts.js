@@ -3,15 +3,6 @@ const FXMarket = artifacts.require('FXMarket');
 const Collateral = artifacts.require('Collateral');
 const Loan = artifacts.require('Loan');
 
-/* DEFAULT */
-// module.exports = function(deployer) {
-//   deployer.deploy(MoneyMarket);
-//   deployer.deploy(FXMarket);
-//   deployer.deploy(Collateral);
-//   deployer.deploy(Loan);
-// };
-
-/* DEBUG */
 // 1) truffle compile
 // 2) truffle develop
 // 3) migrate --reset
@@ -32,48 +23,54 @@ module.exports = function (deployer, network, accounts) {
     );
     await collateral.setLoanAddr(loan.address); // set Loan address
 
-    console.log('moneyMarket addr is', moneyMarket.address);
-    console.log('fxMarket addr is', fxMarket.address);
-    console.log('collateral addr is', collateral.address);
-    console.log('loan addr is', loan.address);
-    console.log('\n');
+    // // Deployed
+    // const moneyMarket = await MoneyMarket.deployed();
+    // const fxMarket = await FXMarket.deployed();
+    // const collateral = await Collateral.deployed();
+    // const loan = await Collateral.deployed();
 
-    // Init MoneyMarket with sample data
-    let input = sample.MoneyMarket;
-    await moneyMarket.setMoneyMarketBook(
-      input.ccy,
-      input.lenders,
-      input.borrowers,
-      input.effectiveSec,
-    );
+    // console.log('moneyMarket addr is', moneyMarket.address);
+    // console.log('fxMarket addr is', fxMarket.address);
+    // console.log('collateral addr is', collateral.address);
+    // console.log('loan addr is', loan.address);
+    // console.log('\n');
 
-    // Init FXMarket with sample data
-    input = sample.FXMarket;
-    await fxMarket.setFXBook(
-      input.pair,
-      input.offerInput,
-      input.bidInput,
-      input.effectiveSec,
-    );
+    // // Init MoneyMarket with sample data
+    // let input = sample.MoneyMarket;
+    // await moneyMarket.setMoneyMarketBook(
+    //   input.ccy,
+    //   input.lenders,
+    //   input.borrowers,
+    //   input.effectiveSec,
+    // );
 
-    // Init Collateral with sample data
-    input = sample.Collateral;
-    await collateral.setColBook(input[0].id, input[0].addrFIL, {
-      from: accounts[0],
-      value: 10000,
-    });
-    await collateral.setColBook(input[1].id, input[1].addrFIL, {
-      from: accounts[1],
-      value: 10000,
-    });
-    await collateral.setColBook(input[2].id, input[2].addrFIL, {
-      from: accounts[2],
-    });
-    await collateral.registerFILCustodyAddr('cid_custody_FIL_0', accounts[0]);
-    await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
-    await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
+    // // Init FXMarket with sample data
+    // input = sample.FXMarket;
+    // await fxMarket.setFXBook(
+    //   input.pair,
+    //   input.offerInput,
+    //   input.bidInput,
+    //   input.effectiveSec,
+    // );
 
-    /* Loan Execution Test */
+    // // Init Collateral with sample data
+    // input = sample.Collateral;
+    // await collateral.setColBook(input[0].id, input[0].addrFIL, {
+    //   from: accounts[0],
+    //   value: 10000,
+    // });
+    // await collateral.setColBook(input[1].id, input[1].addrFIL, {
+    //   from: accounts[1],
+    //   value: 10000,
+    // });
+    // await collateral.setColBook(input[2].id, input[2].addrFIL, {
+    //   from: accounts[2],
+    // });
+    // await collateral.registerFILCustodyAddr('cid_custody_FIL_0', accounts[0]);
+    // await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
+    // await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
+
+    // /* Loan Execution Test */
 
     // // Collateralize test
     // await printCol(collateral, accounts[2], 'Registered');
@@ -120,7 +117,7 @@ module.exports = function (deployer, network, accounts) {
     // await printCol(
     //   collateral,
     //   accounts[2],
-    //   'confirmFILPayment (coverage 174%())',
+    //   'confirmFILPayment (coverage 174%)',
     // );
     // await printLoan(loan, accounts[2], '');
 
@@ -137,7 +134,7 @@ module.exports = function (deployer, network, accounts) {
     //   afterLoan.amt,
     // );
 
-    // loan item test
+    // // loan item test
     // let book = await loan.getOneBook(taker);
     // let loanItem = book.loans[0];
     // printDate(loanItem.schedule.notices);

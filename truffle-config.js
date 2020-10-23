@@ -14,7 +14,7 @@ const ropstenProvider = infuraProvider('ropsten');
 
 module.exports = {
   contracts_directory: './contracts',
-  contracts_build_directory: './contracts',
+  contracts_build_directory: './build/contracts',
   migrations_directory: './migrations',
   networks: {
     development: {
@@ -43,7 +43,7 @@ module.exports = {
       settings: {
         optimizer: {
           enabled: true, // Default: false
-          runs: 0, // Default: 200
+          runs: 200, // Default: 200
         },
       },
     },
