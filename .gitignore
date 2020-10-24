@@ -4,10 +4,10 @@ node_modules
 .npm
 .env
 /dist
-/build
 
 *.bak
 .DS_Store
 .vscode
 .gitattributes
 package-lock.json
+./build/contracts/*.json

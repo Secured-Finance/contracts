@@ -168,8 +168,7 @@
       "name": "setColBook",
       "outputs": [],
       "stateMutability": "payable",
-      "type": "function",
-      "payable": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -221,8 +220,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -246,8 +244,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -266,8 +263,7 @@
         }
       ],
       "stateMutability": "pure",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -353,8 +349,7 @@
       "name": "upSizeETH",
       "outputs": [],
       "stateMutability": "payable",
-      "type": "function",
-      "payable": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -367,8 +362,7 @@
       "name": "upSizeFIL",
       "outputs": [],
       "stateMutability": "payable",
-      "type": "function",
-      "payable": true
+      "type": "function"
     },
     {
       "inputs": [],
@@ -461,8 +455,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [],
@@ -542,8 +535,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [],
@@ -556,8 +548,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -576,8 +567,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [],
@@ -590,8 +580,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -649,8 +638,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -669,8 +657,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -689,8 +676,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     }
   ],
   "metadata": "{\"compiler\":{\"version\":\"0.6.12+commit.27d51765\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"moneyAddr\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fxAddr\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"DEBUG\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"DelColBook\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"PartialLiquidation\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"requester\",\"type\":\"address\"}],\"name\":\"RegisterFILCustodyAddr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RequestFILCustodyAddr\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"SetColBook\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"UpSizeETH\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"UpSizeFIL\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_addr\",\"type\":\"address\"}],\"name\":\"addressToString\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"delColBook\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBooks\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"addrETH\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"addrFIL\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"userAddrFIL\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amtETH\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amtFIL\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amtFILValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inuseETH\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inuseFIL\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inuseFILValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"coverage\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isAvailable\",\"type\":\"bool\"},{\"internalType\":\"enum Collateral.State\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"struct Collateral.ColBook[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllFILCustodyAddr\",\"outputs\":[{\"internalType\":\"string[]\",\"name\":\"\",\"type\":\"string[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllUsers\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getColState\",\"outputs\":[{\"internalType\":\"enum Collateral.State\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amt\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getCoverage\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFILETH\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getOneBook\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"addrETH\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"addrFIL\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"userAddrFIL\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amtETH\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amtFIL\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amtFILValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inuseETH\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inuseFIL\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"inuseFILValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"coverage\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isAvailable\",\"type\":\"bool\"},{\"internalType\":\"enum Collateral.State\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"struct Collateral.ColBook\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"seed\",\"type\":\"uint256\"}],\"name\":\"getRandFILCustodyAddr\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"seed\",\"type\":\"uint256\"}],\"name\":\"getRandom\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amt\",\"type\":\"uint256\"},{\"internalType\":\"enum MoneyMarket.Ccy\",\"name\":\"ccy\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isCovered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"borrower\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"liquiadtion\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"borrower\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"partialLiquidation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"borrower\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"liquidProvider\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"recoverPartialLiquidation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"addrFIL\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"requester\",\"type\":\"address\"}],\"name\":\"registerFILCustodyAddr\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"requestFILCustodyAddr\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"id\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"userAddrFIL\",\"type\":\"string\"}],\"name\":\"setColBook\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"loanAddr\",\"type\":\"address\"}],\"name\":\"setLoanAddr\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"moneyAddr\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"fxAddr\",\"type\":\"address\"}],\"name\":\"setMarketAddr\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"upSizeETH\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"amtFIL\",\"type\":\"uint256\"}],\"name\":\"upSizeFIL\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"updateAllFILValue\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"updateAllState\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"updateFILValue\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"updateState\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enum MoneyMarket.Ccy\",\"name\":\"ccy\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"amt\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"useCollateral\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"addressToString(address)\":{\"details\":\"State Management Section 1. update states 2. notify - confirm method to change states // TODO - modify inuseETH after loan is executed // TODO - update loan mtm condition and change state\"},\"requestFILCustodyAddr()\":{\"details\":\"FIL Custody Address Section 1. emit message to request FIL custody address 2. register FIL custody address for the requester 3. random number can be generated from our market oracle 4. pick random FIL custody address and let others to input its balance 5. random verification updates FIL custody balance decentralized way 6. this is used when market makers want to set their bit/offer quote\"},\"setColBook(string,string)\":{\"details\":\"Register a user and make a collateral book\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getFILETH()\":{\"notice\":\"dev Update FIL Value in ETH Section 1. get the latest FILETH currency rate from fxMarket 2. apply FILETH rate to amtFIL and inuseFIL 3. update amtFILValue and inuseFILValue as ETH value\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/Users/user/tmp/secured-finance/smart-contracts/contracts/Collateral.sol\":\"Collateral\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"/Users/user/tmp/secured-finance/smart-contracts/contracts/Collateral.sol\":{\"keccak256\":\"0x6081513ad23e8a0285b11318354496455af6d19cf119b1bf628c89511d9be207\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://df6e0785a5861bd64218f2727f73df5175f71a2d2a72d36b44a43bc6bc42945c\",\"dweb:/ipfs/QmQkuZvvtsx8JuK3F7wtehUFJGte3QLg4fNtXnPL6ZRqnJ\"]},\"/Users/user/tmp/secured-finance/smart-contracts/contracts/FXMarket.sol\":{\"keccak256\":\"0x693e3ef4c4b94f10c6b0e95be8f990a49bf8a3f1b5a3fdbf5703b8b249b000bc\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9b8dfebfe95a0ee794205305b73806826caae8248efb3a5a8522a1a19fb0ab6b\",\"dweb:/ipfs/QmX27BNWiYkch9cwCUCfLvvVarGD7jELZJPdsLvcoQBoQr\"]},\"/Users/user/tmp/secured-finance/smart-contracts/contracts/Loan.sol\":{\"keccak256\":\"0x2960ee371c9deb71682fe676421c690a13067455735ab73603ae76e449f7cfcb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6467409484b81f4852dad861501946a358ab5820f2ec4bac190fdd1b1b66d382\",\"dweb:/ipfs/QmSG5grgwPUGADAqC19VkMFGgCyLfVdWbiuca1Zk37SETK\"]},\"/Users/user/tmp/secured-finance/smart-contracts/contracts/MoneyMarket.sol\":{\"keccak256\":\"0x80875b9037cab819365eabec97013164eab63c6780bb99afca45ffcded3613a1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://e8a9d0e865d28ebc16663a91aca149bf2556c9a9f9d92f3c5978ff836e692aab\",\"dweb:/ipfs/QmbTuXPiVKvhGpqAux3GuEw3visy3LvLq7t8q2Trw9m1M5\"]}},\"version\":1}",
@@ -42917,8 +42903,7 @@
     }
   },
   "schemaVersion": "3.2.4",
-  "updatedAt": "2020-10-24T09:45:26.216Z",
-  "networkType": "ethereum",
+  "updatedAt": "2020-10-24T09:51:51.533Z",
   "devdoc": {
     "kind": "dev",
     "methods": {
