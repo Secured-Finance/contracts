@@ -1,6 +1,6 @@
 # Secured Finance Smart Contracts
 
-[![badge](https://img.shields.io/badge/submit%20for-HackFS-blue)](https://hack.ethglobal.co/showcase/secured-finance-recTkx6c1RDoLeaQm)
+[![badge](https://img.shields.io/badge/submit%20for-HackFS-blue)](https://hack.ethglobal.co/showcase/secured-finance-recTkx6c1RDoLeaQm) [![badge](https://img.shields.io/badge/submit%20for-ETHOnline-ffe4b4)](https://hack.ethglobal.co/showcase/secured-finance-recJiyE8KWrV5VyHi)
 
 This contains Solidity smartcontracts to deploy to Ethereum network using Truffle framework or Web3.js.
 
@@ -46,6 +46,12 @@ A sample test file `./test/web3Test.ts` is provided. It uses `./src/services/web
 The web3.service is created to deploy smart contracts, send transactions, and interact with smart contracts.
 
 ## Unit Test
- `npx mocha --exit` to run test/test.js
 
- 
+### On-chain test
+
+1. `truffle develop` to prepare for local network
+2. `truffle exec ./scripts/test.js` to run test.js using truffle exec
+
+### Off-chain test (simulate blockchain)
+
+`npx mocha --exit` to run test/test.js using @openzappelin/test-environment
