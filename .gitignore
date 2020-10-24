@@ -6,7 +6,7 @@ node_modules
 /dist
 
 *.bak
-contracts/*.json
+build/contracts/*.json
 .DS_Store
 .vscode
 .gitattributes

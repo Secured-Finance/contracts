@@ -2,7 +2,8 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './Market.sol';
+import './MoneyMarket.sol';
+import './FXMarket.sol';
 import './Collateral.sol';
 
 contract Loan {
