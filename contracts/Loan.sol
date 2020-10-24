@@ -52,7 +52,7 @@ contract Loan {
     uint256 constant FXMULT = 1000; // convert FILETH = 0.085 to 85
     uint256 constant PAYFREQ = 1; // annualy
     uint256 constant NOTICE = 2 weeks;
-    uint256 constant NUMCCY = 2;
+    uint256 constant NUMCCY = 3;
     uint256 constant NUMTERM = 6;
     uint256 constant NUMDF = 7; // numbef of discount factors
     uint256 constant MAXYEAR = 5; // years

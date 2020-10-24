@@ -8,11 +8,11 @@ contract MoneyMarket {
     event DelOneItem(address indexed sender);
     event TakeOneItem(address indexed sender);
 
-    enum Ccy {ETH, FIL}
+    enum Ccy {ETH, FIL, USDC}
     enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
     enum Side {LEND, BORROW}
 
-    uint256 constant NUMCCY = 2;
+    uint256 constant NUMCCY = 3;
     uint256 constant NUMTERM = 6;
     uint256 constant NUMDF = 7; // numbef of discount factors
     uint256 constant BP = 10000; // basis point
@@ -50,7 +50,7 @@ contract MoneyMarket {
     }
 
     // keeps all the records
-    // MoneyMarketBook [0] for ETH, [1] for FIL
+    // MoneyMarketBook [0] for ETH, [1] for FIL, [2] for USDC
     mapping(address => MoneyMarketBook) private moneyMarketMap;
     address[] private marketMakers;
 
@@ -281,10 +281,12 @@ contract MoneyMarket {
         uint256[NUMTERM][NUMCCY] memory mkt = getMidRates();
         uint256[NUMDF][NUMCCY] memory rates = [
             [mkt[0][0], mkt[0][1], mkt[0][2], mkt[0][3], mkt[0][4], (mkt[0][4] + mkt[0][5])/2, mkt[0][5]],
-            [mkt[1][0], mkt[1][1], mkt[1][2], mkt[1][3], mkt[1][4], (mkt[1][4] + mkt[1][5])/2, mkt[1][5]]
+            [mkt[1][0], mkt[1][1], mkt[1][2], mkt[1][3], mkt[1][4], (mkt[1][4] + mkt[1][5])/2, mkt[1][5]],
+            [mkt[2][0], mkt[2][1], mkt[2][2], mkt[2][3], mkt[2][4], (mkt[2][4] + mkt[2][5])/2, mkt[2][5]]
         ];
         DiscountFactor memory dfETH = genDF(rates[0]);
         DiscountFactor memory dfFIL = genDF(rates[1]);
-        return [dfETH, dfFIL];
+        DiscountFactor memory dfUSDC = genDF(rates[2]);
+        return [dfETH, dfFIL, dfUSDC];
     }
 }
