@@ -36,9 +36,9 @@ const printCol = async (col, addr, msg) => {
     `\tamtETH ${book.amtETH}\tamtFIL ${book.amtFIL}\tamtFILValue ${book.amtFILValue}`,
   );
   console.log(
-    `\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILVuale ${book.inuseFILValue}`,
+    `\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILValue ${book.inuseFILValue}`,
   );
-  console.log(`\tcoverage ${book.coverage}\tstate ${states[book.state]}\n`);
+  console.log(`\tcoverage ${book.coverage}%\tstate ${states[book.state]}\n`);
 };
 
 const printLoan = async (loan, addr, msg) => {

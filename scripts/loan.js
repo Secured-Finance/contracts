@@ -112,10 +112,9 @@ module.exports = async function main(callback) {
     await printCol(collateral, accounts[2], 'Registered');
     await collateral.upSizeETH({
       from: accounts[2],
-      value: 20000, // 20000 ETH can cover about 244000 FIL
-      // value: 1000000000000000000, // 1 ETH in wei
+      value: 2000, // 2000 ETH can cover about 24400 FIL
     });
-    await printCol(collateral, accounts[2], 'upSizeETH (ETH 21200 added)');
+    await printCol(collateral, accounts[2], 'upSizeETH (ETH 2000 added)');
 
     // makeLoanDeal test
     input = sample.Loan;
@@ -142,7 +141,7 @@ module.exports = async function main(callback) {
     await printCol(
       collateral,
       accounts[2],
-      'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
+      'makeLoanDeal (borrow FIL 14001, FILETH is 0.082)',
     );
     await printLoan(loan, accounts[2], '');
 
