@@ -42,7 +42,7 @@ describe('MoneyMarket', () => {
   });
 
   it('Init MoneyMarket with sample data', async () => {
-    let input = sample.MoneyMarket;
+    let input = sample.MoneyMarket[1];
     let res = await moneyMarket.setMoneyMarketBook(
       input.ccy,
       input.lenders,
@@ -54,7 +54,7 @@ describe('MoneyMarket', () => {
   });
 
   it('Init FXMarket with sample data', async () => {
-    let input = sample.FXMarket;
+    let input = sample.FXMarket[0];
     let res = await fxMarket.setFXBook(
       input.pair,
       input.offerInput,
@@ -84,7 +84,7 @@ describe('MoneyMarket', () => {
       Ccy.FIL,
       Term._3m,
     );
-    expect(item.amt).to.equal('100000');
+    expect(item.amt).to.equal('10000');
   });
 
   it('Check time forward', async () => {

@@ -121,7 +121,7 @@ const sample = {
     side: 0, // LEND
     ccy: 1, // FIL
     term: 5, // _5y
-    amt: 150000 - 9999,
+    amt: 15000 - 999,
   },
 };
 

@@ -89,94 +89,94 @@ module.exports = async function main(callback) {
     console.log('midRates is');
     printNum(midRates);
 
-    // // Init Collateral with sample data
-    // input = sample.Collateral;
-    // await collateral.setColBook(input[0].id, input[0].addrFIL, {
-    //   from: accounts[0],
-    //   value: 10000,
-    // });
-    // await collateral.setColBook(input[1].id, input[1].addrFIL, {
-    //   from: accounts[1],
-    //   value: 10000,
-    // });
-    // await collateral.setColBook(input[2].id, input[2].addrFIL, {
-    //   from: accounts[2],
-    // });
-    // await collateral.registerFILCustodyAddr('cid_custody_FIL_0', accounts[0]);
-    // await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
-    // await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
+    // Init Collateral with sample data
+    input = sample.Collateral;
+    await collateral.setColBook(input[0].id, input[0].addrFIL, {
+      from: accounts[0],
+      value: 10000,
+    });
+    await collateral.setColBook(input[1].id, input[1].addrFIL, {
+      from: accounts[1],
+      value: 10000,
+    });
+    await collateral.setColBook(input[2].id, input[2].addrFIL, {
+      from: accounts[2],
+    });
+    await collateral.registerFILCustodyAddr('cid_custody_FIL_0', accounts[0]);
+    await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
+    await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
 
-    // /* Loan Execution Test */
+    /* Loan Execution Test */
 
-    // // Collateralize test
-    // await printCol(collateral, accounts[2], 'Registered');
-    // await collateral.upSizeETH({
-    //   from: accounts[2],
-    //   value: 20000, // 20000 ETH can cover about 244000 FIL
-    //   // value: 1000000000000000000, // 1 ETH in wei
-    // });
-    // await printCol(collateral, accounts[2], 'upSizeETH (ETH 21200 added)');
+    // Collateralize test
+    await printCol(collateral, accounts[2], 'Registered');
+    await collateral.upSizeETH({
+      from: accounts[2],
+      value: 20000, // 20000 ETH can cover about 244000 FIL
+      // value: 1000000000000000000, // 1 ETH in wei
+    });
+    await printCol(collateral, accounts[2], 'upSizeETH (ETH 21200 added)');
 
-    // // makeLoanDeal test
-    // input = sample.Loan;
-    // input.makerAddr = accounts[0];
-    // let beforeLoan = await moneyMarket.getOneItem(
-    //   input.makerAddr,
-    //   input.side,
-    //   input.ccy,
-    //   input.term,
-    // );
+    // makeLoanDeal test
+    input = sample.Loan;
+    input.makerAddr = accounts[0];
+    let beforeLoan = await moneyMarket.getOneItem(
+      input.makerAddr,
+      input.side,
+      input.ccy,
+      input.term,
+    );
 
-    // // Init Loan with sample data
-    // let taker = accounts[2];
-    // await loan.makeLoanDeal(
-    //   input.makerAddr,
-    //   input.side,
-    //   input.ccy,
-    //   input.term,
-    //   input.amt,
-    //   {
-    //     from: taker,
-    //   },
-    // );
-    // await printCol(
-    //   collateral,
-    //   accounts[2],
-    //   'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
-    // );
-    // await printLoan(loan, accounts[2], '');
+    // Init Loan with sample data
+    let taker = accounts[2];
+    await loan.makeLoanDeal(
+      input.makerAddr,
+      input.side,
+      input.ccy,
+      input.term,
+      input.amt,
+      {
+        from: taker,
+      },
+    );
+    await printCol(
+      collateral,
+      accounts[2],
+      'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
+    );
+    await printLoan(loan, accounts[2], '');
 
-    // // confirm FIL payment test
-    // await loan.confirmFILPayment(0, {
-    //   from: accounts[2],
-    // });
+    // confirm FIL payment test
+    await loan.confirmFILPayment(0, {
+      from: accounts[2],
+    });
 
-    // await printCol(
-    //   collateral,
-    //   accounts[2],
-    //   'confirmFILPayment (coverage 174%)',
-    // );
-    // await printLoan(loan, accounts[2], '');
+    await printCol(
+      collateral,
+      accounts[2],
+      'confirmFILPayment (coverage 174%)',
+    );
+    await printLoan(loan, accounts[2], '');
 
-    // let afterLoan = await moneyMarket.getOneItem(
-    //   input.makerAddr,
-    //   input.side,
-    //   input.ccy,
-    //   input.term,
-    // );
-    // console.log(
-    //   'FIL loan market before',
-    //   beforeLoan.amt,
-    //   'FIL loan market after',
-    //   afterLoan.amt,
-    // );
+    let afterLoan = await moneyMarket.getOneItem(
+      input.makerAddr,
+      input.side,
+      input.ccy,
+      input.term,
+    );
+    console.log(
+      'FIL loan market before',
+      beforeLoan.amt,
+      'FIL loan market after',
+      afterLoan.amt,
+    );
 
-    // // loan item test
-    // let book = await loan.getOneBook(taker);
-    // let loanItem = book.loans[0];
-    // printDate(loanItem.schedule.notices);
-    // printDate(loanItem.schedule.payments);
-    // console.log(loanItem.schedule.amounts);
+    // loan item test
+    let book = await loan.getOneBook(taker);
+    let loanItem = book.loans[0];
+    printDate(loanItem.schedule.notices);
+    printDate(loanItem.schedule.payments);
+    console.log(loanItem.schedule.amounts);
 
     // discount factor test
     let df = await moneyMarket.getDiscountFactors();
