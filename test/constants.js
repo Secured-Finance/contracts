@@ -81,12 +81,26 @@ const sample = {
       effectiveSec: 36000, // 10 hrs
     },
   ],
-  FXMarket: {
-    pair: 0, // FILETH
-    offerInput: [0, 1, 8500, 100000], // [ETH, FIL, 8500ETH, 100000FIL]
-    bidInput: [1, 0, 100000, 8000], // [FIL, ETH, 100000FIL, 8000ETH]
-    effectiveSec: 36000,
-  },
+  FXMarket: [
+    {
+      pair: 0, // FILETH
+      offerInput: [0, 1, 8500, 100000], // [ETH, FIL, 8500ETH, 100000FIL]
+      bidInput: [1, 0, 100000, 8000], // [FIL, ETH, 100000FIL, 8000ETH]
+      effectiveSec: 36000,
+    },
+    {
+      pair: 1, // FILUSDC
+      offerInput: [1, 2, 100000, 5000000], // [FIL, USDC, 100000FIL, 5000000USDC]
+      bidInput: [2, 1, 3000000, 100000], // [USDC, FIL, 3000000USDC, 100000FIL]
+      effectiveSec: 36000,
+    },
+    {
+      pair: 2, // ETHUSDC
+      offerInput: [2, 1, 5000000, 10000], // [USDC, ETH, 5000000USDC, 10000ETH]
+      bidInput: [1, 2, 10000, 3000000], // [ETH, USDC, 10000ETH, 3000000USDC]
+      effectiveSec: 36000,
+    },
+  ],
   Collateral: [
     {
       id: 'did:sample_0',

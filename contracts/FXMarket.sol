@@ -7,13 +7,13 @@ contract FXMarket {
     event DelFXBook(address indexed sender);
     event DelOneItem(address indexed sender);
 
-    enum Ccy {ETH, FIL}
-    enum CcyPair {FILETH}
+    enum Ccy {ETH, FIL, USDC}
+    enum CcyPair {FILETH, FILUSDC, ETHUSDC}
     enum Side {BID, OFFER}
 
-    uint256 constant NUMCCY = 2;
-    uint256 constant NUMPAIR = 1;
-    uint256[NUMPAIR] FXMULT = [1000];
+    uint256 constant NUMCCY = 3;
+    uint256 constant NUMPAIR = 3;
+    uint256[NUMPAIR] FXMULT = [1000, 1, 1];
 
     struct FXBook {
         FXItem[NUMPAIR] bids;

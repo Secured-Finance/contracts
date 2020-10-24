@@ -16,7 +16,7 @@ contract Collateral {
     event RegisterFILCustodyAddr(address indexed requester);
     event DEBUG(address addr);
 
-    enum CcyPair {FILETH}
+    enum CcyPair {FILETH, FILUSDC, ETHUSDC}
     enum State {
         EMPTY,
         AVAILABLE,
@@ -334,9 +334,9 @@ contract Collateral {
         3. update amtFILValue and inuseFILValue as ETH value
      */
 
-    // helper to get fx mid rate for valuation
+    // helper to get FILETH mid rate for valuation
     function getFILETH() public view returns (uint256) {
-        uint256[1] memory rates = fxMarket.getMidRates();
+        uint256[3] memory rates = fxMarket.getMidRates();
         return rates[uint256(CcyPair.FILETH)];
     }
 
@@ -359,6 +359,8 @@ contract Collateral {
                 FXMULT;
         }
     }
+
+    // TODO - getFILUSDC, getETHUSDC, updateUSDCValue
 
     /**@dev
         FIL Custody Address Section

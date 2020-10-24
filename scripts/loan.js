@@ -63,14 +63,31 @@ module.exports = async function main(callback) {
       input.effectiveSec,
     );
 
-    // // Init FXMarket with sample data
-    // input = sample.FXMarket;
-    // await fxMarket.setFXBook(
-    //   input.pair,
-    //   input.offerInput,
-    //   input.bidInput,
-    //   input.effectiveSec,
-    // );
+    // Init FXMarket with sample data
+    input = sample.FXMarket[0];
+    await fxMarket.setFXBook(
+      input.pair,
+      input.offerInput,
+      input.bidInput,
+      input.effectiveSec,
+    );
+    input = sample.FXMarket[1];
+    await fxMarket.setFXBook(
+      input.pair,
+      input.offerInput,
+      input.bidInput,
+      input.effectiveSec,
+    );
+    input = sample.FXMarket[2];
+    await fxMarket.setFXBook(
+      input.pair,
+      input.offerInput,
+      input.bidInput,
+      input.effectiveSec,
+    );
+    let midRates = await fxMarket.getMidRates();
+    console.log('midRates is');
+    printNum(midRates);
 
     // // Init Collateral with sample data
     // input = sample.Collateral;
