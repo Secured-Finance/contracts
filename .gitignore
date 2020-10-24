@@ -10,4 +10,4 @@ node_modules
 .vscode
 .gitattributes
 package-lock.json
-./build/contracts/*.json
+build/contracts/*.json
