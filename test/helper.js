@@ -13,6 +13,14 @@ const printDate = (arr) => {
   console.log(rv);
 };
 
+const printNumStr = (title, arr) => {
+  let rv = [];
+  arr.forEach((element) => {
+    rv.push(Number(element));
+  });
+  console.log(title, rv.toString());
+};
+
 const printNum = (arr) => {
   let rv = [];
   arr.forEach((element) => {
@@ -61,5 +69,5 @@ const printLoan = async (loan, addr, msg) => {
 };
 
 module.exports = {
-  toDate, printDate, printNum, printCol, printLoan
+  toDate, printDate, printNum, printNumStr, printCol, printLoan
 }

@@ -7,15 +7,20 @@ const {
   toDate,
   printDate,
   printNum,
+  printNumStr,
   printCol,
   printLoan,
 } = require('../test/helper');
 
 module.exports = async function main(callback) {
   try {
-    // TODO
     const accounts = await web3.eth.getAccounts();
     console.log(accounts);
+
+    // const moneyMarket = await MoneyMarket.deployed();
+    // const fxMarket = await FXMarket.deployed();
+    // const collateral = await Collateral.deployed();
+    // const loan = await Loan.deployed();
 
     const moneyMarket = await MoneyMarket.new();
     const fxMarket = await FXMarket.new();
@@ -29,11 +34,6 @@ module.exports = async function main(callback) {
       collateral.address,
     );
 
-    // const moneyMarket = await MoneyMarket.deployed();
-    // const fxMarket = await FXMarket.deployed();
-    // const collateral = await Collateral.deployed();
-    // const loan = await Loan.deployed();
-
     console.log('moneyMarket addr is', moneyMarket.address);
     console.log('fxMarket addr is', fxMarket.address);
     console.log('collateral addr is', collateral.address);
@@ -41,53 +41,34 @@ module.exports = async function main(callback) {
     console.log('\n');
 
     // Init MoneyMarket with sample data
-    let input = sample.MoneyMarket[0];
     await moneyMarket.setMoneyMarketBook(
-      input.ccy,
-      input.lenders,
-      input.borrowers,
-      input.effectiveSec,
+      ...Object.values(sample.MoneyMarket[0]),
     );
-    input = sample.MoneyMarket[1];
     await moneyMarket.setMoneyMarketBook(
-      input.ccy,
-      input.lenders,
-      input.borrowers,
-      input.effectiveSec,
+      ...Object.values(sample.MoneyMarket[1]),
     );
-    input = sample.MoneyMarket[2];
     await moneyMarket.setMoneyMarketBook(
-      input.ccy,
-      input.lenders,
-      input.borrowers,
-      input.effectiveSec,
+      ...Object.values(sample.MoneyMarket[2]),
     );
+    let midRates = await moneyMarket.getMidRates();
+    console.log('Loan midRates is');
+    console.log('FIL ', midRates[0].join(' '));
+    console.log('ETH ', midRates[1].join(' '));
+    console.log('USDC', midRates[2].join(' '), '\n');
+
+    // discount factor test
+    let df = await moneyMarket.getDiscountFactors();
+    console.log('DF is');
+    console.log('FIL ', df[0].join(' '));
+    console.log('ETH ', df[1].join(' '));
+    console.log('USDC', df[2].join(' '), '\n');
 
     // Init FXMarket with sample data
-    input = sample.FXMarket[0];
-    await fxMarket.setFXBook(
-      input.pair,
-      input.offerInput,
-      input.bidInput,
-      input.effectiveSec,
-    );
-    input = sample.FXMarket[1];
-    await fxMarket.setFXBook(
-      input.pair,
-      input.offerInput,
-      input.bidInput,
-      input.effectiveSec,
-    );
-    input = sample.FXMarket[2];
-    await fxMarket.setFXBook(
-      input.pair,
-      input.offerInput,
-      input.bidInput,
-      input.effectiveSec,
-    );
-    let midRates = await fxMarket.getMidRates();
-    console.log('midRates is');
-    printNum(midRates);
+    await fxMarket.setFXBook(...Object.values(sample.FXMarket[0]));
+    await fxMarket.setFXBook(...Object.values(sample.FXMarket[1]));
+    await fxMarket.setFXBook(...Object.values(sample.FXMarket[2]));
+    midRates = await fxMarket.getMidRates();
+    console.log('FX midRates is', midRates.join(' '), '\n');
 
     // Init Collateral with sample data
     input = sample.Collateral;
@@ -106,8 +87,6 @@ module.exports = async function main(callback) {
     await collateral.registerFILCustodyAddr('cid_custody_FIL_1', accounts[1]);
     await collateral.registerFILCustodyAddr('cid_custody_FIL_2', accounts[2]);
 
-    /* Loan Execution Test */
-
     // Collateralize test
     await printCol(collateral, accounts[2], 'Registered');
     await collateral.upSizeETH({
@@ -116,59 +95,42 @@ module.exports = async function main(callback) {
     });
     await printCol(collateral, accounts[2], 'upSizeETH (ETH 2000 added)');
 
+    /* USDC Loan Execution Test */
+
+    // TODO
+    // 1. make loan and check col/loan state
+    // loan.makeLoanDeal
+    // printCol, printLoan
+    // loan.confirmUSDCPayment
+    // printCol, printLoan
+
+    // 2. check loan schedule
+    // let book = await loan.getOneBook(taker);
+    // let loanItem = book.loans[0];
+    // printDate(loanItem.schedule.notices);
+    // printDate(loanItem.schedule.payments);
+    // console.log(loanItem.schedule.amounts);
+
+    /* FIL Loan Execution Test */
+    let maker = accounts[0];
+    let taker = accounts[2];
+
     // makeLoanDeal test
-    input = sample.Loan;
-    input.makerAddr = accounts[0];
-    let beforeLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-    );
+    let item = [maker, ...Object.values(sample.Loan[0])];
+    let beforeLoan = await moneyMarket.getOneItem(...item.slice(0, 4));
 
     // Init Loan with sample data
-    let taker = accounts[2];
-    await loan.makeLoanDeal(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-      input.amt,
-      {
-        from: taker,
-      },
-    );
-    await printCol(
-      collateral,
-      accounts[2],
-      'makeLoanDeal (borrow FIL 14001, FILETH is 0.082)',
-    );
-    await printLoan(loan, accounts[2], '');
+    await loan.makeLoanDeal(...item, {from: taker});
+    await printCol(collateral, taker, 'makeLoanDeal (borrow FIL 14001)');
+    await printLoan(loan, taker, '');
 
     // confirm FIL payment test
-    await loan.confirmFILPayment(0, {
-      from: accounts[2],
-    });
+    await loan.confirmFILPayment(0, {from: taker}); // TODO - fix confirm amount
+    await printCol(collateral, taker, 'confirmFILPayment (coverage 174%)');
+    await printLoan(loan, taker, '');
 
-    await printCol(
-      collateral,
-      accounts[2],
-      'confirmFILPayment (coverage 174%)',
-    );
-    await printLoan(loan, accounts[2], '');
-
-    let afterLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-    );
-    console.log(
-      'FIL loan market before',
-      beforeLoan.amt,
-      'FIL loan market after',
-      afterLoan.amt,
-    );
+    let afterLoan = await moneyMarket.getOneItem(...item.slice(0, 4));
+    console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
 
     // loan item test
     let book = await loan.getOneBook(taker);
@@ -177,11 +139,12 @@ module.exports = async function main(callback) {
     printDate(loanItem.schedule.payments);
     console.log(loanItem.schedule.amounts);
 
-    // discount factor test
-    let df = await moneyMarket.getDiscountFactors();
-    printNum(df[0]);
-    printNum(df[1]);
-    printNum(df[2]);
+    /* Swap Execution Test */
+    // 1. make swap and check col/loan state
+    // lendItem = getOneItem()
+    // borrowItem = getOneItem()
+    // swap.makeSwapDeal(lendItem, borrowItem, {from: accounts[2]})
+    // 2. check swap schedule
 
     callback(0);
   } catch (error) {

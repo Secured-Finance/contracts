@@ -115,14 +115,20 @@ const sample = {
       addrFIL: 'cid_FIL_2',
     },
   ],
-  Loan: {
-    // makerAddr: accounts[0],
-    // side: 1, // BORROW
-    side: 0, // LEND
-    ccy: 1, // FIL
-    term: 5, // _5y
-    amt: 15000 - 999,
-  },
+  Loan: [
+    {
+      side: 0, // LEND
+      ccy: 1,  // FIL
+      term: 5, // 5y
+      amt: 15000 - 999,
+    },
+    {
+      side: 1, // BORROW
+      ccy: 2,  // USDC
+      term: 5, // 5y
+      amt: 400000,
+    },
+  ],
 };
 
 module.exports = {
