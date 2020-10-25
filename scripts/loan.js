@@ -100,7 +100,8 @@ module.exports = async function main(callback) {
     );
     await collateral.upSizeETH({
       from: accounts[2],
-      value: 2000, // 2000 ETH can cover about 24400 FIL
+      value: 1240, // 1240 ETH can cover about 820 ETH = 10000 FIL
+      // value: 2000, // 2000 ETH can cover about 24400 FIL
     });
     await printCol(
       collateral,
@@ -124,7 +125,7 @@ module.exports = async function main(callback) {
     let taker = accounts[2];
     let item, loanId, beforeLoan, afterLoan, res;
 
-    // // maker LEND FIL
+    // maker LEND FIL
     item = Object.values(sample.Loan[0]);
     deal = [maker, ...item]; // maker is FIL lender
     beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
@@ -141,21 +142,43 @@ module.exports = async function main(callback) {
     await printSched(loan, maker, loanId);
 
     // maker BORROW FIL
-    console.log();
-    item = Object.values(sample.Loan[2]);
-    deal = [maker, ...item]; // maker is FIL borrower
-    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    // console.log();
+    // item = Object.values(sample.Loan[2]);
+    // deal = [maker, ...item]; // maker is FIL borrower
+    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
 
-    loanId = 1;
-    await loan.makeLoanDeal(...deal, {from: taker});
-    await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
+    // loanId = 1;
+    // await loan.makeLoanDeal(...deal, {from: taker});
+    // await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
 
-    await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
-    await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
+    // // upsize collateral with lent FIL on maker
+    // // await collateral.upSizeFIL(1000, {from: taker});
+    // // await collateral.upSizeFIL(14001, { from: taker });
+    // // await printCol(collateral, taker, 'collateral upsized with initial swap notional');
 
-    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
-    await printSched(loan, maker, loanId);
+    // await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
+    // await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
+
+    // afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    // console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
+    // await printSched(loan, maker, loanId);
+
+    // // maker BORROW FIL
+    // console.log();
+    // item = Object.values(sample.Loan[2]);
+    // deal = [maker, ...item]; // maker is FIL borrower
+    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+
+    // loanId = 1;
+    // await loan.makeLoanDeal(...deal, {from: taker});
+    // await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
+
+    // await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
+    // await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
+
+    // afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    // console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
+    // await printSched(loan, maker, loanId);
 
     /* USDC Loan Execution Test */
 
@@ -166,24 +189,34 @@ module.exports = async function main(callback) {
     // loan.confirmUSDCPayment
     // printCol, printLoan
 
-    // // maker BORROW USDC
-    // console.log();
-    // item = Object.values(sample.Loan[1]);
-    // deal = [maker, ...item]; // maker is USDC borrower
-    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    /* Swap prep */
+    // upsize collateral with lent FIL on maker
+    // await collateral.upSizeETH({value: 820 , from: taker}); // TODO - fix wei to ETH
+    await collateral.upSizeFIL(10000, {from: taker});
+    await printCol(
+      collateral,
+      taker,
+      'collateral upsized with initial swap notional',
+    );
 
-    // // loanId = 0;
-    // // loanId = 1;
+    // maker BORROW USDC
+    console.log();
+    item = Object.values(sample.Loan[1]);
+    deal = [maker, ...item]; // maker is USDC borrower
+    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+
+    // loanId = 0;
+    loanId = 1;
     // loanId = 2;
-    // await loan.makeLoanDeal(...deal, {from: taker});
-    // await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
+    await loan.makeLoanDeal(...deal, {from: taker});
+    await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
 
-    // await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is USDC borrower
-    // await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
+    await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is USDC borrower
+    await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
 
-    // afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    // console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
-    // await printSched(loan, maker, loanId);
+    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
+    await printSched(loan, maker, loanId);
 
     /* Swap Execution Test */
 

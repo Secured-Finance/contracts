@@ -1,13 +1,14 @@
 {
   "name": "secured-finance",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "peer-to-peer financial transaction platform",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "test": "mocha --exit --recursive",
-    "test2": "npx ts-node ./test/web3Test"
+    "test": "truffle exec scripts/swap.js",
+    "test2": "mocha --exit --recursive",
+    "test3": "npx ts-node ./test/web3Test"
   },
   "author": "Senshi",
   "license": "ISC",
