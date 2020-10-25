@@ -40,7 +40,14 @@ contract Loan {
     // 24. Update Collateral Status
     // 25. Emit MARGIN_CALL or LIQUIDATION message
 
-    event MakeLoanDeal(address indexed sender);
+    event MakeLoanDeal(
+        address makerAddr,
+        MoneyMarket.Side side,
+        MoneyMarket.Ccy ccy,
+        MoneyMarket.Term term,
+        uint256 amt,
+        uint256 loanId
+    );
     event NoitfyFILPayment(address indexed, string indexed txHash);
     event ConfirmFILPayment(address indexed sender);
 
@@ -186,14 +193,17 @@ contract Loan {
         require(makerAddr != msg.sender, 'Same person deal is not allowed');
         if (side == MoneyMarket.Side.LEND)
             collateral.useCollateral(ccy, amt, msg.sender);
+        if (side == MoneyMarket.Side.BORROW) {
+            collateral.useCollateral(ccy, amt, makerAddr);
+        }
         uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
-        LoanBook storage book = loanMap[msg.sender];
+        LoanBook storage book = loanMap[makerAddr];
         LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
         LoanItem memory newItem = inputToItem(input, rate, book.loanNum++);
         book.loans.push(newItem);
         book.isValue = true;
         users.push(msg.sender);
-        emit MakeLoanDeal(msg.sender);
+        emit MakeLoanDeal(makerAddr, side, ccy, term, amt, book.loanNum);
     }
 
     // helper to convert input data to LoanItem
@@ -253,11 +263,11 @@ contract Loan {
     //     return uint256(book.loans[loanId].state);
     // }
 
-    // function getLoanItem(uint256 loanId) public returns (LoanItem memory) {
-    //     require(loanMap[msg.sender].isValue, 'no loan item found');
-    //     LoanBook memory book = getOneBook(msg.sender);
-    //     return book.loans[loanId];
-    // }
+    function getLoanItem(uint256 loanId) public view returns (LoanItem memory) {
+        require(loanMap[msg.sender].isValue, 'no loan item found');
+        LoanBook memory book = getOneBook(msg.sender);
+        return book.loans[loanId];
+    }
 
     function getOneBook(address addr) public view returns (LoanBook memory) {
         return loanMap[addr];
@@ -281,16 +291,21 @@ contract Loan {
         2. notify - confirm method to change states
      */
 
-    function updateState(uint256 loanId) public {
-        LoanBook storage book = loanMap[msg.sender];
+    function updateState(
+        address makerAddr,
+        uint256 loanId,
+        uint256 amt
+    ) public {
+        LoanBook storage book = loanMap[makerAddr];
         LoanItem storage item = book.loans[loanId];
+        require(amt == item.amt, 'confirm amount not match');
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
         if (item.state == State.REGISTERED) {
             require(msg.sender == item.borrower, 'borrower must confirm');
             item.state = State.WORKING;
-            collateral.updateState(msg.sender);
+            collateral.updateState(item.borrower);
         }
 
         // coupon
@@ -302,8 +317,29 @@ contract Loan {
         // margin call
         // IN_USE -> MARGINCALL (Collateral.sol) -> IN_USE or LIQUIDATION
     }
+    // function updateState(uint256 loanId) public {
+    //     LoanBook storage book = loanMap[msg.sender];
+    //     LoanItem storage item = book.loans[loanId];
+    //     // initial
+    //     // REGISTERED -> WORKING
+    //     // AVAILABLE -> IN_USE
+    //     if (item.state == State.REGISTERED) {
+    //         require(msg.sender == item.borrower, 'borrower must confirm');
+    //         item.state = State.WORKING;
+    //         collateral.updateState(item.borrower);
+    //     }
 
-    function updateAllState() public {}
+    //     // coupon
+    //     // WORKING -> DUE
+    //     // DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
+    //     // redemption
+    //     // WORKING -> DUE
+    //     // DUE -> PAST_DUE, IN_USE -> LIQUIDATION
+    //     // margin call
+    //     // IN_USE -> MARGINCALL (Collateral.sol) -> IN_USE or LIQUIDATION
+    // }
+
+    function updateAllState() public {} // TODO
 
     // to be used by makers
     function notifyFILPayment(string memory txHash) public {
@@ -311,8 +347,12 @@ contract Loan {
         emit NoitfyFILPayment(msg.sender, txHash);
     }
 
-    // to be used by takers
-    function confirmFILPayment(uint256 loanId) public {
+    // to be used by borrowers
+    function confirmFILPayment(
+        address makerAddr,
+        uint256 loanId,
+        uint256 amt
+    ) public {
         // TODO - confirm the loan amount in FIL
         // used for initial, coupon, redemption, liquidation
         // LoanBook storage book = loanMap[msg.sender];
@@ -321,7 +361,7 @@ contract Loan {
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
-        updateState(loanId);
+        updateState(makerAddr, loanId, amt);
         emit ConfirmFILPayment(msg.sender);
 
         // coupon
@@ -335,6 +375,29 @@ contract Loan {
         // margin call
         // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
     }
+    // function confirmFILPayment(uint256 loanId) public {
+    //     // TODO - confirm the loan amount in FIL
+    //     // used for initial, coupon, redemption, liquidation
+    //     // LoanBook storage book = loanMap[msg.sender];
+    //     // LoanItem storage item = book.loans[loanId];
+
+    //     // initial
+    //     // REGISTERED -> WORKING
+    //     // AVAILABLE -> IN_USE
+    //     updateState(loanId);
+    //     emit ConfirmFILPayment(msg.sender);
+
+    //     // coupon
+    //     // DUE -> WORKING
+    //     // PAST_DUE->WORKING, PARTIAL_LIQUIATION -> IN_USE
+
+    //     // redemption
+    //     // DUE -> CLOSED, IN_USE -> AVAILABLE
+    //     // PAST_DUE -> TERMINATED, LIQUIDATION -> EMPTY
+
+    //     // margin call
+    //     // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
+    // }
 
     function notifyETHPayment() public {
         // TODO - confirm the loan amount in FIL

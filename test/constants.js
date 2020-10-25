@@ -128,6 +128,12 @@ const sample = {
       term: 5, // 5y
       amt: 400000,
     },
+    {
+      side: 1, // BORROW
+      ccy: 1,  // FIL
+      term: 0, // 3m
+      amt: 8000,
+    },
   ],
 };
 

@@ -49,9 +49,9 @@ const printCol = async (col, addr, msg) => {
   console.log(`\tcoverage ${book.coverage}%\tstate ${states[book.state]}\n`);
 };
 
-const printLoan = async (loan, addr, msg) => {
+const printLoan = async (loan, addr, id, msg) => {
   let book = await loan.getOneBook(addr);
-  let item = book.loans[0];
+  let item = book.loans[id];
   let states = [
     'REGISTERED',
     'WORKING',
