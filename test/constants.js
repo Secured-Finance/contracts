@@ -132,7 +132,7 @@ const sample = {
       side: 1, // BORROW
       ccy: 1,  // FIL
       term: 0, // 3m
-      amt: 8000,
+      amt: 10000,
     },
   ],
 };

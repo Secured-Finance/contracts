@@ -133,6 +133,8 @@ contract Collateral {
         ColBook storage book = colMap[addr];
         if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH += amt;
         if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL += amt;
+        // TODO - USDC
+
         updateFILValue(addr);
     }
 

@@ -5,12 +5,12 @@ const toDate = (timestamp) => {
 };
 
 // helper to print timestamp array
-const printDate = (arr) => {
+const printDate = (title, arr) => {
   let rv = [];
   arr.forEach((element) => {
-    rv.push(toDate(element));
+    if (element > 0) rv.push(toDate(element));
   });
-  console.log(rv);
+  console.log(title, rv);
 };
 
 const printNumStr = (title, arr) => {
@@ -46,12 +46,12 @@ const printCol = async (col, addr, msg) => {
   console.log(
     `\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILValue ${book.inuseFILValue}`,
   );
-  console.log(`\tcoverage ${book.coverage}%\tstate ${states[book.state]}\n`);
+  console.log(`\tcoverage ${book.coverage}%\tcolState ${states[book.state]}\n`);
 };
 
-const printLoan = async (loan, addr, id, msg) => {
-  let book = await loan.getOneBook(addr);
-  let item = book.loans[id];
+const printLoan = async (loan, makerAddr, loanId, msg) => {
+  let book = await loan.getOneBook(makerAddr);
+  let item = book.loans[loanId];
   let states = [
     'REGISTERED',
     'WORKING',
@@ -62,12 +62,36 @@ const printLoan = async (loan, addr, id, msg) => {
   ];
   if (msg.length > 0) console.log(msg);
   console.log(
-    `\tloan ${item.amt}\trate ${item.rate / 100}%\tstate ${
+    `\tloan ${item.amt}\trate ${item.rate / 100}% \tloanState ${
       states[item.state]
     }\n`,
   );
 };
 
-module.exports = {
-  toDate, printDate, printNum, printNumStr, printCol, printLoan
+const printState = async (loan, col, loanMaker, colUser, loanId, loanMsg, colMsg) => {
+  await printLoan(loan, loanMaker, loanId, loanMsg);
+  await printCol(col, colUser, colMsg ? colMsg : 'collateral state');
 }
+
+const printSched = async (loan, makerAddr, loanId) => {
+  let book = await loan.getOneBook(makerAddr);
+  let loanItem = book.loans[loanId];
+  printDate('Notice ', loanItem.schedule.notices);
+  printDate('Payment', loanItem.schedule.payments);
+  let amts = '';
+  loanItem.schedule.amounts.forEach((amt) => {
+    if (amt > 0) amts += ' ' + String(amt);
+  });
+  console.log('Amounts', amts);
+};
+
+module.exports = {
+  toDate,
+  printDate,
+  printNum,
+  printNumStr,
+  printCol,
+  printLoan,
+  printState,
+  printSched,
+};
