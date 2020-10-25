@@ -50,7 +50,7 @@ The web3.service is created to deploy smart contracts, send transactions, and in
 ### On-chain test
 
 1. `truffle develop` to prepare for local network
-2. `truffle exec ./scripts/test.js` to run test.js using truffle exec
+2. `truffle exec scripts/swap.js` to run swap.js to see swap senario works
 
 ### Off-chain test (simulate blockchain)
 
