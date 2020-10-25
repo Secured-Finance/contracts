@@ -35,14 +35,20 @@ contract Collateral {
     struct ColBook {
         string id; // DID, email
         address addrETH;
-        string addrFIL; // custody
+        string addrFIL; // custody addr
         string userAddrFIL;
+        address addrUSDC; // custody addr
+        address userAddrUSDC;
         uint256 amtETH; // custody amount
         uint256 amtFIL; // custody amount
+        uint256 amtUSDC; // custody amount
         uint256 amtFILValue; // custody FIL amt evaluated in ETH
+        uint256 amtUSDCValue; // custody USDC amt evaluated in ETH
         uint256 inuseETH; // total PV of ETH loans
         uint256 inuseFIL; // total PV of FIL loans
-        uint256 inuseFILValue; // total PV of FIL loans
+        uint256 inuseUSDC; // total PV of USDC loans
+        uint256 inuseFILValue; // total PV of FIL loans evaluated in ETH
+        uint256 inuseUSDCValue; // total PV of USDC loans evaluated in ETH
         uint256 coverage; // in PCT
         bool isAvailable;
         State state;
@@ -51,6 +57,7 @@ contract Collateral {
     struct ColInput {
         string id; // DID, email
         string userAddrFIL;
+        address userAddrUSDC;
     }
 
     // keeps all the records
@@ -87,15 +94,16 @@ contract Collateral {
      */
 
     // register an user
-    function setColBook(string memory id, string memory userAddrFIL)
+    function setColBook(string memory id, string memory userAddrFIL, address userAddrUSDC)
         public
         payable
     {
         require(!colMap[msg.sender].isAvailable, 'user already exists'); // one-time
-        ColInput memory input = ColInput(id, userAddrFIL);
+        ColInput memory input = ColInput(id, userAddrFIL, userAddrUSDC);
         ColBook memory newBook = inputToBook(input);
         colMap[msg.sender] = newBook;
         users.push(msg.sender);
+        updateState(msg.sender);
         emit SetColBook(msg.sender);
     }
 
@@ -110,12 +118,18 @@ contract Collateral {
         book.addrETH = msg.sender;
         book.addrFIL; // blank until FIL custody address requested
         book.userAddrFIL = input.userAddrFIL;
+        book.addrUSDC; // blank until USDC custody address is ready
+        book.userAddrUSDC = input.userAddrUSDC;
         book.amtETH = msg.value;
         book.amtFIL = 0; // TODO - P2P oracle will update
+        book.amtUSDC = 0; // TODO - sync with ERC20
         book.amtFILValue = 0;
+        book.amtUSDCValue = 0;
         book.inuseETH = 0; // updated by ETH loan
         book.inuseFIL = 0; // updated by FIL loan
+        book.inuseUSDC = 0; // updated by USDC loan
         book.inuseFILValue = 0;
+        book.inuseUSDCValue = 0;
         book.coverage = 0;
         book.isAvailable = true;
         book.state = State.EMPTY;
@@ -133,9 +147,9 @@ contract Collateral {
         ColBook storage book = colMap[addr];
         if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH += amt;
         if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL += amt;
-        // TODO - USDC
-
+        if (ccy == MoneyMarket.Ccy.USDC) book.inuseUSDC += amt;
         updateFILValue(addr);
+        updateUSDCValue(addr);
     }
 
     // helper to check collateral coverage
@@ -148,11 +162,16 @@ contract Collateral {
         if (amt == 0) return true;
         ColBook memory book = colMap[addr];
         uint256 FILETH = getFILETH();
-        uint256 toBeUsed = ccy == MoneyMarket.Ccy.ETH
-            ? amt
-            : (amt * FILETH) / FXMULT;
-        uint256 totalUse = book.inuseETH + book.inuseFILValue + toBeUsed;
-        uint256 totalAmt = book.amtETH + book.amtFILValue;
+        uint256 ETHUSDC = getETHUSDC();
+        uint256 toBeUsed = 0;
+        if (ccy == MoneyMarket.Ccy.ETH)
+            toBeUsed = amt;
+        if (ccy == MoneyMarket.Ccy.FIL)
+            toBeUsed = (amt * FILETH) / FXMULT;
+        if (ccy == MoneyMarket.Ccy.USDC)
+            toBeUsed = amt / ETHUSDC; // TODO - use safe math
+        uint256 totalUse = book.inuseETH + book.inuseFILValue + book.inuseUSDCValue + toBeUsed;
+        uint256 totalAmt = book.amtETH + book.amtFILValue + book.amtUSDCValue;
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage > MARGINLEVEL;
     }
@@ -205,8 +224,9 @@ contract Collateral {
         ColBook storage book = colMap[addr];
         if (book.state == State.PARTIAL_LIQUIDATION) return;
         updateFILValue(msg.sender);
-        uint256 totalUse = book.inuseETH + book.inuseFILValue;
-        uint256 totalAmt = book.amtETH + book.amtFILValue;
+        updateUSDCValue(msg.sender);
+        uint256 totalUse = book.inuseETH + book.inuseFILValue + book.inuseUSDCValue;
+        uint256 totalAmt = book.amtETH + book.amtFILValue + book.amtUSDCValue;
         if (totalUse == 0) {
             if (totalAmt == 0) book.state = State.EMPTY;
             if (totalAmt > 0) book.state = State.AVAILABLE;
@@ -231,38 +251,38 @@ contract Collateral {
 
     // to be called from Loan for coupon cover up
     // TODO - handle ETH lending case
-    function partialLiquidation(address borrower, uint256 amount) public {
-        require(msg.sender == address(loan), 'only Loan contract can call');
-        ColBook storage book = colMap[borrower];
-        if (book.state == State.IN_USE || book.state == State.MARGIN_CALL) {
-            book.state = State.PARTIAL_LIQUIDATION;
-        }
-        // TODO - nominate liquidation provider, calc payment amount
-        emit PartialLiquidation(borrower);
-    }
+    // function partialLiquidation(address borrower, uint256 amount) public {
+    //     require(msg.sender == address(loan), 'only Loan contract can call');
+    //     ColBook storage book = colMap[borrower];
+    //     if (book.state == State.IN_USE || book.state == State.MARGIN_CALL) {
+    //         book.state = State.PARTIAL_LIQUIDATION;
+    //     }
+    //     // TODO - nominate liquidation provider, calc payment amount
+    //     emit PartialLiquidation(borrower);
+    // }
 
     // TODO
     function liquiadtion(address borrower, uint256 amount) public {}
 
     // to be called from Loan to pay liquidation provider
-    function recoverPartialLiquidation(
-        address borrower,
-        address liquidProvider,
-        uint256 amount
-    ) public {
-        require(msg.sender == address(loan), 'only Loan contract can call');
-        ColBook storage book = colMap[borrower];
-        require(
-            book.state == State.PARTIAL_LIQUIDATION,
-            'expecting PARTIAL_LIQUIDATION state'
-        );
-        uint256 recoverAmount = (amount * LQLEVEL) / PCT;
-        // TODO - handle ETH lending case
-        book.inuseFIL -= amount;
-        book.amtFIL -= recoverAmount;
-        book.state = State.IN_USE;
-        updateState(borrower);
-    }
+    // function recoverPartialLiquidation(
+    //     address borrower,
+    //     address liquidProvider,
+    //     uint256 amount
+    // ) public {
+    //     require(msg.sender == address(loan), 'only Loan contract can call');
+    //     ColBook storage book = colMap[borrower];
+    //     require(
+    //         book.state == State.PARTIAL_LIQUIDATION,
+    //         'expecting PARTIAL_LIQUIDATION state'
+    //     );
+    //     uint256 recoverAmount = (amount * LQLEVEL) / PCT;
+    //     // TODO - handle ETH lending case
+    //     book.inuseFIL -= amount;
+    //     book.amtFIL -= recoverAmount;
+    //     book.state = State.IN_USE;
+    //     updateState(borrower);
+    // }
 
     // function confirmFILPayment(address addr) public {
     //     // TODO - only called by Lender (maybe move to Loan)
@@ -363,6 +383,39 @@ contract Collateral {
     }
 
     // TODO - getFILUSDC, getETHUSDC, updateUSDCValue
+
+    /**dev
+        Update USDC Value in ETH Section
+        1. get the latest ETHUSDC currency rate from fxMarket
+        2. apply ETHUSDC rate to amtFIL and inuseFIL
+        3. update amtUSDCValue and inuseUSDCValue as ETH value
+     */
+
+    // helper to get ETHUSDC mid rate for valuation
+    function getETHUSDC() public view returns (uint256) {
+        uint256[3] memory rates = fxMarket.getMidRates();
+        return rates[uint256(CcyPair.ETHUSDC)];
+    }
+
+    // update for one user
+    function updateUSDCValue(address addr) public {
+        uint256 fxRate = getETHUSDC();
+        colMap[addr].amtUSDCValue = (colMap[addr].amtUSDC / fxRate);
+        colMap[addr].inuseUSDCValue = (colMap[addr].inuseUSDC / fxRate);
+    }
+
+    // to be called relularly
+    function updateAllUSDCValue() public {
+        uint256 fxRate = getETHUSDC();
+        for (uint256 i = 0; i < users.length; i++) {
+            colMap[users[i]].amtUSDCValue =
+                (colMap[users[i]].amtUSDC * fxRate) /
+                FXMULT;
+            colMap[users[i]].inuseUSDCValue =
+                (colMap[users[i]].inuseUSDC * fxRate) /
+                FXMULT;
+        }
+    }
 
     /**@dev
         FIL Custody Address Section

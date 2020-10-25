@@ -105,32 +105,35 @@ const sample = {
     {
       id: 'did:sample_0',
       addrFIL: 'cid_FIL_0',
+      addrUSDC: '0xa9ed07f9bf5bd15804dfd95c5709c0ccc102b221',
     },
     {
       id: 'did:sample_1',
       addrFIL: 'cid_FIL_1',
+      addrUSDC: '0xcb6ba40812a2421ae8bafd1459b0b71cc070f0c8',
     },
     {
       id: 'did:sample_2',
       addrFIL: 'cid_FIL_2',
+      addrUSDC: '0x9188b1e31bc6190afcd893e614a38c704c33c640',
     },
   ],
   Loan: [
     {
       side: 0, // LEND
-      ccy: 1,  // FIL
+      ccy: 1, // FIL
       term: 5, // 5y
       amt: 15000 - 999,
     },
     {
       side: 1, // BORROW
-      ccy: 2,  // USDC
+      ccy: 2, // USDC
       term: 5, // 5y
-      amt: 400000,
+      amt: 1000000,
     },
     {
       side: 1, // BORROW
-      ccy: 1,  // FIL
+      ccy: 1, // FIL
       term: 0, // 3m
       amt: 10000,
     },

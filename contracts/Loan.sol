@@ -50,6 +50,15 @@ contract Loan {
     );
     event NoitfyFILPayment(address indexed, string indexed txHash);
     event ConfirmFILPayment(address indexed sender);
+    event ConfirmPayment(
+        address indexed loanMaker,
+        address indexed colUser,
+        MoneyMarket.Side side,
+        MoneyMarket.Ccy ccy,
+        uint256 term,
+        uint256 amt,
+        uint256 loanId
+    );
 
     enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
     enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}
@@ -292,20 +301,21 @@ contract Loan {
      */
 
     function updateState(
-        address makerAddr,
+        address loanMaker,
+        address colUser,
         uint256 loanId,
         uint256 amt
     ) public {
-        LoanBook storage book = loanMap[makerAddr];
+        LoanBook storage book = loanMap[loanMaker];
         LoanItem storage item = book.loans[loanId];
         require(amt == item.amt, 'confirm amount not match');
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
         if (item.state == State.REGISTERED) {
-            require(msg.sender == item.borrower, 'borrower must confirm');
+            require(colUser == item.borrower, 'borrower must confirm');
             item.state = State.WORKING;
-            collateral.updateState(item.borrower);
+            collateral.updateState(colUser);
         }
 
         // coupon
@@ -348,10 +358,14 @@ contract Loan {
     }
 
     // to be used by borrowers
-    function confirmFILPayment(
-        address makerAddr,
-        uint256 loanId,
-        uint256 amt
+    function confirmPayment(
+        address loanMaker,
+        address colUser,
+        MoneyMarket.Side side,
+        MoneyMarket.Ccy ccy,
+        uint256 term,
+        uint256 amt,
+        uint256 loanId
     ) public {
         // TODO - confirm the loan amount in FIL
         // used for initial, coupon, redemption, liquidation
@@ -361,8 +375,14 @@ contract Loan {
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
-        updateState(makerAddr, loanId, amt);
-        emit ConfirmFILPayment(msg.sender);
+        if (side == MoneyMarket.Side.LEND) {
+            require(msg.sender == colUser, 'msg.sender is not borrower');
+            updateState(loanMaker, colUser, loanId, amt);
+        } else {
+            require(msg.sender == loanMaker, 'msg.sender is not lender');
+            updateState(loanMaker, colUser, loanId, amt);
+        }
+        emit ConfirmPayment(loanMaker, colUser, side, ccy, term, amt, loanId);
 
         // coupon
         // DUE -> WORKING

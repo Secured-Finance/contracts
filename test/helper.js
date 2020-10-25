@@ -41,11 +41,20 @@ const printCol = async (col, addr, msg) => {
   ];
   console.log(msg);
   console.log(
-    `\tamtETH ${book.amtETH}\tamtFIL ${book.amtFIL}\tamtFILValue ${book.amtFILValue}`,
+    `\tamtETH  ${book.amtETH}\tuseETH  ${book.inuseETH}`,
   );
   console.log(
-    `\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILValue ${book.inuseFILValue}`,
+    `\tamtFIL  ${book.amtFIL}\tuseFIL  ${book.inuseFIL}\tuseFILValue  ${book.inuseFILValue}`,
   );
+  console.log(
+    `\tamtUSDC ${book.amtUSDC}\tuseUSDC ${book.inuseUSDC}\tuseUSDCValue ${book.inuseUSDCValue}`,
+  );
+  // console.log(
+  //   `\tamtETH ${book.amtETH}\tamtFIL ${book.amtFIL}\tamtFILValue ${book.amtFILValue}`,
+  // );
+  // console.log(
+  //   `\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILValue ${book.inuseFILValue}`,
+  // );
   console.log(`\tcoverage ${book.coverage}%\tcolState ${states[book.state]}\n`);
 };
 
