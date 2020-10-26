@@ -226,6 +226,14 @@ module.exports = async function main(callback) {
     // swap.makeSwapDeal(lendItem, borrowItem, {from: accounts[2]})
     // 2. check swap schedule
 
+    let loan0 = await loan.getLoanItem(0, {from: maker});
+    let loan1 = await loan.getLoanItem(1, {from: maker});
+
+    console.log('==')
+    await loan.updateAllPV();
+    console.log('loan 0 FIL LEND is', loan0);
+    console.log('loan 1 USDC BORROW is', loan1);
+
     callback(0);
   } catch (error) {
     console.error(error);
