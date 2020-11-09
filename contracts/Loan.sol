@@ -319,13 +319,22 @@ contract Loan {
         }
 
         // coupon
-        // WORKING -> DUE
-        // DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
+        // WORKING -> DUE, IN_USE (no change)
+        // 1) DUE -> WORKING, IN_USE (no change)
+        // 2a) DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
+        // 2b) PAST_DUE -> WORKING, PARTIAL_LIQUIDATION -> IN_USE
+
         // redemption
         // WORKING -> DUE
-        // DUE -> PAST_DUE, IN_USE -> LIQUIDATION
+        // 1) DUE -> CLOSED, IN_USE -> AVAILABLE
+        // 2a) DUE -> PAST_DUE, IN_USE -> LIQUIDATION
+        // 2b) PAST_DUE -> TERMINATED, LIQUIDATION -> EMPTY
+
         // margin call
-        // IN_USE -> MARGINCALL (Collateral.sol) -> IN_USE or LIQUIDATION
+        // 1) WORKING (no change), IN_USE -> MARGINCALL
+        // 2) WORKING (no change), MARGINCALL -> IN_USE
+        // 3a) WORKING (no change), MARGINCALL -> LIQUIDATION
+        // 3b) WORKING -> TERMINATED, LIQUIDATION -> EMPTY
     }
     // function updateState(uint256 loanId) public {
     //     LoanBook storage book = loanMap[msg.sender];
