@@ -1,4 +1,10 @@
-const {accounts, contract} = require('@openzeppelin/test-environment');
+const {
+  accounts,
+  defaultSender,
+  contract,
+  web3,
+  provider,
+} = require('@openzeppelin/test-environment');
 const {expect} = require('chai');
 const {
   BN,
@@ -14,20 +20,29 @@ const Loan = contract.fromArtifact('Loan');
 const {Side, Ccy, Term, sample} = require('./constants');
 const {toDate, printDate, printNum, printCol, printLoan} = require('./helper');
 
+const val = (obj) => {
+  return Object.values(obj);
+};
+
 describe('MoneyMarket', () => {
+  console.log('defaultSender is', defaultSender);
   console.log('accounts is', accounts);
-  const [owner] = accounts;
+
+  const [alice, bob, carol] = accounts;
+  const from = {from: defaultSender};
+  const sender = {sender: defaultSender};
+  const owner = defaultSender;
+
   let moneyMarket;
   let fxMarket;
   let collateral;
   let loan;
+
   before(async () => {
     // beforeEach(async () => {
-    moneyMarket = await MoneyMarket.new({from: owner});
-    fxMarket = await FXMarket.new({from: owner});
-    collateral = await Collateral.new(moneyMarket.address, fxMarket.address, {
-      from: owner,
-    });
+    moneyMarket = await MoneyMarket.new();
+    fxMarket = await FXMarket.new();
+    collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
     loan = await Loan.new(
       moneyMarket.address,
       fxMarket.address,
@@ -41,41 +56,33 @@ describe('MoneyMarket', () => {
     console.log('\n');
   });
 
-  it('Init MoneyMarket with sample data', async () => {
-    let input = sample.MoneyMarket[1];
-    let res = await moneyMarket.setMoneyMarketBook(
-      input.ccy,
-      input.lenders,
-      input.borrowers,
-      input.effectiveSec,
-      {from: owner},
-    );
-    expectEvent(res, 'SetMoneyMarketBook', {sender: accounts[0]});
+  it('Init with sample MoneyMarket', async () => {
+    sample.MoneyMarket.forEach(async (item) => {
+      let input = val(item);
+      let res = await moneyMarket.setMoneyMarketBook(...input);
+      expectEvent(res, 'SetMoneyMarketBook', sender);
+    });
   });
 
-  it('Init FXMarket with sample data', async () => {
-    let input = sample.FXMarket[0];
-    let res = await fxMarket.setFXBook(
-      input.pair,
-      input.offerInput,
-      input.bidInput,
-      input.effectiveSec,
-      {from: owner},
-    );
-    expectEvent(res, 'SetFXBook', {sender: accounts[0]});
+  it('Init with sample FXMarket', async () => {
+    sample.FXMarket.forEach(async (item) => {
+      let input = val(item);
+      let res = await fxMarket.setFXBook(...input);
+      expectEvent(res, 'SetFXBook', sender);
+    });
   });
 
   it('Get item from moneyMarketBook', async () => {
-    // const books = await this.moneyMarket.getAllBooks();
+    // const books = await moneyMarket.getAllBooks();
     // console.log('books is', books[0]);
 
-    // const midRates = await this.moneyMarket.getMidRates();
+    // const midRates = await moneyMarket.getMidRates();
     // console.log('midRates is', midRates);
 
-    // const df = await this.moneyMarket.getDiscountFactors();
+    // const df = await moneyMarket.getDiscountFactors();
     // console.log('df is', df);
 
-    // const book = await this.moneyMarket.getOneBook(owner);
+    // const book = await moneyMarket.getOneBook(owner);
     // console.log('book', book[0]);
 
     const item = await moneyMarket.getOneItem(
@@ -87,149 +94,160 @@ describe('MoneyMarket', () => {
     expect(item.amt).to.equal('10000');
   });
 
-  it('Check time forward', async () => {
-    // console.log('zero addr is', constants.ZERO_ADDRESS);
+  it('Check time forward 100 millisec', async () => {
     let latest = await time.latest();
     // console.log('latest is', latest.toString(), toDate(latest));
-
-    // let latestBlock = await time.latestBlock();
-    // console.log('latestBlock is', latestBlock.toString());
 
     await time.increase(100);
     let latest2 = await time.latest();
     // console.log('latest2 is', latest2.toString(), toDate(latest2));
 
     expect(latest2 - latest).to.equal(100);
-
-    // await time.increase(time.duration.years(1) / 12 - time.duration.weeks(2));
-    // let latest3 = await time.latest();
-    // // console.log('latest3 is', latest3.toString());
-    // console.log('latest3 is', latest3.toString(), toDate(latest3));
-
-    // let latestBlock2 = await time.latestBlock();
-    // console.log('latestBlock2 is', latestBlock2.toString());
   });
 
-  it('Init Collateral with sample data', async () => {
-    input = sample.Collateral;
-    let res;
-    res = await collateral.setColBook(input[0].id, input[0].addrFIL, {
-      from: accounts[0],
-      value: 10000,
-    });
-    expectEvent(res, 'SetColBook', {sender: accounts[0]});
-    res = await collateral.setColBook(input[1].id, input[1].addrFIL, {
-      from: accounts[1],
-      value: 10000,
-    });
-    expectEvent(res, 'SetColBook', {sender: accounts[1]});
-    res = await collateral.setColBook(input[2].id, input[2].addrFIL, {
-      from: accounts[2],
-    });
-    expectEvent(res, 'SetColBook', {sender: accounts[2]});
+  it('Check time forward 1 month', async () => {
+    // let latestBlock = await time.latestBlock();
+    // console.log('latestBlock is', latestBlock.toString());
 
-    res = await collateral.registerFILCustodyAddr(
-      'cid_custody_FIL_0',
-      accounts[0],
-    );
-    expectEvent(res, 'RegisterFILCustodyAddr', {requester: accounts[0]});
-    res = await collateral.registerFILCustodyAddr(
-      'cid_custody_FIL_1',
-      accounts[1],
-    );
-    expectEvent(res, 'RegisterFILCustodyAddr', {requester: accounts[1]});
-    res = await collateral.registerFILCustodyAddr(
-      'cid_custody_FIL_2',
-      accounts[2],
-    );
-    expectEvent(res, 'RegisterFILCustodyAddr', {requester: accounts[2]});
+    let latest = await time.latest();
+
+    const notice = time.duration.years(1) / 12 - time.duration.weeks(2);
+    await time.increase(notice);
+    let latest2 = await time.latest();
+
+    const payment = time.duration.weeks(2);
+    await time.increase(payment);
+    let latest3 = await time.latest();
+
+    // console.log(latest, latest2, latest3)
+    // expect(latest2 - latest).to.equal(notice);
+    // expect(latest3 - latest2).to.equal(payment);
+
+    console.log('latest is', latest.toString(), toDate(latest));
+    console.log('latest2 is', latest2.toString(), toDate(latest2));
+    console.log('latest3 is', latest3.toString(), toDate(latest3));
   });
 
-  it('Collateralize', async () => {
-    await printCol(collateral, accounts[2], 'Registered');
-    let res = await collateral.upSizeETH({
-      from: accounts[2],
-      value: 20000, // 20000 ETH can cover about 244000 FIL
-      // value: 1000000000000000000, // 1 ETH in wei
-    });
-    expectEvent(res, 'UpSizeETH', {sender: accounts[2]});
-    await printCol(collateral, accounts[2], 'upSizeETH (ETH 20000 added)');
-  });
+  // it('Init Collateral with sample data', async () => {
+  //   input = sample.Collateral;
+  //   let res;
+  //   res = await collateral.setColBook(input[0].id, input[0].addrFIL, {
+  //     from: accounts[0],
+  //     value: 10000,
+  //   });
+  //   expectEvent(res, 'SetColBook', {sender: accounts[0]});
+  //   res = await collateral.setColBook(input[1].id, input[1].addrFIL, {
+  //     from: accounts[1],
+  //     value: 10000,
+  //   });
+  //   expectEvent(res, 'SetColBook', {sender: accounts[1]});
+  //   res = await collateral.setColBook(input[2].id, input[2].addrFIL, {
+  //     from: accounts[2],
+  //   });
+  //   expectEvent(res, 'SetColBook', {sender: accounts[2]});
 
-  let beforeLoan;
-  let afterLoan;
-  it('Make Loan Deal', async () => {
-    input = sample.Loan;
-    input.makerAddr = accounts[0];
-    beforeLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-    );
+  //   res = await collateral.registerFILCustodyAddr(
+  //     'cid_custody_FIL_0',
+  //     accounts[0],
+  //   );
+  //   expectEvent(res, 'RegisterFILCustodyAddr', {requester: accounts[0]});
+  //   res = await collateral.registerFILCustodyAddr(
+  //     'cid_custody_FIL_1',
+  //     accounts[1],
+  //   );
+  //   expectEvent(res, 'RegisterFILCustodyAddr', {requester: accounts[1]});
+  //   res = await collateral.registerFILCustodyAddr(
+  //     'cid_custody_FIL_2',
+  //     accounts[2],
+  //   );
+  //   expectEvent(res, 'RegisterFILCustodyAddr', {requester: accounts[2]});
+  // });
 
-    // console.log('input is', input)
+  // it('Collateralize', async () => {
+  //   await printCol(collateral, accounts[2], 'Registered');
+  //   let res = await collateral.upSizeETH({
+  //     from: accounts[2],
+  //     value: 20000, // 20000 ETH can cover about 244000 FIL
+  //     // value: 1000000000000000000, // 1 ETH in wei
+  //   });
+  //   expectEvent(res, 'UpSizeETH', {sender: accounts[2]});
+  //   await printCol(collateral, accounts[2], 'upSizeETH (ETH 20000 added)');
+  // });
 
-    // Init Loan with sample data
-    let taker = accounts[2];
-    let res = await loan.makeLoanDeal(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-      input.amt,
-      {
-        from: taker,
-      },
-    );
-    expectEvent(res, 'MakeLoanDeal', {sender: taker});
-    await printCol(
-      collateral,
-      accounts[2],
-      'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
-    );
-    await printLoan(loan, accounts[2], '');
-  });
+  // let beforeLoan;
+  // let afterLoan;
+  // it('Make Loan Deal', async () => {
+  //   input = sample.Loan;
+  //   input.makerAddr = accounts[0];
+  //   beforeLoan = await moneyMarket.getOneItem(
+  //     input.makerAddr,
+  //     input.side,
+  //     input.ccy,
+  //     input.term,
+  //   );
 
-  it('Confirm FIL Payment', async () => {
-    let res = await loan.confirmFILPayment(0, {
-      from: accounts[2],
-    });
-    expectEvent(res, 'ConfirmFILPayment', {sender: accounts[2]});
-    await printCol(
-      collateral,
-      accounts[2],
-      'confirmFILPayment (coverage 174%)',
-    );
-    await printLoan(loan, accounts[2], '');
-  });
+  //   // console.log('input is', input)
 
-  it('Loan Item Test', async () => {
-    afterLoan = await moneyMarket.getOneItem(
-      input.makerAddr,
-      input.side,
-      input.ccy,
-      input.term,
-    );
-    console.log(
-      'FIL loan market before',
-      beforeLoan.amt,
-      'FIL loan market after',
-      afterLoan.amt,
-    );
+  //   // Init Loan with sample data
+  //   let taker = accounts[2];
+  //   let res = await loan.makeLoanDeal(
+  //     input.makerAddr,
+  //     input.side,
+  //     input.ccy,
+  //     input.term,
+  //     input.amt,
+  //     {
+  //       from: taker,
+  //     },
+  //   );
+  //   expectEvent(res, 'MakeLoanDeal', {sender: taker});
+  //   await printCol(
+  //     collateral,
+  //     accounts[2],
+  //     'makeLoanDeal (borrow FIL 140001, FILETH is 0.082)',
+  //   );
+  //   await printLoan(loan, accounts[2], '');
+  // });
 
-    // loan item test
-    let book = await loan.getOneBook(accounts[2]);
-    let loanItem = book.loans[0];
-    printDate(loanItem.schedule.notices);
-    printDate(loanItem.schedule.payments);
-    console.log(loanItem.schedule.amounts);
+  // it('Confirm FIL Payment', async () => {
+  //   let res = await loan.confirmFILPayment(0, {
+  //     from: accounts[2],
+  //   });
+  //   expectEvent(res, 'ConfirmFILPayment', {sender: accounts[2]});
+  //   await printCol(
+  //     collateral,
+  //     accounts[2],
+  //     'confirmFILPayment (coverage 174%)',
+  //   );
+  //   await printLoan(loan, accounts[2], '');
+  // });
 
-    // discount factor test
-    let df = await moneyMarket.getDiscountFactors();
-    printNum(df[0]);
-    printNum(df[1]);
-  });
+  // it('Loan Item Test', async () => {
+  //   afterLoan = await moneyMarket.getOneItem(
+  //     input.makerAddr,
+  //     input.side,
+  //     input.ccy,
+  //     input.term,
+  //   );
+  //   console.log(
+  //     'FIL loan market before',
+  //     beforeLoan.amt,
+  //     'FIL loan market after',
+  //     afterLoan.amt,
+  //   );
+
+  //   // loan item test
+  //   let book = await loan.getOneBook(accounts[2]);
+  //   let loanItem = book.loans[0];
+  //   printDate(loanItem.schedule.notices);
+  //   printDate(loanItem.schedule.payments);
+  //   console.log(loanItem.schedule.amounts);
+
+  //   // discount factor test
+  //   let df = await moneyMarket.getDiscountFactors();
+  //   printNum(df[0]);
+  //   printNum(df[1]);
+  // });
 });
 
 // // Start test block
