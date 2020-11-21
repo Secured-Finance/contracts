@@ -315,17 +315,39 @@ contract Collateral {
         emit UpSizeFIL(msg.sender);
     }
 
+    function emptyBook(ColBook storage book) private {
+        book.id = "";
+        book.addrETH = 0x0000000000000000000000000000000000000000;
+        book.addrFIL = "";
+        book.userAddrFIL = "";
+        book.addrUSDC = 0x0000000000000000000000000000000000000000;
+        book.userAddrUSDC = 0x0000000000000000000000000000000000000000;
+        book.amtETH = 0;
+        book.amtFIL = 0;
+        book.amtUSDC = 0;
+        book.amtFILValue = 0;
+        book.amtUSDCValue = 0;
+        book.inuseETH = 0;
+        book.inuseFIL = 0;
+        book.inuseUSDC = 0;
+        book.inuseFILValue = 0;
+        book.inuseUSDCValue = 0;
+        book.coverage = 0;
+        book.isAvailable = false;
+        book.state = State.EMPTY;
+    }
+
     // to be called from market maker
     function delColBook() public {
-        require(colMap[msg.sender].isAvailable == true, 'user not found');
-        uint256 amtETH = colMap[msg.sender].amtETH;
-        uint256 amtFIL = colMap[msg.sender].amtFIL;
+        ColBook memory book = colMap[msg.sender];
+        require(book.isAvailable == true, 'user not found');
+        emptyBook(colMap[msg.sender]);
         delete colMap[msg.sender]; // avoid reentrancy
+        msg.sender.transfer(book.amtETH);
         for (uint256 i = 0; i < users.length; i++) {
             if (users[i] == msg.sender) delete users[i];
         } // users.length no change
-        msg.sender.transfer(amtETH);
-        amtFIL; // TODO - return FIL
+        // amtFIL; // TODO - return FIL
         emit DelColBook(msg.sender);
     }
 

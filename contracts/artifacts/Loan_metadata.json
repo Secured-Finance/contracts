@@ -1,0 +1,824 @@
+{
+	"compiler": {
+		"version": "0.6.12+commit.27d51765"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "moneyAddr",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "fxAddr",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "colAddr",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					}
+				],
+				"name": "ConfirmFILPayment",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "loanMaker",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "colUser",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "term",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "loanId",
+						"type": "uint256"
+					}
+				],
+				"name": "ConfirmPayment",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "makerAddr",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "loanId",
+						"type": "uint256"
+					}
+				],
+				"name": "MakeLoanDeal",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "string",
+						"name": "txHash",
+						"type": "string"
+					}
+				],
+				"name": "NoitfyFILPayment",
+				"type": "event"
+			},
+			{
+				"inputs": [],
+				"name": "confirmETHPayment",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "loanMaker",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "colUser",
+						"type": "address"
+					},
+					{
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "term",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "loanId",
+						"type": "uint256"
+					}
+				],
+				"name": "confirmPayment",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getAllBooks",
+				"outputs": [
+					{
+						"components": [
+							{
+								"components": [
+									{
+										"internalType": "uint256",
+										"name": "loanId",
+										"type": "uint256"
+									},
+									{
+										"internalType": "address",
+										"name": "lender",
+										"type": "address"
+									},
+									{
+										"internalType": "address",
+										"name": "borrower",
+										"type": "address"
+									},
+									{
+										"internalType": "enum MoneyMarket.Side",
+										"name": "side",
+										"type": "uint8"
+									},
+									{
+										"internalType": "enum MoneyMarket.Ccy",
+										"name": "ccy",
+										"type": "uint8"
+									},
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"components": [
+											{
+												"internalType": "uint256",
+												"name": "start",
+												"type": "uint256"
+											},
+											{
+												"internalType": "uint256",
+												"name": "end",
+												"type": "uint256"
+											},
+											{
+												"internalType": "uint256[5]",
+												"name": "notices",
+												"type": "uint256[5]"
+											},
+											{
+												"internalType": "uint256[5]",
+												"name": "payments",
+												"type": "uint256[5]"
+											},
+											{
+												"internalType": "uint256[5]",
+												"name": "amounts",
+												"type": "uint256[5]"
+											}
+										],
+										"internalType": "struct Loan.Schedule",
+										"name": "schedule",
+										"type": "tuple"
+									},
+									{
+										"internalType": "uint256",
+										"name": "pv",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "asOf",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "enum Loan.State",
+										"name": "state",
+										"type": "uint8"
+									}
+								],
+								"internalType": "struct Loan.LoanItem[]",
+								"name": "loans",
+								"type": "tuple[]"
+							},
+							{
+								"internalType": "uint256",
+								"name": "loanNum",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isValue",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct Loan.LoanBook[]",
+						"name": "",
+						"type": "tuple[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getAllUsers",
+				"outputs": [
+					{
+						"internalType": "address[]",
+						"name": "",
+						"type": "address[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "loanId",
+						"type": "uint256"
+					}
+				],
+				"name": "getLoanItem",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "loanId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "address",
+								"name": "lender",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "borrower",
+								"type": "address"
+							},
+							{
+								"internalType": "enum MoneyMarket.Side",
+								"name": "side",
+								"type": "uint8"
+							},
+							{
+								"internalType": "enum MoneyMarket.Ccy",
+								"name": "ccy",
+								"type": "uint8"
+							},
+							{
+								"internalType": "enum MoneyMarket.Term",
+								"name": "term",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amt",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rate",
+								"type": "uint256"
+							},
+							{
+								"components": [
+									{
+										"internalType": "uint256",
+										"name": "start",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "end",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256[5]",
+										"name": "notices",
+										"type": "uint256[5]"
+									},
+									{
+										"internalType": "uint256[5]",
+										"name": "payments",
+										"type": "uint256[5]"
+									},
+									{
+										"internalType": "uint256[5]",
+										"name": "amounts",
+										"type": "uint256[5]"
+									}
+								],
+								"internalType": "struct Loan.Schedule",
+								"name": "schedule",
+								"type": "tuple"
+							},
+							{
+								"internalType": "uint256",
+								"name": "pv",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "asOf",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isAvailable",
+								"type": "bool"
+							},
+							{
+								"internalType": "enum Loan.State",
+								"name": "state",
+								"type": "uint8"
+							}
+						],
+						"internalType": "struct Loan.LoanItem",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "addr",
+						"type": "address"
+					}
+				],
+				"name": "getOneBook",
+				"outputs": [
+					{
+						"components": [
+							{
+								"components": [
+									{
+										"internalType": "uint256",
+										"name": "loanId",
+										"type": "uint256"
+									},
+									{
+										"internalType": "address",
+										"name": "lender",
+										"type": "address"
+									},
+									{
+										"internalType": "address",
+										"name": "borrower",
+										"type": "address"
+									},
+									{
+										"internalType": "enum MoneyMarket.Side",
+										"name": "side",
+										"type": "uint8"
+									},
+									{
+										"internalType": "enum MoneyMarket.Ccy",
+										"name": "ccy",
+										"type": "uint8"
+									},
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"components": [
+											{
+												"internalType": "uint256",
+												"name": "start",
+												"type": "uint256"
+											},
+											{
+												"internalType": "uint256",
+												"name": "end",
+												"type": "uint256"
+											},
+											{
+												"internalType": "uint256[5]",
+												"name": "notices",
+												"type": "uint256[5]"
+											},
+											{
+												"internalType": "uint256[5]",
+												"name": "payments",
+												"type": "uint256[5]"
+											},
+											{
+												"internalType": "uint256[5]",
+												"name": "amounts",
+												"type": "uint256[5]"
+											}
+										],
+										"internalType": "struct Loan.Schedule",
+										"name": "schedule",
+										"type": "tuple"
+									},
+									{
+										"internalType": "uint256",
+										"name": "pv",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "asOf",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "enum Loan.State",
+										"name": "state",
+										"type": "uint8"
+									}
+								],
+								"internalType": "struct Loan.LoanItem[]",
+								"name": "loans",
+								"type": "tuple[]"
+							},
+							{
+								"internalType": "uint256",
+								"name": "loanNum",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isValue",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct Loan.LoanBook",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rate",
+						"type": "uint256"
+					}
+				],
+				"name": "getSchedule",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "start",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "end",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256[5]",
+								"name": "notices",
+								"type": "uint256[5]"
+							},
+							{
+								"internalType": "uint256[5]",
+								"name": "payments",
+								"type": "uint256[5]"
+							},
+							{
+								"internalType": "uint256[5]",
+								"name": "amounts",
+								"type": "uint256[5]"
+							}
+						],
+						"internalType": "struct Loan.Schedule",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "makerAddr",
+						"type": "address"
+					},
+					{
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					}
+				],
+				"name": "makeLoanDeal",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "notifyETHPayment",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "txHash",
+						"type": "string"
+					}
+				],
+				"name": "notifyFILPayment",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "updateAllPV",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "updateAllState",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "loanMaker",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "colUser",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "loanId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					}
+				],
+				"name": "updateState",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "addr",
+						"type": "address"
+					}
+				],
+				"name": "updateUserPV",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {
+				"makeLoanDeal(address,uint8,uint8,uint8,uint256)": {
+					"details": "Create a loan deal"
+				},
+				"updateAllPV()": {
+					"details": "Mark to Market Section 1. get discount factors from moneyMarket 2. get PV for each scheduled cashflow 3. update LoanItem with total value of PV"
+				},
+				"updateState(address,address,uint256,uint256)": {
+					"details": "State Management Section 1. update states 2. notify - confirm method to change states"
+				}
+			},
+			"stateVariables": {
+				"DAYS": {
+					"details": "DAYCOUNTS CONVENTION TABLE for PAYMENTS and NOTICES"
+				}
+			},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"localhost/Loan.sol": "Loan"
+		},
+		"evmVersion": "istanbul",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"localhost/Collateral.sol": {
+			"keccak256": "0xa7db5a9fe02b1541b298a470ffa354ef3787864cf4684b9cfb04fa01bf23a031",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c4f4f764a6f9bb72d200583eda0f487e9517e8cf75950337a4b07791b03365a6",
+				"dweb:/ipfs/QmdvfKNMGXoyNYt3q3qBavuqhNhM8LJPqLqQ6zyMSJRWrs"
+			]
+		},
+		"localhost/FXMarket.sol": {
+			"keccak256": "0x45cd70224e11b484d63dd54e12a39a193dfd65bfff38d098ccf6cb96286144c2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://bb4a7ccec57f43d534956c66b54df80305091f74dbea926f3087ef1fa7699d35",
+				"dweb:/ipfs/QmUpSr8c7aZGsHBB51FkGrQNArdsRizxWb6afFmLgRuMaf"
+			]
+		},
+		"localhost/Loan.sol": {
+			"keccak256": "0x6c3ffb9dea024cf4799240126212c9258b4b67cab86e8ae3cf6bddea61dc1c6f",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://35ead0fc5591b43dbeafa9ebbf8d910ea7303c812d64846f3de0204555278a13",
+				"dweb:/ipfs/QmZsx7nVLXZgRdXsgPDc5NjxUDUNkpKa3bjZAYa8SjpkTA"
+			]
+		},
+		"localhost/MoneyMarket.sol": {
+			"keccak256": "0xc2b43f757997822a64cd36a57d0c9f2770e6081234666c54be5e593f8e25508b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://4147c59062c27fbcc4a9e5455221fb95f0513e9558376c34e35b981c84fabd70",
+				"dweb:/ipfs/QmZefiNQ5vtYruy3PH24kQZTWJ9scNMvJj7sy2qhcVjQ6U"
+			]
+		}
+	},
+	"version": 1
+}

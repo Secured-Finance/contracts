@@ -1,0 +1,690 @@
+{
+	"compiler": {
+		"version": "0.6.12+commit.27d51765"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					}
+				],
+				"name": "DelMoneyMarketBook",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					}
+				],
+				"name": "DelOneItem",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					}
+				],
+				"name": "SetMoneyMarketBook",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					}
+				],
+				"name": "TakeOneItem",
+				"type": "event"
+			},
+			{
+				"inputs": [],
+				"name": "delMoneyMarketBook",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "addr",
+						"type": "address"
+					},
+					{
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					}
+				],
+				"name": "delOneItem",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getAllBooks",
+				"outputs": [
+					{
+						"components": [
+							{
+								"components": [
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "goodtil",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "address",
+										"name": "addr",
+										"type": "address"
+									}
+								],
+								"internalType": "struct MoneyMarket.MoneyMarketItem[6][3]",
+								"name": "lenders",
+								"type": "tuple[6][3]"
+							},
+							{
+								"components": [
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "goodtil",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "address",
+										"name": "addr",
+										"type": "address"
+									}
+								],
+								"internalType": "struct MoneyMarket.MoneyMarketItem[6][3]",
+								"name": "borrowers",
+								"type": "tuple[6][3]"
+							},
+							{
+								"internalType": "bool",
+								"name": "isValue",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct MoneyMarket.MoneyMarketBook[]",
+						"name": "",
+						"type": "tuple[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getBestBook",
+				"outputs": [
+					{
+						"components": [
+							{
+								"components": [
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "goodtil",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "address",
+										"name": "addr",
+										"type": "address"
+									}
+								],
+								"internalType": "struct MoneyMarket.MoneyMarketItem[6][3]",
+								"name": "lenders",
+								"type": "tuple[6][3]"
+							},
+							{
+								"components": [
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "goodtil",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "address",
+										"name": "addr",
+										"type": "address"
+									}
+								],
+								"internalType": "struct MoneyMarket.MoneyMarketItem[6][3]",
+								"name": "borrowers",
+								"type": "tuple[6][3]"
+							},
+							{
+								"internalType": "bool",
+								"name": "isValue",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct MoneyMarket.MoneyMarketBook",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getBorrowerRates",
+				"outputs": [
+					{
+						"internalType": "uint256[6][3]",
+						"name": "",
+						"type": "uint256[6][3]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getDiscountFactors",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "df3m",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "df6m",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "df1y",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "df2y",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "df3y",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "df4y",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "df5y",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct MoneyMarket.DiscountFactor[3]",
+						"name": "",
+						"type": "tuple[3]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getLenderRates",
+				"outputs": [
+					{
+						"internalType": "uint256[6][3]",
+						"name": "",
+						"type": "uint256[6][3]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getMarketMakers",
+				"outputs": [
+					{
+						"internalType": "address[]",
+						"name": "",
+						"type": "address[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getMidRates",
+				"outputs": [
+					{
+						"internalType": "uint256[6][3]",
+						"name": "",
+						"type": "uint256[6][3]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "addr",
+						"type": "address"
+					}
+				],
+				"name": "getOneBook",
+				"outputs": [
+					{
+						"components": [
+							{
+								"components": [
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "goodtil",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "address",
+										"name": "addr",
+										"type": "address"
+									}
+								],
+								"internalType": "struct MoneyMarket.MoneyMarketItem[6][3]",
+								"name": "lenders",
+								"type": "tuple[6][3]"
+							},
+							{
+								"components": [
+									{
+										"internalType": "enum MoneyMarket.Term",
+										"name": "term",
+										"type": "uint8"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amt",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "rate",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "goodtil",
+										"type": "uint256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isAvailable",
+										"type": "bool"
+									},
+									{
+										"internalType": "address",
+										"name": "addr",
+										"type": "address"
+									}
+								],
+								"internalType": "struct MoneyMarket.MoneyMarketItem[6][3]",
+								"name": "borrowers",
+								"type": "tuple[6][3]"
+							},
+							{
+								"internalType": "bool",
+								"name": "isValue",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct MoneyMarket.MoneyMarketBook",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "addr",
+						"type": "address"
+					},
+					{
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					}
+				],
+				"name": "getOneItem",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "enum MoneyMarket.Term",
+								"name": "term",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amt",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rate",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "goodtil",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isAvailable",
+								"type": "bool"
+							},
+							{
+								"internalType": "address",
+								"name": "addr",
+								"type": "address"
+							}
+						],
+						"internalType": "struct MoneyMarket.MoneyMarketItem",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"components": [
+							{
+								"internalType": "enum MoneyMarket.Term",
+								"name": "term",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amt",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rate",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct MoneyMarket.MoneyMarketInput[]",
+						"name": "lenders",
+						"type": "tuple[]"
+					},
+					{
+						"components": [
+							{
+								"internalType": "enum MoneyMarket.Term",
+								"name": "term",
+								"type": "uint8"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amt",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "rate",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct MoneyMarket.MoneyMarketInput[]",
+						"name": "borrowers",
+						"type": "tuple[]"
+					},
+					{
+						"internalType": "uint256",
+						"name": "effectiveSec",
+						"type": "uint256"
+					}
+				],
+				"name": "setMoneyMarketBook",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "addr",
+						"type": "address"
+					},
+					{
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					}
+				],
+				"name": "takeOneItem",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "rate",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"localhost/MoneyMarket.sol": "MoneyMarket"
+		},
+		"evmVersion": "istanbul",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"localhost/MoneyMarket.sol": {
+			"keccak256": "0xc2b43f757997822a64cd36a57d0c9f2770e6081234666c54be5e593f8e25508b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://4147c59062c27fbcc4a9e5455221fb95f0513e9558376c34e35b981c84fabd70",
+				"dweb:/ipfs/QmZefiNQ5vtYruy3PH24kQZTWJ9scNMvJj7sy2qhcVjQ6U"
+			]
+		}
+	},
+	"version": 1
+}

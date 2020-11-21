@@ -12,10 +12,10 @@ contract MoneyMarket {
     enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
     enum Side {LEND, BORROW}
 
-    uint256 constant NUMCCY = 3;
-    uint256 constant NUMTERM = 6;
-    uint256 constant NUMDF = 7; // numbef of discount factors
-    uint256 constant BP = 10000; // basis point
+    uint256 internal constant NUMCCY = 3;
+    uint256 internal constant NUMTERM = 6;
+    uint256 internal constant NUMDF = 7; // numbef of discount factors
+    uint256 internal constant BP = 10000; // basis point
 
     struct MoneyMarketBook {
         MoneyMarketItem[NUMTERM][NUMCCY] lenders;

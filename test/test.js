@@ -1,33 +1,18 @@
-const {
-  accounts,
-  defaultSender,
-  contract,
-  web3,
-  provider,
-} = require('@openzeppelin/test-environment');
-const {expect} = require('chai');
-const {
-  BN,
-  expectEvent,
-  expectRevert,
-  constants,
-  time,
-} = require('@openzeppelin/test-helpers');
-const MoneyMarket = contract.fromArtifact('MoneyMarket');
-const FXMarket = contract.fromArtifact('FXMarket');
-const Collateral = contract.fromArtifact('Collateral');
-const Loan = contract.fromArtifact('Loan');
-const {Side, Ccy, Term, sample} = require('./constants');
-const {toDate, printDate, printNum, printCol, printLoan} = require('./helper');
+const {accounts, defaultSender, contract, web3, provider} = require("@openzeppelin/test-environment");
+const {expect} = require("chai");
+const {BN, expectEvent, expectRevert, constants, time} = require("@openzeppelin/test-helpers");
+const MoneyMarket = contract.fromArtifact("MoneyMarket");
+const FXMarket = contract.fromArtifact("FXMarket");
+const Collateral = contract.fromArtifact("Collateral");
+const Loan = contract.fromArtifact("Loan");
+const {Side, Ccy, Term, sample} = require("./constants");
+const {toDate, printDate, printNum, printCol, printLoan, printMoneyMkt} = require("./helper");
 
 const val = (obj) => {
   return Object.values(obj);
 };
 
-describe('MoneyMarket', () => {
-  console.log('defaultSender is', defaultSender);
-  console.log('accounts is', accounts);
-
+describe("MoneyMarket", () => {
   const [alice, bob, carol] = accounts;
   const from = {from: defaultSender};
   const sender = {sender: defaultSender};
@@ -43,90 +28,78 @@ describe('MoneyMarket', () => {
     moneyMarket = await MoneyMarket.new();
     fxMarket = await FXMarket.new();
     collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
-    loan = await Loan.new(
-      moneyMarket.address,
-      fxMarket.address,
-      collateral.address,
-    );
+    loan = await Loan.new(moneyMarket.address, fxMarket.address, collateral.address);
     console.log();
-    console.log('moneyMarket addr is', moneyMarket.address);
-    console.log('fxMarket    addr is', fxMarket.address);
-    console.log('collateral  addr is', collateral.address);
-    console.log('loan        addr is', loan.address);
-    console.log('\n');
+    console.log("moneyMarket addr is", moneyMarket.address);
+    console.log("fxMarket    addr is", fxMarket.address);
+    console.log("collateral  addr is", collateral.address);
+    console.log("loan        addr is", loan.address);
+    console.log();
+    console.log("default     addr is", defaultSender);
+    console.log("alice       addr is", alice);
+    console.log("bob         addr is", alice);
+    console.log("carol       addr is", alice);
+    // console.log("accounts is", accounts);
   });
 
-  it('Init with sample MoneyMarket', async () => {
+  it("Init with sample MoneyMarket", async () => {
     sample.MoneyMarket.forEach(async (item) => {
       let input = val(item);
       let res = await moneyMarket.setMoneyMarketBook(...input);
-      expectEvent(res, 'SetMoneyMarketBook', sender);
+      expectEvent(res, "SetMoneyMarketBook", sender);
     });
   });
 
-  it('Init with sample FXMarket', async () => {
+  it("Init with sample FXMarket", async () => {
     sample.FXMarket.forEach(async (item) => {
       let input = val(item);
       let res = await fxMarket.setFXBook(...input);
-      expectEvent(res, 'SetFXBook', sender);
+      expectEvent(res, "SetFXBook", sender);
     });
   });
 
-  it('Get item from moneyMarketBook', async () => {
-    // const books = await moneyMarket.getAllBooks();
-    // console.log('books is', books[0]);
+  // it("Get all books", async () => {
+  //   const books = await moneyMarket.getAllBooks();
+  //   console.log("books is", books[0]);
+  // });
 
-    // const midRates = await moneyMarket.getMidRates();
-    // console.log('midRates is', midRates);
+  // it("Get mid rates"),
+  //   async () => {
+  //     const midRates = await moneyMarket.getMidRates();
+  //     console.log("midRates is", midRates);
+  //   };
 
-    // const df = await moneyMarket.getDiscountFactors();
-    // console.log('df is', df);
+  // it("Get discount factors", async () => {
+  //   const df = await moneyMarket.getDiscountFactors();
+  //   console.log("df is", df);
+  // });
 
-    // const book = await moneyMarket.getOneBook(owner);
-    // console.log('book', book[0]);
+  // MoneyMarketItem[SIDE][CCY][TERM]
 
-    const item = await moneyMarket.getOneItem(
-      owner,
-      Side.BORROW,
-      Ccy.FIL,
-      Term._3m,
-    );
-    expect(item.amt).to.equal('10000');
+  it("Get one book", async () => {
+    const book = await moneyMarket.getOneBook(owner);
+    printMoneyMkt(book);
+    // console.log("book", printMoneyMkt(book));
+    // console.log("book", book);
+    // console.log("book", book[0]);
+    // console.log("book", book[0][0][0]);
+    // console.log(book.length, book[0].length, book[0][0].length)
+
+    // console.log(book[0])
+
+    // book[0].forEach((b) => printMoneyMkt(b));
+    // book[0].forEach((b) => console.log(b, '\n'));
   });
 
-  it('Check time forward 100 millisec', async () => {
-    let latest = await time.latest();
-    // console.log('latest is', latest.toString(), toDate(latest));
-
-    await time.increase(100);
-    let latest2 = await time.latest();
-    // console.log('latest2 is', latest2.toString(), toDate(latest2));
-
-    expect(latest2 - latest).to.equal(100);
-  });
-
-  it('Check time forward 1 month', async () => {
-    // let latestBlock = await time.latestBlock();
-    // console.log('latestBlock is', latestBlock.toString());
-
-    let latest = await time.latest();
-
-    const notice = time.duration.years(1) / 12 - time.duration.weeks(2);
-    await time.increase(notice);
-    let latest2 = await time.latest();
-
-    const payment = time.duration.weeks(2);
-    await time.increase(payment);
-    let latest3 = await time.latest();
-
-    // console.log(latest, latest2, latest3)
-    // expect(latest2 - latest).to.equal(notice);
-    // expect(latest3 - latest2).to.equal(payment);
-
-    console.log('latest is', latest.toString(), toDate(latest));
-    console.log('latest2 is', latest2.toString(), toDate(latest2));
-    console.log('latest3 is', latest3.toString(), toDate(latest3));
-  });
+  // it("Get one item", async () => {
+  //   const item = await moneyMarket.getOneItem(
+  //     owner,
+  //     Side.BORROW,
+  //     Ccy.FIL,
+  //     Term._3m,
+  //   );
+  //   expect(item.amt).to.equal("10000");
+  // });
 
   // it('Init Collateral with sample data', async () => {
   //   input = sample.Collateral;
@@ -250,69 +223,30 @@ describe('MoneyMarket', () => {
   // });
 });
 
-// // Start test block
-// contract('MoneyMarket', () => {
-//   beforeEach(async () => {
-//     // this.moneyMarket = await MoneyMarket.new();
-//     this.moneyMarket = await MoneyMarket.new();
+// describe('Forward simulation', () => {
+//   it('Check time forward 100 millisec', async () => {
+//     let latest = await time.latest();
+//     // console.log('latest is', latest.toString(), toDate(latest));
+//     await time.increase(100);
+//     let latest2 = await time.latest();
+//     // console.log('latest2 is', latest2.toString(), toDate(latest2));
+//     expect(latest2 - latest).to.equal(100);
 //   });
-
-//   it('set moneyMarketBook', async () => {
-//     const input = sample.MoneyMarket;
-//     await this.moneyMarket.setMoneyMarketBook(
-//       input.ccy,
-//       input.lenders,
-//       input.borrowers,
-//       input.effectiveSec,
-//     );
-
-//     // const books = await this.moneyMarket.getAllBooks();
-//     // console.log('books is', books);
-
-//     // const midRates = await this.moneyMarket.getMidRates();
-//     // console.log('midRates is', midRates);
-
-//     const item = await this.moneyMarket.getOneItem(
-//       accounts[0],
-//       input.side,
-//       input.ccy,
-//       input.term,
-//     );
-//     console.log('item is', item);
+//   it('Check time forward 1 month', async () => {
+//     // let latestBlock = await time.latestBlock();
+//     // console.log('latestBlock is', latestBlock.toString());
+//     let latest = await time.latest();
+//     const notice = time.duration.years(1) / 12 - time.duration.weeks(2);
+//     await time.increase(notice);
+//     let latest2 = await time.latest();
+//     const payment = time.duration.weeks(2);
+//     await time.increase(payment);
+//     let latest3 = await time.latest();
+//     // console.log(latest, latest2, latest3)
+//     // expect(latest2 - latest).to.equal(notice);
+//     // expect(latest3 - latest2).to.equal(payment);
+//     console.log('latest is', latest.toString(), toDate(latest));
+//     console.log('latest2 is', latest2.toString(), toDate(latest2));
+//     console.log('latest3 is', latest3.toString(), toDate(latest3));
 //   });
-// });
-
-// const sample = {
-//   MoneyMarket: {
-//     ccy: Ccy.FIL,
-//     lenders: [
-//       [0, 100, 7],
-//       [1, 111, 11],
-//       [2, 222, 22],
-//       [3, 333, 33],
-//       [4, 444, 44],
-//       [5, 555, 55],
-//     ],
-//     borrowers: [
-//       [0, 100, 5],
-//       [1, 111, 6],
-//       [2, 222, 20],
-//       [3, 333, 30],
-//       [4, 444, 40],
-//       [5, 555, 50],
-//     ],
-//     effectiveSec: 36000,
-//   },
-//   FXMarket: {
-//     pair: 0,
-//     offerInput: [1, 0, 100000, 8500],
-//     bidInput: [1, 0, 100000, 8000],
-//     effectiveSec: 3600,
-//   },
-// };
-
-// // helper to convert timestamp to human readable date
-// const toDate = (timestamp) => {
-//   const dateObject = new Date(timestamp * 1000);
-//   return dateObject.toLocaleString();
-// };
+// })
