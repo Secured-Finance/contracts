@@ -8,9 +8,9 @@ contract MoneyMarket {
     event DelOneItem(address indexed sender);
     event TakeOneItem(address indexed sender);
 
+    enum Side {LEND, BORROW}
     enum Ccy {ETH, FIL, USDC}
     enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
-    enum Side {LEND, BORROW}
 
     uint256 internal constant NUMCCY = 3;
     uint256 internal constant NUMTERM = 6;

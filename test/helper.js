@@ -64,6 +64,22 @@ const printSched = async (loan, makerAddr, loanId) => {
   console.log("Amounts", amts);
 };
 
+const toDateTime = (timestamp) => {
+  const options = {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    // hour: "numeric",
+    // minute: "numeric",
+    // second: "numeric",
+    hour12: false,
+    timeZone: "UTC",
+    // timeZone: "Asia/Bangkok",
+  };
+  const dateObject = new Date(timestamp * 1000);
+  return new Intl.DateTimeFormat("default", options).format(dateObject);
+};
+
 const Side = ["LEND", "BORROW"];
 const Ccy = ["ETH", "FIL", "USDC"];
 const Term = ["3m", "6m", "1y", "2y", "3y", "5y"];
@@ -77,11 +93,19 @@ const printMoneyMkt = (book) => {
       console.log(`    [${Ccy[ccy]}]`);
       for (let term = 0; term < Term.length; term++) {
         let item = book[side][ccy][term];
-        console.log(`\t${t(term)} ${item.amt} ${item.rate / 100}%`);
+        console.log(`\t${t(term)} ${item.amt} ${item.rate / 100}% ${toDateTime(item.goodtil)}`);
       }
     }
   }
+  console.log('[isValue]', book.isValue);
 };
+
+const printDf = (arr) => {
+  arr.forEach((df, index) => {
+    console.log(Ccy[index]);
+    console.log(`${df.df3m} ${df.df6m} ${df.df1y} ${df.df2y} ${df.df3y} ${df.df4y} ${df.df5y}`);
+  })
+}
 
 module.exports = {
   toDate,
@@ -93,4 +117,5 @@ module.exports = {
   printState,
   printSched,
   printMoneyMkt,
+  printDf,
 };

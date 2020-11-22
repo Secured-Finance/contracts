@@ -678,11 +678,11 @@
 	},
 	"sources": {
 		"localhost/MoneyMarket.sol": {
-			"keccak256": "0xc2b43f757997822a64cd36a57d0c9f2770e6081234666c54be5e593f8e25508b",
+			"keccak256": "0x73d9a183b3c7d6fa5a89806e283c3a0a7b2312b3906613f02120f46ab0287d7a",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://4147c59062c27fbcc4a9e5455221fb95f0513e9558376c34e35b981c84fabd70",
-				"dweb:/ipfs/QmZefiNQ5vtYruy3PH24kQZTWJ9scNMvJj7sy2qhcVjQ6U"
+				"bzz-raw://bd06e86fa760ff45b31042686d860dacda4e1b3a493adcfb577fbbe08ce38c1b",
+				"dweb:/ipfs/QmVdzV8vzKWpWt7NiXgvxNFnqEXgoHLftc6gFANb9kqYiS"
 			]
 		}
 	},

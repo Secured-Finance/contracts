@@ -38,7 +38,7 @@ const sample = {
         [4, 140, 600],
         [5, 150, 700],
       ],
-      effectiveSec: 36000, // 10 hrs
+      effectiveSec: 60 * 60 * 24 * 14, // 14 days
     },
     {
       ccy: 1,
@@ -58,7 +58,7 @@ const sample = {
         [4, 14000, 800],
         [5, 15000, 900],
       ],
-      effectiveSec: 36000, // 10 hrs
+      effectiveSec: 60 * 60 * 24 * 14, // 14 days
     },
     {
       ccy: 2,
@@ -78,7 +78,7 @@ const sample = {
         [4, 1400000, 80],
         [5, 1500000, 90],
       ],
-      effectiveSec: 36000, // 10 hrs
+      effectiveSec: 60 * 60 * 24 * 14, // 14 days
     },
   ],
   FXMarket: [
@@ -103,19 +103,19 @@ const sample = {
   ],
   Collateral: [
     {
-      id: 'did:sample_0',
-      addrFIL: 'cid_FIL_0',
-      addrUSDC: '0xa9ed07f9bf5bd15804dfd95c5709c0ccc102b221',
+      id: "did:sample_0",
+      addrFIL: "cid_FIL_0",
+      addrUSDC: "0xa9ed07f9bf5bd15804dfd95c5709c0ccc102b221",
     },
     {
-      id: 'did:sample_1',
-      addrFIL: 'cid_FIL_1',
-      addrUSDC: '0xcb6ba40812a2421ae8bafd1459b0b71cc070f0c8',
+      id: "did:sample_1",
+      addrFIL: "cid_FIL_1",
+      addrUSDC: "0xcb6ba40812a2421ae8bafd1459b0b71cc070f0c8",
     },
     {
-      id: 'did:sample_2',
-      addrFIL: 'cid_FIL_2',
-      addrUSDC: '0x9188b1e31bc6190afcd893e614a38c704c33c640',
+      id: "did:sample_2",
+      addrFIL: "cid_FIL_2",
+      addrUSDC: "0x9188b1e31bc6190afcd893e614a38c704c33c640",
     },
   ],
   Loan: [
