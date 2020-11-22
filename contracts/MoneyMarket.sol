@@ -115,21 +115,6 @@ contract MoneyMarket {
         emit DelMoneyMarketBook(msg.sender);
     }
 
-    // TODO - [internal] delete from loan contract. require(moneyMarketMap[marketMaker] == true)
-    function delOneItem(
-        address addr,
-        Side side,
-        Ccy ccy,
-        Term term
-    ) public {
-        // TODO - require(msg.sender == Loan.address)
-        require(moneyMarketMap[addr].isValue == true, 'MoneyMarketBook not found');
-        if (side == Side.LEND)
-            delete moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
-        else delete moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
-        emit DelOneItem(addr, side, ccy, term);
-    }
-
     function getOneItem(
         address addr,
         Side side,
@@ -139,6 +124,20 @@ contract MoneyMarket {
         if (side == Side.LEND)
             return moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
         else return moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
+    }
+
+    // TODO - [internal] delete from loan contract. require(moneyMarketMap[marketMaker] == true)
+    function delOneItem(
+        address addr,
+        Side side,
+        Ccy ccy,
+        Term term
+    ) public {
+        require(moneyMarketMap[addr].isValue == true, 'MoneyMarketBook not found');
+        if (side == Side.LEND)
+            delete moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
+        else delete moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
+        emit DelOneItem(addr, side, ccy, term);
     }
 
     // to be called from Loan
@@ -160,11 +159,11 @@ contract MoneyMarket {
             delOneItem(addr, side, ccy, term);
             revert("Item expired");
         }
-        if (item.amt < amt) {
+        if (item.amt < amt)
             revert ("Amount too large");
-        } else {
-            item.amt -= amt; // update amount
-        }
+        item.amt -= amt; // update amount
+        if (item.amt == 0)
+            delOneItem(addr, side, ccy, term);
         emit TakeOneItem(addr, side, ccy, term, amt);
         return item.rate;
     }

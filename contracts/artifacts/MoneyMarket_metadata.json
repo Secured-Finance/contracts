@@ -720,11 +720,11 @@
 	},
 	"sources": {
 		"localhost/MoneyMarket.sol": {
-			"keccak256": "0x833075c482522519ec17cd72fe628150a0f1355d59722e85aaa19ad7711ec491",
+			"keccak256": "0x3104f0a0a2ff367a580f6ee53611537da2b5ac9dccac508fd61811567883ad38",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://c442a10d6e721c2a9146553f26f110e875ecd6219a51dfa581773ecc6c282bc2",
-				"dweb:/ipfs/QmZnZK5tciQsjNCnq6yCfadsXCci7uZ4g1TsjkojNPs962"
+				"bzz-raw://4f12a1531d966019bb838dd759d9fa00c19c817625ba1f7c83642552f4b8a685",
+				"dweb:/ipfs/QmQD4Mh6ghavpmavHU6ddTFBv8HDaWfG1NfkurPzpU2Yca"
 			]
 		}
 	},

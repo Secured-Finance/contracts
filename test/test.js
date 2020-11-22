@@ -59,90 +59,155 @@ describe("MoneyMarket", () => {
     });
   });
 
-  // it("Get market makers", async () => {
-  //   const makers = await moneyMarket.getMarketMakers();
-  //   console.log("makers is", makers);
-  //   expect(makers[0]).to.equal(alice);
-  // });
+  it("Get market makers", async () => {
+    const makers = await moneyMarket.getMarketMakers();
+    console.log("makers is", makers);
+    expect(makers[0]).to.equal(alice);
+  });
 
-  // it("Delete money market book", async () => {
-  //   const book0 = await moneyMarket.getBestBook();
-  //   const res = await moneyMarket.delMoneyMarketBook({from: carol});
-  //   const book1 = await moneyMarket.getBestBook();
-  //   expectEvent(res, "DelMoneyMarketBook", {sender: carol});
-  //   expect(book0[1][1][0]).to.not.equal(book1[1][1][0]);
-  //   // printMoneyMkt(book0);
-  //   // printMoneyMkt(book1);
-  // });
+  it("Get one item", async () => {
+    const item = await moneyMarket.getOneItem(alice, Side.BORROW, Ccy.FIL, Term._3m);
+    expect(item.amt).to.equal("10000");
+    // console.log('item is', item)
+  });
+
+  it("Get one book", async () => {
+    // MoneyMarketItem[SIDE][CCY][TERM]
+    const book = await moneyMarket.getOneBook(alice);
+    const {term, amt, rate} = book[0][0][0];
+    const testItem = [Number(term), Number(amt), Number(rate)];
+    expect(testItem).deep.to.equal(sample.MoneyMarket[0]["lenders"][0]);
+    // printMoneyMkt(book);
+  });
+
+  it("Get all books", async () => {
+    const books = await moneyMarket.getAllBooks();
+    expect(books.length).to.equal(3); // 3 market maker in sample
+    // books.forEach((book) => {
+    //   printMoneyMkt(book);
+    // });
+  });
+
+  it("Get best book", async () => {
+    const book = await moneyMarket.getBestBook();
+    const {term, amt, rate} = book[1][1][0]; // borrower fil 3m
+    const testItem = [Number(term), Number(amt), Number(rate)];
+    expect(testItem).deep.to.equal(sample.MoneyMarket[3].borrowers[0]);
+    // printMoneyMkt(book);
+  });
+
+  it("Get lender rates", async () => {
+    const rates = await moneyMarket.getLenderRates();
+    const lend = sample.MoneyMarket[0].lenders[0][2]; // lend 3m amt
+    expect(Number(rates[0][0])).to.equal(lend);
+    // printRates(rates);
+  });
+
+  it("Get borrower rates", async () => {
+    const rates = await moneyMarket.getBorrowerRates();
+    const borrow = sample.MoneyMarket[0].borrowers[0][2]; // borrow 3m amt
+    expect(Number(rates[0][0])).to.equal(borrow);
+    // printRates(rates);
+  });
+
+  it("Get mid rates", async () => {
+    const rates = await moneyMarket.getMidRates();
+    const lend = sample.MoneyMarket[0].lenders[0][2]; // lend 3m amt
+    const borrow = sample.MoneyMarket[0].borrowers[0][2]; // borrow 3m amt
+    expect(Number(rates[0][0])).to.equal((lend + borrow) / 2);
+    // printRates(rates);
+  });
+
+  it("Get discount factors", async () => {
+    const df = await moneyMarket.getDiscountFactors();
+    expect(df[0].length).to.equal(7); // 3m 6m 1y 2y 3y 4y 5y
+    // printDf(df);
+  });
+
+  it("Take one item", async () => {
+    const amt = 20000;
+    const book0 = await moneyMarket.getBestBook();
+    const res = await moneyMarket.takeOneItem(carol, Side.BORROW, Ccy.FIL, Term._3m, amt);
+    const book1 = await moneyMarket.getBestBook();
+    expectEvent(res, "TakeOneItem", {
+      addr: carol,
+      side: String(Side.BORROW),
+      ccy: String(Ccy.FIL),
+      term: String(Term._3m),
+      amt: String(amt),
+    });
+    expect(Number(book0[1][1][0].amt) - amt).to.equal(Number(book1[1][1][0].amt)); // borrow FIL 3m
+    // printMoneyMkt(book0);
+    // printMoneyMkt(book1);
+  });
+
+  it("Take one item full amount", async () => {
+    const book0 = await moneyMarket.getBestBook();
+    const amt = Number(book0[1][1][0].amt);
+    const res = await moneyMarket.takeOneItem(carol, Side.BORROW, Ccy.FIL, Term._3m, amt);
+    const book1 = await moneyMarket.getBestBook();
+    expectEvent(res, "TakeOneItem", {
+      addr: carol,
+      side: String(Side.BORROW),
+      ccy: String(Ccy.FIL),
+      term: String(Term._3m),
+      amt: String(amt),
+    });
+    expect(book1[1][1][0].addr).to.equal(bob);
+    // printMoneyMkt(book0);
+    // printMoneyMkt(book1);
+  });
+
+  it("Add back one item", async () => {
+    const book0 = await moneyMarket.getBestBook();
+    const item = {
+      ccy: 1,
+      lenders: [],
+      borrowers: [[0, 5000, 780]],
+      effectiveSec: 60 * 60 * 24 * 14,
+    };
+    let res = await moneyMarket.setMoneyMarketBook(...val(item), {from: carol});
+    expectEvent(res, "SetMoneyMarketBook", {sender: carol});
+    const book1 = await moneyMarket.getBestBook();
+    // printMoneyMkt(book0);
+    // printMoneyMkt(book1);
+  });
 
   it("Delete one item", async () => {
     const book0 = await moneyMarket.getBestBook();
     const res = await moneyMarket.delOneItem(carol, Side.BORROW, Ccy.FIL, Term._3m);
     const book1 = await moneyMarket.getBestBook();
-    expectEvent(res, "DelOneItem", {addr: carol, side: String(Side.BORROW), ccy: String(Ccy.FIL), term: String(Term._3m)});
+    expectEvent(res, "DelOneItem", {
+      addr: carol,
+      side: String(Side.BORROW),
+      ccy: String(Ccy.FIL),
+      term: String(Term._3m),
+    });
     expect(book0[1][1][0]).to.not.equal(book1[1][1][0]); // borrow FIL 3m
     // printMoneyMkt(book0);
     // printMoneyMkt(book1);
   });
 
-  // it("Get one item", async () => {
-  //   const item = await moneyMarket.getOneItem(alice, Side.BORROW, Ccy.FIL, Term._3m);
-  //   expect(item.amt).to.equal("10000");
-  //   // console.log('item is', item)
-  // });
+  it("Delete one book", async () => {
+    const book0 = await moneyMarket.getOneBook(carol);
+    const res = await moneyMarket.delMoneyMarketBook({from: carol});
+    const book1 = await moneyMarket.getOneBook(carol);
+    expectEvent(res, "DelMoneyMarketBook", {sender: carol});
+    expect(book1.isValue).to.equal(false);
+    // printMoneyMkt(book0);
+    // printMoneyMkt(book1);
+  });
 
-  // it("Get one book", async () => {
-  //   // MoneyMarketItem[SIDE][CCY][TERM]
-  //   const book = await moneyMarket.getOneBook(alice);
-  //   const {term, amt, rate} = book[0][0][0];
-  //   const testItem = [Number(term), Number(amt), Number(rate)];
-  //   expect(testItem).deep.to.equal(sample.MoneyMarket[0]["lenders"][0]);
-  //   // printMoneyMkt(book);
-  // });
-
-  // it("Get all books", async () => {
-  //   const books = await moneyMarket.getAllBooks();
-  //   expect(books.length).to.equal(3); // 3 market maker in sample
-  //   // books.forEach((book) => {
-  //   //   printMoneyMkt(book);
-  //   // });
-  // });
-
-  // it("Get best book", async () => {
-  //   const book = await moneyMarket.getBestBook();
-  //   const {term, amt, rate} = book[1][1][0]; // borrower fil 3m
-  //   const testItem = [Number(term), Number(amt), Number(rate)];
-  //   expect(testItem).deep.to.equal(sample.MoneyMarket[3].borrowers[0]);
-  //   // printMoneyMkt(book);
-  // });
-
-  // it("Get lender rates", async () => {
-  //   const rates = await moneyMarket.getLenderRates();
-  //   const lend = sample.MoneyMarket[0].lenders[0][2]; // lend 3m amt
-  //   expect(Number(rates[0][0])).to.equal(lend);
-  //   // printRates(rates);
-  // });
-
-  // it("Get borrower rates", async () => {
-  //   const rates = await moneyMarket.getBorrowerRates();
-  //   const borrow = sample.MoneyMarket[0].borrowers[0][2]; // borrow 3m amt
-  //   expect(Number(rates[0][0])).to.equal(borrow);
-  //   // printRates(rates);
-  // });
-
-  // it("Get mid rates", async () => {
-  //   const rates = await moneyMarket.getMidRates();
-  //   const lend = sample.MoneyMarket[0].lenders[0][2]; // lend 3m amt
-  //   const borrow = sample.MoneyMarket[0].borrowers[0][2]; // borrow 3m amt
-  //   expect(Number(rates[0][0])).to.equal((lend + borrow) / 2);
-  //   // printRates(rates);
-  // });
-
-  // it("Get discount factors", async () => {
-  //   const df = await moneyMarket.getDiscountFactors();
-  //   expect(df[0].length).to.equal(7); // 3m 6m 1y 2y 3y 4y 5y
-  //   // printDf(df);
-  // });
+  it("Add back one book", async () => {
+    const book0 = await moneyMarket.getOneBook(carol);
+    const item = sample.MoneyMarket[3]; // borrow FIL 3m by carol
+    let res = await moneyMarket.setMoneyMarketBook(...val(item), {from: carol});
+    const book1 = await moneyMarket.getOneBook(carol);
+    expectEvent(res, "SetMoneyMarketBook", {sender: carol});
+    expect(book1.isValue).to.equal(true);
+    // printMoneyMkt(book0);
+    // printMoneyMkt(book1);
+  });
 
   // it('Init Collateral with sample data', async () => {
   //   input = sample.Collateral;
