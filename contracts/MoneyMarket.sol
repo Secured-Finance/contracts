@@ -5,8 +5,8 @@ pragma experimental ABIEncoderV2;
 contract MoneyMarket {
     event SetMoneyMarketBook(address indexed sender);
     event DelMoneyMarketBook(address indexed sender);
-    event DelOneItem(address indexed sender);
-    event TakeOneItem(address indexed sender);
+    event DelOneItem(address indexed addr, Side side, Ccy ccy, Term term);
+    event TakeOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt);
 
     enum Side {LEND, BORROW}
     enum Ccy {ETH, FIL, USDC}
@@ -122,11 +122,12 @@ contract MoneyMarket {
         Ccy ccy,
         Term term
     ) public {
+        // TODO - require(msg.sender == Loan.address)
         require(moneyMarketMap[addr].isValue == true, 'MoneyMarketBook not found');
         if (side == Side.LEND)
             delete moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
         else delete moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
-        emit DelOneItem(addr);
+        emit DelOneItem(addr, side, ccy, term);
     }
 
     function getOneItem(
@@ -164,7 +165,7 @@ contract MoneyMarket {
         } else {
             item.amt -= amt; // update amount
         }
-        emit TakeOneItem(msg.sender);
+        emit TakeOneItem(addr, side, ccy, term, amt);
         return item.rate;
     }
 
@@ -206,11 +207,12 @@ contract MoneyMarket {
                     book.borrowers[i][j] = betterItem(
                         book.borrowers[i][j],
                         moneyMarketMap[marketMakers[k]].borrowers[i][j],
-                        Side.LEND
+                        Side.BORROW
                     );
                 }
             }
         }
+        book.isValue = true;
         return book;
     }
 

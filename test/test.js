@@ -6,7 +6,7 @@ const FXMarket = contract.fromArtifact("FXMarket");
 const Collateral = contract.fromArtifact("Collateral");
 const Loan = contract.fromArtifact("Loan");
 const {Side, Ccy, Term, sample} = require("./constants");
-const {toDate, printDate, printNum, printCol, printLoan, printMoneyMkt, printDf} = require("./helper");
+const {toDate, printDate, printNum, printCol, printLoan, printMoneyMkt, printDf, printRates} = require("./helper");
 
 const val = (obj) => {
   return Object.values(obj);
@@ -14,8 +14,6 @@ const val = (obj) => {
 
 describe("MoneyMarket", () => {
   const [alice, bob, carol] = accounts;
-  const from = {from: defaultSender};
-  const sender = {sender: defaultSender};
   const owner = defaultSender;
 
   let moneyMarket;
@@ -24,7 +22,6 @@ describe("MoneyMarket", () => {
   let loan;
 
   before(async () => {
-    // beforeEach(async () => {
     moneyMarket = await MoneyMarket.new();
     fxMarket = await FXMarket.new();
     collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
@@ -34,70 +31,118 @@ describe("MoneyMarket", () => {
     console.log("fxMarket    addr is", fxMarket.address);
     console.log("collateral  addr is", collateral.address);
     console.log("loan        addr is", loan.address);
+    console.log("owner       addr is", owner);
     console.log();
-    console.log("default     addr is", defaultSender);
     console.log("alice       addr is", alice);
-    console.log("bob         addr is", alice);
-    console.log("carol       addr is", alice);
-    // console.log("accounts is", accounts);
+    console.log("bob         addr is", bob);
+    console.log("carol       addr is", carol);
   });
 
   it("Init with sample MoneyMarket", async () => {
-    sample.MoneyMarket.forEach(async (item) => {
-      let input = val(item);
-      let res = await moneyMarket.setMoneyMarketBook(...input);
-      expectEvent(res, "SetMoneyMarketBook", sender);
-    });
+    const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
+    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
+    let res1 = await moneyMarket.setMoneyMarketBook(...val(item1), {from: alice});
+    let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
+    let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
+    let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
+    expectEvent(res0, "SetMoneyMarketBook", {sender: alice});
+    expectEvent(res1, "SetMoneyMarketBook", {sender: alice});
+    expectEvent(res2, "SetMoneyMarketBook", {sender: bob});
+    expectEvent(res3, "SetMoneyMarketBook", {sender: carol});
+    expectEvent(res4, "SetMoneyMarketBook", {sender: alice});
   });
 
   it("Init with sample FXMarket", async () => {
     sample.FXMarket.forEach(async (item) => {
-      let input = val(item);
-      let res = await fxMarket.setFXBook(...input);
-      expectEvent(res, "SetFXBook", sender);
+      let res = await fxMarket.setFXBook(...val(item), {from: alice});
+      expectEvent(res, "SetFXBook", {sender: alice});
     });
   });
 
-  it("Get mid rates", async () => {
-    const midRates = await moneyMarket.getMidRates();
-    const lend = sample.MoneyMarket[0].lenders[0][2]; // lend 3m amt
-    const borrow = sample.MoneyMarket[0].borrowers[0][2]; // borrow 3m amt
-    expect(Number(midRates[0][0])).to.equal((lend + borrow) / 2);
-    // const Ccy = ["ETH", "FIL", "USDC"];
-    // midRates.forEach((rates, index) => {
-    //   console.log(Ccy[index]);
-    //   printNum(rates);
-    // });
+  // it("Get market makers", async () => {
+  //   const makers = await moneyMarket.getMarketMakers();
+  //   console.log("makers is", makers);
+  //   expect(makers[0]).to.equal(alice);
+  // });
+
+  // it("Delete money market book", async () => {
+  //   const book0 = await moneyMarket.getBestBook();
+  //   const res = await moneyMarket.delMoneyMarketBook({from: carol});
+  //   const book1 = await moneyMarket.getBestBook();
+  //   expectEvent(res, "DelMoneyMarketBook", {sender: carol});
+  //   expect(book0[1][1][0]).to.not.equal(book1[1][1][0]);
+  //   // printMoneyMkt(book0);
+  //   // printMoneyMkt(book1);
+  // });
+
+  it("Delete one item", async () => {
+    const book0 = await moneyMarket.getBestBook();
+    const res = await moneyMarket.delOneItem(carol, Side.BORROW, Ccy.FIL, Term._3m);
+    const book1 = await moneyMarket.getBestBook();
+    expectEvent(res, "DelOneItem", {addr: carol, side: String(Side.BORROW), ccy: String(Ccy.FIL), term: String(Term._3m)});
+    expect(book0[1][1][0]).to.not.equal(book1[1][1][0]); // borrow FIL 3m
+    // printMoneyMkt(book0);
+    // printMoneyMkt(book1);
   });
 
-  it("Get discount factors", async () => {
-    const df = await moneyMarket.getDiscountFactors();
-    expect(df[0].length).to.equal(7); // 3m 6m 1y 2y 3y 4y 5y
-    // printDf(df);
-  });
+  // it("Get one item", async () => {
+  //   const item = await moneyMarket.getOneItem(alice, Side.BORROW, Ccy.FIL, Term._3m);
+  //   expect(item.amt).to.equal("10000");
+  //   // console.log('item is', item)
+  // });
 
-  it("Get one item", async () => {
-    const item = await moneyMarket.getOneItem(owner, Side.BORROW, Ccy.FIL, Term._3m);
-    expect(item.amt).to.equal("10000");
-    // console.log('item is', item)
-  });
+  // it("Get one book", async () => {
+  //   // MoneyMarketItem[SIDE][CCY][TERM]
+  //   const book = await moneyMarket.getOneBook(alice);
+  //   const {term, amt, rate} = book[0][0][0];
+  //   const testItem = [Number(term), Number(amt), Number(rate)];
+  //   expect(testItem).deep.to.equal(sample.MoneyMarket[0]["lenders"][0]);
+  //   // printMoneyMkt(book);
+  // });
 
-  it("Get one book", async () => {
-    // MoneyMarketItem[SIDE][CCY][TERM]
-    const book = await moneyMarket.getOneBook(owner);
-    const {term, amt, rate} = book[0][0][0];
-    const testItem = [Number(term), Number(amt), Number(rate)];
-    expect(testItem).deep.to.equal(sample.MoneyMarket[0]["lenders"][0]);
-    // printMoneyMkt(book);
-  });
+  // it("Get all books", async () => {
+  //   const books = await moneyMarket.getAllBooks();
+  //   expect(books.length).to.equal(3); // 3 market maker in sample
+  //   // books.forEach((book) => {
+  //   //   printMoneyMkt(book);
+  //   // });
+  // });
 
-  it("Get all books", async () => {
-    const books = await moneyMarket.getAllBooks();
-    expect(books.length).to.equal(1); // one market maker in sample
-    // books.forEach((book) => {
-    //   printMoneyMkt(book);
-    // });
-  });
+  // it("Get best book", async () => {
+  //   const book = await moneyMarket.getBestBook();
+  //   const {term, amt, rate} = book[1][1][0]; // borrower fil 3m
+  //   const testItem = [Number(term), Number(amt), Number(rate)];
+  //   expect(testItem).deep.to.equal(sample.MoneyMarket[3].borrowers[0]);
+  //   // printMoneyMkt(book);
+  // });
+
+  // it("Get lender rates", async () => {
+  //   const rates = await moneyMarket.getLenderRates();
+  //   const lend = sample.MoneyMarket[0].lenders[0][2]; // lend 3m amt
+  //   expect(Number(rates[0][0])).to.equal(lend);
+  //   // printRates(rates);
+  // });
+
+  // it("Get borrower rates", async () => {
+  //   const rates = await moneyMarket.getBorrowerRates();
+  //   const borrow = sample.MoneyMarket[0].borrowers[0][2]; // borrow 3m amt
+  //   expect(Number(rates[0][0])).to.equal(borrow);
+  //   // printRates(rates);
+  // });
+
+  // it("Get mid rates", async () => {
+  //   const rates = await moneyMarket.getMidRates();
+  //   const lend = sample.MoneyMarket[0].lenders[0][2]; // lend 3m amt
+  //   const borrow = sample.MoneyMarket[0].borrowers[0][2]; // borrow 3m amt
+  //   expect(Number(rates[0][0])).to.equal((lend + borrow) / 2);
+  //   // printRates(rates);
+  // });
+
+  // it("Get discount factors", async () => {
+  //   const df = await moneyMarket.getDiscountFactors();
+  //   expect(df[0].length).to.equal(7); // 3m 6m 1y 2y 3y 4y 5y
+  //   // printDf(df);
+  // });
 
   // it('Init Collateral with sample data', async () => {
   //   input = sample.Collateral;

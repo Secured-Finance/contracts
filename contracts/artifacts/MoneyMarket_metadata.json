@@ -24,8 +24,26 @@
 					{
 						"indexed": true,
 						"internalType": "address",
-						"name": "sender",
+						"name": "addr",
 						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
 					}
 				],
 				"name": "DelOneItem",
@@ -50,8 +68,32 @@
 					{
 						"indexed": true,
 						"internalType": "address",
-						"name": "sender",
+						"name": "addr",
 						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
 					}
 				],
 				"name": "TakeOneItem",
@@ -678,11 +720,11 @@
 	},
 	"sources": {
 		"localhost/MoneyMarket.sol": {
-			"keccak256": "0x73d9a183b3c7d6fa5a89806e283c3a0a7b2312b3906613f02120f46ab0287d7a",
+			"keccak256": "0x833075c482522519ec17cd72fe628150a0f1355d59722e85aaa19ad7711ec491",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://bd06e86fa760ff45b31042686d860dacda4e1b3a493adcfb577fbbe08ce38c1b",
-				"dweb:/ipfs/QmVdzV8vzKWpWt7NiXgvxNFnqEXgoHLftc6gFANb9kqYiS"
+				"bzz-raw://c442a10d6e721c2a9146553f26f110e875ecd6219a51dfa581773ecc6c282bc2",
+				"dweb:/ipfs/QmZnZK5tciQsjNCnq6yCfadsXCci7uZ4g1TsjkojNPs962"
 			]
 		}
 	},

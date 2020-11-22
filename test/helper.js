@@ -80,32 +80,46 @@ const toDateTime = (timestamp) => {
   return new Intl.DateTimeFormat("default", options).format(dateObject);
 };
 
-const Side = ["LEND", "BORROW"];
+const Side = ["LENDERS", "BORROWERS"];
 const Ccy = ["ETH", "FIL", "USDC"];
 const Term = ["3m", "6m", "1y", "2y", "3y", "5y"];
-const s = (addr) => addr.slice(0, 8);
+const s = (addr) => addr.slice(0, 5);
 const t = (term) => Term[term];
 
 const printMoneyMkt = (book) => {
+  if (!book.isValue) {
+    console.log("book is not value");
+    return;
+  }
+  let addr;
   for (let side = 0; side < Side.length; side++) {
     console.log(`[${Side[side]}]`);
     for (let ccy = 0; ccy < Ccy.length; ccy++) {
       console.log(`    [${Ccy[ccy]}]`);
       for (let term = 0; term < Term.length; term++) {
         let item = book[side][ccy][term];
-        console.log(`\t${t(term)} ${item.amt} ${item.rate / 100}% ${toDateTime(item.goodtil)}`);
+        if (!item.isAvailable) continue;
+        addr = item.addr;
+        console.log(`\t${t(term)} ${item.amt} ${item.rate / 100}% ${toDateTime(item.goodtil)} ${s(item.addr)}`);
       }
     }
   }
-  console.log('[isValue]', book.isValue);
+  console.log();
 };
 
 const printDf = (arr) => {
   arr.forEach((df, index) => {
     console.log(Ccy[index]);
     console.log(`${df.df3m} ${df.df6m} ${df.df1y} ${df.df2y} ${df.df3y} ${df.df4y} ${df.df5y}`);
-  })
-}
+  });
+};
+
+const printRates = (arr) => {
+  arr.forEach((rate, index) => {
+    console.log(Ccy[index]);
+    printNum(rate);
+  });
+};
 
 module.exports = {
   toDate,
@@ -118,4 +132,5 @@ module.exports = {
   printSched,
   printMoneyMkt,
   printDf,
+  printRates,
 };
