@@ -6,7 +6,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "truffle exec scripts/swap.js",
+    "test": "truffle exec scripts/loan.js",
     "test2": "mocha --exit --recursive",
     "test3": "npx ts-node ./test/web3Test"
   },

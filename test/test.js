@@ -68,7 +68,7 @@ describe("MoneyMarket", () => {
   it("Get one item", async () => {
     const item = await moneyMarket.getOneItem(alice, Side.BORROW, Ccy.FIL, Term._3m);
     expect(item.amt).to.equal("10000");
-    // console.log('item is', item)
+    console.log('item is', item)
   });
 
   it("Get one book", async () => {

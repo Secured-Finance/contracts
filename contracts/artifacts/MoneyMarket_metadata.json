@@ -694,12 +694,23 @@
 		],
 		"devdoc": {
 			"kind": "dev",
-			"methods": {},
+			"methods": {
+				"getMarketMakers()": {
+					"returns": {
+						"_0": "marketMakers"
+					}
+				}
+			},
+			"title": "MoneyMarket Contract for Loans",
 			"version": 1
 		},
 		"userdoc": {
 			"kind": "user",
-			"methods": {},
+			"methods": {
+				"getMarketMakers()": {
+					"notice": "Get the list of market makers address"
+				}
+			},
 			"version": 1
 		}
 	},
@@ -720,11 +731,11 @@
 	},
 	"sources": {
 		"localhost/MoneyMarket.sol": {
-			"keccak256": "0x3104f0a0a2ff367a580f6ee53611537da2b5ac9dccac508fd61811567883ad38",
+			"keccak256": "0xd11e74587e9868cb79a7c497dfb8ff06d9fb8665a3ff36990f2d94462ca3ea10",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://4f12a1531d966019bb838dd759d9fa00c19c817625ba1f7c83642552f4b8a685",
-				"dweb:/ipfs/QmQD4Mh6ghavpmavHU6ddTFBv8HDaWfG1NfkurPzpU2Yca"
+				"bzz-raw://117013322b69cfbcf612325228176844e18c5add9026a8e6ee93b50f5edbd54f",
+				"dweb:/ipfs/Qmf97BQ7zySkY1Zufg576vQNJAgd5mMweahi3q847BCKPu"
 			]
 		}
 	},

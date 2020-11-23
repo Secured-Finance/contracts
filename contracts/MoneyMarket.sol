@@ -2,6 +2,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+/// @title MoneyMarket Contract for Loans
 contract MoneyMarket {
     event SetMoneyMarketBook(address indexed sender);
     event DelMoneyMarketBook(address indexed sender);
@@ -54,6 +55,8 @@ contract MoneyMarket {
     mapping(address => MoneyMarketBook) private moneyMarketMap;
     address[] private marketMakers;
 
+    /// @notice Get the list of market makers address
+    /// @return marketMakers
     function getMarketMakers() public view returns (address[] memory) {
         return marketMakers;
     }
@@ -155,6 +158,8 @@ contract MoneyMarket {
         if (side == Side.LEND)
             item = moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
         else item = moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
+        if (!item.isAvailable) 
+            revert("no item found");
         if (item.goodtil < now) {
             delOneItem(addr, side, ccy, term);
             revert("Item expired");
