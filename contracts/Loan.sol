@@ -48,8 +48,9 @@ contract Loan {
         uint256 amt,
         uint256 loanId
     );
-    event NoitfyFILPayment(address indexed, string indexed txHash);
-    event ConfirmFILPayment(address indexed sender);
+
+    event NoitfyPayment(MoneyMarket.Ccy ccy, address sender, address receiver, uint256 indexed loanId, string txHash);
+
     event ConfirmPayment(
         address indexed loanMaker,
         address indexed colUser,
@@ -336,34 +337,13 @@ contract Loan {
         // 3a) WORKING (no change), MARGINCALL -> LIQUIDATION
         // 3b) WORKING -> TERMINATED, LIQUIDATION -> EMPTY
     }
-    // function updateState(uint256 loanId) public {
-    //     LoanBook storage book = loanMap[msg.sender];
-    //     LoanItem storage item = book.loans[loanId];
-    //     // initial
-    //     // REGISTERED -> WORKING
-    //     // AVAILABLE -> IN_USE
-    //     if (item.state == State.REGISTERED) {
-    //         require(msg.sender == item.borrower, 'borrower must confirm');
-    //         item.state = State.WORKING;
-    //         collateral.updateState(item.borrower);
-    //     }
-
-    //     // coupon
-    //     // WORKING -> DUE
-    //     // DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
-    //     // redemption
-    //     // WORKING -> DUE
-    //     // DUE -> PAST_DUE, IN_USE -> LIQUIDATION
-    //     // margin call
-    //     // IN_USE -> MARGINCALL (Collateral.sol) -> IN_USE or LIQUIDATION
-    // }
 
     function updateAllState() public {} // TODO
 
-    // to be used by makers
-    function notifyFILPayment(string memory txHash) public {
+    // to be used by lenders
+    function notifyPayment(MoneyMarket.Ccy ccy, address receiver, uint256 loanId, string memory txHash) public {
         // used for initial, coupon, redemption, liquidation
-        emit NoitfyFILPayment(msg.sender, txHash);
+        emit NoitfyPayment(ccy, msg.sender, receiver, loanId, txHash);
     }
 
     // to be used by borrowers
@@ -376,7 +356,7 @@ contract Loan {
         uint256 amt,
         uint256 loanId
     ) public {
-        // TODO - confirm the loan amount in FIL
+        // TODO - confirm the loan amount in FIL or in ETH
         // used for initial, coupon, redemption, liquidation
         // LoanBook storage book = loanMap[msg.sender];
         // LoanItem storage item = book.loans[loanId];
@@ -403,37 +383,6 @@ contract Loan {
 
         // margin call
         // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
-    }
-    // function confirmFILPayment(uint256 loanId) public {
-    //     // TODO - confirm the loan amount in FIL
-    //     // used for initial, coupon, redemption, liquidation
-    //     // LoanBook storage book = loanMap[msg.sender];
-    //     // LoanItem storage item = book.loans[loanId];
-
-    //     // initial
-    //     // REGISTERED -> WORKING
-    //     // AVAILABLE -> IN_USE
-    //     updateState(loanId);
-    //     emit ConfirmFILPayment(msg.sender);
-
-    //     // coupon
-    //     // DUE -> WORKING
-    //     // PAST_DUE->WORKING, PARTIAL_LIQUIATION -> IN_USE
-
-    //     // redemption
-    //     // DUE -> CLOSED, IN_USE -> AVAILABLE
-    //     // PAST_DUE -> TERMINATED, LIQUIDATION -> EMPTY
-
-    //     // margin call
-    //     // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
-    // }
-
-    function notifyETHPayment() public {
-        // TODO - confirm the loan amount in FIL
-    }
-
-    function confirmETHPayment() public {
-        // TODO - confirm and notify for ETH
     }
 
     /**@dev
