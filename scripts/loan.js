@@ -1,8 +1,8 @@
-const MoneyMarket = artifacts.require('MoneyMarket');
-const FXMarket = artifacts.require('FXMarket');
-const Collateral = artifacts.require('Collateral');
-const Loan = artifacts.require('Loan');
-const {Side, Ccy, Term, sample} = require('../test/constants');
+const MoneyMarket = artifacts.require("MoneyMarket");
+const FXMarket = artifacts.require("FXMarket");
+const Collateral = artifacts.require("Collateral");
+const Loan = artifacts.require("Loan");
+const {Side, Ccy, Term, sample} = require("../test/constants");
 const {
   toDate,
   printDate,
@@ -12,7 +12,7 @@ const {
   printLoan,
   printState,
   printSched,
-} = require('../test/helper');
+} = require("../test/helper");
 
 module.exports = async function main(callback) {
   try {
