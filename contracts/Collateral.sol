@@ -76,14 +76,14 @@ contract Collateral {
         fxMarket = FXMarket(fxAddr);
     }
 
-    // reset market contracts to interact if needed
+    // reset market contracts addresses
     function setMarketAddr(address moneyAddr, address fxAddr) public {
         require(msg.sender == owner, 'only owner');
         moneyMarket = MoneyMarket(moneyAddr);
         fxMarket = FXMarket(fxAddr);
     }
 
-    // called after Loan contract is deployed
+    // reset loan contract address
     function setLoanAddr(address loanAddr) public {
         require(msg.sender == owner, 'only owner');
         loan = Loan(loanAddr);
@@ -94,10 +94,11 @@ contract Collateral {
      */
 
     // register an user
-    function setColBook(string memory id, string memory userAddrFIL, address userAddrUSDC)
-        public
-        payable
-    {
+    function setColBook(
+        string memory id,
+        string memory userAddrFIL,
+        address userAddrUSDC
+    ) public payable {
         require(!colMap[msg.sender].isAvailable, 'user already exists'); // one-time
         ColInput memory input = ColInput(id, userAddrFIL, userAddrUSDC);
         ColBook memory newBook = inputToBook(input);
@@ -164,13 +165,13 @@ contract Collateral {
         uint256 FILETH = getFILETH();
         uint256 ETHUSDC = getETHUSDC();
         uint256 toBeUsed = 0;
-        if (ccy == MoneyMarket.Ccy.ETH)
-            toBeUsed = amt;
-        if (ccy == MoneyMarket.Ccy.FIL)
-            toBeUsed = (amt * FILETH) / FXMULT;
-        if (ccy == MoneyMarket.Ccy.USDC)
-            toBeUsed = amt / ETHUSDC; // TODO - use safe math
-        uint256 totalUse = book.inuseETH + book.inuseFILValue + book.inuseUSDCValue + toBeUsed;
+        if (ccy == MoneyMarket.Ccy.ETH) toBeUsed = amt;
+        if (ccy == MoneyMarket.Ccy.FIL) toBeUsed = (amt * FILETH) / FXMULT;
+        if (ccy == MoneyMarket.Ccy.USDC) toBeUsed = amt / ETHUSDC; // TODO - use safe math
+        uint256 totalUse = book.inuseETH +
+            book.inuseFILValue +
+            book.inuseUSDCValue +
+            toBeUsed;
         uint256 totalAmt = book.amtETH + book.amtFILValue + book.amtUSDCValue;
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage > MARGINLEVEL;
@@ -225,7 +226,9 @@ contract Collateral {
         if (book.state == State.PARTIAL_LIQUIDATION) return;
         updateFILValue(msg.sender);
         updateUSDCValue(msg.sender);
-        uint256 totalUse = book.inuseETH + book.inuseFILValue + book.inuseUSDCValue;
+        uint256 totalUse = book.inuseETH +
+            book.inuseFILValue +
+            book.inuseUSDCValue;
         uint256 totalAmt = book.amtETH + book.amtFILValue + book.amtUSDCValue;
         if (totalUse == 0) {
             if (totalAmt == 0) book.state = State.EMPTY;
@@ -316,10 +319,10 @@ contract Collateral {
     }
 
     function emptyBook(ColBook storage book) private {
-        book.id = "";
+        book.id = '';
         book.addrETH = 0x0000000000000000000000000000000000000000;
-        book.addrFIL = "";
-        book.userAddrFIL = "";
+        book.addrFIL = '';
+        book.userAddrFIL = '';
         book.addrUSDC = 0x0000000000000000000000000000000000000000;
         book.userAddrUSDC = 0x0000000000000000000000000000000000000000;
         book.amtETH = 0;

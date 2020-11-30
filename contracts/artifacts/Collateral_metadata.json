@@ -785,11 +785,11 @@
 	},
 	"sources": {
 		"localhost/Collateral.sol": {
-			"keccak256": "0xa7db5a9fe02b1541b298a470ffa354ef3787864cf4684b9cfb04fa01bf23a031",
+			"keccak256": "0x744c85ec18a87613c7cc7b6396ab5b800eec2d459c479f86868e8c049aa728f2",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://c4f4f764a6f9bb72d200583eda0f487e9517e8cf75950337a4b07791b03365a6",
-				"dweb:/ipfs/QmdvfKNMGXoyNYt3q3qBavuqhNhM8LJPqLqQ6zyMSJRWrs"
+				"bzz-raw://86025ab2124929e7ed414ef3e0ead81ebc3b484bcc141f0d3e65b213a73d367c",
+				"dweb:/ipfs/QmVuZe4A3wu3UcFbXdm7cVEDR4E4FiQ6ESALurh7o6VWnf"
 			]
 		},
 		"localhost/FXMarket.sol": {
@@ -801,11 +801,11 @@
 			]
 		},
 		"localhost/Loan.sol": {
-			"keccak256": "0x6c3ffb9dea024cf4799240126212c9258b4b67cab86e8ae3cf6bddea61dc1c6f",
+			"keccak256": "0xa289da3e980d36d2fb76834d02aa39d8c1612c8cf7abb1b2decf5593deaa1492",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://35ead0fc5591b43dbeafa9ebbf8d910ea7303c812d64846f3de0204555278a13",
-				"dweb:/ipfs/QmZsx7nVLXZgRdXsgPDc5NjxUDUNkpKa3bjZAYa8SjpkTA"
+				"bzz-raw://16a8d1698a30d3bff77ef90ca9acdd81cf232ecf74b1ed1a037c14a861ffdd10",
+				"dweb:/ipfs/QmaZFJ3TXrorzvbeUzRtNHYyKxuUf1DvNmAMe6CPQ6382p"
 			]
 		},
 		"localhost/MoneyMarket.sol": {
