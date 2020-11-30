@@ -213,7 +213,7 @@ contract Loan {
         book.loans.push(newItem);
         book.isValue = true;
         users.push(msg.sender);
-        emit MakeLoanDeal(makerAddr, side, ccy, term, amt, book.loanNum);
+        emit MakeLoanDeal(makerAddr, side, ccy, term, amt, newItem.loanId);
     }
 
     // helper to convert input data to LoanItem

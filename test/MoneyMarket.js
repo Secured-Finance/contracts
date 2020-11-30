@@ -12,7 +12,7 @@ const val = (obj) => {
   return Object.values(obj);
 };
 
-describe("MoneyMarket", () => {
+describe("MoneyMarket Unit Tests", () => {
   const [alice, bob, carol] = accounts;
   const owner = defaultSender;
 

@@ -62,7 +62,7 @@ module.exports = async function main(callback) {
     console.log("FX midRates is", midRates.join(" "), "\n");
 
     // Init Collateral with sample data
-    input = sample.Collateral;
+    let input = sample.Collateral;
     await collateral.setColBook(...Object.values(input[0]), {
       // await collateral.setColBook(input[0].id, input[0].addrFIL, {
       from: accounts[0],
