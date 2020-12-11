@@ -35,9 +35,30 @@ module.exports = async function main(callback) {
     console.log("loan addr is", loan.address);
     console.log("\n");
 
-    // Init MoneyMarket with sample data
+    // Init MoneyMarket using setOneItem
+    {
+      const item = sample.MoneyMarket[1];
+
+      // lender side is 0
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._3m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._6m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._1y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._2y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._3y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._5y], item.effectiveSec);
+
+      // borrower side is 1
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._3m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._6m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._1y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._2y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._3y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._5y], item.effectiveSec);
+    }
+
+    // Init MoneyMarket using setMoneyMarketBook for bulk operation
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[0]));
-    await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[1]));
+    // await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[1]));
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[2]));
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[3]));
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[4]));
@@ -119,47 +140,44 @@ module.exports = async function main(callback) {
     // loan state WORKING -> DUE
     await printState(loan, collateral, maker, taker, loanId, "Payment Advice");
 
+    // maker BORROW FIL
+    console.log();
+    item = Object.values(sample.Loan[2]);
+    deal = [maker, ...item]; // maker is FIL borrower
+    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
 
+    loanId = 1;
+    await loan.makeLoanDeal(...deal, {from: taker});
+    await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
 
+    // upsize collateral with lent FIL on maker
+    // await collateral.upSizeFIL(1000, {from: taker});
+    // await collateral.upSizeFIL(14001, { from: taker });
+    // await printCol(collateral, taker, 'collateral upsized with initial swap notional');
+
+    await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
+    await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
+
+    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
+    await printSched(loan, maker, loanId);
 
     // maker BORROW FIL
-    // console.log();
-    // item = Object.values(sample.Loan[2]);
-    // deal = [maker, ...item]; // maker is FIL borrower
-    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    console.log();
+    item = Object.values(sample.Loan[2]);
+    deal = [maker, ...item]; // maker is FIL borrower
+    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
 
-    // loanId = 1;
-    // await loan.makeLoanDeal(...deal, {from: taker});
-    // await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
+    loanId = 1;
+    await loan.makeLoanDeal(...deal, {from: taker});
+    await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
 
-    // // upsize collateral with lent FIL on maker
-    // // await collateral.upSizeFIL(1000, {from: taker});
-    // // await collateral.upSizeFIL(14001, { from: taker });
-    // // await printCol(collateral, taker, 'collateral upsized with initial swap notional');
+    await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
+    await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
 
-    // await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
-    // await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
-
-    // afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    // console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
-    // await printSched(loan, maker, loanId);
-
-    // // maker BORROW FIL
-    // console.log();
-    // item = Object.values(sample.Loan[2]);
-    // deal = [maker, ...item]; // maker is FIL borrower
-    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-
-    // loanId = 1;
-    // await loan.makeLoanDeal(...deal, {from: taker});
-    // await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
-
-    // await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
-    // await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
-
-    // afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    // console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
-    // await printSched(loan, maker, loanId);
+    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
+    await printSched(loan, maker, loanId);
 
     /* USDC Loan Execution Test */
 

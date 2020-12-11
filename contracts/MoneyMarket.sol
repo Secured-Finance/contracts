@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 contract MoneyMarket {
     event SetMoneyMarketBook(address indexed sender);
     event DelMoneyMarketBook(address indexed sender);
+    event SetOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt, uint rate, uint effectiveSec);
     event DelOneItem(address indexed addr, Side side, Ccy ccy, Term term);
     event TakeOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt);
 
@@ -118,6 +119,31 @@ contract MoneyMarket {
         emit DelMoneyMarketBook(msg.sender);
     }
 
+    function setOneItem(
+        Side side,
+        Ccy ccy,
+        Term term,
+        uint256 amt,
+        uint256 rate,
+        uint256 effectiveSec
+    ) public {
+        // TODO - check if collateral covers borrowers amt
+        MoneyMarketBook storage book = moneyMarketMap[msg.sender];
+        MoneyMarketItem[NUMTERM] storage terms;
+        if (side == Side.LEND)
+            terms = book.lenders[uint256(ccy)];
+        else
+            terms = book.borrowers[uint256(ccy)];
+        MoneyMarketItem memory newItem = inputToItem(
+            MoneyMarketInput(term, amt, rate),
+            now + effectiveSec
+        );
+        terms[uint256(term)] = newItem;
+        if (!moneyMarketMap[msg.sender].isValue) marketMakers.push(msg.sender);
+        book.isValue = true;
+        emit SetOneItem(msg.sender, side, ccy, term, amt, rate, effectiveSec);
+    }
+
     function getOneItem(
         address addr,
         Side side,
@@ -158,7 +184,7 @@ contract MoneyMarket {
         if (side == Side.LEND)
             item = moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
         else item = moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
-        if (!item.isAvailable) 
+        if (!item.isAvailable)
             revert("no item found");
         if (item.goodtil < now) {
             delOneItem(addr, side, ccy, term);
