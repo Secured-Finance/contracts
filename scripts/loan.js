@@ -43,15 +43,15 @@ module.exports = async function main(callback) {
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[4]));
     let midRates = await moneyMarket.getMidRates();
     console.log("Loan midRates is");
-    console.log("FIL ", midRates[0].join(" "));
-    console.log("ETH ", midRates[1].join(" "));
+    console.log("ETH ", midRates[0].join(" "));
+    console.log("FIL ", midRates[1].join(" "));
     console.log("USDC", midRates[2].join(" "), "\n");
 
     // discount factor test
     let df = await moneyMarket.getDiscountFactors();
     console.log("DF is");
-    console.log("FIL ", df[0].join(" "));
-    console.log("ETH ", df[1].join(" "));
+    console.log("ETH ", df[0].join(" "));
+    console.log("FIL ", df[1].join(" "));
     console.log("USDC", df[2].join(" "), "\n");
 
     // Init FXMarket with sample data
