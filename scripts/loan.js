@@ -162,23 +162,6 @@ module.exports = async function main(callback) {
     console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
     await printSched(loan, maker, loanId);
 
-    // maker BORROW FIL
-    console.log();
-    item = Object.values(sample.Loan[2]);
-    deal = [maker, ...item]; // maker is FIL borrower
-    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-
-    loanId = 1;
-    await loan.makeLoanDeal(...deal, {from: taker});
-    await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
-
-    await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
-    await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
-
-    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
-    await printSched(loan, maker, loanId);
-
     /* USDC Loan Execution Test */
 
     // TODO
