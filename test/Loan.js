@@ -112,7 +112,7 @@ describe("Loan Unit Tests", () => {
 
     loanId = 0; // available from event
     let res = await loan.makeLoanDeal(...deal, {from: taker});
-    await printState(loan, collateral, maker, taker, loanId, "makeLoanDeal");
+    await printState(loan, collateral, maker, taker, loanId, "[makeLoanDeal]");
 
     console.log("deal item is", item);
 
@@ -127,17 +127,40 @@ describe("Loan Unit Tests", () => {
 
     // notifyPayment -> check -> confirmPayment to ensure finality
     await loan.confirmPayment(maker, taker, ...val(item), loanId, {from: taker}); // taker is borrower
-    await printState(loan, collateral, maker, taker, loanId, "confirmPayment");
+    await printState(loan, collateral, maker, taker, loanId, "[confirmPayment]");
 
     afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
     expect(Number(beforeLoan.amt) - item.amt).to.equal(Number(afterLoan.amt));
 
-    // console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
-    // await printSched(loan, maker, loanId);
+    console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
+    await printSched(loan, maker, loanId);
   });
 
   it("Test for coupon payment DUE", async () => {
+    let maker = accounts[0]; // FIL lender
+    let taker = accounts[2]; // FIL borrower
+    let loanId = 0; // available from event
+
+    const dueTime = time.duration.years(1);
+    const noticeGap = time.duration.weeks(2);
+    const dayTime = time.duration.days(1);
+
+    // loan state WORKING
+    let timeStart = await time.latest();
+    console.log("start   is", toDate(timeStart));
+    await printState(loan, collateral, maker, taker, loanId, "[BEFORE payment DUE]");
+
     // loan state WORKING -> DUE
+    await time.increase(dueTime - noticeGap);
+    let timeNotice = await time.latest();
+    console.log("notify  is", toDate(timeNotice));
+    await printState(loan, collateral, maker, taker, loanId, "[AFTER payment DUE]");
+
+    // loan state DUE -> PAST_DUE
+    // await time.increase(noticeGap);
+    // let timePayment = await time.latest();
+    // console.log("payment is", toDate(timePayment));
+    // await printState(loan, collateral, maker, taker, loanId, "[PAST payment DUE]");
   });
 
   // it('Confirm FIL Payment', async () => {

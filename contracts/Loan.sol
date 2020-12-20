@@ -311,19 +311,29 @@ contract Loan {
         LoanItem storage item = book.loans[loanId];
         require(amt == item.amt, 'confirm amount not match');
         // initial
-        // REGISTERED -> WORKING
-        // AVAILABLE -> IN_USE
+        // LOAN: REGISTERED -> WORKING
+        // COLL: AVAILABLE -> IN_USE
         if (item.state == State.REGISTERED) {
             require(colUser == item.borrower, 'borrower must confirm');
             item.state = State.WORKING;
             collateral.updateState(colUser);
         }
 
-        // coupon
-        // WORKING -> DUE, IN_USE (no change)
-        // 1) DUE -> WORKING, IN_USE (no change)
-        // 2a) DUE -> PAST_DUE, IN_USE -> PARTIAL_LIQUIDATION
-        // 2b) PAST_DUE -> WORKING, PARTIAL_LIQUIDATION -> IN_USE
+        // coupon is due
+        // LOAN: WORKING -> DUE
+        // COLL: IN_USE (no change)
+
+        // coupon due -> paid
+        // LOAN: DUE -> WORKING
+        // COLL: IN_USE (no change)
+
+        // coupon due -> unpaid
+        // LOAN: DUE -> PAST_DUE
+        // COLL: IN_USE -> PARTIAL_LIQUIDATION
+
+        // coupon unpaid -> paid
+        // LOAN: PAST_DUE -> WORKING
+        // COLL: PARTIAL_LIQUIDATION -> IN_USE
 
         // redemption
         // WORKING -> DUE

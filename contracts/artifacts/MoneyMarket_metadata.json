@@ -94,6 +94,55 @@
 						"internalType": "uint256",
 						"name": "amt",
 						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "rate",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "effectiveSec",
+						"type": "uint256"
+					}
+				],
+				"name": "SetOneItem",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "addr",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
 					}
 				],
 				"name": "TakeOneItem",
@@ -655,6 +704,44 @@
 			{
 				"inputs": [
 					{
+						"internalType": "enum MoneyMarket.Side",
+						"name": "side",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Ccy",
+						"name": "ccy",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum MoneyMarket.Term",
+						"name": "term",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amt",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rate",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "effectiveSec",
+						"type": "uint256"
+					}
+				],
+				"name": "setOneItem",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
 						"internalType": "address",
 						"name": "addr",
 						"type": "address"
@@ -731,11 +818,11 @@
 	},
 	"sources": {
 		"localhost/MoneyMarket.sol": {
-			"keccak256": "0xd11e74587e9868cb79a7c497dfb8ff06d9fb8665a3ff36990f2d94462ca3ea10",
+			"keccak256": "0xeca7cf67325b47fdff316944c6e89d01deb306b92394d06043e082954b8cb43e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://117013322b69cfbcf612325228176844e18c5add9026a8e6ee93b50f5edbd54f",
-				"dweb:/ipfs/Qmf97BQ7zySkY1Zufg576vQNJAgd5mMweahi3q847BCKPu"
+				"bzz-raw://135b341521897c7b144895d59c728628946250ad30baa7de5d429064f646994f",
+				"dweb:/ipfs/QmVpGDWWQR2MApo7KTjW7fkF2Gt9mBgaPkpAtugeHUcSe4"
 			]
 		}
 	},

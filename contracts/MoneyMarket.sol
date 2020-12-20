@@ -17,6 +17,7 @@ contract MoneyMarket {
     uint256 internal constant NUMTERM = 6;
     uint256 internal constant NUMDF = 7; // numbef of discount factors
     uint256 internal constant BP = 10000; // basis point
+    uint256 internal constant NUMMAKER = 100000000;
 
     struct MoneyMarketBook {
         MoneyMarketItem[NUMTERM][NUMCCY] lenders;

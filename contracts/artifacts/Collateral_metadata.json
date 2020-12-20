@@ -801,19 +801,19 @@
 			]
 		},
 		"localhost/Loan.sol": {
-			"keccak256": "0xa289da3e980d36d2fb76834d02aa39d8c1612c8cf7abb1b2decf5593deaa1492",
+			"keccak256": "0xb31cc4dc206492ed97d04941c6aa32b40633f7bf66a0a135f744b70bfe53cbec",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://16a8d1698a30d3bff77ef90ca9acdd81cf232ecf74b1ed1a037c14a861ffdd10",
-				"dweb:/ipfs/QmaZFJ3TXrorzvbeUzRtNHYyKxuUf1DvNmAMe6CPQ6382p"
+				"bzz-raw://8a8de0f6b7f58bf2f4ebf74b2bcb106f647649b50a806db7f19110d77b3e4c29",
+				"dweb:/ipfs/QmdqoafpyoSunHkRabv4yC4CBkCppUmNn6MWnuND4kanfB"
 			]
 		},
 		"localhost/MoneyMarket.sol": {
-			"keccak256": "0xd11e74587e9868cb79a7c497dfb8ff06d9fb8665a3ff36990f2d94462ca3ea10",
+			"keccak256": "0xeca7cf67325b47fdff316944c6e89d01deb306b92394d06043e082954b8cb43e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://117013322b69cfbcf612325228176844e18c5add9026a8e6ee93b50f5edbd54f",
-				"dweb:/ipfs/Qmf97BQ7zySkY1Zufg576vQNJAgd5mMweahi3q847BCKPu"
+				"bzz-raw://135b341521897c7b144895d59c728628946250ad30baa7de5d429064f646994f",
+				"dweb:/ipfs/QmVpGDWWQR2MApo7KTjW7fkF2Gt9mBgaPkpAtugeHUcSe4"
 			]
 		}
 	},

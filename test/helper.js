@@ -44,12 +44,13 @@ const printLoan = async (loan, makerAddr, loanId, msg) => {
   let item = book.loans[loanId];
   let states = ["REGISTERED", "WORKING", "DUE", "PAST_DUE", "CLOSED", "TERMINATED"];
   if (msg.length > 0) console.log(msg);
-  console.log(`\tloan ${item.amt}\trate ${item.rate / 100}% \tloanState ${states[item.state]}\n`);
+  console.log(`\tloan ${item.amt}\trate ${item.rate / 100}% \tloanState ${states[item.state]}`);
 };
 
 const printState = async (loan, col, loanMaker, colUser, loanId, loanMsg, colMsg) => {
+  console.log();
   await printLoan(loan, loanMaker, loanId, loanMsg);
-  await printCol(col, colUser, colMsg ? colMsg : "collateral state");
+  await printCol(col, colUser, colMsg ? colMsg : "    COLLATERAL:");
 };
 
 const printSched = async (loan, makerAddr, loanId) => {
