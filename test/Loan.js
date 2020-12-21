@@ -141,7 +141,37 @@ describe("Loan Unit Tests", () => {
     await printSched(loan, maker, loanId);
   });
 
-  it("State transition WORKING -> DUE -> PAST_DUE", async () => {
+  // it("State transition WORKING -> DUE -> PAST_DUE", async () => {
+  //   let maker = accounts[0]; // FIL lender
+  //   let taker = accounts[2]; // FIL borrower
+  //   let loanId = 0; // available from event
+
+  //   const oneYear = Number(time.duration.years(1));
+  //   const noticeGap = Number(time.duration.weeks(2));
+  //   const oneSec = Number(time.duration.seconds(1));
+
+  //   // loan state WORKING
+  //   await loan.updateState(maker, taker, loanId);
+  //   await printState(loan, collateral, maker, taker, loanId, `BEFORE notice ${await getDate()}`);
+  //   let item = await loan.getLoanItem(loanId, {from: maker});
+  //   expect(Number(item.state)).to.equal(LoanState.WORKING);
+
+  //   // loan state WORKING -> DUE
+  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await loan.updateState(maker, taker, loanId);
+  //   await printState(loan, collateral, maker, taker, loanId, `AFTER notice ${await getDate()}`);
+  //   item = await loan.getLoanItem(loanId, {from: maker});
+  //   expect(Number(item.state)).to.equal(LoanState.DUE);
+
+  //   // loan state DUE -> PAST_DUE
+  //   await time.increase(noticeGap + oneSec);
+  //   await loan.updateState(maker, taker, loanId);
+  //   await printState(loan, collateral, maker, taker, loanId, `PAST payment ${await getDate()}`);
+  //   item = await loan.getLoanItem(loanId, {from: maker});
+  //   expect(Number(item.state)).to.equal(LoanState.PAST_DUE);
+  // });
+
+  it("State transition WORKING -> DUE -> WORKING", async () => {
     let maker = accounts[0]; // FIL lender
     let taker = accounts[2]; // FIL borrower
     let loanId = 0; // available from event
@@ -154,21 +184,23 @@ describe("Loan Unit Tests", () => {
     await loan.updateState(maker, taker, loanId);
     await printState(loan, collateral, maker, taker, loanId, `BEFORE notice ${await getDate()}`);
     let item = await loan.getLoanItem(loanId, {from: maker});
-    expect(Number(item.state)).to.equal(LoanState.WORKING);
+    // expect(Number(item.state)).to.equal(LoanState.WORKING);
 
     // loan state WORKING -> DUE
     await time.increase(oneYear - noticeGap + oneSec);
     await loan.updateState(maker, taker, loanId);
     await printState(loan, collateral, maker, taker, loanId, `AFTER notice ${await getDate()}`);
     item = await loan.getLoanItem(loanId, {from: maker});
-    expect(Number(item.state)).to.equal(LoanState.DUE);
+    // expect(Number(item.state)).to.equal(LoanState.DUE);
 
-    // loan state DUE -> PAST_DUE
-    await time.increase(noticeGap + oneSec);
+    const amt = 1000; // coupon amount
+    await loan.confirmPayment(maker, taker, sample.Loan[0].side, sample.Loan[0].ccy, sample.Loan[0].term, amt, loanId, { from: maker }); // lender confirm coupon receipt
+
+    // loan state DUE -> WORKING
     await loan.updateState(maker, taker, loanId);
-    await printState(loan, collateral, maker, taker, loanId, `PAST payment ${await getDate()}`);
-    item = await loan.getLoanItem(loanId, {from: maker});
-    expect(Number(item.state)).to.equal(LoanState.PAST_DUE);
+    await printState(loan, collateral, maker, taker, loanId, `AFTER confirmation ${await getDate()}`);
+    item = await loan.getLoanItem(loanId, { from: maker });
+    expect(Number(item.state)).to.equal(LoanState.WORKING);
   });
 
   // it('Confirm FIL Payment', async () => {

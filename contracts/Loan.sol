@@ -308,11 +308,13 @@ contract Loan {
     function getCurrentState(Schedule memory schedule) public view returns (State) {
         uint256 i;
         for (i = 0; i < MAXPAYNUM; i++) {
-            if (schedule.isDone[i] == false) break;
+            // if (schedule.isDone[i] == false) break;
+            if (schedule.payments[i+1] == 0) break;
+            if (schedule.payments[i+1] > 0 && now < schedule.payments[i+1]) break;
         }
-        if (now < schedule.notices[i]) return State.WORKING;
-        if (now <= schedule.payments[i]) return State.DUE;
-        if (schedule.payments[i] < now) return State.PAST_DUE;
+        if (schedule.isDone[i] == true || now < schedule.notices[i]) return State.WORKING;
+        if (schedule.isDone[i] == false && now <= schedule.payments[i]) return State.DUE;
+        if (schedule.isDone[i] == false && schedule.payments[i] < now) return State.PAST_DUE;
     }
 
     function updateState(
@@ -328,7 +330,7 @@ contract Loan {
         // LOAN: REGISTERED -> WORKING
         // COLL: AVAILABLE -> IN_USE
         if (item.state == State.REGISTERED) {
-            require(colUser == item.borrower, 'borrower must confirm');
+            // require(colUser == item.borrower, 'borrower must confirm');
             item.state = State.WORKING;
             collateral.updateState(colUser);
         }
@@ -336,30 +338,34 @@ contract Loan {
         // coupon is due
         // LOAN: WORKING -> DUE
         // COLL: IN_USE (no change)
-        if (item.state == State.WORKING) {
+        else if (item.state == State.WORKING) {
             item.state = getCurrentState(item.schedule);
             // collateral.updateState(colUser);
         }
 
-        // coupon due -> paid
-        // LOAN: DUE -> WORKING
-        // COLL: IN_USE (no change)
+        // // coupon due -> paid
+        // // LOAN: DUE -> WORKING
+        // // COLL: IN_USE (no change)
+        // else if (item.state == State.DUE) {
+        //     item.state = State.WORKING;
+        //     // collateral.updateState(colUser);
+        // }
 
         // coupon due -> unpaid
         // LOAN: DUE -> PAST_DUE
         // COLL: IN_USE -> PARTIAL_LIQUIDATION
-        if (item.state == State.DUE) {
+        else if (item.state == State.DUE) {
             item.state = getCurrentState(item.schedule);
             // collateral.updateState(colUser);
         }
 
-        // coupon unpaid -> paid
-        // LOAN: PAST_DUE -> WORKING
-        // COLL: PARTIAL_LIQUIDATION -> IN_USE
-        if (item.state == State.PAST_DUE) {
-            item.state = getCurrentState(item.schedule);
-            // collateral.updateState(colUser);
-        }
+        // // coupon unpaid -> paid
+        // // LOAN: PAST_DUE -> WORKING
+        // // COLL: PARTIAL_LIQUIDATION -> IN_USE
+        // else if (item.state == State.PAST_DUE) {
+        //     item.state = getCurrentState(item.schedule);
+        //     // collateral.updateState(colUser);
+        // }
 
         // redemption
         // WORKING -> DUE
@@ -396,23 +402,40 @@ contract Loan {
         // used for initial, coupon, redemption, liquidation
         LoanBook storage book = loanMap[loanMaker];
         LoanItem storage item = book.loans[loanId];
-        require(amt == item.amt, 'confirm amount not match');
 
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
-        if (side == MoneyMarket.Side.LEND) {
-            require(msg.sender == colUser, 'msg.sender is not borrower');
-            updateState(loanMaker, colUser, loanId);
-        } else {
-            require(msg.sender == loanMaker, 'msg.sender is not lender');
-            updateState(loanMaker, colUser, loanId);
+        if (item.state == State.REGISTERED) {
+            require(amt == item.amt, 'confirm amount not match');
+            if (side == MoneyMarket.Side.LEND) {
+                require(msg.sender == colUser, 'msg.sender is not borrower');
+                updateState(loanMaker, colUser, loanId);
+            } else {
+                require(msg.sender == loanMaker, 'msg.sender is not lender');
+                updateState(loanMaker, colUser, loanId);
+            }
         }
-        emit ConfirmPayment(loanMaker, colUser, side, ccy, term, amt, loanId);
 
         // coupon
         // DUE -> WORKING
         // PAST_DUE->WORKING, PARTIAL_LIQUIATION -> IN_USE
+        if (item.state == State.DUE) {
+            if (side == MoneyMarket.Side.BORROW) {
+                require(msg.sender == colUser, 'msg.sender for coupon should be borrower');
+                updateState(loanMaker, colUser, loanId);
+            } else {
+                require(msg.sender == loanMaker, 'msg.sender for coupon should be lender');
+                updateState(loanMaker, colUser, loanId);
+            }
+            uint256 i;
+            for (i = 0; i < MAXPAYNUM; i++) {
+                if (item.schedule.isDone[i] == false) break;
+            }
+            require(amt == item.schedule.amounts[i], 'confirm amount not match');
+            item.schedule.isDone[i] = true;
+            item.state = State.WORKING;
+        }
 
         // redemption
         // DUE -> CLOSED, IN_USE -> AVAILABLE
@@ -420,6 +443,8 @@ contract Loan {
 
         // margin call
         // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
+
+        emit ConfirmPayment(loanMaker, colUser, side, ccy, term, amt, loanId);
     }
 
     /**@dev
