@@ -158,10 +158,11 @@ describe("Loan Unit Tests", () => {
     await printState(loan, collateral, maker, taker, loanId, "[AFTER payment DUE]");
 
     // loan state DUE -> PAST_DUE
-    // await time.increase(noticeGap);
-    // let timePayment = await time.latest();
-    // console.log("payment is", toDate(timePayment));
-    // await printState(loan, collateral, maker, taker, loanId, "[PAST payment DUE]");
+    await time.increase(noticeGap);
+    let timePayment = await time.latest();
+    console.log("payment is", toDate(timePayment));
+    await loan.updateState(maker, taker, loanId);
+    await printState(loan, collateral, maker, taker, loanId, "[PAST payment DUE]");
   });
 
   // it('Confirm FIL Payment', async () => {

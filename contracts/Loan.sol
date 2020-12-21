@@ -354,6 +354,11 @@ contract Loan {
             // collateral.updateState(colUser);
         }
 
+        if (item.state == State.DUE) {
+            item.state = getCurrentState(item.schedule);
+            // collateral.updateState(colUser);
+        }
+
         // redemption
         // WORKING -> DUE
         // 1) DUE -> CLOSED, IN_USE -> AVAILABLE
