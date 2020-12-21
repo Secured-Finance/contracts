@@ -156,7 +156,6 @@ contract Loan {
         uint256 start;
         uint256 end;
         Schedule schedule;
-        bool[MAXPAYNUM] isDone;
         uint256 pv; // valuation in ETH
         uint256 asOf; // updated date
         bool isAvailable;
@@ -305,15 +304,26 @@ contract Loan {
         2. notify - confirm method to change states
      */
 
+    // helper to check loan state while working
+    function getCurrentState(Schedule memory schedule) public view returns (State) {
+        uint256 i;
+        for (i = 0; i < MAXPAYNUM; i++) {
+            if (schedule.isDone[i] == false) break;
+        }
+        if (now < schedule.notices[i]) return State.WORKING;
+        if (now <= schedule.payments[i]) return State.DUE;
+        if (schedule.payments[i] < now) return State.PAST_DUE;
+    }
+
     function updateState(
         address loanMaker,
         address colUser,
-        uint256 loanId,
-        uint256 amt
+        uint256 loanId
+        // uint256 amt
     ) public {
         LoanBook storage book = loanMap[loanMaker];
         LoanItem storage item = book.loans[loanId];
-        require(amt == item.amt, 'confirm amount not match');
+
         // initial
         // LOAN: REGISTERED -> WORKING
         // COLL: AVAILABLE -> IN_USE
@@ -323,9 +333,6 @@ contract Loan {
             collateral.updateState(colUser);
         }
 
-        if (item.state == State.WORKING) {
-                        
-        }
         // coupon is due
         // LOAN: WORKING -> DUE
         // COLL: IN_USE (no change)
@@ -341,6 +348,11 @@ contract Loan {
         // coupon unpaid -> paid
         // LOAN: PAST_DUE -> WORKING
         // COLL: PARTIAL_LIQUIDATION -> IN_USE
+
+        if (item.state == State.WORKING) {
+            item.state = getCurrentState(item.schedule);
+            // collateral.updateState(colUser);
+        }
 
         // redemption
         // WORKING -> DUE
@@ -375,18 +387,19 @@ contract Loan {
     ) public {
         // TODO - confirm the loan amount in FIL or in ETH
         // used for initial, coupon, redemption, liquidation
-        // LoanBook storage book = loanMap[msg.sender];
-        // LoanItem storage item = book.loans[loanId];
+        LoanBook storage book = loanMap[loanMaker];
+        LoanItem storage item = book.loans[loanId];
+        require(amt == item.amt, 'confirm amount not match');
 
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
         if (side == MoneyMarket.Side.LEND) {
             require(msg.sender == colUser, 'msg.sender is not borrower');
-            updateState(loanMaker, colUser, loanId, amt);
+            updateState(loanMaker, colUser, loanId);
         } else {
             require(msg.sender == loanMaker, 'msg.sender is not lender');
-            updateState(loanMaker, colUser, loanId, amt);
+            updateState(loanMaker, colUser, loanId);
         }
         emit ConfirmPayment(loanMaker, colUser, side, ccy, term, amt, loanId);
 
@@ -437,7 +450,6 @@ contract Loan {
         if (date <= now) return 0;
         uint256 time = date - now;
         if (time <= SECONDS[0]) return (dfArr[0] * time) / SECONDS[0];
-        // if (time <= SECONDS[0]) return (dfArr[0] * SECONDS[0]) / time;
         for (uint256 i = 1; i < NUMDF; i++) {
             if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
                 uint256 left = time - SECONDS[i - 1];
@@ -462,7 +474,6 @@ contract Loan {
             df.df4y,
             df.df5y
         ];
-        // Schedule[MAXPAYNUM] memory sched = item.schedule;
         uint256[MAXPAYNUM] memory schedDf;
         uint256 pv = 0;
         for (uint256 i = 0; i < PAYNUMS[uint256(item.term)]; i++) {

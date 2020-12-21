@@ -280,11 +280,6 @@
 								"type": "tuple"
 							},
 							{
-								"internalType": "bool[5]",
-								"name": "isDone",
-								"type": "bool[5]"
-							},
-							{
 								"internalType": "uint256",
 								"name": "pv",
 								"type": "uint256"
@@ -416,11 +411,6 @@
 										"type": "tuple"
 									},
 									{
-										"internalType": "bool[5]",
-										"name": "isDone",
-										"type": "bool[5]"
-									},
-									{
 										"internalType": "uint256",
 										"name": "pv",
 										"type": "uint256"
@@ -472,6 +462,47 @@
 						"internalType": "address[]",
 						"name": "",
 						"type": "address[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256[5]",
+								"name": "notices",
+								"type": "uint256[5]"
+							},
+							{
+								"internalType": "uint256[5]",
+								"name": "payments",
+								"type": "uint256[5]"
+							},
+							{
+								"internalType": "uint256[5]",
+								"name": "amounts",
+								"type": "uint256[5]"
+							},
+							{
+								"internalType": "bool[5]",
+								"name": "isDone",
+								"type": "bool[5]"
+							}
+						],
+						"internalType": "struct Loan.Schedule",
+						"name": "schedule",
+						"type": "tuple"
+					}
+				],
+				"name": "getCurrentState",
+				"outputs": [
+					{
+						"internalType": "enum Loan.State",
+						"name": "",
+						"type": "uint8"
 					}
 				],
 				"stateMutability": "view",
@@ -565,11 +596,6 @@
 								"internalType": "struct Loan.Schedule",
 								"name": "schedule",
 								"type": "tuple"
-							},
-							{
-								"internalType": "bool[5]",
-								"name": "isDone",
-								"type": "bool[5]"
 							},
 							{
 								"internalType": "uint256",
@@ -690,11 +716,6 @@
 										"internalType": "struct Loan.Schedule",
 										"name": "schedule",
 										"type": "tuple"
-									},
-									{
-										"internalType": "bool[5]",
-										"name": "isDone",
-										"type": "bool[5]"
 									},
 									{
 										"internalType": "uint256",
@@ -831,11 +852,6 @@
 						"internalType": "uint256",
 						"name": "loanId",
 						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "amt",
-						"type": "uint256"
 					}
 				],
 				"name": "updateState",
@@ -860,14 +876,14 @@
 		"devdoc": {
 			"kind": "dev",
 			"methods": {
+				"getCurrentState((uint256[5],uint256[5],uint256[5],bool[5]))": {
+					"details": "State Management Section 1. update states 2. notify - confirm method to change states"
+				},
 				"makeLoanDeal(address,uint8,uint8,uint8,uint256)": {
 					"details": "Create a loan deal"
 				},
 				"updateAllPV()": {
 					"details": "Mark to Market Section 1. get discount factors from moneyMarket 2. get PV for each scheduled cashflow 3. update LoanItem with total value of PV"
-				},
-				"updateState(address,address,uint256,uint256)": {
-					"details": "State Management Section 1. update states 2. notify - confirm method to change states"
 				}
 			},
 			"stateVariables": {
@@ -916,11 +932,11 @@
 			]
 		},
 		"localhost/Loan.sol": {
-			"keccak256": "0x6984c1f9dffba4e87465b0c7d0baca2aa399d9818bdaa4357554780e27ab3c43",
+			"keccak256": "0xa9fc25dbd81cc4e3324796468ac542393d4cf130bbb35104eceb12c917fdfb2e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://b44218b14da8adc523d641fd0fab7388ce0cd660eb16c7b8d1a373dfaf525229",
-				"dweb:/ipfs/QmVKqLKwPQSVfwaKQLu7gkxGEWZ7yYKH3w8k6nJFS2nEJb"
+				"bzz-raw://71e997427dc3b810ea5fff0ddd2adc7bafdac1adfcb67989b326bad99d100935",
+				"dweb:/ipfs/QmQdq2zjKALoPTATf7vUGVAeCepUTgVDXrKGMN7NyxUQkK"
 			]
 		},
 		"localhost/MoneyMarket.sol": {

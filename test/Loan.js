@@ -154,6 +154,7 @@ describe("Loan Unit Tests", () => {
     await time.increase(dueTime - noticeGap);
     let timeNotice = await time.latest();
     console.log("notify  is", toDate(timeNotice));
+    await loan.updateState(maker, taker, loanId);
     await printState(loan, collateral, maker, taker, loanId, "[AFTER payment DUE]");
 
     // loan state DUE -> PAST_DUE
