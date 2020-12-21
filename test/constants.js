@@ -18,6 +18,10 @@ const Term = {
   _5y: 5,
 };
 
+const LoanState = {REGISTERED: 0, WORKING: 1, DUE: 2, PAST_DUE: 3, CLOSED: 4, TERMINATED: 5};
+
+const ColState = {EMPTY: 0, AVAILABLE: 1, IN_USE: 2, MARGIN_CALL: 3, PARTIAL_LIQUIDATION: 4, LIQUIDATION: 5};
+
 const sample = {
   MoneyMarket: [
     {
@@ -186,5 +190,7 @@ module.exports = {
   Side,
   Ccy,
   Term,
-  sample
+  LoanState,
+  ColState,
+  sample,
 };

@@ -203,105 +203,28 @@
 					{
 						"components": [
 							{
-								"internalType": "uint256",
-								"name": "loanId",
-								"type": "uint256"
+								"internalType": "uint256[5]",
+								"name": "notices",
+								"type": "uint256[5]"
 							},
 							{
-								"internalType": "address",
-								"name": "lender",
-								"type": "address"
+								"internalType": "uint256[5]",
+								"name": "payments",
+								"type": "uint256[5]"
 							},
 							{
-								"internalType": "address",
-								"name": "borrower",
-								"type": "address"
+								"internalType": "uint256[5]",
+								"name": "amounts",
+								"type": "uint256[5]"
 							},
 							{
-								"internalType": "enum MoneyMarket.Side",
-								"name": "side",
-								"type": "uint8"
-							},
-							{
-								"internalType": "enum MoneyMarket.Ccy",
-								"name": "ccy",
-								"type": "uint8"
-							},
-							{
-								"internalType": "enum MoneyMarket.Term",
-								"name": "term",
-								"type": "uint8"
-							},
-							{
-								"internalType": "uint256",
-								"name": "amt",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "rate",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "start",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "end",
-								"type": "uint256"
-							},
-							{
-								"components": [
-									{
-										"internalType": "uint256[5]",
-										"name": "notices",
-										"type": "uint256[5]"
-									},
-									{
-										"internalType": "uint256[5]",
-										"name": "payments",
-										"type": "uint256[5]"
-									},
-									{
-										"internalType": "uint256[5]",
-										"name": "amounts",
-										"type": "uint256[5]"
-									},
-									{
-										"internalType": "bool[5]",
-										"name": "isDone",
-										"type": "bool[5]"
-									}
-								],
-								"internalType": "struct Loan.Schedule",
-								"name": "schedule",
-								"type": "tuple"
-							},
-							{
-								"internalType": "uint256",
-								"name": "pv",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "asOf",
-								"type": "uint256"
-							},
-							{
-								"internalType": "bool",
-								"name": "isAvailable",
-								"type": "bool"
-							},
-							{
-								"internalType": "enum Loan.State",
-								"name": "state",
-								"type": "uint8"
+								"internalType": "bool[5]",
+								"name": "isDone",
+								"type": "bool[5]"
 							}
 						],
-						"internalType": "struct Loan.LoanItem",
-						"name": "item",
+						"internalType": "struct Loan.Schedule",
+						"name": "schedule",
 						"type": "tuple"
 					},
 					{
@@ -932,11 +855,11 @@
 			]
 		},
 		"localhost/Loan.sol": {
-			"keccak256": "0xe566fb9d9f012af36d0a03832f15703ae3d89579cf79994417e73441af9cc386",
+			"keccak256": "0x2ef3230fd8f7abe645bc7bfd8b0e36ccaf47e5284f315318dd8895eaa1f27300",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://8526d63f501a5d0d888d0529fc59ca540cdcda9412f33256b4ac37869cc34b66",
-				"dweb:/ipfs/QmeaibNASCYFLqvYjek66wSw2m3R5yQn4748XDrpcsWWRh"
+				"bzz-raw://1e03393dd3d227444507cf9c47ff7b37d0e74a410345f4fe9e298143aace609e",
+				"dweb:/ipfs/QmZnsbi9mNcxfmXCmmWhfEiiHNGQWTA5NkhX3z1FeRhyh1"
 			]
 		},
 		"localhost/MoneyMarket.sol": {

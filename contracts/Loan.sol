@@ -245,7 +245,7 @@ contract Loan {
         item.rate = rate;
         item.start = now;
         item.end = now + DAYS[uint256(input.term)];
-        fillSchedule(item, input.term, input.amt, rate);
+        fillSchedule(item.schedule, input.term, input.amt, rate);
         item.pv = input.amt; // updated by MtM
         item.asOf = now;
         item.isAvailable = true;
@@ -255,7 +255,7 @@ contract Loan {
 
     // helper to fill dates and amounts
     function fillSchedule(
-        LoanItem memory item,
+        Schedule memory schedule,
         MoneyMarket.Term term,
         uint256 amt,
         uint256 rate
@@ -263,10 +263,10 @@ contract Loan {
         uint256 paynums = PAYNUMS[uint256(term)];
         uint256[MAXPAYNUM] memory daysArr = SCHEDULES[uint256(term)];
         for (uint256 i = 0; i < paynums; i++) {
-            item.schedule.notices[i] = daysArr[i] + now - NOTICE;
-            item.schedule.payments[i] = daysArr[i] + now;
-            item.schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
-            item.schedule.isDone[i] = false;
+            schedule.notices[i] = daysArr[i] + now - NOTICE;
+            schedule.payments[i] = daysArr[i] + now;
+            schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
+            schedule.isDone[i] = false;
         }
     }
 

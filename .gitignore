@@ -11,3 +11,4 @@ node_modules
 .gitattributes
 package-lock.json
 build/contracts/*.json
+contracts/artifacts
