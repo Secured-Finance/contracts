@@ -118,7 +118,14 @@ contract Loan {
         sched_5y
     ];
     // for generate payments and notices schedules
-    uint256[NUMTERM] PAYNUMS = [1, 1, 1, 2, 3, 5];
+    uint256[NUMTERM] PAYNUMS = [
+        1 * PAYFREQ, 
+        1 * PAYFREQ, 
+        1 * PAYFREQ, 
+        2 * PAYFREQ, 
+        3 * PAYFREQ, 
+        5 * PAYFREQ
+    ];
 
     // seconds in DFTERM
     uint256[NUMDF] SECONDS = [
@@ -146,7 +153,10 @@ contract Loan {
         MoneyMarket.Term term;
         uint256 amt;
         uint256 rate;
+        uint256 start;
+        uint256 end;
         Schedule schedule;
+        bool[MAXPAYNUM] isDone;
         uint256 pv; // valuation in ETH
         uint256 asOf; // updated date
         bool isAvailable;
@@ -154,11 +164,10 @@ contract Loan {
     }
 
     struct Schedule {
-        uint256 start;
-        uint256 end;
-        uint256[MAXYEAR] notices;
-        uint256[MAXYEAR] payments;
-        uint256[MAXYEAR] amounts;
+        uint256[MAXPAYNUM] notices;
+        uint256[MAXPAYNUM] payments;
+        uint256[MAXPAYNUM] amounts;
+        bool[MAXPAYNUM] isDone;
     }
 
     struct LoanInput {
@@ -235,7 +244,9 @@ contract Loan {
         item.term = input.term;
         item.amt = input.amt;
         item.rate = rate;
-        item.schedule = getSchedule(input.term, input.amt, rate);
+        item.start = now;
+        item.end = now + DAYS[uint256(input.term)];
+        fillSchedule(item, input.term, input.amt, rate);
         item.pv = input.amt; // updated by MtM
         item.asOf = now;
         item.isAvailable = true;
@@ -243,28 +254,21 @@ contract Loan {
         return item;
     }
 
-    // helper to generate payment schedule dates
-    function getSchedule(
+    // helper to fill dates and amounts
+    function fillSchedule(
+        LoanItem memory item,
         MoneyMarket.Term term,
         uint256 amt,
         uint256 rate
-    ) public view returns (Schedule memory) {
-        uint256[MAXYEAR] memory notices = SCHEDULES[uint256(term)];
-        uint256[MAXYEAR] memory payments = SCHEDULES[uint256(term)];
-        uint256[MAXYEAR] memory amounts = SCHEDULES[uint256(term)];
-        for (uint256 i = 0; i < PAYNUMS[uint256(term)]; i++) {
-            notices[i] += now - NOTICE;
-            payments[i] += now;
-            amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
+    ) public view {
+        uint256 paynums = PAYNUMS[uint256(term)];
+        uint256[MAXPAYNUM] memory daysArr = SCHEDULES[uint256(term)];
+        for (uint256 i = 0; i < paynums; i++) {
+            item.schedule.notices[i] = daysArr[i] + now - NOTICE;
+            item.schedule.payments[i] = daysArr[i] + now;
+            item.schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
+            item.schedule.isDone[i] = false;
         }
-        return
-            Schedule(
-                now,
-                now + DAYS[uint256(term)],
-                notices,
-                payments,
-                amounts
-            );
     }
 
     // function getLoanState(uint256 loanId, address addr) public returns (uint256) {
@@ -319,6 +323,9 @@ contract Loan {
             collateral.updateState(colUser);
         }
 
+        if (item.state == State.WORKING) {
+                        
+        }
         // coupon is due
         // LOAN: WORKING -> DUE
         // COLL: IN_USE (no change)
@@ -455,14 +462,13 @@ contract Loan {
             df.df4y,
             df.df5y
         ];
-        uint256[MAXPAYNUM] memory schedDate = item.schedule.payments;
-        uint256[MAXPAYNUM] memory schedAmt = item.schedule.amounts;
+        // Schedule[MAXPAYNUM] memory sched = item.schedule;
         uint256[MAXPAYNUM] memory schedDf;
         uint256 pv = 0;
         for (uint256 i = 0; i < PAYNUMS[uint256(item.term)]; i++) {
-            uint256 d = calcDF(dfArr, schedDate[i]);
+            uint256 d = calcDF(dfArr, item.schedule.payments[i]);
             schedDf[i] = d;
-            pv += (schedAmt[i] * d) / BP;
+            pv += (item.schedule.amounts[i] * d) / BP;
         }
         uint256 lastIndex = PAYNUMS[uint256(item.term)] - 1;
         pv += (item.amt * schedDf[lastIndex]) / BP;
