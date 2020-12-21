@@ -932,11 +932,11 @@
 			]
 		},
 		"localhost/Loan.sol": {
-			"keccak256": "0x81d659e04969e28eefeac6500d3614708a1b10c7732d9defb0e52477413eaf86",
+			"keccak256": "0xe566fb9d9f012af36d0a03832f15703ae3d89579cf79994417e73441af9cc386",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://45aa4e50f28cd35b369d4ba8bfcf5866ef53bb1cd4d3033a6808ae621e3e8ede",
-				"dweb:/ipfs/Qmd24FZfftoGSTJRs9PiV1fZhb2mbcoS5sEBkyrfUtEc2s"
+				"bzz-raw://8526d63f501a5d0d888d0529fc59ca540cdcda9412f33256b4ac37869cc34b66",
+				"dweb:/ipfs/QmeaibNASCYFLqvYjek66wSw2m3R5yQn4748XDrpcsWWRh"
 			]
 		},
 		"localhost/MoneyMarket.sol": {

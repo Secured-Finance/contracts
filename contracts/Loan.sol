@@ -336,6 +336,10 @@ contract Loan {
         // coupon is due
         // LOAN: WORKING -> DUE
         // COLL: IN_USE (no change)
+        if (item.state == State.WORKING) {
+            item.state = getCurrentState(item.schedule);
+            // collateral.updateState(colUser);
+        }
 
         // coupon due -> paid
         // LOAN: DUE -> WORKING
@@ -344,17 +348,15 @@ contract Loan {
         // coupon due -> unpaid
         // LOAN: DUE -> PAST_DUE
         // COLL: IN_USE -> PARTIAL_LIQUIDATION
-
-        // coupon unpaid -> paid
-        // LOAN: PAST_DUE -> WORKING
-        // COLL: PARTIAL_LIQUIDATION -> IN_USE
-
-        if (item.state == State.WORKING) {
+        if (item.state == State.DUE) {
             item.state = getCurrentState(item.schedule);
             // collateral.updateState(colUser);
         }
 
-        if (item.state == State.DUE) {
+        // coupon unpaid -> paid
+        // LOAN: PAST_DUE -> WORKING
+        // COLL: PARTIAL_LIQUIDATION -> IN_USE
+        if (item.state == State.PAST_DUE) {
             item.state = getCurrentState(item.schedule);
             // collateral.updateState(colUser);
         }
