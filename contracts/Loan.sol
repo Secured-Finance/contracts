@@ -343,18 +343,16 @@ contract Loan {
             // collateral.updateState(colUser);
         }
 
-        // // coupon due -> paid
-        // // LOAN: DUE -> WORKING
-        // // COLL: IN_USE (no change)
-        // else if (item.state == State.DUE) {
-        //     item.state = State.WORKING;
-        //     // collateral.updateState(colUser);
-        // }
+        // 1) coupon due -> paid
+        // LOAN: DUE -> WORKING
+        // COLL: IN_USE (no change)
 
-        // coupon due -> unpaid
+        // 2) coupon due -> unpaid
         // LOAN: DUE -> PAST_DUE
         // COLL: IN_USE -> PARTIAL_LIQUIDATION
-        else if (item.state == State.DUE) {
+        if (item.state == State.DUE) {
+            // paid => WORKING
+            // unpaid => PAST_DUE
             item.state = getCurrentState(item.schedule);
 
             // collateral liquidation to release 120% coupon amount to lender
