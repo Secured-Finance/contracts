@@ -2,16 +2,20 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './MoneyMarket.sol';
-import './FXMarket.sol';
-import './Loan.sol';
+import "./MoneyMarket.sol";
+import "./FXMarket.sol";
+import "./Loan.sol";
 
 contract Collateral {
     event SetColBook(address indexed sender);
     event UpSizeETH(address indexed sender);
     event UpSizeFIL(address indexed sender);
     event DelColBook(address indexed sender);
-    event PartialLiquidation(address indexed addr);
+    event PartialLiquidation(
+        address indexed borrower,
+        address indexed lender,
+        uint256 amount
+    );
     event RequestFILCustodyAddr(address indexed sender);
     event RegisterFILCustodyAddr(address indexed requester);
     event DEBUG(address addr);
@@ -78,14 +82,14 @@ contract Collateral {
 
     // reset market contracts addresses
     function setMarketAddr(address moneyAddr, address fxAddr) public {
-        require(msg.sender == owner, 'only owner');
+        require(msg.sender == owner, "only owner");
         moneyMarket = MoneyMarket(moneyAddr);
         fxMarket = FXMarket(fxAddr);
     }
 
     // reset loan contract address
     function setLoanAddr(address loanAddr) public {
-        require(msg.sender == owner, 'only owner');
+        require(msg.sender == owner, "only owner");
         loan = Loan(loanAddr);
     }
 
@@ -99,7 +103,7 @@ contract Collateral {
         string memory userAddrFIL,
         address userAddrUSDC
     ) public payable {
-        require(!colMap[msg.sender].isAvailable, 'user already exists'); // one-time
+        require(!colMap[msg.sender].isAvailable, "user already exists"); // one-time
         ColInput memory input = ColInput(id, userAddrFIL, userAddrUSDC);
         ColBook memory newBook = inputToBook(input);
         colMap[msg.sender] = newBook;
@@ -144,7 +148,7 @@ contract Collateral {
         uint256 amt,
         address addr
     ) public {
-        require(isCovered(amt, ccy, addr), 'Please upsize collateral');
+        require(isCovered(amt, ccy, addr), "Please upsize collateral");
         ColBook storage book = colMap[addr];
         if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH += amt;
         if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL += amt;
@@ -159,7 +163,7 @@ contract Collateral {
         MoneyMarket.Ccy ccy, // ETH or FIL
         address addr
     ) public view returns (bool) {
-        require(colMap[addr].isAvailable, 'not registered yet');
+        require(colMap[addr].isAvailable, "not registered yet");
         if (amt == 0) return true;
         ColBook memory book = colMap[addr];
         uint256 FILETH = getFILETH();
@@ -183,7 +187,7 @@ contract Collateral {
         view
         returns (uint256)
     {
-        require(colMap[addr].isAvailable, 'not registered yet');
+        require(colMap[addr].isAvailable, "not registered yet");
         if (amt == 0) return 0;
         ColBook memory book = colMap[addr];
         uint256 totalUse = book.inuseETH + book.inuseFILValue + amt;
@@ -208,11 +212,11 @@ contract Collateral {
         returns (string memory)
     {
         bytes32 value = bytes32(uint256(_addr));
-        bytes memory alphabet = '0123456789abcdef';
+        bytes memory alphabet = "0123456789abcdef";
 
         bytes memory str = new bytes(51);
-        str[0] = '0';
-        str[1] = 'x';
+        str[0] = "0";
+        str[1] = "x";
         for (uint256 i = 0; i < 20; i++) {
             str[2 + i * 2] = alphabet[uint256(uint8(value[i + 12] >> 4))];
             str[3 + i * 2] = alphabet[uint256(uint8(value[i + 12] & 0x0f))];
@@ -223,7 +227,6 @@ contract Collateral {
     // update state and coverage
     function updateState(address addr) public {
         ColBook storage book = colMap[addr];
-        if (book.state == State.PARTIAL_LIQUIDATION) return;
         updateFILValue(msg.sender);
         updateUSDCValue(msg.sender);
         uint256 totalUse = book.inuseETH +
@@ -236,6 +239,7 @@ contract Collateral {
         } else if (totalUse > 0) {
             uint256 coverage = (PCT * totalAmt) / totalUse;
             book.coverage = coverage;
+            if (book.state == State.PARTIAL_LIQUIDATION) return;
             if (totalAmt > 0 && coverage <= AUTOLQLEVEL)
                 book.state = State.LIQUIDATION;
             if (totalAmt > 0 && coverage > AUTOLQLEVEL)
@@ -254,15 +258,29 @@ contract Collateral {
 
     // to be called from Loan for coupon cover up
     // TODO - handle ETH lending case
-    // function partialLiquidation(address borrower, uint256 amount) public {
-    //     require(msg.sender == address(loan), 'only Loan contract can call');
-    //     ColBook storage book = colMap[borrower];
-    //     if (book.state == State.IN_USE || book.state == State.MARGIN_CALL) {
-    //         book.state = State.PARTIAL_LIQUIDATION;
-    //     }
-    //     // TODO - nominate liquidation provider, calc payment amount
-    //     emit PartialLiquidation(borrower);
-    // }
+    function partialLiquidation(
+        address borrower,
+        address lender,
+        uint256 amount
+    ) public {
+        // require(msg.sender == address(loan), 'only Loan contract can call');
+        ColBook storage borrowerBook = colMap[borrower];
+        ColBook storage lenderBook = colMap[lender];
+        require(borrowerBook.amtETH >= amount);
+        if (borrowerBook.state == State.IN_USE) {
+            borrowerBook.state = State.PARTIAL_LIQUIDATION;
+            borrowerBook.amtETH -= amount * LQLEVEL / PCT;
+            lenderBook.amtETH += amount * LQLEVEL / PCT;
+            updateState(borrower);
+        }
+        emit PartialLiquidation(borrower, lender, amount);
+    }
+
+    function completePartialLiquidation(address borrower) public {
+        // require(msg.sender == address(loan), 'only Loan contract can call');
+        ColBook storage borrowerBook = colMap[borrower];
+        borrowerBook.state = State.IN_USE;
+    }
 
     // TODO
     function liquiadtion(address borrower, uint256 amount) public {}
@@ -299,19 +317,19 @@ contract Collateral {
 
     // collateralize ETH
     function upSizeETH() public payable {
-        require(colMap[msg.sender].isAvailable == true, 'user not found');
+        require(colMap[msg.sender].isAvailable == true, "user not found");
         colMap[msg.sender].amtETH += msg.value;
         updateState(msg.sender);
         if (
             (colMap[msg.sender].state != State.AVAILABLE) &&
             (colMap[msg.sender].state != State.IN_USE)
-        ) revert('Collateral not enough');
+        ) revert("Collateral not enough");
         emit UpSizeETH(msg.sender);
     }
 
     // collateralize FIL
     function upSizeFIL(uint256 amtFIL) public payable {
-        require(colMap[msg.sender].isAvailable == true, 'user not found');
+        require(colMap[msg.sender].isAvailable == true, "user not found");
         colMap[msg.sender].amtFIL += amtFIL;
         // TODO - check FIL network by other peers to verify amtFIL
         updateState(msg.sender);
@@ -319,10 +337,10 @@ contract Collateral {
     }
 
     function emptyBook(ColBook storage book) private {
-        book.id = '';
+        book.id = "";
         book.addrETH = 0x0000000000000000000000000000000000000000;
-        book.addrFIL = '';
-        book.userAddrFIL = '';
+        book.addrFIL = "";
+        book.userAddrFIL = "";
         book.addrUSDC = 0x0000000000000000000000000000000000000000;
         book.userAddrUSDC = 0x0000000000000000000000000000000000000000;
         book.amtETH = 0;
@@ -343,7 +361,7 @@ contract Collateral {
     // to be called from market maker
     function delColBook() public {
         ColBook memory book = colMap[msg.sender];
-        require(book.isAvailable == true, 'user not found');
+        require(book.isAvailable == true, "user not found");
         emptyBook(colMap[msg.sender]);
         delete colMap[msg.sender]; // avoid reentrancy
         msg.sender.transfer(book.amtETH);
@@ -461,7 +479,7 @@ contract Collateral {
     function registerFILCustodyAddr(string memory addrFIL, address requester)
         public
     {
-        require(colMap[requester].isAvailable == true, 'Requester not found');
+        require(colMap[requester].isAvailable == true, "Requester not found");
         colMap[requester].addrFIL = addrFIL;
         emit RegisterFILCustodyAddr(requester);
     }

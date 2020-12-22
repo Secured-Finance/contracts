@@ -357,19 +357,30 @@ contract Loan {
         else if (item.state == State.DUE) {
             item.state = getCurrentState(item.schedule);
 
-            // TODO - collateral liquidation to release 120% coupon amount to lender
-            // if (item.state == State.PAST_DUE)
-            //     collateral.liquidation();
-            // collateral.updateState(colUser);
+            // collateral liquidation to release 120% coupon amount to lender
+            if (item.state == State.PAST_DUE) {
+
+                // TODO amount should be ETH
+                uint256 amount = item.schedule.amounts[0];
+
+                collateral.partialLiquidation(colUser, loanMaker, amount);
+                uint256 i;
+                for (i = 0; i < MAXPAYNUM; i++) {
+                    if (item.schedule.isDone[i] == false) break;
+                }
+                item.schedule.isDone[i] = true;
+                // collateral.updateState(colUser);
+            }
         }
 
-        // // coupon unpaid -> paid
-        // // LOAN: PAST_DUE -> WORKING
-        // // COLL: PARTIAL_LIQUIDATION -> IN_USE
-        // else if (item.state == State.PAST_DUE) {
-        //     item.state = getCurrentState(item.schedule);
-        //     // collateral.updateState(colUser);
-        // }
+        // coupon unpaid -> paid
+        // LOAN: PAST_DUE -> WORKING
+        // COLL: PARTIAL_LIQUIDATION -> IN_USE
+        else if (item.state == State.PAST_DUE) {
+            item.state = getCurrentState(item.schedule);
+            if (item.state == State.WORKING)
+            collateral.completePartialLiquidation(colUser);
+        }
 
         // redemption
         // WORKING -> DUE

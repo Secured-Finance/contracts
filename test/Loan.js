@@ -244,16 +244,10 @@ describe("Loan Unit Tests", () => {
     item = await loan.getLoanItem(loanId, {from: maker});
     expect(Number(item.state)).to.equal(LoanState.PAST_DUE);
 
-    // check collateral state for maker and taker
-    await printCol(collateral, maker, "Maker COL before partial liquidation");
-    await printCol(collateral, taker, "Taker COL before partial liquidation");
-
-    let res1 = await collateral.updateState(maker);
-    let res2 = await collateral.updateState(taker);
-
-    // check collateral state for maker and taker
-    await printCol(collateral, maker, "Maker COL before partial liquidation");
-    await printCol(collateral, taker, "Taker COL before partial liquidation");
+    await loan.updateState(maker, taker, loanId);
+    await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
+    item = await loan.getLoanItem(loanId, {from: maker});
+    expect(Number(item.state)).to.equal(LoanState.WORKING);
   });
 
   // it('Confirm FIL Payment', async () => {
