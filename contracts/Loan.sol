@@ -307,8 +307,8 @@ contract Loan {
     // helper to check loan state while working
     function getCurrentState(Schedule memory schedule) public view returns (State) {
         uint256 i;
+        // find current index
         for (i = 0; i < MAXPAYNUM; i++) {
-            // if (schedule.isDone[i] == false) break;
             if (schedule.payments[i+1] == 0) break;
             if (schedule.payments[i+1] > 0 && now < schedule.payments[i+1]) break;
         }
@@ -338,7 +338,7 @@ contract Loan {
         // coupon is due
         // LOAN: WORKING -> DUE
         // COLL: IN_USE (no change)
-        else if (item.state == State.WORKING) {
+        if (item.state == State.WORKING) {
             item.state = getCurrentState(item.schedule);
             // collateral.updateState(colUser);
         }
