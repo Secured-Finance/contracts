@@ -356,6 +356,10 @@ contract Loan {
         // COLL: IN_USE -> PARTIAL_LIQUIDATION
         else if (item.state == State.DUE) {
             item.state = getCurrentState(item.schedule);
+
+            // TODO - collateral liquidation to release 120% coupon amount to lender
+            // if (item.state == State.PAST_DUE)
+            //     collateral.liquidation();
             // collateral.updateState(colUser);
         }
 
