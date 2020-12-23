@@ -166,16 +166,15 @@ const sample = {
     {
       side: 0, // LEND
       ccy: 1, // FIL
-      term: 5, // 5y
+      term: Term._3y, // 3y
+      // term: 5, // 5y
       amt: 10000,
-      // amt: 15000 - 999,
     },
     {
       side: 1, // BORROW
       ccy: 2, // USDC
       term: 5, // 5y
       amt: 400000,
-      // amt: 1000000,
     },
     {
       side: 1, // BORROW

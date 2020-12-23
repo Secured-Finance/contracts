@@ -119,11 +119,11 @@ contract Loan {
     ];
     // for generate payments and notices schedules
     uint256[NUMTERM] PAYNUMS = [
-        1 * PAYFREQ,
-        1 * PAYFREQ,
-        1 * PAYFREQ,
-        2 * PAYFREQ,
-        3 * PAYFREQ,
+        1 * PAYFREQ, 
+        1 * PAYFREQ, 
+        1 * PAYFREQ, 
+        2 * PAYFREQ, 
+        3 * PAYFREQ, 
         5 * PAYFREQ
     ];
 
@@ -267,9 +267,6 @@ contract Loan {
             schedule.payments[i] = daysArr[i] + now;
             schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
             schedule.isDone[i] = false;
-            if (i == paynums - 1) {
-                schedule.amounts[i] += amt;
-            }
         }
     }
 
@@ -309,15 +306,22 @@ contract Loan {
 
     // helper to check loan state while working
     function getCurrentState(Schedule memory schedule) public view returns (State) {
-        uint256 i;
+        // uint256 i;
         // find current index
+        // for (i = 0; i < MAXPAYNUM; i++) {
+        //     if (schedule.payments[i+1] == 0) break;
+        //     if (schedule.payments[i+1] > 0 && now < schedule.payments[i+1]) break;
+        // }
+        // if (schedule.isDone[i] == true || now < schedule.notices[i]) return State.WORKING;
+        // if (schedule.isDone[i] == false && now <= schedule.payments[i]) return State.DUE;
+        // if (schedule.isDone[i] == false && schedule.payments[i] < now) return State.PAST_DUE;
+        uint256 i;
         for (i = 0; i < MAXPAYNUM; i++) {
-            if (schedule.payments[i+1] == 0) break;
-            if (schedule.payments[i+1] > 0 && now < schedule.payments[i+1]) break;
+            if (schedule.isDone[i] == false) break;
         }
-        if (schedule.isDone[i] == true || now < schedule.notices[i]) return State.WORKING;
-        if (schedule.isDone[i] == false && now <= schedule.payments[i]) return State.DUE;
-        if (schedule.isDone[i] == false && schedule.payments[i] < now) return State.PAST_DUE;
+        if (now < schedule.notices[i]) return State.WORKING;
+        if (now <= schedule.payments[i]) return State.DUE;
+        if (now > schedule.payments[i]) return State.PAST_DUE;
     }
 
     function updateState(
@@ -361,11 +365,11 @@ contract Loan {
             // collateral liquidation to release 120% coupon amount to lender
             if (item.state == State.PAST_DUE) {
                 uint256 i;
-                for (i = 0; i < MAXPAYNUM; i++) {
-                    if (item.schedule.isDone[i] == false) break;
-                }
-                item.schedule.isDone[i] = true;
-                uint256 amount = item.schedule.amounts[i];
+        for (i = 0; i < MAXPAYNUM; i++) {
+            if (item.schedule.isDone[i] == false) break;
+        }
+        item.schedule.isDone[i] = true;
+        uint256 amount = item.schedule.amounts[i];
                 collateral.partialLiquidation(colUser, loanMaker, amount, item.ccy);
             }
         }
