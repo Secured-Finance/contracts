@@ -119,11 +119,11 @@ contract Loan {
     ];
     // for generate payments and notices schedules
     uint256[NUMTERM] PAYNUMS = [
-        1 * PAYFREQ, 
-        1 * PAYFREQ, 
-        1 * PAYFREQ, 
-        2 * PAYFREQ, 
-        3 * PAYFREQ, 
+        1 * PAYFREQ,
+        1 * PAYFREQ,
+        1 * PAYFREQ,
+        2 * PAYFREQ,
+        3 * PAYFREQ,
         5 * PAYFREQ
     ];
 
@@ -267,6 +267,9 @@ contract Loan {
             schedule.payments[i] = daysArr[i] + now;
             schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
             schedule.isDone[i] = false;
+            if (i == paynums - 1) {
+                schedule.amounts[i] += amt;
+            }
         }
     }
 

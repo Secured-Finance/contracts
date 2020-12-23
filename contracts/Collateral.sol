@@ -257,7 +257,6 @@ contract Collateral {
     }
 
     // to be called from Loan for coupon cover up
-    // TODO - access control only by collateral
     function partialLiquidation(
         address borrower,
         address lender,
