@@ -43,6 +43,7 @@ describe("Loan Unit Tests", () => {
     fxMarket = await FXMarket.new();
     collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
     loan = await Loan.new(moneyMarket.address, fxMarket.address, collateral.address);
+    await collateral.setLoanAddr(loan.address, {from: owner});
     console.log();
     console.log("moneyMarket addr is", moneyMarket.address);
     console.log("fxMarket    addr is", fxMarket.address);
@@ -219,6 +220,8 @@ describe("Loan Unit Tests", () => {
     let maker = accounts[0]; // FIL lender
     let taker = accounts[2]; // FIL borrower
     let loanId = 0; // available from event
+    console.log("maker is", maker);
+    console.log("taker is", taker);
 
     const oneYear = Number(time.duration.years(1));
     const noticeGap = Number(time.duration.weeks(2));
@@ -245,7 +248,7 @@ describe("Loan Unit Tests", () => {
     expect(Number(item.state)).to.equal(LoanState.PAST_DUE);
 
     // loan state PAST_DUE -> WORKING
-    await loan.updateState(maker, taker, loanId);
+    await loan.updateState(maker, taker, loanId, {from: taker});
     await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
     item = await loan.getLoanItem(loanId, {from: maker});
     expect(Number(item.state)).to.equal(LoanState.WORKING);

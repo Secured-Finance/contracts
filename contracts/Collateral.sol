@@ -257,14 +257,14 @@ contract Collateral {
     }
 
     // to be called from Loan for coupon cover up
-    // TODO - handle ETH lending case
+    // TODO - access control only by collateral
     function partialLiquidation(
         address borrower,
         address lender,
         uint256 amount,
         MoneyMarket.Ccy ccy
-    ) public {
-        // require(msg.sender == address(loan), 'only Loan contract can call');
+    ) external {
+        require(msg.sender == address(loan), 'only Loan contract can call');
         ColBook storage borrowerBook = colMap[borrower];
         ColBook storage lenderBook = colMap[lender];
         require(borrowerBook.amtETH >= amount);
@@ -278,8 +278,8 @@ contract Collateral {
         emit PartialLiquidation(borrower, lender, amount);
     }
 
-    function completePartialLiquidation(address borrower) public {
-        // require(msg.sender == address(loan), 'only Loan contract can call');
+    function completePartialLiquidation(address borrower) external {
+        require(msg.sender == address(loan), 'only Loan contract can call');
         ColBook storage borrowerBook = colMap[borrower];
         borrowerBook.state = State.IN_USE;
     }
