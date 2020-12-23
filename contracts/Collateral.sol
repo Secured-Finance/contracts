@@ -261,7 +261,8 @@ contract Collateral {
     function partialLiquidation(
         address borrower,
         address lender,
-        uint256 amount
+        uint256 amount,
+        MoneyMarket.Ccy ccy
     ) public {
         // require(msg.sender == address(loan), 'only Loan contract can call');
         ColBook storage borrowerBook = colMap[borrower];
@@ -269,8 +270,9 @@ contract Collateral {
         require(borrowerBook.amtETH >= amount);
         if (borrowerBook.state == State.IN_USE) {
             borrowerBook.state = State.PARTIAL_LIQUIDATION;
-            borrowerBook.amtETH -= amount * LQLEVEL / PCT;
-            lenderBook.amtETH += amount * LQLEVEL / PCT;
+            uint256 amtETH = fxMarket.getETHvalue(amount, ccy);
+            borrowerBook.amtETH -= amtETH * LQLEVEL / PCT;
+            lenderBook.amtETH += amtETH * LQLEVEL / PCT;
             updateState(borrower);
         }
         emit PartialLiquidation(borrower, lender, amount);

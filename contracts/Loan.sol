@@ -357,17 +357,13 @@ contract Loan {
 
             // collateral liquidation to release 120% coupon amount to lender
             if (item.state == State.PAST_DUE) {
-
-                // TODO amount should be ETH
-                uint256 amount = item.schedule.amounts[0];
-
-                collateral.partialLiquidation(colUser, loanMaker, amount);
                 uint256 i;
                 for (i = 0; i < MAXPAYNUM; i++) {
                     if (item.schedule.isDone[i] == false) break;
                 }
                 item.schedule.isDone[i] = true;
-                // collateral.updateState(colUser);
+                uint256 amount = item.schedule.amounts[i];
+                collateral.partialLiquidation(colUser, loanMaker, amount, item.ccy);
             }
         }
 

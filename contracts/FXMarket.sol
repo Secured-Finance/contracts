@@ -2,6 +2,8 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+import './MoneyMarket.sol';
+
 contract FXMarket {
     event SetFXBook(address indexed sender);
     event DelFXBook(address indexed sender);
@@ -196,5 +198,20 @@ contract FXMarket {
             rates[i] = (bestBook.offers[i].rate + bestBook.bids[i].rate) / 2;
         }
         return rates;
+    }
+
+    function getETHvalue(uint256 amount, MoneyMarket.Ccy ccy) public view returns (uint256) {
+        uint256[3] memory rates = getMidRates();
+        if (ccy == MoneyMarket.Ccy.FIL) {
+            uint256 pairIndex = uint256(CcyPair.FILETH);
+            uint256 mult = FXMULT[pairIndex];
+            return rates[pairIndex] * amount / mult;
+        }
+        if (ccy == MoneyMarket.Ccy.USDC) {
+            uint256 pairIndex = uint256(CcyPair.ETHUSDC);
+            uint256 mult = FXMULT[pairIndex];
+            // TODO - add more presicion to handle fractional value ETH
+            return amount / (rates[pairIndex] / mult);
+        }
     }
 }
