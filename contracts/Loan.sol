@@ -307,20 +307,12 @@ contract Loan {
 
     // helper to check loan state while working
     function getCurrentState(Schedule memory schedule) public view returns (State) {
-        // uint256 i;
-        // find current index
-        // for (i = 0; i < MAXPAYNUM; i++) {
-        //     if (schedule.payments[i+1] == 0) break;
-        //     if (schedule.payments[i+1] > 0 && now < schedule.payments[i+1]) break;
-        // }
-        // if (schedule.isDone[i] == true || now < schedule.notices[i]) return State.WORKING;
-        // if (schedule.isDone[i] == false && now <= schedule.payments[i]) return State.DUE;
-        // if (schedule.isDone[i] == false && schedule.payments[i] < now) return State.PAST_DUE;
         uint256 i;
         for (i = 0; i < MAXPAYNUM; i++) {
             if (schedule.isDone[i] == false) break;
         }
-        if (schedule.notices[i] == 0) return State.CLOSED;
+        if (i == MAXPAYNUM || schedule.notices[i] == 0) return State.CLOSED;
+        // if (schedule.notices[i] == 0) return State.CLOSED;
         if (now < schedule.notices[i]) return State.WORKING;
         if (now <= schedule.payments[i]) return State.DUE;
         if (now > schedule.payments[i]) return State.PAST_DUE;
@@ -330,7 +322,6 @@ contract Loan {
         address loanMaker,
         address colUser,
         uint256 loanId
-        // uint256 amt
     ) public {
         LoanBook storage book = loanMap[loanMaker];
         LoanItem storage item = book.loans[loanId];
@@ -347,7 +338,7 @@ contract Loan {
         // coupon is due
         // LOAN: WORKING -> DUE
         // COLL: IN_USE (no change)
-        if (item.state == State.WORKING) {
+        else if (item.state == State.WORKING) {
             item.state = getCurrentState(item.schedule);
             // collateral.updateState(colUser);
         }
@@ -359,15 +350,16 @@ contract Loan {
         // 2) coupon due -> unpaid
         // LOAN: DUE -> PAST_DUE
         // COLL: IN_USE -> PARTIAL_LIQUIDATION
-        if (item.state == State.DUE) {
+        else if (item.state == State.DUE) {
             // paid => WORKING
             // unpaid => PAST_DUE
             item.state = getCurrentState(item.schedule);
 
             // collateral liquidation to release 120% coupon amount to lender
             if (item.state == State.PAST_DUE) {
+                uint256 paynums = PAYNUMS[uint256(item.term)];
                 uint256 i;
-                for (i = 0; i < MAXPAYNUM; i++) {
+                for (i = 0; i < paynums; i++) {
                     if (item.schedule.isDone[i] == false) break;
                 }
                 item.schedule.isDone[i] = true;
@@ -379,10 +371,17 @@ contract Loan {
         // coupon unpaid -> paid
         // LOAN: PAST_DUE -> WORKING
         // COLL: PARTIAL_LIQUIDATION -> IN_USE
+
+        // collateral liquidation to release 120% coupon amount to lender
         else if (item.state == State.PAST_DUE) {
             item.state = getCurrentState(item.schedule);
             if (item.state == State.WORKING)
-            collateral.completePartialLiquidation(colUser);
+                collateral.completePartialLiquidation(colUser);
+            if (item.state == State.CLOSED) {
+                collateral.completePartialLiquidation(colUser);
+                collateral.releaseCollateral(item.ccy, item.amt, colUser);
+                item.isAvailable = false;
+            }
         }
 
         // redemption
