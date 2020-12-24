@@ -406,7 +406,8 @@ contract Loan {
         emit NoitfyPayment(ccy, msg.sender, receiver, loanId, txHash);
     }
 
-    // to be used by borrowers
+    // to be used by borrowers and lenders
+    // used for initial, coupon, redemption, liquidation
     function confirmPayment(
         address loanMaker,
         address colUser,
@@ -416,16 +417,15 @@ contract Loan {
         uint256 amt,
         uint256 loanId
     ) public {
-        // TODO - confirm the loan amount in FIL or in ETH
-        // used for initial, coupon, redemption, liquidation
         LoanBook storage book = loanMap[loanMaker];
         LoanItem storage item = book.loans[loanId];
-
+        require(item.state == State.REGISTERED || item.state == State.DUE, 'No need to confirm now');
+        
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
         if (item.state == State.REGISTERED) {
-            require(amt == item.amt, 'confirm amount not match');
+            require(amt == item.amt, '[RESISTERED] confirm amount not match');
             if (side == MoneyMarket.Side.LEND) {
                 require(msg.sender == colUser, 'msg.sender is not borrower');
                 updateState(loanMaker, colUser, loanId);
@@ -450,7 +450,7 @@ contract Loan {
             for (i = 0; i < MAXPAYNUM; i++) {
                 if (item.schedule.isDone[i] == false) break;
             }
-            require(amt == item.schedule.amounts[i], 'confirm amount not match');
+            require(amt == item.schedule.amounts[i], '[DUE] confirm amount not match');
             item.schedule.isDone[i] = true;
             if (i == MAXPAYNUM - 1 || item.schedule.payments[i + 1] == 0) {
                 item.state = State.CLOSED;

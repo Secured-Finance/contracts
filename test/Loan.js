@@ -327,9 +327,11 @@ describe("Loan Unit Tests", () => {
     const oneSec = Number(time.duration.seconds(1));
 
     let item = await loan.getLoanItem(loanId, {from: maker});
-    const couponAmt = item.schedule.amounts[0];
-    const {side, ccy, term, amt} = sample.Loan[0];
+    const {side, ccy, term} = sample.Loan[0]; // get basic condition
     const paynums = [1, 1, 1, 2, 3, 5];
+
+    // TODO - test for short time
+    if (term == Term._3m || term == Term._6m) return;
 
     // loan state WORKING -> DUE
     await time.increase(oneYear - noticeGap + oneSec);
@@ -337,6 +339,7 @@ describe("Loan Unit Tests", () => {
 
     // iter coupon payments until redeption
     for (i = 0; i < paynums[term] - 1; i++) {
+      const couponAmt = item.schedule.amounts[i];
       // loan state DUE -> WORKING
       await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
       // loan state WORKING -> DUE
@@ -345,9 +348,8 @@ describe("Loan Unit Tests", () => {
     }
 
     // loan state DUE -> CLOSED
-    let confirmAmt = Number(amt) + Number(couponAmt);
-    res = await loan.confirmPayment(maker, taker, side, ccy, term, confirmAmt, loanId, {from: maker});
-
+    const redeemAmt = item.schedule.amounts[paynums[term] - 1];
+    res = await loan.confirmPayment(maker, taker, side, ccy, term, redeemAmt, loanId, {from: maker});
     await printState(loan, collateral, maker, taker, loanId, `AFTER redemption ${await getDate()}`);
 
     // item = await loan.getLoanItem(loanId, {from: maker});
