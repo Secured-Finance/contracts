@@ -164,22 +164,21 @@ const sample = {
   ],
   Loan: [
     {
-      side: 0, // LEND
-      ccy: 1, // FIL
-      term: Term._3y, // 3y
-      // term: 5, // 5y
+      side: Side.LEND,
+      ccy: Ccy.FIL,
+      term: Term._5y,
       amt: 10000,
     },
     {
-      side: 1, // BORROW
-      ccy: 2, // USDC
-      term: 5, // 5y
+      side: Side.BORROW,
+      ccy: Ccy.USDC,
+      term: Term._5y,
       amt: 400000,
     },
     {
-      side: 1, // BORROW
-      ccy: 1, // FIL
-      term: 0, // 3m
+      side: Side.BORROW,
+      ccy: Ccy.FIL,
+      term: Term._3m,
       amt: 10000,
     },
   ],

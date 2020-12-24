@@ -254,7 +254,7 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(item.state)).to.equal(LoanState.WORKING);
   // });
 
-  it("Recemption State transition WORKING -> DUE -> CLOSED", async () => {
+  it("Redemption State transition WORKING -> DUE -> CLOSED", async () => {
     let maker = accounts[0]; // FIL lender
     let taker = accounts[2]; // FIL borrower
     let loanId = 0;

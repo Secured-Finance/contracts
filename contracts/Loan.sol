@@ -268,6 +268,7 @@ contract Loan {
             schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
             schedule.isDone[i] = false;
         }
+        schedule.amounts[paynums - 1] += amt; // redemption amt
     }
 
     // function getLoanState(uint256 loanId, address addr) public returns (uint256) {
@@ -319,6 +320,7 @@ contract Loan {
         for (i = 0; i < MAXPAYNUM; i++) {
             if (schedule.isDone[i] == false) break;
         }
+        if (schedule.notices[i] == 0) return State.CLOSED;
         if (now < schedule.notices[i]) return State.WORKING;
         if (now <= schedule.payments[i]) return State.DUE;
         if (now > schedule.payments[i]) return State.PAST_DUE;
@@ -365,11 +367,11 @@ contract Loan {
             // collateral liquidation to release 120% coupon amount to lender
             if (item.state == State.PAST_DUE) {
                 uint256 i;
-        for (i = 0; i < MAXPAYNUM; i++) {
-            if (item.schedule.isDone[i] == false) break;
-        }
-        item.schedule.isDone[i] = true;
-        uint256 amount = item.schedule.amounts[i];
+                for (i = 0; i < MAXPAYNUM; i++) {
+                    if (item.schedule.isDone[i] == false) break;
+                }
+                item.schedule.isDone[i] = true;
+                uint256 amount = item.schedule.amounts[i];
                 collateral.partialLiquidation(colUser, loanMaker, amount, item.ccy);
             }
         }
