@@ -186,12 +186,28 @@ contract Collateral {
         uint256 amt,
         address addr
     ) external {
-        require(msg.sender == address(loan), 'only Loan contract can call');
+        require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage book = colMap[addr];
         if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH -= amt;
         if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL -= amt;
         if (ccy == MoneyMarket.Ccy.USDC) book.inuseUSDC -= amt;
         updateState(addr);
+    }
+
+    function withdrawCollaretal(MoneyMarket.Ccy ccy, uint256 amt) public {
+        ColBook storage book = colMap[msg.sender];
+        require(book.isAvailable, "not registered yet");
+        // require(book.state == State.IN_USE || book.state == State.AVAILABLE, "State should be IN_USE or AVAILABLE");
+        // TODO - limit amt to keep 150%
+        // if (book.state == State.IN_USE || book.state == State.AVAILABLE) {
+            if (ccy == MoneyMarket.Ccy.ETH) {
+                book.amtETH -= amt;
+                // msg.sender.transfer(amt); // TODO
+            }
+            if (ccy == MoneyMarket.Ccy.FIL) book.amtFIL -= amt;
+            if (ccy == MoneyMarket.Ccy.USDC) book.amtUSDC -= amt;
+        // }
+        updateState(msg.sender);
     }
 
     // helper to calc coverage in PCT
@@ -278,22 +294,22 @@ contract Collateral {
         uint256 amount,
         MoneyMarket.Ccy ccy
     ) external {
-        require(msg.sender == address(loan), 'only Loan contract can call');
+        require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage borrowerBook = colMap[borrower];
         ColBook storage lenderBook = colMap[lender];
         require(borrowerBook.amtETH >= amount);
         if (borrowerBook.state == State.IN_USE) {
             borrowerBook.state = State.PARTIAL_LIQUIDATION;
             uint256 amtETH = fxMarket.getETHvalue(amount, ccy);
-            borrowerBook.amtETH -= amtETH * LQLEVEL / PCT;
-            lenderBook.amtETH += amtETH * LQLEVEL / PCT;
+            borrowerBook.amtETH -= (amtETH * LQLEVEL) / PCT;
+            lenderBook.amtETH += (amtETH * LQLEVEL) / PCT;
             updateState(borrower);
         }
         emit PartialLiquidation(borrower, lender, amount);
     }
 
     function completePartialLiquidation(address borrower) external {
-        require(msg.sender == address(loan), 'only Loan contract can call');
+        require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage borrowerBook = colMap[borrower];
         borrowerBook.state = State.IN_USE;
     }

@@ -356,51 +356,73 @@ describe("Loan Unit Tests", () => {
   //   // console.log("item is", item);
   // });
 
-  it("Redemption State transition WORKING -> DUE -> PAST_DUE -> CLOSED", async () => {
+  // it("Redemption State transition WORKING -> DUE -> PAST_DUE -> CLOSED", async () => {
+  //   let maker = accounts[0]; // FIL lender
+  //   let taker = accounts[2]; // FIL borrower
+  //   let loanId = 0;
+
+  //   const oneYear = Number(time.duration.years(1));
+  //   const noticeGap = Number(time.duration.weeks(2));
+  //   const oneSec = Number(time.duration.seconds(1));
+
+  //   let item = await loan.getLoanItem(loanId, {from: maker});
+  //   const {side, ccy, term} = sample.Loan[0]; // get basic condition
+  //   const paynums = [1, 1, 1, 2, 3, 5];
+
+  //   // TODO - test for short time
+  //   if (term == Term._3m || term == Term._6m) return;
+
+  //   // loan state WORKING -> DUE
+  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await loan.updateState(maker, taker, loanId);
+
+  //   // iter coupon payments until redeption
+  //   for (i = 0; i < paynums[term] - 1; i++) {
+  //     const couponAmt = item.schedule.amounts[i];
+  //     // loan state DUE -> WORKING
+  //     await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
+  //     // loan state WORKING -> DUE
+  //     await time.increase(oneYear);
+  //     await loan.updateState(maker, taker, loanId);
+  //   }
+
+  //   // loan state DUE -> PAST_DUE
+  //   await time.increase(noticeGap + oneSec);
+  //   await loan.updateState(maker, taker, loanId);
+  //   await printState(loan, collateral, maker, taker, loanId, `PAST payment ${await getDate()}`);
+  //   item = await loan.getLoanItem(loanId, {from: maker});
+  //   expect(Number(item.state)).to.equal(LoanState.PAST_DUE);
+
+  //   // loan state PAST_DUE -> CLOSED
+  //   await loan.updateState(maker, taker, loanId);
+  //   await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
+  //   item = await loan.getLoanItem(loanId, {from: maker});
+  //   expect(Number(item.state)).to.equal(LoanState.CLOSED);
+
+  //   // item = await loan.getLoanItem(loanId, {from: maker});
+  //   // console.log("item is", item);
+  // });
+
+  it("Collateral State transition IN_USE -> MARGINCALL", async () => {
     let maker = accounts[0]; // FIL lender
     let taker = accounts[2]; // FIL borrower
-    let loanId = 0;
 
-    const oneYear = Number(time.duration.years(1));
-    const noticeGap = Number(time.duration.weeks(2));
-    const oneSec = Number(time.duration.seconds(1));
+    await printCol(collateral, taker, "BEFORE PV drop");
 
-    let item = await loan.getLoanItem(loanId, {from: maker});
-    const {side, ccy, term} = sample.Loan[0]; // get basic condition
-    const paynums = [1, 1, 1, 2, 3, 5];
+    let book, amtWithdraw;
+    book = await collateral.getOneBook(taker);
+    amtWithdraw = book.amtETH - Math.round((150 * book.amtETH) / book.coverage);
+    await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
+    await printCol(collateral, taker, "PV drop to 150");
 
-    // TODO - test for short time
-    if (term == Term._3m || term == Term._6m) return;
+    book = await collateral.getOneBook(taker);
+    expect(Number(book.state)).to.equal(ColState.MARGIN_CALL);
 
-    // loan state WORKING -> DUE
-    await time.increase(oneYear - noticeGap + oneSec);
-    await loan.updateState(maker, taker, loanId);
-
-    // iter coupon payments until redeption
-    for (i = 0; i < paynums[term] - 1; i++) {
-      const couponAmt = item.schedule.amounts[i];
-      // loan state DUE -> WORKING
-      await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
-      // loan state WORKING -> DUE
-      await time.increase(oneYear);
-      await loan.updateState(maker, taker, loanId);
-    }
-
-    // loan state DUE -> PAST_DUE
-    await time.increase(noticeGap + oneSec);
-    await loan.updateState(maker, taker, loanId);
-    await printState(loan, collateral, maker, taker, loanId, `PAST payment ${await getDate()}`);
-    item = await loan.getLoanItem(loanId, {from: maker});
-    expect(Number(item.state)).to.equal(LoanState.PAST_DUE);
-
-    // loan state PAST_DUE -> CLOSED
-    await loan.updateState(maker, taker, loanId);
-    await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
-    item = await loan.getLoanItem(loanId, {from: maker});
-    expect(Number(item.state)).to.equal(LoanState.CLOSED);
-
-    // item = await loan.getLoanItem(loanId, {from: maker});
-    console.log("item is", item);
+    // TODO - book.state should be IN_USE or AVAILABLE
+    // book = await collateral.getOneBook(taker);
+    // amtWithdraw = book.amtETH - Math.round((125 * book.amtETH) / book.coverage);
+    // await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
+    // await printCol(collateral, taker, "PV drop to 125");
   });
 
   // it('Confirm FIL Payment', async () => {
