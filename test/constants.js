@@ -166,7 +166,7 @@ const sample = {
     {
       side: Side.LEND,
       ccy: Ccy.FIL,
-      term: Term._5y,
+      term: Term._3y,
       amt: 10000,
     },
     {
