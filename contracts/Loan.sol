@@ -452,7 +452,12 @@ contract Loan {
             }
             require(amt == item.schedule.amounts[i], 'confirm amount not match');
             item.schedule.isDone[i] = true;
-            item.state = State.WORKING;
+            if (i == MAXPAYNUM - 1 || item.schedule.payments[i + 1] == 0) {
+                item.state = State.CLOSED;
+                collateral.releaseCollateral(ccy, item.amt, colUser);
+            }
+            else
+                item.state = State.WORKING;
         }
 
         // redemption

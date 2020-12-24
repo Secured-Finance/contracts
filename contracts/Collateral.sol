@@ -181,6 +181,19 @@ contract Collateral {
         return coverage > MARGINLEVEL;
     }
 
+    function releaseCollateral(
+        MoneyMarket.Ccy ccy,
+        uint256 amt,
+        address addr
+    ) external {
+        require(msg.sender == address(loan), 'only Loan contract can call');
+        ColBook storage book = colMap[addr];
+        if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH -= amt;
+        if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL -= amt;
+        if (ccy == MoneyMarket.Ccy.USDC) book.inuseUSDC -= amt;
+        updateState(addr);
+    }
+
     // helper to calc coverage in PCT
     function getCoverage(uint256 amt, address addr)
         public
@@ -225,15 +238,17 @@ contract Collateral {
     }
 
     // update state and coverage
+    // TODO - access control to loan
     function updateState(address addr) public {
         ColBook storage book = colMap[addr];
-        updateFILValue(msg.sender);
-        updateUSDCValue(msg.sender);
+        updateFILValue(addr);
+        updateUSDCValue(addr);
         uint256 totalUse = book.inuseETH +
             book.inuseFILValue +
             book.inuseUSDCValue;
         uint256 totalAmt = book.amtETH + book.amtFILValue + book.amtUSDCValue;
         if (totalUse == 0) {
+            book.coverage = 0;
             if (totalAmt == 0) book.state = State.EMPTY;
             if (totalAmt > 0) book.state = State.AVAILABLE;
         } else if (totalUse > 0) {
