@@ -26,7 +26,7 @@ contract Collateral {
         AVAILABLE,
         IN_USE,
         MARGIN_CALL,
-        PARTIAL_LIQUIDATION,
+        LIQUIDATION_IN_PROGRESS,
         LIQUIDATION
     }
 
@@ -200,12 +200,12 @@ contract Collateral {
         // require(book.state == State.IN_USE || book.state == State.AVAILABLE, "State should be IN_USE or AVAILABLE");
         // TODO - limit amt to keep 150%
         // if (book.state == State.IN_USE || book.state == State.AVAILABLE) {
-            if (ccy == MoneyMarket.Ccy.ETH) {
-                book.amtETH -= amt;
-                // msg.sender.transfer(amt); // TODO
-            }
-            if (ccy == MoneyMarket.Ccy.FIL) book.amtFIL -= amt;
-            if (ccy == MoneyMarket.Ccy.USDC) book.amtUSDC -= amt;
+        if (ccy == MoneyMarket.Ccy.ETH) {
+            book.amtETH -= amt;
+            // msg.sender.transfer(amt); // TODO
+        }
+        if (ccy == MoneyMarket.Ccy.FIL) book.amtFIL -= amt;
+        if (ccy == MoneyMarket.Ccy.USDC) book.amtUSDC -= amt;
         // }
         updateState(msg.sender);
     }
@@ -255,7 +255,7 @@ contract Collateral {
 
     // update state and coverage
     // TODO - access control to loan
-    function updateState(address addr) public {
+    function updateState(address addr) public returns (State) {
         ColBook storage book = colMap[addr];
         updateFILValue(addr);
         updateUSDCValue(addr);
@@ -270,13 +270,15 @@ contract Collateral {
         } else if (totalUse > 0) {
             uint256 coverage = (PCT * totalAmt) / totalUse;
             book.coverage = coverage;
-            if (book.state == State.PARTIAL_LIQUIDATION) return;
+            // TODO - handle partial liquidation and margin call together
+            if (book.state == State.LIQUIDATION_IN_PROGRESS) return book.state;
             if (totalAmt > 0 && coverage <= AUTOLQLEVEL)
                 book.state = State.LIQUIDATION;
             if (totalAmt > 0 && coverage > AUTOLQLEVEL)
                 book.state = State.MARGIN_CALL;
             if (totalAmt > 0 && coverage > MARGINLEVEL)
                 book.state = State.IN_USE;
+            return book.state;
         }
     }
 
@@ -297,10 +299,13 @@ contract Collateral {
         require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage borrowerBook = colMap[borrower];
         ColBook storage lenderBook = colMap[lender];
-        require(borrowerBook.amtETH >= amount);
-        if (borrowerBook.state == State.IN_USE) {
-            borrowerBook.state = State.PARTIAL_LIQUIDATION;
-            uint256 amtETH = fxMarket.getETHvalue(amount, ccy);
+        uint256 amtETH = fxMarket.getETHvalue(amount, ccy);
+        require(borrowerBook.amtETH >= amtETH, "Liquidation amount not enough");
+        if (
+            borrowerBook.state == State.IN_USE ||
+            borrowerBook.state == State.LIQUIDATION
+        ) {
+            borrowerBook.state = State.LIQUIDATION_IN_PROGRESS;
             borrowerBook.amtETH -= (amtETH * LQLEVEL) / PCT;
             lenderBook.amtETH += (amtETH * LQLEVEL) / PCT;
             updateState(borrower);
@@ -326,8 +331,8 @@ contract Collateral {
     //     require(msg.sender == address(loan), 'only Loan contract can call');
     //     ColBook storage book = colMap[borrower];
     //     require(
-    //         book.state == State.PARTIAL_LIQUIDATION,
-    //         'expecting PARTIAL_LIQUIDATION state'
+    //         book.state == State.LIQUIDATION_IN_PROGRESS,
+    //         'expecting LIQUIDATION_IN_PROGRESS state'
     //     );
     //     uint256 recoverAmount = (amount * LQLEVEL) / PCT;
     //     // TODO - handle ETH lending case
@@ -340,7 +345,7 @@ contract Collateral {
     // function confirmFILPayment(address addr) public {
     //     // TODO - only called by Lender (maybe move to Loan)
     //     ColBook storage book = colMap[addr];
-    //     if (book.state == State.PARTIAL_LIQUIDATION) {
+    //     if (book.state == State.LIQUIDATION_IN_PROGRESS) {
     //         book.state = State.IN_USE;
     //         // TODO - release Collateral
     //     }

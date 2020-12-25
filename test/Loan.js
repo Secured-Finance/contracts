@@ -441,7 +441,8 @@ describe("Loan Unit Tests", () => {
     book = await collateral.getOneBook(taker);
     expect(Number(book.state)).to.equal(ColState.IN_USE);
 
-    let item, res, midrates;
+    // col state IN_USE -> MARGINCALL
+    let item, res, midRates;
     item = {
       pair: CcyPair.FILETH,
       offerInput: [Ccy.ETH, Ccy.FIL, 8900, 100000],
@@ -453,9 +454,10 @@ describe("Loan Unit Tests", () => {
 
     midRates = await fxMarket.getMidRates();
     console.log("FX midRates is", midRates.join(" "), "\n");
-    await collateral.updateAllState();
+    await collateral.updateState(taker);
     await printCol(collateral, taker, "FX rate changed from 82 to 88");
 
+    // col state MARGINCALL -> LIQUIDATION
     item = {
       pair: CcyPair.FILETH,
       offerInput: [Ccy.ETH, Ccy.FIL, 10600, 100000],
@@ -467,13 +469,24 @@ describe("Loan Unit Tests", () => {
 
     midRates = await fxMarket.getMidRates();
     console.log("FX midRates is", midRates.join(" "), "\n");
-    await collateral.updateAllState();
+    await collateral.updateState(taker);
     await printCol(collateral, taker, "FX rate changed from 88 to 105");
 
-    // // loan state WORKING -> CLOSED
-    // item = await loan.getLoanItem(loanId, {from: maker});
-    // await loan.updateState(maker, taker, loanId);
-    // await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
+    // loan state WORKING -> TERMINATED
+    // coll state LIQUIDATION -> LIQUIDATION_IN_PROGRESS
+    await loan.updateState(maker, taker, loanId);
+    await printState(loan, collateral, maker, taker, loanId, `BEFORE liquidation ${await getDate()}`);
+
+    // coll state LIQUIDATION_IN_PROGRESS -> AVAILABLE or EMPTY
+    await loan.updateState(maker, taker, loanId);
+    await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
+
+    // TODO - check if pv is correct
+    // await loan.updateUserPV(taker);
+
+    item = await loan.getLoanItem(loanId, { from: maker });
+    // console.log("item is", item);
+    expect(Number(item.state)).to.equal(LoanState.TERMINATED);
   });
 
   // it('Confirm FIL Payment', async () => {

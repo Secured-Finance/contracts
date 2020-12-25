@@ -1,7 +1,7 @@
-const MoneyMarket = artifacts.require('MoneyMarket');
-const FXMarket = artifacts.require('FXMarket');
-const Collateral = artifacts.require('Collateral');
-const Loan = artifacts.require('Loan');
+const MoneyMarket = artifacts.require("MoneyMarket");
+const FXMarket = artifacts.require("FXMarket");
+const Collateral = artifacts.require("Collateral");
+const Loan = artifacts.require("Loan");
 
 // 1) truffle compile
 // 2) truffle develop
@@ -10,17 +10,8 @@ module.exports = function (deployer, network, accounts) {
   deployer.then(async () => {
     const moneyMarket = await deployer.deploy(MoneyMarket);
     const fxMarket = await deployer.deploy(FXMarket);
-    const collateral = await deployer.deploy(
-      Collateral,
-      moneyMarket.address,
-      fxMarket.address,
-    );
-    const loan = await deployer.deploy(
-      Loan,
-      moneyMarket.address,
-      fxMarket.address,
-      collateral.address,
-    );
+    const collateral = await deployer.deploy(Collateral, moneyMarket.address, fxMarket.address);
+    const loan = await deployer.deploy(Loan, moneyMarket.address, fxMarket.address, collateral.address);
     await collateral.setLoanAddr(loan.address); // set Loan address
 
     // // Deployed
@@ -193,16 +184,16 @@ module.exports = function (deployer, network, accounts) {
     },
     Collateral: [
       {
-        id: 'did:sample_0',
-        addrFIL: 'cid_FIL_0',
+        id: "did:sample_0",
+        addrFIL: "cid_FIL_0",
       },
       {
-        id: 'did:sample_1',
-        addrFIL: 'cid_FIL_1',
+        id: "did:sample_1",
+        addrFIL: "cid_FIL_1",
       },
       {
-        id: 'did:sample_2',
-        addrFIL: 'cid_FIL_2',
+        id: "did:sample_2",
+        addrFIL: "cid_FIL_2",
       },
     ],
     Loan: {
@@ -241,39 +232,17 @@ const printNum = (arr) => {
 
 const printCol = async (col, addr, msg) => {
   let book = await col.getOneBook(addr);
-  let states = [
-    'EMPTY',
-    'AVAILABLE',
-    'IN_USE',
-    'MARGIN_CALL',
-    'PARTIAL_LIQUIDATION',
-    'LIQUIDATION',
-  ];
+  let states = ["EMPTY", "AVAILABLE", "IN_USE", "MARGIN_CALL", "LIQUIDATION_IN_PROGRESS", "LIQUIDATION"];
   console.log(msg);
-  console.log(
-    `\tamtETH ${book.amtETH}\tamtFIL ${book.amtFIL}\tamtFILVale ${book.amtFILValue}`,
-  );
-  console.log(
-    `\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILVale ${book.inuseFILValue}`,
-  );
+  console.log(`\tamtETH ${book.amtETH}\tamtFIL ${book.amtFIL}\tamtFILVale ${book.amtFILValue}`);
+  console.log(`\tuseETH ${book.inuseETH}\tuseFIL ${book.inuseFIL}\tuseFILVale ${book.inuseFILValue}`);
   console.log(`\tcoverage ${book.coverage}\tstate ${states[book.state]}\n`);
 };
 
 const printLoan = async (loan, addr, msg) => {
   let book = await loan.getOneBook(addr);
   let item = book.loans[0];
-  let states = [
-    'REGISTERED',
-    'WORKING',
-    'DUE',
-    'PAST_DUE',
-    'CLOSED',
-    'TERMINATED',
-  ];
+  let states = ["REGISTERED", "WORKING", "DUE", "PAST_DUE", "CLOSED", "TERMINATED"];
   if (msg.length > 0) console.log(msg);
-  console.log(
-    `\tloan ${item.amt}\trate ${item.rate / 100}%\tstate ${
-      states[item.state]
-    }\n`,
-  );
+  console.log(`\tloan ${item.amt}\trate ${item.rate / 100}%\tstate ${states[item.state]}\n`);
 };

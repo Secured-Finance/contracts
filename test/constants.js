@@ -13,7 +13,7 @@ const CcyPair = {
   FILETH: 0,
   FILUSDC: 1,
   ETHUSDC: 2,
-}
+};
 
 const Term = {
   _3m: 0,
@@ -26,7 +26,7 @@ const Term = {
 
 const LoanState = {REGISTERED: 0, WORKING: 1, DUE: 2, PAST_DUE: 3, CLOSED: 4, TERMINATED: 5};
 
-const ColState = {EMPTY: 0, AVAILABLE: 1, IN_USE: 2, MARGIN_CALL: 3, PARTIAL_LIQUIDATION: 4, LIQUIDATION: 5};
+const ColState = {EMPTY: 0, AVAILABLE: 1, IN_USE: 2, MARGIN_CALL: 3, LIQUIDATION_IN_PROGRESS: 4, LIQUIDATION: 5};
 
 const effectiveSec = 60 * 60 * 24 * 14; // 14 days
 
@@ -50,7 +50,7 @@ const sample = {
         [4, 140, 600],
         [5, 150, 700],
       ],
-      effectiveSec
+      effectiveSec,
     },
     {
       ccy: Ccy.FIL,
@@ -70,7 +70,7 @@ const sample = {
         [4, 14000, 800],
         [5, 15000, 900],
       ],
-      effectiveSec
+      effectiveSec,
     },
     {
       ccy: Ccy.FIL,
@@ -90,7 +90,7 @@ const sample = {
         [4, 24000, 1100],
         [5, 25000, 1300],
       ],
-      effectiveSec
+      effectiveSec,
     },
     {
       ccy: Ccy.FIL,
@@ -110,7 +110,7 @@ const sample = {
         [4, 34000, 1000],
         // [5, 35000, 1200],
       ],
-      effectiveSec
+      effectiveSec,
     },
     {
       ccy: Ccy.USDC,
@@ -130,7 +130,7 @@ const sample = {
         [4, 1400000, 80],
         [5, 1500000, 90],
       ],
-      effectiveSec
+      effectiveSec,
     },
   ],
   FXMarket: [

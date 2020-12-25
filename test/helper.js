@@ -31,7 +31,7 @@ const printNum = (arr) => {
 
 const printCol = async (col, addr, msg) => {
   let book = await col.getOneBook(addr);
-  let states = ["EMPTY", "AVAILABLE", "IN_USE", "MARGIN_CALL", "PARTIAL_LIQUIDATION", "LIQUIDATION"];
+  let states = ["EMPTY", "AVAILABLE", "IN_USE", "MARGIN_CALL", "LIQUIDATION_IN_PROGRESS", "LIQUIDATION"];
   console.log(msg);
   console.log(`\tamtETH  ${book.amtETH}\tuseETH  ${book.inuseETH}`);
   console.log(`\tamtFIL  ${book.amtFIL}\tuseFIL  ${book.inuseFIL}\tuseFILValue  ${book.inuseFILValue}`);

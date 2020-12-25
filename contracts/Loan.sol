@@ -119,11 +119,11 @@ contract Loan {
     ];
     // for generate payments and notices schedules
     uint256[NUMTERM] PAYNUMS = [
-        1 * PAYFREQ, 
-        1 * PAYFREQ, 
-        1 * PAYFREQ, 
-        2 * PAYFREQ, 
-        3 * PAYFREQ, 
+        1 * PAYFREQ,
+        1 * PAYFREQ,
+        1 * PAYFREQ,
+        2 * PAYFREQ,
+        3 * PAYFREQ,
         5 * PAYFREQ
     ];
 
@@ -146,8 +146,8 @@ contract Loan {
 
     struct LoanItem {
         uint256 loanId;
-        address lender; // ETH
-        address borrower; // ETH
+        address lender;
+        address borrower;
         MoneyMarket.Side side;
         MoneyMarket.Ccy ccy;
         MoneyMarket.Term term;
@@ -156,7 +156,7 @@ contract Loan {
         uint256 start;
         uint256 end;
         Schedule schedule;
-        uint256 pv; // valuation in ETH
+        uint256 pv; // valuation in ccy
         uint256 asOf; // updated date
         bool isAvailable;
         State state;
@@ -335,21 +335,50 @@ contract Loan {
             collateral.updateState(colUser);
         }
 
-        // coupon is due
+        // 1) coupon or redemption is due
         // LOAN: WORKING -> DUE
         // COLL: IN_USE (no change)
+        //
+        // 2a) margin low -> margin call
+        // LOAN: WORKING (no change)
+        // COLL: IN_USE -> MARGINCALL
+        //
+        // 2b) margin call -> filled
+        // LOAN: WORKING (no change)
+        // COLL: MARGINCALL -> IN_USE
+        //
+        // 2c) margin lower -> liquidation (unfilled)
+        // LOAN: WORKING (no change)
+        // COLL: MARGINCALL -> LIQUIDATION
+        //
+        // 2d) liquidation -> close
+        // LOAN: WORKING -> TERMINATED
+        // COLL: LIQUIDATION -> AVAILABLE or EMPTY
         else if (item.state == State.WORKING) {
             item.state = getCurrentState(item.schedule);
-            // collateral.updateState(colUser);
+            Collateral.State colState = collateral.updateState(colUser);
+            if (colState == Collateral.State.LIQUIDATION) {
+                item.state = State.TERMINATED;
+                // TODO - make sure pv works correctly
+                collateral.partialLiquidation(colUser, loanMaker, item.pv, item.ccy);
+            }
         }
 
-        // 1) coupon due -> paid
+        // 1a) coupon due -> paid
         // LOAN: DUE -> WORKING
         // COLL: IN_USE (no change)
-
-        // 2) coupon due -> unpaid
+        //
+        // 1b) coupon due -> unpaid
         // LOAN: DUE -> PAST_DUE
-        // COLL: IN_USE -> PARTIAL_LIQUIDATION
+        // COLL: IN_USE -> LIQUIDATION_IN_PROGRESS
+        //
+        // 2a) redemption due -> paid
+        // LOAN: DUE -> CLOSED
+        // COLL: IN_USE -> AVAILABLE or EMPTY
+        //
+        // 2b) redemption due -> unpaid
+        // LOAN: DUE -> PAST_DUE
+        // COLL: IN_USE -> LIQUIDATION_IN_PROGRESS
         else if (item.state == State.DUE) {
             // paid => WORKING
             // unpaid => PAST_DUE
@@ -368,10 +397,14 @@ contract Loan {
             }
         }
 
-        // coupon unpaid -> paid
+        // coupon unpaid -> paid by liquidation
         // LOAN: PAST_DUE -> WORKING
-        // COLL: PARTIAL_LIQUIDATION -> IN_USE
-
+        // COLL: LIQUIDATION_IN_PROGRESS -> IN_USE
+        //
+        // redemption unpaid -> paid by liquidation
+        // LOAN: PAST_DUE -> CLOSED
+        // COLL: LIQUIDATION_IN_PROGRESS -> AVAILABLE or EMPTY
+        //
         // collateral liquidation to release 120% coupon amount to lender
         else if (item.state == State.PAST_DUE) {
             item.state = getCurrentState(item.schedule);
@@ -384,17 +417,11 @@ contract Loan {
             }
         }
 
-        // redemption
-        // WORKING -> DUE
-        // 1) DUE -> CLOSED, IN_USE -> AVAILABLE
-        // 2a) DUE -> PAST_DUE, IN_USE -> LIQUIDATION
-        // 2b) PAST_DUE -> TERMINATED, LIQUIDATION -> EMPTY
-
-        // margin call
-        // 1) WORKING (no change), IN_USE -> MARGINCALL
-        // 2) WORKING (no change), MARGINCALL -> IN_USE
-        // 3a) WORKING (no change), MARGINCALL -> LIQUIDATION
-        // 3b) WORKING -> TERMINATED, LIQUIDATION -> EMPTY
+        else if (item.state == State.TERMINATED) {
+            collateral.completePartialLiquidation(colUser);
+            collateral.releaseCollateral(item.ccy, item.amt, colUser);
+            item.isAvailable = false;
+        }
     }
 
     function updateAllState() public {} // TODO
@@ -419,7 +446,7 @@ contract Loan {
         LoanBook storage book = loanMap[loanMaker];
         LoanItem storage item = book.loans[loanId];
         require(item.state == State.REGISTERED || item.state == State.DUE, 'No need to confirm now');
-        
+
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
