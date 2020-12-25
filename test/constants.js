@@ -9,6 +9,12 @@ const Ccy = {
   USDC: 2,
 };
 
+const CcyPair = {
+  FILETH: 0,
+  FILUSDC: 1,
+  ETHUSDC: 2,
+}
+
 const Term = {
   _3m: 0,
   _6m: 1,
@@ -22,10 +28,12 @@ const LoanState = {REGISTERED: 0, WORKING: 1, DUE: 2, PAST_DUE: 3, CLOSED: 4, TE
 
 const ColState = {EMPTY: 0, AVAILABLE: 1, IN_USE: 2, MARGIN_CALL: 3, PARTIAL_LIQUIDATION: 4, LIQUIDATION: 5};
 
+const effectiveSec = 60 * 60 * 24 * 14; // 14 days
+
 const sample = {
   MoneyMarket: [
     {
-      ccy: 0, // ETH
+      ccy: Ccy.ETH,
       lenders: [
         [0, 100, 200],
         [1, 110, 300],
@@ -42,10 +50,10 @@ const sample = {
         [4, 140, 600],
         [5, 150, 700],
       ],
-      effectiveSec: 60 * 60 * 24 * 14, // 14 days
+      effectiveSec
     },
     {
-      ccy: 1, // FIL
+      ccy: Ccy.FIL,
       lenders: [
         [0, 10000, 400],
         [1, 11000, 500],
@@ -62,10 +70,10 @@ const sample = {
         [4, 14000, 800],
         [5, 15000, 900],
       ],
-      effectiveSec: 60 * 60 * 24 * 14, // 14 days
+      effectiveSec
     },
     {
-      ccy: 1, // FIL
+      ccy: Ccy.FIL,
       lenders: [
         [0, 20000, 900],
         [1, 21000, 1000],
@@ -82,10 +90,10 @@ const sample = {
         [4, 24000, 1100],
         [5, 25000, 1300],
       ],
-      effectiveSec: 60 * 60 * 24 * 14, // 14 days
+      effectiveSec
     },
     {
-      ccy: 1, // FIL
+      ccy: Ccy.FIL,
       lenders: [
         [0, 30000, 700],
         [1, 31000, 800],
@@ -102,10 +110,10 @@ const sample = {
         [4, 34000, 1000],
         // [5, 35000, 1200],
       ],
-      effectiveSec: 60 * 60 * 24 * 14, // 14 days
+      effectiveSec
     },
     {
-      ccy: 2, // USDC
+      ccy: Ccy.USDC,
       lenders: [
         [0, 1000000, 40],
         [1, 1100000, 50],
@@ -122,26 +130,26 @@ const sample = {
         [4, 1400000, 80],
         [5, 1500000, 90],
       ],
-      effectiveSec: 60 * 60 * 24 * 14, // 14 days
+      effectiveSec
     },
   ],
   FXMarket: [
     {
-      pair: 0, // FILETH
-      offerInput: [0, 1, 8500, 100000], // [ETH, FIL, 8500ETH, 100000FIL]
-      bidInput: [1, 0, 100000, 8000], // [FIL, ETH, 100000FIL, 8000ETH]
+      pair: CcyPair.FILETH,
+      offerInput: [Ccy.ETH, Ccy.FIL, 8500, 100000], // [ETH, FIL, 8500ETH, 100000FIL]
+      bidInput: [Ccy.FIL, Ccy.ETH, 100000, 8000], // [FIL, ETH, 100000FIL, 8000ETH]
       effectiveSec: 36000,
     },
     {
-      pair: 1, // FILUSDC
-      offerInput: [1, 2, 100000, 5000000], // [FIL, USDC, 100000FIL, 5000000USDC]
-      bidInput: [2, 1, 3000000, 100000], // [USDC, FIL, 3000000USDC, 100000FIL]
+      pair: CcyPair.FILUSDC,
+      offerInput: [Ccy.FIL, Ccy.USDC, 100000, 5000000], // [FIL, USDC, 100000FIL, 5000000USDC]
+      bidInput: [Ccy.USDC, Ccy.FIL, 3000000, 100000], // [USDC, FIL, 3000000USDC, 100000FIL]
       effectiveSec: 36000,
     },
     {
-      pair: 2, // ETHUSDC
-      offerInput: [2, 1, 5000000, 10000], // [USDC, ETH, 5000000USDC, 10000ETH]
-      bidInput: [1, 2, 10000, 3000000], // [ETH, USDC, 10000ETH, 3000000USDC]
+      pair: CcyPair.ETHUSDC,
+      offerInput: [Ccy.USDC, Ccy.ETH, 5000000, 10000], // [USDC, ETH, 5000000USDC, 10000ETH]
+      bidInput: [Ccy.ETH, Ccy.USDC, 10000, 3000000], // [ETH, USDC, 10000ETH, 3000000USDC]
       effectiveSec: 36000,
     },
   ],
@@ -187,6 +195,7 @@ const sample = {
 module.exports = {
   Side,
   Ccy,
+  CcyPair,
   Term,
   LoanState,
   ColState,
