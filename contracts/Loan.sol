@@ -178,8 +178,10 @@ contract Loan {
     }
 
     // keeps all the records
-    mapping(address => LoanBook) private loanMap;
-    address[] private users;
+    mapping(address => LoanBook) private loanMap; // lender to LoanBook
+    mapping(address => bool) private borrowerMap; // borrower map
+    address[] private lenders;
+    address[] private borrowers;
 
     // Contracts
     MoneyMarket moneyMarket;
@@ -209,18 +211,30 @@ contract Loan {
         uint256 amt
     ) public {
         require(makerAddr != msg.sender, 'Same person deal is not allowed');
-        if (side == MoneyMarket.Side.LEND)
-            collateral.useCollateral(ccy, amt, msg.sender);
-        if (side == MoneyMarket.Side.BORROW) {
-            collateral.useCollateral(ccy, amt, makerAddr);
+        address lender;
+        address borrower;
+        if (side == MoneyMarket.Side.LEND) {
+            lender = makerAddr;
+            borrower = msg.sender;
         }
+        if (side == MoneyMarket.Side.BORROW) {
+            lender = msg.sender;
+            borrower = makerAddr;
+        }
+
+        collateral.useCollateral(ccy, amt, borrower);
         uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
-        LoanBook storage book = loanMap[makerAddr];
+        LoanBook storage book = loanMap[lender];
+        if (!book.isValue)
+            book.isValue = true;
+            lenders.push(lender);
+        if (!borrowerMap[borrower]) {
+            borrowerMap[borrower] = true;
+            borrowers.push(borrower);
+        }
         LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
         LoanItem memory newItem = inputToItem(input, rate, book.loanNum++);
         book.loans.push(newItem);
-        book.isValue = true;
-        users.push(msg.sender);
         emit MakeLoanDeal(makerAddr, side, ccy, term, amt, newItem.loanId);
     }
 
@@ -288,15 +302,19 @@ contract Loan {
     }
 
     function getAllBooks() public view returns (LoanBook[] memory) {
-        LoanBook[] memory allBooks = new LoanBook[](users.length);
-        for (uint256 i = 0; i < users.length; i++) {
-            allBooks[i] = loanMap[users[i]];
+        LoanBook[] memory allBooks = new LoanBook[](lenders.length);
+        for (uint256 i = 0; i < lenders.length; i++) {
+            allBooks[i] = loanMap[lenders[i]];
         }
         return allBooks;
     }
 
-    function getAllUsers() public view returns (address[] memory) {
-        return users;
+    function getAllLenders() public view returns (address[] memory) {
+        return lenders;
+    }
+
+    function getAllBorrowers() public view returns (address[] memory) {
+        return borrowers;
     }
 
     /**@dev
@@ -504,22 +522,48 @@ contract Loan {
      */
 
     // For Mark to Market
+    // function updateAllPV() public view returns (address) {
+    // function updateAllPV(address addr) public {
     function updateAllPV() public {
-        for (uint256 i = 0; i < users.length; i++) {
-            LoanItem[] storage loans = loanMap[users[i]].loans;
-            for (uint256 j = 0; j < loans.length; j++) {
-                updateOnePV(loans[j]);
-            }
+        // require(users[0] == addr, collateral.addressToString(addr));
+
+        // updateUserPV(addr);
+        // updateUserPV(users[0]);
+
+        // return users[0];
+        // loanMap[users[0]].loans = updateUserPV(users[0]);
+        // LoanItem[] memory loans = updateUserPV(users[0]);
+        // for (uint256 i = 0; i < loans.length; i++) {
+            // loanMap[users[0]].loans[i] = loans[i];
+        // }
+
+        for (uint256 i = 0; i < lenders.length; i++) {
+            updateBookPV(lenders[i]);
         }
     }
 
     // After Upsize Collateral
-    function updateUserPV(address addr) public {
-        LoanItem[] storage loans = loanMap[addr].loans;
+    function updateBookPV(address lender) public {
+    // function updateUserPV(address addr) public returns (LoanItem[] memory) {
+        LoanItem[] storage loans = loanMap[lender].loans;
         for (uint256 j = 0; j < loans.length; j++) {
-            updateOnePV(loans[j]);
+            if (loans[j].isAvailable)
+                updateOnePV(loans[j]);
         }
+        // LoanItem[] memory rv = loans;
+        // return rv;
+        // return loans;
     }
+
+    // // After Upsize Collateral
+    // function updateUserPV(address addr) public {
+    //     LoanItem[] storage loans = loanMap[addr].loans;
+    //     for (uint256 j = 0; j < loans.length; j++) {
+    //         if (loans[j].isAvailable)
+    //             loans[j] = updateOnePV(loans[j]);
+    //             // updateOnePV(loans[j]);
+    //     }
+    // }
 
     // helper to get actual discount factors
     function calcDF(uint256[NUMDF] memory dfArr, uint256 date)
@@ -542,7 +586,17 @@ contract Loan {
     }
 
     // helper to take a loan item and update its net present value
+    // function updateOnePV(LoanItem memory item) public view returns (uint256[MAXPAYNUM] memory) {
+    // function updateOnePV(LoanItem memory item) public view returns (LoanItem memory) {
     function updateOnePV(LoanItem storage item) private {
+        if(!item.isAvailable) {
+            if (item.pv > 0) {
+                item.pv = 0;
+                item.asOf = now;
+            }
+            // return item;
+            return;
+        }
         MoneyMarket.DiscountFactor[NUMCCY] memory dfList = moneyMarket
             .getDiscountFactors();
         MoneyMarket.DiscountFactor memory df = dfList[uint256(item.ccy)];
@@ -555,16 +609,45 @@ contract Loan {
             df.df4y,
             df.df5y
         ];
-        uint256[MAXPAYNUM] memory schedDf;
+        // uint256[MAXPAYNUM] memory schedDf;
         uint256 pv = 0;
-        for (uint256 i = 0; i < PAYNUMS[uint256(item.term)]; i++) {
+        for (uint256 i = 0; i < item.schedule.amounts.length; i++) {
+            if (item.schedule.payments[i] < now) continue;
             uint256 d = calcDF(dfArr, item.schedule.payments[i]);
-            schedDf[i] = d;
-            pv += (item.schedule.amounts[i] * d) / BP;
+            // schedDf[i] = d;
+            pv += (item.schedule.amounts[i] * d);
         }
-        uint256 lastIndex = PAYNUMS[uint256(item.term)] - 1;
-        pv += (item.amt * schedDf[lastIndex]) / BP;
-        item.pv = pv;
+        item.pv = pv / BP;
         item.asOf = now;
+
+        // return item;
+        // return schedDf;
     }
+
+    // // helper to take a loan item and update its net present value
+    // function updateOnePV(LoanItem storage item) private {
+    //     MoneyMarket.DiscountFactor[NUMCCY] memory dfList = moneyMarket
+    //         .getDiscountFactors();
+    //     MoneyMarket.DiscountFactor memory df = dfList[uint256(item.ccy)];
+    //     uint256[NUMDF] memory dfArr = [
+    //         df.df3m,
+    //         df.df6m,
+    //         df.df1y,
+    //         df.df2y,
+    //         df.df3y,
+    //         df.df4y,
+    //         df.df5y
+    //     ];
+    //     uint256[MAXPAYNUM] memory schedDf;
+    //     uint256 pv = 0;
+    //     for (uint256 i = 0; i < PAYNUMS[uint256(item.term)]; i++) {
+    //         uint256 d = calcDF(dfArr, item.schedule.payments[i]);
+    //         schedDf[i] = d;
+    //         pv += (item.schedule.amounts[i] * d) / BP;
+    //     }
+    //     uint256 lastIndex = PAYNUMS[uint256(item.term)] - 1;
+    //     pv += (item.amt * schedDf[lastIndex]) / BP;
+    //     item.pv = pv;
+    //     item.asOf = now;
+    // }
 }
