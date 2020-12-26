@@ -528,25 +528,26 @@ describe("Loan Unit Tests", () => {
     let input = {
       ccy: Ccy.FIL,
       lenders: [
-        [0, 10000, 900],
-        [1, 11000, 1000],
-        [2, 12000, 1100],
-        [3, 13000, 1200],
-        [4, 14000, 1300],
+        // [0, 10000, 900],
+        // [1, 11000, 1000],
+        // [2, 12000, 1100],
+        // [3, 13000, 1200],
+        // [4, 14000, 1300],
         [5, 15000, 1300], // changed from 1500 to 1300
       ],
       borrowers: [
-        [0, 10000, 700],
-        [1, 11000, 800],
-        [2, 12000, 900],
-        [3, 13000, 1000],
-        [4, 14000, 1100],
-        [5, 15000, 1300],
+      //   // [0, 10000, 700],
+      //   // [1, 11000, 800],
+      //   // [2, 12000, 900],
+      //   // [3, 13000, 1000],
+      //   // [4, 14000, 1100],
+      //   [5, 15000, 1300],
       ],
       effectiveSec: 60 * 60 * 24 * 14,
     };
 
     await moneyMarket.setMoneyMarketBook(...val(input), {from: alice});
+    // await moneyMarket.setOneItem(Side.LEND, Ccy.FIL, Term._5y, 15000, 1300, 360000, {from: alice});
     await loan.updateBookPV(maker);
 
     item = await loan.getLoanItem(loanId, {from: maker});
