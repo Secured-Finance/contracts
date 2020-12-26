@@ -485,48 +485,76 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(item.state)).to.equal(LoanState.TERMINATED);
   // });
 
-  it("Check PV calculation made correctly", async () => {
-    let maker = accounts[0]; // FIL lender
-    let taker = accounts[2]; // FIL borrower
-    let loanId = 0;
-
-    // console.log('DF is', await moneyMarket.getDiscountFactors());
-    let DF = await moneyMarket.getDiscountFactors();
-    let [df3m, df6m, df1y, df2y, df3y, df4y, df5y] = DF[Ccy.FIL];
-    console.log(df1y, df2y, df3y, df4y, df5y);
-
-    // check if pv is correct
-    item = await loan.getLoanItem(loanId, {from: maker});
-    console.log("BEFORE MtM", item.pv, toDate(item.asOf));
-    let [cf1, cf2, cf3, cf4, cf5] = item.schedule.amounts;
-
-    // Manual check for pv
-    let BP = 10000;
-    let coupon = (item.rate * item.amt) / BP;
-    let notional = item.amt;
-    let pv = (cf1 * df1y + cf2 * df2y + cf3 * df3y + cf4 * df4y + cf5 * df5y) / BP;
-    // console.log('pv is', pv);
-
-    await loan.updateAllPV();
-    // await loan.updateBookPV(maker);
-    item = await loan.getLoanItem(loanId, {from: maker});
-    console.log("AFTER MtM", item.pv, toDate(item.asOf));
-    expect(Number(item.pv)).to.equal(Math.floor(pv));
-  });
-
-  // it("Update PV by yield change", async () => {
+  // it("Check PV calculation made correctly", async () => {
   //   let maker = accounts[0]; // FIL lender
   //   let taker = accounts[2]; // FIL borrower
   //   let loanId = 0;
 
-  //   let item = await loan.getLoanItem(loanId, {from: maker});
+  //   // console.log('DF is', await moneyMarket.getDiscountFactors());
+  //   let DF = await moneyMarket.getDiscountFactors();
+  //   let [df3m, df6m, df1y, df2y, df3y, df4y, df5y] = DF[Ccy.FIL];
+  //   console.log(df1y, df2y, df3y, df4y, df5y);
+
+  //   // check if pv is correct
+  //   item = await loan.getLoanItem(loanId, {from: maker});
   //   console.log("BEFORE MtM", item.pv, toDate(item.asOf));
+  //   let [cf1, cf2, cf3, cf4, cf5] = item.schedule.amounts;
+
+  //   // Manual check for pv
+  //   let BP = 10000;
+  //   let coupon = (item.rate * item.amt) / BP;
+  //   let notional = item.amt;
+  //   let pv = (cf1 * df1y + cf2 * df2y + cf3 * df3y + cf4 * df4y + cf5 * df5y) / BP;
+  //   // console.log('pv is', pv);
 
   //   await loan.updateAllPV();
-
-  //   item = await loan.getLoanItem(loanId, { from: maker });
+  //   // await loan.updateBookPV(maker);
+  //   item = await loan.getLoanItem(loanId, {from: maker});
   //   console.log("AFTER MtM", item.pv, toDate(item.asOf));
+  //   expect(Number(item.pv)).to.equal(Math.floor(pv));
   // });
+
+  it("Update PV by Yield Change", async () => {
+    let maker = accounts[0]; // FIL lender
+    let taker = accounts[2]; // FIL borrower
+    let loanId = 0;
+
+    await loan.updateBookPV(maker);
+
+    let item = await loan.getLoanItem(loanId, {from: maker});
+    console.log("BEFORE Yield Change", item.pv, toDate(item.asOf));
+    let pv1 = item.pv;
+
+    let input = {
+      ccy: Ccy.FIL,
+      lenders: [
+        [0, 10000, 900],
+        [1, 11000, 1000],
+        [2, 12000, 1100],
+        [3, 13000, 1200],
+        [4, 14000, 1300],
+        [5, 15000, 1300], // changed from 1500 to 1300
+      ],
+      borrowers: [
+        [0, 10000, 700],
+        [1, 11000, 800],
+        [2, 12000, 900],
+        [3, 13000, 1000],
+        [4, 14000, 1100],
+        [5, 15000, 1300],
+      ],
+      effectiveSec: 60 * 60 * 24 * 14,
+    };
+
+    await moneyMarket.setMoneyMarketBook(...val(input), {from: alice});
+    await loan.updateBookPV(maker);
+
+    item = await loan.getLoanItem(loanId, {from: maker});
+    console.log("AFTER  Yield Change", item.pv, toDate(item.asOf));
+    let pv2 = item.pv;
+
+    expect(Number(pv1)).not.to.equal(Number(pv2));
+  });
 
   // it('Confirm FIL Payment', async () => {
   //   let res = await loan.confirmFILPayment(0, {
