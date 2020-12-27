@@ -81,7 +81,8 @@ describe("Loan Unit Tests", () => {
     sample.Collateral.forEach(async (item, index) => {
       let res = await collateral.setColBook(...val(item), {
         from: accounts[index],
-        value: 100000,
+        value: 0,
+        // value: 100000,
       });
       expectEvent(res, "SetColBook", {sender: accounts[index]});
     });
@@ -130,6 +131,8 @@ describe("Loan Unit Tests", () => {
       amt: String(item.amt),
       loanId: String(loanId),
     });
+
+    // TODO - notifyPayment to state change REGISTERED -> PLEASE_CONFIRM
 
     // notifyPayment -> check -> confirmPayment to ensure finality
     await loan.confirmPayment(maker, taker, ...val(item), loanId, {from: taker}); // taker is borrower
@@ -348,9 +351,10 @@ describe("Loan Unit Tests", () => {
   //   }
 
   //   // loan state DUE -> CLOSED
+  //   await printState(loan, collateral, maker, taker, loanId, `BEFORE redemption ${await getDate()}`);
   //   const redeemAmt = item.schedule.amounts[paynums[term] - 1];
   //   res = await loan.confirmPayment(maker, taker, side, ccy, term, redeemAmt, loanId, {from: maker});
-  //   await printState(loan, collateral, maker, taker, loanId, `AFTER redemption ${await getDate()}`);
+  //   await printState(loan, collateral, maker, taker, loanId, `AFTER  redemption ${await getDate()}`);
 
   //   // item = await loan.getLoanItem(loanId, {from: maker});
   //   // console.log("item is", item);
@@ -373,6 +377,7 @@ describe("Loan Unit Tests", () => {
   //   if (term == Term._3m || term == Term._6m) return;
 
   //   // loan state WORKING -> DUE
+  //   await printState(loan, collateral, maker, taker, loanId, `BEFORE due ${await getDate()}`);
   //   await time.increase(oneYear - noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
 
@@ -387,6 +392,7 @@ describe("Loan Unit Tests", () => {
   //   }
 
   //   // loan state DUE -> PAST_DUE
+  //   await printState(loan, collateral, maker, taker, loanId, `AFTER due ${await getDate()}`);
   //   await time.increase(noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `PAST payment ${await getDate()}`);
@@ -430,7 +436,11 @@ describe("Loan Unit Tests", () => {
   //   let taker = accounts[2]; // FIL borrower
   //   let loanId = 0;
 
+  //   let item, res, midRates;
+
   //   await printCol(collateral, taker, "BEFORE PV drop");
+  //   midRates = await fxMarket.getMidRates();
+  //   console.log("FX midRates is", midRates.join(" "), "\n");
 
   //   let book, amtWithdraw;
   //   book = await collateral.getOneBook(taker);
@@ -442,7 +452,6 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(book.state)).to.equal(ColState.IN_USE);
 
   //   // col state IN_USE -> MARGINCALL
-  //   let item, res, midRates;
   //   item = {
   //     pair: CcyPair.FILETH,
   //     offerInput: [Ccy.ETH, Ccy.FIL, 8900, 100000],
@@ -514,87 +523,47 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(item.pv)).to.equal(Math.floor(pv));
   // });
 
-  it("Update PV by Yield Change", async () => {
-    let maker = accounts[0]; // FIL lender
-    let taker = accounts[2]; // FIL borrower
-    let loanId = 0;
+  // it("Update PV by Yield Change", async () => {
+  //   let maker = accounts[0]; // FIL lender
+  //   let taker = accounts[2]; // FIL borrower
+  //   let loanId = 0;
 
-    await loan.updateBookPV(maker);
+  //   await loan.updateBookPV(maker);
 
-    let item = await loan.getLoanItem(loanId, {from: maker});
-    console.log("BEFORE Yield Change", item.pv, toDate(item.asOf));
-    let pv1 = item.pv;
+  //   let item = await loan.getLoanItem(loanId, {from: maker});
+  //   console.log("BEFORE Yield Change", item.pv, toDate(item.asOf));
+  //   let pv1 = item.pv;
 
-    let input = {
-      ccy: Ccy.FIL,
-      lenders: [
-        // [0, 10000, 900],
-        // [1, 11000, 1000],
-        // [2, 12000, 1100],
-        // [3, 13000, 1200],
-        // [4, 14000, 1300],
-        [5, 15000, 1300], // changed from 1500 to 1300
-      ],
-      borrowers: [
-      //   // [0, 10000, 700],
-      //   // [1, 11000, 800],
-      //   // [2, 12000, 900],
-      //   // [3, 13000, 1000],
-      //   // [4, 14000, 1100],
-      //   [5, 15000, 1300],
-      ],
-      effectiveSec: 60 * 60 * 24 * 14,
-    };
+  //   let input = {
+  //     ccy: Ccy.FIL,
+  //     lenders: [
+  //       // [0, 10000, 900],
+  //       // [1, 11000, 1000],
+  //       // [2, 12000, 1100],
+  //       // [3, 13000, 1200],
+  //       // [4, 14000, 1300],
+  //       [5, 15000, 1300], // changed from 1500 to 1300
+  //     ],
+  //     borrowers: [
+  //     //   // [0, 10000, 700],
+  //     //   // [1, 11000, 800],
+  //     //   // [2, 12000, 900],
+  //     //   // [3, 13000, 1000],
+  //     //   // [4, 14000, 1100],
+  //     //   [5, 15000, 1300],
+  //     ],
+  //     effectiveSec: 60 * 60 * 24 * 14,
+  //   };
 
-    await moneyMarket.setMoneyMarketBook(...val(input), {from: alice});
-    // await moneyMarket.setOneItem(Side.LEND, Ccy.FIL, Term._5y, 15000, 1300, 360000, {from: alice});
-    await loan.updateBookPV(maker);
+  //   await moneyMarket.setMoneyMarketBook(...val(input), {from: alice});
+  //   // await moneyMarket.setOneItem(Side.LEND, Ccy.FIL, Term._5y, 15000, 1300, 360000, {from: alice});
+  //   await loan.updateBookPV(maker);
 
-    item = await loan.getLoanItem(loanId, {from: maker});
-    console.log("AFTER  Yield Change", item.pv, toDate(item.asOf));
-    let pv2 = item.pv;
+  //   item = await loan.getLoanItem(loanId, {from: maker});
+  //   console.log("AFTER  Yield Change", item.pv, toDate(item.asOf));
+  //   let pv2 = item.pv;
 
-    expect(Number(pv1)).not.to.equal(Number(pv2));
-  });
-
-  // it('Confirm FIL Payment', async () => {
-  //   let res = await loan.confirmFILPayment(0, {
-  //     from: accounts[2],
-  //   });
-  //   expectEvent(res, 'ConfirmFILPayment', {sender: accounts[2]});
-  //   await printCol(
-  //     collateral,
-  //     accounts[2],
-  //     'confirmFILPayment (coverage 174%)',
-  //   );
-  //   await printLoan(loan, accounts[2], '');
-  // });
-
-  // it('Loan Item Test', async () => {
-  //   afterLoan = await moneyMarket.getOneItem(
-  //     input.makerAddr,
-  //     input.side,
-  //     input.ccy,
-  //     input.term,
-  //   );
-  //   console.log(
-  //     'FIL loan market before',
-  //     beforeLoan.amt,
-  //     'FIL loan market after',
-  //     afterLoan.amt,
-  //   );
-
-  //   // loan item test
-  //   let book = await loan.getOneBook(accounts[2]);
-  //   let loanItem = book.loans[0];
-  //   printDate(loanItem.schedule.notices);
-  //   printDate(loanItem.schedule.payments);
-  //   console.log(loanItem.schedule.amounts);
-
-  //   // discount factor test
-  //   let df = await moneyMarket.getDiscountFactors();
-  //   printNum(df[0]);
-  //   printNum(df[1]);
+  //   expect(Number(pv1)).not.to.equal(Number(pv2));
   // });
 });
 

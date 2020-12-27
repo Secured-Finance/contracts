@@ -316,7 +316,8 @@ contract Collateral {
     function completePartialLiquidation(address borrower) external {
         require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage borrowerBook = colMap[borrower];
-        borrowerBook.state = State.IN_USE;
+        borrowerBook.state = State.IN_USE; // set to default before update
+        updateState(borrower);
     }
 
     // TODO

@@ -440,8 +440,10 @@ contract Loan {
 
     function updateAllState() public {} // TODO
 
-    // to be used by lenders
+    // to be used by lenders and borrowers
     function notifyPayment(MoneyMarket.Ccy ccy, address receiver, uint256 loanId, string memory txHash) public {
+        // TODO - state change REGISTERED -> PLEASE_CONFIRM
+
         // used for initial, coupon, redemption, liquidation
         emit NoitfyPayment(ccy, msg.sender, receiver, loanId, txHash);
     }
