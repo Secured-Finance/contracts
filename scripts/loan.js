@@ -35,9 +35,30 @@ module.exports = async function main(callback) {
     console.log("loan addr is", loan.address);
     console.log("\n");
 
-    // Init MoneyMarket with sample data
+    // Init MoneyMarket using setOneItem
+    {
+      const item = sample.MoneyMarket[1];
+
+      // lender side is 0
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._3m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._6m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._1y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._2y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._3y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._5y], item.effectiveSec);
+
+      // borrower side is 1
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._3m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._6m], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._1y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._2y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._3y], item.effectiveSec);
+      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._5y], item.effectiveSec);
+    }
+
+    // Init MoneyMarket using setMoneyMarketBook for bulk operation
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[0]));
-    await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[1]));
+    // await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[1]));
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[2]));
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[3]));
     await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[4]));
@@ -111,16 +132,14 @@ module.exports = async function main(callback) {
     await printState(loan, collateral, maker, taker, loanId, "confirmPayment");
 
     afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, '\n');
+    console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
 
     await printSched(loan, maker, loanId);
 
+    // TODO
     // time to pay coupon
     // loan state WORKING -> DUE
-    await printState(loan, collateral, maker, taker, loanId, "Payment Advice");
-
-
-
+    // await printState(loan, collateral, maker, taker, loanId, "Payment Advice");
 
     // maker BORROW FIL
     // console.log();

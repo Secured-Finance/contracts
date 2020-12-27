@@ -345,12 +345,8 @@ contract Loan {
         LoanItem storage item = book.loans[loanId];
 
         // initial
-        // LOAN: REGISTERED -> WORKING
-        // COLL: AVAILABLE -> IN_USE
         if (item.state == State.REGISTERED) {
-            // require(colUser == item.borrower, 'borrower must confirm');
-            item.state = State.WORKING;
-            collateral.updateState(colUser);
+            // TODO - check if lender payment done within 2 days, else liquidate lender collateral
         }
 
         // 1) coupon or redemption is due
@@ -453,15 +449,15 @@ contract Loan {
     // to be used by borrowers and lenders
     // used for initial, coupon, redemption, liquidation
     function confirmPayment(
-        address loanMaker,
-        address colUser,
+        address lender,
+        address borrower,
         MoneyMarket.Side side,
         MoneyMarket.Ccy ccy,
         uint256 term,
         uint256 amt,
         uint256 loanId
     ) public {
-        LoanBook storage book = loanMap[loanMaker];
+        LoanBook storage book = loanMap[lender];
         LoanItem storage item = book.loans[loanId];
         require(item.state == State.REGISTERED || item.state == State.DUE, 'No need to confirm now');
 
@@ -471,24 +467,26 @@ contract Loan {
         if (item.state == State.REGISTERED) {
             require(amt == item.amt, '[RESISTERED] confirm amount not match');
             if (side == MoneyMarket.Side.LEND) {
-                require(msg.sender == colUser, 'msg.sender is not borrower');
-                updateState(loanMaker, colUser, loanId);
+                require(msg.sender == borrower, 'borrower must confirm');
+                // updateState(lender, borrower, loanId);
             } else {
-                require(msg.sender == loanMaker, 'msg.sender is not lender');
-                updateState(loanMaker, colUser, loanId);
+                require(msg.sender == lender, 'lender must confirm');
+                // updateState(lender, borrower, loanId);
             }
+            item.state = State.WORKING;
+            collateral.updateState(borrower);
         }
 
         // coupon
         // DUE -> WORKING
         // PAST_DUE->WORKING, PARTIAL_LIQUIATION -> IN_USE
-        if (item.state == State.DUE) {
+        else if (item.state == State.DUE) {
             if (side == MoneyMarket.Side.BORROW) {
-                require(msg.sender == colUser, 'msg.sender for coupon should be borrower');
-                updateState(loanMaker, colUser, loanId);
+                require(msg.sender == borrower, 'msg.sender for coupon should be borrower');
+                updateState(lender, borrower, loanId);
             } else {
-                require(msg.sender == loanMaker, 'msg.sender for coupon should be lender');
-                updateState(loanMaker, colUser, loanId);
+                require(msg.sender == lender, 'msg.sender for coupon should be lender');
+                updateState(lender, borrower, loanId);
             }
             uint256 i;
             for (i = 0; i < MAXPAYNUM; i++) {
@@ -498,7 +496,7 @@ contract Loan {
             item.schedule.isDone[i] = true;
             if (i == MAXPAYNUM - 1 || item.schedule.payments[i + 1] == 0) {
                 item.state = State.CLOSED;
-                collateral.releaseCollateral(ccy, item.amt, colUser);
+                collateral.releaseCollateral(ccy, item.amt, borrower);
             }
             else
                 item.state = State.WORKING;
@@ -511,7 +509,7 @@ contract Loan {
         // margin call
         // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
 
-        emit ConfirmPayment(loanMaker, colUser, side, ccy, term, amt, loanId);
+        emit ConfirmPayment(lender, borrower, side, ccy, term, amt, loanId);
     }
 
     /**@dev

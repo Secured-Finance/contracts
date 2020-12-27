@@ -39,18 +39,18 @@ const printCol = async (col, addr, msg) => {
   console.log(`\tcoverage ${book.coverage}%\tcolState ${states[book.state]}\n`);
 };
 
-const printLoan = async (loan, makerAddr, loanId, msg) => {
-  let book = await loan.getOneBook(makerAddr);
+const printLoan = async (loan, lender, loanId, msg) => {
+  let book = await loan.getOneBook(lender);
   let item = book.loans[loanId];
   let states = ["REGISTERED", "WORKING", "DUE", "PAST_DUE", "CLOSED", "TERMINATED"];
   if (msg.length > 0) console.log(msg);
   console.log(`\tloan ${item.amt}\trate ${item.rate / 100}% \tloanState ${states[item.state]}`);
 };
 
-const printState = async (loan, col, loanMaker, colUser, loanId, loanMsg, colMsg) => {
+const printState = async (loan, col, lender, borrower, loanId, loanMsg, colMsg) => {
   console.log();
-  await printLoan(loan, loanMaker, loanId, loanMsg);
-  await printCol(col, colUser, colMsg ? colMsg : "    COLLATERAL:");
+  await printLoan(loan, lender, loanId, loanMsg);
+  await printCol(col, borrower, colMsg ? colMsg : "    COLLATERAL:");
 };
 
 const printSched = async (loan, makerAddr, loanId) => {
