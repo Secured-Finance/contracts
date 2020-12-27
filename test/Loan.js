@@ -132,7 +132,7 @@ describe("Loan Unit Tests", () => {
       loanId: String(loanId),
     });
 
-    // TODO - notifyPayment to state change REGISTERED -> PLEASE_CONFIRM
+    // TODO - notifyPayment with txHash
 
     // notifyPayment -> check -> confirmPayment to ensure finality
     await loan.confirmPayment(maker, taker, ...val(item), loanId, {from: taker}); // taker is borrower
