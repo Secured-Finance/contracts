@@ -33,9 +33,9 @@ const printCol = async (col, addr, msg) => {
   let book = await col.getOneBook(addr);
   let states = ["EMPTY", "AVAILABLE", "IN_USE", "MARGIN_CALL", "LIQUIDATION_IN_PROGRESS", "LIQUIDATION"];
   console.log(msg);
-  console.log(`\tamtETH  ${book.amtETH}\tuseETH  ${book.inuseETH}`);
-  console.log(`\tamtFIL  ${book.amtFIL}\tuseFIL  ${book.inuseFIL}\tuseFILValue  ${book.inuseFILValue}`);
-  console.log(`\tamtUSDC ${book.amtUSDC}\tuseUSDC ${book.inuseUSDC}\tuseUSDCValue ${book.inuseUSDCValue}`);
+  console.log(`\tamtETH  ${book.colAmtETH}\tuseETH  ${book.inuseETH}`);
+  console.log(`\tamtFIL  ${book.colAmtFIL}\tuseFIL  ${book.inuseFIL}\tuseFILValue  ${book.inuseFILValue}`);
+  console.log(`\tamtUSDC ${book.colAmtUSDC}\tuseUSDC ${book.inuseUSDC}\tuseUSDCValue ${book.inuseUSDCValue}`);
   console.log(`\tcoverage ${book.coverage}%\tcolState ${states[book.state]}\n`);
 };
 

@@ -2,6 +2,8 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+import './Collateral.sol';
+
 /// @title MoneyMarket Contract for Loans
 contract MoneyMarket {
     event SetMoneyMarketBook(address indexed sender);
@@ -55,6 +57,20 @@ contract MoneyMarket {
     // MoneyMarketBook [0] for ETH, [1] for FIL, [2] for USDC
     mapping(address => MoneyMarketBook) private moneyMarketMap;
     address[] private marketMakers;
+    address private owner;
+
+    // Contracts
+    Collateral collateral;
+
+    constructor() public {
+        owner = msg.sender;        
+    }
+
+    // set collateral contract address
+    function setColAddr(address colAddr) public {
+        require(msg.sender == owner, "only owner");
+        collateral = Collateral(colAddr);
+    }
 
     /// @notice Get the list of market makers address
     /// @return marketMakers
@@ -112,6 +128,7 @@ contract MoneyMarket {
 
     function delMoneyMarketBook() public {
         require(moneyMarketMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
+        moneyMarketMap[msg.sender].isValue = false;
         delete moneyMarketMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];

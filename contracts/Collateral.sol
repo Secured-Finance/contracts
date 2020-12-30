@@ -37,8 +37,8 @@ contract Collateral {
 
     uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000;
-    uint256 constant PENALTYLEVEL = 110; // 110% for settlement failure penalty
-    uint256 constant MKTMAKELEVEL = 120;
+    uint256 constant PENALTYLEVEL = 10; // 10% settlement failure penalty
+    uint256 constant MKTMAKELEVEL = 20; // 20% for market making
     uint256 constant LQLEVEL = 120; // 120% for liquidation price
     uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
     uint256 constant AUTOLQLEVEL = 125; // 125% auto liquidation
@@ -175,7 +175,7 @@ contract Collateral {
         MoneyMarket.Ccy ccy, // ETH or FIL
         address addr
     ) public view returns (bool) {
-        require(colMap[addr].isAvailable, "not registered yet");
+        require(colMap[addr].isAvailable, "Collateral book not set yet");
         if (amt == 0) return true;
         ColBook memory book = colMap[addr];
         uint256 FILETH = getFILETH();
@@ -458,6 +458,7 @@ contract Collateral {
     // update for one user
     function updateFILValue(address addr) public {
         uint256 fxRate = getFILETH();
+        if (fxRate == 0) return;
         colMap[addr].colAmtFILValue = (colMap[addr].colAmtFIL * fxRate) / FXMULT;
         colMap[addr].inuseFILValue = (colMap[addr].inuseFIL * fxRate) / FXMULT;
     }
@@ -465,6 +466,7 @@ contract Collateral {
     // to be called relularly
     function updateAllFILValue() public {
         uint256 fxRate = getFILETH();
+        if (fxRate == 0) return;
         for (uint256 i = 0; i < users.length; i++) {
             colMap[users[i]].colAmtFILValue =
                 (colMap[users[i]].colAmtFIL * fxRate) /
@@ -493,6 +495,7 @@ contract Collateral {
     // update for one user
     function updateUSDCValue(address addr) public {
         uint256 fxRate = getETHUSDC();
+        if (fxRate == 0) return;
         colMap[addr].colAmtUSDCValue = (colMap[addr].colAmtUSDC / fxRate);
         colMap[addr].inuseUSDCValue = (colMap[addr].inuseUSDC / fxRate);
     }

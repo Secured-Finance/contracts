@@ -101,6 +101,7 @@ contract FXMarket {
 
     function delFXBook() public {
         require(fxMap[msg.sender].isValue == true, 'fxBook not found');
+        fxMap[msg.sender].isValue = false;
         delete fxMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
@@ -146,6 +147,7 @@ contract FXMarket {
         FXItem memory b,
         Side side
     ) private pure returns (FXItem memory) {
+        require(a.isAvailable || b.isAvailable, 'Not enough FX Data');
         if (!a.isAvailable) return b;
         if (!b.isAvailable) return a;
         if (a.rate == b.rate) return a.amtBuy > b.amtBuy ? a : b;

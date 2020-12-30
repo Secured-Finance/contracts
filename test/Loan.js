@@ -46,6 +46,7 @@ describe("Loan Unit Tests", () => {
     collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
     loan = await Loan.new(moneyMarket.address, fxMarket.address, collateral.address);
     await collateral.setLoanAddr(loan.address, {from: owner});
+    await moneyMarket.setColAddr(collateral.address);
     console.log();
     console.log("moneyMarket addr is", moneyMarket.address);
     console.log("fxMarket    addr is", fxMarket.address);
@@ -69,11 +70,28 @@ describe("Loan Unit Tests", () => {
     });
   });
 
+  it("Init with sample FXMarket", async () => {
+    sample.FXMarket.forEach(async (item) => {
+      let res = await fxMarket.setFXBook(...val(item), {from: alice});
+      expectEvent(res, "SetFXBook", {sender: alice});
+    });
+  });
+
+  it("Upsize ETH collateral", async () => {
+    await printCol(collateral, accounts[2], "collateral state for carol before upSizeETH");
+    let res = await collateral.upSizeETH({
+      from: accounts[2],
+      value: 1240, // 1240 ETH can cover about 820 ETH = 10000 FIL
+    });
+    expectEvent(res, "UpSizeETH", {sender: accounts[2]});
+    await printCol(collateral, accounts[2], "collateral state for carol after upSizeETH");
+  });
+
   // TODO - check collateral for market making
 
   it("Init with sample MoneyMarket", async () => {
     const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
-    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), { from: alice });
+    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
     let res1 = await moneyMarket.setMoneyMarketBook(...val(item1), {from: alice});
     let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
     let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
@@ -85,24 +103,6 @@ describe("Loan Unit Tests", () => {
     expectEvent(res4, "SetMoneyMarketBook", {sender: alice});
   });
 
-  it("Init with sample FXMarket", async () => {
-    sample.FXMarket.forEach(async (item) => {
-      let res = await fxMarket.setFXBook(...val(item), {from: alice});
-      expectEvent(res, "SetFXBook", {sender: alice});
-    });
-  });
-
-  it("Init Collateral with sample data", async () => {
-    sample.Collateral.forEach(async (item, index) => {
-      let res = await collateral.setColBook(...val(item), {
-        from: accounts[index],
-        value: 0,
-        // value: 100000,
-      });
-      expectEvent(res, "SetColBook", {addr: accounts[index]});
-    });
-  });
-
   it("Init FIL custody addr", async () => {
     let res0 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_0"), accounts[0]);
     let res1 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_1"), accounts[1]);
@@ -110,16 +110,6 @@ describe("Loan Unit Tests", () => {
     expectEvent(res0, "RegisterFILCustodyAddr", {addr: accounts[0]});
     expectEvent(res1, "RegisterFILCustodyAddr", {addr: accounts[1]});
     expectEvent(res2, "RegisterFILCustodyAddr", {addr: accounts[2]});
-  });
-
-  it("Upsize ETH collateral", async () => {
-    await printCol(collateral, accounts[2], "collateral state for carol before upSizeETH");
-    let res = await collateral.upSizeETH({
-      from: accounts[2],
-      value: 1240, // 1240 ETH can cover about 820 ETH = 10000 FIL
-    });
-    expectEvent(res, "UpSizeETH", {sender: accounts[2]});
-    await printCol(collateral, accounts[2], "collateral state for carol after upSizeETH");
   });
 
   it("FIL Loan Execution", async () => {
