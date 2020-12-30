@@ -7,17 +7,22 @@ import "./FXMarket.sol";
 import "./Loan.sol";
 
 contract Collateral {
-    event SetColBook(address indexed sender);
+    event SetColBook(
+        address indexed addr,
+        string indexed id,
+        bytes32 userAddrFIL,
+        address userAddrUSDC
+    );
     event UpSizeETH(address indexed sender);
     event UpSizeFIL(address indexed sender);
     event DelColBook(address indexed sender);
     event PartialLiquidation(
         address indexed borrower,
         address indexed lender,
-        uint256 amount
+        uint256 indexed amount
     );
-    event RequestFILCustodyAddr(address indexed sender);
-    event RegisterFILCustodyAddr(address indexed requester);
+    event RequestFILCustodyAddr(address indexed requester);
+    event RegisterFILCustodyAddr(address indexed addr);
     event DEBUG(address addr);
 
     enum CcyPair {FILETH, FILUSDC, ETHUSDC}
@@ -40,16 +45,16 @@ contract Collateral {
 
     struct ColBook {
         string id; // DID, email
-        address addrETH;
-        string addrFIL; // custody addr
-        string userAddrFIL;
-        address addrUSDC; // custody addr
+        address userAddrETH;
+        bytes32 userAddrFIL;
         address userAddrUSDC;
-        uint256 amtETH; // custody amount
-        uint256 amtFIL; // custody amount
-        uint256 amtUSDC; // custody amount
-        uint256 amtFILValue; // custody FIL amt evaluated in ETH
-        uint256 amtUSDCValue; // custody USDC amt evaluated in ETH
+        bytes32 colAddrFIL;
+        address colAddrUSDC;
+        uint256 colAmtETH;
+        uint256 colAmtFIL;
+        uint256 colAmtUSDC;
+        uint256 colAmtFILValue; // custody FIL amt evaluated in ETH
+        uint256 colAmtUSDCValue; // custody USDC amt evaluated in ETH
         uint256 inuseETH; // total PV of ETH loans
         uint256 inuseFIL; // total PV of FIL loans
         uint256 inuseUSDC; // total PV of USDC loans
@@ -62,7 +67,7 @@ contract Collateral {
 
     struct ColInput {
         string id; // DID, email
-        string userAddrFIL;
+        bytes32 userAddrFIL;
         address userAddrUSDC;
     }
 
@@ -99,19 +104,24 @@ contract Collateral {
         Register a user and make a collateral book
      */
 
-    // register an user
+    // register or update col book for a user
     function setColBook(
         string memory id,
-        string memory userAddrFIL,
+        bytes32 userAddrFIL,
         address userAddrUSDC
     ) public payable {
-        require(!colMap[msg.sender].isAvailable, "user already exists"); // one-time
-        ColInput memory input = ColInput(id, userAddrFIL, userAddrUSDC);
-        ColBook memory newBook = inputToBook(input);
-        colMap[msg.sender] = newBook;
-        users.push(msg.sender);
-        updateState(msg.sender);
-        emit SetColBook(msg.sender);
+        if (colMap[msg.sender].isAvailable) {
+            colMap[msg.sender].id = id;
+            colMap[msg.sender].userAddrFIL = userAddrFIL;
+            colMap[msg.sender].userAddrUSDC = userAddrUSDC;
+        } else {
+            ColInput memory input = ColInput(id, userAddrFIL, userAddrUSDC);
+            ColBook memory newBook = inputToBook(input);
+            colMap[msg.sender] = newBook;
+            users.push(msg.sender);
+        }
+        // updateState(msg.sender);
+        emit SetColBook(msg.sender, id, userAddrFIL, userAddrUSDC);
     }
 
     // helper to convert input data to ColBook
@@ -122,16 +132,16 @@ contract Collateral {
     {
         ColBook memory book;
         book.id = input.id;
-        book.addrETH = msg.sender;
-        book.addrFIL; // blank until FIL custody address requested
+        book.userAddrETH = msg.sender;
         book.userAddrFIL = input.userAddrFIL;
-        book.addrUSDC; // blank until USDC custody address is ready
         book.userAddrUSDC = input.userAddrUSDC;
-        book.amtETH = msg.value;
-        book.amtFIL = 0; // TODO - P2P oracle will update
-        book.amtUSDC = 0; // TODO - sync with ERC20
-        book.amtFILValue = 0;
-        book.amtUSDCValue = 0;
+        book.colAddrFIL;
+        book.colAddrUSDC;
+        book.colAmtETH = msg.value;
+        book.colAmtFIL = 0; // oracle will update
+        book.colAmtUSDC = 0; // sync with ERC20
+        book.colAmtFILValue = 0;
+        book.colAmtUSDCValue = 0;
         book.inuseETH = 0; // updated by ETH loan
         book.inuseFIL = 0; // updated by FIL loan
         book.inuseUSDC = 0; // updated by USDC loan
@@ -139,8 +149,8 @@ contract Collateral {
         book.inuseUSDCValue = 0;
         book.coverage = 0;
         book.isAvailable = true;
-        book.state = State.EMPTY;
-        // book.state = msg.value > 0 ? State.AVAILABLE : State.EMPTY;
+        // book.state = State.EMPTY;
+        book.state = msg.value > 0 ? State.AVAILABLE : State.EMPTY;
         return book;
     }
 
@@ -178,7 +188,7 @@ contract Collateral {
             book.inuseFILValue +
             book.inuseUSDCValue +
             toBeUsed;
-        uint256 totalAmt = book.amtETH + book.amtFILValue + book.amtUSDCValue;
+        uint256 totalAmt = book.colAmtETH + book.colAmtFILValue + book.colAmtUSDCValue;
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage > MARGINLEVEL;
     }
@@ -203,11 +213,11 @@ contract Collateral {
         // TODO - limit amt to keep 150%
         // if (book.state == State.IN_USE || book.state == State.AVAILABLE) {
         if (ccy == MoneyMarket.Ccy.ETH) {
-            book.amtETH -= amt;
+            book.colAmtETH -= amt;
             // msg.sender.transfer(amt); // TODO
         }
-        if (ccy == MoneyMarket.Ccy.FIL) book.amtFIL -= amt;
-        if (ccy == MoneyMarket.Ccy.USDC) book.amtUSDC -= amt;
+        if (ccy == MoneyMarket.Ccy.FIL) book.colAmtFIL -= amt;
+        if (ccy == MoneyMarket.Ccy.USDC) book.colAmtUSDC -= amt;
         // }
         updateState(msg.sender);
     }
@@ -222,7 +232,7 @@ contract Collateral {
         if (amt == 0) return 0;
         ColBook memory book = colMap[addr];
         uint256 totalUse = book.inuseETH + book.inuseFILValue + amt;
-        uint256 totalAmt = book.amtETH + book.amtFILValue;
+        uint256 totalAmt = book.colAmtETH + book.colAmtFILValue;
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage;
     }
@@ -264,7 +274,7 @@ contract Collateral {
         uint256 totalUse = book.inuseETH +
             book.inuseFILValue +
             book.inuseUSDCValue;
-        uint256 totalAmt = book.amtETH + book.amtFILValue + book.amtUSDCValue;
+        uint256 totalAmt = book.colAmtETH + book.colAmtFILValue + book.colAmtUSDCValue;
         if (totalUse == 0) {
             book.coverage = 0;
             if (totalAmt == 0) book.state = State.EMPTY;
@@ -291,7 +301,7 @@ contract Collateral {
         }
     }
 
-    // to be called from Loan for coupon cover up
+    // to be called from Loan for coupon and redemption cover
     function partialLiquidation(
         address borrower,
         address lender,
@@ -301,15 +311,15 @@ contract Collateral {
         require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage borrowerBook = colMap[borrower];
         ColBook storage lenderBook = colMap[lender];
-        uint256 amtETH = fxMarket.getETHvalue(amount, ccy);
-        require(borrowerBook.amtETH >= amtETH, "Liquidation amount not enough");
+        uint256 colAmtETH = fxMarket.getETHvalue(amount, ccy);
+        require(borrowerBook.colAmtETH >= colAmtETH, "Liquidation amount not enough");
         if (
             borrowerBook.state == State.IN_USE ||
             borrowerBook.state == State.LIQUIDATION
         ) {
             borrowerBook.state = State.LIQUIDATION_IN_PROGRESS;
-            borrowerBook.amtETH -= (amtETH * LQLEVEL) / PCT;
-            lenderBook.amtETH += (amtETH * LQLEVEL) / PCT;
+            borrowerBook.colAmtETH -= (colAmtETH * LQLEVEL) / PCT;
+            lenderBook.colAmtETH += (colAmtETH * LQLEVEL) / PCT;
             updateState(borrower);
         }
         emit PartialLiquidation(borrower, lender, amount);
@@ -340,7 +350,7 @@ contract Collateral {
     //     uint256 recoverAmount = (amount * LQLEVEL) / PCT;
     //     // TODO - handle ETH lending case
     //     book.inuseFIL -= amount;
-    //     book.amtFIL -= recoverAmount;
+    //     book.colAmtFIL -= recoverAmount;
     //     book.state = State.IN_USE;
     //     updateState(borrower);
     // }
@@ -358,7 +368,7 @@ contract Collateral {
     // collateralize ETH
     function upSizeETH() public payable {
         require(colMap[msg.sender].isAvailable == true, "user not found");
-        colMap[msg.sender].amtETH += msg.value;
+        colMap[msg.sender].colAmtETH += msg.value;
         updateState(msg.sender);
         if (
             (colMap[msg.sender].state != State.AVAILABLE) &&
@@ -368,26 +378,26 @@ contract Collateral {
     }
 
     // collateralize FIL
-    function upSizeFIL(uint256 amtFIL) public payable {
+    function upSizeFIL(uint256 colAmtFIL) public payable {
         require(colMap[msg.sender].isAvailable == true, "user not found");
-        colMap[msg.sender].amtFIL += amtFIL;
-        // TODO - check FIL network by other peers to verify amtFIL
+        colMap[msg.sender].colAmtFIL += colAmtFIL;
+        // TODO - check FIL network by other peers to verify colAmtFIL
         updateState(msg.sender);
         emit UpSizeFIL(msg.sender);
     }
 
     function emptyBook(ColBook storage book) private {
         book.id = "";
-        book.addrETH = 0x0000000000000000000000000000000000000000;
-        book.addrFIL = "";
+        book.userAddrETH = 0x0000000000000000000000000000000000000000;
+        book.colAddrFIL = "";
         book.userAddrFIL = "";
-        book.addrUSDC = 0x0000000000000000000000000000000000000000;
+        book.colAddrUSDC = 0x0000000000000000000000000000000000000000;
         book.userAddrUSDC = 0x0000000000000000000000000000000000000000;
-        book.amtETH = 0;
-        book.amtFIL = 0;
-        book.amtUSDC = 0;
-        book.amtFILValue = 0;
-        book.amtUSDCValue = 0;
+        book.colAmtETH = 0;
+        book.colAmtFIL = 0;
+        book.colAmtUSDC = 0;
+        book.colAmtFILValue = 0;
+        book.colAmtUSDCValue = 0;
         book.inuseETH = 0;
         book.inuseFIL = 0;
         book.inuseUSDC = 0;
@@ -404,11 +414,11 @@ contract Collateral {
         require(book.isAvailable == true, "user not found");
         emptyBook(colMap[msg.sender]);
         delete colMap[msg.sender]; // avoid reentrancy
-        msg.sender.transfer(book.amtETH);
+        msg.sender.transfer(book.colAmtETH);
         for (uint256 i = 0; i < users.length; i++) {
             if (users[i] == msg.sender) delete users[i];
         } // users.length no change
-        // amtFIL; // TODO - return FIL
+        // colAmtFIL; // TODO - return FIL
         emit DelColBook(msg.sender);
     }
 
@@ -435,8 +445,8 @@ contract Collateral {
     /**dev
         Update FIL Value in ETH Section
         1. get the latest FILETH currency rate from fxMarket
-        2. apply FILETH rate to amtFIL and inuseFIL
-        3. update amtFILValue and inuseFILValue as ETH value
+        2. apply FILETH rate to colAmtFIL and inuseFIL
+        3. update colAmtFILValue and inuseFILValue as ETH value
      */
 
     // helper to get FILETH mid rate for valuation
@@ -448,7 +458,7 @@ contract Collateral {
     // update for one user
     function updateFILValue(address addr) public {
         uint256 fxRate = getFILETH();
-        colMap[addr].amtFILValue = (colMap[addr].amtFIL * fxRate) / FXMULT;
+        colMap[addr].colAmtFILValue = (colMap[addr].colAmtFIL * fxRate) / FXMULT;
         colMap[addr].inuseFILValue = (colMap[addr].inuseFIL * fxRate) / FXMULT;
     }
 
@@ -456,8 +466,8 @@ contract Collateral {
     function updateAllFILValue() public {
         uint256 fxRate = getFILETH();
         for (uint256 i = 0; i < users.length; i++) {
-            colMap[users[i]].amtFILValue =
-                (colMap[users[i]].amtFIL * fxRate) /
+            colMap[users[i]].colAmtFILValue =
+                (colMap[users[i]].colAmtFIL * fxRate) /
                 FXMULT;
             colMap[users[i]].inuseFILValue =
                 (colMap[users[i]].inuseFIL * fxRate) /
@@ -470,8 +480,8 @@ contract Collateral {
     /**dev
         Update USDC Value in ETH Section
         1. get the latest ETHUSDC currency rate from fxMarket
-        2. apply ETHUSDC rate to amtFIL and inuseFIL
-        3. update amtUSDCValue and inuseUSDCValue as ETH value
+        2. apply ETHUSDC rate to colAmtFIL and inuseFIL
+        3. update colAmtUSDCValue and inuseUSDCValue as ETH value
      */
 
     // helper to get ETHUSDC mid rate for valuation
@@ -483,7 +493,7 @@ contract Collateral {
     // update for one user
     function updateUSDCValue(address addr) public {
         uint256 fxRate = getETHUSDC();
-        colMap[addr].amtUSDCValue = (colMap[addr].amtUSDC / fxRate);
+        colMap[addr].colAmtUSDCValue = (colMap[addr].colAmtUSDC / fxRate);
         colMap[addr].inuseUSDCValue = (colMap[addr].inuseUSDC / fxRate);
     }
 
@@ -491,8 +501,8 @@ contract Collateral {
     function updateAllUSDCValue() public {
         uint256 fxRate = getETHUSDC();
         for (uint256 i = 0; i < users.length; i++) {
-            colMap[users[i]].amtUSDCValue =
-                (colMap[users[i]].amtUSDC * fxRate) /
+            colMap[users[i]].colAmtUSDCValue =
+                (colMap[users[i]].colAmtUSDC * fxRate) /
                 FXMULT;
             colMap[users[i]].inuseUSDCValue =
                 (colMap[users[i]].inuseUSDC * fxRate) /
@@ -516,12 +526,12 @@ contract Collateral {
     }
 
     // to be called by whitelisted scheduler
-    function registerFILCustodyAddr(string memory addrFIL, address requester)
+    function registerFILCustodyAddr(bytes32 colAddrFIL, address addr)
         public
     {
-        require(colMap[requester].isAvailable == true, "Requester not found");
-        colMap[requester].addrFIL = addrFIL;
-        emit RegisterFILCustodyAddr(requester);
+        require(colMap[addr].isAvailable == true, "user not found");
+        colMap[addr].colAddrFIL = colAddrFIL;
+        emit RegisterFILCustodyAddr(addr);
     }
 
     // helper to check empty string
@@ -530,12 +540,13 @@ contract Collateral {
         return byteStr.length == 0;
     }
 
-    function getAllFILCustodyAddr() public view returns (string[] memory) {
-        string[] memory addrList = new string[](users.length);
+    function getAllFILCustodyAddr() public view returns (bytes32[] memory) {
+        bytes32[] memory addrList = new bytes32[](users.length);
         uint256 j = 0;
         for (uint256 i = 0; i < users.length; i++) {
-            string memory addrFIL = colMap[users[i]].addrFIL;
-            if (!isEmptyStr(addrFIL)) addrList[j++] = addrFIL;
+            bytes32 colAddrFIL = colMap[users[i]].colAddrFIL;
+            // if (!isEmptyStr(colAddrFIL)) addrList[j++] = colAddrFIL;
+            if (colAddrFIL.length > 0) addrList[j++] = colAddrFIL;
         }
         return addrList;
     }
@@ -575,11 +586,12 @@ contract Collateral {
     function getRandFILCustodyAddr(uint256 seed)
         public
         view
-        returns (string memory)
+        returns (bytes32)
     {
-        string[] memory addrList = getAllFILCustodyAddr();
+        bytes32[] memory addrList = getAllFILCustodyAddr();
         uint256 rand = getRandom(users.length + seed) % addrList.length;
-        if (isEqualStr(addrList[rand], colMap[msg.sender].addrFIL))
+        // if (isEqualStr(addrList[rand], colMap[msg.sender].colAddrFIL))
+        if (addrList[rand] == colMap[msg.sender].colAddrFIL)
             return getRandFILCustodyAddr(seed + 1); // avoid verify balance myself
         return addrList[rand];
     }

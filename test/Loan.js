@@ -21,6 +21,8 @@ const {
 } = require("./helper");
 
 const val = (obj) => {
+  if (obj.addrFIL)
+    obj.addrFIL = web3.utils.asciiToHex(obj.addrFIL);
   return Object.values(obj);
 };
 
@@ -56,11 +58,22 @@ describe("Loan Unit Tests", () => {
     console.log("carol       addr is", carol);
   });
 
+  it("Init Collateral with sample data", async () => {
+    sample.Collateral.forEach(async (item, index) => {
+      let res = await collateral.setColBook(...val(item), {
+        from: accounts[index],
+        value: 0,
+        // value: 100000,
+      });
+      expectEvent(res, "SetColBook", {addr: accounts[index]});
+    });
+  });
+
   // TODO - check collateral for market making
 
   it("Init with sample MoneyMarket", async () => {
     const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
-    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
+    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), { from: alice });
     let res1 = await moneyMarket.setMoneyMarketBook(...val(item1), {from: alice});
     let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
     let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
@@ -86,17 +99,17 @@ describe("Loan Unit Tests", () => {
         value: 0,
         // value: 100000,
       });
-      expectEvent(res, "SetColBook", {sender: accounts[index]});
+      expectEvent(res, "SetColBook", {addr: accounts[index]});
     });
   });
 
   it("Init FIL custody addr", async () => {
-    let res0 = await collateral.registerFILCustodyAddr("cid_custody_FIL_0", accounts[0]);
-    let res1 = await collateral.registerFILCustodyAddr("cid_custody_FIL_1", accounts[1]);
-    let res2 = await collateral.registerFILCustodyAddr("cid_custody_FIL_2", accounts[2]);
-    expectEvent(res0, "RegisterFILCustodyAddr", {requester: accounts[0]});
-    expectEvent(res1, "RegisterFILCustodyAddr", {requester: accounts[1]});
-    expectEvent(res2, "RegisterFILCustodyAddr", {requester: accounts[2]});
+    let res0 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_0"), accounts[0]);
+    let res1 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_1"), accounts[1]);
+    let res2 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_2"), accounts[2]);
+    expectEvent(res0, "RegisterFILCustodyAddr", {addr: accounts[0]});
+    expectEvent(res1, "RegisterFILCustodyAddr", {addr: accounts[1]});
+    expectEvent(res2, "RegisterFILCustodyAddr", {addr: accounts[2]});
   });
 
   it("Upsize ETH collateral", async () => {
@@ -442,18 +455,21 @@ describe("Loan Unit Tests", () => {
 
   //   let book, amtWithdraw;
   //   book = await collateral.getOneBook(taker);
-  //   amtWithdraw = book.amtETH - Math.round((150 * book.amtETH) / book.coverage);
+  //   amtWithdraw = book.colAmtETH - Math.round((150 * book.colAmtETH) / book.coverage);
+
+  //   // console.log('book is', book);
+  //   // console.log('amtWithdraw is', amtWithdraw);
+
   //   await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
   //   await printCol(collateral, taker, "PV drop to 150");
 
   //   book = await collateral.getOneBook(taker);
   //   expect(Number(book.state)).to.equal(ColState.MARGIN_CALL);
 
-  //   // TODO - book.state should be IN_USE or AVAILABLE
-  //   // book = await collateral.getOneBook(taker);
-  //   // amtWithdraw = book.amtETH - Math.round((125 * book.amtETH) / book.coverage);
-  //   // await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
-  //   // await printCol(collateral, taker, "PV drop to 125");
+  //   book = await collateral.getOneBook(taker);
+  //   amtWithdraw = book.colAmtETH - Math.round((125 * book.colAmtETH) / book.coverage);
+  //   await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
+  //   await printCol(collateral, taker, "PV drop to 125");
   // });
 
   // it("Collateral State change by FX IN_USE -> MARGINCALL -> LIQUIDATION", async () => {
@@ -469,7 +485,7 @@ describe("Loan Unit Tests", () => {
 
   //   let book, amtWithdraw;
   //   book = await collateral.getOneBook(taker);
-  //   amtWithdraw = book.amtETH - Math.round((160 * book.amtETH) / book.coverage);
+  //   amtWithdraw = book.colAmtETH - Math.round((160 * book.colAmtETH) / book.coverage);
   //   await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
   //   await printCol(collateral, taker, "PV drop to 160");
 
