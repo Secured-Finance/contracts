@@ -32,6 +32,8 @@ contract Collateral {
 
     uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000;
+    uint256 constant PENALTYLEVEL = 110; // 110% for settlement failure penalty
+    uint256 constant MKTMAKELEVEL = 120;
     uint256 constant LQLEVEL = 120; // 120% for liquidation price
     uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
     uint256 constant AUTOLQLEVEL = 125; // 125% auto liquidation

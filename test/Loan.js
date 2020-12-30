@@ -56,6 +56,8 @@ describe("Loan Unit Tests", () => {
     console.log("carol       addr is", carol);
   });
 
+  // TODO - check collateral for market making
+
   it("Init with sample MoneyMarket", async () => {
     const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
     let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
@@ -132,10 +134,12 @@ describe("Loan Unit Tests", () => {
       loanId: String(loanId),
     });
 
-    // TODO - notifyPayment with txHash
+    // lender - notifyPayment with txHash
+    const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
+    await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker});
 
-    // notifyPayment -> check -> confirmPayment to ensure finality
-    await loan.confirmPayment(maker, taker, ...val(item), loanId, {from: taker}); // taker is borrower
+    // borrower check -> confirmPayment to ensure finality
+    await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
     await printState(loan, collateral, maker, taker, loanId, "[confirmPayment]");
 
     afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
@@ -200,23 +204,30 @@ describe("Loan Unit Tests", () => {
   //   const couponAmt = item.schedule.amounts[0];
   //   const {side, ccy, term, amt} = sample.Loan[0];
 
+  //   // borrower notify coupon payment
+  //   const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
+  //   await loan.notifyPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: taker});
+
   //   // lender confirm coupon receipt
-  //   let res = await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
+  //   let res = await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: maker});
+
+  //   // console.log('res is', res);
   //   expectEvent(res, "ConfirmPayment", {
-  //     loanMaker: maker,
-  //     colUser: taker,
+  //     lender: maker,
+  //     borrower: taker,
   //     side: String(item.side),
   //     ccy: String(item.ccy),
   //     term: String(item.term),
   //     amt: String(couponAmt),
   //     loanId: String(loanId),
+  //     txHash: txHash.padEnd(66, "0"),
   //   });
 
-  //   // loan state DUE -> WORKING
-  //   await loan.updateState(maker, taker, loanId);
-  //   await printState(loan, collateral, maker, taker, loanId, `AFTER confirmation ${await getDate()}`);
-  //   item = await loan.getLoanItem(loanId, {from: maker});
-  //   expect(Number(item.state)).to.equal(LoanState.WORKING);
+  //   // // loan state DUE -> WORKING
+  //   // await loan.updateState(maker, taker, loanId);
+  //   // await printState(loan, collateral, maker, taker, loanId, `AFTER confirmation ${await getDate()}`);
+  //   // item = await loan.getLoanItem(loanId, {from: maker});
+  //   // expect(Number(item.state)).to.equal(LoanState.WORKING);
   // });
 
   // it("State transition WORKING -> DUE -> PAST_DUE -> WORKING", async () => {
@@ -283,19 +294,26 @@ describe("Loan Unit Tests", () => {
   //   const {side, ccy, term, amt} = sample.Loan[0];
 
   //   // loan state DUE -> WORKING
-  //   let res = await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
+  //   // borrower notify coupon payment
+  //   const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
+  //   await loan.notifyPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: taker});
+
+  //   // lender confirm coupon receipt
+  //   let res = await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: maker});
   //   expectEvent(res, "ConfirmPayment", {
-  //     loanMaker: maker,
-  //     colUser: taker,
+  //     lender: maker,
+  //     borrower: taker,
   //     side: String(item.side),
   //     ccy: String(item.ccy),
   //     term: String(item.term),
   //     amt: String(couponAmt),
   //     loanId: String(loanId),
+  //     txHash: txHash.padEnd(66, "0"),
   //   });
+
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER confirmation ${await getDate()}`);
-  //   item = await loan.getLoanItem(loanId, { from: maker });
+  //   item = await loan.getLoanItem(loanId, {from: maker});
   //   expect(Number(item.state)).to.equal(LoanState.WORKING);
 
   //   // loan state WORKING -> DUE
@@ -304,15 +322,17 @@ describe("Loan Unit Tests", () => {
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER notice ${await getDate()}`);
 
   //   // loan state DUE -> WORKING
-  //   res = await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
+  //   await loan.notifyPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: taker});
+  //   res = await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: maker});
   //   expectEvent(res, "ConfirmPayment", {
-  //     loanMaker: maker,
-  //     colUser: taker,
+  //     lender: maker,
+  //     borrower: taker,
   //     side: String(item.side),
   //     ccy: String(item.ccy),
   //     term: String(item.term),
   //     amt: String(couponAmt),
   //     loanId: String(loanId),
+  //     txHash: txHash.padEnd(66, "0"),
   //   });
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER confirmation ${await getDate()}`);
@@ -332,6 +352,7 @@ describe("Loan Unit Tests", () => {
   //   let item = await loan.getLoanItem(loanId, {from: maker});
   //   const {side, ccy, term} = sample.Loan[0]; // get basic condition
   //   const paynums = [1, 1, 1, 2, 3, 5];
+  //   const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
 
   //   // TODO - test for short time
   //   if (term == Term._3m || term == Term._6m) return;
@@ -344,7 +365,8 @@ describe("Loan Unit Tests", () => {
   //   for (i = 0; i < paynums[term] - 1; i++) {
   //     const couponAmt = item.schedule.amounts[i];
   //     // loan state DUE -> WORKING
-  //     await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
+  //     await loan.notifyPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: taker});
+  //     await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: maker});
   //     // loan state WORKING -> DUE
   //     await time.increase(oneYear);
   //     await loan.updateState(maker, taker, loanId);
@@ -353,7 +375,8 @@ describe("Loan Unit Tests", () => {
   //   // loan state DUE -> CLOSED
   //   await printState(loan, collateral, maker, taker, loanId, `BEFORE redemption ${await getDate()}`);
   //   const redeemAmt = item.schedule.amounts[paynums[term] - 1];
-  //   res = await loan.confirmPayment(maker, taker, side, ccy, term, redeemAmt, loanId, {from: maker});
+  //   await loan.notifyPayment(maker, taker, side, ccy, term, redeemAmt, loanId, txHash, {from: taker});
+  //   res = await loan.confirmPayment(maker, taker, side, ccy, term, redeemAmt, loanId, txHash, {from: maker});
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER  redemption ${await getDate()}`);
 
   //   // item = await loan.getLoanItem(loanId, {from: maker});
@@ -372,6 +395,7 @@ describe("Loan Unit Tests", () => {
   //   let item = await loan.getLoanItem(loanId, {from: maker});
   //   const {side, ccy, term} = sample.Loan[0]; // get basic condition
   //   const paynums = [1, 1, 1, 2, 3, 5];
+  //   const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
 
   //   // TODO - test for short time
   //   if (term == Term._3m || term == Term._6m) return;
@@ -385,7 +409,8 @@ describe("Loan Unit Tests", () => {
   //   for (i = 0; i < paynums[term] - 1; i++) {
   //     const couponAmt = item.schedule.amounts[i];
   //     // loan state DUE -> WORKING
-  //     await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, {from: maker});
+  //     await loan.notifyPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: taker});
+  //     await loan.confirmPayment(maker, taker, side, ccy, term, couponAmt, loanId, txHash, {from: maker});
   //     // loan state WORKING -> DUE
   //     await time.increase(oneYear);
   //     await loan.updateState(maker, taker, loanId);

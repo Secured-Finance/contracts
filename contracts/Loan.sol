@@ -49,16 +49,26 @@ contract Loan {
         uint256 loanId
     );
 
-    event NoitfyPayment(MoneyMarket.Ccy ccy, address sender, address receiver, uint256 indexed loanId, string txHash);
-
-    event ConfirmPayment(
-        address indexed loanMaker,
-        address indexed colUser,
+    event NotifyPayment(
+        address indexed lender,
+        address indexed borrower,
         MoneyMarket.Side side,
         MoneyMarket.Ccy ccy,
         uint256 term,
         uint256 amt,
-        uint256 loanId
+        uint256 loanId,
+        bytes32 indexed txHash
+    );
+
+    event ConfirmPayment(
+        address indexed lender,
+        address indexed borrower,
+        MoneyMarket.Side side,
+        MoneyMarket.Ccy ccy,
+        uint256 term,
+        uint256 amt,
+        uint256 loanId,
+        bytes32 indexed txHash
     );
 
     enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
@@ -69,6 +79,7 @@ contract Loan {
     uint256 constant FXMULT = 1000; // convert FILETH = 0.085 to 85
     uint256 constant PAYFREQ = 1; // annualy
     uint256 constant NOTICE = 2 weeks;
+    uint256 constant SETTLE = 2 days;
     uint256 constant NUMCCY = 3;
     uint256 constant NUMTERM = 6;
     uint256 constant NUMDF = 7; // numbef of discount factors
@@ -159,6 +170,7 @@ contract Loan {
         uint256 pv; // valuation in ccy
         uint256 asOf; // updated date
         bool isAvailable;
+        bytes32 startTxHash;
         State state;
     }
 
@@ -167,6 +179,7 @@ contract Loan {
         uint256[MAXPAYNUM] payments;
         uint256[MAXPAYNUM] amounts;
         bool[MAXPAYNUM] isDone;
+        bytes32[MAXPAYNUM] txHash;
     }
 
     struct LoanInput {
@@ -263,6 +276,7 @@ contract Loan {
         item.pv = input.amt; // updated by MtM
         item.asOf = now;
         item.isAvailable = true;
+        item.startTxHash = '';
         item.state = State.REGISTERED;
         return item;
     }
@@ -281,6 +295,7 @@ contract Loan {
             schedule.payments[i] = daysArr[i] + now;
             schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
             schedule.isDone[i] = false;
+            schedule.txHash[i] = '';
         }
         schedule.amounts[paynums - 1] += amt; // redemption amt
     }
@@ -330,7 +345,6 @@ contract Loan {
             if (schedule.isDone[i] == false) break;
         }
         if (i == MAXPAYNUM || schedule.notices[i] == 0) return State.CLOSED;
-        // if (schedule.notices[i] == 0) return State.CLOSED;
         if (now < schedule.notices[i]) return State.WORKING;
         if (now <= schedule.payments[i]) return State.DUE;
         if (now > schedule.payments[i]) return State.PAST_DUE;
@@ -372,8 +386,7 @@ contract Loan {
             item.state = getCurrentState(item.schedule);
             Collateral.State colState = collateral.updateState(colUser);
             if (colState == Collateral.State.LIQUIDATION) {
-                item.state = State.TERMINATED;
-                // TODO - make sure pv works correctly
+                item.state = State.TERMINATED;                // TODO - make sure pv works correctly
                 collateral.partialLiquidation(colUser, loanMaker, item.pv, item.ccy);
             }
         }
@@ -440,16 +453,55 @@ contract Loan {
 
     function updateAllState() public {} // TODO
 
-    // to be used by lenders and borrowers
-    function notifyPayment(MoneyMarket.Ccy ccy, address receiver, uint256 loanId, string memory txHash) public {
-        // TODO - state change REGISTERED -> PLEASE_CONFIRM
+    // to be used by lender for initial
+    // to be used by borrower for coupon, redemption
+    function notifyPayment(
+        address lender,
+        address borrower,
+        MoneyMarket.Side side,
+        MoneyMarket.Ccy ccy,
+        uint256 term,
+        uint256 amt,
+        uint256 loanId,
+        bytes32 txHash
+    ) public {
+        LoanBook storage book = loanMap[lender];
+        LoanItem storage item = book.loans[loanId];
+        require(item.state == State.REGISTERED || item.state == State.DUE, 'No need to notify now');
 
-        // used for initial, coupon, redemption, liquidation
-        emit NoitfyPayment(ccy, msg.sender, receiver, loanId, txHash);
+        // initial
+        // REGISTERED
+        if (item.state == State.REGISTERED) {
+            require(amt == item.amt, 'notify amount not match');
+            if (side == MoneyMarket.Side.LEND) {
+                require(msg.sender == lender, 'lender must notify');
+            } else {
+                require(msg.sender == borrower, 'borrower must notify');
+            }
+            item.startTxHash = txHash;
+        }
+
+        // coupon and redemption
+        // DUE
+        else if (item.state == State.DUE) {
+            if (side == MoneyMarket.Side.BORROW) {
+                require(msg.sender == lender, 'lender must notify');
+            } else {
+                require(msg.sender == borrower, 'borrower must notify');
+            }
+            uint256 i;
+            for (i = 0; i < MAXPAYNUM; i++) {
+                if (item.schedule.isDone[i] == false) break;
+            }
+            require(amt == item.schedule.amounts[i], 'confirm amount not match');
+            item.schedule.txHash[i] = txHash;
+        }
+
+        emit NotifyPayment(lender, borrower, side, ccy, term, amt, loanId, txHash);
     }
 
-    // to be used by borrowers and lenders
-    // used for initial, coupon, redemption, liquidation
+    // to be used by borrower for initial
+    // to be used by lender for coupon, redemption
     function confirmPayment(
         address lender,
         address borrower,
@@ -457,7 +509,8 @@ contract Loan {
         MoneyMarket.Ccy ccy,
         uint256 term,
         uint256 amt,
-        uint256 loanId
+        uint256 loanId,
+        bytes32 txHash
     ) public {
         LoanBook storage book = loanMap[lender];
         LoanItem storage item = book.loans[loanId];
@@ -467,7 +520,9 @@ contract Loan {
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
         if (item.state == State.REGISTERED) {
-            require(amt == item.amt, '[RESISTERED] confirm amount not match');
+            require(item.startTxHash != '', 'start txHash is not provided yet');
+            require(item.startTxHash == txHash, 'txhash not match');
+            require(amt == item.amt, 'confirm amount not match');
             if (side == MoneyMarket.Side.LEND) {
                 require(msg.sender == borrower, 'borrower must confirm');
                 // updateState(lender, borrower, loanId);
@@ -481,20 +536,22 @@ contract Loan {
 
         // coupon
         // DUE -> WORKING
-        // PAST_DUE->WORKING, PARTIAL_LIQUIATION -> IN_USE
+        //
+        // redemption
+        // DUE -> CLOSED
         else if (item.state == State.DUE) {
             if (side == MoneyMarket.Side.BORROW) {
-                require(msg.sender == borrower, 'msg.sender for coupon should be borrower');
+                require(msg.sender == borrower, 'borrower must confirm');
                 updateState(lender, borrower, loanId);
             } else {
-                require(msg.sender == lender, 'msg.sender for coupon should be lender');
+                require(msg.sender == lender, 'lender must confirm');
                 updateState(lender, borrower, loanId);
             }
             uint256 i;
             for (i = 0; i < MAXPAYNUM; i++) {
                 if (item.schedule.isDone[i] == false) break;
             }
-            require(amt == item.schedule.amounts[i], '[DUE] confirm amount not match');
+            require(amt == item.schedule.amounts[i], 'confirm amount not match');
             item.schedule.isDone[i] = true;
             if (i == MAXPAYNUM - 1 || item.schedule.payments[i + 1] == 0) {
                 item.state = State.CLOSED;
@@ -504,14 +561,7 @@ contract Loan {
                 item.state = State.WORKING;
         }
 
-        // redemption
-        // DUE -> CLOSED, IN_USE -> AVAILABLE
-        // PAST_DUE -> TERMINATED, LIQUIDATION -> EMPTY
-
-        // margin call
-        // WORKING -> TERMINATED, LIQUIDATION -> EMPTY
-
-        emit ConfirmPayment(lender, borrower, side, ccy, term, amt, loanId);
+        emit ConfirmPayment(lender, borrower, side, ccy, term, amt, loanId, txHash);
     }
 
     /**@dev
