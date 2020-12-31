@@ -6,8 +6,8 @@ import './Collateral.sol';
 
 /// @title MoneyMarket Contract for Loans
 contract MoneyMarket {
-    event SetMoneyMarketBook(address indexed sender);
-    event DelMoneyMarketBook(address indexed sender);
+    event SetMoneyMarketBook(address indexed addr);
+    event DelMoneyMarketBook(address indexed addr);
     event SetOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt, uint rate, uint effectiveSec);
     event DelOneItem(address indexed addr, Side side, Ccy ccy, Term term);
     event TakeOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt);
