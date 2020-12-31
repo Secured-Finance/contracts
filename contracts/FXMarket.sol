@@ -204,6 +204,9 @@ contract FXMarket {
 
     function getETHvalue(uint256 amount, MoneyMarket.Ccy ccy) public view returns (uint256) {
         uint256[3] memory rates = getMidRates();
+        if (ccy == MoneyMarket.Ccy.ETH) {
+            return amount;
+        }
         if (ccy == MoneyMarket.Ccy.FIL) {
             uint256 pairIndex = uint256(CcyPair.FILETH);
             uint256 mult = FXMULT[pairIndex];

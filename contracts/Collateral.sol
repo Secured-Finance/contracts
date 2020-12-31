@@ -19,7 +19,8 @@ contract Collateral {
     event PartialLiquidation(
         address indexed borrower,
         address indexed lender,
-        uint256 indexed amount
+        uint256 indexed amount,
+        MoneyMarket.Ccy ccy
     );
     event RequestFILCustodyAddr(address indexed requester);
     event RegisterFILCustodyAddr(address indexed addr);
@@ -335,15 +336,16 @@ contract Collateral {
             "Liquidation amount not enough"
         );
         if (
+            borrowerBook.state == State.AVAILABLE ||
             borrowerBook.state == State.IN_USE ||
             borrowerBook.state == State.LIQUIDATION
         ) {
             borrowerBook.state = State.LIQUIDATION_IN_PROGRESS;
-            borrowerBook.colAmtETH -= (colAmtETH * LQLEVEL) / PCT;
-            lenderBook.colAmtETH += (colAmtETH * LQLEVEL) / PCT;
+            borrowerBook.colAmtETH -= colAmtETH;
+            lenderBook.colAmtETH += colAmtETH;
             updateState(borrower);
         }
-        emit PartialLiquidation(borrower, lender, amount);
+        emit PartialLiquidation(borrower, lender, amount, ccy);
     }
 
     function completePartialLiquidation(address borrower) external {

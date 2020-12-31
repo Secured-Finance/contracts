@@ -21,8 +21,7 @@ const {
 } = require("./helper");
 
 const val = (obj) => {
-  if (obj.addrFIL)
-    obj.addrFIL = web3.utils.asciiToHex(obj.addrFIL);
+  if (obj.addrFIL) obj.addrFIL = web3.utils.asciiToHex(obj.addrFIL);
   return Object.values(obj);
 };
 
@@ -34,6 +33,11 @@ const getDate = async () => {
 describe("Loan Unit Tests", () => {
   const [alice, bob, carol] = accounts;
   const owner = defaultSender;
+
+  const oneYear = Number(time.duration.years(1));
+  const settleGap = Number(time.duration.days(2));
+  const noticeGap = Number(time.duration.weeks(2));
+  const oneSec = Number(time.duration.seconds(1));
 
   let moneyMarket;
   let fxMarket;
@@ -89,19 +93,19 @@ describe("Loan Unit Tests", () => {
 
   it("Init with sample MoneyMarket", async () => {
     const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
-    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
+    // let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
     let res1 = await moneyMarket.setMoneyMarketBook(...val(item1), {from: alice});
-    let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
-    let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
-    let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
-    expectEvent(res0, "SetMoneyMarketBook", {addr: alice});
+    // let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
+    // let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
+    // let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
+    // expectEvent(res0, "SetMoneyMarketBook", {addr: alice});
     expectEvent(res1, "SetMoneyMarketBook", {addr: alice});
-    expectEvent(res2, "SetMoneyMarketBook", {addr: bob});
-    expectEvent(res3, "SetMoneyMarketBook", {addr: carol});
-    expectEvent(res4, "SetMoneyMarketBook", {addr: alice});
+    // expectEvent(res2, "SetMoneyMarketBook", {addr: bob});
+    // expectEvent(res3, "SetMoneyMarketBook", {addr: carol});
+    // expectEvent(res4, "SetMoneyMarketBook", {addr: alice});
     await printCol(collateral, alice, "collateral state for alice after setMoneyMarketBook");
-    await printCol(collateral, bob, "collateral state for bob after setMoneyMarketBook");
-    await printCol(collateral, carol, "collateral state for carol after setMoneyMarketBook");
+    // await printCol(collateral, bob, "collateral state for bob after setMoneyMarketBook");
+    // await printCol(collateral, carol, "collateral state for carol after setMoneyMarketBook");
   });
 
   it("Init FIL custody addr", async () => {
@@ -113,7 +117,47 @@ describe("Loan Unit Tests", () => {
     expectEvent(res2, "RegisterFILCustodyAddr", {addr: accounts[2]});
   });
 
-  it("FIL Loan Execution", async () => {
+  // it("FIL Loan Execution", async () => {
+  //   let maker = accounts[0]; // FIL lender
+  //   let taker = accounts[2]; // FIL borrower
+  //   let item, loanId, beforeLoan, afterLoan;
+
+  //   // maker LEND FIL
+  //   item = sample.Loan[0];
+  //   deal = [maker, ...val(item)]; // maker is FIL lender
+  //   beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+
+  //   loanId = 0; // available from event
+  //   let res = await loan.makeLoanDeal(...deal, {from: taker});
+  //   await printState(loan, collateral, maker, taker, loanId, "[makeLoanDeal]");
+
+  //   console.log("deal item is", item);
+
+  //   expectEvent(res, "MakeLoanDeal", {
+  //     makerAddr: maker,
+  //     side: String(item.side),
+  //     ccy: String(item.ccy),
+  //     term: String(item.term),
+  //     amt: String(item.amt),
+  //     loanId: String(loanId),
+  //   });
+
+  //   // lender - notifyPayment with txHash
+  //   const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
+  //   await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker});
+
+  //   // borrower check -> confirmPayment to ensure finality
+  //   await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
+  //   await printState(loan, collateral, maker, taker, loanId, "[confirmPayment]");
+
+  //   afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+  //   expect(Number(beforeLoan.amt) - item.amt).to.equal(Number(afterLoan.amt));
+
+  //   console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
+  //   await printSched(loan, maker, loanId);
+  // });
+
+  it("FIL Loan initial settlement failure", async () => {
     let maker = accounts[0]; // FIL lender
     let taker = accounts[2]; // FIL borrower
     let item, loanId, beforeLoan, afterLoan;
@@ -125,10 +169,6 @@ describe("Loan Unit Tests", () => {
 
     loanId = 0; // available from event
     let res = await loan.makeLoanDeal(...deal, {from: taker});
-    await printState(loan, collateral, maker, taker, loanId, "[makeLoanDeal]");
-
-    console.log("deal item is", item);
-
     expectEvent(res, "MakeLoanDeal", {
       makerAddr: maker,
       side: String(item.side),
@@ -138,29 +178,47 @@ describe("Loan Unit Tests", () => {
       loanId: String(loanId),
     });
 
-    // lender - notifyPayment with txHash
-    const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
-    await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker});
+    await printLoan(loan, maker, loanId, "[before settlement] loan");
+    await printCol(collateral, maker, "[before settlement] maker collateral");
+    await printCol(collateral, taker, "[before settlement] taker collateral");
 
-    // borrower check -> confirmPayment to ensure finality
-    await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
-    await printState(loan, collateral, maker, taker, loanId, "[confirmPayment]");
+    // fail to lend within settlement period
+    await time.increase(settleGap + oneSec);
+    res = await loan.updateState(maker, taker, loanId);
+    expectEvent(res, "UpdateState", {
+      lender: maker,
+      borrower: taker,
+      loanId: String(loanId),
+      prevState: String(LoanState.REGISTERED),
+      currState: String(LoanState.CLOSED),
+    });
+
+    // lender - notifyPayment with txHash, but cannot
+    const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
+    await expectRevert(
+      loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker}),
+      "No need to notify now",
+    );
+
+    // borrower -> confirmPayment to ensure finality, but cannot
+    await expectRevert(
+      loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker}),
+      "No need to confirm now",
+    );
 
     afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
     expect(Number(beforeLoan.amt) - item.amt).to.equal(Number(afterLoan.amt));
-
     console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
-    await printSched(loan, maker, loanId);
+
+    await printLoan(loan, maker, loanId, "[after settlement] loan");
+    await printCol(collateral, maker, "[after settlement] maker collateral");
+    await printCol(collateral, taker, "[after settlement] taker collateral");
   });
 
   // it("State transition WORKING -> DUE -> PAST_DUE", async () => {
   //   let maker = accounts[0]; // FIL lender
   //   let taker = accounts[2]; // FIL borrower
   //   let loanId = 0; // available from event
-
-  //   const oneYear = Number(time.duration.years(1));
-  //   const noticeGap = Number(time.duration.weeks(2));
-  //   const oneSec = Number(time.duration.seconds(1));
 
   //   // loan state WORKING
   //   await loan.updateState(maker, taker, loanId);
@@ -169,7 +227,7 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(item.state)).to.equal(LoanState.WORKING);
 
   //   // loan state WORKING -> DUE
-  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await time.increase(oneYear + settleGap - noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER notice ${await getDate()}`);
   //   item = await loan.getLoanItem(loanId, {from: maker});
@@ -188,10 +246,6 @@ describe("Loan Unit Tests", () => {
   //   let taker = accounts[2]; // FIL borrower
   //   let loanId = 0; // available from event
 
-  //   const oneYear = Number(time.duration.years(1));
-  //   const noticeGap = Number(time.duration.weeks(2));
-  //   const oneSec = Number(time.duration.seconds(1));
-
   //   // loan state WORKING
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `BEFORE notice ${await getDate()}`);
@@ -199,7 +253,7 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(item.state)).to.equal(LoanState.WORKING);
 
   //   // loan state WORKING -> DUE
-  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await time.increase(oneYear + settleGap - noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER notice ${await getDate()}`);
   //   item = await loan.getLoanItem(loanId, {from: maker});
@@ -241,10 +295,6 @@ describe("Loan Unit Tests", () => {
   //   console.log("maker is", maker);
   //   console.log("taker is", taker);
 
-  //   const oneYear = Number(time.duration.years(1));
-  //   const noticeGap = Number(time.duration.weeks(2));
-  //   const oneSec = Number(time.duration.seconds(1));
-
   //   // loan state WORKING
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `BEFORE notice ${await getDate()}`);
@@ -252,7 +302,7 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(item.state)).to.equal(LoanState.WORKING);
 
   //   // loan state WORKING -> DUE
-  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await time.increase(oneYear + settleGap - noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER notice ${await getDate()}`);
   //   item = await loan.getLoanItem(loanId, {from: maker});
@@ -277,10 +327,6 @@ describe("Loan Unit Tests", () => {
   //   let taker = accounts[2]; // FIL borrower
   //   let loanId = 0;
 
-  //   const oneYear = Number(time.duration.years(1));
-  //   const noticeGap = Number(time.duration.weeks(2));
-  //   const oneSec = Number(time.duration.seconds(1));
-
   //   // loan state WORKING
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `BEFORE notice ${await getDate()}`);
@@ -288,7 +334,7 @@ describe("Loan Unit Tests", () => {
   //   expect(Number(item.state)).to.equal(LoanState.WORKING);
 
   //   // loan state WORKING -> DUE
-  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await time.increase(oneYear + settleGap - noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
   //   await printState(loan, collateral, maker, taker, loanId, `AFTER notice ${await getDate()}`);
   //   item = await loan.getLoanItem(loanId, {from: maker});
@@ -349,10 +395,6 @@ describe("Loan Unit Tests", () => {
   //   let taker = accounts[2]; // FIL borrower
   //   let loanId = 0;
 
-  //   const oneYear = Number(time.duration.years(1));
-  //   const noticeGap = Number(time.duration.weeks(2));
-  //   const oneSec = Number(time.duration.seconds(1));
-
   //   let item = await loan.getLoanItem(loanId, {from: maker});
   //   const {side, ccy, term} = sample.Loan[0]; // get basic condition
   //   const paynums = [1, 1, 1, 2, 3, 5];
@@ -362,7 +404,7 @@ describe("Loan Unit Tests", () => {
   //   if (term == Term._3m || term == Term._6m) return;
 
   //   // loan state WORKING -> DUE
-  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await time.increase(oneYear + settleGap - noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
 
   //   // iter coupon payments until redeption
@@ -392,10 +434,6 @@ describe("Loan Unit Tests", () => {
   //   let taker = accounts[2]; // FIL borrower
   //   let loanId = 0;
 
-  //   const oneYear = Number(time.duration.years(1));
-  //   const noticeGap = Number(time.duration.weeks(2));
-  //   const oneSec = Number(time.duration.seconds(1));
-
   //   let item = await loan.getLoanItem(loanId, {from: maker});
   //   const {side, ccy, term} = sample.Loan[0]; // get basic condition
   //   const paynums = [1, 1, 1, 2, 3, 5];
@@ -406,7 +444,7 @@ describe("Loan Unit Tests", () => {
 
   //   // loan state WORKING -> DUE
   //   await printState(loan, collateral, maker, taker, loanId, `BEFORE due ${await getDate()}`);
-  //   await time.increase(oneYear - noticeGap + oneSec);
+  //   await time.increase(oneYear + settleGap - noticeGap + oneSec);
   //   await loan.updateState(maker, taker, loanId);
 
   //   // iter coupon payments until redeption
@@ -537,7 +575,7 @@ describe("Loan Unit Tests", () => {
   //   console.log(df1y, df2y, df3y, df4y, df5y);
 
   //   // check if pv is correct
-  //   item = await loan.getLoanItem(loanId, {from: maker});
+  //   item = await loan.getLoanItem(loanId, { from: maker });
   //   console.log("BEFORE MtM", item.pv, toDate(item.asOf));
   //   let [cf1, cf2, cf3, cf4, cf5] = item.schedule.amounts;
 
@@ -546,10 +584,9 @@ describe("Loan Unit Tests", () => {
   //   let coupon = (item.rate * item.amt) / BP;
   //   let notional = item.amt;
   //   let pv = (cf1 * df1y + cf2 * df2y + cf3 * df3y + cf4 * df4y + cf5 * df5y) / BP;
-  //   // console.log('pv is', pv);
 
-  //   await loan.updateAllPV();
-  //   // await loan.updateBookPV(maker);
+  //   // await loan.updateAllPV();
+  //   await loan.updateBookPV(maker);
   //   item = await loan.getLoanItem(loanId, {from: maker});
   //   console.log("AFTER MtM", item.pv, toDate(item.asOf));
   //   expect(Number(item.pv)).to.equal(Math.floor(pv));

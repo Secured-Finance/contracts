@@ -41,12 +41,12 @@ contract Loan {
     // 25. Emit MARGIN_CALL or LIQUIDATION message
 
     event MakeLoanDeal(
-        address makerAddr,
-        MoneyMarket.Side side,
+        address indexed makerAddr,
+        MoneyMarket.Side indexed side,
         MoneyMarket.Ccy ccy,
         MoneyMarket.Term term,
         uint256 amt,
-        uint256 loanId
+        uint256 indexed loanId
     );
 
     event NotifyPayment(
@@ -71,6 +71,14 @@ contract Loan {
         bytes32 indexed txHash
     );
 
+    event UpdateState(
+        address indexed lender,
+        address indexed borrower,
+        uint256 indexed loanId,
+        State prevState,
+        State currState
+    );
+
     enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
     enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}
 
@@ -85,6 +93,9 @@ contract Loan {
     uint256 constant NUMDF = 7; // numbef of discount factors
     uint256 constant MAXYEAR = 5; // years
     uint256 constant MAXPAYNUM = PAYFREQ * MAXYEAR;
+    uint256 constant PENALTYLEVEL = 10; // 10% settlement failure penalty
+    uint256 constant MKTMAKELEVEL = 20; // 20% for market making
+    uint256 constant LQLEVEL = 120; // 120% for liquidation price
     uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
 
     /** @dev
@@ -352,16 +363,26 @@ contract Loan {
     }
 
     function updateState(
-        address loanMaker,
-        address colUser,
+        address lender,
+        address borrower,
         uint256 loanId
     ) public {
-        LoanBook storage book = loanMap[loanMaker];
+        LoanBook storage book = loanMap[lender];
         LoanItem storage item = book.loans[loanId];
+        State prevState = item.state;
 
         // initial
         if (item.state == State.REGISTERED) {
-            // TODO - check if lender payment done within 2 days, else liquidate lender collateral
+            // check if lender payment done within 2 days, else liquidate lender collateral
+            if (item.startTxHash == '' && item.start + SETTLE < now) {
+                item.state = State.CLOSED;
+                item.isAvailable = false;
+                collateral.partialLiquidation(borrower, lender, item.amt * PENALTYLEVEL / PCT, item.ccy);
+                collateral.completePartialLiquidation(borrower);
+                collateral.completePartialLiquidation(lender);
+                collateral.releaseCollateral(item.ccy, item.amt, borrower);
+                collateral.releaseCollateral(item.ccy, item.amt * MKTMAKELEVEL / PCT, lender);
+            }
         }
 
         // 1) coupon or redemption is due
@@ -385,10 +406,10 @@ contract Loan {
         // COLL: LIQUIDATION -> AVAILABLE or EMPTY
         else if (item.state == State.WORKING) {
             item.state = getCurrentState(item.schedule);
-            Collateral.State colState = collateral.updateState(colUser);
+            Collateral.State colState = collateral.updateState(borrower);
             if (colState == Collateral.State.LIQUIDATION) {
-                item.state = State.TERMINATED;                // TODO - make sure pv works correctly
-                collateral.partialLiquidation(colUser, loanMaker, item.pv, item.ccy);
+                item.state = State.TERMINATED;
+                collateral.partialLiquidation(borrower, lender, item.pv * LQLEVEL / PCT, item.ccy);
             }
         }
 
@@ -421,7 +442,7 @@ contract Loan {
                 }
                 item.schedule.isDone[i] = true;
                 uint256 amount = item.schedule.amounts[i];
-                collateral.partialLiquidation(colUser, loanMaker, amount, item.ccy);
+                collateral.partialLiquidation(borrower, lender, amount * LQLEVEL / PCT, item.ccy);
             }
         }
 
@@ -437,19 +458,21 @@ contract Loan {
         else if (item.state == State.PAST_DUE) {
             item.state = getCurrentState(item.schedule);
             if (item.state == State.WORKING)
-                collateral.completePartialLiquidation(colUser);
+                collateral.completePartialLiquidation(borrower);
             if (item.state == State.CLOSED) {
-                collateral.completePartialLiquidation(colUser);
-                collateral.releaseCollateral(item.ccy, item.amt, colUser);
                 item.isAvailable = false;
+                collateral.completePartialLiquidation(borrower);
+                collateral.releaseCollateral(item.ccy, item.amt, borrower);
             }
         }
 
         else if (item.state == State.TERMINATED) {
-            collateral.completePartialLiquidation(colUser);
-            collateral.releaseCollateral(item.ccy, item.amt, colUser);
             item.isAvailable = false;
+            collateral.completePartialLiquidation(borrower);
+            collateral.releaseCollateral(item.ccy, item.amt, borrower);
         }
+        if(item.state != prevState)
+            emit UpdateState(lender, borrower, loanId, prevState, item.state);
     }
 
     function updateAllState() public {} // TODO
