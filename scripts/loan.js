@@ -132,13 +132,14 @@ module.exports = async function main(callback) {
     await printState(loan, collateral, maker, taker, loanId, "confirmPayment");
 
     afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, '\n');
+    console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
 
     await printSched(loan, maker, loanId);
 
+    // TODO
     // time to pay coupon
     // loan state WORKING -> DUE
-    await printState(loan, collateral, maker, taker, loanId, "Payment Advice");
+    // await printState(loan, collateral, maker, taker, loanId, "Payment Advice");
 
     // maker BORROW FIL
     console.log();

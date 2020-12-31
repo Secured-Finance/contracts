@@ -2,10 +2,12 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+import './Collateral.sol';
+
 /// @title MoneyMarket Contract for Loans
 contract MoneyMarket {
-    event SetMoneyMarketBook(address indexed sender);
-    event DelMoneyMarketBook(address indexed sender);
+    event SetMoneyMarketBook(address indexed addr);
+    event DelMoneyMarketBook(address indexed addr);
     event SetOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt, uint rate, uint effectiveSec);
     event DelOneItem(address indexed addr, Side side, Ccy ccy, Term term);
     event TakeOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt);
@@ -18,6 +20,8 @@ contract MoneyMarket {
     uint256 internal constant NUMTERM = 6;
     uint256 internal constant NUMDF = 7; // numbef of discount factors
     uint256 internal constant BP = 10000; // basis point
+    uint256 internal constant PCT = 100; // basis point
+    uint256 internal constant MKTMAKELEVEL = 20; // 20% for market making
 
     struct MoneyMarketBook {
         MoneyMarketItem[NUMTERM][NUMCCY] lenders;
@@ -55,6 +59,20 @@ contract MoneyMarket {
     // MoneyMarketBook [0] for ETH, [1] for FIL, [2] for USDC
     mapping(address => MoneyMarketBook) private moneyMarketMap;
     address[] private marketMakers;
+    address private owner;
+
+    // Contracts
+    Collateral collateral;
+
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    // set collateral contract address
+    function setColAddr(address colAddr) public {
+        require(msg.sender == owner, "only owner");
+        collateral = Collateral(colAddr);
+    }
 
     /// @notice Get the list of market makers address
     /// @return marketMakers
@@ -85,10 +103,11 @@ contract MoneyMarket {
         MoneyMarketInput[] memory borrowers,
         uint256 effectiveSec
     ) public {
-        // TODO - check if collateral covers borrowers amt
         MoneyMarketBook storage book = moneyMarketMap[msg.sender];
         MoneyMarketItem[NUMTERM] storage lenderTerms = book.lenders[uint256(ccy)];
         MoneyMarketItem[NUMTERM] storage borrowerTerms = book.borrowers[uint256(ccy)];
+        uint256 lendersAmt = 0;
+        uint256 borrowersAmt = 0;
         for (uint256 i = 0; i < lenders.length; i++) {
             Term term = lenders[i].term;
             MoneyMarketItem memory newItem = inputToItem(
@@ -96,6 +115,7 @@ contract MoneyMarket {
                 now + effectiveSec
             );
             lenderTerms[uint256(term)] = newItem;
+            lendersAmt += lenders[i].amt;
         }
         for (uint256 i = 0; i < borrowers.length; i++) {
             Term term = borrowers[i].term;
@@ -104,7 +124,10 @@ contract MoneyMarket {
                 now + effectiveSec
             );
             borrowerTerms[uint256(term)] = newItem;
+            borrowersAmt += borrowers[i].amt;
         }
+        // check and use if collateral covers 20% of booking amt
+        collateral.useCollateral(ccy, (lendersAmt + borrowersAmt) * MKTMAKELEVEL / PCT, msg.sender);
         if (!moneyMarketMap[msg.sender].isValue) marketMakers.push(msg.sender);
         book.isValue = true;
         emit SetMoneyMarketBook(msg.sender);
@@ -112,6 +135,7 @@ contract MoneyMarket {
 
     function delMoneyMarketBook() public {
         require(moneyMarketMap[msg.sender].isValue == true, 'MoneyMarketBook not found');
+        moneyMarketMap[msg.sender].isValue = false;
         delete moneyMarketMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
@@ -127,7 +151,6 @@ contract MoneyMarket {
         uint256 rate,
         uint256 effectiveSec
     ) public {
-        // TODO - check if collateral covers borrowers amt
         MoneyMarketBook storage book = moneyMarketMap[msg.sender];
         MoneyMarketItem[NUMTERM] storage terms;
         if (side == Side.LEND)
@@ -139,6 +162,8 @@ contract MoneyMarket {
             now + effectiveSec
         );
         terms[uint256(term)] = newItem;
+        // check and use if collateral covers booking amt
+        collateral.useCollateral(ccy, amt * MKTMAKELEVEL / PCT, msg.sender);
         if (!moneyMarketMap[msg.sender].isValue) marketMakers.push(msg.sender);
         book.isValue = true;
         emit SetOneItem(msg.sender, side, ccy, term, amt, rate, effectiveSec);
@@ -155,7 +180,7 @@ contract MoneyMarket {
         else return moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
     }
 
-    // TODO - [internal] delete from loan contract. require(moneyMarketMap[marketMaker] == true)
+    // TODO - maybe msg.sender only
     function delOneItem(
         address addr,
         Side side,
@@ -166,6 +191,7 @@ contract MoneyMarket {
         if (side == Side.LEND)
             delete moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)];
         else delete moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
+        collateral.releaseCollateral(ccy, moneyMarketMap[addr].lenders[uint256(ccy)][uint256(term)].amt * MKTMAKELEVEL / PCT, addr);
         emit DelOneItem(addr, side, ccy, term);
     }
 

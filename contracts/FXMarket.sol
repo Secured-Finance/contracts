@@ -2,10 +2,12 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
+import './MoneyMarket.sol';
+
 contract FXMarket {
-    event SetFXBook(address indexed sender);
-    event DelFXBook(address indexed sender);
-    event DelOneItem(address indexed sender);
+    event SetFXBook(address indexed addr);
+    event DelFXBook(address indexed addr);
+    event DelOneItem(address indexed addr);
 
     enum Ccy {ETH, FIL, USDC}
     enum CcyPair {FILETH, FILUSDC, ETHUSDC}
@@ -99,6 +101,7 @@ contract FXMarket {
 
     function delFXBook() public {
         require(fxMap[msg.sender].isValue == true, 'fxBook not found');
+        fxMap[msg.sender].isValue = false;
         delete fxMap[msg.sender];
         for (uint256 i = 0; i < marketMakers.length; i++) {
             if (marketMakers[i] == msg.sender) delete marketMakers[i];
@@ -144,6 +147,7 @@ contract FXMarket {
         FXItem memory b,
         Side side
     ) private pure returns (FXItem memory) {
+        require(a.isAvailable || b.isAvailable, 'Not enough FX Data');
         if (!a.isAvailable) return b;
         if (!b.isAvailable) return a;
         if (a.rate == b.rate) return a.amtBuy > b.amtBuy ? a : b;
@@ -196,5 +200,23 @@ contract FXMarket {
             rates[i] = (bestBook.offers[i].rate + bestBook.bids[i].rate) / 2;
         }
         return rates;
+    }
+
+    function getETHvalue(uint256 amount, MoneyMarket.Ccy ccy) public view returns (uint256) {
+        uint256[3] memory rates = getMidRates();
+        if (ccy == MoneyMarket.Ccy.ETH) {
+            return amount;
+        }
+        if (ccy == MoneyMarket.Ccy.FIL) {
+            uint256 pairIndex = uint256(CcyPair.FILETH);
+            uint256 mult = FXMULT[pairIndex];
+            return rates[pairIndex] * amount / mult;
+        }
+        if (ccy == MoneyMarket.Ccy.USDC) {
+            uint256 pairIndex = uint256(CcyPair.ETHUSDC);
+            uint256 mult = FXMULT[pairIndex];
+            // TODO - add more presicion to handle fractional value ETH
+            return amount / (rates[pairIndex] / mult);
+        }
     }
 }
