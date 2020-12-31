@@ -13,9 +13,9 @@ contract Collateral {
         bytes32 userAddrFIL,
         address userAddrUSDC
     );
-    event UpSizeETH(address indexed sender);
-    event UpSizeFIL(address indexed sender);
-    event DelColBook(address indexed sender);
+    event UpSizeETH(address indexed addr);
+    event UpSizeFIL(address indexed addr);
+    event DelColBook(address indexed addr);
     event PartialLiquidation(
         address indexed borrower,
         address indexed lender,
@@ -160,7 +160,16 @@ contract Collateral {
         uint256 amt,
         address addr
     ) public {
-        require(isCovered(amt, ccy, addr), "Please upsize collateral");
+        require(
+            msg.sender == address(loan) ||
+                msg.sender == address(moneyMarket) ||
+                msg.sender == address(fxMarket),
+            "msg sender is not allowed to use collateral"
+        );
+        require(
+            isCovered(amt, ccy, addr),
+            "Please upsize collateral"
+        );
         ColBook storage book = colMap[addr];
         if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH += amt;
         if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL += amt;
@@ -188,7 +197,9 @@ contract Collateral {
             book.inuseFILValue +
             book.inuseUSDCValue +
             toBeUsed;
-        uint256 totalAmt = book.colAmtETH + book.colAmtFILValue + book.colAmtUSDCValue;
+        uint256 totalAmt = book.colAmtETH +
+            book.colAmtFILValue +
+            book.colAmtUSDCValue;
         uint256 coverage = (PCT * totalAmt) / totalUse;
         return coverage > MARGINLEVEL;
     }
@@ -198,7 +209,12 @@ contract Collateral {
         uint256 amt,
         address addr
     ) external {
-        require(msg.sender == address(loan), "only Loan contract can call");
+        require(
+            msg.sender == address(loan) ||
+                msg.sender == address(moneyMarket) ||
+                msg.sender == address(fxMarket),
+            "msg sender is not allowed to release collateral"
+        );
         ColBook storage book = colMap[addr];
         if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH -= amt;
         if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL -= amt;
@@ -274,7 +290,9 @@ contract Collateral {
         uint256 totalUse = book.inuseETH +
             book.inuseFILValue +
             book.inuseUSDCValue;
-        uint256 totalAmt = book.colAmtETH + book.colAmtFILValue + book.colAmtUSDCValue;
+        uint256 totalAmt = book.colAmtETH +
+            book.colAmtFILValue +
+            book.colAmtUSDCValue;
         if (totalUse == 0) {
             book.coverage = 0;
             if (totalAmt == 0) book.state = State.EMPTY;
@@ -312,7 +330,10 @@ contract Collateral {
         ColBook storage borrowerBook = colMap[borrower];
         ColBook storage lenderBook = colMap[lender];
         uint256 colAmtETH = fxMarket.getETHvalue(amount, ccy);
-        require(borrowerBook.colAmtETH >= colAmtETH, "Liquidation amount not enough");
+        require(
+            borrowerBook.colAmtETH >= colAmtETH,
+            "Liquidation amount not enough"
+        );
         if (
             borrowerBook.state == State.IN_USE ||
             borrowerBook.state == State.LIQUIDATION
@@ -459,7 +480,9 @@ contract Collateral {
     function updateFILValue(address addr) public {
         uint256 fxRate = getFILETH();
         if (fxRate == 0) return;
-        colMap[addr].colAmtFILValue = (colMap[addr].colAmtFIL * fxRate) / FXMULT;
+        colMap[addr].colAmtFILValue =
+            (colMap[addr].colAmtFIL * fxRate) /
+            FXMULT;
         colMap[addr].inuseFILValue = (colMap[addr].inuseFIL * fxRate) / FXMULT;
     }
 
@@ -529,9 +552,7 @@ contract Collateral {
     }
 
     // to be called by whitelisted scheduler
-    function registerFILCustodyAddr(bytes32 colAddrFIL, address addr)
-        public
-    {
+    function registerFILCustodyAddr(bytes32 colAddrFIL, address addr) public {
         require(colMap[addr].isAvailable == true, "user not found");
         colMap[addr].colAddrFIL = colAddrFIL;
         emit RegisterFILCustodyAddr(addr);
@@ -586,11 +607,7 @@ contract Collateral {
 
     // to be called by market makers
     // ramdomly pick a FILCustoryAddr to verify FIL balance for others
-    function getRandFILCustodyAddr(uint256 seed)
-        public
-        view
-        returns (bytes32)
-    {
+    function getRandFILCustodyAddr(uint256 seed) public view returns (bytes32) {
         bytes32[] memory addrList = getAllFILCustodyAddr();
         uint256 rand = getRandom(users.length + seed) % addrList.length;
         // if (isEqualStr(addrList[rand], colMap[msg.sender].colAddrFIL))

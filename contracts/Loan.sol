@@ -85,6 +85,7 @@ contract Loan {
     uint256 constant NUMDF = 7; // numbef of discount factors
     uint256 constant MAXYEAR = 5; // years
     uint256 constant MAXPAYNUM = PAYFREQ * MAXYEAR;
+    uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
 
     /** @dev
         DAYCOUNTS CONVENTION TABLE for PAYMENTS and NOTICES

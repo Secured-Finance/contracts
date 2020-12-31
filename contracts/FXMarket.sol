@@ -5,9 +5,9 @@ pragma experimental ABIEncoderV2;
 import './MoneyMarket.sol';
 
 contract FXMarket {
-    event SetFXBook(address indexed sender);
-    event DelFXBook(address indexed sender);
-    event DelOneItem(address indexed sender);
+    event SetFXBook(address indexed addr);
+    event DelFXBook(address indexed addr);
+    event DelOneItem(address indexed addr);
 
     enum Ccy {ETH, FIL, USDC}
     enum CcyPair {FILETH, FILUSDC, ETHUSDC}

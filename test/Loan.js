@@ -63,8 +63,8 @@ describe("Loan Unit Tests", () => {
     sample.Collateral.forEach(async (item, index) => {
       let res = await collateral.setColBook(...val(item), {
         from: accounts[index],
-        value: 0,
-        // value: 100000,
+        // value: 0,
+        value: 100000,
       });
       expectEvent(res, "SetColBook", {addr: accounts[index]});
     });
@@ -73,7 +73,7 @@ describe("Loan Unit Tests", () => {
   it("Init with sample FXMarket", async () => {
     sample.FXMarket.forEach(async (item) => {
       let res = await fxMarket.setFXBook(...val(item), {from: alice});
-      expectEvent(res, "SetFXBook", {sender: alice});
+      expectEvent(res, "SetFXBook", {addr: alice});
     });
   });
 
@@ -83,7 +83,7 @@ describe("Loan Unit Tests", () => {
       from: accounts[2],
       value: 1240, // 1240 ETH can cover about 820 ETH = 10000 FIL
     });
-    expectEvent(res, "UpSizeETH", {sender: accounts[2]});
+    expectEvent(res, "UpSizeETH", {addr: accounts[2]});
     await printCol(collateral, accounts[2], "collateral state for carol after upSizeETH");
   });
 
@@ -91,66 +91,69 @@ describe("Loan Unit Tests", () => {
 
   it("Init with sample MoneyMarket", async () => {
     const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
-    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
+    // let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
     let res1 = await moneyMarket.setMoneyMarketBook(...val(item1), {from: alice});
     let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
     let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
-    let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
-    expectEvent(res0, "SetMoneyMarketBook", {sender: alice});
-    expectEvent(res1, "SetMoneyMarketBook", {sender: alice});
-    expectEvent(res2, "SetMoneyMarketBook", {sender: bob});
-    expectEvent(res3, "SetMoneyMarketBook", {sender: carol});
-    expectEvent(res4, "SetMoneyMarketBook", {sender: alice});
+    // let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
+    // expectEvent(res0, "SetMoneyMarketBook", {addr: alice});
+    // expectEvent(res1, "SetMoneyMarketBook", {addr: alice});
+    // expectEvent(res2, "SetMoneyMarketBook", {addr: bob});
+    // expectEvent(res3, "SetMoneyMarketBook", {addr: carol});
+    // expectEvent(res4, "SetMoneyMarketBook", {addr: alice});
+    await printCol(collateral, alice, "collateral state for alice after setMoneyMarketBook");
+    await printCol(collateral, bob, "collateral state for bob after setMoneyMarketBook");
+    await printCol(collateral, carol, "collateral state for carol after setMoneyMarketBook");
   });
 
-  it("Init FIL custody addr", async () => {
-    let res0 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_0"), accounts[0]);
-    let res1 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_1"), accounts[1]);
-    let res2 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_2"), accounts[2]);
-    expectEvent(res0, "RegisterFILCustodyAddr", {addr: accounts[0]});
-    expectEvent(res1, "RegisterFILCustodyAddr", {addr: accounts[1]});
-    expectEvent(res2, "RegisterFILCustodyAddr", {addr: accounts[2]});
-  });
+  // it("Init FIL custody addr", async () => {
+  //   let res0 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_0"), accounts[0]);
+  //   let res1 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_1"), accounts[1]);
+  //   let res2 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_2"), accounts[2]);
+  //   expectEvent(res0, "RegisterFILCustodyAddr", {addr: accounts[0]});
+  //   expectEvent(res1, "RegisterFILCustodyAddr", {addr: accounts[1]});
+  //   expectEvent(res2, "RegisterFILCustodyAddr", {addr: accounts[2]});
+  // });
 
-  it("FIL Loan Execution", async () => {
-    let maker = accounts[0]; // FIL lender
-    let taker = accounts[2]; // FIL borrower
-    let item, loanId, beforeLoan, afterLoan;
+  // it("FIL Loan Execution", async () => {
+  //   let maker = accounts[0]; // FIL lender
+  //   let taker = accounts[2]; // FIL borrower
+  //   let item, loanId, beforeLoan, afterLoan;
 
-    // maker LEND FIL
-    item = sample.Loan[0];
-    deal = [maker, ...val(item)]; // maker is FIL lender
-    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+  //   // maker LEND FIL
+  //   item = sample.Loan[0];
+  //   deal = [maker, ...val(item)]; // maker is FIL lender
+  //   beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
 
-    loanId = 0; // available from event
-    let res = await loan.makeLoanDeal(...deal, {from: taker});
-    await printState(loan, collateral, maker, taker, loanId, "[makeLoanDeal]");
+  //   loanId = 0; // available from event
+  //   let res = await loan.makeLoanDeal(...deal, {from: taker});
+  //   await printState(loan, collateral, maker, taker, loanId, "[makeLoanDeal]");
 
-    console.log("deal item is", item);
+  //   console.log("deal item is", item);
 
-    expectEvent(res, "MakeLoanDeal", {
-      makerAddr: maker,
-      side: String(item.side),
-      ccy: String(item.ccy),
-      term: String(item.term),
-      amt: String(item.amt),
-      loanId: String(loanId),
-    });
+  //   expectEvent(res, "MakeLoanDeal", {
+  //     makerAddr: maker,
+  //     side: String(item.side),
+  //     ccy: String(item.ccy),
+  //     term: String(item.term),
+  //     amt: String(item.amt),
+  //     loanId: String(loanId),
+  //   });
 
-    // lender - notifyPayment with txHash
-    const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
-    await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker});
+  //   // lender - notifyPayment with txHash
+  //   const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
+  //   await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker});
 
-    // borrower check -> confirmPayment to ensure finality
-    await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
-    await printState(loan, collateral, maker, taker, loanId, "[confirmPayment]");
+  //   // borrower check -> confirmPayment to ensure finality
+  //   await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
+  //   await printState(loan, collateral, maker, taker, loanId, "[confirmPayment]");
 
-    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    expect(Number(beforeLoan.amt) - item.amt).to.equal(Number(afterLoan.amt));
+  //   afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+  //   expect(Number(beforeLoan.amt) - item.amt).to.equal(Number(afterLoan.amt));
 
-    console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
-    await printSched(loan, maker, loanId);
-  });
+  //   console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
+  //   await printSched(loan, maker, loanId);
+  // });
 
   // it("State transition WORKING -> DUE -> PAST_DUE", async () => {
   //   let maker = accounts[0]; // FIL lender
@@ -490,7 +493,7 @@ describe("Loan Unit Tests", () => {
   //     effectiveSec: 36000,
   //   };
   //   res = await fxMarket.setFXBook(...val(item), {from: alice});
-  //   expectEvent(res, "SetFXBook", {sender: alice});
+  //   expectEvent(res, "SetFXBook", {addr: alice});
 
   //   midRates = await fxMarket.getMidRates();
   //   console.log("FX midRates is", midRates.join(" "), "\n");
@@ -505,7 +508,7 @@ describe("Loan Unit Tests", () => {
   //     effectiveSec: 36000,
   //   };
   //   res = await fxMarket.setFXBook(...val(item), {from: alice});
-  //   expectEvent(res, "SetFXBook", {sender: alice});
+  //   expectEvent(res, "SetFXBook", {addr: alice});
 
   //   midRates = await fxMarket.getMidRates();
   //   console.log("FX midRates is", midRates.join(" "), "\n");
