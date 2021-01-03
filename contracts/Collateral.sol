@@ -14,7 +14,8 @@ contract Collateral {
         address userAddrUSDC
     );
     event UpSizeETH(address indexed addr);
-    event UpSizeFIL(address indexed addr);
+    event UpSizeFIL(address indexed addr, uint256 amt, bytes32 txHash);
+    event ConfirmUpSizeFIL(address indexed addr, bytes32 indexed addrFIL, uint256 amt, bytes32 indexed txHash);
     event DelColBook(address indexed addr);
     event PartialLiquidation(
         address indexed borrower,
@@ -25,6 +26,11 @@ contract Collateral {
     event RequestFILCustodyAddr(address indexed requester);
     event RegisterFILCustodyAddr(address indexed addr);
     event DEBUG(address addr);
+    event UpdateState(
+        address indexed addr,
+        State prevState,
+        State currState
+    );
 
     enum CcyPair {FILETH, FILUSDC, ETHUSDC}
     enum State {
@@ -44,6 +50,7 @@ contract Collateral {
     uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
     uint256 constant AUTOLQLEVEL = 125; // 125% auto liquidation
 
+    // TODO - userAddrUSDC and ERC20 token addr should be the same as userAddrETH
     struct ColBook {
         string id; // DID, email
         address userAddrETH;
@@ -286,6 +293,7 @@ contract Collateral {
     // TODO - access control to loan
     function updateState(address addr) public returns (State) {
         ColBook storage book = colMap[addr];
+        State prevState = book.state;
         updateFILValue(addr);
         updateUSDCValue(addr);
         uint256 totalUse = book.inuseETH +
@@ -309,8 +317,10 @@ contract Collateral {
                 book.state = State.MARGIN_CALL;
             if (totalAmt > 0 && coverage > MARGINLEVEL)
                 book.state = State.IN_USE;
-            return book.state;
         }
+        if (prevState != book.state)
+            emit UpdateState(addr, prevState, book.state);
+        return book.state;
     }
 
     // update state all
@@ -400,13 +410,19 @@ contract Collateral {
         emit UpSizeETH(msg.sender);
     }
 
-    // collateralize FIL
-    function upSizeFIL(uint256 colAmtFIL) public payable {
+    // TODO - collateralize FIL and notify oracle or custodian
+    function upSizeFIL(uint256 amtFIL, bytes32 txHash) public {
         require(colMap[msg.sender].isAvailable == true, "user not found");
-        colMap[msg.sender].colAmtFIL += colAmtFIL;
-        // TODO - check FIL network by other peers to verify colAmtFIL
-        updateState(msg.sender);
-        emit UpSizeFIL(msg.sender);
+        // TODO - check FIL network by oracle or custodian to verify amtFIL
+        emit UpSizeFIL(msg.sender, amtFIL, txHash);
+    }
+
+    // TODO - to be called by oracle or custodian
+    function confirmUpSizeFIL(address addr, bytes32 addrFIL, uint256 amtFIL, bytes32 txHash) public {
+        require(colMap[addr].isAvailable == true, "user not found");
+        colMap[addr].colAmtFIL += amtFIL;
+        updateState(addr);
+        emit ConfirmUpSizeFIL(addr, addrFIL, amtFIL, txHash);
     }
 
     function emptyBook(ColBook storage book) private {
