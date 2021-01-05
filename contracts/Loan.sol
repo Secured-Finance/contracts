@@ -621,8 +621,10 @@ contract Loan {
     // function updateUserPV(address addr) public returns (LoanItem[] memory) {
         LoanItem[] storage loans = loanMap[lender].loans;
         for (uint256 j = 0; j < loans.length; j++) {
-            if (loans[j].isAvailable)
+            if (loans[j].isAvailable) {
                 updateOnePV(loans[j]);
+                collateral.updateState(loans[j].borrower);                
+            }
         }
         // LoanItem[] memory rv = loans;
         // return rv;
