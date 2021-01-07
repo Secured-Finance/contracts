@@ -2,7 +2,7 @@ const MoneyMarket = artifacts.require("MoneyMarket");
 const FXMarket = artifacts.require("FXMarket");
 const Collateral = artifacts.require("Collateral");
 const Loan = artifacts.require("Loan");
-const {Side, Ccy, Term, sample} = require("../test/constants");
+const {Side, Ccy, CcyPair, Term, sample} = require("../test/constants");
 const {
   toDate,
   printDate,
@@ -14,206 +14,166 @@ const {
   printSched,
 } = require("../test/helper");
 
+const val = (obj) => {
+  if (obj.addrFIL) obj.addrFIL = web3.utils.asciiToHex(obj.addrFIL);
+  return Object.values(obj);
+};
+
+const getDate = async () => {
+  const currentTime = await Date.now();
+  return toDate(currentTime);
+};
+
 module.exports = async function main(callback) {
   try {
     const accounts = await web3.eth.getAccounts();
     console.log(accounts);
+    let owner = accounts[0]
 
-    // const moneyMarket = await MoneyMarket.deployed();
-    // const fxMarket = await FXMarket.deployed();
-    // const collateral = await Collateral.deployed();
-    // const loan = await Loan.deployed();
+    moneyMarket = await MoneyMarket.new();
+    fxMarket = await FXMarket.new();
+    collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
+    loan = await Loan.new(moneyMarket.address, fxMarket.address, collateral.address);
+    await collateral.setLoanAddr(loan.address, {from: owner});
+    await moneyMarket.setColAddr(collateral.address);
 
-    const moneyMarket = await MoneyMarket.new();
-    const fxMarket = await FXMarket.new();
-    const collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
-    const loan = await Loan.new(moneyMarket.address, fxMarket.address, collateral.address);
-
+    console.log();
     console.log("moneyMarket addr is", moneyMarket.address);
-    console.log("fxMarket addr is", fxMarket.address);
-    console.log("collateral addr is", collateral.address);
-    console.log("loan addr is", loan.address);
-    console.log("\n");
+    console.log("fxMarket    addr is", fxMarket.address);
+    console.log("collateral  addr is", collateral.address);
+    console.log("loan        addr is", loan.address);
 
-    // Init MoneyMarket using setOneItem
-    {
-      const item = sample.MoneyMarket[1];
-
-      // lender side is 0
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._3m], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._6m], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._1y], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._2y], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._3y], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.lenders[Term._5y], item.effectiveSec);
-
-      // borrower side is 1
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._3m], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._6m], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._1y], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._2y], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._3y], item.effectiveSec);
-      await moneyMarket.setOneItem(Side.LEND, item.ccy, ...item.borrowers[Term._5y], item.effectiveSec);
-    }
-
-    // Init MoneyMarket using setMoneyMarketBook for bulk operation
-    await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[0]));
-    // await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[1]));
-    await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[2]));
-    await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[3]));
-    await moneyMarket.setMoneyMarketBook(...Object.values(sample.MoneyMarket[4]));
-    let midRates = await moneyMarket.getMidRates();
-    console.log("Loan midRates is");
-    console.log("ETH ", midRates[0].join(" "));
-    console.log("FIL ", midRates[1].join(" "));
-    console.log("USDC", midRates[2].join(" "), "\n");
-
-    // discount factor test
-    let df = await moneyMarket.getDiscountFactors();
-    console.log("DF is");
-    console.log("ETH ", df[0].join(" "));
-    console.log("FIL ", df[1].join(" "));
-    console.log("USDC", df[2].join(" "), "\n");
-
-    // Init FXMarket with sample data
-    await fxMarket.setFXBook(...Object.values(sample.FXMarket[0]));
-    await fxMarket.setFXBook(...Object.values(sample.FXMarket[1]));
-    await fxMarket.setFXBook(...Object.values(sample.FXMarket[2]));
-    midRates = await fxMarket.getMidRates();
-    console.log("FX midRates is", midRates.join(" "), "\n");
-
-    // Init Collateral with sample data
-    let input = sample.Collateral;
-    await collateral.setColBook(...Object.values(input[0]), {
-      // await collateral.setColBook(input[0].id, input[0].addrFIL, {
-      from: accounts[0],
-      value: 10000,
+    sample.Collateral.forEach(async (item, index) => {
+      let res = await collateral.setColBook(...val(item), {
+        from: accounts[index],
+        // value: 0,
+        value: 100000,
+      });
+      // expectEvent(res, "SetColBook", {addr: accounts[index]});
     });
-    await collateral.setColBook(...Object.values(input[1]), {
-      // await collateral.setColBook(input[1].id, input[1].addrFIL, {
-      from: accounts[1],
-      value: 10000,
-    });
-    await collateral.setColBook(...Object.values(input[2]), {
-      // await collateral.setColBook(input[2].id, input[2].addrFIL, {
-      from: accounts[2],
-    });
-    await collateral.registerFILCustodyAddr("cid_custody_FIL_0", accounts[0]);
-    await collateral.registerFILCustodyAddr("cid_custody_FIL_1", accounts[1]);
-    await collateral.registerFILCustodyAddr("cid_custody_FIL_2", accounts[2]);
 
-    // Collateralize test
-    await printCol(collateral, accounts[2], "collateral state before upSizeETH");
-    await collateral.upSizeETH({
+    sample.FXMarket.forEach(async (item) => {
+      let res = await fxMarket.setFXBook(...val(item), {from: accounts[0]});
+      // expectEvent(res, "SetFXBook", {addr: accounts[0]});
+    });
+  
+    await printCol(collateral, accounts[2], "collateral state for carol before upSizeETH");
+    let res = await collateral.upSizeETH({
       from: accounts[2],
       value: 1240, // 1240 ETH can cover about 820 ETH = 10000 FIL
-      // value: 2000, // 2000 ETH can cover about 24400 FIL
     });
-    await printCol(collateral, accounts[0], "collateral state after upSizeETH for accounts[0]");
-    await printCol(collateral, accounts[1], "collateral state after upSizeETH for accounts[1]");
-    await printCol(collateral, accounts[2], "collateral state after upSizeETH for accounts[2]");
+    // expectEvent(res, "UpSizeETH", {addr: accounts[2]});
+    await printCol(collateral, accounts[2], "collateral state for carol after upSizeETH");
+  
+    const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
+    // let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: accounts[0]});
+    let moneyMarketRes = await moneyMarket.setMoneyMarketBook(...val(item1), {from: accounts[0]});
+    // let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: accounts[1]});
+    // let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
+    // let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: accounts[0]});
+    // expectEvent(res0, "SetMoneyMarketBook", {addr: accounts[0]});
+    // expectEvent(moneyMarketRes, "SetMoneyMarketBook", {addr: accounts[0]});
+    // expectEvent(res2, "SetMoneyMarketBook", {addr: accounts[1]});
+    // expectEvent(res3, "SetMoneyMarketBook", {addr: carol});
+    // expectEvent(res4, "SetMoneyMarketBook", {addr: accounts[0]});
+    await printCol(collateral, accounts[0], "collateral state for accounts[0] after setMoneyMarketBook");
+    // await printCol(collateral, accounts[1], "collateral state for accounts[1] after setMoneyMarketBook");
+    // await printCol(collateral, carol, "collateral state for carol after setMoneyMarketBook");
+  
+      let collateralRes = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_0"), accounts[0]);
+      let collateralRes1 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_1"), accounts[1]);
+      let collateralRes2 = await collateral.registerFILCustodyAddr(web3.utils.asciiToHex("cid_custody_FIL_2"), accounts[2]);
+      // expectEvent(collateralRes, "RegisterFILCustodyAddr", {addr: accounts[0]});
+      // expectEvent(collateralRes1, "RegisterFILCustodyAddr", {addr: accounts[1]});
+      // expectEvent(collateralRes2, "RegisterFILCustodyAddr", {addr: accounts[2]});
+  
+      let maker = accounts[0]; // FIL lender
+      let taker = accounts[2]; // FIL borrower
+      let item, loanId, beforeLoan, afterLoan;
+  
+      // maker LEND FIL
+      item = sample.Loan[0];
+      deal = [maker, ...val(item)]; // maker is FIL lender
+      beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+  
+      loanId = 0; // available from event
+      let loanRes = await loan.makeLoanDeal(...deal, {from: taker});
+      await printState(loan, collateral, maker, taker, loanId, "[makeLoanDeal]");
+  
+      console.log("deal item is", item);
+  
+      // expectEvent(loanRes, "MakeLoanDeal", {
+      //   makerAddr: maker,
+      //   side: String(item.side),
+      //   ccy: String(item.ccy),
+      //   term: String(item.term),
+      //   amt: String(item.amt),
+      //   loanId: String(loanId),
+      // });
+  
+      // lender - notifyPayment with txHash
+      const txHash = web3.utils.asciiToHex("0x_this_is_sample_tx_hash");
+      await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker});
+  
+      // borrower check -> confirmPayment to ensure finality
+      await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
+      await printState(loan, collateral, maker, taker, loanId, "[confirmPayment]");
+  
+      afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+      // expect(Number(beforeLoan.amt) - item.amt).to.equal(Number(afterLoan.amt));
+  
+      console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
+      await printSched(loan, maker, loanId);
 
-    /* FIL Loan Execution Test */
-
-    let maker = accounts[0]; // FIL lender
-    let taker = accounts[2]; // FIL borrower
-    let item, loanId, beforeLoan, afterLoan, res;
-
-    // maker LEND FIL
-    item = Object.values(sample.Loan[0]);
-    deal = [maker, ...item]; // maker is FIL lender
-    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-
-    loanId = 0; // available from event
-    await loan.makeLoanDeal(...deal, {from: taker});
-    await printState(loan, collateral, maker, taker, loanId, "makeLoanDeal");
-
-    await loan.confirmPayment(maker, taker, ...item, loanId, {from: taker}); // taker is borrower
-    await printState(loan, collateral, maker, taker, loanId, "confirmPayment");
-
-    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
-
-    await printSched(loan, maker, loanId);
-
-    // TODO
-    // time to pay coupon
-    // loan state WORKING -> DUE
-    // await printState(loan, collateral, maker, taker, loanId, "Payment Advice");
-
-    // maker BORROW FIL
-    console.log();
-    item = Object.values(sample.Loan[2]);
-    deal = [maker, ...item]; // maker is FIL borrower
-    beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-
-    loanId = 1;
-    await loan.makeLoanDeal(...deal, {from: taker});
-    await printState(loan, collateral, maker, maker, loanId, 'makeLoanDeal');
-
-    // upsize collateral with lent FIL on maker
-    // await collateral.upSizeFIL(1000, {from: taker});
-    // await collateral.upSizeFIL(14001, { from: taker });
-    // await printCol(collateral, taker, 'collateral upsized with initial swap notional');
-
-    await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is FIL borrower
-    await printState(loan, collateral, maker, maker, loanId, 'confirmPayment');
-
-    afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
-    await printSched(loan, maker, loanId);
-
-    /* USDC Loan Execution Test */
-
-    // TODO
-    // 1. make loan and check col/loan state
-    // loan.makeLoanDeal
-    // printCol, printLoan
-    // loan.confirmUSDCPayment
-    // printCol, printLoan
-
-    /* Swap prep */
-    // upsize collateral with lent FIL on maker
-    // // await collateral.upSizeETH({value: 820 , from: taker}); // TODO - fix wei to ETH
-    // await collateral.upSizeFIL(10000, {from: taker});
-    // await printCol(collateral, taker, "collateral upsized with initial swap notional");
-
-    // // maker BORROW USDC
-    // console.log();
-    // item = Object.values(sample.Loan[1]);
-
-    // deal = [maker, ...item]; // maker is USDC borrower
-    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-
-    // // loanId = 0;
-    // loanId = 1; // USDC loan from constants.js/sample
-    // // loanId = 2;
-
-    // await loan.makeLoanDeal(...deal, {from: taker});
-    // await printState(loan, collateral, maker, maker, loanId, "makeLoanDeal");
-
-    // await loan.confirmPayment(maker, maker, ...item, loanId, {from: maker}); // maker is USDC borrower
-    // await printState(loan, collateral, maker, maker, loanId, "confirmPayment");
-
-    // afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    // console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt);
-    // await printSched(loan, maker, loanId);
-
-    /* Swap Execution Test */
-
-    // 1. make swap and check col/loan state
-    // lendItem = getOneItem()
-    // borrowItem = getOneItem()
-    // swap.makeSwapDeal(lendItem, borrowItem, {from: accounts[2]})
-    // 2. check swap schedule
-
-    // let loan0 = await loan.getLoanItem(0, {from: maker});
-    // let loan1 = await loan.getLoanItem(1, {from: maker});
-
-    // console.log("==");
-    // await loan.updateAllPV();
-    // console.log("loan 0 FIL LEND is", loan0);
-    // console.log("loan 1 USDC BORROW is", loan1);
+      {
+        let maker = accounts[0]; // FIL lender
+        let taker = accounts[2]; // FIL borrower
+        let loanId = 0;
+    
+        let item, res, midRates;
+    
+        await printCol(collateral, taker, "BEFORE PV drop");
+        midRates = await fxMarket.getMidRates();
+        console.log("FX midRates is", midRates.join(" "), "\n");
+    
+        let book, amtWithdraw;
+        book = await collateral.getOneBook(taker);
+        amtWithdraw = book.colAmtETH - Math.round((160 * book.colAmtETH) / book.coverage);
+        await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
+        await printCol(collateral, taker, "PV drop to 160");
+    
+        book = await collateral.getOneBook(taker);
+    
+        // // col state IN_USE -> MARGINCALL
+        // item = {
+        //   pair: CcyPair.FILETH,
+        //   offerInput: [Ccy.ETH, Ccy.FIL, 8900, 100000],
+        //   bidInput: [Ccy.FIL, Ccy.ETH, 100000, 8700],
+        //   effectiveSec: 36000,
+        // };
+        // res = await fxMarket.setFXBook(...val(item), {from: accounts[0]});
+    
+        // midRates = await fxMarket.getMidRates();
+        // console.log("FX midRates is", midRates.join(" "), "\n");
+        // await loan.updateBookPV(maker);
+        // // await collateral.updateState(taker);
+        // await printState(loan, collateral, maker, taker, loanId, `FX rate changed from 82 to 88`);
+    
+        // // col state MARGINCALL -> LIQUIDATION
+        // item = {
+        //   pair: CcyPair.FILETH,
+        //   offerInput: [Ccy.ETH, Ccy.FIL, 10600, 100000],
+        //   bidInput: [Ccy.FIL, Ccy.ETH, 100000, 10400],
+        //   effectiveSec: 36000,
+        // };
+        // res = await fxMarket.setFXBook(...val(item), {from: accounts[0]});
+    
+        // midRates = await fxMarket.getMidRates();
+        // console.log("FX midRates is", midRates.join(" "), "\n");
+        // await loan.updateBookPV(maker);
+        // // await collateral.updateState(taker);
+        // await printState(loan, collateral, maker, taker, loanId, `FX rate changed from 88 to 105`);
+      }
 
     callback(0);
   } catch (error) {
