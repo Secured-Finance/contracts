@@ -5,7 +5,7 @@ const MoneyMarket = contract.fromArtifact("MoneyMarket");
 const FXMarket = contract.fromArtifact("FXMarket");
 const Collateral = contract.fromArtifact("Collateral");
 const Loan = contract.fromArtifact("Loan");
-const {Side, Ccy, CcyPair, Term, LoanState, ColState, sample} = require("./constants");
+const {Side, Ccy, CcyPair, Term, LoanState, ColState, sample} = require("../test-utils").constants;
 const {
   toDate,
   printDate,
@@ -18,7 +18,7 @@ const {
   printMoneyMkt,
   printDf,
   printRates,
-} = require("./helper");
+} = require("../test-utils").helper;
 
 const val = (obj) => {
   if (obj.addrFIL) obj.addrFIL = web3.utils.asciiToHex(obj.addrFIL);

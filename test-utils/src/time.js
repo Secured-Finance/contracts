@@ -1,6 +1,5 @@
 /*
- * Use of code from https://medium.com/edgefund/time-travelling-truffle-tests-f581c1964687
- * Utility functions to advance blocktime and mine blocks artificially for EVM
+ * Use code from https://medium.com/edgefund/time-travelling-truffle-tests-f581c1964687
  */
 const SECONDS_IN_DAY = 60 * 60 * 24;
 const helper = require("ganache-time-traveler");

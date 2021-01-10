@@ -4,7 +4,7 @@ const accountAddr = process.env.ACCOUNT_ADDR;
 const accountPriv = process.env.PRIVATE_KEY;
 
 // contracts
-import * as CompiledToken from '../contracts/MoneyMarket.json';
+import * as CompiledToken from '../build/contracts/MoneyMarket.json';
 const ABI = CompiledToken.abi;
 const BYTECODE = CompiledToken.bytecode;
 const CONTRACT_ADDR = '0x69A010d8ffB7faA0cf8B94C6022420EDe8274811'; // change

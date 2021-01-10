@@ -6,8 +6,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "truffle exec scripts/loan-unit.js",
-    "test2": "mocha --exit --recursive test/Loan.js",
+    "test": "truffle test",
+    "test1": "truffle exec scripts/loan.js",
+    "test2": "mocha --exit --recursive test2/Loan.js",
     "test3": "npx ts-node ./test/web3Test"
   },
   "author": "Senshi",
