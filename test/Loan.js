@@ -93,11 +93,11 @@ describe("Loan Unit Tests", () => {
 
   it("Init with sample MoneyMarket", async () => {
     const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
-    // let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
+    let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
     let res1 = await moneyMarket.setMoneyMarketBook(...val(item1), {from: alice});
-    // let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
-    // let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
-    // let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
+    let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
+    let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
+    let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
     // expectEvent(res0, "SetMoneyMarketBook", {addr: alice});
     expectEvent(res1, "SetMoneyMarketBook", {addr: alice});
     // expectEvent(res2, "SetMoneyMarketBook", {addr: bob});
@@ -155,15 +155,35 @@ describe("Loan Unit Tests", () => {
 
     console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
     await printSched(loan, maker, loanId);
+  });
 
-    // const lenderBook = await loan.getLenderBook(maker);
-    // console.log(lenderBook);
+  it("More than one FIL Loan Execution", async () => {
+    let maker = accounts[0]; // FIL lender
+    let taker = accounts[2]; // FIL borrower
+    let item, loanId, beforeLoan, afterLoan;
+
+    item = sample.Loan[2];
+    deal = [alice, ...val(item)]; // maker is FIL borrower
+
+    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    // console.log('beforeLoan is', beforeLoan);
+
+    res = await loan.makeLoanDeal(...deal, {from: bob});
+
+    const lenderBook = await loan.getLenderBook(maker);
+    console.log("lenderBook is", lenderBook);
 
     const borrowerBook = await loan.getBorrowerBook(taker);
-    console.log(borrowerBook);
+    console.log("borrowerBook bob is", borrowerBook);
+
+    const borrowerBook2 = await loan.getBorrowerBook(bob);
+    console.log("borrowerBook bob is", borrowerBook2);
+
+    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
+    // console.log("beforeLoan is", beforeLoan);
 
     // const loanPartyMap = await loan.loanPartyMap;
-    // console.log('loanPartyMap is', loanPartyMap);
+    // console.log("loanPartyMap is", loanPartyMap);
   });
 
   // it("FIL Loan initial settlement failure", async () => {

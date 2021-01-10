@@ -184,10 +184,10 @@ const sample = {
       amt: 400000,
     },
     {
-      side: Side.BORROW,
+      side: Side.LEND,
       ccy: Ccy.FIL,
-      term: Term._3m,
-      amt: 10000,
+      term: Term._5y,
+      amt: 1000,
     },
   ],
 };
