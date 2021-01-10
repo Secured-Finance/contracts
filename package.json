@@ -1,6 +1,6 @@
 {
   "name": "secured-finance",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "peer-to-peer financial transaction platform",
   "directories": {
     "test": "test"
@@ -14,8 +14,9 @@
   "license": "ISC",
   "dependencies": {},
   "devDependencies": {
+    "@airswap/test-utils": "^0.1.6",
     "@openzeppelin/test-environment": "^0.1.5",
-    "@openzeppelin/test-helpers": "^0.5.7",
+    "@openzeppelin/test-helpers": "^0.5.10",
     "@truffle/hdwallet-provider": "^1.0.39",
     "babel-eslint": "^10.1.0",
     "chai": "^4.2.0",
