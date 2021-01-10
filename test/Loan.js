@@ -155,6 +155,15 @@ describe("Loan Unit Tests", () => {
 
     console.log("Loan amt before", beforeLoan.amt, "after", afterLoan.amt, "\n");
     await printSched(loan, maker, loanId);
+
+    // const lenderBook = await loan.getLenderBook(maker);
+    // console.log(lenderBook);
+
+    const borrowerBook = await loan.getBorrowerBook(taker);
+    console.log(borrowerBook);
+
+    // const loanPartyMap = await loan.loanPartyMap;
+    // console.log('loanPartyMap is', loanPartyMap);
   });
 
   // it("FIL Loan initial settlement failure", async () => {
@@ -501,70 +510,70 @@ describe("Loan Unit Tests", () => {
   //   await printCol(collateral, taker, "PV drop to 125");
   // });
 
-  it("Collateral State change by FX IN_USE -> MARGINCALL -> LIQUIDATION -> AVAILABLE", async () => {
-    let maker = accounts[0]; // FIL lender
-    let taker = accounts[2]; // FIL borrower
-    let loanId = 0;
+  // it("Collateral State change by FX IN_USE -> MARGINCALL -> LIQUIDATION -> AVAILABLE", async () => {
+  //   let maker = accounts[0]; // FIL lender
+  //   let taker = accounts[2]; // FIL borrower
+  //   let loanId = 0;
 
-    let item, res, midRates;
+  //   let item, res, midRates;
 
-    await printCol(collateral, taker, "BEFORE PV drop");
-    midRates = await fxMarket.getMidRates();
-    console.log("FX midRates is", midRates.join(" "), "\n");
+  //   await printCol(collateral, taker, "BEFORE PV drop");
+  //   midRates = await fxMarket.getMidRates();
+  //   console.log("FX midRates is", midRates.join(" "), "\n");
 
-    let book, amtWithdraw;
-    book = await collateral.getOneBook(taker);
-    amtWithdraw = book.colAmtETH - Math.round((160 * book.colAmtETH) / book.coverage);
-    await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
-    await printCol(collateral, taker, "PV drop to 160");
+  //   let book, amtWithdraw;
+  //   book = await collateral.getOneBook(taker);
+  //   amtWithdraw = book.colAmtETH - Math.round((160 * book.colAmtETH) / book.coverage);
+  //   await collateral.withdrawCollaretal(Ccy.ETH, amtWithdraw, {from: taker});
+  //   await printCol(collateral, taker, "PV drop to 160");
 
-    book = await collateral.getOneBook(taker);
-    expect(Number(book.state)).to.equal(ColState.IN_USE);
+  //   book = await collateral.getOneBook(taker);
+  //   expect(Number(book.state)).to.equal(ColState.IN_USE);
 
-    // col state IN_USE -> MARGINCALL
-    item = {
-      pair: CcyPair.FILETH,
-      offerInput: [Ccy.ETH, Ccy.FIL, 8900, 100000],
-      bidInput: [Ccy.FIL, Ccy.ETH, 100000, 8700],
-      effectiveSec: 36000,
-    };
-    res = await fxMarket.setFXBook(...val(item), {from: alice});
-    expectEvent(res, "SetFXBook", {addr: alice});
+  //   // col state IN_USE -> MARGINCALL
+  //   item = {
+  //     pair: CcyPair.FILETH,
+  //     offerInput: [Ccy.ETH, Ccy.FIL, 8900, 100000],
+  //     bidInput: [Ccy.FIL, Ccy.ETH, 100000, 8700],
+  //     effectiveSec: 36000,
+  //   };
+  //   res = await fxMarket.setFXBook(...val(item), {from: alice});
+  //   expectEvent(res, "SetFXBook", {addr: alice});
 
-    midRates = await fxMarket.getMidRates();
-    console.log("FX midRates is", midRates.join(" "), "\n");
-    await loan.updateBookPV(maker);
-    // await collateral.updateState(taker);
-    await printState(loan, collateral, maker, taker, loanId, `FX rate changed from 82 to 88`);
+  //   midRates = await fxMarket.getMidRates();
+  //   console.log("FX midRates is", midRates.join(" "), "\n");
+  //   await loan.updateBookPV(maker);
+  //   // await collateral.updateState(taker);
+  //   await printState(loan, collateral, maker, taker, loanId, `FX rate changed from 82 to 88`);
 
-    // col state MARGINCALL -> LIQUIDATION
-    item = {
-      pair: CcyPair.FILETH,
-      offerInput: [Ccy.ETH, Ccy.FIL, 10600, 100000],
-      bidInput: [Ccy.FIL, Ccy.ETH, 100000, 10400],
-      effectiveSec: 36000,
-    };
-    res = await fxMarket.setFXBook(...val(item), {from: alice});
-    expectEvent(res, "SetFXBook", {addr: alice});
+  //   // col state MARGINCALL -> LIQUIDATION
+  //   item = {
+  //     pair: CcyPair.FILETH,
+  //     offerInput: [Ccy.ETH, Ccy.FIL, 10600, 100000],
+  //     bidInput: [Ccy.FIL, Ccy.ETH, 100000, 10400],
+  //     effectiveSec: 36000,
+  //   };
+  //   res = await fxMarket.setFXBook(...val(item), {from: alice});
+  //   expectEvent(res, "SetFXBook", {addr: alice});
 
-    midRates = await fxMarket.getMidRates();
-    console.log("FX midRates is", midRates.join(" "), "\n");
-    await loan.updateBookPV(maker);
-    // await collateral.updateState(taker);
-    await printState(loan, collateral, maker, taker, loanId, `FX rate changed from 88 to 105`);
+  //   midRates = await fxMarket.getMidRates();
+  //   console.log("FX midRates is", midRates.join(" "), "\n");
+  //   await loan.updateBookPV(maker);
+  //   // await collateral.updateState(taker);
+  //   await printState(loan, collateral, maker, taker, loanId, `FX rate changed from 88 to 105`);
 
-    // loan state WORKING -> TERMINATED
-    // coll state LIQUIDATION -> LIQUIDATION_IN_PROGRESS
-    await loan.updateState(maker, taker, loanId);
-    await printState(loan, collateral, maker, taker, loanId, `BEFORE liquidation ${await getDate()}`);
+  //   // loan state WORKING -> TERMINATED
+  //   // coll state LIQUIDATION -> LIQUIDATION_IN_PROGRESS
+  //   await loan.updateState(maker, taker, loanId);
+  //   await printState(loan, collateral, maker, taker, loanId, `BEFORE liquidation ${await getDate()}`);
 
-    // coll state LIQUIDATION_IN_PROGRESS -> AVAILABLE or EMPTY
-    await loan.updateState(maker, taker, loanId);
-    await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
+  //   // coll state LIQUIDATION_IN_PROGRESS -> AVAILABLE or EMPTY
+  //   await loan.updateState(maker, taker, loanId);
+  //   await printState(loan, collateral, maker, taker, loanId, `AFTER liquidation ${await getDate()}`);
 
-    item = await loan.getLoanItem(loanId, {from: maker});
-    expect(Number(item.state)).to.equal(LoanState.TERMINATED);
-  });
+  //   item = await loan.getLoanItem(loanId, {from: maker});
+  //   expect(Number(item.state)).to.equal(LoanState.TERMINATED);
+  // });
 
   // it("Check PV calculation made correctly", async () => {
   //   let maker = accounts[0]; // FIL lender

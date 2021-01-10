@@ -97,6 +97,7 @@ contract Loan {
     uint256 constant MKTMAKELEVEL = 20; // 20% for market making
     uint256 constant LQLEVEL = 120; // 120% for liquidation price
     uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
+    uint256 constant MAXITEM = 3;
 
     /** @dev
         DAYCOUNTS CONVENTION TABLE for PAYMENTS and NOTICES
@@ -161,6 +162,7 @@ contract Loan {
         86400 * 365 * 5
     ];
 
+    // for lender
     struct LoanBook {
         LoanItem[] loans;
         uint256 loanNum;
@@ -202,9 +204,23 @@ contract Loan {
         uint256 amt;
     }
 
+    // for borrower
+    struct LoanPartyBook {
+        LoanParty[] loanPartyList;
+        bool isValue;
+    }
+
+    struct LoanParty {
+        address lender;
+        address borrower;
+        uint256 loanId;
+    }
+
     // keeps all the records
     mapping(address => LoanBook) private loanMap; // lender to LoanBook
-    mapping(address => bool) private borrowerMap; // borrower map
+    // mapping(address => bool) private borrowerMap; // borrower map
+    // mapping(address => LoanPartyBook) public loanPartyMap; // borrower to LoanPartyBook
+    mapping(address => LoanPartyBook) private loanPartyMap; // borrower to LoanPartyBook
     address[] private lenders;
     address[] private borrowers;
 
@@ -249,17 +265,26 @@ contract Loan {
 
         collateral.useCollateral(ccy, amt, borrower);
         uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
+
+        // lender
         LoanBook storage book = loanMap[lender];
-        if (!book.isValue)
+        if (!book.isValue) {
             book.isValue = true;
             lenders.push(lender);
-        if (!borrowerMap[borrower]) {
-            borrowerMap[borrower] = true;
-            borrowers.push(borrower);
         }
         LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
         LoanItem memory newItem = inputToItem(input, rate, book.loanNum++);
         book.loans.push(newItem);
+
+        // borrower
+        LoanPartyBook storage partyBook = loanPartyMap[borrower];
+        if (!partyBook.isValue) {
+            partyBook.isValue = true;
+            borrowers.push(borrower);
+        }
+        LoanParty memory party = LoanParty(lender, borrower, newItem.loanId);
+        partyBook.loanPartyList.push(party);
+
         emit MakeLoanDeal(makerAddr, side, ccy, term, amt, newItem.loanId);
     }
 
@@ -324,8 +349,59 @@ contract Loan {
         return book.loans[loanId];
     }
 
+    // for lender
     function getOneBook(address addr) public view returns (LoanBook memory) {
         return loanMap[addr];
+    }
+
+    function getLenderBook(address lender) public view returns (LoanBook memory) {
+        return loanMap[lender];
+    }
+
+    // for borrower
+    // function getBorrowerBook(address borrower) public view returns (LoanItem memory) {
+    function getBorrowerBook(address borrower) public view returns (LoanItem[] memory) {
+    // function getBorrowerBook(address borrower) public view returns (LoanBook memory) {
+        LoanPartyBook memory loanPartyBook = loanPartyMap[borrower];
+        require(loanPartyBook.isValue, 'loanPartyBook not found');
+        LoanParty[] memory loanPartyList = loanPartyBook.loanPartyList;
+        // LoanBook memory borrowerBook;
+        LoanItem[MAXITEM] memory loans;
+        // LoanItem memory item;
+        uint256 count = 0;
+        for (uint256 i = 0; i < loanPartyList.length; i++) {
+            address lender = loanPartyList[i].lender;
+            uint256 loanId = loanPartyList[i].loanId;
+            LoanBook memory book = loanMap[lender];
+            if (book.isValue) {
+                LoanItem memory item = book.loans[loanId];
+                loans[i] = item;
+                count++;
+                // loans.push(item);
+                // borrowerBook.loans.push(book.loans[loanId]);
+                // borrowerBook.loans[loanId] = book.loans[loanId];
+                // loans.push(book.loans[loanId]);
+                // loans[0] = book.loans[0];
+                // loans[0] = loanMap[lender].loans[0];
+                // item = loanMap[lender].loans[0];
+                // loans[i];
+                // loans.push()
+                // loans[i].loanId = book.loans[0].loanId;
+                // loans[i].loanId = book.loans[loanId].loanId;
+            }
+        }
+
+        LoanItem[] memory rv = new LoanItem[](count);
+        for (uint256 i = 0; i < loans.length; i++) {
+            if (loans[i].isAvailable)
+                rv[i] = loans[i];
+        }
+        return rv;
+        // borrowerBook.loans = loans;
+        // borrowerBook.loanNum = borrowerBook.loans.length;
+        // borrowerBook.isValue = true;
+        // return loans;
+        // return item;
     }
 
     function getAllBooks() public view returns (LoanBook[] memory) {
@@ -623,7 +699,7 @@ contract Loan {
         for (uint256 j = 0; j < loans.length; j++) {
             if (loans[j].isAvailable) {
                 updateOnePV(loans[j]);
-                collateral.updateState(loans[j].borrower);                
+                collateral.updateState(loans[j].borrower);
             }
         }
         // LoanItem[] memory rv = loans;
