@@ -157,33 +157,27 @@ describe("Loan Unit Tests", () => {
     await printSched(loan, maker, loanId);
   });
 
-  it("More than one FIL Loan Execution", async () => {
-    let maker = accounts[0]; // FIL lender
-    let taker = accounts[2]; // FIL borrower
-    let item, loanId, beforeLoan, afterLoan;
+  it("Get Borrower Book for more than one loan", async () => {
+    let item = sample.Loan[2];
+    deal = [alice, ...val(item)]; // alice is maker
 
-    item = sample.Loan[2];
-    deal = [alice, ...val(item)]; // maker is FIL borrower
-
-    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    // console.log('beforeLoan is', beforeLoan);
-
+    // previous taker was carol and this taker is bob
     res = await loan.makeLoanDeal(...deal, {from: bob});
 
-    const lenderBook = await loan.getLenderBook(maker);
-    console.log("lenderBook is", lenderBook);
+    // const lenderBook = await loan.getLenderBook(maker);
+    // console.log("lenderBook is", lenderBook);
 
-    const borrowerBook = await loan.getBorrowerBook(taker);
-    console.log("borrowerBook bob is", borrowerBook);
+    const borrowerBookBob = await loan.getBorrowerBook(bob);
+    // console.log("borrowerBook bob is", borrowerBookBob);
 
-    const borrowerBook2 = await loan.getBorrowerBook(bob);
-    console.log("borrowerBook bob is", borrowerBook2);
+    const borrowerBookCarol = await loan.getBorrowerBook(carol);
+    // console.log("borrowerBook bob is", borrowerBookCarol);
 
-    // beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
-    // console.log("beforeLoan is", beforeLoan);
+    expect(borrowerBookBob.loans[0].lender).to.equal(alice);
+    expect(borrowerBookBob.loans[0].borrower).to.equal(bob);
 
-    // const loanPartyMap = await loan.loanPartyMap;
-    // console.log("loanPartyMap is", loanPartyMap);
+    expect(borrowerBookCarol.loans[0].lender).to.equal(alice);
+    expect(borrowerBookCarol.loans[0].borrower).to.equal(carol);
   });
 
   // it("FIL Loan initial settlement failure", async () => {

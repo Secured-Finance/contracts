@@ -349,59 +349,37 @@ contract Loan {
         return book.loans[loanId];
     }
 
-    // for lender
+    // alias for lender book
     function getOneBook(address addr) public view returns (LoanBook memory) {
         return loanMap[addr];
     }
 
+    // for lender book
     function getLenderBook(address lender) public view returns (LoanBook memory) {
         return loanMap[lender];
     }
 
-    // for borrower
-    // function getBorrowerBook(address borrower) public view returns (LoanItem memory) {
-    function getBorrowerBook(address borrower) public view returns (LoanItem[] memory) {
-    // function getBorrowerBook(address borrower) public view returns (LoanBook memory) {
+    // generate borrower book
+    function getBorrowerBook(address borrower) public view returns (LoanBook memory) {
         LoanPartyBook memory loanPartyBook = loanPartyMap[borrower];
         require(loanPartyBook.isValue, 'loanPartyBook not found');
         LoanParty[] memory loanPartyList = loanPartyBook.loanPartyList;
-        // LoanBook memory borrowerBook;
-        LoanItem[MAXITEM] memory loans;
-        // LoanItem memory item;
-        uint256 count = 0;
+        LoanItem[] memory tmpLoans = new LoanItem[](loanPartyList.length);
+        uint256 count = 0; // num of available loan
         for (uint256 i = 0; i < loanPartyList.length; i++) {
             address lender = loanPartyList[i].lender;
             uint256 loanId = loanPartyList[i].loanId;
-            LoanBook memory book = loanMap[lender];
-            if (book.isValue) {
-                LoanItem memory item = book.loans[loanId];
-                loans[i] = item;
-                count++;
-                // loans.push(item);
-                // borrowerBook.loans.push(book.loans[loanId]);
-                // borrowerBook.loans[loanId] = book.loans[loanId];
-                // loans.push(book.loans[loanId]);
-                // loans[0] = book.loans[0];
-                // loans[0] = loanMap[lender].loans[0];
-                // item = loanMap[lender].loans[0];
-                // loans[i];
-                // loans.push()
-                // loans[i].loanId = book.loans[0].loanId;
-                // loans[i].loanId = book.loans[loanId].loanId;
+            LoanBook memory lenderBook = loanMap[lender];
+            if (lenderBook.isValue && lenderBook.loans[loanId].isAvailable) {
+                tmpLoans[count++] = lenderBook.loans[loanId];
             }
         }
-
-        LoanItem[] memory rv = new LoanItem[](count);
-        for (uint256 i = 0; i < loans.length; i++) {
-            if (loans[i].isAvailable)
-                rv[i] = loans[i];
+        // copy to book
+        LoanBook memory borrowerBook = LoanBook(new LoanItem[](count), count, true);
+        for (uint256 i = 0; i < count; i++) {
+            borrowerBook.loans[i] = tmpLoans[i];
         }
-        return rv;
-        // borrowerBook.loans = loans;
-        // borrowerBook.loanNum = borrowerBook.loans.length;
-        // borrowerBook.isValue = true;
-        // return loans;
-        // return item;
+        return borrowerBook;
     }
 
     function getAllBooks() public view returns (LoanBook[] memory) {
