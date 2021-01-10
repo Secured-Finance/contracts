@@ -180,7 +180,7 @@ contract MoneyMarket {
         else return moneyMarketMap[addr].borrowers[uint256(ccy)][uint256(term)];
     }
 
-    // TODO - maybe msg.sender only
+    // TODO - msg.sender and internal contract only
     function delOneItem(
         address addr,
         Side side,
@@ -195,7 +195,7 @@ contract MoneyMarket {
         emit DelOneItem(addr, side, ccy, term);
     }
 
-    // to be called from Loan
+    // TODO - to be called from Loan
     // take a deal, update amount, and return rates
     function takeOneItem(
         address addr,
@@ -265,6 +265,49 @@ contract MoneyMarket {
                         moneyMarketMap[marketMakers[k]].borrowers[i][j],
                         Side.BORROW
                     );
+                }
+            }
+        }
+        book.isValue = true;
+        return book;
+    }
+
+    function isMatchFilter(
+        MoneyMarketItem memory item,
+        uint256 minAmt,
+        uint256 maxAmt,
+        uint256 minRate,
+        uint256 maxRate
+    ) private pure returns (bool) {
+        if (minAmt <= item.amt && item.amt <= maxAmt)
+            if (minRate <= item.rate && item.rate <= maxRate)
+                return true;
+        return false;
+    }
+
+    // return book filtered by minAmt
+    function getFilteredBook(
+        uint256 minAmt,
+        uint256 maxAmt,
+        uint256 minRate,
+        uint256 maxRate
+    ) public view returns (MoneyMarketBook memory) {
+        MoneyMarketBook memory book;
+        for (uint256 i = 0; i < NUMCCY; i++) {
+            for (uint256 j = 0; j < NUMTERM; j++) {
+                for (uint256 k = 0; k < marketMakers.length; k++) {
+                    if (isMatchFilter(moneyMarketMap[marketMakers[k]].lenders[i][j], minAmt, maxAmt, minRate, maxRate))
+                        book.lenders[i][j] = betterItem(
+                            book.lenders[i][j],
+                            moneyMarketMap[marketMakers[k]].lenders[i][j],
+                            Side.LEND
+                        );
+                    if (isMatchFilter(moneyMarketMap[marketMakers[k]].borrowers[i][j], minAmt, maxAmt, minRate, maxRate))
+                        book.borrowers[i][j] = betterItem(
+                            book.borrowers[i][j],
+                            moneyMarketMap[marketMakers[k]].borrowers[i][j],
+                            Side.BORROW
+                        );
                 }
             }
         }
