@@ -4,6 +4,7 @@
   },
   "extends": ["eslint:recommended", "prettier"],
   "rules": {
+    "no-undef": 0,
     "no-console": 0
   }
 }
