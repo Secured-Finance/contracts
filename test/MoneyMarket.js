@@ -78,7 +78,7 @@ describe("MoneyMarket Unit Tests", () => {
 
   it("Get market makers", async () => {
     const makers = await moneyMarket.getMarketMakers();
-    console.log("makers is", makers);
+    // console.log("makers is", makers);
     expect(makers[0]).to.equal(alice);
   });
 
