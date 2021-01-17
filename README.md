@@ -50,11 +50,11 @@ The web3.service is created to deploy smart contracts, send transactions, and in
 1. `truffle develop` to prepare for local network.
 2. `truffle test` or `npm run test` to run all the test files under test/ directry.
 
+### Off-chain test (simulate blockchain)
+
+`npm run test2` to run test2/Loan.js using @openzappelin/test-environment
+
 ### On-chain test (small tests)
 
 1. `truffle develop` to prepare for local network
 2. `truffle exec ./scripts/test.js` to run test.js using truffle exec
-
-### Off-chain test (simulate blockchain)
-
-`npm run test2` to run test2/Loan.js using @openzappelin/test-environment
