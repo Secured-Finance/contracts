@@ -45,13 +45,16 @@ A sample test file `./test/web3Test.ts` is provided. It uses `./src/services/web
 
 The web3.service is created to deploy smart contracts, send transactions, and interact with smart contracts.
 
-## Unit Test
+### On-chain test (default)
 
-### On-chain test
+1. `truffle develop` to prepare for local network.
+2. `truffle test` or `npm run test` to run all the test files under test/ directry.
+
+### On-chain test (small tests)
 
 1. `truffle develop` to prepare for local network
 2. `truffle exec ./scripts/test.js` to run test.js using truffle exec
 
 ### Off-chain test (simulate blockchain)
 
-`npx mocha --exit` to run test/test.js using @openzappelin/test-environment
+`npm run test2` to run test2/Loan.js using @openzappelin/test-environment

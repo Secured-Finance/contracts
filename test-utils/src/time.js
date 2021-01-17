@@ -1,18 +1,18 @@
 /*
  * Use code from https://medium.com/edgefund/time-travelling-truffle-tests-f581c1964687
  */
-const SEC = 1;
-const MIN = 60 * SEC;
-const HOUR = 60 * MIN;
-const DAY = 24 * HOUR;
-const SETTLE_GAP = 2 * DAY;
-const NOTICE_GAP = 14 * DAY;
-const YEAR = 365 * DAY;
+const ONE_SECOND = 1;
+const ONE_MINUTE = 60 * ONE_SECOND;
+const ONE_HOUR = 60 * ONE_MINUTE;
+const ONE_DAY = 24 * ONE_HOUR;
+const SETTLE_GAP = 2 * ONE_DAY;
+const NOTICE_GAP = 14 * ONE_DAY;
+const ONE_YEAR = 365 * ONE_DAY;
 
-const helper = require("ganache-time-traveler");
+const helper = require('ganache-time-traveler');
 
 const getLatestTimestamp = async () => {
-  return (await web3.eth.getBlock("latest")).timestamp;
+  return (await web3.eth.getBlock('latest')).timestamp;
 };
 
 const getTimestampPlusDays = async (days) => {
@@ -20,13 +20,13 @@ const getTimestampPlusDays = async (days) => {
 };
 
 module.exports = {
-  SEC,
-  MIN,
-  HOUR,
-  DAY,
+  ONE_SECOND,
+  ONE_MINUTE,
+  ONE_HOUR,
+  ONE_DAY,
   SETTLE_GAP,
   NOTICE_GAP,
-  YEAR,
+  ONE_YEAR,
   advanceTime: helper.advanceTime,
   advanceBlock: helper.advanceBlock,
   advanceBlockAndSetTime: helper.advanceBlockAndSetTime,
