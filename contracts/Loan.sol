@@ -46,6 +46,7 @@ contract Loan {
         MoneyMarket.Ccy ccy,
         MoneyMarket.Term term,
         uint256 amt,
+        uint rate,
         uint256 indexed loanId
     );
 
@@ -285,7 +286,7 @@ contract Loan {
         LoanParty memory party = LoanParty(lender, borrower, newItem.loanId);
         partyBook.loanPartyList.push(party);
 
-        emit MakeLoanDeal(makerAddr, side, ccy, term, amt, newItem.loanId);
+        emit MakeLoanDeal(makerAddr, side, ccy, term, amt, rate, newItem.loanId);
     }
 
     // helper to convert input data to LoanItem

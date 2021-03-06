@@ -2,8 +2,9 @@ const MoneyMarket = artifacts.require('MoneyMarket');
 const FXMarket = artifacts.require('FXMarket');
 const Collateral = artifacts.require('Collateral');
 const Loan = artifacts.require('Loan');
+
 const {Side, Ccy, CcyPair, Term, LoanState, ColState, sample} = require('../test-utils').constants;
-const {defaultSender} = require('@openzeppelin/test-environment');
+const {accounts, defaultSender, web3, provider} = require("@openzeppelin/test-environment");
 const {
   toDate,
   printDate,
@@ -52,7 +53,7 @@ const expectEvent = async (res, eventName, msg) => {
 
 const expectRevert = reverted;
 
-contract('Loan Unit Tests', async (accounts) => {
+contract('MoneyMarket', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
   const users = [alice, bob, carol]; // without owner
 
@@ -129,7 +130,9 @@ contract('Loan Unit Tests', async (accounts) => {
     it('Init with sample MoneyMarket', async () => {
       const [item0, item1, item2, item3, item4] = sample.MoneyMarket;
       let res0 = await moneyMarket.setMoneyMarketBook(...val(item0), {from: alice});
+      console.log(`GasUsed: ${res0.receipt.gasUsed}`)
       let res1 = await moneyMarket.setMoneyMarketBook(...val(item1), {from: alice});
+      console.log(`GasUsed 2: ${res1.receipt.gasUsed}`)
       let res2 = await moneyMarket.setMoneyMarketBook(...val(item2), {from: bob});
       let res3 = await moneyMarket.setMoneyMarketBook(...val(item3), {from: carol});
       let res4 = await moneyMarket.setMoneyMarketBook(...val(item4), {from: alice});
@@ -748,7 +751,10 @@ contract('Loan Unit Tests', async (accounts) => {
     it('Update PV by Yield Change', async () => {
       let loanId = 0;
 
-      await loan.updateBookPV(maker);
+      const pvUpdateAll = await loan.updateAllPV();
+      console.log(`GasUsed: ${pvUpdateAll.receipt.gasUsed}`)
+
+      const pvUpdate0 = await loan.updateBookPV(maker);
 
       let item = await loan.getLoanItem(loanId, {from: maker});
       console.log('BEFORE Yield Change', item.pv, toDate(item.asOf));
@@ -777,7 +783,8 @@ contract('Loan Unit Tests', async (accounts) => {
 
       await moneyMarket.setMoneyMarketBook(...val(input), {from: alice});
       // await moneyMarket.setOneItem(Side.LEND, Ccy.FIL, Term._5y, 15000, 1300, 360000, {from: alice});
-      await loan.updateBookPV(maker);
+      const pvUpdate1 = await loan.updateBookPV(maker);
+      console.log(`GasUsed: ${pvUpdate1.receipt.gasUsed}`)
 
       item = await loan.getLoanItem(loanId, {from: maker});
       console.log('AFTER  Yield Change', item.pv, toDate(item.asOf));
@@ -787,38 +794,38 @@ contract('Loan Unit Tests', async (accounts) => {
     });
   });
 
-  // describe('Time Dependency Test', async () => {
-  //   beforeEach(async () => {
-  //     let time = await getDate();
-  //     console.log('beforeEach', time);
+  describe('Time Dependency Test', async () => {
+    beforeEach(async () => {
+      let time = await getDate();
+      console.log('beforeEach', time);
 
-  //     const snapShot = await takeSnapshot();
-  //     snapshotId = snapShot['result'];
-  //   });
+      const snapShot = await takeSnapshot();
+      snapshotId = snapShot['result'];
+    });
 
-  //   afterEach(async () => {
-  //     await revertToSnapshot(snapshotId);
+    afterEach(async () => {
+      await revertToSnapshot(snapshotId);
 
-  //     let time = await getDate();
-  //     console.log('afterEach ', time);
-  //   });
+      let time = await getDate();
+      console.log('afterEach ', time);
+    });
 
-  //   it('One day forward', async () => {
-  //     await advanceTimeAndBlock(DAY);
-  //     let time = await getDate();
-  //     console.log('test01    ', time);
+    it('One day forward', async () => {
+      await advanceTimeAndBlock(ONE_DAY);
+      let time = await getDate();
+      console.log('test01    ', time);
 
-  //     console.log('hoge');
-  //   });
-  //   it('Coupon notice and payment', async () => {
-  //     await advanceTimeAndBlock(YEAR - NOTICE_GAP);
-  //     let time = await getDate();
-  //     console.log('notice    ', time);
-  //     await advanceTimeAndBlock(NOTICE_GAP);
-  //     time = await getDate();
-  //     console.log('payment    ', time);
+      console.log('hoge');
+    });
+    it('Coupon notice and payment', async () => {
+      await advanceTimeAndBlock(ONE_YEAR - NOTICE_GAP);
+      let time = await getDate();
+      console.log('notice    ', time);
+      await advanceTimeAndBlock(NOTICE_GAP);
+      time = await getDate();
+      console.log('payment    ', time);
 
-  //     console.log('hoge hoge');
-  //   });
-  // });
+      console.log('hoge hoge');
+    });
+  });
 });

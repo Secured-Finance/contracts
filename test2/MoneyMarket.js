@@ -13,7 +13,7 @@ const val = (obj) => {
   return Object.values(obj);
 };
 
-describe("MoneyMarket Unit Tests", () => {
+contract("MoneyMarket Unit Tests", (accounts) => {
   const [alice, bob, carol] = accounts;
   const owner = defaultSender;
 

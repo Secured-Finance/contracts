@@ -32,7 +32,7 @@ const Loan = artifacts.require('Loan');
 // };
 
 // for testing
-const {Side, Ccy, CcyPair, Term, LoanState, ColState, sample} = require('../test-utils').constants;
+const {Side, Ccy, CcyPair, Term, LoanState, ColState, sample} = require('../../test-utils').constants;
 const {
   toDate,
   printDate,
@@ -42,8 +42,8 @@ const {
   printLoan,
   printState,
   printSched,
-} = require('../test-utils/src/helper');
-const {emitted, reverted, notEmitted, equal, notEqual, isTrue, ok} = require('../test-utils').assert;
+} = require('../../test-utils/src/helper');
+const {emitted, reverted, notEmitted, equal, notEqual, isTrue, ok} = require('../../test-utils').assert;
 
 /* Helper */
 const val = (obj) => {
@@ -89,12 +89,12 @@ module.exports = function (deployer, network, accounts) {
   };
 
   deployer.then(async () => {
-    // const moneyMarket = await deployer.deploy(MoneyMarket);
-    // const fxMarket = await deployer.deploy(FXMarket);
-    // const collateral = await deployer.deploy(Collateral, moneyMarket.address, fxMarket.address);
-    // const loan = await deployer.deploy(Loan, moneyMarket.address, fxMarket.address, collateral.address);
-    // await collateral.setLoanAddr(loan.address);
-    // await moneyMarket.setColAddr(collateral.address);
+    const moneyMarket = await deployer.deploy(MoneyMarket);
+    const fxMarket = await deployer.deploy(FXMarket);
+    const collateral = await deployer.deploy(Collateral, moneyMarket.address, fxMarket.address);
+    const loan = await deployer.deploy(Loan, moneyMarket.address, fxMarket.address, collateral.address);
+    await collateral.setLoanAddr(loan.address);
+    await moneyMarket.setColAddr(collateral.address);
 
     // Deployed
     const moneyMarket = await MoneyMarket.deployed();
