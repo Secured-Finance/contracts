@@ -190,6 +190,15 @@ const sample = {
       amt: 1000,
     },
   ],
+  OrderBook: [
+    {
+      ccy: Ccy.FIL,
+      orders: [
+        [0, 10000, 375, effectiveSec],
+        [1, 2000, 710, effectiveSec],
+      ],
+    },
+  ]
 };
 
 module.exports = {

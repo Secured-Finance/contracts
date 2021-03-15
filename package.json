@@ -14,7 +14,10 @@
   },
   "author": "Senshi",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.4.1",
+    "abi-to-sol": "^0.2.1"
+  },
   "devDependencies": {
     "@openzeppelin/test-environment": "^0.1.5",
     "@openzeppelin/test-helpers": "^0.5.10",

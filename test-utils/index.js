@@ -3,6 +3,6 @@ module.exports = {
   balances: require('./src/balances'),
   time: require('./src/time'),
   padding: require('./src/padding'),
-  constants: require('./src/constants_extended'),
+  constants: require('./src/constants'),
   helper: require('./src/helper'),
 };
