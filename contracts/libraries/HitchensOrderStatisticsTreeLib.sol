@@ -467,7 +467,6 @@ library HitchensOrderStatisticsTreeLib {
      */
     function getOrderById(Tree storage self, uint256 value, uint256 _id)
         internal
-        virtual
         view
         returns (uint256 id, uint256 next, uint256 prev, uint256 timestamp, address owner, uint256 amount, uint256 orderId)
     {
@@ -483,7 +482,6 @@ library HitchensOrderStatisticsTreeLib {
      */
     function findOrderIdForAmount(Tree storage self, uint256 value, uint256 _amount)
         internal
-        virtual
         view
         returns (uint256)
     {        
@@ -501,7 +499,6 @@ library HitchensOrderStatisticsTreeLib {
      */
     function addHead(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
         internal
-        virtual
     {
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
@@ -516,7 +513,6 @@ library HitchensOrderStatisticsTreeLib {
      */
     function addTail(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
         internal
-        virtual
     {
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
@@ -535,7 +531,6 @@ library HitchensOrderStatisticsTreeLib {
      */
     function removeOrder(Tree storage self, uint256 value, uint256 _id)
         internal
-        virtual
     {
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
@@ -564,7 +559,7 @@ library HitchensOrderStatisticsTreeLib {
     /**
     * @dev Insert a new OrderItem after the last OrderItem with the same `_amount`.
     */
-    function insertOrder(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId) internal virtual {
+    function insertOrder(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId) internal {
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         require(_amount > 0, "Insuficient amount");
 
@@ -593,7 +588,6 @@ library HitchensOrderStatisticsTreeLib {
      */
     function insertOrderAfter(Tree storage self, uint256 value, uint256 _prevId, uint256 _amount, uint256 _orderId)
         internal
-        virtual
     {
         require(_amount > 0, "Insuficient amount");
 
@@ -616,7 +610,6 @@ library HitchensOrderStatisticsTreeLib {
      */
     function insertOrderBefore(Tree storage self, uint256 value, uint256 _nextId, uint256 _amount, uint256 _orderId)
         internal
-        virtual
     {
         Node storage gn = self.nodes[value];
 
