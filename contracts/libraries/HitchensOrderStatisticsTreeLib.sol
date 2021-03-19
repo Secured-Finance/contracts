@@ -36,38 +36,49 @@ https://github.com/bokkypoobah/BokkyPooBahsRedBlackTreeLibrary
 THIS SOFTWARE IS NOT TESTED OR AUDITED. DO NOT USE FOR PRODUCTION.
 */
 
-import "./Owned.sol";
-
 library HitchensOrderStatisticsTreeLib {
-    uint private constant EMPTY = 0;
+    uint256 private constant EMPTY = 0;
     struct Node {
-        uint parent;
-        uint left;
-        uint right;
+        uint256 parent;
+        uint256 left;
+        uint256 right;
         bool red;
-        bytes32[] keys;
-        mapping(bytes32 => uint) keyMap;
-        uint count;
+        uint256 head;
+        uint256 tail;
+        uint256 orderCounter;
+        mapping (uint256 => OrderItem) orders;
+        uint256 count;
     }
+
+    struct OrderItem{
+        uint256 id;
+        uint256 next;
+        uint256 prev;
+        uint256 timestamp;
+        address owner;
+        uint256 amount;
+        uint256 orderId;
+    }
+
     struct Tree {
-        uint root;
-        mapping(uint => Node) nodes;
+        uint256 root;
+        mapping(uint256 => Node) nodes;
     }
-    function first(Tree storage self) internal view returns (uint _value) {
+    function first(Tree storage self) internal view returns (uint256 _value) {
         _value = self.root;
         if(_value == EMPTY) return 0;
         while (self.nodes[_value].left != EMPTY) {
             _value = self.nodes[_value].left;
         }
     }
-    function last(Tree storage self) internal view returns (uint _value) {
+    function last(Tree storage self) internal view returns (uint256 _value) {
         _value = self.root;
         if(_value == EMPTY) return 0;
         while (self.nodes[_value].right != EMPTY) {
             _value = self.nodes[_value].right;
         }
     }
-    function next(Tree storage self, uint value) internal view returns (uint _cursor) {
+    function next(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
         require(value != EMPTY, "OrderStatisticsTree(401) - Starting value cannot be zero");
         if (self.nodes[value].right != EMPTY) {
             _cursor = treeMinimum(self, self.nodes[value].right);
@@ -79,7 +90,7 @@ library HitchensOrderStatisticsTreeLib {
             }
         }
     }
-    function prev(Tree storage self, uint value) internal view returns (uint _cursor) {
+    function prev(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
         require(value != EMPTY, "OrderStatisticsTree(402) - Starting value cannot be zero");
         if (self.nodes[value].left != EMPTY) {
             _cursor = treeMaximum(self, self.nodes[value].left);
@@ -91,67 +102,63 @@ library HitchensOrderStatisticsTreeLib {
             }
         }
     }
-    function exists(Tree storage self, uint value) internal view returns (bool _exists) {
+    function exists(Tree storage self, uint256 value) internal view returns (bool _exists) {
         if(value == EMPTY) return false;
         if(value == self.root) return true;
         if(self.nodes[value].parent != EMPTY) return true;
         return false;       
     }
-    function keyExists(Tree storage self, bytes32 key, uint value) internal view returns (bool _exists) {
+    function amountExistsInNode(Tree storage self, uint256 amount, uint256 value) internal view returns (bool _exists) {
         if(!exists(self, value)) return false;
-        return self.nodes[value].keys[self.nodes[value].keyMap[key]] == key;
+        if (findOrderIdForAmount(self, value, amount) != 0) return true;
     } 
-    function getNode(Tree storage self, uint value) internal view returns (uint _parent, uint _left, uint _right, bool _red, uint keyCount, uint count) {
+    function getNode(Tree storage self, uint256 value) internal view returns (uint256 _parent, uint256 _left, uint256 _right, bool _red, uint256 _head, uint256 _tail, uint256 _orderCounter, uint256 _count) {        
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
-        return(gn.parent, gn.left, gn.right, gn.red, gn.keys.length, gn.keys.length+gn.count);
+        return(gn.parent, gn.left, gn.right, gn.red, gn.head, gn.tail, gn.orderCounter, gn.orderCounter+gn.count);
     }
-    function getNodeCount(Tree storage self, uint value) internal view returns(uint count) {
+    function getNodeCount(Tree storage self, uint256 value) internal view returns(uint256 count) {
         Node storage gn = self.nodes[value];
-        return gn.keys.length+gn.count;
+        return gn.orderCounter+gn.count;
     }
-    function valueKeyAtIndex(Tree storage self, uint value, uint index) internal view returns(bytes32 _key) {
-        require(exists(self,value), "OrderStatisticsTree(404) - Value does not exist.");
-        return self.nodes[value].keys[index];
-    }
-    function count(Tree storage self) internal view returns(uint _count) {
+    function count(Tree storage self) internal view returns(uint256 _count) {
         return getNodeCount(self,self.root);
     }
-    function percentile(Tree storage self, uint value) internal view returns(uint _percentile) {
-        uint denominator = count(self);
-        uint numerator = rank(self, value);
-        _percentile = ((uint(1000) * numerator)/denominator+(uint(5)))/uint(10);
+    function percentile(Tree storage self, uint256 value) internal view returns(uint256 _percentile) {
+        uint256 denominator = count(self);
+        uint256 numerator = rank(self, value);
+        _percentile = ((uint256(1000) * numerator)/denominator+(uint256(5)))/uint256(10);
     }
-    function permil(Tree storage self, uint value) internal view returns(uint _permil) {
-        uint denominator = count(self);
-        uint numerator = rank(self, value);
-        _permil = ((uint(10000) * numerator)/denominator+(uint(5)))/uint(10);
+    function permil(Tree storage self, uint256 value) internal view returns(uint256 _permil) {
+        uint256 denominator = count(self);
+        uint256 numerator = rank(self, value);
+        _permil = ((uint256(10000) * numerator)/denominator+(uint256(5)))/uint256(10);
     }
-    function atPercentile(Tree storage self, uint _percentile) internal view returns(uint _value) {
-        uint findRank = (((_percentile * count(self))/uint(10)) + uint(5)) / uint(10);
+    function atPercentile(Tree storage self, uint256 _percentile) internal view returns(uint256 _value) {
+        uint256 findRank = (((_percentile * count(self))/uint256(10)) + uint256(5)) / uint256(10);
         return atRank(self,findRank);
     }
-    function atPermil(Tree storage self, uint _permil) internal view returns(uint _value) {
-        uint findRank = (((_permil * count(self))/uint(100)) + uint(5)) / uint(10);
+    function atPermil(Tree storage self, uint256 _permil) internal view returns(uint256 _value) {
+        uint256 findRank = (((_permil * count(self))/uint256(100)) + uint256(5)) / uint256(10);
         return atRank(self,findRank);
     }    
-    function median(Tree storage self) internal view returns(uint value) {
+    function median(Tree storage self) internal view returns(uint256 value) {
         return atPercentile(self,50);
     }
-    function below(Tree storage self, uint value) public view returns(uint _below) {
-        if(count(self) > 0 && value > 0) _below = rank(self,value)-uint(1);
+    function below(Tree storage self, uint256 value) public view returns(uint256 _below) {
+        if(count(self) > 0 && value > 0) _below = rank(self,value)-uint256(1);
     }
-    function above(Tree storage self, uint value) public view returns(uint _above) {
+    function above(Tree storage self, uint256 value) public view returns(uint256 _above) {
         if(count(self) > 0) _above = count(self)-rank(self,value);
     } 
-    function rank(Tree storage self, uint value) internal view returns(uint _rank) {
+    function rank(Tree storage self, uint256 value) internal view returns(uint256 _rank) {
         if(count(self) > 0) {
             bool finished;
-            uint cursor = self.root;
+            uint256 cursor = self.root;
             Node storage c = self.nodes[cursor];
-            uint smaller = getNodeCount(self,c.left);
+            uint256 smaller = getNodeCount(self,c.left);
             while (!finished) {
-                uint keyCount = c.keys.length;
+                uint256 keyCount = c.orderCounter;
                 if(cursor == value) {
                     finished = true;
                 } else {
@@ -172,27 +179,27 @@ library HitchensOrderStatisticsTreeLib {
             return smaller + 1;
         }
     }
-    function atRank(Tree storage self, uint _rank) internal view returns(uint _value) {
+    function atRank(Tree storage self, uint256 _rank) internal view returns(uint256 _value) {
         bool finished;
-        uint cursor = self.root;
+        uint256 cursor = self.root;
         Node storage c = self.nodes[cursor];
-        uint smaller = getNodeCount(self,c.left);
+        uint256 smaller = getNodeCount(self,c.left);
         while (!finished) {
             _value = cursor;
             c = self.nodes[cursor];
-            uint keyCount = c.keys.length;
-            if(smaller + 1 >= _rank && smaller + keyCount <= _rank) {
+            uint256 orderCounter = c.orderCounter;
+            if(smaller + 1 >= _rank && smaller + orderCounter <= _rank) {
                 _value = cursor;
                 finished = true;
             } else {
-                if(smaller + keyCount <= _rank) {
+                if(smaller + orderCounter <= _rank) {
                     cursor = c.right;
                     c = self.nodes[cursor];
-                    smaller += keyCount + getNodeCount(self,c.left);
+                    smaller += orderCounter + getNodeCount(self,c.left);
                 } else {
                     cursor = c.left;
                     c = self.nodes[cursor];
-                    smaller -= (keyCount + getNodeCount(self,c.right));
+                    smaller -= (orderCounter + getNodeCount(self,c.right));
                 }
             }
             if (!exists(self,cursor)) {
@@ -200,11 +207,10 @@ library HitchensOrderStatisticsTreeLib {
             }
         }
     }
-    function insert(Tree storage self, bytes32 key, uint value) internal {
+    function insert(Tree storage self, uint256 amount, uint256 value, uint256 orderId) internal {
         require(value != EMPTY, "OrderStatisticsTree(405) - Value to insert cannot be zero");
-        require(!keyExists(self,key,value), "OrderStatisticsTree(406) - Value and Key pair exists. Cannot be inserted again.");
-        uint cursor;
-        uint probe = self.root;
+        uint256 cursor;
+        uint256 probe = self.root;
         while (probe != EMPTY) {
             cursor = probe;
             if (value < probe) {
@@ -212,7 +218,7 @@ library HitchensOrderStatisticsTreeLib {
             } else if (value > probe) {
                 probe = self.nodes[probe].right;
             } else if (value == probe) {
-                self.nodes[probe].keyMap[key] = self.nodes[probe].keys.push(key) - uint(1);
+                insertOrder(self, probe, amount, orderId);
                 return;
             }
             self.nodes[cursor].count++;
@@ -222,7 +228,8 @@ library HitchensOrderStatisticsTreeLib {
         nValue.left = EMPTY;
         nValue.right = EMPTY;
         nValue.red = true;
-        nValue.keyMap[key] = nValue.keys.push(key) - uint(1);
+        nValue.orderCounter = 1;
+        insertOrder(self, value, amount, orderId);
         if (cursor == EMPTY) {
             self.root = value;
         } else if (value < cursor) {
@@ -232,17 +239,14 @@ library HitchensOrderStatisticsTreeLib {
         }
         insertFixup(self, value);
     }
-    function remove(Tree storage self, bytes32 key, uint value) internal {
+    function remove(Tree storage self, uint256 amount, uint256 value, uint256 _id) internal {
         require(value != EMPTY, "OrderStatisticsTree(407) - Value to delete cannot be zero");
-        require(keyExists(self,key,value), "OrderStatisticsTree(408) - Value to delete does not exist.");
+        require(amountExistsInNode(self,amount,value), "OrderStatisticsTree(408) - Value to delete does not exist.");
         Node storage nValue = self.nodes[value];
-        uint rowToDelete = nValue.keyMap[key];
-        nValue.keys[rowToDelete] = nValue.keys[nValue.keys.length - uint(1)];
-        nValue.keyMap[key]=rowToDelete;
-        nValue.keys.length--;
-        uint probe;
-        uint cursor;
-        if(nValue.keys.length == 0) {
+        removeOrder(self, value, _id);
+        uint256 probe;
+        uint256 cursor;
+        if(nValue.orderCounter == 0) {
             if (self.nodes[value].left == EMPTY || self.nodes[value].right == EMPTY) {
                 cursor = value;
             } else {
@@ -256,7 +260,7 @@ library HitchensOrderStatisticsTreeLib {
             } else {
                 probe = self.nodes[cursor].right; 
             }
-            uint cursorParent = self.nodes[cursor].parent;
+            uint256 cursorParent = self.nodes[cursor].parent;
             self.nodes[probe].parent = cursorParent;
             if (cursorParent != EMPTY) {
                 if (cursor == self.nodes[cursorParent].left) {
@@ -285,28 +289,28 @@ library HitchensOrderStatisticsTreeLib {
             delete self.nodes[cursor];
         }
     }
-    function fixCountRecurse(Tree storage self, uint value) private {
+    function fixCountRecurse(Tree storage self, uint256 value) private {
         while (value != EMPTY) {
            self.nodes[value].count = getNodeCount(self,self.nodes[value].left) + getNodeCount(self,self.nodes[value].right);
            value = self.nodes[value].parent;
         }
     }
-    function treeMinimum(Tree storage self, uint value) private view returns (uint) {
+    function treeMinimum(Tree storage self, uint256 value) private view returns (uint256) {
         while (self.nodes[value].left != EMPTY) {
             value = self.nodes[value].left;
         }
         return value;
     }
-    function treeMaximum(Tree storage self, uint value) private view returns (uint) {
+    function treeMaximum(Tree storage self, uint256 value) private view returns (uint256) {
         while (self.nodes[value].right != EMPTY) {
             value = self.nodes[value].right;
         }
         return value;
     }
-    function rotateLeft(Tree storage self, uint value) private {
-        uint cursor = self.nodes[value].right;
-        uint parent = self.nodes[value].parent;
-        uint cursorLeft = self.nodes[cursor].left;
+    function rotateLeft(Tree storage self, uint256 value) private {
+        uint256 cursor = self.nodes[value].right;
+        uint256 parent = self.nodes[value].parent;
+        uint256 cursorLeft = self.nodes[cursor].left;
         self.nodes[value].right = cursorLeft;
         if (cursorLeft != EMPTY) {
             self.nodes[cursorLeft].parent = value;
@@ -324,10 +328,10 @@ library HitchensOrderStatisticsTreeLib {
         self.nodes[value].count = getNodeCount(self,self.nodes[value].left) + getNodeCount(self,self.nodes[value].right);
         self.nodes[cursor].count = getNodeCount(self,self.nodes[cursor].left) + getNodeCount(self,self.nodes[cursor].right);
     }
-    function rotateRight(Tree storage self, uint value) private {
-        uint cursor = self.nodes[value].left;
-        uint parent = self.nodes[value].parent;
-        uint cursorRight = self.nodes[cursor].right;
+    function rotateRight(Tree storage self, uint256 value) private {
+        uint256 cursor = self.nodes[value].left;
+        uint256 parent = self.nodes[value].parent;
+        uint256 cursorRight = self.nodes[cursor].right;
         self.nodes[value].left = cursorRight;
         if (cursorRight != EMPTY) {
             self.nodes[cursorRight].parent = value;
@@ -345,10 +349,10 @@ library HitchensOrderStatisticsTreeLib {
         self.nodes[value].count = getNodeCount(self,self.nodes[value].left) + getNodeCount(self,self.nodes[value].right);
         self.nodes[cursor].count = getNodeCount(self,self.nodes[cursor].left) + getNodeCount(self,self.nodes[cursor].right);
     }
-    function insertFixup(Tree storage self, uint value) private {
-        uint cursor;
+    function insertFixup(Tree storage self, uint256 value) private {
+        uint256 cursor;
         while (value != self.root && self.nodes[self.nodes[value].parent].red) {
-            uint valueParent = self.nodes[value].parent;
+            uint256 valueParent = self.nodes[value].parent;
             if (valueParent == self.nodes[self.nodes[valueParent].parent].left) {
                 cursor = self.nodes[self.nodes[valueParent].parent].right;
                 if (self.nodes[cursor].red) {
@@ -387,8 +391,8 @@ library HitchensOrderStatisticsTreeLib {
         }
         self.nodes[self.root].red = false;
     }
-    function replaceParent(Tree storage self, uint a, uint b) private {
-        uint bParent = self.nodes[b].parent;
+    function replaceParent(Tree storage self, uint256 a, uint256 b) private {
+        uint256 bParent = self.nodes[b].parent;
         self.nodes[a].parent = bParent;
         if (bParent == EMPTY) {
             self.root = a;
@@ -400,10 +404,10 @@ library HitchensOrderStatisticsTreeLib {
             }
         }
     }
-    function removeFixup(Tree storage self, uint value) private {
-        uint cursor;
+    function removeFixup(Tree storage self, uint256 value) private {
+        uint256 cursor;
         while (value != self.root && !self.nodes[value].red) {
-            uint valueParent = self.nodes[value].parent;
+            uint256 valueParent = self.nodes[value].parent;
             if (value == self.nodes[valueParent].left) {
                 cursor = self.nodes[valueParent].right;
                 if (self.nodes[cursor].red) {
@@ -456,4 +460,230 @@ library HitchensOrderStatisticsTreeLib {
         }
         self.nodes[value].red = false;
     }
+
+    // Double linked list functions
+    /**
+     * @dev Retrieves the Object denoted by `_id`.
+     */
+    function getOrderById(Tree storage self, uint256 value, uint256 _id)
+        internal
+        virtual
+        view
+        returns (uint256 id, uint256 next, uint256 prev, uint256 timestamp, address owner, uint256 amount, uint256 orderId)
+    {
+        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
+        Node storage gn = self.nodes[value];
+
+        OrderItem memory order = gn.orders[_id];
+        return (order.id, order.next, order.prev, order.timestamp, order.owner, order.amount, order.orderId);
+    }
+
+    /**
+     * @dev Return the id of the first OrderItem matching `_amount` in the amount field.
+     */
+    function findOrderIdForAmount(Tree storage self, uint256 value, uint256 _amount)
+        internal
+        virtual
+        view
+        returns (uint256)
+    {        
+        Node storage gn = self.nodes[value];
+
+        OrderItem memory order = gn.orders[gn.head];
+        while (order.amount != _amount) {
+            order = gn.orders[order.next];
+        }
+        return order.id;
+    }
+
+    /**
+     * @dev Insert a new OrderItem as the new Head with `_amount` in the amount field, and orderId.
+     */
+    function addHead(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
+        internal
+        virtual
+    {
+        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
+        Node storage gn = self.nodes[value];
+        uint256 orderId = _createOrder(self, value, _amount, _orderId);
+        _link(self, value, orderId, gn.head);
+        _setHead(self, value, orderId);
+        if (gn.tail == 0) _setTail(self, value, orderId);
+    }
+
+    /**
+     * @dev Insert a new OrderItem as the new Tail with `_amount` in the amount field, and orderId.
+     */
+    function addTail(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
+        internal
+        virtual
+    {
+        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
+        Node storage gn = self.nodes[value];
+
+        if (gn.head == 0) {
+            addHead(self, value, _amount, _orderId);
+        }
+        else {
+            uint256 orderId = _createOrder(self, value, _amount, _orderId);
+            _link(self, value, gn.tail, orderId);
+            _setTail(self, value, orderId);
+        }
+    }
+    /**
+     * @dev Remove the OrderItem denoted by `_id` from the List.
+     */
+    function removeOrder(Tree storage self, uint256 value, uint256 _id)
+        internal
+        virtual
+    {
+        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
+        Node storage gn = self.nodes[value];
+
+        OrderItem memory order = gn.orders[_id];
+        require(order.owner == msg.sender, "Order can be deleted by owner");
+        if (gn.head == _id && gn.tail == _id) {
+            _setHead(self, value, 0);
+            _setTail(self, value, 0);
+        }
+        else if (gn.head == _id) {
+            _setHead(self, value, order.next);
+            gn.orders[order.next].prev = 0;
+        }
+        else if (gn.tail == _id) {
+            _setTail(self, value, order.prev);
+            gn.orders[order.prev].next = 0;
+        }
+        else {
+            _link(self, value, order.prev, order.next);
+        }
+        delete gn.orders[order.id];
+        gn.orderCounter -= 1;
+    }
+
+    /**
+    * @dev Insert a new OrderItem after the last OrderItem with the same `_amount`.
+    */
+    function insertOrder(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId) internal virtual {
+        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
+        require(_amount > 0, "Insuficient amount");
+
+        Node storage gn = self.nodes[value];
+        if (gn.head == 0) {
+            addHead(self, value, _amount, _orderId);
+        } else {
+            if (gn.orders[gn.head].amount <= _amount) {
+                OrderItem memory order = gn.orders[gn.head];
+                while (order.next != 0 && order.amount <= _amount) {
+                    order = gn.orders[order.next];
+                }
+                insertOrderAfter(self, value, order.id, _amount, _orderId);
+            } else {
+                OrderItem memory order = gn.orders[gn.head];
+                while (order.next != 0 && !(order.amount <= _amount)) {
+                    order = gn.orders[order.next];
+                }
+                insertOrderBefore(self, value, order.id, _amount, _orderId);
+            }
+        }
+    }
+
+    /**
+     * @dev Insert a new OrderImer after the Order denoted by `_id` with `_amount` and `_orderId` in the amount field.
+     */
+    function insertOrderAfter(Tree storage self, uint256 value, uint256 _prevId, uint256 _amount, uint256 _orderId)
+        internal
+        virtual
+    {
+        require(_amount > 0, "Insuficient amount");
+
+        Node storage gn = self.nodes[value];
+
+        if (_prevId == gn.tail) {
+            addTail(self, value, _amount, _orderId);
+        }
+        else {
+            OrderItem memory prevOrder = gn.orders[_prevId];
+            OrderItem memory nextOrder = gn.orders[prevOrder.next];
+            uint256 newOrderId = _createOrder(self, value, _amount, _orderId);
+            _link(self, value, newOrderId, nextOrder.id);
+            _link(self, value, prevOrder.id, newOrderId);
+        }
+    }
+
+    /**
+     * @dev Insert a new Object before the Object denoted by `_id` with `_amount` and `_orderId` in the data field.
+     */
+    function insertOrderBefore(Tree storage self, uint256 value, uint256 _nextId, uint256 _amount, uint256 _orderId)
+        internal
+        virtual
+    {
+        Node storage gn = self.nodes[value];
+
+        if (_nextId == gn.head) {
+            addHead(self, value, _amount, _orderId);
+        }
+        else {
+            insertOrderAfter(self, value, gn.orders[_nextId].prev, _amount, _orderId);
+        }
+    }
+
+    /**
+     * @dev Internal function to update the Head pointer.
+     */
+    function _setHead(Tree storage self, uint256 value, uint256 _id)
+        internal
+    {
+        Node storage gn = self.nodes[value];
+
+        gn.head = _id;
+    }
+
+    /**
+     * @dev Internal function to update the Tail pointer.
+     */
+    function _setTail(Tree storage self, uint256 value, uint256 _id)
+        internal
+    {
+        Node storage gn = self.nodes[value];
+
+        gn.tail = _id;
+    }
+
+    /**
+     * @dev Internal function to create an unlinked Order.
+     */
+    function _createOrder(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
+        internal
+        returns (uint256)
+    {
+        Node storage gn = self.nodes[value];
+
+        uint256 newId = gn.orderCounter;
+        gn.orderCounter += 1;
+        OrderItem memory order = OrderItem(
+            newId,
+            0,
+            0,
+            block.timestamp,
+            msg.sender,
+            _amount,
+            _orderId
+        );
+        gn.orders[order.id] = order;
+        return order.id;
+    }
+
+    /**
+     * @dev Internal function to link an Object to another.
+     */
+    function _link(Tree storage self, uint256 value, uint256 _prevId, uint256 _nextId)
+        internal
+    {
+        Node storage gn = self.nodes[value];
+
+        gn.orders[_prevId].next = _nextId;
+        gn.orders[_nextId].prev = _prevId;
+    }
+
 }

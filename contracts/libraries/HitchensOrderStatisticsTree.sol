@@ -5,8 +5,8 @@ pragma solidity ^0.6.12;
 Hitchens Order Statistics Tree v0.99
 
 A Solidity Red-Black Tree library to store and maintain a sorted data
-structure in a Red-Black binary search tree, with O(log 2n) insert, remove
-and search time (and gas, approximately)
+structure in a Red-Black binary search tree, with O(log 2n) insert, O(1) remove
+and O(log 2n) search time (and gas, approximately)
 
 https://github.com/rob-Hitchens/OrderStatisticsTree
 
@@ -36,51 +36,16 @@ https://github.com/bokkypoobah/BokkyPooBahsRedBlackTreeLibrary
 THIS SOFTWARE IS NOT TESTED OR AUDITED. DO NOT USE FOR PRODUCTION.
 */
 
-import "./Owned.sol";
 import "./HitchensOrderStatisticsTreeLib.sol";
 
 
-/* 
-Hitchens Order Statistics Tree v0.99
-
-A Solidity Red-Black Tree library to store and maintain a sorted data
-structure in a Red-Black binary search tree, with O(log 2n) insert, remove
-and search time (and gas, approximately)
-
-https://github.com/rob-Hitchens/OrderStatisticsTree
-
-Copyright (c) Rob Hitchens. the MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-Portions from BokkyPooBahsRedBlackTreeLibrary, 
-https://github.com/bokkypoobah/BokkyPooBahsRedBlackTreeLibrary
-
-THIS SOFTWARE IS NOT TESTED OR AUDITED. DO NOT USE FOR PRODUCTION.
-*/
-
-contract HitchensOrderStatisticsTree is Owned {
+contract HitchensOrderStatisticsTree {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     HitchensOrderStatisticsTreeLib.Tree tree;
 
-    event Log(string action, bytes32 key, uint value);
+    event InsertOrder(string action, uint256 amount, uint256 value, uint256 orderId);
+    event RemoveOrder(string action, uint256 amount, uint256 value, uint256 _id);
 
     constructor() public {
     }
@@ -102,14 +67,14 @@ contract HitchensOrderStatisticsTree is Owned {
     function valueExists(uint value) public view returns (bool _exists) {
         _exists = tree.exists(value);
     }
-    function keyValueExists(bytes32 key, uint value) public view returns(bool _exists) {
-        _exists = tree.keyExists(key, value);
+    function keyValueExists(uint256 amount, uint value) public view returns(bool _exists) {
+        _exists = tree.amountExistsInNode(amount, value);
     }
-    function getNode(uint value) public view returns (uint _parent, uint _left, uint _right, bool _red, uint _keyCount, uint _count) {
-        (_parent, _left, _right, _red, _keyCount, _count) = tree.getNode(value);
+    function getNode(uint value) public view returns (uint _parent, uint _left, uint _right, bool _red, uint256 _head, uint256 _tail, uint256 _orderCounter, uint256 _count) {
+        (_parent, _left, _right, _red, _head, _tail, _orderCounter, _count) = tree.getNode(value);
     }
-    function getValueKey(uint value, uint row) public view returns(bytes32 _key) {
-        _key = tree.valueKeyAtIndex(value,row);
+    function getOrderByID(uint256 value, uint256 id) public view returns(uint256 _id, uint256 _next, uint256 _prev, uint256 _timestamp, address _owner, uint256 _amount, uint256 _orderId) {
+        (_id, _next, _prev, _timestamp, _owner, _amount, _orderId) = tree.getOrderById(value, id);
     }
     function valueKeyCount() public view returns(uint _count) {
         _count = tree.count();
@@ -147,12 +112,12 @@ contract HitchensOrderStatisticsTree is Owned {
     function valueRankReverse(uint value) public view returns(uint _rank) {
         _rank = tree.count() - (tree.rank(value) - 1);
     }
-    function insertKeyValue(bytes32 key, uint value) public onlyOwner {
-        emit Log("insert", key, value);
-        tree.insert(key, value);
+    function insertKeyValue(uint256 amount, uint256 value, uint256 orderId) public {
+        emit InsertOrder("insert", amount, value, orderId);
+        tree.insert(amount, value, orderId);
     }
-    function removeKeyValue(bytes32 key, uint value) public onlyOwner {
-        emit Log("delete", key, value);
-        tree.remove(key, value);
+    function removeKeyValue(uint256 amount, uint256 value, uint256 _id) public {
+        emit RemoveOrder("delete", amount, value, _id);
+        tree.remove( amount, value, _id);
     }
 }
