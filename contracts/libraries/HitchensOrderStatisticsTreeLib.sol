@@ -112,7 +112,7 @@ library HitchensOrderStatisticsTreeLib {
         if(!exists(self, value)) return false;
         if (findOrderIdForAmount(self, value, amount) != 0) return true;
     } 
-    function getNode(Tree storage self, uint256 value) internal view returns (uint256 _parent, uint256 _left, uint256 _right, bool _red, uint256 _head, uint256 _tail, uint256 _orderCounter, uint256 _count) {        
+    function getNode(Tree storage self, uint256 value) internal view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256) {        
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
         return(gn.parent, gn.left, gn.right, gn.red, gn.head, gn.tail, gn.orderCounter, gn.orderCounter+gn.count);
@@ -468,7 +468,7 @@ library HitchensOrderStatisticsTreeLib {
     function getOrderById(Tree storage self, uint256 value, uint256 _id)
         internal
         view
-        returns (uint256 id, uint256 next, uint256 prev, uint256 timestamp, address owner, uint256 amount, uint256 orderId)
+        returns (uint256, uint256, uint256, uint256, address, uint256, uint256)
     {
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
