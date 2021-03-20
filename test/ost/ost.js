@@ -6,22 +6,23 @@ let scenarios = [];
 
 contract("OrderStatisticsTree - sort and rank", accounts => {
 
+    let steps;
+
     beforeEach(async () => {;
         ost = await OrderStatisticsTree.new();
+        steps = await loadSteps();
     });
 
     it("should be ready to test", async () => {
         assert.strictEqual(true, true, "something is wrong");
     });
 
-    it("should process scenario 3", async () => {
-        let steps = await loadSteps();   
+    it("should insert all orders and delete after", async () => {
         console.log("Number of steps: "+steps.length);  
-        let s = await loadScenario2(steps);
+        let s = await loadScenario(steps);
         await printScenario(steps);
         await printExists(steps);
     });
-
 });
 
 async function loadSteps() {
@@ -100,29 +101,18 @@ async function printScenario(s) {
     }
 }
 
-async function loadScenario2(steps) {
-    let element;
-    let sorted = [];
-    let removeIndex;
+async function loadScenario(steps) {
+    let amount;
 
     for(i=0; i < steps.length; i++) {
-        element = steps[i]["amount"];
+        amount = steps[i]["amount"];
         orderId = steps[i]["orderId"];
         rate = steps[i]["rate"];
-        if (element > 0) {
-            sorted.push(rate);
-            await ost.insertAmountValue(element, rate, orderId);
-        } 
-        // else {
-        //     removeIndex = sorted.indexOf(element*-1);
-        //     sorted.splice(removeIndex,1);
-        //     await ost.removeAmountValue(rate, element*-1, orderId);
-        // }
+        if (steps[i]['action'] == "insert") {
+            await ost.insertAmountValue(amount, rate, orderId);
+        }
+        else if (steps[i]['action'] == "delete"){
+            await ost.removeAmountValue(amount, rate, orderId, 1);
+        }
     }
-    sorted.sort(numeric);
-    return sorted;
-}
-
-function numeric(a, b) {
-    return a - b;
 }

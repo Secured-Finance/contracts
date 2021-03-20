@@ -51,8 +51,8 @@ contract HitchensOrderStatisticsTree {
         emit InsertOrder("insert", amount, value, orderId);
         tree.insert(amount, value, orderId);
     }
-    function removeAmountValue(uint256 amount, uint256 value, uint256 _id) public {
-        emit RemoveOrder("delete", amount, value, _id);
-        tree.remove( amount, value, _id);
+    function removeAmountValue(uint256 amount, uint256 value, uint256 orderId, uint256 _id) public {
+        emit RemoveOrder("delete", amount, value, orderId);
+        tree.remove(amount, value, orderId, _id);
     }
 }

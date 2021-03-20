@@ -72,9 +72,13 @@ library HitchensOrderStatisticsTreeLib {
         if(self.nodes[value].parent != EMPTY) return true;
         return false;       
     }
-    function amountExistsInNode(Tree storage self, uint256 amount, uint256 value) internal view returns (bool _exists) {
+    function amountExistsInNode(Tree storage self, uint256 amount, uint256 value) internal view returns (bool) {
         if(!exists(self, value)) return false;
-        if (findOrderIdForAmount(self, value, amount) != 0) return true;
+        return isAmountExistsInList(self, value, amount);
+    } 
+    function orderExistsInNode(Tree storage self, uint256 amount, uint256 value, uint256 orderId, uint256 _id) internal view returns (bool) {
+        if(!exists(self, value)) return false;
+        return isOrderIdExists(self, value, amount, orderId, _id);
     } 
     function getNode(Tree storage self, uint256 value) internal view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256) {        
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
@@ -118,9 +122,9 @@ library HitchensOrderStatisticsTreeLib {
         }
         insertFixup(self, value);
     }
-    function remove(Tree storage self, uint256 amount, uint256 value, uint256 _id) internal {
+    function remove(Tree storage self, uint256 amount, uint256 value, uint256 orderId, uint256 _id) internal {
         require(value != EMPTY, "OrderStatisticsTree(407) - Value to delete cannot be zero");
-        require(amountExistsInNode(self,amount,value), "OrderStatisticsTree(408) - Value to delete does not exist.");
+        require(orderExistsInNode(self,amount,value,orderId, _id), "OrderStatisticsTree(408) - Value to delete does not exist.");
         Node storage nValue = self.nodes[value];
         removeOrder(self, value, _id);
         uint256 probe;
@@ -345,9 +349,43 @@ library HitchensOrderStatisticsTreeLib {
     }
 
     /**
+    * @dev Return boolean if value, amount and orderId exist in doubly linked list
+    */
+    function isOrderIdExists(Tree storage self, uint256 value, uint256 amount, uint256 orderId, uint256 _id) internal view returns (bool) {
+        Node storage gn = self.nodes[value];
+
+        OrderItem memory order = gn.orders[_id];
+        if (order.amount != amount && order.orderId != orderId) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @dev Return boolean if value and amount exist in doubly linked list.
+     */
+    function isAmountExistsInList(Tree storage self, uint256 value, uint256 amount)
+        internal
+        view
+        returns (bool)
+    {        
+        Node storage gn = self.nodes[value];
+
+        OrderItem memory order = gn.orders[gn.head];
+        while (order.next != 0 && order.amount < amount) {
+            order = gn.orders[order.next];
+        }
+        if (order.amount == 0) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * @dev Return the id of the first OrderItem matching `_amount` in the amount field.
      */
-    function findOrderIdForAmount(Tree storage self, uint256 value, uint256 _amount)
+    function findOrderIdForAmount(Tree storage self, uint256 value, uint256 amount)
         internal
         view
         returns (uint256)
@@ -355,7 +393,7 @@ library HitchensOrderStatisticsTreeLib {
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[gn.head];
-        while (order.amount != _amount) {
+        while (order.next != 0 && order.amount <= amount) {
             order = gn.orders[order.next];
         }
         return order.id;
@@ -515,8 +553,10 @@ library HitchensOrderStatisticsTreeLib {
         returns (uint256)
     {
         Node storage gn = self.nodes[value];
-
-        uint256 newId = gn.orderCounter;
+        uint256 newId;
+        if (gn.orderCounter == 0) {
+            newId = 1;
+        }
         gn.orderCounter += 1;
         OrderItem memory order = OrderItem(
             newId,
