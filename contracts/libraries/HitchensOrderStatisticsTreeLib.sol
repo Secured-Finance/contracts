@@ -1,41 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
 
-/* 
-Hitchens Order Statistics Tree v0.99
-
-A Solidity Red-Black Tree library to store and maintain a sorted data
-structure in a Red-Black binary search tree, with O(log 2n) insert, remove
-and search time (and gas, approximately)
-
-https://github.com/rob-Hitchens/OrderStatisticsTree
-
-Copyright (c) Rob Hitchens. the MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-Significant portions from BokkyPooBahsRedBlackTreeLibrary, 
-https://github.com/bokkypoobah/BokkyPooBahsRedBlackTreeLibrary
-
-THIS SOFTWARE IS NOT TESTED OR AUDITED. DO NOT USE FOR PRODUCTION.
-*/
-
 library HitchensOrderStatisticsTreeLib {
     uint256 private constant EMPTY = 0;
     struct Node {
@@ -47,7 +12,6 @@ library HitchensOrderStatisticsTreeLib {
         uint256 tail;
         uint256 orderCounter;
         mapping (uint256 => OrderItem) orders;
-        uint256 count;
     }
 
     struct OrderItem{
@@ -112,100 +76,17 @@ library HitchensOrderStatisticsTreeLib {
         if(!exists(self, value)) return false;
         if (findOrderIdForAmount(self, value, amount) != 0) return true;
     } 
-    function getNode(Tree storage self, uint256 value) internal view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256, uint256) {        
+    function getNode(Tree storage self, uint256 value) internal view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256) {        
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
-        return(gn.parent, gn.left, gn.right, gn.red, gn.head, gn.tail, gn.orderCounter, gn.orderCounter+gn.count);
+        return(gn.parent, gn.left, gn.right, gn.red, gn.head, gn.tail, gn.orderCounter);
     }
-    function getNodeCount(Tree storage self, uint256 value) internal view returns(uint256 count) {
+    function getNodeCount(Tree storage self, uint256 value) internal view returns(uint256) {
         Node storage gn = self.nodes[value];
-        return gn.orderCounter+gn.count;
+        return gn.orderCounter;
     }
     function count(Tree storage self) internal view returns(uint256 _count) {
         return getNodeCount(self,self.root);
-    }
-    function percentile(Tree storage self, uint256 value) internal view returns(uint256 _percentile) {
-        uint256 denominator = count(self);
-        uint256 numerator = rank(self, value);
-        _percentile = ((uint256(1000) * numerator)/denominator+(uint256(5)))/uint256(10);
-    }
-    function permil(Tree storage self, uint256 value) internal view returns(uint256 _permil) {
-        uint256 denominator = count(self);
-        uint256 numerator = rank(self, value);
-        _permil = ((uint256(10000) * numerator)/denominator+(uint256(5)))/uint256(10);
-    }
-    function atPercentile(Tree storage self, uint256 _percentile) internal view returns(uint256 _value) {
-        uint256 findRank = (((_percentile * count(self))/uint256(10)) + uint256(5)) / uint256(10);
-        return atRank(self,findRank);
-    }
-    function atPermil(Tree storage self, uint256 _permil) internal view returns(uint256 _value) {
-        uint256 findRank = (((_permil * count(self))/uint256(100)) + uint256(5)) / uint256(10);
-        return atRank(self,findRank);
-    }    
-    function median(Tree storage self) internal view returns(uint256 value) {
-        return atPercentile(self,50);
-    }
-    function below(Tree storage self, uint256 value) public view returns(uint256 _below) {
-        if(count(self) > 0 && value > 0) _below = rank(self,value)-uint256(1);
-    }
-    function above(Tree storage self, uint256 value) public view returns(uint256 _above) {
-        if(count(self) > 0) _above = count(self)-rank(self,value);
-    } 
-    function rank(Tree storage self, uint256 value) internal view returns(uint256 _rank) {
-        if(count(self) > 0) {
-            bool finished;
-            uint256 cursor = self.root;
-            Node storage c = self.nodes[cursor];
-            uint256 smaller = getNodeCount(self,c.left);
-            while (!finished) {
-                uint256 keyCount = c.orderCounter;
-                if(cursor == value) {
-                    finished = true;
-                } else {
-                    if(cursor < value) {
-                        cursor = c.right;
-                        c = self.nodes[cursor];
-                        smaller += keyCount + getNodeCount(self,c.left);
-                    } else {
-                        cursor = c.left;
-                        c = self.nodes[cursor];
-                        smaller -= (keyCount + getNodeCount(self,c.right));
-                    }
-                }
-                if (!exists(self,cursor)) {
-                    finished = true;
-                }
-            }
-            return smaller + 1;
-        }
-    }
-    function atRank(Tree storage self, uint256 _rank) internal view returns(uint256 _value) {
-        bool finished;
-        uint256 cursor = self.root;
-        Node storage c = self.nodes[cursor];
-        uint256 smaller = getNodeCount(self,c.left);
-        while (!finished) {
-            _value = cursor;
-            c = self.nodes[cursor];
-            uint256 orderCounter = c.orderCounter;
-            if(smaller + 1 >= _rank && smaller + orderCounter <= _rank) {
-                _value = cursor;
-                finished = true;
-            } else {
-                if(smaller + orderCounter <= _rank) {
-                    cursor = c.right;
-                    c = self.nodes[cursor];
-                    smaller += orderCounter + getNodeCount(self,c.left);
-                } else {
-                    cursor = c.left;
-                    c = self.nodes[cursor];
-                    smaller -= (orderCounter + getNodeCount(self,c.right));
-                }
-            }
-            if (!exists(self,cursor)) {
-                finished = true;
-            }
-        }
     }
     function insert(Tree storage self, uint256 amount, uint256 value, uint256 orderId) internal {
         require(value != EMPTY, "OrderStatisticsTree(405) - Value to insert cannot be zero");
@@ -221,14 +102,12 @@ library HitchensOrderStatisticsTreeLib {
                 insertOrder(self, probe, amount, orderId);
                 return;
             }
-            self.nodes[cursor].count++;
         }
         Node storage nValue = self.nodes[value];
         nValue.parent = cursor;
         nValue.left = EMPTY;
         nValue.right = EMPTY;
         nValue.red = true;
-        nValue.orderCounter = 1;
         insertOrder(self, value, amount, orderId);
         if (cursor == EMPTY) {
             self.root = value;
@@ -280,19 +159,11 @@ library HitchensOrderStatisticsTreeLib {
                 self.nodes[self.nodes[cursor].right].parent = cursor;
                 self.nodes[cursor].red = self.nodes[value].red;
                 (cursor, value) = (value, cursor);
-                fixCountRecurse(self, value);
             }
             if (doFixup) {
                 removeFixup(self, probe);
             }
-            fixCountRecurse(self, cursorParent);
             delete self.nodes[cursor];
-        }
-    }
-    function fixCountRecurse(Tree storage self, uint256 value) private {
-        while (value != EMPTY) {
-           self.nodes[value].count = getNodeCount(self,self.nodes[value].left) + getNodeCount(self,self.nodes[value].right);
-           value = self.nodes[value].parent;
         }
     }
     function treeMinimum(Tree storage self, uint256 value) private view returns (uint256) {
@@ -325,8 +196,6 @@ library HitchensOrderStatisticsTreeLib {
         }
         self.nodes[cursor].left = value;
         self.nodes[value].parent = cursor;
-        self.nodes[value].count = getNodeCount(self,self.nodes[value].left) + getNodeCount(self,self.nodes[value].right);
-        self.nodes[cursor].count = getNodeCount(self,self.nodes[cursor].left) + getNodeCount(self,self.nodes[cursor].right);
     }
     function rotateRight(Tree storage self, uint256 value) private {
         uint256 cursor = self.nodes[value].left;
@@ -346,8 +215,6 @@ library HitchensOrderStatisticsTreeLib {
         }
         self.nodes[cursor].right = value;
         self.nodes[value].parent = cursor;
-        self.nodes[value].count = getNodeCount(self,self.nodes[value].left) + getNodeCount(self,self.nodes[value].right);
-        self.nodes[cursor].count = getNodeCount(self,self.nodes[cursor].left) + getNodeCount(self,self.nodes[cursor].right);
     }
     function insertFixup(Tree storage self, uint256 value) private {
         uint256 cursor;
@@ -500,7 +367,6 @@ library HitchensOrderStatisticsTreeLib {
     function addHead(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
         internal
     {
-        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
         uint256 orderId = _createOrder(self, value, _amount, _orderId);
         _link(self, value, orderId, gn.head);
@@ -514,7 +380,6 @@ library HitchensOrderStatisticsTreeLib {
     function addTail(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
         internal
     {
-        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
 
         if (gn.head == 0) {
@@ -560,7 +425,6 @@ library HitchensOrderStatisticsTreeLib {
     * @dev Insert a new OrderItem after the last OrderItem with the same `_amount`.
     */
     function insertOrder(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId) internal {
-        require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         require(_amount > 0, "Insuficient amount");
 
         Node storage gn = self.nodes[value];
