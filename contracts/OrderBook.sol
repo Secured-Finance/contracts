@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import './interfaces/ICollateral.sol';
+import "./libraries/HitchensOrderStatisticsTreeLib.sol";
 
 /**
  * @dev Order Book contract module which allows lending market participants
@@ -16,6 +17,7 @@ import './interfaces/ICollateral.sol';
  */
 contract OrderBook is ReentrancyGuard, Ownable {
     using SafeMath for uint256;
+    using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     // Contracts interfaces
     ICollateral collateral;
@@ -23,7 +25,7 @@ contract OrderBook is ReentrancyGuard, Ownable {
     /**
     * @dev Emitted when market order created by market maker.
     */
-    event MakeOrder(uint256 id, address indexed maker, Side side, Ccy ccy, Term term, uint amount, uint rate, uint deadline);
+    event MakeOrder(uint256 orderId, address indexed maker, Side side, Ccy ccy, Term term, uint amount, uint rate, uint deadline);
     
     /**
     * @dev Emitted when market order canceled by market maker.
@@ -32,7 +34,7 @@ contract OrderBook is ReentrancyGuard, Ownable {
     *
     * - Market order must be active and cancelable.
     */
-    event CancelOrder(uint256 id, address indexed maker, Side side, uint256 amount, uint256 rate);
+    event CancelOrder(uint256 orderId, address indexed maker, Side side, uint256 amount, uint256 rate);
 
     /**
     * @dev Emitted when market order taken by market taker.
@@ -41,7 +43,7 @@ contract OrderBook is ReentrancyGuard, Ownable {
     *
     * - Market order must be active.
     */
-    event TakeOrder(uint256 id, address indexed taker, Side side, uint256 amount, uint256 rate);
+    event TakeOrder(uint256 orderId, address indexed taker, Side side, uint256 amount, uint256 rate);
 
     enum Side {
         LEND,
@@ -69,6 +71,8 @@ contract OrderBook is ReentrancyGuard, Ownable {
     * @dev Order Book mapping for all Market Orders.
     */
     mapping (uint256 => MarketOrder) public orders;
+    HitchensOrderStatisticsTreeLib.Tree lendOrders;
+    HitchensOrderStatisticsTreeLib.Tree borrowOrders;
 
     /**
     * @dev Constructor.
@@ -82,20 +86,20 @@ contract OrderBook is ReentrancyGuard, Ownable {
 
     /**
     * @dev Modifier to make a function callable only when the market order is active.
-    * @param id Market order id
+    * @param orderId Market order id
     */
-    modifier activeOrder(uint256 id) {
-        require(isActive(id), "Order Expired");
+    modifier activeOrder(uint256 orderId) {
+        require(isActive(orderId), "Order Expired");
         _;
     }
 
     /**
     * @dev Modifier to make a function callable only when the market order can be canceled by market maker.
-    * @param id Market order id
+    * @param orderId Market order id
     */
-    modifier cancelable(uint256 id) {
-        require(isActive(id));
-        require(getMaker(id) == msg.sender, "No access to cancel order");
+    modifier cancelable(uint256 orderId) {
+        require(isActive(orderId));
+        require(getMaker(orderId) == msg.sender, "No access to cancel order");
         _;
     }
 
@@ -114,26 +118,26 @@ contract OrderBook is ReentrancyGuard, Ownable {
     /**
     * @dev Triggers to make a check if market order executable.
     * If market order exceeded the deadline, market order deleted from order book.
-    * @param id Market order id
+    * @param orderId Market order id
     */
-    function isActive(uint256 id) public view returns (bool active) {
-        return orders[id].deadline > block.timestamp;
+    function isActive(uint256 orderId) public view returns (bool active) {
+        return orders[orderId].deadline > block.timestamp;
     }
 
     /**
     * @dev Triggers to get order maker address.
-    * @param id Market order id
+    * @param orderId Market order id
     */
-    function getMaker(uint256 id) public view returns (address maker) {
-        return orders[id].maker;
+    function getMaker(uint256 orderId) public view returns (address maker) {
+        return orders[orderId].maker;
     }
 
     /**
     * @dev Triggers to get market order information.
-    * @param id Market order id
+    * @param orderId Market order id
     */
-    function getOrder(uint256 id) public view returns (MarketOrder memory) {
-      return orders[id];
+    function getOrder(uint256 orderId) public view returns (MarketOrder memory) {
+      return orders[orderId];
     }
 
     /**
@@ -146,18 +150,23 @@ contract OrderBook is ReentrancyGuard, Ownable {
 
     /**
     * @dev Triggered to cancel market order.
-    * @param id Market order id
+    * @param orderId Market order id
     *
     * Requirements:
     * - Order has to be cancelable by market maker
     */
-    function cancelOrder(uint256 id) public cancelable(id) nonReentrant returns (bool success) {
-        MarketOrder memory order = orders[id];
-        delete orders[id];
+    function cancelOrder(uint256 orderId) public cancelable(orderId) nonReentrant returns (bool success) {
+        MarketOrder memory order = orders[orderId];
+        if (order.side == Side.LEND) {
+            lendOrders.remove(order.amount, order.rate, orderId);
+        } else if (order.side == Side.BORROW) {
+            borrowOrders.remove(order.amount, order.rate, orderId);
+        }
+        delete orders[orderId];
 
         // collateral.releaseCollateral(uint8(MarketCcy), order.amount.mul(MKTMAKELEVEL).div(PCT), order.maker);
         emit CancelOrder(
-            id,
+            orderId,
             order.maker,
             order.side,
             order.amount,
@@ -174,7 +183,7 @@ contract OrderBook is ReentrancyGuard, Ownable {
     * @param _rate Preferable interest rate
     * @param _deadline Deadline for market maker execution (adds to current network timestamp)
     */
-    function makeOrder(Side _side, uint256 _amount, uint256 _rate, uint256 _deadline) public nonReentrant returns (uint id) {
+    function makeOrder(Side _side, uint256 _amount, uint256 _rate, uint256 _deadline) internal nonReentrant returns (uint256 orderId) {
         MarketOrder memory order;
 
         require(_amount > 0, "Can't place empty amount");
@@ -185,12 +194,18 @@ contract OrderBook is ReentrancyGuard, Ownable {
         order.rate = _rate;
         order.maker = msg.sender;
         order.deadline = block.timestamp.add(_deadline);
-        id = _next_id();
+        orderId = _next_id();
 
-        orders[id] = order;
+        orders[orderId] = order;
         // collateral.useCollateral(uint8(MarketCcy), _amount.mul(MKTMAKELEVEL).div(PCT), msg.sender);
+        if (order.side == Side.LEND) {
+            lendOrders.insert(order.amount, order.rate, orderId);
+        } else if (order.side == Side.BORROW) {
+            borrowOrders.insert(order.amount, order.rate, orderId);
+        }
+
         emit MakeOrder(
-            id, 
+            orderId, 
             order.maker, 
             order.side, 
             MarketCcy, 
@@ -203,37 +218,78 @@ contract OrderBook is ReentrancyGuard, Ownable {
 
     /**
     * @dev Triggered to take market order.
-    * @param id Market Order id in Order Book
+    * @param orderId Market Order id in Order Book
     * @param _amount Amount of funds taker wish to borrow/lend
     *
     * Requirements:
     * - Market order has to be active
     */
-    function takeOrder(uint256 id, uint256 _amount) public activeOrder(id) nonReentrant returns (bool) {
-        MarketOrder memory order = orders[id];
+    function takeOrder(Side side, uint256 orderId, uint256 _amount) internal activeOrder(orderId) nonReentrant returns (bool) {
+        MarketOrder memory order = orders[orderId];
         require(_amount <= order.amount, "Insuficient amount");
+        require(order.maker != msg.sender, "Maker couldn't take its order");
 
-        orders[id].amount = order.amount.sub(_amount);
-
-        Side takerSide;
+        orders[orderId].amount = order.amount.sub(_amount);
         if (order.side == Side.LEND) {
-            takerSide = Side.BORROW;
-        } else {
-            takerSide = Side.LEND;
+            require(lendOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
+        } else if (order.side == Side.BORROW) {
+            require(borrowOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
         }
 
         emit TakeOrder(
-            id,
+            orderId,
             msg.sender,
-            takerSide,
+            side,
             _amount,
             order.rate
         );
 
         if (order.amount == 0) {
-          delete orders[id];
+            delete orders[orderId];
         }
 
+        return true;
+    }
+
+    /**
+    * @dev Triggered to get matching market order.
+    * @param side Market order side it can be borrow or lend
+    * @param amount Amount of funds taker wish to borrow/lend
+    * @param rate Amount of interest rate taker wish to borrow/lend
+    *
+    * Returns zero if didn't find a matched order, reverts if no orders for specified interest rate
+    */
+    function matchOrders(Side side, uint256 amount, uint256 rate) public view returns (uint256) {
+        if (side == Side.LEND) {
+            require(lendOrders.exists(rate), "No orders exists for selected interest rate");
+            return lendOrders.findOrderIdForAmount(rate, amount);
+        } else {
+            require(borrowOrders.exists(rate), "No orders exists for selected interest rate");
+            return borrowOrders.findOrderIdForAmount(rate, amount);
+        }
+    }
+
+    /**
+    * @dev Triggered to execute market order, if order matched it takes order, if not matched places new order.
+    * @param side Market order side it can be borrow or lend
+    * @param amount Amount of funds maker/taker wish to borrow/lend
+    * @param rate Amount of interest rate maker/taker wish to borrow/lend
+    * @param deadline Deadline for market maker execution (adds to current network timestamp)
+    *
+    * Returns true after successful execution
+    */
+    function order(Side side, uint256 amount, uint256 rate, uint256 deadline) public nonReentrant returns (bool) {
+        uint256 orderId;
+
+        if (side == Side.LEND) {
+            orderId = borrowOrders.findOrderIdForAmount(rate, amount);
+            if (orderId != 0) return takeOrder(Side.BORROW, orderId, amount);
+        } else {
+            orderId = lendOrders.findOrderIdForAmount(rate, amount);
+            if (orderId != 0) return takeOrder(Side.LEND, orderId, amount);
+        }
+
+        makeOrder(side, amount, rate, deadline);
         return true;
     }
 }

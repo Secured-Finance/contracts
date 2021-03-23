@@ -38,8 +38,8 @@ contract HitchensOrderStatisticsTree {
     function getNode(uint256 value) public view returns (uint256 _parent, uint256 _left, uint256 _right, bool _red, uint256 _head, uint256 _tail, uint256 _orderCounter) {
         (_parent, _left, _right, _red, _head, _tail, _orderCounter) = tree.getNode(value);
     }
-    function getOrderByID(uint256 value, uint256 id) public view returns(uint256 _id, uint256 _next, uint256 _prev, uint256 _timestamp, address _owner, uint256 _amount, uint256 _orderId) {
-        (_id, _next, _prev, _timestamp, _owner, _amount, _orderId) = tree.getOrderById(value, id);
+    function getOrderByID(uint256 value, uint256 id) public view returns(uint256 _orderId, uint256 _next, uint256 _prev, uint256 _timestamp, uint256 _amount) {
+        (_orderId, _next, _prev, _timestamp, _amount) = tree.getOrderById(value, id);
     }
     function getRootCount() public view returns(uint256 _orderCounter) {
         _orderCounter = tree.count();
@@ -51,8 +51,8 @@ contract HitchensOrderStatisticsTree {
         emit InsertOrder("insert", amount, value, orderId);
         tree.insert(amount, value, orderId);
     }
-    function removeAmountValue(uint256 amount, uint256 value, uint256 orderId, uint256 _id) public {
+    function removeAmountValue(uint256 amount, uint256 value, uint256 orderId) public {
         emit RemoveOrder("delete", amount, value, orderId);
-        tree.remove(amount, value, orderId, _id);
+        tree.remove(amount, value, orderId);
     }
 }

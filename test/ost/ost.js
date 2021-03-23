@@ -112,7 +112,7 @@ async function loadScenario(steps) {
             await ost.insertAmountValue(amount, rate, orderId);
         }
         else if (steps[i]['action'] == "delete"){
-            await ost.removeAmountValue(amount, rate, orderId, 1);
+            await ost.removeAmountValue(amount, rate, orderId);
         }
     }
 }

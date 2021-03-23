@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
 library HitchensOrderStatisticsTreeLib {
+    using SafeMath for uint256;
     uint256 private constant EMPTY = 0;
+
     struct Node {
         uint256 parent;
         uint256 left;
@@ -15,13 +19,11 @@ library HitchensOrderStatisticsTreeLib {
     }
 
     struct OrderItem{
-        uint256 id;
+        uint256 orderId;
         uint256 next;
         uint256 prev;
         uint256 timestamp;
-        address owner;
         uint256 amount;
-        uint256 orderId;
     }
 
     struct Tree {
@@ -75,10 +77,10 @@ library HitchensOrderStatisticsTreeLib {
     function amountExistsInNode(Tree storage self, uint256 amount, uint256 value) internal view returns (bool) {
         if(!exists(self, value)) return false;
         return isAmountExistsInList(self, value, amount);
-    } 
-    function orderExistsInNode(Tree storage self, uint256 amount, uint256 value, uint256 orderId, uint256 _id) internal view returns (bool) {
+    }
+    function orderExistsInNode(Tree storage self, uint256 amount, uint256 value, uint256 orderId) internal view returns (bool) {
         if(!exists(self, value)) return false;
-        return isOrderIdExists(self, value, amount, orderId, _id);
+        return isOrderIdExists(self, value, amount, orderId);
     } 
     function getNode(Tree storage self, uint256 value) internal view returns (uint256, uint256, uint256, bool, uint256, uint256, uint256) {        
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
@@ -122,11 +124,11 @@ library HitchensOrderStatisticsTreeLib {
         }
         insertFixup(self, value);
     }
-    function remove(Tree storage self, uint256 amount, uint256 value, uint256 orderId, uint256 _id) internal {
+    function remove(Tree storage self, uint256 amount, uint256 value, uint256 orderId) internal {
         require(value != EMPTY, "OrderStatisticsTree(407) - Value to delete cannot be zero");
-        require(orderExistsInNode(self,amount,value,orderId, _id), "OrderStatisticsTree(408) - Value to delete does not exist.");
+        require(orderExistsInNode(self,amount,value,orderId), "OrderStatisticsTree(408) - Value to delete does not exist.");
         Node storage nValue = self.nodes[value];
-        removeOrder(self, value, _id);
+        removeOrder(self, value, orderId);
         uint256 probe;
         uint256 cursor;
         if(nValue.orderCounter == 0) {
@@ -336,26 +338,26 @@ library HitchensOrderStatisticsTreeLib {
     /**
      * @dev Retrieves the Object denoted by `_id`.
      */
-    function getOrderById(Tree storage self, uint256 value, uint256 _id)
+    function getOrderById(Tree storage self, uint256 value, uint256 orderId)
         internal
         view
-        returns (uint256, uint256, uint256, uint256, address, uint256, uint256)
+        returns (uint256, uint256, uint256, uint256, uint256)
     {
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
 
-        OrderItem memory order = gn.orders[_id];
-        return (order.id, order.next, order.prev, order.timestamp, order.owner, order.amount, order.orderId);
+        OrderItem memory order = gn.orders[orderId];
+        return (order.orderId, order.next, order.prev, order.timestamp, order.amount);
     }
 
     /**
     * @dev Return boolean if value, amount and orderId exist in doubly linked list
     */
-    function isOrderIdExists(Tree storage self, uint256 value, uint256 amount, uint256 orderId, uint256 _id) internal view returns (bool) {
+    function isOrderIdExists(Tree storage self, uint256 value, uint256 amount, uint256 orderId) internal view returns (bool) {
         Node storage gn = self.nodes[value];
 
-        OrderItem memory order = gn.orders[_id];
-        if (order.amount != amount && order.orderId != orderId) {
+        OrderItem memory order = gn.orders[orderId];
+        if (order.amount != amount) {
             return false;
         }
 
@@ -393,10 +395,87 @@ library HitchensOrderStatisticsTreeLib {
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[gn.head];
-        while (order.next != 0 && order.amount <= amount) {
+        while (order.next != 0 && order.amount < amount) {
             order = gn.orders[order.next];
         }
-        return order.id;
+        return order.orderId;
+    }
+
+    /**
+     * @dev Reduces order amount once market order taken.
+     */
+    function fillOrder(Tree storage self, uint256 value, uint256 orderId, uint256 _amount)
+        internal
+        returns (bool)
+    {        
+        Node storage gn = self.nodes[value];
+
+        OrderItem memory order = gn.orders[orderId];
+        uint256 newAmount = order.amount.sub(_amount);
+        gn.orders[orderId].amount = newAmount;
+
+        if (gn.orders[orderId].amount == 0) {
+            remove(self, newAmount, value, orderId);
+        } else {
+            if (gn.orders[gn.head].amount < newAmount) {
+                OrderItem memory rootOrder = gn.orders[gn.head];
+                while (rootOrder.next != 0 && rootOrder.amount < newAmount) {
+                    rootOrder = gn.orders[rootOrder.next];
+                }
+
+                OrderItem memory nextOrder = gn.orders[rootOrder.next];
+                _link(self, value, order.orderId, nextOrder.orderId);
+                _link(self, value, rootOrder.orderId, order.orderId);
+            } else {
+                OrderItem memory rootOrder = gn.orders[gn.head];
+                while (rootOrder.next != 0 && !(rootOrder.amount <= newAmount)) {
+                    rootOrder = gn.orders[rootOrder.next];
+                }
+
+                OrderItem memory prevOrder = gn.orders[rootOrder.prev];
+                _link(self, value, order.orderId, rootOrder.orderId);
+                _link(self, value, prevOrder.orderId, order.orderId);
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * @dev Up size order by market maker.
+     */
+    function upSizeOrder(Tree storage self, uint256 value, uint256 orderId, uint256 _amount)
+        internal
+        returns (bool)
+    {
+        require(_amount > 0, "Couldn't up size order with 0");
+        Node storage gn = self.nodes[value];
+
+        OrderItem memory order = gn.orders[orderId];
+        uint256 newAmount = order.amount.add(_amount);
+        gn.orders[orderId].amount = newAmount;
+
+        if (gn.orders[gn.head].amount < newAmount) {
+            OrderItem memory rootOrder = gn.orders[gn.head];
+            while (rootOrder.next != 0 && rootOrder.amount < newAmount) {
+                rootOrder = gn.orders[rootOrder.next];
+            }
+
+            OrderItem memory nextOrder = gn.orders[rootOrder.next];
+            _link(self, value, order.orderId, nextOrder.orderId);
+            _link(self, value, rootOrder.orderId, order.orderId);
+        } else {
+            OrderItem memory rootOrder = gn.orders[gn.head];
+            while (rootOrder.next != 0 && !(rootOrder.amount <= newAmount)) {
+                rootOrder = gn.orders[rootOrder.next];
+            }
+
+            OrderItem memory prevOrder = gn.orders[rootOrder.prev];
+            _link(self, value, order.orderId, rootOrder.orderId);
+            _link(self, value, prevOrder.orderId, order.orderId);
+        }
+
+        return true;
     }
 
     /**
@@ -432,30 +511,29 @@ library HitchensOrderStatisticsTreeLib {
     /**
      * @dev Remove the OrderItem denoted by `_id` from the List.
      */
-    function removeOrder(Tree storage self, uint256 value, uint256 _id)
+    function removeOrder(Tree storage self, uint256 value, uint256 orderId)
         internal
     {
         require(exists(self,value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
 
-        OrderItem memory order = gn.orders[_id];
-        require(order.owner == msg.sender, "Order can be deleted by owner");
-        if (gn.head == _id && gn.tail == _id) {
+        OrderItem memory order = gn.orders[orderId];
+        if (gn.head == orderId && gn.tail == orderId) {
             _setHead(self, value, 0);
             _setTail(self, value, 0);
         }
-        else if (gn.head == _id) {
+        else if (gn.head == orderId) {
             _setHead(self, value, order.next);
             gn.orders[order.next].prev = 0;
         }
-        else if (gn.tail == _id) {
+        else if (gn.tail == orderId) {
             _setTail(self, value, order.prev);
             gn.orders[order.prev].next = 0;
         }
         else {
             _link(self, value, order.prev, order.next);
         }
-        delete gn.orders[order.id];
+        delete gn.orders[order.orderId];
         gn.orderCounter -= 1;
     }
 
@@ -474,13 +552,13 @@ library HitchensOrderStatisticsTreeLib {
                 while (order.next != 0 && order.amount <= _amount) {
                     order = gn.orders[order.next];
                 }
-                insertOrderAfter(self, value, order.id, _amount, _orderId);
+                insertOrderAfter(self, value, order.orderId, _amount, _orderId);
             } else {
                 OrderItem memory order = gn.orders[gn.head];
                 while (order.next != 0 && !(order.amount <= _amount)) {
                     order = gn.orders[order.next];
                 }
-                insertOrderBefore(self, value, order.id, _amount, _orderId);
+                insertOrderBefore(self, value, order.orderId, _amount, _orderId);
             }
         }
     }
@@ -502,8 +580,8 @@ library HitchensOrderStatisticsTreeLib {
             OrderItem memory prevOrder = gn.orders[_prevId];
             OrderItem memory nextOrder = gn.orders[prevOrder.next];
             uint256 newOrderId = _createOrder(self, value, _amount, _orderId);
-            _link(self, value, newOrderId, nextOrder.id);
-            _link(self, value, prevOrder.id, newOrderId);
+            _link(self, value, newOrderId, nextOrder.orderId);
+            _link(self, value, prevOrder.orderId, newOrderId);
         }
     }
 
@@ -526,29 +604,29 @@ library HitchensOrderStatisticsTreeLib {
     /**
      * @dev Internal function to update the Head pointer.
      */
-    function _setHead(Tree storage self, uint256 value, uint256 _id)
+    function _setHead(Tree storage self, uint256 value, uint256 orderId)
         internal
     {
         Node storage gn = self.nodes[value];
 
-        gn.head = _id;
+        gn.head = orderId;
     }
 
     /**
      * @dev Internal function to update the Tail pointer.
      */
-    function _setTail(Tree storage self, uint256 value, uint256 _id)
+    function _setTail(Tree storage self, uint256 value, uint256 orderId)
         internal
     {
         Node storage gn = self.nodes[value];
 
-        gn.tail = _id;
+        gn.tail = orderId;
     }
 
     /**
      * @dev Internal function to create an unlinked Order.
      */
-    function _createOrder(Tree storage self, uint256 value, uint256 _amount, uint256 _orderId)
+    function _createOrder(Tree storage self, uint256 value, uint256 amount, uint256 orderId)
         internal
         returns (uint256)
     {
@@ -559,16 +637,14 @@ library HitchensOrderStatisticsTreeLib {
         }
         gn.orderCounter += 1;
         OrderItem memory order = OrderItem(
-            newId,
+            orderId,
             0,
             0,
             block.timestamp,
-            msg.sender,
-            _amount,
-            _orderId
+            amount
         );
-        gn.orders[order.id] = order;
-        return order.id;
+        gn.orders[order.orderId] = order;
+        return order.orderId;
     }
 
     /**
