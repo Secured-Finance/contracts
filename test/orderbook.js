@@ -17,6 +17,7 @@ const {
   getLatestTimestamp,
 } = require('../test-utils').time;
 const { emitted, reverted } = require('../test-utils').assert;
+const { orders } = require("./orders");
 
 /* Helper */
 const val = (obj) => {
@@ -43,10 +44,12 @@ contract('OrderBook', async (accounts) => {
   let collateral;
   let loan;
   let orderBook;
+  let orderList;
 
   before('deploy OrderBook', async () => {
     let time = await getLatestTimestamp();
     console.log('before    ', toDate(time));
+    orderList = orders;
 
     moneyMarket = await MoneyMarket.new();
     fxMarket = await FXMarket.new();
@@ -87,18 +90,17 @@ contract('OrderBook', async (accounts) => {
       });
     });
     it('Create new market order by Alice', async () => {
-      let marketOrder = await orderBook.makeOrder(0, 10000, 375, effectiveSec, {from: alice});
+      let marketOrder = await orderBook.order(0, 10000, 375, effectiveSec, {from: alice});
       await emitted(marketOrder, 'MakeOrder');
-      await printCol(collateral, alice, 'collateral state for alice after making new order');
     });
     it('Take order successfully by Bob and insuficient amount by Carol', async () => {
-        let marketOrder = await orderBook.takeOrder(1, 1000, {from: bob});
+        let marketOrder = await orderBook.order(1, 1000, 375, effectiveSec, {from: bob});
         await emitted(marketOrder, 'TakeOrder');
-        await expectRevert(
-            orderBook.takeOrder(1, 9001, {from: carol}),
-            "Insuficient amount",
-        );    
+
+        let marketOrder2 = await orderBook.order(1, 15000, 375, effectiveSec, {from: carol});
+        await emitted(marketOrder2, 'MakeOrder');
     });
+
     it('Cancel created order: revert for Bob and success for Alice', async () => {
         await expectRevert(
             orderBook.cancelOrder(1, {from: bob}),
@@ -108,20 +110,74 @@ contract('OrderBook', async (accounts) => {
         await emitted(marketOrder, 'CancelOrder');
     });
     it('Create new market order by Bob, and cancel on next day', async () => {
-        let marketOrder = await orderBook.makeOrder(1, 1000, 750, effectiveSec, {from: bob});
+        let marketOrder = await orderBook.order(1, 1000, 750, effectiveSec, {from: bob});
         await emitted(marketOrder, 'MakeOrder');
         await advanceTimeAndBlock(ONE_DAY);
-        let canceledOrder = await orderBook.cancelOrder(2, {from: bob});
+        let canceledOrder = await orderBook.cancelOrder(3, {from: bob});
         await emitted(canceledOrder, 'CancelOrder');
       });
-    it('Create new market order by Bob, wait 15 days and try to take by Alice', async () => {
-        let marketOrder = await orderBook.makeOrder(1, 1000, 750, effectiveSec, {from: bob});
+    it('Create new market order by Bob, wait 15 days and try to take by Alice but cancel instead', async () => {
+        let marketOrder = await orderBook.order(1, 1000, 750, effectiveSec, {from: bob});
         await emitted(marketOrder, 'MakeOrder');
         await advanceTimeAndBlock(NOTICE_GAP + ONE_DAY);
-        await expectRevert(
-            orderBook.takeOrder(3, 1000, {from: alice}),
-            "Order Expired",
-        );
+
+        let canceledOrder = await orderBook.order(0, 1000, 750, effectiveSec, {from: alice});
+        await emitted(canceledOrder, 'CancelOrder');
       });
+
+      // it("Get information about market orders", async () => {
+      //   const marketOrder3 = await orderBook.getOrderFromTree(1, 750, 3);
+      //   console.log("Order ID: " + marketOrder3[0].toNumber());
+      //   console.log("Next: " + marketOrder3[1].toNumber());
+      //   console.log("Prev: " + marketOrder3[2].toNumber());
+      //   console.log("Timestamp: " + marketOrder3[3].toNumber());
+      //   console.log("Amount: " + marketOrder3[4].toNumber());
+      // });
+
+      it('Create 10 new market orders with the same interest rate', async () => {
+        // let marketOrder = await orderBook.order(0, 10000, 900, effectiveSec, {from: bob});
+        // await emitted(marketOrder, 'MakeOrder');
+
+        // let matchedOrders = await orderBook.matchOrders(0, 100, 750, {from: bob});
+        // console.log("Order ID: " + matchedOrders.toNumber());
+
+        for(i=0; i < orderList.length; i++) {
+          amount = orderList[i]["amount"];
+          orderId = orderList[i]["orderId"];
+          rate = orderList[i]["rate"];
+
+          let marketOrder = await orderBook.order(0, amount, rate, effectiveSec, {from: bob});
+          await emitted(marketOrder, 'MakeOrder');
+        }
+      });
+
+      it('check market orders from linked list', async () => {
+        for(i=0; i < orderList.length; i++) {
+          amount = orderList[i]["amount"];
+          orderId = orderList[i]["orderId"];
+          rate = orderList[i]["rate"];
+
+          const marketOrder = await orderBook.getOrderFromTree(0, rate, orderId);
+          console.log("Order ID: " + marketOrder[0].toNumber());
+          console.log("Next: " + marketOrder[1].toNumber());
+          console.log("Prev: " + marketOrder[2].toNumber());
+          console.log("Timestamp: " + marketOrder[3].toNumber());
+          console.log("Amount: " + marketOrder[4].toNumber());
+
+          console.log();
+          }
+      })
+
+      it('Try to take 10 market orders with the same interest rate', async () => {
+        for(i=0; i < orderList.length; i++) {
+          amount = orderList[i]["amount"];
+          orderId = orderList[i]["orderId"];
+          rate = orderList[i]["rate"];
+
+          let marketOrder = await orderBook.order(1, amount, rate, effectiveSec, {from: alice});
+          await emitted(marketOrder, 'TakeOrder');
+        }
+      });
+
   });
 });

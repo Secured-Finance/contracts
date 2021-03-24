@@ -72,7 +72,7 @@ library HitchensOrderStatisticsTreeLib {
         if(value == EMPTY) return false;
         if(value == self.root) return true;
         if(self.nodes[value].parent != EMPTY) return true;
-        return false;       
+        return false;
     }
     function amountExistsInNode(Tree storage self, uint256 amount, uint256 value) internal view returns (bool) {
         if(!exists(self, value)) return false;
@@ -391,14 +391,18 @@ library HitchensOrderStatisticsTreeLib {
         internal
         view
         returns (uint256)
-    {        
+    {
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[gn.head];
-        while (order.next != 0 && order.amount < amount) {
+        while (order.orderId != gn.tail && order.amount < amount) {
             order = gn.orders[order.next];
         }
-        return order.orderId;
+        if (order.amount >= amount) {
+            return order.orderId;
+        } else {
+            return 0;
+        }
     }
 
     /**
@@ -419,22 +423,22 @@ library HitchensOrderStatisticsTreeLib {
         } else {
             if (gn.orders[gn.head].amount < newAmount) {
                 OrderItem memory rootOrder = gn.orders[gn.head];
-                while (rootOrder.next != 0 && rootOrder.amount < newAmount) {
+                while (rootOrder.orderId != gn.tail && rootOrder.amount < newAmount) {
                     rootOrder = gn.orders[rootOrder.next];
                 }
-
-                OrderItem memory nextOrder = gn.orders[rootOrder.next];
-                _link(self, value, order.orderId, nextOrder.orderId);
-                _link(self, value, rootOrder.orderId, order.orderId);
+                if (order.amount > _amount) {
+                    OrderItem memory prevOrder = gn.orders[rootOrder.prev];
+                    _link(self, value, order.orderId, rootOrder.orderId);
+                    _link(self, value, prevOrder.orderId, order.orderId);
+                } else {
+                    OrderItem memory nextOrder = gn.orders[rootOrder.next];
+                    _link(self, value, order.orderId, nextOrder.orderId);
+                    _link(self, value, rootOrder.orderId, order.orderId);
+                }
             } else {
-                OrderItem memory rootOrder = gn.orders[gn.head];
-                while (rootOrder.next != 0 && !(rootOrder.amount <= newAmount)) {
-                    rootOrder = gn.orders[rootOrder.next];
-                }
-
-                OrderItem memory prevOrder = gn.orders[rootOrder.prev];
-                _link(self, value, order.orderId, rootOrder.orderId);
-                _link(self, value, prevOrder.orderId, order.orderId);
+                _link(self, value, order.orderId, gn.head);
+                _setHead(self, value, order.orderId);
+                if (gn.tail == 0) _setTail(self, value, order.orderId);
             }
         }
         
@@ -457,22 +461,22 @@ library HitchensOrderStatisticsTreeLib {
 
         if (gn.orders[gn.head].amount < newAmount) {
             OrderItem memory rootOrder = gn.orders[gn.head];
-            while (rootOrder.next != 0 && rootOrder.amount < newAmount) {
+            while (rootOrder.orderId != gn.tail && rootOrder.amount < newAmount) {
                 rootOrder = gn.orders[rootOrder.next];
             }
-
-            OrderItem memory nextOrder = gn.orders[rootOrder.next];
-            _link(self, value, order.orderId, nextOrder.orderId);
-            _link(self, value, rootOrder.orderId, order.orderId);
+            if (order.amount > _amount) {
+                OrderItem memory prevOrder = gn.orders[rootOrder.prev];
+                _link(self, value, order.orderId, rootOrder.orderId);
+                _link(self, value, prevOrder.orderId, order.orderId);
+            } else {
+                OrderItem memory nextOrder = gn.orders[rootOrder.next];
+                _link(self, value, order.orderId, nextOrder.orderId);
+                _link(self, value, rootOrder.orderId, order.orderId);
+            }
         } else {
-            OrderItem memory rootOrder = gn.orders[gn.head];
-            while (rootOrder.next != 0 && !(rootOrder.amount <= newAmount)) {
-                rootOrder = gn.orders[rootOrder.next];
-            }
-
-            OrderItem memory prevOrder = gn.orders[rootOrder.prev];
-            _link(self, value, order.orderId, rootOrder.orderId);
-            _link(self, value, prevOrder.orderId, order.orderId);
+            _link(self, value, order.orderId, gn.head);
+            _setHead(self, value, order.orderId);
+            if (gn.tail == 0) _setTail(self, value, order.orderId);
         }
 
         return true;
@@ -547,18 +551,18 @@ library HitchensOrderStatisticsTreeLib {
         if (gn.head == 0) {
             addHead(self, value, _amount, _orderId);
         } else {
-            if (gn.orders[gn.head].amount <= _amount) {
+            if (gn.orders[gn.head].amount < _amount) {
                 OrderItem memory order = gn.orders[gn.head];
                 while (order.next != 0 && order.amount <= _amount) {
                     order = gn.orders[order.next];
                 }
-                insertOrderAfter(self, value, order.orderId, _amount, _orderId);
-            } else {
-                OrderItem memory order = gn.orders[gn.head];
-                while (order.next != 0 && !(order.amount <= _amount)) {
-                    order = gn.orders[order.next];
+                if (order.amount > _amount) {
+                    insertOrderBefore(self, value, order.orderId, _amount, _orderId);
+                } else {
+                    insertOrderAfter(self, value, order.orderId, _amount, _orderId);
                 }
-                insertOrderBefore(self, value, order.orderId, _amount, _orderId);
+            } else {
+                addHead(self, value, _amount, _orderId);
             }
         }
     }

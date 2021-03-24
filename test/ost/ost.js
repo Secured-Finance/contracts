@@ -1,16 +1,11 @@
 //const BigNumber = require('big-number');
 const OrderStatisticsTree = artifacts.require("HitchensOrderStatisticsTree.sol");
-const fs = require('fs');
+const { steps } = require("./steps");
 let ost;
-let scenarios = [];
 
 contract("OrderStatisticsTree - sort and rank", accounts => {
-
-    let steps;
-
     beforeEach(async () => {;
         ost = await OrderStatisticsTree.new();
-        steps = await loadSteps();
     });
 
     it("should be ready to test", async () => {
@@ -24,12 +19,6 @@ contract("OrderStatisticsTree - sort and rank", accounts => {
         await printExists(steps);
     });
 });
-
-async function loadSteps() {
-    let rawdata = fs.readFileSync('./steps.json');
-    steps = JSON.parse(rawdata);
-    return steps
-}
 
 async function printExists(s) {
     console.log();

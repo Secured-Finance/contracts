@@ -89,8 +89,11 @@ contract OrderBook is ReentrancyGuard, Ownable {
     * @param orderId Market order id
     */
     modifier activeOrder(uint256 orderId) {
-        require(isActive(orderId), "Order Expired");
-        _;
+        if (!isActive(orderId)) {
+            require(cancelOrder(orderId), "Couldn't cancel order");
+        } else {
+            _;
+        }
     }
 
     /**
@@ -98,8 +101,9 @@ contract OrderBook is ReentrancyGuard, Ownable {
     * @param orderId Market order id
     */
     modifier cancelable(uint256 orderId) {
-        require(isActive(orderId));
-        require(getMaker(orderId) == msg.sender, "No access to cancel order");
+        if (isActive(orderId)) {
+            require(getMaker(orderId) == msg.sender, "No access to cancel order");
+        }
         _;
     }
 
@@ -140,6 +144,14 @@ contract OrderBook is ReentrancyGuard, Ownable {
       return orders[orderId];
     }
 
+    function getOrderFromTree(Side side, uint256 rate, uint256 orderId) public view returns (uint256, uint256, uint256, uint256, uint256) {
+        if (side == Side.LEND) {
+            return lendOrders.getOrderById(rate, orderId);
+        } else {
+            return borrowOrders.getOrderById(rate, orderId);
+        }
+    }
+
     /**
     * @dev Internally triggered to increase and return id of last order in order book.
     */
@@ -155,7 +167,7 @@ contract OrderBook is ReentrancyGuard, Ownable {
     * Requirements:
     * - Order has to be cancelable by market maker
     */
-    function cancelOrder(uint256 orderId) public cancelable(orderId) nonReentrant returns (bool success) {
+    function cancelOrder(uint256 orderId) public cancelable(orderId) returns (bool success) {
         MarketOrder memory order = orders[orderId];
         if (order.side == Side.LEND) {
             lendOrders.remove(order.amount, order.rate, orderId);
@@ -183,7 +195,7 @@ contract OrderBook is ReentrancyGuard, Ownable {
     * @param _rate Preferable interest rate
     * @param _deadline Deadline for market maker execution (adds to current network timestamp)
     */
-    function makeOrder(Side _side, uint256 _amount, uint256 _rate, uint256 _deadline) internal nonReentrant returns (uint256 orderId) {
+    function makeOrder(Side _side, uint256 _amount, uint256 _rate, uint256 _deadline) internal returns (uint256 orderId) {
         MarketOrder memory order;
 
         require(_amount > 0, "Can't place empty amount");
@@ -224,7 +236,7 @@ contract OrderBook is ReentrancyGuard, Ownable {
     * Requirements:
     * - Market order has to be active
     */
-    function takeOrder(Side side, uint256 orderId, uint256 _amount) internal activeOrder(orderId) nonReentrant returns (bool) {
+    function takeOrder(Side side, uint256 orderId, uint256 _amount) internal activeOrder(orderId) returns (bool) {
         MarketOrder memory order = orders[orderId];
         require(_amount <= order.amount, "Insuficient amount");
         require(order.maker != msg.sender, "Maker couldn't take its order");
@@ -261,11 +273,11 @@ contract OrderBook is ReentrancyGuard, Ownable {
     */
     function matchOrders(Side side, uint256 amount, uint256 rate) public view returns (uint256) {
         if (side == Side.LEND) {
-            require(lendOrders.exists(rate), "No orders exists for selected interest rate");
-            return lendOrders.findOrderIdForAmount(rate, amount);
-        } else {
             require(borrowOrders.exists(rate), "No orders exists for selected interest rate");
             return borrowOrders.findOrderIdForAmount(rate, amount);
+        } else {
+            require(lendOrders.exists(rate), "No orders exists for selected interest rate");
+            return lendOrders.findOrderIdForAmount(rate, amount);
         }
     }
 

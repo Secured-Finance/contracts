@@ -1,4 +1,4 @@
-[
+const steps = [
 {
   "action": "insert",
   "amount": 4000000000000,
@@ -1071,3 +1071,5 @@
   "rate": 1715,
   "orderId": 287
 }]
+
+module.exports = {steps}

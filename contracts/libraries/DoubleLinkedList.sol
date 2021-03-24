@@ -8,19 +8,18 @@ pragma solidity ^0.6.12;
  */
 contract DoubleLinkedList {
 
-    event ObjectCreated(uint256 id, uint256 amount, uint256 orderId);
+    event ObjectCreated(uint256 orderId, uint256 amount);
     event ObjectsLinked(uint256 prev, uint256 next);
-    event ObjectRemoved(uint256 id);
-    event NewHead(uint256 id);
-    event NewTail(uint256 id);
+    event ObjectRemoved(uint256 orderId);
+    event NewHead(uint256 orderId);
+    event NewTail(uint256 orderId);
 
     struct Object{
-        uint256 id;
+        uint256 orderId;
         uint256 next;
         uint256 prev;
         uint256 timestamp;
         uint256 amount;
-        uint256 orderId;
     }
 
     uint256 public head;
@@ -44,10 +43,10 @@ contract DoubleLinkedList {
         public
         virtual
         view
-        returns (uint256, uint256, uint256, uint256, uint256, uint256)
+        returns (uint256, uint256, uint256, uint256, uint256)
     {
         Object memory object = objects[_id];
-        return (object.id, object.next, object.prev, object.timestamp, object.amount, object.orderId);
+        return (object.orderId, object.next, object.prev, object.timestamp, object.amount);
     }
 
     /**
@@ -63,7 +62,7 @@ contract DoubleLinkedList {
         while (object.amount != _amount) {
             object = objects[object.next];
         }
-        return object.id;
+        return object.orderId;
     }
 
     /**
@@ -99,28 +98,28 @@ contract DoubleLinkedList {
     /**
      * @dev Remove the Object denoted by `_id` from the List.
      */
-    function remove(uint256 _id)
+    function remove(uint256 _orderId)
         public
         virtual
     {
-        Object memory removeObject = objects[_id];
-        if (head == _id && tail == _id) {
+        Object memory removeObject = objects[_orderId];
+        if (head == _orderId && tail == _orderId) {
             _setHead(0);
             _setTail(0);
         }
-        else if (head == _id) {
+        else if (head == _orderId) {
             _setHead(removeObject.next);
             objects[removeObject.next].prev = 0;
         }
-        else if (tail == _id) {
+        else if (tail == _orderId) {
             _setTail(removeObject.prev);
             objects[removeObject.prev].next = 0;
         }
         else {
             _link(removeObject.prev, removeObject.next);
         }
-        delete objects[removeObject.id];
-        emit ObjectRemoved(_id);
+        delete objects[removeObject.orderId];
+        emit ObjectRemoved(_orderId);
     }
 
     /**
@@ -132,18 +131,18 @@ contract DoubleLinkedList {
         if (head == 0) {
             addHead(_amount, _orderId);
         } else {
-            if (objects[head].amount <= _amount) {
+            if (objects[head].amount < _amount) {
                 Object memory object = objects[head];
                 while (object.next != 0 && object.amount <= _amount) {
                     object = objects[object.next];
                 }
-                insertAfter(object.id, _amount, _orderId);
-            } else {
-                Object memory object = objects[head];
-                while (object.next != 0 && !(object.amount <= _amount)) {
-                    object = objects[object.next];
+                if (object.amount > _amount) {
+                    insertBefore(object.orderId, _amount, _orderId);
+                } else {
+                    insertAfter(object.orderId, _amount, _orderId);
                 }
-                insertBefore(object.id, _amount, _orderId);
+            } else {
+                addHead(_amount, _orderId);
             }
         }
     }
@@ -162,8 +161,8 @@ contract DoubleLinkedList {
             Object memory prevObject = objects[_prevId];
             Object memory nextObject = objects[prevObject.next];
             uint256 newObjectId = _createObject(_amount, _orderId);
-            _link(newObjectId, nextObject.id);
-            _link(prevObject.id, newObjectId);
+            _link(newObjectId, nextObject.orderId);
+            _link(prevObject.orderId, newObjectId);
         }
     }
 
@@ -185,21 +184,21 @@ contract DoubleLinkedList {
     /**
      * @dev Internal function to update the Head pointer.
      */
-    function _setHead(uint256 _id)
+    function _setHead(uint256 _orderId)
         internal
     {
-        head = _id;
-        emit NewHead(_id);
+        head = _orderId;
+        emit NewHead(_orderId);
     }
 
     /**
      * @dev Internal function to update the Tail pointer.
      */
-    function _setTail(uint256 _id)
+    function _setTail(uint256 _orderId)
         internal
     {
-        tail = _id;
-        emit NewTail(_id);
+        tail = _orderId;
+        emit NewTail(_orderId);
     }
 
     /**
@@ -209,23 +208,20 @@ contract DoubleLinkedList {
         internal
         returns (uint256)
     {
-        uint256 newId = idCounter;
         idCounter += 1;
         Object memory object = Object(
-            newId,
+            _orderId,
             0,
             0,
             block.timestamp,
-            _amount,
-            _orderId
+            _amount
         );
-        objects[object.id] = object;
+        objects[object.orderId] = object;
         emit ObjectCreated(
-            object.id,
-            object.amount,
-            object.orderId
+            object.orderId,
+            object.amount
         );
-        return object.id;
+        return object.orderId;
     }
 
     /**
