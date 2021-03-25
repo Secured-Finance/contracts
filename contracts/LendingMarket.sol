@@ -7,15 +7,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import './interfaces/ICollateral.sol';
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
+import "./ProtocolTypes.sol";
 
 /**
- * @dev Order Book contract module which allows lending market participants
+ * @dev Lending Market contract module which allows lending market participants
  * to create/take/cancel market orders.
  *
- * This module is used for LendingMarket contract. It will store market orders
- * in unstructured way.
+ * It will store market orders in structured red-black tree and doubly linked list in each node.
  */
-contract OrderBook is ReentrancyGuard, Ownable {
+contract LendingMarket is ProtocolTypes, ReentrancyGuard, Ownable {
     using SafeMath for uint256;
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
@@ -45,19 +45,9 @@ contract OrderBook is ReentrancyGuard, Ownable {
     */
     event TakeOrder(uint256 orderId, address indexed taker, Side side, uint256 amount, uint256 rate);
 
-    enum Side {
-        LEND,
-        BORROW
-    }
-    enum Ccy {ETH, FIL, USDC}
-    enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
-
     uint256 public last_order_id;
     Ccy public MarketCcy;
     Term public MarketTerm;
-    uint256 internal constant BP = 10000; // basis point
-    uint256 internal constant PCT = 100; // percentage base
-    uint256 internal constant MKTMAKELEVEL = 20; // 20% for market making
 
     struct MarketOrder {
         Side side;
@@ -134,6 +124,29 @@ contract OrderBook is ReentrancyGuard, Ownable {
     */
     function getMaker(uint256 orderId) public view returns (address maker) {
         return orders[orderId].maker;
+    }
+
+    /**
+    * @dev Triggers to get highest borrow rate.
+    */
+    function getBorrowRate() public view returns (uint256 rate) {
+        return borrowOrders.last();
+    }
+
+    /**
+    * @dev Triggers to get highest lend rate.
+    */
+    function getLendRate() public view returns (uint256 rate) {
+        return lendOrders.last();
+    }
+
+    /**
+    * @dev Triggers to get mid rate.
+    */
+    function getMidRate() public view returns (uint256 rate) {
+        uint256 borrowRate = getBorrowRate();
+        uint256 lendRate = getLendRate();
+        return (borrowRate.add(lendRate)).div(2);
     }
 
     /**
