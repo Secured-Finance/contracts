@@ -1,7 +1,7 @@
 const MoneyMarket = artifacts.require('MoneyMarket');
 const FXMarket = artifacts.require('FXMarket');
 const Collateral = artifacts.require('Collateral');
-const OrderBook = artifacts.require('OrderBook');
+const OrderBook = artifacts.require('LendingMarket');
 const Loan = artifacts.require('Loan');
 
 const {Side, Ccy, Term, ColState, sample} = require('../test-utils').constants;

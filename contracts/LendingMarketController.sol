@@ -77,7 +77,7 @@ contract LendingMarketController is ProtocolTypes {
     }
 
     /**
-    * @dev Triggers to get lend rates for selected currency.
+    * @dev Triggers to get mid rates for selected currency.
     * @param _ccy Currency
     */
     function getMidRatesForCcy(Ccy _ccy) public view returns (uint256[NUMTERM] memory rates) {
@@ -99,10 +99,10 @@ contract LendingMarketController is ProtocolTypes {
         df.df3m = BP.mul(BP).div((BP.add(rates[0].mul(90).div(360))));
         df.df6m = BP.mul(BP).div((BP.add(rates[1].mul(180).div(360))));
         df.df1y = BP.mul(BP).div((BP.add(rates[2]))); 
-        df.df2y = BP.mul(BP.sub(rates[3]).mul(df.df1y).div(BP)).div(BP.add(rates[3]));
-        df.df3y = BP.mul(BP.sub(rates[4]).mul(df.df1y.add(df.df2y)).div(BP)).div(BP.add(rates[4]));
-        df.df4y = BP.mul(BP.sub(rates[5]).mul(df.df1y.add(df.df2y).add(df.df3y)).div(BP)).div(BP.add(rates[5]));
-        df.df5y = BP.mul(BP.sub(rates[6]).mul(df.df1y.add(df.df2y).add(df.df3y).add(df.df4y)).div(BP)).div(BP.add(rates[6]));
+        df.df2y = BP.mul(BP.sub(rates[3].mul(df.df1y).div(BP))).div(BP.add(rates[3]));
+        df.df3y = BP.mul(BP.sub(rates[4].mul(df.df1y.add(df.df2y)).div(BP))).div(BP.add(rates[4]));
+        df.df4y = BP.mul(BP.sub(rates[5].mul(df.df1y.add(df.df2y).add(df.df3y)).div(BP))).div(BP.add(rates[5]));
+        df.df5y = BP.mul(BP.sub(rates[6].mul(df.df1y.add(df.df2y).add(df.df3y).add(df.df4y)).div(BP))).div(BP.add(rates[6]));
         return df;
     }
 
@@ -124,5 +124,6 @@ contract LendingMarketController is ProtocolTypes {
         lendingMarkets[_ccy][_term] = market;
 
         emit LendingMarketCreated(_ccy, _term, market);
+        return market;
     }
 }
