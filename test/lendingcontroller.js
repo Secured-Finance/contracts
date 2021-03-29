@@ -70,6 +70,7 @@ contract('LendingMarketController', async (accounts) => {
 
             let lendingMarket = await LendingMarket.at(_3mMarket.logs[0].args.marketAddr);
             await lendingMarket.setCollateral(collateral.address, {from: owner});
+            await lendingMarket.setLoan(loan.address, {from: owner});
             await collateral.addLendingMarket(Ccy.FIL, Term._3m, lendingMarket.address, {from: owner});
             await loan.addLendingMarket(Ccy.FIL, Term._3m, lendingMarket.address, {from: owner});        
         });
@@ -80,6 +81,7 @@ contract('LendingMarketController', async (accounts) => {
 
             let lendingMarket = await LendingMarket.at(_6mMarket.logs[0].args.marketAddr);
             await lendingMarket.setCollateral(collateral.address, {from: owner});
+            await lendingMarket.setLoan(loan.address, {from: owner});
             await collateral.addLendingMarket(Ccy.FIL, Term._6m, lendingMarket.address, {from: owner});
             await loan.addLendingMarket(Ccy.FIL, Term._6m, lendingMarket.address, {from: owner});        
         });
@@ -90,6 +92,7 @@ contract('LendingMarketController', async (accounts) => {
 
             let lendingMarket = await LendingMarket.at(_1yMarket.logs[0].args.marketAddr);
             await lendingMarket.setCollateral(collateral.address, {from: owner});
+            await lendingMarket.setLoan(loan.address, {from: owner});
             await collateral.addLendingMarket(Ccy.FIL, Term._1y, lendingMarket.address, {from: owner});
             await loan.addLendingMarket(Ccy.FIL, Term._1y, lendingMarket.address, {from: owner});        
         });
@@ -100,6 +103,7 @@ contract('LendingMarketController', async (accounts) => {
 
             let lendingMarket = await LendingMarket.at(_2yMarket.logs[0].args.marketAddr);
             await lendingMarket.setCollateral(collateral.address, {from: owner});
+            await lendingMarket.setLoan(loan.address, {from: owner});
             await collateral.addLendingMarket(Ccy.FIL, Term._2y, lendingMarket.address, {from: owner});
             await loan.addLendingMarket(Ccy.FIL, Term._2y, lendingMarket.address, {from: owner});        
         });
@@ -110,6 +114,7 @@ contract('LendingMarketController', async (accounts) => {
 
             let lendingMarket = await LendingMarket.at(_3yMarket.logs[0].args.marketAddr);
             await lendingMarket.setCollateral(collateral.address, {from: owner});
+            await lendingMarket.setLoan(loan.address, {from: owner});
             await collateral.addLendingMarket(Ccy.FIL, Term._3y, lendingMarket.address, {from: owner});
             await loan.addLendingMarket(Ccy.FIL, Term._3y, lendingMarket.address, {from: owner});        
         });
@@ -120,6 +125,7 @@ contract('LendingMarketController', async (accounts) => {
 
             let lendingMarket = await LendingMarket.at(_5yMarket.logs[0].args.marketAddr);
             await lendingMarket.setCollateral(collateral.address, {from: owner});
+            await lendingMarket.setLoan(loan.address, {from: owner});
             await collateral.addLendingMarket(Ccy.FIL, Term._5y, lendingMarket.address, {from: owner});
             await loan.addLendingMarket(Ccy.FIL, Term._5y, lendingMarket.address, {from: owner});        
         });

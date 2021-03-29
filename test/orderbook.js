@@ -57,6 +57,7 @@ contract('OrderBook', async (accounts) => {
     
     orderBook = await OrderBook.new(Ccy.FIL, Term._1y, owner);
     await orderBook.setCollateral(collateral.address, {from: owner});
+    await orderBook.setLoan(loan.address, {from: owner});
     await collateral.addLendingMarket(Ccy.FIL, Term._1y, orderBook.address, {from: owner});
     await loan.addLendingMarket(Ccy.FIL, Term._1y, orderBook.address, {from: owner});
   });
