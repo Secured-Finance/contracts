@@ -41,8 +41,9 @@ contract Loan is ProtocolTypes {
     // 25. Emit MARGIN_CALL or LIQUIDATION message
 
     event MakeLoanDeal(
-        address indexed makerAddr,
-        Side indexed side,
+        address indexed lender,
+        address indexed borrower,
+        Side side,
         Ccy ccy,
         Term term,
         uint256 amt,
@@ -187,6 +188,7 @@ contract Loan is ProtocolTypes {
 
     struct LoanInput {
         address makerAddr;
+        address takerAddr;
         Side side;
         Ccy ccy;
         Term term;
@@ -255,28 +257,27 @@ contract Loan is ProtocolTypes {
 
     // to be called by market takers to register loan
     function makeLoanDeal(
-        address makerAddr,
-        address takerAddr,
+        address maker,
+        address taker,
         Side side,
         Ccy ccy,
         Term term,
         uint256 amt,
         uint256 rate
-    ) public {
-        require(makerAddr != takerAddr, 'Same person deal is not allowed');
+    ) public lendingMarketExists(ccy, term) {
+        require(maker != taker, 'Same person deal is not allowed');
         address lender;
         address borrower;
         if (side == Side.LEND) {
-            lender = makerAddr;
-            borrower = takerAddr;
+            lender = maker;
+            borrower = taker;
         }
         if (side == Side.BORROW) {
-            lender = takerAddr;
-            borrower = makerAddr;
+            lender = taker;
+            borrower = maker;
         }
 
         collateral.useCollateral(uint8(ccy), amt, borrower);
-        // uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
 
         // lender
         LoanBook storage book = loanMap[lender];
@@ -284,20 +285,11 @@ contract Loan is ProtocolTypes {
             book.isValue = true;
             lenders.push(lender);
         }
-        LoanInput memory input = LoanInput(makerAddr, side, ccy, term, amt);
+        LoanInput memory input = LoanInput(maker, taker, side, ccy, term, amt);
         LoanItem memory newItem = inputToItem(input, rate, book.loanNum++);
         book.loans.push(newItem);
 
-        // borrower
-        LoanPartyBook storage partyBook = loanPartyMap[borrower];
-        if (!partyBook.isValue) {
-            partyBook.isValue = true;
-            borrowers.push(borrower);
-        }
-        LoanParty memory party = LoanParty(lender, borrower, newItem.loanId);
-        partyBook.loanPartyList.push(party);
-
-        emit MakeLoanDeal(makerAddr, side, ccy, term, amt, rate, newItem.loanId);
+        emit MakeLoanDeal(lender, borrower, side, ccy, term, amt, rate, newItem.loanId);
     }
 
     // helper to convert input data to LoanItem
@@ -310,10 +302,10 @@ contract Loan is ProtocolTypes {
         item.loanId = loanId;
         item.lender = input.side == Side.LEND
             ? input.makerAddr
-            : msg.sender;
+            : input.takerAddr;
         item.borrower = input.side == Side.BORROW
             ? input.makerAddr
-            : msg.sender;
+            : input.takerAddr;
         item.side = input.side;
         item.ccy = input.ccy;
         item.term = input.term;

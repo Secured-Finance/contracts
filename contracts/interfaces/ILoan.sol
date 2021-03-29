@@ -40,23 +40,26 @@ interface ILoan {
     event MakeLoanDeal(address indexed makerAddr, uint8 indexed side, uint8 ccy, uint8 term, uint256 amt, uint256 rate, uint256 indexed loanId);
     event NotifyPayment(address indexed lender, address indexed borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 indexed txHash);
     event UpdateState(address indexed lender, address indexed borrower, uint256 indexed loanId, uint8 prevState, uint8 currState);
-    
-    function owner() external view returns (address);
-    function setLendingControllerAddr(address addr) external;
-    function makeLoanDeal(address makerAddr, uint8 side, uint8 ccy, uint8 term, uint256 amt) external;
+
+    function addLendingMarket(uint8 _ccy, uint8 _term, address addr) external;
+    function confirmPayment(address lender, address borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 txHash) external;
     function fillSchedule(Schedule memory schedule, uint8 term, uint256 amt, uint256 rate) external view;
+    function getAllBooks() external view returns (LoanBook[] memory);
+    function getAllBorrowers() external view returns (address[] memory);
+    function getAllLenders() external view returns (address[] memory);
+    function getBorrowerBook(address borrower) external view returns (LoanBook memory);
+    function getCurrentState(Schedule memory schedule) external view returns (uint8);
+    function getLenderBook(address lender) external view returns (LoanBook memory);
     function getLoanItem(uint256 loanId) external view returns (LoanItem memory);
     function getOneBook(address addr) external view returns (LoanBook memory);
-    function getLenderBook(address lender) external view returns (LoanBook memory);
-    function getBorrowerBook(address borrower) external view returns (LoanBook memory);
-    function getAllBooks() external view returns (LoanBook[] memory);
-    function getAllLenders() external view returns (address[] memory);
-    function getAllBorrowers() external view returns (address[] memory);
-    function getCurrentState(Schedule memory schedule) external view returns (uint8);
-    function updateState(address lender, address borrower, uint256 loanId) external;
-    function updateAllState() external;
+    function lendingMarkets(uint8 , uint8 ) external view returns (address);
+    function makeLoanDeal(address makerAddr, address takerAddr, uint8 side, uint8 ccy, uint8 term, uint256 amt, uint256 rate) external;
     function notifyPayment(address lender, address borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 txHash) external;
-    function confirmPayment(address lender, address borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 txHash) external;
+    function owner() external view returns (address);
+    function setCollateralAddr(address addr) external;
+    function setLendingControllerAddr(address addr) external;
     function updateAllPV() external;
+    function updateAllState() external;
     function updateBookPV(address lender) external;
+    function updateState(address lender, address borrower, uint256 loanId) external;
 }

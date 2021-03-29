@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import './interfaces/ICollateral.sol';
+import './interfaces/ILoan.sol';
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
 import "./ProtocolTypes.sol";
 
@@ -20,6 +21,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
 
     // Contracts interfaces
     ICollateral collateral;
+    ILoan loan;
 
     /**
     * @dev Emitted when market order created by market maker.
@@ -116,6 +118,18 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     */
     function setCollateral(address colAddr) public onlyOwner {
         collateral = ICollateral(colAddr);
+    }
+
+    /**
+    * @dev Triggers to make a set loan contract address.
+    * @param addr Loan smart contract addreess
+    *
+    * Requirements:
+    *
+    * - Can be executed only by contract owner.
+    */
+    function setLoan(address addr) public onlyOwner {
+        loan = ILoan(addr);
     }
 
     /**
@@ -269,6 +283,8 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
         } else if (order.side == Side.BORROW) {
             require(borrowOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
         }
+
+        loan.makeLoanDeal(order.maker, msg.sender, uint8(order.side), uint8(MarketCcy), uint8(MarketTerm), _amount, order.rate);
 
         emit TakeOrder(
             orderId,
