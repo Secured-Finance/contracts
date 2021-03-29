@@ -34,9 +34,13 @@ interface ICollateral {
     event UpSizeETH(address indexed addr);
     event UpSizeFIL(address indexed addr, uint256 amt, bytes32 txHash);
     event UpdateState(address indexed addr, uint8 prevState, uint8 currState);
-    
-    function setMarketAddr(address moneyAddr, address fxAddr) external;
-    function setLoanAddr(address loanAddr) external;
+
+    function lendingMarkets(uint8 , uint8) external view returns (address);
+    function owner() external view returns (address);
+    function addLendingMarket(uint8 _ccy, uint8 _term, address addr) external;
+    function isLendingMarket(uint8 _ccy, address addr) external view returns (bool);
+    function setLoanAddr(address addr) external;
+    function setFxMarketAddr(address addr) external;
     function setColBook(string memory id, bytes32 userAddrFIL, address userAddrUSDC) external payable;
     function useCollateral(uint8 ccy, uint256 amt, address addr) external;
     function isCovered(uint256 amt, uint8 ccy, address addr) external view returns (bool);

@@ -1,4 +1,3 @@
-const MoneyMarket = artifacts.require('MoneyMarket');
 const FXMarket = artifacts.require('FXMarket');
 const Collateral = artifacts.require('Collateral');
 const OrderBook = artifacts.require('LendingMarket');
@@ -39,7 +38,6 @@ contract('OrderBook', async (accounts) => {
   const users = [alice, bob, carol]; // without owner
 
   let snapshotId;
-  let moneyMarket;
   let fxMarket;
   let collateral;
   let loan;
@@ -51,25 +49,16 @@ contract('OrderBook', async (accounts) => {
     console.log('before    ', toDate(time));
     orderList = orders;
 
-    moneyMarket = await MoneyMarket.new();
     fxMarket = await FXMarket.new();
-    collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
-    loan = await Loan.new(moneyMarket.address, fxMarket.address, collateral.address);
-    await collateral.setLoanAddr(loan.address, {from: owner});
-    await moneyMarket.setColAddr(collateral.address, {from: owner});
+    loan = await Loan.new();
+    collateral = await Collateral.new(loan.address);
+    await collateral.setFxMarketAddr(fxMarket.address, {from: owner});
+    await loan.setCollateralAddr(collateral.address, {from: owner});
     
-    orderBook = await OrderBook.new(Ccy.FIL, Term._1y);
+    orderBook = await OrderBook.new(Ccy.FIL, Term._1y, owner);
     await orderBook.setCollateral(collateral.address, {from: owner});
-    await collateral.setMarketAddr(moneyMarket.address, orderBook.address, {from: owner});
-
-    console.log();
-    console.log('collateral  addr is', collateral.address);
-    console.log('order book addr is', orderBook.address);
-    console.log();
-    console.log('alice       addr is', alice);
-    console.log('bob         addr is', bob);
-    console.log('carol       addr is', carol);
-    console.log();
+    await collateral.addLendingMarket(Ccy.FIL, Term._1y, orderBook.address, {from: owner});
+    await loan.addLendingMarket(Ccy.FIL, Term._1y, orderBook.address, {from: owner});
   });
 
   describe('Setup Test Data', async () => {
@@ -125,22 +114,7 @@ contract('OrderBook', async (accounts) => {
         await emitted(canceledOrder, 'CancelOrder');
       });
 
-      // it("Get information about market orders", async () => {
-      //   const marketOrder3 = await orderBook.getOrderFromTree(1, 750, 3);
-      //   console.log("Order ID: " + marketOrder3[0].toNumber());
-      //   console.log("Next: " + marketOrder3[1].toNumber());
-      //   console.log("Prev: " + marketOrder3[2].toNumber());
-      //   console.log("Timestamp: " + marketOrder3[3].toNumber());
-      //   console.log("Amount: " + marketOrder3[4].toNumber());
-      // });
-
       it('Create 10 new market orders with the same interest rate', async () => {
-        // let marketOrder = await orderBook.order(0, 10000, 900, effectiveSec, {from: bob});
-        // await emitted(marketOrder, 'MakeOrder');
-
-        // let matchedOrders = await orderBook.matchOrders(0, 100, 750, {from: bob});
-        // console.log("Order ID: " + matchedOrders.toNumber());
-
         for(i=0; i < orderList.length; i++) {
           amount = orderList[i]["amount"];
           orderId = orderList[i]["orderId"];

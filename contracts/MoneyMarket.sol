@@ -3,25 +3,15 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import './Collateral.sol';
+import "./ProtocolTypes.sol";
 
 /// @title MoneyMarket Contract for Loans
-contract MoneyMarket {
+contract MoneyMarket is ProtocolTypes {
     event SetMoneyMarketBook(address indexed addr);
     event DelMoneyMarketBook(address indexed addr);
     event SetOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt, uint rate, uint effectiveSec);
     event DelOneItem(address indexed addr, Side side, Ccy ccy, Term term);
     event TakeOneItem(address indexed addr, Side side, Ccy ccy, Term term, uint amt);
-
-    enum Side {LEND, BORROW}
-    enum Ccy {ETH, FIL, USDC}
-    enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
-
-    uint256 internal constant NUMCCY = 3;
-    uint256 internal constant NUMTERM = 6;
-    uint256 internal constant NUMDF = 7; // numbef of discount factors
-    uint256 internal constant BP = 10000; // basis point
-    uint256 internal constant PCT = 100; // basis point
-    uint256 internal constant MKTMAKELEVEL = 20; // 20% for market making
 
     struct MoneyMarketBook {
         MoneyMarketItem[NUMTERM][NUMCCY] lenders;
@@ -42,17 +32,6 @@ contract MoneyMarket {
         Term term;
         uint256 amt;
         uint256 rate;
-    }
-
-    // For mark to market
-    struct DiscountFactor{
-        uint256 df3m;
-        uint256 df6m;
-        uint256 df1y;
-        uint256 df2y;
-        uint256 df3y;
-        uint256 df4y;
-        uint256 df5y;
     }
 
     // keeps all the records

@@ -2,18 +2,13 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './MoneyMarket.sol';
+import "./ProtocolTypes.sol";
 
-contract FXMarket {
+contract FXMarket  is ProtocolTypes {
     event SetFXBook(address indexed addr);
     event DelFXBook(address indexed addr);
     event DelOneItem(address indexed addr);
 
-    enum Ccy {ETH, FIL, USDC}
-    enum CcyPair {FILETH, FILUSDC, ETHUSDC}
-    enum Side {BID, OFFER}
-
-    uint256 constant NUMCCY = 3;
     uint256 constant NUMPAIR = 3;
     uint256[NUMPAIR] FXMULT = [1000, 1, 1];
 
@@ -111,21 +106,21 @@ contract FXMarket {
 
     function delOneItem(
         address addr,
-        Side side,
+        FXSide side,
         CcyPair pair
     ) public {
         require(fxMap[addr].isValue == true, 'fxBook not found');
-        if (side == Side.BID) delete fxMap[addr].bids[uint256(pair)];
+        if (side == FXSide.BID) delete fxMap[addr].bids[uint256(pair)];
         else delete fxMap[addr].offers[uint256(pair)];
         emit DelOneItem(addr);
     }
 
     function getOneItem(
         address addr,
-        Side side,
+        FXSide side,
         CcyPair pair
     ) public view returns (FXItem memory) {
-        if (side == Side.BID) return fxMap[addr].bids[uint256(pair)];
+        if (side == FXSide.BID) return fxMap[addr].bids[uint256(pair)];
         else return fxMap[addr].offers[uint256(pair)];
     }
 
@@ -145,14 +140,14 @@ contract FXMarket {
     function betterItem(
         FXItem memory a,
         FXItem memory b,
-        Side side
+        FXSide side
     ) private pure returns (FXItem memory) {
         require(a.isAvailable || b.isAvailable, 'Not enough FX Data');
         if (!a.isAvailable) return b;
         if (!b.isAvailable) return a;
         if (a.rate == b.rate) return a.amtBuy > b.amtBuy ? a : b;
-        if (side == Side.OFFER) return a.rate < b.rate ? a : b;
-        return a.rate > b.rate ? a : b; // Side.BID
+        if (side == FXSide.OFFER) return a.rate < b.rate ? a : b;
+        return a.rate > b.rate ? a : b; // FXSide.BID
     }
 
     function getBestBook() public view returns (FXBook memory) {
@@ -162,12 +157,12 @@ contract FXMarket {
                 book.bids[i] = betterItem(
                     book.bids[i],
                     fxMap[marketMakers[k]].bids[i],
-                    Side.BID
+                    FXSide.BID
                 );
                 book.offers[i] = betterItem(
                     book.offers[i],
                     fxMap[marketMakers[k]].offers[i],
-                    Side.OFFER
+                    FXSide.OFFER
                 );
             }
         }
@@ -202,17 +197,17 @@ contract FXMarket {
         return rates;
     }
 
-    function getETHvalue(uint256 amount, MoneyMarket.Ccy ccy) public view returns (uint256) {
+    function getETHvalue(uint256 amount, Ccy ccy) public view returns (uint256) {
         uint256[3] memory rates = getMidRates();
-        if (ccy == MoneyMarket.Ccy.ETH) {
+        if (ccy == Ccy.ETH) {
             return amount;
         }
-        if (ccy == MoneyMarket.Ccy.FIL) {
+        if (ccy == Ccy.FIL) {
             uint256 pairIndex = uint256(CcyPair.FILETH);
             uint256 mult = FXMULT[pairIndex];
             return rates[pairIndex] * amount / mult;
         }
-        if (ccy == MoneyMarket.Ccy.USDC) {
+        if (ccy == Ccy.USDC) {
             uint256 pairIndex = uint256(CcyPair.ETHUSDC);
             uint256 mult = FXMULT[pairIndex];
             // TODO - add more presicion to handle fractional value ETH

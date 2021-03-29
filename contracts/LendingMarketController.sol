@@ -120,7 +120,7 @@ contract LendingMarketController is ProtocolTypes {
     */
     function deployLendingMarket(Ccy _ccy, Term _term) public onlyOwner returns (address market) {
         require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
-        market = address(new LendingMarket(_ccy, _term));
+        market = address(new LendingMarket(_ccy, _term, owner));
         lendingMarkets[_ccy][_term] = market;
 
         emit LendingMarketCreated(_ccy, _term, market);

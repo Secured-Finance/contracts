@@ -13,7 +13,11 @@ contract ProtocolTypes {
     uint8 internal constant NUMDF = 7; // number of discount factors
     uint256 internal constant BP = 10000; // basis point
     uint256 internal constant PCT = 100; // percentage point
+    uint256 internal constant PENALTYLEVEL = 10; // 10% settlement failure penalty
     uint256 internal constant MKTMAKELEVEL = 20; // 20% for market making
+    uint256 internal constant LQLEVEL = 120; // 120% for liquidation price
+    uint256 internal constant MARGINLEVEL = 150; // 150% margin call threshold
+    uint256 internal constant AUTOLQLEVEL = 125; // 125% auto liquidation
 
     // Lending market common types
     enum Side {
@@ -24,7 +28,7 @@ contract ProtocolTypes {
     enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
 
     // Mark to market mechanism
-    struct DiscountFactor{
+    struct DiscountFactor {
         uint256 df3m;
         uint256 df6m;
         uint256 df1y;

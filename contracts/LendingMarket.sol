@@ -3,7 +3,6 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import './interfaces/ICollateral.sol';
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
@@ -15,7 +14,7 @@ import "./ProtocolTypes.sol";
  *
  * It will store market orders in structured red-black tree and doubly linked list in each node.
  */
-contract LendingMarket is ProtocolTypes, ReentrancyGuard, Ownable {
+contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     using SafeMath for uint256;
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
@@ -48,6 +47,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Ownable {
     uint256 public last_order_id;
     Ccy public MarketCcy;
     Term public MarketTerm;
+    address public owner;
 
     struct MarketOrder {
         Side side;
@@ -69,9 +69,18 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Ownable {
     * @param _ccy The main currency for order book lending deals
     * @param _term The main term for order book lending deals
     */
-    constructor(Ccy _ccy, Term _term) public {
+    constructor(Ccy _ccy, Term _term, address _owner) public {
         MarketCcy = _ccy;
         MarketTerm = _term;
+        owner = _owner;
+    }
+
+    /**
+    * @dev Modifier to make a function callable only by contract owner.
+    */
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
     }
 
     /**
@@ -189,7 +198,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Ownable {
         }
         delete orders[orderId];
 
-        // collateral.releaseCollateral(uint8(MarketCcy), order.amount.mul(MKTMAKELEVEL).div(PCT), order.maker);
+        collateral.releaseCollateral(uint8(MarketCcy), order.amount.mul(MKTMAKELEVEL).div(PCT), order.maker);
         emit CancelOrder(
             orderId,
             order.maker,
@@ -222,7 +231,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Ownable {
         orderId = _next_id();
 
         orders[orderId] = order;
-        // collateral.useCollateral(uint8(MarketCcy), _amount.mul(MKTMAKELEVEL).div(PCT), msg.sender);
+        collateral.useCollateral(uint8(MarketCcy), _amount.mul(MKTMAKELEVEL).div(PCT), msg.sender);
         if (order.side == Side.LEND) {
             lendOrders.insert(order.amount, order.rate, orderId);
         } else if (order.side == Side.BORROW) {

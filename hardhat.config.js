@@ -1,0 +1,40 @@
+require("@nomiclabs/hardhat-truffle5");
+require("hardhat-gas-reporter");
+require("solidity-coverage");
+
+module.exports = {
+  defaultNetwork: "hardhat",
+  networks: {
+    hardhat: {
+    },
+    development: {
+      url: 'http://0.0.0.0:8545', // Localhost (default: none)
+      chainId: 1337,
+      // port: 8545, // Standard Ethereum port (default: none)
+      // network_id: '*', // Any network (default: none)
+    },
+  },
+  solidity: {
+    version: "0.6.12",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./build"
+  },
+  gasReporter: {
+    currency: 'USD',
+    gasPrice: 125
+  },
+  mocha: {
+    timeout: 100000,
+    reporter: 'eth-gas-reporter',
+  }
+}

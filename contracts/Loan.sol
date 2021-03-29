@@ -2,11 +2,11 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './MoneyMarket.sol';
-import './FXMarket.sol';
-import './Collateral.sol';
+import './interfaces/ICollateral.sol';
+import "./ProtocolTypes.sol";
+import './LendingMarketController.sol';
 
-contract Loan {
+contract Loan is ProtocolTypes {
     // (Execution)
     // 1. Deploy from market taker (maker addr, side, ccy, term, amt)
     // 2. Check collateral coverage and state
@@ -42,9 +42,9 @@ contract Loan {
 
     event MakeLoanDeal(
         address indexed makerAddr,
-        MoneyMarket.Side indexed side,
-        MoneyMarket.Ccy ccy,
-        MoneyMarket.Term term,
+        Side indexed side,
+        Ccy ccy,
+        Term term,
         uint256 amt,
         uint rate,
         uint256 indexed loanId
@@ -53,8 +53,8 @@ contract Loan {
     event NotifyPayment(
         address indexed lender,
         address indexed borrower,
-        MoneyMarket.Side side,
-        MoneyMarket.Ccy ccy,
+        Side side,
+        Ccy ccy,
         uint256 term,
         uint256 amt,
         uint256 loanId,
@@ -64,8 +64,8 @@ contract Loan {
     event ConfirmPayment(
         address indexed lender,
         address indexed borrower,
-        MoneyMarket.Side side,
-        MoneyMarket.Ccy ccy,
+        Side side,
+        Ccy ccy,
         uint256 term,
         uint256 amt,
         uint256 loanId,
@@ -76,28 +76,16 @@ contract Loan {
         address indexed lender,
         address indexed borrower,
         uint256 indexed loanId,
-        State prevState,
-        State currState
+        LoanState prevState,
+        LoanState currState
     );
 
-    enum State {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
-    enum DFTERM {_3m, _6m, _1y, _2y, _3y, _4y, _5y}
-
-    uint256 constant BP = 10000; // basis point
-    uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000; // convert FILETH = 0.085 to 85
     uint256 constant PAYFREQ = 1; // annualy
     uint256 constant NOTICE = 2 weeks;
     uint256 constant SETTLE = 2 days;
-    uint256 constant NUMCCY = 3;
-    uint256 constant NUMTERM = 6;
-    uint256 constant NUMDF = 7; // numbef of discount factors
     uint256 constant MAXYEAR = 5; // years
     uint256 constant MAXPAYNUM = PAYFREQ * MAXYEAR;
-    uint256 constant PENALTYLEVEL = 10; // 10% settlement failure penalty
-    uint256 constant MKTMAKELEVEL = 20; // 20% for market making
-    uint256 constant LQLEVEL = 120; // 120% for liquidation price
-    uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
     uint256 constant MAXITEM = 3;
 
     /** @dev
@@ -174,9 +162,9 @@ contract Loan {
         uint256 loanId;
         address lender;
         address borrower;
-        MoneyMarket.Side side;
-        MoneyMarket.Ccy ccy;
-        MoneyMarket.Term term;
+        Side side;
+        Ccy ccy;
+        Term term;
         uint256 amt;
         uint256 rate;
         uint256 start;
@@ -186,7 +174,7 @@ contract Loan {
         uint256 asOf; // updated date
         bool isAvailable;
         bytes32 startTxHash;
-        State state;
+        LoanState state;
     }
 
     struct Schedule {
@@ -199,9 +187,9 @@ contract Loan {
 
     struct LoanInput {
         address makerAddr;
-        MoneyMarket.Side side;
-        MoneyMarket.Ccy ccy;
-        MoneyMarket.Term term;
+        Side side;
+        Ccy ccy;
+        Term term;
         uint256 amt;
     }
 
@@ -224,48 +212,71 @@ contract Loan {
     mapping(address => LoanPartyBook) private loanPartyMap; // borrower to LoanPartyBook
     address[] private lenders;
     address[] private borrowers;
+    address public owner;
 
     // Contracts
-    MoneyMarket moneyMarket;
-    FXMarket fxMarket;
-    Collateral collateral;
+    ICollateral collateral;
+    LendingMarketController lendingController;
+    mapping(Ccy => mapping(Term => address)) public lendingMarkets;
 
-    constructor(
-        address moneyAddr,
-        address fxAddr,
-        address colAddr
-    ) public {
-        moneyMarket = MoneyMarket(moneyAddr);
-        fxMarket = FXMarket(fxAddr);
-        collateral = Collateral(colAddr);
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+    modifier lendingMarketExists(Ccy _ccy, Term _term) {
+        require(lendingMarkets[_ccy][_term] == msg.sender);
+        _;
+    }
+
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    // reset lending market controller contract address
+    function setLendingControllerAddr(address addr) public onlyOwner {
+        lendingController = LendingMarketController(addr);
+    }
+
+    // reset collateral contract address
+    function setCollateralAddr(address addr) public onlyOwner {
+        collateral = ICollateral(addr);
+    }
+
+    // reset market contracts addresses
+    function addLendingMarket(Ccy _ccy, Term _term, address addr) public onlyOwner {
+        require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
+        lendingMarkets[_ccy][_term] = addr;
     }
 
     /**@dev
         Create a loan deal
-     */
+    */
 
     // to be called by market takers to register loan
     function makeLoanDeal(
         address makerAddr,
-        MoneyMarket.Side side,
-        MoneyMarket.Ccy ccy,
-        MoneyMarket.Term term,
-        uint256 amt
+        address takerAddr,
+        Side side,
+        Ccy ccy,
+        Term term,
+        uint256 amt,
+        uint256 rate
     ) public {
-        require(makerAddr != msg.sender, 'Same person deal is not allowed');
+        require(makerAddr != takerAddr, 'Same person deal is not allowed');
         address lender;
         address borrower;
-        if (side == MoneyMarket.Side.LEND) {
+        if (side == Side.LEND) {
             lender = makerAddr;
-            borrower = msg.sender;
+            borrower = takerAddr;
         }
-        if (side == MoneyMarket.Side.BORROW) {
-            lender = msg.sender;
+        if (side == Side.BORROW) {
+            lender = takerAddr;
             borrower = makerAddr;
         }
 
-        collateral.useCollateral(ccy, amt, borrower);
-        uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
+        collateral.useCollateral(uint8(ccy), amt, borrower);
+        // uint256 rate = moneyMarket.takeOneItem(makerAddr, side, ccy, term, amt);
 
         // lender
         LoanBook storage book = loanMap[lender];
@@ -297,10 +308,10 @@ contract Loan {
     ) private view returns (LoanItem memory) {
         LoanItem memory item;
         item.loanId = loanId;
-        item.lender = input.side == MoneyMarket.Side.LEND
+        item.lender = input.side == Side.LEND
             ? input.makerAddr
             : msg.sender;
-        item.borrower = input.side == MoneyMarket.Side.BORROW
+        item.borrower = input.side == Side.BORROW
             ? input.makerAddr
             : msg.sender;
         item.side = input.side;
@@ -315,14 +326,14 @@ contract Loan {
         item.asOf = now;
         item.isAvailable = true;
         item.startTxHash = '';
-        item.state = State.REGISTERED;
+        item.state = LoanState.REGISTERED;
         return item;
     }
 
     // helper to fill dates and amounts
     function fillSchedule(
         Schedule memory schedule,
-        MoneyMarket.Term term,
+        Term term,
         uint256 amt,
         uint256 rate
     ) public view {
@@ -400,21 +411,21 @@ contract Loan {
     }
 
     /**@dev
-        State Management Section
+        LoanState Management Section
         1. update states
         2. notify - confirm method to change states
      */
 
     // helper to check loan state while working
-    function getCurrentState(Schedule memory schedule) public view returns (State) {
+    function getCurrentState(Schedule memory schedule) public view returns (LoanState) {
         uint256 i;
         for (i = 0; i < MAXPAYNUM; i++) {
             if (schedule.isDone[i] == false) break;
         }
-        if (i == MAXPAYNUM || schedule.notices[i] == 0) return State.CLOSED;
-        if (now < schedule.notices[i]) return State.WORKING;
-        if (now <= schedule.payments[i]) return State.DUE;
-        if (now > schedule.payments[i]) return State.PAST_DUE;
+        if (i == MAXPAYNUM || schedule.notices[i] == 0) return LoanState.CLOSED;
+        if (now < schedule.notices[i]) return LoanState.WORKING;
+        if (now <= schedule.payments[i]) return LoanState.DUE;
+        if (now > schedule.payments[i]) return LoanState.PAST_DUE;
     }
 
     function updateState(
@@ -424,19 +435,19 @@ contract Loan {
     ) public {
         LoanBook storage book = loanMap[lender];
         LoanItem storage item = book.loans[loanId];
-        State prevState = item.state;
+        LoanState prevState = item.state;
 
         // initial
-        if (item.state == State.REGISTERED) {
+        if (item.state == LoanState.REGISTERED) {
             // check if lender payment done within 2 days, else liquidate lender collateral
             if (item.startTxHash == '' && item.start + SETTLE < now) {
-                item.state = State.CLOSED;
+                item.state = LoanState.CLOSED;
                 item.isAvailable = false;
-                collateral.partialLiquidation(borrower, lender, item.amt * PENALTYLEVEL / PCT, item.ccy);
+                collateral.partialLiquidation(borrower, lender, item.amt * PENALTYLEVEL / PCT, uint8(item.ccy));
                 collateral.completePartialLiquidation(borrower);
                 collateral.completePartialLiquidation(lender);
-                collateral.releaseCollateral(item.ccy, item.amt, borrower);
-                collateral.releaseCollateral(item.ccy, item.amt * MKTMAKELEVEL / PCT, lender);
+                collateral.releaseCollateral(uint8(item.ccy), item.amt, borrower);
+                collateral.releaseCollateral(uint8(item.ccy), item.amt * MKTMAKELEVEL / PCT, lender);
             }
         }
 
@@ -459,12 +470,12 @@ contract Loan {
         // 2d) liquidation -> close
         // LOAN: WORKING -> TERMINATED
         // COLL: LIQUIDATION -> AVAILABLE or EMPTY
-        else if (item.state == State.WORKING) {
+        else if (item.state == LoanState.WORKING) {
             item.state = getCurrentState(item.schedule);
-            Collateral.State colState = collateral.updateState(borrower);
-            if (colState == Collateral.State.LIQUIDATION) {
-                item.state = State.TERMINATED;
-                collateral.partialLiquidation(borrower, lender, item.pv * LQLEVEL / PCT, item.ccy);
+            CollateralState colState = CollateralState(collateral.updateState(borrower));
+            if (colState == CollateralState.LIQUIDATION) {
+                item.state = LoanState.TERMINATED;
+                collateral.partialLiquidation(borrower, lender, item.pv * LQLEVEL / PCT, uint8(item.ccy));
             }
         }
 
@@ -483,13 +494,13 @@ contract Loan {
         // 2b) redemption due -> unpaid
         // LOAN: DUE -> PAST_DUE
         // COLL: IN_USE -> LIQUIDATION_IN_PROGRESS
-        else if (item.state == State.DUE) {
+        else if (item.state == LoanState.DUE) {
             // paid => WORKING
             // unpaid => PAST_DUE
             item.state = getCurrentState(item.schedule);
 
             // collateral liquidation to release 120% coupon amount to lender
-            if (item.state == State.PAST_DUE) {
+            if (item.state == LoanState.PAST_DUE) {
                 uint256 paynums = PAYNUMS[uint256(item.term)];
                 uint256 i;
                 for (i = 0; i < paynums; i++) {
@@ -497,7 +508,7 @@ contract Loan {
                 }
                 item.schedule.isDone[i] = true;
                 uint256 amount = item.schedule.amounts[i];
-                collateral.partialLiquidation(borrower, lender, amount * LQLEVEL / PCT, item.ccy);
+                collateral.partialLiquidation(borrower, lender, amount * LQLEVEL / PCT, uint8(item.ccy));
             }
         }
 
@@ -510,21 +521,21 @@ contract Loan {
         // COLL: LIQUIDATION_IN_PROGRESS -> AVAILABLE or EMPTY
         //
         // collateral liquidation to release 120% coupon amount to lender
-        else if (item.state == State.PAST_DUE) {
+        else if (item.state == LoanState.PAST_DUE) {
             item.state = getCurrentState(item.schedule);
-            if (item.state == State.WORKING)
+            if (item.state == LoanState.WORKING)
                 collateral.completePartialLiquidation(borrower);
-            if (item.state == State.CLOSED) {
+            if (item.state == LoanState.CLOSED) {
                 item.isAvailable = false;
                 collateral.completePartialLiquidation(borrower);
-                collateral.releaseCollateral(item.ccy, item.amt, borrower);
+                collateral.releaseCollateral(uint8(item.ccy), item.amt, borrower);
             }
         }
 
-        else if (item.state == State.TERMINATED) {
+        else if (item.state == LoanState.TERMINATED) {
             item.isAvailable = false;
             collateral.completePartialLiquidation(borrower);
-            collateral.releaseCollateral(item.ccy, item.amt, borrower);
+            collateral.releaseCollateral(uint8(item.ccy), item.amt, borrower);
         }
         if(item.state != prevState)
             emit UpdateState(lender, borrower, loanId, prevState, item.state);
@@ -537,8 +548,8 @@ contract Loan {
     function notifyPayment(
         address lender,
         address borrower,
-        MoneyMarket.Side side,
-        MoneyMarket.Ccy ccy,
+        Side side,
+        Ccy ccy,
         uint256 term,
         uint256 amt,
         uint256 loanId,
@@ -546,13 +557,13 @@ contract Loan {
     ) public {
         LoanBook storage book = loanMap[lender];
         LoanItem storage item = book.loans[loanId];
-        require(item.state == State.REGISTERED || item.state == State.DUE, 'No need to notify now');
+        require(item.state == LoanState.REGISTERED || item.state == LoanState.DUE, 'No need to notify now');
 
         // initial
         // REGISTERED
-        if (item.state == State.REGISTERED) {
+        if (item.state == LoanState.REGISTERED) {
             require(amt == item.amt, 'notify amount not match');
-            if (side == MoneyMarket.Side.LEND) {
+            if (side == Side.LEND) {
                 require(msg.sender == lender, 'lender must notify');
             } else {
                 require(msg.sender == borrower, 'borrower must notify');
@@ -562,8 +573,8 @@ contract Loan {
 
         // coupon and redemption
         // DUE
-        else if (item.state == State.DUE) {
-            if (side == MoneyMarket.Side.BORROW) {
+        else if (item.state == LoanState.DUE) {
+            if (side == Side.BORROW) {
                 require(msg.sender == lender, 'lender must notify');
             } else {
                 require(msg.sender == borrower, 'borrower must notify');
@@ -584,8 +595,8 @@ contract Loan {
     function confirmPayment(
         address lender,
         address borrower,
-        MoneyMarket.Side side,
-        MoneyMarket.Ccy ccy,
+        Side side,
+        Ccy ccy,
         uint256 term,
         uint256 amt,
         uint256 loanId,
@@ -593,23 +604,23 @@ contract Loan {
     ) public {
         LoanBook storage book = loanMap[lender];
         LoanItem storage item = book.loans[loanId];
-        require(item.state == State.REGISTERED || item.state == State.DUE, 'No need to confirm now');
+        require(item.state == LoanState.REGISTERED || item.state == LoanState.DUE, 'No need to confirm now');
 
         // initial
         // REGISTERED -> WORKING
         // AVAILABLE -> IN_USE
-        if (item.state == State.REGISTERED) {
+        if (item.state == LoanState.REGISTERED) {
             require(item.startTxHash != '', 'start txHash is not provided yet');
             require(item.startTxHash == txHash, 'txhash not match');
             require(amt == item.amt, 'confirm amount not match');
-            if (side == MoneyMarket.Side.LEND) {
+            if (side == Side.LEND) {
                 require(msg.sender == borrower, 'borrower must confirm');
                 // updateState(lender, borrower, loanId);
             } else {
                 require(msg.sender == lender, 'lender must confirm');
                 // updateState(lender, borrower, loanId);
             }
-            item.state = State.WORKING;
+            item.state = LoanState.WORKING;
             collateral.updateState(borrower);
         }
 
@@ -618,8 +629,8 @@ contract Loan {
         //
         // redemption
         // DUE -> CLOSED
-        else if (item.state == State.DUE) {
-            if (side == MoneyMarket.Side.BORROW) {
+        else if (item.state == LoanState.DUE) {
+            if (side == Side.BORROW) {
                 require(msg.sender == borrower, 'borrower must confirm');
                 updateState(lender, borrower, loanId);
             } else {
@@ -633,11 +644,11 @@ contract Loan {
             require(amt == item.schedule.amounts[i], 'confirm amount not match');
             item.schedule.isDone[i] = true;
             if (i == MAXPAYNUM - 1 || item.schedule.payments[i + 1] == 0) {
-                item.state = State.CLOSED;
-                collateral.releaseCollateral(ccy, item.amt, borrower);
+                item.state = LoanState.CLOSED;
+                collateral.releaseCollateral(uint8(ccy), item.amt, borrower);
             }
             else
-                item.state = State.WORKING;
+                item.state = LoanState.WORKING;
         }
 
         emit ConfirmPayment(lender, borrower, side, ccy, term, amt, loanId, txHash);
@@ -728,9 +739,7 @@ contract Loan {
             // return item;
             return;
         }
-        MoneyMarket.DiscountFactor[NUMCCY] memory dfList = moneyMarket
-            .getDiscountFactors();
-        MoneyMarket.DiscountFactor memory df = dfList[uint256(item.ccy)];
+        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(item.ccy);
         uint256[NUMDF] memory dfArr = [
             df.df3m,
             df.df6m,
@@ -757,9 +766,9 @@ contract Loan {
 
     // // helper to take a loan item and update its net present value
     // function updateOnePV(LoanItem storage item) private {
-    //     MoneyMarket.DiscountFactor[NUMCCY] memory dfList = moneyMarket
+    //     DiscountFactor[NUMCCY] memory dfList = moneyMarket
     //         .getDiscountFactors();
-    //     MoneyMarket.DiscountFactor memory df = dfList[uint256(item.ccy)];
+    //     DiscountFactor memory df = dfList[uint256(item.ccy)];
     //     uint256[NUMDF] memory dfArr = [
     //         df.df3m,
     //         df.df6m,

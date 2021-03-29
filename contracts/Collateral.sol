@@ -2,11 +2,10 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./MoneyMarket.sol";
-import "./FXMarket.sol";
-import "./Loan.sol";
+import "./interfaces/IFXMarket.sol";
+import "./ProtocolTypes.sol";
 
-contract Collateral {
+contract Collateral is ProtocolTypes {
     event SetColBook(
         address indexed addr,
         string indexed id,
@@ -21,34 +20,18 @@ contract Collateral {
         address indexed borrower,
         address indexed lender,
         uint256 indexed amount,
-        MoneyMarket.Ccy ccy
+        Ccy ccy
     );
     event RequestFILCustodyAddr(address indexed requester);
     event RegisterFILCustodyAddr(address indexed addr);
     event DEBUG(address addr);
     event UpdateState(
         address indexed addr,
-        State prevState,
-        State currState
+        CollateralState prevState,
+        CollateralState currState
     );
 
-    enum CcyPair {FILETH, FILUSDC, ETHUSDC}
-    enum State {
-        EMPTY,
-        AVAILABLE,
-        IN_USE,
-        MARGIN_CALL,
-        LIQUIDATION_IN_PROGRESS,
-        LIQUIDATION
-    }
-
-    uint256 constant PCT = 100;
     uint256 constant FXMULT = 1000;
-    uint256 constant PENALTYLEVEL = 10; // 10% settlement failure penalty
-    uint256 constant MKTMAKELEVEL = 20; // 20% for market making
-    uint256 constant LQLEVEL = 120; // 120% for liquidation price
-    uint256 constant MARGINLEVEL = 150; // 150% margin call threshold
-    uint256 constant AUTOLQLEVEL = 125; // 125% auto liquidation
 
     // TODO - userAddrUSDC and ERC20 token addr should be the same as userAddrETH
     struct ColBook {
@@ -70,7 +53,7 @@ contract Collateral {
         uint256 inuseUSDCValue; // total PV of USDC loans evaluated in ETH
         uint256 coverage; // in PCT
         bool isAvailable;
-        State state;
+        CollateralState state;
     }
 
     struct ColInput {
@@ -82,36 +65,68 @@ contract Collateral {
     // keeps all the records
     mapping(address => ColBook) private colMap;
     address[] private users;
-    address private owner;
+    address public owner;
 
     // Contracts
-    MoneyMarket moneyMarket;
-    FXMarket fxMarket;
-    Loan loan;
+    address loan;
+    IFXMarket fxMarket;
+    mapping(Ccy => mapping(Term => address)) public lendingMarkets;
 
-    constructor(address moneyAddr, address fxAddr) public {
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+    modifier lendingMarketExists(Ccy _ccy, Term _term) {
+        require(lendingMarkets[_ccy][_term] == msg.sender);
+        _;
+    }
+
+    modifier acceptedAddr(Ccy ccy) {
+        require(
+            msg.sender == address(loan) ||
+                isLendingMarket(ccy, msg.sender) ||
+                msg.sender == address(fxMarket),
+            "msg sender is not allowed to use collateral"
+        );
+        _;
+    }
+
+    constructor(address loanAddr) public {
         owner = msg.sender;
-        moneyMarket = MoneyMarket(moneyAddr);
-        fxMarket = FXMarket(fxAddr);
+        loan = loanAddr;
     }
 
     // reset market contracts addresses
-    function setMarketAddr(address moneyAddr, address fxAddr) public {
-        require(msg.sender == owner, "only owner");
-        moneyMarket = MoneyMarket(moneyAddr);
-        fxMarket = FXMarket(fxAddr);
+    function addLendingMarket(Ccy _ccy, Term _term, address addr) public onlyOwner {
+        require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
+        lendingMarkets[_ccy][_term] = addr;
+    }
+
+    // check if address is one of lending markets for specific ccy
+    function isLendingMarket(Ccy _ccy, address addr) public view returns (bool) {
+        for (uint256 i = 0; i < NUMTERM; i++) {
+            if (lendingMarkets[_ccy][Term(i)] == addr) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // reset loan contract address
-    function setLoanAddr(address loanAddr) public {
-        require(msg.sender == owner, "only owner");
-        loan = Loan(loanAddr);
+    function setLoanAddr(address addr) public onlyOwner {
+        require(loan != addr, "Couldn't rewrite the same address");
+        loan = addr;
     }
 
-    /**@dev
-        Register a user and make a collateral book
-     */
+    // reset fxmarket contract address
+    function setFxMarketAddr(address addr) public onlyOwner {
+        fxMarket = IFXMarket(addr);
+    }
 
+    /**
+    * @dev Register a user and make a collateral book
+    */
     // register or update col book for a user
     function setColBook(
         string memory id,
@@ -157,31 +172,25 @@ contract Collateral {
         book.inuseUSDCValue = 0;
         book.coverage = 0;
         book.isAvailable = true;
-        // book.state = State.EMPTY;
-        book.state = msg.value > 0 ? State.AVAILABLE : State.EMPTY;
+        // book.state = CollateralState.EMPTY;
+        book.state = msg.value > 0 ? CollateralState.AVAILABLE : CollateralState.EMPTY;
         return book;
     }
 
     // helper to make loan deal to check coverage and update ColBook
     function useCollateral(
-        MoneyMarket.Ccy ccy,
+        Ccy ccy,
         uint256 amt,
         address addr
-    ) public {
-        require(
-            msg.sender == address(loan) ||
-                msg.sender == address(moneyMarket) ||
-                msg.sender == address(fxMarket),
-            "msg sender is not allowed to use collateral"
-        );
+    ) public acceptedAddr(ccy) {
         require(
             isCovered(amt, ccy, addr),
             "Please upsize collateral"
         );
         ColBook storage book = colMap[addr];
-        if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH += amt;
-        if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL += amt;
-        if (ccy == MoneyMarket.Ccy.USDC) book.inuseUSDC += amt;
+        if (ccy == Ccy.ETH) book.inuseETH += amt;
+        if (ccy == Ccy.FIL) book.inuseFIL += amt;
+        if (ccy == Ccy.USDC) book.inuseUSDC += amt;
         updateFILValue(addr);
         updateUSDCValue(addr);
     }
@@ -189,7 +198,7 @@ contract Collateral {
     // helper to check collateral coverage
     function isCovered(
         uint256 amt,
-        MoneyMarket.Ccy ccy, // ETH or FIL
+        Ccy ccy, // ETH or FIL
         address addr
     ) public view returns (bool) {
         require(colMap[addr].isAvailable, "Collateral book not set yet");
@@ -198,9 +207,9 @@ contract Collateral {
         uint256 FILETH = getFILETH();
         uint256 ETHUSDC = getETHUSDC();
         uint256 toBeUsed = 0;
-        if (ccy == MoneyMarket.Ccy.ETH) toBeUsed = amt;
-        if (ccy == MoneyMarket.Ccy.FIL) toBeUsed = (amt * FILETH) / FXMULT;
-        if (ccy == MoneyMarket.Ccy.USDC) toBeUsed = amt / ETHUSDC; // TODO - use safe math
+        if (ccy == Ccy.ETH) toBeUsed = amt;
+        if (ccy == Ccy.FIL) toBeUsed = (amt * FILETH) / FXMULT;
+        if (ccy == Ccy.USDC) toBeUsed = amt / ETHUSDC; // TODO - use safe math
         uint256 totalUse = book.inuseETH +
             book.inuseFILValue +
             book.inuseUSDCValue +
@@ -213,35 +222,29 @@ contract Collateral {
     }
 
     function releaseCollateral(
-        MoneyMarket.Ccy ccy,
+        Ccy ccy,
         uint256 amt,
         address addr
-    ) external {
-        require(
-            msg.sender == address(loan) ||
-                msg.sender == address(moneyMarket) ||
-                msg.sender == address(fxMarket),
-            "msg sender is not allowed to release collateral"
-        );
+    ) external acceptedAddr(ccy) {
         ColBook storage book = colMap[addr];
-        if (ccy == MoneyMarket.Ccy.ETH) book.inuseETH -= amt;
-        if (ccy == MoneyMarket.Ccy.FIL) book.inuseFIL -= amt;
-        if (ccy == MoneyMarket.Ccy.USDC) book.inuseUSDC -= amt;
+        if (ccy == Ccy.ETH) book.inuseETH -= amt;
+        if (ccy == Ccy.FIL) book.inuseFIL -= amt;
+        if (ccy == Ccy.USDC) book.inuseUSDC -= amt;
         updateState(addr);
     }
 
-    function withdrawCollaretal(MoneyMarket.Ccy ccy, uint256 amt) public {
+    function withdrawCollaretal(Ccy ccy, uint256 amt) public {
         ColBook storage book = colMap[msg.sender];
         require(book.isAvailable, "not registered yet");
-        // require(book.state == State.IN_USE || book.state == State.AVAILABLE, "State should be IN_USE or AVAILABLE");
+        // require(book.state == CollateralState.IN_USE || book.state == CollateralState.AVAILABLE, " CollateralState should be IN_USE or AVAILABLE");
         // TODO - limit amt to keep 150%
-        // if (book.state == State.IN_USE || book.state == State.AVAILABLE) {
-        if (ccy == MoneyMarket.Ccy.ETH) {
+        // if (book.state == CollateralState.IN_USE || book.state == CollateralState.AVAILABLE) {
+        if (ccy == Ccy.ETH) {
             book.colAmtETH -= amt;
             // msg.sender.transfer(amt); // TODO
         }
-        if (ccy == MoneyMarket.Ccy.FIL) book.colAmtFIL -= amt;
-        if (ccy == MoneyMarket.Ccy.USDC) book.colAmtUSDC -= amt;
+        if (ccy == Ccy.FIL) book.colAmtFIL -= amt;
+        if (ccy == Ccy.USDC) book.colAmtUSDC -= amt;
         // }
         updateState(msg.sender);
     }
@@ -262,7 +265,7 @@ contract Collateral {
     }
 
     /**@dev
-        State Management Section
+        CollateralState Management Section
         1. update states
         2. notify - confirm method to change states
 
@@ -291,9 +294,9 @@ contract Collateral {
 
     // update state and coverage
     // TODO - access control to loan
-    function updateState(address addr) public returns (State) {
+    function updateState(address addr) public returns (CollateralState) {
         ColBook storage book = colMap[addr];
-        State prevState = book.state;
+        CollateralState prevState = book.state;
         updateFILValue(addr);
         updateUSDCValue(addr);
         uint256 totalUse = book.inuseETH +
@@ -304,19 +307,19 @@ contract Collateral {
             book.colAmtUSDCValue;
         if (totalUse == 0) {
             book.coverage = 0;
-            if (totalAmt == 0) book.state = State.EMPTY;
-            if (totalAmt > 0) book.state = State.AVAILABLE;
+            if (totalAmt == 0) book.state = CollateralState.EMPTY;
+            if (totalAmt > 0) book.state = CollateralState.AVAILABLE;
         } else if (totalUse > 0) {
             uint256 coverage = (PCT * totalAmt) / totalUse;
             book.coverage = coverage;
             // TODO - handle partial liquidation and margin call together
-            if (book.state == State.LIQUIDATION_IN_PROGRESS) return book.state;
+            if (book.state == CollateralState.LIQUIDATION_IN_PROGRESS) return book.state;
             if (totalAmt > 0 && coverage <= AUTOLQLEVEL)
-                book.state = State.LIQUIDATION;
+                book.state = CollateralState.LIQUIDATION;
             if (totalAmt > 0 && coverage > AUTOLQLEVEL)
-                book.state = State.MARGIN_CALL;
+                book.state = CollateralState.MARGIN_CALL;
             if (totalAmt > 0 && coverage > MARGINLEVEL)
-                book.state = State.IN_USE;
+                book.state = CollateralState.IN_USE;
         }
         if (prevState != book.state)
             emit UpdateState(addr, prevState, book.state);
@@ -335,22 +338,22 @@ contract Collateral {
         address borrower,
         address lender,
         uint256 amount,
-        MoneyMarket.Ccy ccy
+        Ccy ccy
     ) external {
         require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage borrowerBook = colMap[borrower];
         ColBook storage lenderBook = colMap[lender];
-        uint256 colAmtETH = fxMarket.getETHvalue(amount, ccy);
+        uint256 colAmtETH = fxMarket.getETHvalue(amount, uint8(ccy));
         require(
             borrowerBook.colAmtETH >= colAmtETH,
             "Liquidation amount not enough"
         );
         if (
-            borrowerBook.state == State.AVAILABLE ||
-            borrowerBook.state == State.IN_USE ||
-            borrowerBook.state == State.LIQUIDATION
+            borrowerBook.state == CollateralState.AVAILABLE ||
+            borrowerBook.state == CollateralState.IN_USE ||
+            borrowerBook.state == CollateralState.LIQUIDATION
         ) {
-            borrowerBook.state = State.LIQUIDATION_IN_PROGRESS;
+            borrowerBook.state = CollateralState.LIQUIDATION_IN_PROGRESS;
             borrowerBook.colAmtETH -= colAmtETH;
             lenderBook.colAmtETH += colAmtETH;
             updateState(borrower);
@@ -361,7 +364,7 @@ contract Collateral {
     function completePartialLiquidation(address borrower) external {
         require(msg.sender == address(loan), "only Loan contract can call");
         ColBook storage borrowerBook = colMap[borrower];
-        borrowerBook.state = State.IN_USE; // set to default before update
+        borrowerBook.state = CollateralState.IN_USE; // set to default before update
         updateState(borrower);
     }
 
@@ -377,22 +380,22 @@ contract Collateral {
     //     require(msg.sender == address(loan), 'only Loan contract can call');
     //     ColBook storage book = colMap[borrower];
     //     require(
-    //         book.state == State.LIQUIDATION_IN_PROGRESS,
+    //         book.state == CollateralState.LIQUIDATION_IN_PROGRESS,
     //         'expecting LIQUIDATION_IN_PROGRESS state'
     //     );
     //     uint256 recoverAmount = (amount * LQLEVEL) / PCT;
     //     // TODO - handle ETH lending case
     //     book.inuseFIL -= amount;
     //     book.colAmtFIL -= recoverAmount;
-    //     book.state = State.IN_USE;
+    //     book.state = CollateralState.IN_USE;
     //     updateState(borrower);
     // }
 
     // function confirmFILPayment(address addr) public {
     //     // TODO - only called by Lender (maybe move to Loan)
     //     ColBook storage book = colMap[addr];
-    //     if (book.state == State.LIQUIDATION_IN_PROGRESS) {
-    //         book.state = State.IN_USE;
+    //     if (book.state == CollateralState.LIQUIDATION_IN_PROGRESS) {
+    //         book.state = CollateralState.IN_USE;
     //         // TODO - release Collateral
     //     }
     //     updateState(addr);
@@ -404,8 +407,8 @@ contract Collateral {
         colMap[msg.sender].colAmtETH += msg.value;
         updateState(msg.sender);
         if (
-            (colMap[msg.sender].state != State.AVAILABLE) &&
-            (colMap[msg.sender].state != State.IN_USE)
+            (colMap[msg.sender].state != CollateralState.AVAILABLE) &&
+            (colMap[msg.sender].state != CollateralState.IN_USE)
         ) revert("Collateral not enough");
         emit UpSizeETH(msg.sender);
     }
@@ -444,7 +447,7 @@ contract Collateral {
         book.inuseUSDCValue = 0;
         book.coverage = 0;
         book.isAvailable = false;
-        book.state = State.EMPTY;
+        book.state = CollateralState.EMPTY;
     }
 
     // to be called from market maker
@@ -477,7 +480,7 @@ contract Collateral {
         return users;
     }
 
-    function getColState(address addr) public view returns (State) {
+    function getColState(address addr) public view returns ( CollateralState) {
         return colMap[addr].state;
     }
 
@@ -596,18 +599,12 @@ contract Collateral {
     // helper to generate random using market oracle
     function getRandom(uint256 seed) public view returns (uint256) {
         address[] memory fxMakers = fxMarket.getMarketMakers();
-        address[] memory loanMakers = moneyMarket.getMarketMakers();
         uint256 rand = uint256(
             keccak256(abi.encode(uint256(users[0]) ^ seed ^ now))
         );
         for (uint256 i = 0; i < fxMakers.length; i++) {
             rand ^= uint256(
                 keccak256(abi.encode(uint256(fxMakers[0]) ^ seed ^ now))
-            );
-        }
-        for (uint256 i = 0; i < loanMakers.length; i++) {
-            rand ^= uint256(
-                keccak256(abi.encode(uint256(loanMakers[0]) ^ seed ^ now))
             );
         }
         return rand;

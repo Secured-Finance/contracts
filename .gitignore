@@ -10,6 +10,7 @@ node_modules
 .vscode
 .gitattributes
 package-lock.json
-build/contracts/*.json
 contracts/artifacts
 types/
+cache/
+build/
