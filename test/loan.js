@@ -59,6 +59,11 @@ contract('Loan', async (accounts) => {
         await collateral.setFxMarketAddr(fxMarket.address, {from: owner});
         await loan.setLendingControllerAddr(lendingController.address, {from: owner});
         await loan.setCollateralAddr(collateral.address, {from: owner});
+
+        console.log('lending controller addr is', lendingController.address);
+        console.log('fxMarket    addr is', fxMarket.address);
+        console.log('collateral  addr is', collateral.address);
+        console.log('loan        addr is', loan.address);
     });
 
     describe('Setup Test Data', async () => {
@@ -89,12 +94,20 @@ contract('Loan', async (accounts) => {
 
                 await collateral.addLendingMarket(Ccy.FIL, i, lendingMarket.address, {from: owner});
                 await loan.addLendingMarket(Ccy.FIL, i, lendingMarket.address, {from: owner});
+                console.log("Lending Market CCY: Ccy.FIL")
+                console.log("Lending Market Term: " + i)
+                console.log("Lending Market Address: " + lendingMarket.address)
+                console.log()
             }
         });
         it('Create new lend market orders by Alice', async () => {
             let _3mMarket = await LendingMarket.at(lendingMarkets[0]);
             marketOrder = await _3mMarket.order(0, 10000, 900, effectiveSec, {from: alice});
             await emitted(marketOrder, 'MakeOrder');
+
+            // _3mMarket = await LendingMarket.at(lendingMarkets[0]);
+            // marketOrder2 = await _3mMarket.order(0, 11000, 900, effectiveSec, {from: alice});
+            // await emitted(marketOrder2, 'MakeOrder');
             
             let _6mMarket = await LendingMarket.at(lendingMarkets[1]);
             marketOrder = await _6mMarket.order(0, 11000, 1000, effectiveSec, {from: alice});
@@ -254,60 +267,60 @@ contract('Loan', async (accounts) => {
           });      
     });
 
-    describe('Loan Settlement Failure Test', async () => {
-        before(async () => {
-            const snapShot = await takeSnapshot();
-            snapshotId = snapShot['result'];
-        });
+    // describe('Loan Settlement Failure Test', async () => {
+    //     before(async () => {
+    //         const snapShot = await takeSnapshot();
+    //         snapshotId = snapShot['result'];
+    //     });
     
-        after(async () => {
-            await revertToSnapshot(snapshotId);
-        });
+    //     after(async () => {
+    //         await revertToSnapshot(snapshotId);
+    //     });
     
-        it('FIL Loan initial settlement failure', async () => {
-            let maker = alice; // FIL lender
-            let taker = carol; // FIL borrower
-            let item, loanId;
-            item = sample.Loan[0];
+    //     it('FIL Loan initial settlement failure', async () => {
+    //         let maker = alice; // FIL lender
+    //         let taker = carol; // FIL borrower
+    //         let item, loanId;
+    //         item = sample.Loan[0];
 
-            let _5yMarket = await LendingMarket.at(lendingMarkets[5]);
-            marketOrder = await _5yMarket.order(1, 10000, 1500, effectiveSec, {from: carol});
-            await emitted(marketOrder, 'TakeOrder');
+    //         let _5yMarket = await LendingMarket.at(lendingMarkets[5]);
+    //         marketOrder = await _5yMarket.order(1, 10000, 1500, effectiveSec, {from: carol});
+    //         await emitted(marketOrder, 'TakeOrder');
 
-            loanId = 0; // available from event
-            await printLoan(loan, maker, loanId, '[before settlement] loan');
-            await printCol(collateral, maker, '[before settlement] maker collateral');
-            await printCol(collateral, taker, '[before settlement] taker collateral');
+    //         loanId = 0; // available from event
+    //         await printLoan(loan, maker, loanId, '[before settlement] loan');
+    //         await printCol(collateral, maker, '[before settlement] maker collateral');
+    //         await printCol(collateral, taker, '[before settlement] taker collateral');
         
-            // fail to lend within settlement period
-            await advanceTimeAndBlock(SETTLE_GAP + ONE_MINUTE);
-            res = await loan.updateState(maker, taker, loanId);
-            await expectEvent(res, 'UpdateState', {
-                lender: maker,
-                borrower: taker,
-                loanId: String(loanId),
-                prevState: String(LoanState.REGISTERED),
-                currState: String(LoanState.CLOSED),
-            });
+    //         // fail to lend within settlement period
+    //         await advanceTimeAndBlock(SETTLE_GAP + ONE_MINUTE);
+    //         res = await loan.updateState(maker, taker, loanId);
+    //         await expectEvent(res, 'UpdateState', {
+    //             lender: maker,
+    //             borrower: taker,
+    //             loanId: String(loanId),
+    //             prevState: String(LoanState.REGISTERED),
+    //             currState: String(LoanState.CLOSED),
+    //         });
         
-            // lender - notifyPayment with txHash, but cannot
-            const txHash = web3.utils.asciiToHex('0x_this_is_sample_tx_hash');
-            await expectRevert(
-                loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker}),
-                'No need to notify now',
-            );
+    //         // lender - notifyPayment with txHash, but cannot
+    //         const txHash = web3.utils.asciiToHex('0x_this_is_sample_tx_hash');
+    //         await expectRevert(
+    //             loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker}),
+    //             'No need to notify now',
+    //         );
     
-          // borrower -> confirmPayment to ensure finality, but cannot
-            await expectRevert(
-                loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker}),
-                'No need to confirm now',
-            );
+    //       // borrower -> confirmPayment to ensure finality, but cannot
+    //         await expectRevert(
+    //             loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker}),
+    //             'No need to confirm now',
+    //         );
                 
-            await printLoan(loan, maker, loanId, '[after settlement] loan');
-            await printCol(collateral, maker, '[after settlement] maker collateral');
-            await printCol(collateral, taker, '[after settlement] taker collateral');
-        });
-    });
+    //         await printLoan(loan, maker, loanId, '[after settlement] loan');
+    //         await printCol(collateral, maker, '[after settlement] maker collateral');
+    //         await printCol(collateral, taker, '[after settlement] taker collateral');
+    //     });
+    // });
 
     describe('Loan Test', async () => {
         it('FIL Loan Execution', async () => {
@@ -334,6 +347,10 @@ contract('Loan', async (accounts) => {
             await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
             await printState(loan, collateral, maker, taker, loanId, '[confirmPayment]');
             await printSched(loan, maker, loanId);
+
+            // let _3mMarket = await LendingMarket.at(lendingMarkets[0]);
+            // marketOrder2 = await _3mMarket.order(1, 25000, 920, effectiveSec, {from: alice});
+            // await emitted(marketOrder, 'TakeOrder');
         });
         
         it('Check Lender Book for loans', async () => {

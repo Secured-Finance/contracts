@@ -47,7 +47,7 @@ contract Loan is ProtocolTypes {
         Ccy ccy,
         Term term,
         uint256 amt,
-        uint rate,
+        uint256 rate,
         uint256 indexed loanId
     );
 

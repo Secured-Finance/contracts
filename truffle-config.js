@@ -7,7 +7,7 @@ const customProvider = (mnemonic, rpcEndpoint) => () =>
 const infuraProvider = (network) =>
   customProvider(
     process.env.MNEMONIC || process.env.PRIVATE_KEY || '',
-    `https://${network}.infura.io/v3/${process.env.WEB3_INFURA_ID}`,
+    `wss://${network}.infura.io/ws/v3/${process.env.WEB3_INFURA_ID}`,
   );
 
 const ropstenProvider = infuraProvider('ropsten');
@@ -23,6 +23,19 @@ module.exports = {
       host: '0.0.0.0', // Localhost (default: none)
       port: 8545, // Standard Ethereum port (default: none)
       network_id: '*', // Any network (default: none)
+    },
+
+    ropsten: {
+      provider: ropstenProvider,
+      network_id: 3,
+      // gasPrice: 5000000000,
+      // gas: 4500000,
+      // gasPrice: 10000000000,
+      // confirmations: 0, // # of confs to wait between deployments. (default: 0)
+      skipDryRun: true,
+      gas: 8000000,
+      websockets: true,
+      networkCheckTimeout: 90000,
     },
 
     // this is necessary for coverage

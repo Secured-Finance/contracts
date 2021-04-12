@@ -53,6 +53,6 @@ contract ProtocolTypes {
     }
 
     // FXMarket common types
-    enum CcyPair {FILETH, FILUSDC, ETHUSDC, BTCUSD, BTCETH, BTCFIL}
+    enum CcyPair {FILETH, FILUSDC, ETHUSDC, BTCUSDC, BTCETH, BTCFIL}
     enum FXSide {BID, OFFER}
 }
