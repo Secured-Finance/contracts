@@ -5,8 +5,11 @@ pragma experimental ABIEncoderV2;
 import './interfaces/ICollateral.sol';
 import "./ProtocolTypes.sol";
 import './LendingMarketController.sol';
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract Loan is ProtocolTypes {
+    using SafeMath for uint256;
+    
     // (Execution)
     // 1. Deploy from market taker (maker addr, side, ccy, term, amt)
     // 2. Check collateral coverage and state
@@ -195,25 +198,9 @@ contract Loan is ProtocolTypes {
         uint256 amt;
     }
 
-    // for borrower
-    struct LoanPartyBook {
-        LoanParty[] loanPartyList;
-        bool isValue;
-    }
-
-    struct LoanParty {
-        address lender;
-        address borrower;
-        uint256 loanId;
-    }
-
     // keeps all the records
     mapping(address => LoanBook) private loanMap; // lender to LoanBook
-    // mapping(address => bool) private borrowerMap; // borrower map
-    // mapping(address => LoanPartyBook) public loanPartyMap; // borrower to LoanPartyBook
-    mapping(address => LoanPartyBook) private loanPartyMap; // borrower to LoanPartyBook
     address[] private lenders;
-    address[] private borrowers;
     address public owner;
 
     // Contracts
@@ -311,11 +298,11 @@ contract Loan is ProtocolTypes {
         item.term = input.term;
         item.amt = input.amt;
         item.rate = rate;
-        item.start = now;
-        item.end = now + DAYS[uint256(input.term)];
+        item.start = block.timestamp;
+        item.end = block.timestamp.add(DAYS[uint256(input.term)]);
         fillSchedule(item.schedule, input.term, input.amt, rate);
         item.pv = input.amt; // updated by MtM
-        item.asOf = now;
+        item.asOf = block.timestamp;
         item.isAvailable = true;
         item.startTxHash = '';
         item.state = LoanState.REGISTERED;
@@ -332,9 +319,9 @@ contract Loan is ProtocolTypes {
         uint256 paynums = PAYNUMS[uint256(term)];
         uint256[MAXPAYNUM] memory daysArr = SCHEDULES[uint256(term)];
         for (uint256 i = 0; i < paynums; i++) {
-            schedule.notices[i] = daysArr[i] + now - NOTICE;
-            schedule.payments[i] = daysArr[i] + now;
-            schedule.amounts[i] = (amt * rate * DCFRAC[uint256(term)]) / BP / BP;
+            schedule.notices[i] = daysArr[i].add(block.timestamp).sub(NOTICE);
+            schedule.payments[i] = daysArr[i].add(block.timestamp);
+            schedule.amounts[i] = (amt.mul(rate).mul(DCFRAC[uint256(term)])).div(BP).div(BP);
             schedule.isDone[i] = false;
             schedule.txHash[i] = '';
         }
@@ -363,29 +350,6 @@ contract Loan is ProtocolTypes {
         return loanMap[lender];
     }
 
-    // generate borrower book
-    function getBorrowerBook(address borrower) public view returns (LoanBook memory) {
-        LoanPartyBook memory loanPartyBook = loanPartyMap[borrower];
-        require(loanPartyBook.isValue, 'loanPartyBook not found');
-        LoanParty[] memory loanPartyList = loanPartyBook.loanPartyList;
-        LoanItem[] memory tmpLoans = new LoanItem[](loanPartyList.length);
-        uint256 count = 0; // num of available loan
-        for (uint256 i = 0; i < loanPartyList.length; i++) {
-            address lender = loanPartyList[i].lender;
-            uint256 loanId = loanPartyList[i].loanId;
-            LoanBook memory lenderBook = loanMap[lender];
-            if (lenderBook.isValue && lenderBook.loans[loanId].isAvailable) {
-                tmpLoans[count++] = lenderBook.loans[loanId];
-            }
-        }
-        // copy to book
-        LoanBook memory borrowerBook = LoanBook(new LoanItem[](count), count, true);
-        for (uint256 i = 0; i < count; i++) {
-            borrowerBook.loans[i] = tmpLoans[i];
-        }
-        return borrowerBook;
-    }
-
     function getAllBooks() public view returns (LoanBook[] memory) {
         LoanBook[] memory allBooks = new LoanBook[](lenders.length);
         for (uint256 i = 0; i < lenders.length; i++) {
@@ -396,10 +360,6 @@ contract Loan is ProtocolTypes {
 
     function getAllLenders() public view returns (address[] memory) {
         return lenders;
-    }
-
-    function getAllBorrowers() public view returns (address[] memory) {
-        return borrowers;
     }
 
     /**@dev
@@ -415,9 +375,9 @@ contract Loan is ProtocolTypes {
             if (schedule.isDone[i] == false) break;
         }
         if (i == MAXPAYNUM || schedule.notices[i] == 0) return LoanState.CLOSED;
-        if (now < schedule.notices[i]) return LoanState.WORKING;
-        if (now <= schedule.payments[i]) return LoanState.DUE;
-        if (now > schedule.payments[i]) return LoanState.PAST_DUE;
+        if (block.timestamp < schedule.notices[i]) return LoanState.WORKING;
+        if (block.timestamp <= schedule.payments[i]) return LoanState.DUE;
+        if (block.timestamp > schedule.payments[i]) return LoanState.PAST_DUE;
     }
 
     function updateState(
@@ -432,14 +392,14 @@ contract Loan is ProtocolTypes {
         // initial
         if (item.state == LoanState.REGISTERED) {
             // check if lender payment done within 2 days, else liquidate lender collateral
-            if (item.startTxHash == '' && item.start + SETTLE < now) {
+            if (item.startTxHash == '' && item.start + SETTLE < block.timestamp) {
                 item.state = LoanState.CLOSED;
                 item.isAvailable = false;
-                collateral.partialLiquidation(borrower, lender, item.amt * PENALTYLEVEL / PCT, uint8(item.ccy));
+                collateral.liquidate(borrower, lender, item.amt.mul(PENALTYLEVEL).div(PCT), uint8(item.ccy));
                 collateral.completePartialLiquidation(borrower);
                 collateral.completePartialLiquidation(lender);
                 collateral.releaseCollateral(uint8(item.ccy), item.amt, borrower);
-                collateral.releaseCollateral(uint8(item.ccy), item.amt * MKTMAKELEVEL / PCT, lender);
+                collateral.releaseCollateral(uint8(item.ccy), item.amt.mul(MKTMAKELEVEL).div(PCT), lender);
             }
         }
 
@@ -467,7 +427,7 @@ contract Loan is ProtocolTypes {
             CollateralState colState = CollateralState(collateral.updateState(borrower));
             if (colState == CollateralState.LIQUIDATION) {
                 item.state = LoanState.TERMINATED;
-                collateral.partialLiquidation(borrower, lender, item.pv * LQLEVEL / PCT, uint8(item.ccy));
+                collateral.liquidate(borrower, lender, item.pv.mul(LQLEVEL).div(PCT), uint8(item.ccy));
             }
         }
 
@@ -500,7 +460,7 @@ contract Loan is ProtocolTypes {
                 }
                 item.schedule.isDone[i] = true;
                 uint256 amount = item.schedule.amounts[i];
-                collateral.partialLiquidation(borrower, lender, amount * LQLEVEL / PCT, uint8(item.ccy));
+                collateral.liquidate(borrower, lender, amount.mul(LQLEVEL).div(PCT), uint8(item.ccy));
             }
         }
 
@@ -706,15 +666,15 @@ contract Loan is ProtocolTypes {
         returns (uint256)
     {
         // if (date == 0) return BP;
-        if (date <= now) return 0;
-        uint256 time = date - now;
+        if (date <= block.timestamp) return 0;
+        uint256 time = date.sub(block.timestamp);
         if (time <= SECONDS[0]) return (dfArr[0] * time) / SECONDS[0];
         for (uint256 i = 1; i < NUMDF; i++) {
             if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
-                uint256 left = time - SECONDS[i - 1];
-                uint256 right = SECONDS[i] - time;
-                uint256 total = SECONDS[i] - SECONDS[i - 1];
-                return (dfArr[i - 1] * right + dfArr[i] * left) / total;
+                uint256 left = time.sub(SECONDS[i - 1]);
+                uint256 right = SECONDS[i].sub(time);
+                uint256 total = SECONDS[i].sub(SECONDS[i - 1]);
+                return ((dfArr[i - 1].mul(right)).add((dfArr[i].mul(left))).div(total));
             }
         }
     }
@@ -726,7 +686,7 @@ contract Loan is ProtocolTypes {
         if(!item.isAvailable) {
             if (item.pv > 0) {
                 item.pv = 0;
-                item.asOf = now;
+                item.asOf = block.timestamp;
             }
             // return item;
             return;
@@ -744,42 +704,15 @@ contract Loan is ProtocolTypes {
         // uint256[MAXPAYNUM] memory schedDf;
         uint256 pv = 0;
         for (uint256 i = 0; i < item.schedule.amounts.length; i++) {
-            if (item.schedule.payments[i] < now) continue;
+            if (item.schedule.payments[i] < block.timestamp) continue;
             uint256 d = calcDF(dfArr, item.schedule.payments[i]);
             // schedDf[i] = d;
-            pv += (item.schedule.amounts[i] * d);
+            pv += (item.schedule.amounts[i].mul(d));
         }
-        item.pv = pv / BP;
-        item.asOf = now;
+        item.pv = pv.div(BP);
+        item.asOf = block.timestamp;
 
         // return item;
         // return schedDf;
     }
-
-    // // helper to take a loan item and update its net present value
-    // function updateOnePV(LoanItem storage item) private {
-    //     DiscountFactor[NUMCCY] memory dfList = moneyMarket
-    //         .getDiscountFactors();
-    //     DiscountFactor memory df = dfList[uint256(item.ccy)];
-    //     uint256[NUMDF] memory dfArr = [
-    //         df.df3m,
-    //         df.df6m,
-    //         df.df1y,
-    //         df.df2y,
-    //         df.df3y,
-    //         df.df4y,
-    //         df.df5y
-    //     ];
-    //     uint256[MAXPAYNUM] memory schedDf;
-    //     uint256 pv = 0;
-    //     for (uint256 i = 0; i < PAYNUMS[uint256(item.term)]; i++) {
-    //         uint256 d = calcDF(dfArr, item.schedule.payments[i]);
-    //         schedDf[i] = d;
-    //         pv += (item.schedule.amounts[i] * d) / BP;
-    //     }
-    //     uint256 lastIndex = PAYNUMS[uint256(item.term)] - 1;
-    //     pv += (item.amt * schedDf[lastIndex]) / BP;
-    //     item.pv = pv;
-    //     item.asOf = now;
-    // }
 }

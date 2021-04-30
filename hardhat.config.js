@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-truffle5");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
+require('hardhat-contract-sizer');
 
 module.exports = {
   defaultNetwork: "hardhat",
@@ -35,6 +36,11 @@ module.exports = {
   },
   mocha: {
     timeout: 100000,
-    reporter: 'eth-gas-reporter',
-  }
+    // reporter: 'eth-gas-reporter',
+  },
+  contractSizer: {
+    alphaSort: false,
+    runOnCompile: false,
+    disambiguatePaths: false,
+  },
 }

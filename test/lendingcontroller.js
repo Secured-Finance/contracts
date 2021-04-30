@@ -2,7 +2,8 @@ const Collateral = artifacts.require('Collateral');
 const LendingMarket = artifacts.require('LendingMarket');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const Loan = artifacts.require('Loan');
-const FXMarket = artifacts.require('FXMarket');
+const FXRatesAggregator = artifacts.require('FXRatesAggregator');
+const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
 should();
@@ -23,8 +24,10 @@ const val = (obj) => {
 contract('LendingMarketController', async (accounts) => {
     const [owner, alice, bob, carol] = accounts;
     const users = [alice, bob, carol]; // without owner
-  
-    let fxMarket;
+    const filRate = web3.utils.toBN("67175250000000000");
+    const filAddr = web3.utils.utf8ToHex("f01523555");
+    const btcAddr = web3.utils.utf8ToHex("3LvFB9E2rqjnvHmjUbQqpcc4gingrN45Y4");
+
     let collateral;
     let loan;  
     let lendingController;
@@ -32,11 +35,17 @@ contract('LendingMarketController', async (accounts) => {
     let orderList;
 
     before('deploy LendingMarketController', async () => {
-        fxMarket = await FXMarket.new();
         loan = await Loan.new();
+
         collateral = await Collateral.new(loan.address);
-        await collateral.setFxMarketAddr(fxMarket.address, {from: owner});
         await loan.setCollateralAddr(collateral.address, {from: owner});
+        
+        ratesAggregator = await FXRatesAggregator.new();
+        filToETHPriceFeed = await MockV3Aggregator.new(18, Ccy.FIL, filRate);
+        setPriceFeedTx = await ratesAggregator.linkPriceFeed(Ccy.FIL, filToETHPriceFeed.address, true);
+        await emitted(setPriceFeedTx, 'PriceFeedAdded');
+
+        await collateral.setRatesAggregatorAddr(ratesAggregator.address, {from: owner});
     
         orderList = orders;
         lendingController = await LendingMarketController.new();
@@ -46,26 +55,32 @@ contract('LendingMarketController', async (accounts) => {
         console.log();
     });
 
-    it('Init Collateral with sample data', async () => {
-        sample.Collateral.forEach(async (item, index) => {
-          let res = await collateral.setColBook(...val(item), {
-            from: users[index],
-            // value: 0,
-            value: 100000,
-          });
-          await emitted(res, 'SetColBook');
+    describe('Init Collateral with 100,000 Wei for Bob', async () => {
+        it('Register collateral book with 100,000 Wei payment', async () => {
+            let result = await collateral.register("Bob", "f01523555", "3LvFB9E2rqjnvHmjUbQqpcc4gingrN45Y4", {from: bob, value: 100000});
+            await emitted(result, 'Register');
+        });
+
+        it('Get Bob collateral book and check values', async () => {
+            const book = await collateral.getOneBook(bob);
+            
+            book[0].should.be.equal('Bob');
+            book[1].should.be.equal(filAddr);
+            book[2].should.be.equal(btcAddr);
+            book[3].should.be.equal('100000');
+            book[4].should.be.equal('0');
+            book[5].should.be.equal('0');
+            book[6].should.be.equal('0');
+            book[7].should.be.equal('0');
+            book[8].should.be.equal(true);
+            book[9].should.be.equal('1');
         });
       });
-    it('Init with sample FXMarket', async () => {
-        sample.FXMarket.forEach(async (item) => {
-            let res = await fxMarket.setFXBook(...val(item), {from: alice});
-            await emitted(res, 'SetFXBook');
-        });
-    });
   
     describe('deploy Lending Markets for each term of FIL market', async () => {
         it('deploy Lending Market for 3 month FIL market', async () => {
             _3mMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._3m);
+            await emitted(_3mMarket, "LendingMarketCreated");
             lendingMarkets.push(_3mMarket.logs[0].args.marketAddr);
 
             let lendingMarket = await LendingMarket.at(_3mMarket.logs[0].args.marketAddr);
@@ -77,6 +92,7 @@ contract('LendingMarketController', async (accounts) => {
 
         it('deploy Lending Market for 6 month FIL market', async () => {
             _6mMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._6m);
+            await emitted(_6mMarket, "LendingMarketCreated");
             lendingMarkets.push(_6mMarket.logs[0].args.marketAddr);
 
             let lendingMarket = await LendingMarket.at(_6mMarket.logs[0].args.marketAddr);
@@ -88,6 +104,7 @@ contract('LendingMarketController', async (accounts) => {
 
         it('deploy Lending Market for 1 year FIL market', async () => {
             _1yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._1y);
+            await emitted(_1yMarket, "LendingMarketCreated");
             lendingMarkets.push(_1yMarket.logs[0].args.marketAddr);
 
             let lendingMarket = await LendingMarket.at(_1yMarket.logs[0].args.marketAddr);
@@ -99,6 +116,7 @@ contract('LendingMarketController', async (accounts) => {
 
         it('deploy Lending Market for 2 year FIL market', async () => {
             _2yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._2y);
+            await emitted(_2yMarket, "LendingMarketCreated");
             lendingMarkets.push(_2yMarket.logs[0].args.marketAddr);
 
             let lendingMarket = await LendingMarket.at(_2yMarket.logs[0].args.marketAddr);
@@ -110,6 +128,7 @@ contract('LendingMarketController', async (accounts) => {
 
         it('deploy Lending Market for 3 year FIL market', async () => {
             _3yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._3y);
+            await emitted(_3yMarket, "LendingMarketCreated");
             lendingMarkets.push(_3yMarket.logs[0].args.marketAddr);
 
             let lendingMarket = await LendingMarket.at(_3yMarket.logs[0].args.marketAddr);
@@ -121,6 +140,7 @@ contract('LendingMarketController', async (accounts) => {
 
         it('deploy Lending Market for 5 year FIL market', async () => {
             _5yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._5y);
+            await emitted(_5yMarket, "LendingMarketCreated");
             lendingMarkets.push(_5yMarket.logs[0].args.marketAddr);
 
             let lendingMarket = await LendingMarket.at(_5yMarket.logs[0].args.marketAddr);

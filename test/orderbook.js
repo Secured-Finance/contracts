@@ -1,7 +1,8 @@
-const FXMarket = artifacts.require('FXMarket');
 const Collateral = artifacts.require('Collateral');
 const OrderBook = artifacts.require('LendingMarket');
 const Loan = artifacts.require('Loan');
+const FXRatesAggregator = artifacts.require('FXRatesAggregator');
+const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const {Side, Ccy, Term, ColState, sample} = require('../test-utils').constants;
 const {accounts, defaultSender, web3, provider} = require("@openzeppelin/test-environment");
@@ -17,6 +18,8 @@ const {
 } = require('../test-utils').time;
 const { emitted, reverted } = require('../test-utils').assert;
 const { orders } = require("./orders");
+const { should } = require('chai');
+should();
 
 /* Helper */
 const val = (obj) => {
@@ -36,6 +39,7 @@ const expectRevert = reverted;
 contract('OrderBook', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
   const users = [alice, bob, carol]; // without owner
+  const filRate = web3.utils.toBN("67175250000000000");
 
   let snapshotId;
   let fxMarket;
@@ -49,11 +53,15 @@ contract('OrderBook', async (accounts) => {
     console.log('before    ', toDate(time));
     orderList = orders;
 
-    fxMarket = await FXMarket.new();
     loan = await Loan.new();
     collateral = await Collateral.new(loan.address);
-    await collateral.setFxMarketAddr(fxMarket.address, {from: owner});
     await loan.setCollateralAddr(collateral.address, {from: owner});
+    ratesAggregator = await FXRatesAggregator.new();
+    filToETHPriceFeed = await MockV3Aggregator.new(18, Ccy.FIL, filRate);
+    setPriceFeedTx = await ratesAggregator.linkPriceFeed(Ccy.FIL, filToETHPriceFeed.address, true);
+    await emitted(setPriceFeedTx, 'PriceFeedAdded');
+
+    await collateral.setRatesAggregatorAddr(ratesAggregator.address, {from: owner});
     
     orderBook = await OrderBook.new(Ccy.FIL, Term._1y, owner);
     await orderBook.setCollateral(collateral.address, {from: owner});
@@ -62,23 +70,69 @@ contract('OrderBook', async (accounts) => {
     await loan.addLendingMarket(Ccy.FIL, Term._1y, orderBook.address, {from: owner});
   });
 
+  describe('Init Collateral with 100,000 Wei for Alice, Bob and Carol', async () => {
+    it('Register collateral book with 100,000 Wei payment by Alice', async () => {
+        let result = await collateral.register("Alice", "f0152351", "3LvFB9E2rqjnvHmjUbQqpcc4JbfuXqVmY4", {from: alice, value: 100000});
+        await emitted(result, 'Register');
+    });
+
+    it('Get Bob collateral book and check values', async () => {
+        const book = await collateral.getOneBook(alice);
+        
+        book[0].should.be.equal('Alice');
+        book[1].should.be.equal(web3.utils.utf8ToHex("f0152351"));
+        book[2].should.be.equal(web3.utils.utf8ToHex("3LvFB9E2rqjnvHmjUbQqpcc4JbfuXqVmY4"));
+        book[3].should.be.equal('100000');
+        book[4].should.be.equal('0');
+        book[5].should.be.equal('0');
+        book[6].should.be.equal('0');
+        book[7].should.be.equal('0');
+        book[8].should.be.equal(true);
+        book[9].should.be.equal('1');
+    });
+
+    it('Register collateral book with 100,000 Wei payment by Bob', async () => {
+      let result = await collateral.register("Bob", "f01523555", "3LvFB9E2rqjnvHmjUbQqpcc4gingrN45Y4", {from: bob, value: 100000});
+      await emitted(result, 'Register');
+    });
+
+    it('Get Bob collateral book and check values', async () => {
+        const book = await collateral.getOneBook(bob);
+        
+        book[0].should.be.equal('Bob');
+        book[1].should.be.equal(web3.utils.utf8ToHex("f01523555"));
+        book[2].should.be.equal(web3.utils.utf8ToHex("3LvFB9E2rqjnvHmjUbQqpcc4gingrN45Y4"));
+        book[3].should.be.equal('100000');
+        book[4].should.be.equal('0');
+        book[5].should.be.equal('0');
+        book[6].should.be.equal('0');
+        book[7].should.be.equal('0');
+        book[8].should.be.equal(true);
+        book[9].should.be.equal('1');
+    });
+
+    it('Register collateral book with 100,000 Wei payment by Carol', async () => {
+      let result = await collateral.register("Carol", "f01524214", "3LvIj382rqjnvHmjUbQqpcc4gingrN45Y4", {from: carol, value: 100000});
+      await emitted(result, 'Register');
+    });
+
+    it('Get Bob collateral book and check values', async () => {
+        const book = await collateral.getOneBook(carol);
+        
+        book[0].should.be.equal('Carol');
+        book[1].should.be.equal(web3.utils.utf8ToHex("f01524214"));
+        book[2].should.be.equal(web3.utils.utf8ToHex("3LvIj382rqjnvHmjUbQqpcc4gingrN45Y4"));
+        book[3].should.be.equal('100000');
+        book[4].should.be.equal('0');
+        book[5].should.be.equal('0');
+        book[6].should.be.equal('0');
+        book[7].should.be.equal('0');
+        book[8].should.be.equal(true);
+        book[9].should.be.equal('1');
+    });
+  });
+
   describe('Setup Test Data', async () => {
-    it('Init Collateral with sample data', async () => {
-      sample.Collateral.forEach(async (item, index) => {
-        let res = await collateral.setColBook(...val(item), {
-          from: users[index],
-          // value: 0,
-          value: 100000,
-        });
-        await emitted(res, 'SetColBook');
-      });
-    });
-    it('Init with sample FXMarket', async () => {
-      sample.FXMarket.forEach(async (item) => {
-        let res = await fxMarket.setFXBook(...val(item), {from: alice});
-        await emitted(res, 'SetFXBook');
-      });
-    });
     it('Create new market order by Alice', async () => {
       let marketOrder = await orderBook.order(0, 10000, 375, effectiveSec, {from: alice});
       await emitted(marketOrder, 'MakeOrder');

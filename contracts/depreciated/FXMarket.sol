@@ -2,7 +2,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./ProtocolTypes.sol";
+import "../ProtocolTypes.sol";
 
 contract FXMarket  is ProtocolTypes {
     event SetFXBook(address indexed addr);

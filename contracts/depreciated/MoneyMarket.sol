@@ -2,8 +2,8 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './Collateral.sol';
-import "./ProtocolTypes.sol";
+import '../Collateral.sol';
+import "../ProtocolTypes.sol";
 
 /// @title MoneyMarket Contract for Loans
 contract MoneyMarket is ProtocolTypes {

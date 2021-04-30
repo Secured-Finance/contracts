@@ -7,6 +7,7 @@ const Ccy = {
   ETH: 0,
   FIL: 1,
   USDC: 2,
+  BTC: 3,
 };
 
 const CcyPair = {

@@ -12,12 +12,13 @@ contract ProtocolTypes {
     uint8 internal constant NUMTERM = 6;
     uint8 internal constant NUMDF = 7; // number of discount factors
     uint256 internal constant BP = 10000; // basis point
-    uint256 internal constant PCT = 100; // percentage point
-    uint256 internal constant PENALTYLEVEL = 10; // 10% settlement failure penalty
-    uint256 internal constant MKTMAKELEVEL = 20; // 20% for market making
-    uint256 internal constant LQLEVEL = 120; // 120% for liquidation price
-    uint256 internal constant MARGINLEVEL = 150; // 150% margin call threshold
-    uint256 internal constant AUTOLQLEVEL = 125; // 125% auto liquidation
+    
+    uint256 internal constant PCT = 10000; // percentage point in basis
+    uint256 internal constant PENALTYLEVEL = 1000; // 10% settlement failure penalty
+    uint256 internal constant MKTMAKELEVEL = 2000; // 20% for market making
+    uint256 internal constant LQLEVEL = 12000; // 120% for liquidation price
+    uint256 internal constant MARGINLEVEL = 15000; // 150% margin call threshold
+    uint256 internal constant AUTOLQLEVEL = 12500; // 125% auto liquidation
 
     // Lending market common types
     enum Side {
