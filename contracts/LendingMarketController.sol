@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ProtocolTypes.sol";
 import "./LendingMarket.sol";
 import './interfaces/ILendingMarket.sol';
+import './interfaces/IDiscountFactors.sol';
 
 /**
  * @dev Lending Market Controller contract is managing separated lending 
@@ -14,13 +15,22 @@ import './interfaces/ILendingMarket.sol';
  *
  * It will store lending market addresses by ccy and term in lendingMarkets mapping.
  */
-contract LendingMarketController is ProtocolTypes {
+contract LendingMarketController is ProtocolTypes, IDiscountFactors {
     using SafeMath for uint256;
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
     event LendingMarketCreated(Ccy ccy, Term term, address indexed marketAddr);
 
     address public owner;
+
+    struct Order {
+        Ccy ccy;
+        Term term;
+        Side side;
+        uint256 amount;
+        uint256 rate;
+        uint256 deadline;
+    }
 
     mapping(Ccy => mapping(Term => address)) public lendingMarkets;
 
@@ -92,7 +102,7 @@ contract LendingMarketController is ProtocolTypes {
 
     // =========== DISCOUNT FACTORS CALCULATION ===========
 
-        // helper to generate DF
+    // helper to generate DF
     function genDF(uint256[NUMDF] memory rates) private pure returns (DiscountFactor memory) {
         DiscountFactor memory df;
         // bootstrap in BasisPoint scale
@@ -125,5 +135,20 @@ contract LendingMarketController is ProtocolTypes {
 
         emit LendingMarketCreated(_ccy, _term, market);
         return market;
+    }
+
+    // =========== BULK TRADE FUNCTIONS ===========
+
+    /**
+    * @dev Places orders in multiple Lending Markets.
+    * @param orders Lending Market orders array with ccy and terms to identify right market
+    */
+    function placeBulkOrders(Order[] memory orders) public returns (bool) {
+        for (uint8 i = 0; i < orders.length; i++) {
+            Order memory order = orders[i];
+
+            ILendingMarket market = ILendingMarket(lendingMarkets[order.ccy][order.term]);
+            market.order(uint8(order.side), order.amount, order.rate, order.deadline);
+        }
     }
 }

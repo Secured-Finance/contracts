@@ -26,7 +26,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     /**
     * @dev Emitted when market order created by market maker.
     */
-    event MakeOrder(uint256 orderId, address indexed maker, Side side, Ccy ccy, Term term, uint amount, uint rate, uint deadline);
+    event MakeOrder(uint256 orderId, address indexed maker, Side side, Ccy ccy, Term term, uint amount, uint rate);
     
     /**
     * @dev Emitted when market order canceled by market maker.
@@ -55,7 +55,6 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
         Side side;
         uint256 amount;
         uint256 rate; // in basis points
-        uint256 deadline;
         address maker;
     }
 
@@ -86,25 +85,11 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     }
 
     /**
-    * @dev Modifier to make a function callable only when the market order is active.
+    * @dev Modifier to make a function callable only by order maker.
     * @param orderId Market order id
     */
-    modifier activeOrder(uint256 orderId) {
-        if (!isActive(orderId)) {
-            require(cancelOrder(orderId), "Couldn't cancel order");
-        } else {
-            _;
-        }
-    }
-
-    /**
-    * @dev Modifier to make a function callable only when the market order can be canceled by market maker.
-    * @param orderId Market order id
-    */
-    modifier cancelable(uint256 orderId) {
-        if (isActive(orderId)) {
-            require(getMaker(orderId) == msg.sender, "No access to cancel order");
-        }
+    modifier onlyMaker(uint256 orderId) {
+        require(getMaker(orderId) == msg.sender, "No access to cancel order");
         _;
     }
 
@@ -130,15 +115,6 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     */
     function setLoan(address addr) public onlyOwner {
         loan = ILoan(addr);
-    }
-
-    /**
-    * @dev Triggers to make a check if market order executable.
-    * If market order exceeded the deadline, market order deleted from order book.
-    * @param orderId Market order id
-    */
-    function isActive(uint256 orderId) public view returns (bool active) {
-        return orders[orderId].deadline > block.timestamp;
     }
 
     /**
@@ -203,7 +179,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     * Requirements:
     * - Order has to be cancelable by market maker
     */
-    function cancelOrder(uint256 orderId) public cancelable(orderId) returns (bool success) {
+    function cancelOrder(uint256 orderId) public onlyMaker(orderId) returns (bool success) {
         MarketOrder memory order = orders[orderId];
         if (order.side == Side.LEND) {
             lendOrders.remove(order.amount, order.rate, orderId);
@@ -229,9 +205,8 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     * @param _side Borrow or Lend order position
     * @param _amount Amount of funds maker wish to borrow/lend
     * @param _rate Preferable interest rate
-    * @param _deadline Deadline for market maker execution (adds to current network timestamp)
     */
-    function makeOrder(Side _side, uint256 _amount, uint256 _rate, uint256 _deadline) internal returns (uint256 orderId) {
+    function makeOrder(Side _side, uint256 _amount, uint256 _rate) internal returns (uint256 orderId) {
         MarketOrder memory order;
 
         require(_amount > 0, "Can't place empty amount");
@@ -241,7 +216,6 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
         order.amount = _amount;
         order.rate = _rate;
         order.maker = msg.sender;
-        order.deadline = block.timestamp.add(_deadline);
         orderId = _next_id();
 
         orders[orderId] = order;
@@ -254,13 +228,12 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
 
         emit MakeOrder(
             orderId, 
-            order.maker, 
-            order.side, 
-            MarketCcy, 
-            MarketTerm, 
-            order.amount, 
-            order.rate, 
-            order.deadline    
+            order.maker,
+            order.side,
+            MarketCcy,
+            MarketTerm,
+            order.amount,
+            order.rate
         );
     }
 
@@ -272,7 +245,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     * Requirements:
     * - Market order has to be active
     */
-    function takeOrder(Side side, uint256 orderId, uint256 _amount) internal activeOrder(orderId) returns (bool) {
+    function takeOrder(Side side, uint256 orderId, uint256 _amount) internal returns (bool) {
         MarketOrder memory order = orders[orderId];
         require(_amount <= order.amount, "Insuficient amount");
         require(order.maker != msg.sender, "Maker couldn't take its order");
@@ -324,11 +297,10 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     * @param side Market order side it can be borrow or lend
     * @param amount Amount of funds maker/taker wish to borrow/lend
     * @param rate Amount of interest rate maker/taker wish to borrow/lend
-    * @param deadline Deadline for market maker execution (adds to current network timestamp)
     *
     * Returns true after successful execution
     */
-    function order(Side side, uint256 amount, uint256 rate, uint256 deadline) public nonReentrant returns (bool) {
+    function order(Side side, uint256 amount, uint256 rate) public nonReentrant returns (bool) {
         uint256 orderId;
 
         if (side == Side.LEND) {
@@ -339,7 +311,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
             if (orderId != 0) return takeOrder(Side.LEND, orderId, amount);
         }
 
-        makeOrder(side, amount, rate, deadline);
+        makeOrder(side, amount, rate);
         return true;
     }
 }

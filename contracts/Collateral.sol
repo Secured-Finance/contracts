@@ -24,19 +24,19 @@ contract Collateral is ProtocolTypes {
     event UseCollateral(address indexed addr, uint256 amount, Ccy ccy);
     event UpdateFILAddress(address indexed addr, string filAddr);
     event UpdateBTCAddress(address indexed addr, string btcAddr);
-    event PartialLiquidation(address indexed borrower, address indexed lender, uint256 indexed amount, Ccy ccy);
+    event Liquidate(address indexed from, address indexed to, uint256 amount);
     event UpdateState(address indexed addr, CollateralState prevState, CollateralState currState);
+    event UpdatePV(address indexed addr, uint256 prevPV, uint256 newPV, Ccy ccy);
 
     struct ColBook {
         string id; // DID, email
         bytes userAddrFIL;
         bytes userAddrBTC;
         uint256 colAmtETH; // total collateral amount
-        uint256 inuseETH; // total PV of ETH loans
-        uint256 inuseFIL; // total PV of FIL loans
-        uint256 inuseUSDC; // total PV of USDC loans
-        uint256 inuseBTC; // total PV of BTC loans
-        // uint256 coverage; // in PCT
+        uint256 totalUsedETH; // total PV of ETH loans
+        uint256 totalUsedFIL; // total PV of FIL loans
+        uint256 totalUsedUSDC; // total PV of USDC loans
+        uint256 totalUsedBTC; // total PV of BTC loans
         bool isAvailable;
         CollateralState state;
     }
@@ -47,7 +47,11 @@ contract Collateral is ProtocolTypes {
     mapping(address => ColBook) private colMap;
     address[] private users;
     address public owner;
-    address internal zeroAddr = 0x0000000000000000000000000000000000000000;
+
+    // Collateral coverage ratios
+    uint256 public LQLEVEL;
+    uint256 public MARGINLEVEL;
+    uint256 public AUTOLQLEVEL;
 
     // Contracts
     address loan;
@@ -94,6 +98,10 @@ contract Collateral is ProtocolTypes {
     constructor(address loanAddr) public {
         owner = msg.sender;
         loan = loanAddr;
+
+        LQLEVEL = 12000; // 120% for liquidation price
+        MARGINLEVEL = 15000; // 150% margin call threshold
+        AUTOLQLEVEL = 12500; // 125% auto liquidatio
     }
 
     /**
@@ -143,7 +151,7 @@ contract Collateral is ProtocolTypes {
     * @notice Trigers only be contract owner
     */
     function setRatesAggregatorAddr(address addr) public onlyOwner {
-        require(addr != zeroAddr);
+        require(addr != address(0));
         ratesAggregator = IFXRatesAggregator(addr);
     }
 
@@ -220,18 +228,18 @@ contract Collateral is ProtocolTypes {
         Ccy ccy,
         uint256 amt,
         address addr
-    ) public acceptedAddr(ccy) {
+    ) external acceptedAddr(ccy) {
         require(isCovered(amt, ccy, addr), "Please upsize collateral");
         ColBook storage book = colMap[addr];
         if (ccy == Ccy.ETH) {
-            book.inuseETH = book.inuseETH.add(amt);
+            book.totalUsedETH = book.totalUsedETH.add(amt);
         } else {            
             if (ccy == Ccy.FIL) {
-                book.inuseFIL = book.inuseFIL.add(amt);
+                book.totalUsedFIL = book.totalUsedFIL.add(amt);
             } else if (ccy == Ccy.USDC) {
-                book.inuseUSDC = book.inuseUSDC.add(amt);
+                book.totalUsedUSDC = book.totalUsedUSDC.add(amt);
             } else if (ccy == Ccy.BTC) {
-                book.inuseBTC = book.inuseBTC.add(amt);
+                book.totalUsedBTC = book.totalUsedBTC.add(amt);
             }
         }
         updateState(addr);
@@ -276,22 +284,22 @@ contract Collateral is ProtocolTypes {
     {
         require(colMap[addr].isAvailable, "Collateral book not set yet");
         ColBook memory book = colMap[addr];
-        uint256 inusePVinETH;
+        uint256 totalPVinETH;
 
-        if (book.inuseFIL > 0) {
-            uint256 used = ratesAggregator.convertToETH(uint8(Ccy.FIL), book.inuseFIL);
-            inusePVinETH = inusePVinETH.add(used);
+        if (book.totalUsedFIL > 0) {
+            uint256 used = ratesAggregator.convertToETH(uint8(Ccy.FIL), book.totalUsedFIL);
+            totalPVinETH = totalPVinETH.add(used);
         }
-        if (book.inuseBTC > 0) {
-            uint256 used = ratesAggregator.convertToETH(uint8(Ccy.BTC), book.inuseBTC);
-            inusePVinETH = inusePVinETH.add(used);
+        if (book.totalUsedBTC > 0) {
+            uint256 used = ratesAggregator.convertToETH(uint8(Ccy.BTC), book.totalUsedBTC);
+            totalPVinETH = totalPVinETH.add(used);
         }
-        if (book.inuseUSDC > 0) {
-            uint256 used = ratesAggregator.convertToETH(uint8(Ccy.USDC), book.inuseUSDC);
-            inusePVinETH = inusePVinETH.add(used);
+        if (book.totalUsedUSDC > 0) {
+            uint256 used = ratesAggregator.convertToETH(uint8(Ccy.USDC), book.totalUsedUSDC);
+            totalPVinETH = totalPVinETH.add(used);
         }
 
-        uint256 totalUse = book.inuseETH.add(inusePVinETH);
+        uint256 totalUse = book.totalUsedETH.add(totalPVinETH);
         return totalUse;
     }
 
@@ -327,18 +335,18 @@ contract Collateral is ProtocolTypes {
     ) external acceptedAddr(ccy) {
         ColBook storage book = colMap[addr];
         if (ccy == Ccy.ETH) {
-            require(book.inuseETH >= amt);
-            book.inuseETH = book.inuseETH.sub(amt);
+            require(book.totalUsedETH >= amt);
+            book.totalUsedETH = book.totalUsedETH.sub(amt);
         } else {
             if (ccy == Ccy.FIL) {
-                require(book.inuseFIL >= amt, "Not enough to unlock");
-                book.inuseFIL = book.inuseFIL.sub(amt);
+                require(book.totalUsedFIL >= amt, "Not enough to unlock");
+                book.totalUsedFIL = book.totalUsedFIL.sub(amt);
             } else if (ccy == Ccy.USDC) {
-                require(book.inuseUSDC >= amt, "Not enough to unlock");
-                book.inuseUSDC = book.inuseUSDC.sub(amt);
+                require(book.totalUsedUSDC >= amt, "Not enough to unlock");
+                book.totalUsedUSDC = book.totalUsedUSDC.sub(amt);
             } else if (ccy == Ccy.BTC) {
-                require(book.inuseBTC >= amt, "Not enough to unlock");
-                book.inuseBTC = book.inuseBTC.sub(amt);
+                require(book.totalUsedBTC >= amt, "Not enough to unlock");
+                book.totalUsedBTC = book.totalUsedBTC.sub(amt);
             }
         }
         updateState(addr);
@@ -378,7 +386,7 @@ contract Collateral is ProtocolTypes {
         1. update states
         2. notify - confirm method to change states
 
-        // TODO - modify inuseETH after loan is executed
+        // TODO - modify totalUsedETH after loan is executed
         // TODO - update loan mtm condition and change state
     */
 
@@ -398,7 +406,7 @@ contract Collateral is ProtocolTypes {
             if (book.colAmtETH > 0) book.state = CollateralState.AVAILABLE;
         } else if (totalUse > 0) {
             uint256 coverage = (PCT.mul(book.colAmtETH)).div(totalUse);
-            // TODO - handle partial liquidation and margin call together
+
             if (book.state == CollateralState.LIQUIDATION_IN_PROGRESS) return book.state;
             if (book.colAmtETH > 0 && coverage <= AUTOLQLEVEL)
                 book.state = CollateralState.LIQUIDATION;
@@ -421,43 +429,67 @@ contract Collateral is ProtocolTypes {
     }
 
     /**
+    * @dev Triggers to update PV value in currency for collateral book
+    * changes present value in native currency, without exchange rate conversion
+    * @param addr Collateral book address
+    * @param prevPV Previous snapshot present value
+    * @param amount New present value
+    * @param ccy Currency to change PV value for
+    *
+    * @notice Trigers only be Loan contract
+    */
+    function updatePV(
+        address addr,
+        uint256 prevPV,
+        uint256 amount,
+        Ccy ccy
+    ) external {
+        require(msg.sender == address(loan), "only Loan contract can call");
+        ColBook storage book = colMap[addr];
+        if (ccy == Ccy.ETH) {
+            book.totalUsedETH = book.totalUsedETH.sub(prevPV).add(amount);
+        } else {
+            if (ccy == Ccy.FIL) {
+                book.totalUsedFIL = book.totalUsedFIL.sub(prevPV).add(amount);
+            } else if (ccy == Ccy.USDC) {
+                book.totalUsedUSDC = book.totalUsedUSDC.sub(prevPV).add(amount);
+            } else if (ccy == Ccy.BTC) {
+                book.totalUsedBTC = book.totalUsedBTC.sub(prevPV).add(amount);
+            }
+        }
+        updateState(addr);
+        emit UpdatePV(addr, prevPV, amount, ccy);
+    }
+
+    /**
     * @dev Triggers to liquidate collateral from borrower to lender
-    * @param borrower Borrowers address
-    * @param lender Lenders address
+    * @param from Address for liquidating collateral from
+    * @param to Address for sending collateral to
     * @param amount Liquidation amount
     * @param ccy Currency to use rate to ETH for
     *
     * @notice Trigers only be Loan contract
     */
     function liquidate(
-        address borrower,
-        address lender,
+        address from,
+        address to,
         uint256 amount,
         Ccy ccy
     ) external {
         require(msg.sender == address(loan), "only Loan contract can call");
-        ColBook storage borrowerBook = colMap[borrower];
+        ColBook storage borrowerBook = colMap[from];
         uint256 amt = ratesAggregator.convertToETH(uint8(ccy), amount);
         require(borrowerBook.colAmtETH >= amt, "Liquidation amount not enough");
         if (
-            borrowerBook.state == CollateralState.AVAILABLE ||
             borrowerBook.state == CollateralState.IN_USE ||
             borrowerBook.state == CollateralState.LIQUIDATION
         ) {
-            borrowerBook.state = CollateralState.LIQUIDATION_IN_PROGRESS;
-            borrowerBook.colAmtETH -= amt;
-            colMap[lender].colAmtETH += amt;
-            updateState(borrower);
-            updateState(lender);
+            borrowerBook.colAmtETH = borrowerBook.colAmtETH.sub(amt);
+            colMap[to].colAmtETH = colMap[to].colAmtETH.add(amt);
+            updateState(from);
+            updateState(to);
         }
-        emit PartialLiquidation(borrower, lender, amount, ccy);
-    }
-
-    function completePartialLiquidation(address borrower) external {
-        require(msg.sender == address(loan), "only Loan contract can call");
-        ColBook storage borrowerBook = colMap[borrower];
-        borrowerBook.state = CollateralState.IN_USE; // set to default before update
-        updateState(borrower);
+        emit Liquidate(from, to, amt);
     }
 
     function getOneBook(address addr) public view returns (ColBook memory) {
@@ -476,7 +508,7 @@ contract Collateral is ProtocolTypes {
         return users;
     }
 
-    function getColState(address addr) public view returns ( CollateralState) {
+    function getColState(address addr) public view returns (CollateralState) {
         return colMap[addr].state;
     }
 }
