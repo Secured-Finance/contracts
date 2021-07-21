@@ -20,7 +20,9 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
     event LendingMarketCreated(Ccy ccy, Term term, address indexed marketAddr);
-
+    event LendingMarketsPaused(Ccy ccy);
+    event LendingMarketsUnpaused(Ccy ccy);
+    
     address public owner;
 
     struct Order {
@@ -29,7 +31,6 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
         Side side;
         uint256 amount;
         uint256 rate;
-        uint256 deadline;
     }
 
     mapping(Ccy => mapping(Term => address)) public lendingMarkets;
@@ -126,7 +127,10 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
 
     /**
     * @dev Deploys new Lending Market and save address at lendingMarkets mapping.
+    * @param _ccy Main currency for new lending market
     * @param _term Term for new Lending Market
+    * 
+    * @notice Reverts on deployment market with existing currency and term
     */
     function deployLendingMarket(Ccy _ccy, Term _term) public onlyOwner returns (address market) {
         require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
@@ -135,6 +139,38 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
 
         emit LendingMarketCreated(_ccy, _term, market);
         return market;
+    }
+
+    // =========== LENDING MARKETS MANAGEMENT FUNCTIONS ===========
+
+    /**
+    * @dev Pauses previously deployed lending market by currency
+    * @param _ccy Currency for pausing all lending markets
+    */
+    function pauseLendingMarkets(Ccy _ccy) public onlyOwner returns (bool) {
+        for (uint8 i = 0; i < NUMTERM; i++) {
+            Term term = Term(i);
+            ILendingMarket market = ILendingMarket(lendingMarkets[_ccy][term]);
+            market.pauseMarket();
+        }
+
+        emit LendingMarketsPaused(_ccy);
+        return true;
+    }
+
+    /**
+    * @dev Unpauses previously deployed lending market by currency
+    * @param _ccy Currency for pausing all lending markets
+    */
+    function unpauseLendingMarkets(Ccy _ccy) public onlyOwner returns (bool) {
+        for (uint8 i = 0; i < NUMTERM; i++) {
+            Term term = Term(i);
+            ILendingMarket market = ILendingMarket(lendingMarkets[_ccy][term]);
+            market.unpauseMarket();
+        }
+
+        emit LendingMarketsUnpaused(_ccy);
+        return true;
     }
 
     // =========== BULK TRADE FUNCTIONS ===========
@@ -148,7 +184,7 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
             Order memory order = orders[i];
 
             ILendingMarket market = ILendingMarket(lendingMarkets[order.ccy][order.term]);
-            market.order(uint8(order.side), order.amount, order.rate, order.deadline);
+            market.order(uint8(order.side), order.amount, order.rate);
         }
     }
 }

@@ -3,9 +3,11 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import './interfaces/ICollateral.sol';
 import './interfaces/ILoan.sol';
+import './interfaces/ILendingMarketController.sol';
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
 import "./ProtocolTypes.sol";
 
@@ -15,7 +17,7 @@ import "./ProtocolTypes.sol";
  *
  * It will store market orders in structured red-black tree and doubly linked list in each node.
  */
-contract LendingMarket is ProtocolTypes, ReentrancyGuard {
+contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
@@ -49,7 +51,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     uint256 public last_order_id;
     Ccy public MarketCcy;
     Term public MarketTerm;
-    address public owner;
+    address public lendingController;
 
     struct MarketOrder {
         Side side;
@@ -70,17 +72,17 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     * @param _ccy The main currency for order book lending deals
     * @param _term The main term for order book lending deals
     */
-    constructor(Ccy _ccy, Term _term, address _owner) public {
+    constructor(Ccy _ccy, Term _term, address _lendingController) public {
         MarketCcy = _ccy;
         MarketTerm = _term;
-        owner = _owner;
+        lendingController = _lendingController;
     }
 
     /**
-    * @dev Modifier to make a function callable only by contract owner.
+    * @dev Modifier to make a function callable only by lending market controller owner.
     */
-    modifier onlyOwner() {
-        require(msg.sender == owner);
+    modifier onlyLendingControllerAdmin() {
+        require(msg.sender == ILendingMarketController(lendingController).owner() || msg.sender == lendingController);
         _;
     }
 
@@ -99,9 +101,9 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     *
     * Requirements:
     *
-    * - Can be executed only by contract owner.
+    * - Can be executed only by lending market controller owner.
     */
-    function setCollateral(address colAddr) public onlyOwner {
+    function setCollateral(address colAddr) public onlyLendingControllerAdmin {
         collateral = ICollateral(colAddr);
     }
 
@@ -111,9 +113,9 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     *
     * Requirements:
     *
-    * - Can be executed only by contract owner.
+    * - Can be executed only by lending market controller owner.
     */
-    function setLoan(address addr) public onlyOwner {
+    function setLoan(address addr) public onlyLendingControllerAdmin {
         loan = ILoan(addr);
     }
 
@@ -156,11 +158,13 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
       return orders[orderId];
     }
 
-    function getOrderFromTree(Side side, uint256 rate, uint256 orderId) public view returns (uint256, uint256, uint256, uint256, uint256) {
-        if (side == Side.LEND) {
-            return lendOrders.getOrderById(rate, orderId);
+    function getOrderFromTree(uint256 orderId) public view returns (uint256, uint256, uint256, uint256, uint256) {
+        MarketOrder memory order = orders[orderId];
+
+        if (order.side == Side.LEND) {
+            return lendOrders.getOrderById(order.rate, orderId);
         } else {
-            return borrowOrders.getOrderById(rate, orderId);
+            return borrowOrders.getOrderById(order.rate, orderId);
         }
     }
 
@@ -180,6 +184,8 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     * - Order has to be cancelable by market maker
     */
     function cancelOrder(uint256 orderId) public onlyMaker(orderId) returns (bool success) {
+        _beforeMarketOrder();
+
         MarketOrder memory order = orders[orderId];
         if (order.side == Side.LEND) {
             lendOrders.remove(order.amount, order.rate, orderId);
@@ -211,6 +217,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
 
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
+        _beforeMarketOrder();
 
         order.side = _side;
         order.amount = _amount;
@@ -247,8 +254,10 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
     */
     function takeOrder(Side side, uint256 orderId, uint256 _amount) internal returns (bool) {
         MarketOrder memory order = orders[orderId];
+
         require(_amount <= order.amount, "Insuficient amount");
         require(order.maker != msg.sender, "Maker couldn't take its order");
+        _beforeMarketOrder();
 
         orders[orderId].amount = order.amount.sub(_amount);
         if (order.side == Side.LEND) {
@@ -313,5 +322,26 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard {
 
         makeOrder(side, amount, rate);
         return true;
+    }
+
+    /**
+     * @dev Triggered to pause lending market.
+     */
+    function pauseMarket() public virtual onlyLendingControllerAdmin {
+        _pause();
+    }
+
+    /**
+     * @dev Triggered to pause lending market.
+     */
+    function unpauseMarket() public virtual onlyLendingControllerAdmin {
+        _unpause();
+    }
+
+    /**
+     * @dev Additional checks before making/taking orders.
+     */
+    function _beforeMarketOrder() internal view {
+        require(!paused(), "Market paused");
     }
 }

@@ -16,8 +16,8 @@ const getLatestTimestamp = async () => {
 };
 
 const getTimestampPlusDays = async (days) => {
-  return (await getLatestTimestamp()) + SECONDS_IN_DAY * days;
-};
+  return (await getLatestTimestamp()) + ONE_DAY * days;
+}; 
 
 module.exports = {
   ONE_SECOND,

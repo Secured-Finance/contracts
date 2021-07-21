@@ -24,6 +24,7 @@ contract CurrencyController {
     event LTVUpdated(bytes32 indexed ccy, uint256 ltv);
     event MinMarginUpdated(bytes32 indexed ccy, uint256 minMargin);
 
+    event CcySupportUpdate(bytes32 indexed ccy, bool isSupported);
     event CcyCollateralUpdate(bytes32 indexed ccy, bool isCollateral);
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
@@ -56,6 +57,11 @@ contract CurrencyController {
 
     modifier onlyOwner() {
         require(msg.sender == owner);
+        _;
+    }
+
+    modifier supportedCcyOnly(bytes32 _ccy) {
+        require(isSupportedCcy(_ccy), "Unsupported asset");
         _;
     }
 
@@ -101,22 +107,34 @@ contract CurrencyController {
     }
 
     /**
-    * @dev Triggers to add new currency into the protocol. Links with existing ETH chainlink pricefeed
+    * @dev Triggers to update currency support
     * @param _ccy Currency short ticket
     * @param _isSupported Boolean whether currency supported as collateral or not   
     */
-    function updateCollateralSupport(bytes32 _ccy, bool _isSupported) onlyOwner public returns (bool) {
+    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) onlyOwner public returns (bool) {
+        Currency storage currency = currencies[_ccy];
+        currency.isSupported = _isSupported;
+
+        emit CcySupportUpdate(_ccy, _isSupported);
+    }
+
+    /**
+    * @dev Triggers to update if currency is accepted as collateral
+    * @param _ccy Currency short ticket
+    * @param _isSupported Boolean whether currency supported as collateral or not   
+    */
+    function updateCollateralSupport(bytes32 _ccy, bool _isSupported) onlyOwner supportedCcyOnly(_ccy) public returns (bool) {
         isCollateral[_ccy] = _isSupported;
 
         emit CcyCollateralUpdate(_ccy, _isSupported);
     }
 
     /**
-    * @dev Triggers to add new currency into the protocol. Links with existing ETH chainlink pricefeed
+    * @dev Triggers to update the loan-to-value ratio for supported currency
     * @param _ccy Currency short ticket
     * @param _ltv Currency LTV value used to calculate in collateral calculations
     */
-    function updateCcyLTV(bytes32 _ccy, uint256 _ltv) onlyOwner public returns (bool) {
+    function updateCcyLTV(bytes32 _ccy, uint256 _ltv) onlyOwner supportedCcyOnly(_ccy) public returns (bool) {
         require(_ltv > 0, "Incorrect LTV");
         require(_ltv <= 10000, "LTV overflow");
         
@@ -126,11 +144,11 @@ contract CurrencyController {
     }
 
     /**
-    * @dev Triggers to add new currency into the protocol. Links with existing ETH chainlink pricefeed
+    * @dev Triggers to update the minimal margin requirements for currency supported as collateral
     * @param _ccy Currency short ticket
     * @param _minMargin Currency minimal margin ratio used to calculate collateral coverage
     */
-    function updateMinMargin(bytes32 _ccy, uint256 _minMargin) onlyOwner public returns (bool) {
+    function updateMinMargin(bytes32 _ccy, uint256 _minMargin) onlyOwner supportedCcyOnly(_ccy) public returns (bool) {
         require(_minMargin > 0, "Incorrect MinMargin");
         require(_minMargin <= 10000, "MinMargin overflow");
         require(isCollateral[_ccy], "Unable to set MinMargin");
@@ -145,7 +163,7 @@ contract CurrencyController {
     /**
     * @dev Triggers to get LTV percentage for specific currency. 
     * LTV is used to apply haircut percentage on bilateral netting cross-calculation.
-    * @param _ccy Currency
+    * @param _ccy Currency short ticket
     */
     function getLTV(bytes32 _ccy) external view returns (uint256) {
         return ltvs[_ccy];
@@ -153,11 +171,19 @@ contract CurrencyController {
 
     /**
     * @dev Triggers to get minimal margin percentage for specific currency.
-    * @param _ccy Currency
+    * @param _ccy Currency short ticket
     */
     function getMinMargin(bytes32 _ccy) external view returns (uint256) {
         require(isCollateral[_ccy], "Unable to get MinMargin");
         return minMargins[_ccy];
+    }
+
+    /**
+    * @dev Triggers to get if specified currency is supported.
+    * @param _ccy Currency short ticket
+    */
+    function isSupportedCcy(bytes32 _ccy) public view returns (bool) {
+        return currencies[_ccy].isSupported;
     }
 
     // =========== CHAINLINK PRICE FEED FUNCTIONS ===========
@@ -197,7 +223,7 @@ contract CurrencyController {
     * @param _ccy Specified currency
     * @param _isEthPriceFeed Boolean for price feed with ETH price
     */
-    function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external onlyOwner {        
+    function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external onlyOwner supportedCcyOnly(_ccy) {        
         if (_isEthPriceFeed == true) {
             address priceFeed = address(ethPriceFeeds[_ccy]);
 
