@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import './interfaces/ICollateral.sol';
+import './interfaces/ICollateralAggregator.sol';
 import './interfaces/ILoan.sol';
 import './interfaces/ILendingMarketController.sol';
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
@@ -22,13 +22,13 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     // Contracts interfaces
-    ICollateral collateral;
+    ICollateralAggregator collateralAggregator;
     ILoan loan;
 
     /**
     * @dev Emitted when market order created by market maker.
     */
-    event MakeOrder(uint256 orderId, address indexed maker, Side side, Ccy ccy, Term term, uint amount, uint rate);
+    event MakeOrder(uint256 orderId, address indexed maker, Side side, bytes32 ccy, Term term, uint amount, uint rate);
     
     /**
     * @dev Emitted when market order canceled by market maker.
@@ -49,7 +49,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     event TakeOrder(uint256 orderId, address indexed taker, Side side, uint256 amount, uint256 rate);
 
     uint256 public last_order_id;
-    Ccy public MarketCcy;
+    bytes32 public MarketCcy;
     Term public MarketTerm;
     address public lendingController;
 
@@ -72,7 +72,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     * @param _ccy The main currency for order book lending deals
     * @param _term The main term for order book lending deals
     */
-    constructor(Ccy _ccy, Term _term, address _lendingController) public {
+    constructor(bytes32 _ccy, Term _term, address _lendingController) public {
         MarketCcy = _ccy;
         MarketTerm = _term;
         lendingController = _lendingController;
@@ -82,7 +82,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     * @dev Modifier to make a function callable only by lending market controller owner.
     */
     modifier onlyLendingControllerAdmin() {
-        require(msg.sender == ILendingMarketController(lendingController).owner() || msg.sender == lendingController);
+        require(msg.sender == ILendingMarketController(lendingController).owner() || msg.sender == lendingController, "Incorrect access");
         _;
     }
 
@@ -91,7 +91,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     * @param orderId Market order id
     */
     modifier onlyMaker(uint256 orderId) {
-        require(getMaker(orderId) == msg.sender, "No access to cancel order");
+        require(msg.sender == getMaker(orderId), "No access to cancel order");
         _;
     }
 
@@ -104,7 +104,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     * - Can be executed only by lending market controller owner.
     */
     function setCollateral(address colAddr) public onlyLendingControllerAdmin {
-        collateral = ICollateral(colAddr);
+        collateralAggregator = ICollateralAggregator(colAddr);
     }
 
     /**
@@ -147,7 +147,9 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     function getMidRate() public view returns (uint256 rate) {
         uint256 borrowRate = getBorrowRate();
         uint256 lendRate = getLendRate();
-        return (borrowRate.add(lendRate)).div(2);
+        uint256 combinedRate = borrowRate.add(lendRate); 
+
+        return combinedRate.div(2);
     }
 
     /**
@@ -194,7 +196,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
         }
         delete orders[orderId];
 
-        collateral.releaseCollateral(uint8(MarketCcy), order.amount.mul(MKTMAKELEVEL).div(PCT), order.maker);
+        collateralAggregator.releaseUnsettledCollateral(order.maker, MarketCcy, order.amount.mul(MKTMAKELEVEL).div(PCT));
         emit CancelOrder(
             orderId,
             order.maker,
@@ -226,7 +228,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
         orderId = _next_id();
 
         orders[orderId] = order;
-        collateral.useCollateral(uint8(MarketCcy), _amount.mul(MKTMAKELEVEL).div(PCT), msg.sender);
+        collateralAggregator.useUnsettledCollateral(msg.sender, MarketCcy, _amount.mul(MKTMAKELEVEL).div(PCT));
         if (order.side == Side.LEND) {
             lendOrders.insert(order.amount, order.rate, orderId);
         } else if (order.side == Side.BORROW) {
@@ -254,7 +256,6 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     */
     function takeOrder(Side side, uint256 orderId, uint256 _amount) internal returns (bool) {
         MarketOrder memory order = orders[orderId];
-
         require(_amount <= order.amount, "Insuficient amount");
         require(order.maker != msg.sender, "Maker couldn't take its order");
         _beforeMarketOrder();
@@ -266,7 +267,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
             require(borrowOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
         }
 
-        loan.makeLoanDeal(order.maker, msg.sender, uint8(order.side), uint8(MarketCcy), uint8(MarketTerm), _amount, order.rate);
+        loan.makeLoanDeal(order.maker, msg.sender, uint8(order.side), MarketCcy, uint8(MarketTerm), _amount, order.rate);
 
         emit TakeOrder(
             orderId,

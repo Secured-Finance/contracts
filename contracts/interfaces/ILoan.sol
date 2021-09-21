@@ -36,13 +36,13 @@ struct LoanBook {
 }
 
 interface ILoan {
-    event ConfirmPayment(address indexed lender, address indexed borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 indexed txHash);
-    event MakeLoanDeal(address indexed makerAddr, uint8 indexed side, uint8 ccy, uint8 term, uint256 amt, uint256 rate, uint256 indexed loanId);
-    event NotifyPayment(address indexed lender, address indexed borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 indexed txHash);
+    event ConfirmPayment(address indexed lender, address indexed borrower, uint8 side, bytes32 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 indexed txHash);
+    event MakeLoanDeal(address indexed makerAddr, uint8 indexed side, bytes32 ccy, uint8 term, uint256 amt, uint256 rate, uint256 indexed loanId);
+    event NotifyPayment(address indexed lender, address indexed borrower, uint8 side, bytes32 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 indexed txHash);
     event UpdateState(address indexed lender, address indexed borrower, uint256 indexed loanId, uint8 prevState, uint8 currState);
 
     function addLendingMarket(uint8 _ccy, uint8 _term, address addr) external;
-    function confirmPayment(address lender, address borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 txHash) external;
+    function confirmPayment(address lender, address borrower, uint8 side, bytes32 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 txHash) external;
     function fillSchedule(Schedule memory schedule, uint8 term, uint256 amt, uint256 rate) external view;
     function getAllBooks() external view returns (LoanBook[] memory);
     function getAllBorrowers() external view returns (address[] memory);
@@ -53,8 +53,8 @@ interface ILoan {
     function getLoanItem(uint256 loanId) external view returns (LoanItem memory);
     function getOneBook(address addr) external view returns (LoanBook memory);
     function lendingMarkets(uint8 , uint8 ) external view returns (address);
-    function makeLoanDeal(address makerAddr, address takerAddr, uint8 side, uint8 ccy, uint8 term, uint256 amt, uint256 rate) external;
-    function notifyPayment(address lender, address borrower, uint8 side, uint8 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 txHash) external;
+    function makeLoanDeal(address makerAddr, address takerAddr, uint8 side, bytes32 ccy, uint8 term, uint256 amt, uint256 rate) external;
+    function notifyPayment(address lender, address borrower, uint8 side, bytes32 ccy, uint256 term, uint256 amt, uint256 loanId, bytes32 txHash) external;
     function owner() external view returns (address);
     function setCollateralAddr(address addr) external;
     function setLendingControllerAddr(address addr) external;

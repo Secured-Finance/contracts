@@ -12,12 +12,12 @@ struct MarketOrder {
 
 interface ILendingMarket {
     event CancelOrder(uint256 orderId,address indexed maker,uint8 side,uint256 amount,uint256 rate);
-    event MakeOrder(uint256 orderId,address indexed maker,uint8 side,uint8 ccy,uint8 term,uint256 amount,uint256 rate);
+    event MakeOrder(uint256 orderId,address indexed maker,uint8 side,bytes32 ccy,uint8 term,uint256 amount,uint256 rate);
     event Paused(address account);
     event TakeOrder(uint256 orderId,address indexed taker,uint8 side,uint256 amount,uint256 rate);
     event Unpaused(address account);
 
-    function MarketCcy() external view returns (uint8);
+    function MarketCcy() external view returns (bytes32);
     function MarketTerm() external view returns (uint8);
     function cancelOrder(uint256 orderId) external  returns (bool success);
     function getBorrowRate() external view returns (uint256 rate);

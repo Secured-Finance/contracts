@@ -5,4 +5,5 @@ module.exports = {
   padding: require('./src/padding'),
   constants: require('./src/constants'),
   helper: require('./src/helper'),
+  strings: require('./src/strings'),
 };

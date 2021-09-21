@@ -2,7 +2,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './interfaces/ICollateral.sol';
+import './interfaces/ICollateralAggregator.sol';
 import "./ProtocolTypes.sol";
 import './interfaces/ILendingMarketController.sol';
 import './interfaces/IDiscountFactors.sol';
@@ -18,7 +18,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract Loan is ProtocolTypes, IDiscountFactors {
     using SafeMath for uint256;
     
-    event MakeLoanDeal(address indexed lender, address indexed borrower, Ccy ccy, Term term, uint256 amt, uint256 rate, uint256 indexed loanId);
+    event MakeLoanDeal(address indexed lender, address indexed borrower, bytes32 ccy, Term term, uint256 amt, uint256 rate, uint256 indexed loanId);
     event NotifyPayment(uint256 loanId, uint256 amt, bytes32 txHash);
     event ConfirmPayment(uint256 loanId, uint256 amt, bytes32 txHash);
     event RequestTermination(uint256 loanId, address indexed requestedBy);
@@ -98,7 +98,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     struct LoanDeal {
         address lender;
         address borrower;
-        Ccy ccy;
+        bytes32 ccy;
         Term term;
         uint256 amt;
         uint256 rate;
@@ -133,9 +133,9 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     uint256 public last_loan_id;
 
     // Contracts
-    ICollateral collateral;
+    ICollateralAggregator collateralAggregator;
     ILendingMarketController lendingController;
-    mapping(Ccy => mapping(Term => address)) public lendingMarkets;
+    mapping(bytes32 => mapping(Term => address)) public lendingMarkets;
 
     /**
     * @dev Modifier to make a function callable only by contract owner.
@@ -150,7 +150,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     * @param _ccy LendingMarket currency
     * @param _term LendingMarket term
     */
-    modifier lendingMarketExists(Ccy _ccy, Term _term) {
+    modifier lendingMarketExists(bytes32 _ccy, Term _term) {
         require(lendingMarkets[_ccy][_term] == msg.sender);
         _;
     }
@@ -199,7 +199,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     * @notice Executed only by contract owner
     */
     function setCollateralAddr(address addr) public onlyOwner {
-        collateral = ICollateral(addr);
+        collateralAggregator = ICollateralAggregator(addr);
     }
 
     /**
@@ -220,7 +220,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     *
     * @notice Executed only by contract owner
     */
-    function addLendingMarket(Ccy _ccy, Term _term, address addr) public onlyOwner {
+    function addLendingMarket(bytes32 _ccy, Term _term, address addr) public onlyOwner {
         require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
         lendingMarkets[_ccy][_term] = addr;
     }
@@ -258,7 +258,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
         address maker,
         address taker,
         Side side,
-        Ccy ccy,
+        bytes32 ccy,
         Term term,
         uint256 amt,
         uint256 rate
@@ -274,7 +274,9 @@ contract Loan is ProtocolTypes, IDiscountFactors {
             borrower = maker;
         }
 
-        collateral.useCollateral(uint8(ccy), amt, borrower);
+        // TODO: Lock 20% notional from lender and unlock unsettled exposure from borrower, if maker was borrower
+        collateralAggregator.releaseUnsettledCollateral(maker, ccy, amt.mul(MKTMAKELEVEL).div(PCT));
+        collateralAggregator.useCollateral(lender, borrower, ccy, amt.mul(MKTMAKELEVEL).div(PCT), amt, false);
 
         LoanDeal memory item;
         item.lender = lender;
@@ -379,20 +381,19 @@ contract Loan is ProtocolTypes, IDiscountFactors {
 
         if (item.state == LoanState.REGISTERED) {
             if (item.startTxHash == bytes32(0) && item.start.add(SETTLE) < block.timestamp) {
-                item.state = LoanState.CLOSED;
-                item.isAvailable = false;
-                collateral.liquidate(item.lender, item.borrower, item.amt.mul(MKTMAKELEVEL).div(PCT), uint8(item.ccy));
-                collateral.releaseCollateral(uint8(item.ccy), item.amt, item.borrower);
+                collateralAggregator.liquidate(item.lender, item.borrower, item.ccy, item.amt.mul(MKTMAKELEVEL).div(PCT));
+                collateralAggregator.releaseCollateral(item.lender, item.borrower, item.ccy, item.amt.mul(MKTMAKELEVEL).div(PCT), item.amt, false);
+                _liquidateLoan(loanId);
             }
         } else {
             item.state = getCurrentState(loanId);
-            CollateralState colState = CollateralState(collateral.getColState(item.borrower));
-            if (colState == CollateralState.LIQUIDATION) {
-                item.state = LoanState.TERMINATED;
-                item.isAvailable = false;
-                collateral.liquidate(item.borrower, item.lender, item.pv.mul(collateral.LQLEVEL()).div(PCT), uint8(item.ccy));
-                collateral.releaseCollateral(uint8(item.ccy), item.pv, item.borrower);
-            }
+            // CollateralState colState = CollateralState(collateral.getColState(item.borrower));
+            // if (colState == CollateralState.LIQUIDATION) {
+            //     item.state = LoanState.TERMINATED;
+            //     item.isAvailable = false;
+            //     collateralAggregator.liquidate(item.borrower, item.lender, item.pv.mul(collateralAggregator.LQLEVEL()).div(PCT), item.ccy);
+            //     collateralAggregator.releaseCollateral(item.ccy, item.pv, item.borrower);
+            // }
 
             if (item.state == LoanState.PAST_DUE) {
                 Schedule storage schedule = schedules[loanId];
@@ -402,13 +403,12 @@ contract Loan is ProtocolTypes, IDiscountFactors {
                 }
                 schedule.isDone[i] = true;
                 uint256 amount = schedule.amounts[i];
-                collateral.liquidate(item.borrower, item.lender, amount.mul(collateral.LQLEVEL()).div(PCT), uint8(item.ccy));
+                collateralAggregator.liquidate(item.borrower, item.lender, item.ccy, amount.mul(collateralAggregator.LQLEVEL()).div(PCT));
 
                 // terminate loan on last last payment
                 if (i == schedule.payNums.sub(1)) {
-                    item.state = LoanState.TERMINATED;
-                    item.isAvailable = false;
-                    collateral.releaseCollateral(uint8(item.ccy), item.pv, item.borrower);
+                    collateralAggregator.releaseCollateral(item.lender, item.borrower, item.ccy, 0, item.pv, true);
+                    _liquidateLoan(loanId);
                 }
             }
         } 
@@ -476,8 +476,9 @@ contract Loan is ProtocolTypes, IDiscountFactors {
 
             item.state = LoanState.WORKING;
 
-            collateral.releaseCollateral(uint8(item.ccy), item.amt.mul(MKTMAKELEVEL).div(PCT), item.lender);
-            collateral.updateState(item.borrower);
+            collateralAggregator.releaseCollateral(item.lender, item.borrower, item.ccy, item.amt.mul(MKTMAKELEVEL).div(PCT), 0, false);
+            collateralAggregator.settleCollateral(item.lender, item.borrower, item.ccy, 0, item.pv);
+            // collateralAggregator.updateState(item.borrower);
         } else if (item.state == LoanState.DUE) {
             require(msg.sender == item.lender, "lender must confirm");
             Schedule storage schedule = schedules[loanId];
@@ -491,9 +492,8 @@ contract Loan is ProtocolTypes, IDiscountFactors {
             schedule.isDone[i] = true;
 
             if (i == schedule.payNums.sub(1)) {
-                item.state = LoanState.CLOSED;
-                item.isAvailable = false;
-                collateral.releaseCollateral(uint8(item.ccy), item.pv, item.borrower);
+                collateralAggregator.releaseCollateral(item.lender, item.borrower, item.ccy, 0, item.pv, true);
+                _liquidateLoan(loanId);
             } else {
                 item.state = LoanState.WORKING;
             }
@@ -510,7 +510,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     *
     * @notice Executed only for working loan deal
     */
-    function requestTermination(uint256 loanId) public workingLoan(loanId) {
+    function requestTermination(uint256 loanId) public {
         LoanDeal storage item = loans[loanId];
         require(msg.sender == item.lender || msg.sender == item.borrower, 'parties must request');
         require(updateLoanPV(loanId), "failed MtM");
@@ -527,7 +527,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     *
     * @notice Executed only for working loan deal
     */
-    function acceptTermination(uint256 loanId) public workingLoan(loanId) {
+    function acceptTermination(uint256 loanId) public {
         LoanDeal memory item = loans[loanId];
         require(item.terminationAsked, 'no termination request');
         if (item.terminationAsker == item.lender) {
@@ -537,31 +537,37 @@ contract Loan is ProtocolTypes, IDiscountFactors {
         }
 
         require(updateLoanPV(loanId), "failed MtM");
-        Schedule memory schedule = schedules[loanId];
 
-        uint256 i;
-        for (i = 0; i < schedule.payNums; i++) {
-            if (schedule.isDone[i] == false) break;
-        }
+        if (item.state == LoanState.WORKING) {
+            Schedule memory schedule = schedules[loanId];
 
-        uint256 timeDelta;
-        if (i == 0) {
-            timeDelta = block.timestamp.sub(item.start);
+            uint256 i;
+            for (i = 0; i < schedule.payNums; i++) {
+                if (schedule.isDone[i] == false) break;
+            }
+
+            uint256 timeDelta;
+            if (i == 0) {
+                timeDelta = block.timestamp.sub(item.start);
+            } else {
+                timeDelta = block.timestamp.sub(schedule.payments[i - 1]);
+            }
+
+            uint256 interestPerSecond = item.rate.mul(1e18).div(SECONDS[2]);
+
+            uint256 accuredInterest = interestPerSecond.mul(timeDelta).div(1e18);
+            uint totalPayment = accuredInterest.add(item.pv);
+            collateralAggregator.liquidate(item.borrower, item.lender, item.ccy, totalPayment);
+            collateralAggregator.releaseCollateral(item.lender, item.borrower, item.ccy, 0, item.pv, true);
+
+            emit EarlyTermination(loanId, msg.sender, totalPayment);
+
         } else {
-            timeDelta = block.timestamp.sub(schedule.payments[i - 1]);
+            collateralAggregator.releaseCollateral(item.lender, item.borrower, item.ccy, 0, item.pv, false);
+            emit EarlyTermination(loanId, msg.sender, 0);
         }
 
-        uint256 interestPerSecond = item.rate.mul(1e18).div(SECONDS[2]);
-
-        uint256 accuredInterest = interestPerSecond.mul(timeDelta).div(1e18);
-        uint totalPayment = accuredInterest.add(item.pv);
-        collateral.liquidate(item.borrower, item.lender, totalPayment, uint8(item.ccy));
-        collateral.releaseCollateral(uint8(item.ccy), item.pv, item.borrower);
-
-        loans[loanId].state = LoanState.TERMINATED;
-        loans[loanId].isAvailable = false;
-
-        emit EarlyTermination(loanId, msg.sender, totalPayment);
+        _liquidateLoan(loanId);
     }
 
     /**
@@ -570,7 +576,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     *
     * @notice Executed only for working loan deal
     */
-    function rejectTermination(uint256 loanId) public workingLoan(loanId) {
+    function rejectTermination(uint256 loanId) public {
         LoanDeal memory item = loans[loanId];
         require(item.terminationAsked, 'no termination request');
         require(msg.sender == item.lender || msg.sender == item.borrower, 'parties must request');
@@ -661,7 +667,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
         LoanDeal storage item = loans[loanId];
         if (item.state == LoanState.REGISTERED) return true;
 
-        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(uint8(item.ccy));
+        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(item.ccy);
         uint256[NUMDF] memory dfArr = [
             df.df3m,
             df.df6m,
@@ -685,7 +691,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
             item.pv = pv.div(BP);
             item.asOf = block.timestamp;
 
-            collateral.updatePV(item.borrower, oldPV, item.pv, uint8(item.ccy));
+            collateralAggregator.updatePV(item.lender, item.borrower, item.ccy, 0, oldPV, 0, item.pv);
 
             emit MarkToMarket(loanId, oldPV, pv.div(BP));
         }
@@ -699,9 +705,12 @@ contract Loan is ProtocolTypes, IDiscountFactors {
     */
     function getCurrentPV(uint256 loanId) public view returns (uint256 pv) {
         LoanDeal memory item = loans[loanId];
+
+        if (item.state == LoanState.REGISTERED) return item.pv;
+
         Schedule memory schedule = schedules[loanId];
 
-        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(uint8(item.ccy));
+        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(item.ccy);
         uint256[NUMDF] memory dfArr = [
             df.df3m,
             df.df6m,
@@ -735,7 +744,7 @@ contract Loan is ProtocolTypes, IDiscountFactors {
         returns (uint256)
     {
         LoanDeal memory item = loans[loanId];
-        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(uint8(item.ccy));
+        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(item.ccy);
         uint256[NUMDF] memory dfArr = [
             df.df3m,
             df.df6m,
@@ -766,5 +775,9 @@ contract Loan is ProtocolTypes, IDiscountFactors {
                 }
             }
         }
+    }
+
+    function _liquidateLoan(uint256 loanId) internal {
+        delete loans[loanId];
     }
 }

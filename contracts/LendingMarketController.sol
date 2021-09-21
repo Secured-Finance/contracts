@@ -7,6 +7,7 @@ import "./ProtocolTypes.sol";
 import "./LendingMarket.sol";
 import './interfaces/ILendingMarket.sol';
 import './interfaces/IDiscountFactors.sol';
+import './interfaces/ICurrencyController.sol';
 
 /**
  * @dev Lending Market Controller contract is managing separated lending 
@@ -19,21 +20,22 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
     using SafeMath for uint256;
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
-    event LendingMarketCreated(Ccy ccy, Term term, address indexed marketAddr);
-    event LendingMarketsPaused(Ccy ccy);
-    event LendingMarketsUnpaused(Ccy ccy);
+    event LendingMarketCreated(bytes32 ccy, Term term, address indexed marketAddr);
+    event LendingMarketsPaused(bytes32 ccy);
+    event LendingMarketsUnpaused(bytes32 ccy);
     
     address public owner;
+    ICurrencyController public currencyController;
 
     struct Order {
-        Ccy ccy;
+        bytes32 ccy;
         Term term;
         Side side;
         uint256 amount;
         uint256 rate;
     }
 
-    mapping(Ccy => mapping(Term => address)) public lendingMarkets;
+    mapping(bytes32 => mapping(Term => address)) public lendingMarkets;
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -57,13 +59,23 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
         owner = _owner;
     }
 
+    /**
+    * @dev Triggers to link with Currency Controller contract.
+    * @param addr CurrencyController smart contract address 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setCurrencyController(address addr) public onlyOwner {
+        currencyController = ICurrencyController(addr);
+    }
+
     // =========== YIELD CURVE FUNCTIONS ===========
 
     /**
     * @dev Triggers to get borrow rates for selected currency.
     * @param _ccy Currency
     */
-    function getBorrowRatesForCcy(Ccy _ccy) public view returns (uint256[NUMTERM] memory rates) {
+    function getBorrowRatesForCcy(bytes32 _ccy) public view returns (uint256[NUMTERM] memory rates) {
         for (uint8 i = 0; i < NUMTERM; i++) {
             Term term = Term(i);
             ILendingMarket market = ILendingMarket(lendingMarkets[_ccy][term]);
@@ -77,7 +89,7 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
     * @dev Triggers to get lend rates for selected currency.
     * @param _ccy Currency
     */
-    function getLendRatesForCcy(Ccy _ccy) public view returns (uint256[NUMTERM] memory rates) {
+    function getLendRatesForCcy(bytes32 _ccy) public view returns (uint256[NUMTERM] memory rates) {
         for (uint8 i = 0; i < NUMTERM; i++) {
             Term term = Term(i);
             ILendingMarket market = ILendingMarket(lendingMarkets[_ccy][term]);
@@ -91,7 +103,7 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
     * @dev Triggers to get mid rates for selected currency.
     * @param _ccy Currency
     */
-    function getMidRatesForCcy(Ccy _ccy) public view returns (uint256[NUMTERM] memory rates) {
+    function getMidRatesForCcy(bytes32 _ccy) public view returns (uint256[NUMTERM] memory rates) {
         for (uint8 i = 0; i < NUMTERM; i++) {
             Term term = Term(i);
             ILendingMarket market = ILendingMarket(lendingMarkets[_ccy][term]);
@@ -117,7 +129,7 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
         return df;
     }
 
-    function getDiscountFactorsForCcy(Ccy _ccy) public view returns (DiscountFactor memory) {
+    function getDiscountFactorsForCcy(bytes32 _ccy) public view returns (DiscountFactor memory) {
         uint256[NUMTERM] memory mkt = getMidRatesForCcy(_ccy);
         uint256[NUMDF] memory rates = [mkt[0], mkt[1], mkt[2], mkt[3], mkt[4], ((mkt[4].add(mkt[5])).div(2)), mkt[5]];
         return genDF(rates);
@@ -132,9 +144,10 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
     * 
     * @notice Reverts on deployment market with existing currency and term
     */
-    function deployLendingMarket(Ccy _ccy, Term _term) public onlyOwner returns (address market) {
+    function deployLendingMarket(bytes32 _ccy, Term _term) public onlyOwner returns (address market) {
+        require(currencyController.isSupportedCcy(_ccy));
         require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
-        market = address(new LendingMarket(_ccy, _term, owner));
+        market = address(new LendingMarket(_ccy, _term, address(this)));
         lendingMarkets[_ccy][_term] = market;
 
         emit LendingMarketCreated(_ccy, _term, market);
@@ -147,7 +160,7 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
     * @dev Pauses previously deployed lending market by currency
     * @param _ccy Currency for pausing all lending markets
     */
-    function pauseLendingMarkets(Ccy _ccy) public onlyOwner returns (bool) {
+    function pauseLendingMarkets(bytes32 _ccy) public onlyOwner returns (bool) {
         for (uint8 i = 0; i < NUMTERM; i++) {
             Term term = Term(i);
             ILendingMarket market = ILendingMarket(lendingMarkets[_ccy][term]);
@@ -162,7 +175,7 @@ contract LendingMarketController is ProtocolTypes, IDiscountFactors {
     * @dev Unpauses previously deployed lending market by currency
     * @param _ccy Currency for pausing all lending markets
     */
-    function unpauseLendingMarkets(Ccy _ccy) public onlyOwner returns (bool) {
+    function unpauseLendingMarkets(bytes32 _ccy) public onlyOwner returns (bool) {
         for (uint8 i = 0; i < NUMTERM; i++) {
             Term term = Term(i);
             ILendingMarket market = ILendingMarket(lendingMarkets[_ccy][term]);

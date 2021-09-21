@@ -80,6 +80,13 @@ interface ICollateralAggregator {
         uint256 _party1PV
     ) external view returns (bool, bool);
 
+    function liquidateUnsettled(
+        address from,
+        address to,
+        bytes32 ccy,
+        uint256 amount
+    ) external;
+
     function liquidate(
         address from,
         address to,
@@ -107,12 +114,19 @@ interface ICollateralAggregator {
 
     function register(uint256 id) external payable;
 
+    function releaseUnsettledCollateral(
+        address user,
+        bytes32 ccy,
+        uint256 amount
+    ) external;
+
     function releaseCollateral(
         address partyA,
         address partyB,
         bytes32 ccy,
         uint256 amount0,
-        uint256 amount1
+        uint256 amount1,
+        bool isSettled
     ) external;
 
     function removeCollateralUser(address _user) external returns (bool);
@@ -133,7 +147,22 @@ interface ICollateralAggregator {
         uint256 currentPV1
     ) external;
 
+    function useUnsettledCollateral(
+        address user,
+        bytes32 ccy,
+        uint256 amount
+    ) external;
+
     function useCollateral(
+        address partyA,
+        address partyB,
+        bytes32 ccy,
+        uint256 amount0,
+        uint256 amount1,
+        bool isSettled
+    ) external;
+
+    function settleCollateral(
         address partyA,
         address partyB,
         bytes32 ccy,

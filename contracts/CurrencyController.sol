@@ -20,7 +20,7 @@ contract CurrencyController {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
 
-    event CcyAdded(bytes32 indexed ccy, string name, uint8 chainId, uint256 ltv);
+    event CcyAdded(bytes32 indexed ccy, string name, uint16 chainId, uint256 ltv);
     event LTVUpdated(bytes32 indexed ccy, uint256 ltv);
     event MinMarginUpdated(bytes32 indexed ccy, uint256 minMargin);
 
@@ -38,7 +38,7 @@ contract CurrencyController {
     struct Currency {
         bool isSupported;
         string name;
-        uint8 chainId; // chain id for address conversion
+        uint16 chainId; // chain id for address conversion
     }
 
     // Protocol currencies storage
@@ -91,7 +91,7 @@ contract CurrencyController {
     * @param _chainId Chain ID for conversion from bytes32 to bytes
     * @param _ethPriceFeed Address for ETH price feed   
     */
-    function supportCurrency(bytes32 _ccy, string memory _name, uint8 _chainId, address _ethPriceFeed, uint256 _ltv) onlyOwner public returns (bool) {
+    function supportCurrency(bytes32 _ccy, string memory _name, uint16 _chainId, address _ethPriceFeed, uint256 _ltv) onlyOwner public returns (bool) {
         last_ccy_index = last_ccy_index++;
 
         Currency memory currency;
@@ -102,7 +102,11 @@ contract CurrencyController {
         currencies[_ccy] = currency;
         ltvs[_ccy] = _ltv;
 
-        require(linkPriceFeed(_ccy, _ethPriceFeed, true), "Invalid PriceFeed");
+        if (_ccy != "ETH") {
+            require(linkPriceFeed(_ccy, _ethPriceFeed, true), "Invalid PriceFeed");
+        } else {
+            require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
+        }
         emit CcyAdded(_ccy, _name, _chainId, _ltv);
     }
 
