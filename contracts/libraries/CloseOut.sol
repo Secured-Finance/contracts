@@ -2,6 +2,7 @@
 pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 library CloseOut {
     using SafeMath for uint256;
@@ -14,7 +15,6 @@ library CloseOut {
         uint256 netPayment;
         bool flipped;
         bytes32 paymentProof;
-        bool isClosed;
     }
 
     /**
@@ -50,18 +50,18 @@ library CloseOut {
         CloseOut.Payment storage closeOut = self[addr][ccy];
 
         if (closeOut.flipped) {
-            if (payment0 > closeOut.netPayment && payment1 < closeOut.netPayment) {
-                closeOut.netPayment = payment0.sub(closeOut.netPayment).add(payment1);
+            if (payment0 > closeOut.netPayment && payment1 < payment0) {
+                closeOut.netPayment = payment0.sub(closeOut.netPayment.add(payment1));
                 closeOut.flipped = false;
             } else {
-                closeOut.netPayment = closeOut.netPayment.add(payment0).sub(payment1);
+                closeOut.netPayment = closeOut.netPayment.add(payment1).sub(payment0);
             }
-        } else {    
-            if (payment1 > closeOut.netPayment && payment0 < closeOut.netPayment) {
-                closeOut.netPayment = payment1.sub(closeOut.netPayment).add(payment0);
+        } else {
+            if (payment1 > closeOut.netPayment && payment0 < payment1) {
+                closeOut.netPayment = payment1.sub(closeOut.netPayment.add(payment0));
                 closeOut.flipped = true;
             } else {
-                closeOut.netPayment = closeOut.netPayment.add(payment1).sub(payment0);
+                closeOut.netPayment = closeOut.netPayment.add(payment0).sub(payment1);
             }
         }
     }
@@ -83,25 +83,20 @@ library CloseOut {
         uint256 payment1
     ) internal returns (bool) {
         CloseOut.Payment storage closeOut = self[addr][ccy];
+        uint256 paymentDelta = payment0 > payment1 ? payment0.sub(payment1) : payment1.sub(payment0);
+        bool substraction;
 
-        if (closeOut.isClosed) {
-            return true;
-        }
-        
         if (closeOut.flipped) {
-            if (payment0 > closeOut.netPayment && payment1 < closeOut.netPayment) {
-                closeOut.netPayment = payment0.add(closeOut.netPayment).sub(payment1);
-                closeOut.flipped = false;
-            } else {
-                closeOut.netPayment = closeOut.netPayment.add(payment1).sub(payment0);
-            }
-        } else {    
-            if (payment1 > closeOut.netPayment && payment0 < closeOut.netPayment) {
-                closeOut.netPayment = payment1.add(closeOut.netPayment).sub(payment0);
-                closeOut.flipped = true;
-            } else {
-                closeOut.netPayment = closeOut.netPayment.add(payment0).sub(payment1);
-            }
+            substraction = payment0 > payment1 ? false : true;
+        } else {
+            substraction = payment0 > payment1 ? true : false;
+        }
+
+        if (paymentDelta > closeOut.netPayment) {
+            closeOut.netPayment = paymentDelta.sub(closeOut.netPayment);
+            closeOut.flipped = !closeOut.flipped;
+        } else {
+            closeOut.netPayment = substraction ? closeOut.netPayment.sub(paymentDelta) : closeOut.netPayment.add(paymentDelta);
         }
     }
 
@@ -113,6 +108,23 @@ library CloseOut {
     * @param ccy Main currency for the close out
     */
     function close(
+        mapping(bytes32 => mapping(bytes32 => CloseOut.Payment)) storage self,
+        bytes32 addr,
+        bytes32 ccy,
+        bytes32 txHash
+    ) internal {
+        CloseOut.Payment storage closeOut = self[addr][ccy];
+
+        closeOut.paymentProof = txHash;
+    }
+
+    /** 
+    * @dev Clears the state of close out payment
+    * @param self The mapping with all close out netting payments
+    * @param addr Packed addresses for counterparties
+    * @param ccy Main currency for the close out
+    */
+    function clear(
         mapping(bytes32 => mapping(bytes32 => CloseOut.Payment)) storage self,
         bytes32 addr,
         bytes32 ccy

@@ -23,6 +23,7 @@
     "moment": "^2.29.1"
   },
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-truffle5": "^2.0.0",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-environment": "^0.1.5",
@@ -35,6 +36,7 @@
     "eslint": "^7.5.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-prettier": "^3.1.4",
+    "ethers": "^5.4.7",
     "ganache-time-traveler": "^1.0.15",
     "hardhat": "^2.1.2",
     "hardhat-contract-sizer": "^2.0.3",

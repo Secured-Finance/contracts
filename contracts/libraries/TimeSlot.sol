@@ -71,7 +71,8 @@ library TimeSlot {
         uint256 payment1
     ) internal returns (bool) {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
-        
+        require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
+
         timeSlot.totalPayment0 = timeSlot.totalPayment0.add(payment0);
         timeSlot.totalPayment1 = timeSlot.totalPayment1.add(payment1);
         
@@ -105,11 +106,8 @@ library TimeSlot {
         uint256 payment1
     ) internal returns (bool) {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
+        require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
 
-        if (timeSlot.isSettled) {
-            return true;
-        }
-        
         timeSlot.totalPayment0 = timeSlot.totalPayment0.sub(payment0);
         timeSlot.totalPayment1 = timeSlot.totalPayment1.sub(payment1);
         
@@ -142,7 +140,7 @@ library TimeSlot {
         bytes32 txHash
     ) internal {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
-        
+        require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
         require (timeSlot.netPayment == payment, "Incorrect settlement amount");
         timeSlot.paymentProof = txHash;
         timeSlot.verificationParty = msg.sender;
@@ -166,7 +164,8 @@ library TimeSlot {
         bytes32 txHash
     ) internal {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
-        
+        require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
+
         require (timeSlot.netPayment == payment, "Incorrect settlement amount");
         require (timeSlot.paymentProof == txHash, "Incorrect tx hash");
         require(msg.sender != timeSlot.verificationParty, "Incorrect counterparty");

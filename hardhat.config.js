@@ -2,6 +2,7 @@ require("@nomiclabs/hardhat-truffle5");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 require('hardhat-contract-sizer');
+require("@nomiclabs/hardhat-ethers");
 
 module.exports = {
   defaultNetwork: "hardhat",
