@@ -572,8 +572,6 @@ contract('DoubleLinkedList - findLastIdForAmount', (accounts) => {
         firstObject[2].toNumber().should.be.equal(0);
         firstObject[4].toNumber().should.be.equal(5);
 
-        console.log(await doubleLinkedList.head());
-        console.log(await doubleLinkedList.tail());
         const headObject = (await doubleLinkedList.get(headId));
         headObject[0].toNumber().should.be.equal(headOrderId);
         headObject[1].toNumber().should.be.equal(7);
@@ -641,37 +639,37 @@ contract('DoubleLinkedList - findLastIdForAmount', (accounts) => {
 });
 
 
-/* contract('DoubleLinkedList - gas tests', (accounts) => {
-    let doubleLinkedList: DoubleLinkedListInstance;
+contract('DoubleLinkedList - gas tests', (accounts) => {
+    let doubleLinkedList;
     const dummyData = '0x0000000000000000000000000000000000000001';
 
     beforeEach(async () => {
         doubleLinkedList = await DoubleLinkedList.new();
         for (let i = 0; i < 100; i++) {
-            await doubleLinkedList.addHead(dummyData);
+            await doubleLinkedList.addHead(dummyData, 0);
         }
     });
 
     it('Add Head.', async () => {
-        await doubleLinkedList.addHead(dummyData);
+        await doubleLinkedList.addHead(dummyData, 1);
     });
 
     it('Add Tail.', async () => {
-        await doubleLinkedList.addTail(dummyData);
+        await doubleLinkedList.addTail(dummyData, 2);
     });
 
     it('Insert After.', async () => {
         const tailId = await doubleLinkedList.tail();
-        await doubleLinkedList.insertAfter(tailId, dummyData);
+        await doubleLinkedList.insertAfter(tailId, dummyData, 3);
     });
 
     it('Insert Before.', async () => {
         const tailId = await doubleLinkedList.tail();
-        await doubleLinkedList.insertBefore(tailId, dummyData);
+        await doubleLinkedList.insertBefore(tailId, dummyData, 4);
     });
 
     it('Remove.', async () => {
         const tailId = await doubleLinkedList.tail();
         await doubleLinkedList.remove(tailId);
     });
-}); */
+});

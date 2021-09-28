@@ -25,11 +25,12 @@ contract PaymentAggregator is ProtocolTypes {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     event RegisterPayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment0, uint256 payment1);
-    event VerifyPayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
-    event SettlePayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
+    event VerifyPayment(address indexed verifier, address indexed counterparty, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
+    event SettlePayment(address indexed verifier, address indexed counterparty, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
     event RemovePayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment0, uint256 payment1);
 
     address public owner;
+    uint256 public settlementWindow = 2;
     uint256 constant MAXPAYNUM = 5;
 
     // Linked contract addresses
@@ -158,8 +159,8 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 lastPayNum;
         uint256 coupon0;
         uint256 coupon1;
-        uint256 repayment0;
-        uint256 repayment1;
+        uint256 lastPayment0;
+        uint256 lastPayment1;
         bytes32 slotPosition;
     }
 
@@ -172,7 +173,8 @@ contract PaymentAggregator is ProtocolTypes {
     * @param notional Notional amount of funds in product
     * @param rate0 Product interest rate for first party
     * @param rate1 Product interest rate for second party
-    * @param repayment Boolean to identify if repayment should be included
+    * @param repayment0 Boolean to identify if the first party should return notional
+    * @param repayment1 Boolean to identify if the second party should return notional
     */
     function registerPayments(
         address party0,
@@ -182,7 +184,8 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 notional,
         uint256 rate0,
         uint256 rate1,
-        bool repayment
+        bool repayment0,
+        bool repayment1
     ) external acceptedContract {
         TimeSlotPaymentsLocalVars memory vars;
 
@@ -194,23 +197,23 @@ contract PaymentAggregator is ProtocolTypes {
 
         if (rate0 > 0) {
             vars.coupon0 = (notional.mul(rate0).mul(DCFRAC[uint256(term)])).div(BP).div(BP);
-        } 
+        }
 
         if (rate1 > 0) {
             vars.coupon1 = (notional.mul(rate1).mul(DCFRAC[uint256(term)])).div(BP).div(BP);
         }
 
         for (uint256 i = 0; i < vars.payNums; i++) {
-            (vars.time, vars.slotPosition) = _slotPositionPlusDays(vars.time, daysArr[i]);
+            vars.slotPosition = _slotPositionPlusDays(vars.time, daysArr[i]);
 
-            if (i == vars.lastPayNum && repayment) {
-                vars.repayment0 = notional.add(vars.coupon0);
-                vars.repayment1 = notional.add(vars.coupon1);
+            if (i == vars.lastPayNum) {
+                vars.lastPayment0 = repayment0 ? notional.add(vars.coupon0) : vars.coupon0;
+                vars.lastPayment1 = repayment1 ? notional.add(vars.coupon1) : vars.coupon1;
 
                 if (vars.flipped) {
-                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.repayment1, vars.repayment0);
+                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment1, vars.lastPayment0);
                 } else {
-                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.repayment0, vars.repayment1);
+                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment0, vars.lastPayment1);
                 }
             } else {
                 if (vars.flipped) {
@@ -222,8 +225,17 @@ contract PaymentAggregator is ProtocolTypes {
         }
     }
 
+    struct PaymentSettlementLocalVars {
+        bytes32 packedAddrs;
+        bytes32 slotPosition;
+        uint256 payment;
+        address verifier;
+        bytes32 txHash;
+    }
+
     /**
     * @dev External function to verify payment by msg.sender, uses timestamp to identify TimeSlot.
+    * @param verifier Payment verifier address
     * @param counterparty Counterparty address
     * @param ccy Main payment settlement currency
     * @param timestamp Main timestamp for TimeSlot
@@ -231,77 +243,53 @@ contract PaymentAggregator is ProtocolTypes {
     * @param txHash Main payment settlement currency
     */
     function verifyPayment(
+        address verifier,
         address counterparty,
         bytes32 ccy,
         uint256 timestamp,
         uint256 payment,
         bytes32 txHash
     ) external {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(msg.sender, counterparty);
+        require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
+        PaymentSettlementLocalVars memory vars;
+
+        vars.payment = payment;
+        vars.txHash = txHash;
+        vars.verifier = verifier;
+
+        (vars.packedAddrs, ) = AddressPacking.pack(verifier, counterparty);
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
-        bytes32 slotPosition = TimeSlot.position(year, month, day);
+        vars.slotPosition = TimeSlot.position(year, month, day);
 
-        TimeSlot.verifyPayment(_timeSlots, packedAddrs, ccy, slotPosition, payment, txHash);
-    }
-
-    /**
-    * @dev External function to verify payment by msg.sender, uses direct TimeSlot position.
-    * @param counterparty Counterparty address
-    * @param ccy Main payment settlement currency
-    * @param slot TimeSlot position
-    * @param payment Main payment settlement currency
-    * @param txHash Main payment settlement currency
-    */
-    function verifyPayment(
-        address counterparty,
-        bytes32 ccy,
-        bytes32 slot,
-        uint256 payment,
-        bytes32 txHash
-    ) external {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(msg.sender, counterparty);
-        TimeSlot.verifyPayment(_timeSlots, packedAddrs, ccy, slot, payment, txHash);
+        TimeSlot.verifyPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.payment, vars.txHash, vars.verifier);
     }
 
     /**
     * @dev External function to settle payment using timestamp to identify TimeSlot.
+    * @param verifier Payment settlement verifier address
     * @param counterparty Counterparty address
     * @param ccy Main payment settlement currency
     * @param timestamp Main timestamp for TimeSlot
-    * @param payment Main payment settlement currency
     * @param txHash Main payment settlement currency
     */
     function settlePayment(
+        address verifier,
         address counterparty,
         bytes32 ccy,
         uint256 timestamp,
-        uint256 payment,
         bytes32 txHash
     ) external {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(msg.sender, counterparty);
+        require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
+        PaymentSettlementLocalVars memory vars;
+
+        vars.txHash = txHash;
+        vars.verifier = verifier;
+
+        (vars.packedAddrs, ) = AddressPacking.pack(verifier, counterparty);
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
-        bytes32 slotPosition = TimeSlot.position(year, month, day);
+        vars.slotPosition = TimeSlot.position(year, month, day);
 
-        TimeSlot.settlePayment(_timeSlots, packedAddrs, ccy, slotPosition, payment, txHash);
-    }
-
-    /**
-    * @dev External function to settle payment using direct TimeSlot position.
-    * @param counterparty Counterparty address
-    * @param ccy Main payment settlement currency
-    * @param slot TimeSlot position
-    * @param payment Main payment settlement currency
-    * @param txHash Main payment settlement currency
-    */
-    function settlePayment(
-        address counterparty,
-        bytes32 ccy,
-        bytes32 slot,
-        uint256 payment,
-        bytes32 txHash
-    ) external {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(msg.sender, counterparty);
-        TimeSlot.settlePayment(_timeSlots, packedAddrs, ccy, slot, payment, txHash);
+        TimeSlot.settlePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.txHash, vars.verifier);
     }
 
     /**
@@ -314,7 +302,8 @@ contract PaymentAggregator is ProtocolTypes {
     * @param notional Notional amount of funds in product
     * @param rate0 Product interest rate for first party
     * @param rate1 Product interest rate for second party
-    * @param repayment Boolean to identify if repayment should be included
+    * @param repayment0 Boolean to identify the first party should return notional
+    * @param repayment1 Boolean to identify the second party should return notional
     */
     function removePayments(
         address party0,
@@ -325,7 +314,8 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 notional,
         uint256 rate0,
         uint256 rate1,
-        bool repayment
+        bool repayment0,
+        bool repayment1
     ) external acceptedContract {
         TimeSlotPaymentsLocalVars memory vars;
 
@@ -344,16 +334,17 @@ contract PaymentAggregator is ProtocolTypes {
         }
 
         for (uint256 i = 0; i < vars.payNums; i++) {
-            (vars.time, vars.slotPosition) = _slotPositionPlusDays(vars.time, daysArr[i]);
+            vars.slotPosition = _slotPositionPlusDays(vars.time, daysArr[i]);
 
-            if (i == vars.lastPayNum && repayment) {
-                vars.repayment0 = notional.add(vars.coupon0);
-                vars.repayment1 = notional.add(vars.coupon1);
+            if (i == vars.lastPayNum) {
+
+                vars.lastPayment0 = repayment0 ? notional.add(vars.coupon0) : vars.coupon0;
+                vars.lastPayment1 = repayment1 ? notional.add(vars.coupon1) : vars.coupon1;
 
                 if (vars.flipped) {
-                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.repayment1, vars.repayment0);
+                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment1, vars.lastPayment0);
                 } else {
-                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.repayment0, vars.repayment1);
+                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment0, vars.lastPayment1);
                 }
             } else {
                 if (vars.flipped) {
@@ -366,17 +357,69 @@ contract PaymentAggregator is ProtocolTypes {
     }
 
     /**
+    * @dev Returns the time slot between parties using slot id.
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
+    * @param ccy Main payment settlement currency
+    */
+    function getTimeSlotByDate(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        uint256 year,
+        uint256 month,
+        uint256 day
+    ) public view returns (TimeSlot.Slot memory timeSlot) {
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        timeSlot = TimeSlot.get(_timeSlots, packedAddrs, ccy, year, month, day);
+    }
+
+    /**
+    * @dev Returns the time slot between parties using slot id.
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
+    * @param ccy Main payment settlement currency
+    * @param slot TimeSlot position
+    */
+    function getTimeSlotBySlotId(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        bytes32 slot
+    ) public view returns (TimeSlot.Slot memory timeSlot) {
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        timeSlot = TimeSlot.getBySlotId(_timeSlots, packedAddrs, ccy, slot);
+    }
+
+    /**
     * @dev Internal function to get TimeSlot position after adding days
     * @param timestamp Timestamp to add days
-    * @param numDays number of days to add
+    * @param numSeconds number of seconds to add
     * @return Updated timestamp and TimeSlot position
     */
-    function _slotPositionPlusDays(uint256 timestamp, uint256 numDays) internal pure returns (uint256, bytes32) {
-        timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
+    function _slotPositionPlusDays(uint256 timestamp, uint256 numSeconds) internal pure returns (bytes32) {
+        if (numSeconds >= 2592000) {
+            uint256 numMonths = numSeconds.div(2592000);
+            timestamp = BokkyPooBahsDateTimeLibrary.addMonths(timestamp, numMonths);
+        } else {
+            timestamp = BokkyPooBahsDateTimeLibrary.addSeconds(timestamp, numSeconds);
+        }
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
-        return (timestamp, slotPosition);
+        return slotPosition;
+    }
+
+    /**
+    * @dev Internal function to check if settlement payment is within available timeline
+    * @param targetTime target time for settlement of time slot
+    * @return Boolean if slot within the settlement window
+    */
+    function _checkSettlementWindow(uint256 targetTime) internal view returns (bool) {
+        uint256 time = block.timestamp;
+        uint256 delta = BokkyPooBahsDateTimeLibrary.diffDays(time, targetTime);
+
+        return !(delta >= settlementWindow);
     }
 
 }

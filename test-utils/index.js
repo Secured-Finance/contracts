@@ -6,4 +6,5 @@ module.exports = {
   constants: require('./src/constants'),
   helper: require('./src/helper'),
   strings: require('./src/strings'),
+  numbers: require('./src/numbers'),
 };

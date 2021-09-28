@@ -3,6 +3,7 @@ pragma solidity ^0.6.12;
 
 import "./BokkyPooBahsDateTimeLibrary.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 library TimeSlot {
     using BokkyPooBahsDateTimeLibrary for uint256;
@@ -50,6 +51,21 @@ library TimeSlot {
         uint256 day
     ) internal view returns (TimeSlot.Slot storage slot) {
         slot = self[addr][ccy][keccak256(abi.encodePacked(year, month, day))];
+    }
+
+    /**
+    * @dev Returns the time slot information from the mapping
+    * @param addr Packed addresses for counterparties
+    * @param ccy Main currency for the time slot
+    * @param slotId Time slot identifier
+    */
+    function getBySlotId(
+        mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
+        bytes32 addr,
+        bytes32 ccy,
+        bytes32 slotId
+    ) internal view returns (TimeSlot.Slot storage slot) {
+        slot = self[addr][ccy][slotId];
     }
 
     /** 
@@ -137,13 +153,14 @@ library TimeSlot {
         bytes32 ccy,
         bytes32 slot,
         uint256 payment,
-        bytes32 txHash
+        bytes32 txHash,
+        address verifier
     ) internal {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
         require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
         require (timeSlot.netPayment == payment, "Incorrect settlement amount");
         timeSlot.paymentProof = txHash;
-        timeSlot.verificationParty = msg.sender;
+        timeSlot.verificationParty = verifier;
     }
 
     /** 
@@ -152,7 +169,6 @@ library TimeSlot {
     * @param addr Packed addresses for counterparties
     * @param ccy Main currency for the time slot
     * @param slot Time slot identifier to be settled
-    * @param payment Net payment amount
     * @param txHash Transaction hash to signal successfull settlement of payment
     */
     function settlePayment(
@@ -160,15 +176,13 @@ library TimeSlot {
         bytes32 addr,
         bytes32 ccy,
         bytes32 slot,
-        uint256 payment,
-        bytes32 txHash
+        bytes32 txHash,
+        address verifier
     ) internal {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
         require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
-
-        require (timeSlot.netPayment == payment, "Incorrect settlement amount");
-        require (timeSlot.paymentProof == txHash, "Incorrect tx hash");
-        require(msg.sender != timeSlot.verificationParty, "Incorrect counterparty");
+        require (timeSlot.paymentProof == txHash, "INCORRECT_TX_HASH");
+        require(verifier != timeSlot.verificationParty, "INCORRECT_COUNTERPARTY");
         timeSlot.isSettled = true;
     }
 

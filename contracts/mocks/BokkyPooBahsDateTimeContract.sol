@@ -120,11 +120,29 @@ contract BokkyPooBahsDateTimeContract {
     function addYears(uint timestamp, uint _years) public pure returns (uint newTimestamp) {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addYears(timestamp, _years);
     }
+    function getGasCostofAddYears(uint timestamp, uint _years) public view returns (uint) {
+        uint256 gasBefore = gasleft();
+        BokkyPooBahsDateTimeLibrary.addYears(timestamp, _years);
+        
+        return gasBefore - gasleft();
+    }
     function addMonths(uint timestamp, uint _months) public pure returns (uint newTimestamp) {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(timestamp, _months);
     }
+    function getGasCostofAddMonths(uint timestamp, uint _months) public view returns (uint) {
+        uint256 gasBefore = gasleft();
+        BokkyPooBahsDateTimeLibrary.addMonths(timestamp, _months);
+        
+        return gasBefore - gasleft();
+    }
     function addDays(uint timestamp, uint _days) public pure returns (uint newTimestamp) {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, _days);
+    }
+    function getGasCostofAddDays(uint timestamp, uint _days) public view returns (uint) {
+        uint256 gasBefore = gasleft();
+        BokkyPooBahsDateTimeLibrary.addDays(timestamp, _days);
+        
+        return gasBefore - gasleft();
     }
     function addHours(uint timestamp, uint _hours) public pure returns (uint newTimestamp) {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addHours(timestamp, _hours);
@@ -134,6 +152,12 @@ contract BokkyPooBahsDateTimeContract {
     }
     function addSeconds(uint timestamp, uint _seconds) public pure returns (uint newTimestamp) {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addSeconds(timestamp, _seconds);
+    }
+    function getGasCostofAddSeconds(uint timestamp, uint _seconds) public view returns (uint) {
+        uint256 gasBefore = gasleft();
+        BokkyPooBahsDateTimeLibrary.addSeconds(timestamp, _seconds);
+        
+        return gasBefore - gasleft();
     }
 
     function subYears(uint timestamp, uint _years) public pure returns (uint newTimestamp) {

@@ -143,7 +143,7 @@ contract('TimeSlotTest', async (accounts) => {
         });
         
         it('Settle net payment from time slot at the same date', async () => {
-            await timeSlotTest.settlePayment(packedAddresses[0], position, 5000, firstTxHash, { from: alice });
+            await timeSlotTest.settlePayment(packedAddresses[0], position, firstTxHash, { from: alice });
             (await timeSlotTest.isSettled(packedAddresses[0], position)).should.be.equal(true);
 
             let slot = await timeSlotTest.get(packedAddresses[0], 2021, 10, 6);

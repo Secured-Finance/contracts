@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../libraries/TimeSlot.sol";
 import "../libraries/AddressPacking.sol";
 import "../libraries/BokkyPooBahsDateTimeLibrary.sol";
-import "hardhat/console.sol";
 
 contract TimeSlotTest {
     using TimeSlot for TimeSlot.Slot;
@@ -77,7 +76,7 @@ contract TimeSlotTest {
         bytes32 txHash
     ) external {
         TimeSlot.Slot memory timeSlot = _timeSlots[addrPack][ccy][slot];
-        TimeSlot.verifyPayment(_timeSlots, addrPack, ccy, slot, payment, txHash);
+        TimeSlot.verifyPayment(_timeSlots, addrPack, ccy, slot, payment, txHash, msg.sender);
 
         timeSlot = _timeSlots[addrPack][ccy][slot];
 
@@ -88,11 +87,10 @@ contract TimeSlotTest {
     function settlePayment(
         bytes32 addrPack,
         bytes32 slot,
-        uint256 payment,
         bytes32 txHash
     ) external {
         TimeSlot.Slot memory timeSlot = _timeSlots[addrPack][ccy][slot];
-        TimeSlot.settlePayment(_timeSlots, addrPack, ccy, slot, payment, txHash);
+        TimeSlot.settlePayment(_timeSlots, addrPack, ccy, slot, txHash, msg.sender);
 
         timeSlot = _timeSlots[addrPack][ccy][slot];
         

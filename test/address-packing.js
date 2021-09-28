@@ -7,16 +7,23 @@ should();
 
 const expectRevert = reverted;
 
-const packAddresses = (flipped, addr0, addr1) => {
+const packAddresses = (addr0, addr1) => {
   let encodedAddrs;
+  let _addr0, _addr1;
+  
+  addr0 < addr1 ? (_addr0 = addr0, _addr1 = addr1) : (_addr0 = addr1, _addr1 = addr0);
 
-  if (flipped === true) {
-    encodedAddrs = ethers.utils.defaultAbiCoder.encode([ "address", "address" ], [ addr1, addr0 ]);
+  if (_addr0 != addr0) {
+      encodedAddrs = ethers.utils.defaultAbiCoder.encode([ "address", "address" ], [ _addr0, _addr1 ]);
+      let packed = ethers.utils.keccak256(encodedAddrs);
+      return [packed, true];
   } else {
-    encodedAddrs = ethers.utils.defaultAbiCoder.encode([ "address", "address" ], [ addr0, addr1 ]);
+      encodedAddrs = ethers.utils.defaultAbiCoder.encode([ "address", "address" ], [ _addr0, _addr1 ]);
+      let packed = ethers.utils.keccak256(encodedAddrs);
+      return [packed, false];
   }
 
-  return ethers.utils.keccak256(encodedAddrs);
+  // return ethers.utils.keccak256(encodedAddrs);
 }
 
 contract('AddressPacking', async (accounts) => {
@@ -31,9 +38,12 @@ contract('AddressPacking', async (accounts) => {
     describe('Pack function', () => {
         it('pack owner and alice addresses', async () => {
           let packedAddresses = await addressPacking.pack(owner, alice);
-          let selfPack = await packAddresses(packedAddresses[1], owner, alice);
+          let selfPack = await packAddresses(owner, alice);
+          let selfPack2 = await packAddresses(alice, owner);
 
-          packedAddresses[0].should.be.equal(selfPack);
+          selfPack[0].should.be.equal(selfPack2[0]);
+          packedAddresses[0].should.be.equal(selfPack[0]);
+          packedAddresses[0].should.be.equal(selfPack2[0]);
         });
 
         it('pack two owner addresses, expect revert', async () => {
@@ -50,19 +60,18 @@ contract('AddressPacking', async (accounts) => {
 
         it('pack alice and bob addresses back and forth', async () => {
           let packedAddresses = await addressPacking.pack(alice, bob);
-          let selfPack = await packAddresses(packedAddresses[1], alice, bob);
+          let selfPack = await packAddresses(alice, bob);
 
-          packedAddresses[0].should.be.equal(selfPack);
+          packedAddresses[0].should.be.equal(selfPack[0]);
 
           let invertedPackedAddresses = await addressPacking.pack(bob, alice);
           invertedPackedAddresses[0].should.be.equal(packedAddresses[0]);  
         });
 
         it('pack alice and zero Address back and forth', async () => {
-          let packedAddresses = await addressPacking.pack(alice, zeroAddr);
-          let selfPack = await packAddresses(packedAddresses[1], alice, zeroAddr);
-
-          packedAddresses[0].should.be.equal(selfPack);
+          await expectRevert(
+            addressPacking.pack(alice, zeroAddr), "Invalid address"
+          );
 
           await expectRevert(
             addressPacking.pack(zeroAddr, alice), "Invalid address"
@@ -81,8 +90,8 @@ contract('AddressPacking', async (accounts) => {
             console.log("Gas Cost for Pack function is " + cost.toString() + " gas");
         });
 
-        it('calculate gas cost for address packing with zero address', async () => {
-          let cost = await addressPacking.getGasCostOfPack(alice, zeroAddr);
+        it('calculate gas cost for address packing for alice and bob', async () => {
+          let cost = await addressPacking.getGasCostOfPack(alice, bob);
 
           console.log("Gas Cost for Pack function is " + cost.toString() + " gas");
       });
