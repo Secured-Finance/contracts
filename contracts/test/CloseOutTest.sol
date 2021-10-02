@@ -32,9 +32,9 @@ contract CloseOutTest {
         CloseOut.removePayments(_closeOuts, addrPack, ccy, payment0, payment1);
     }
 
-    function close(bytes32 addrPack, bytes32 txHash) external {
-        CloseOut.close(_closeOuts, addrPack, ccy, txHash);
-        require(_closeOuts[addrPack][ccy].paymentProof == txHash, "PAYMENTS NOT SETTLED");
+    function close(bytes32 addrPack) external {
+        CloseOut.close(_closeOuts, addrPack, ccy);
+        require(_closeOuts[addrPack][ccy].closed == true, "PAYMENTS NOT SETTLED");
     }
 
     function clear(bytes32 addrPack) external {

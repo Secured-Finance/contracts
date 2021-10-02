@@ -1,10 +1,10 @@
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const PaymentAggregatorCallerMock = artifacts.require('PaymentAggregatorCallerMock');
 const TimeSlotTest = artifacts.require('TimeSlotTest');
+const CloseOutNetting = artifacts.require('CloseOutNetting');
 const BokkyPooBahsDateTimeContract = artifacts.require('BokkyPooBahsDateTimeContract');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 
-const { ethers } = require('hardhat');
 const { reverted} = require('../test-utils').assert;
 const { should } = require('chai');
 const { toBytes32 } = require('../test-utils').strings;
@@ -28,7 +28,7 @@ contract('PaymentAggregator', async (accounts) => {
         let timeSlots = new Array();
         
         for (i = 0; i < years.length; i++) {
-            slotTime = await timeLibrary.addYears(now, years[i]);
+            slotTime = await timeLibrary.addDays(now, years[i] * 365);
             slotDate = await timeLibrary.timestampToDate(slotTime);
             timeSlot = await timeSlotTest.position(slotDate.year, slotDate.month, slotDate.day);    
     
@@ -43,6 +43,7 @@ contract('PaymentAggregator', async (accounts) => {
     let aggregatorCaller;
     let timeSlotTest;
     let addressPacking;
+    let closeOutNetting;
 
     let totalPayment0 = ZERO_BN;
     let couponPayment0 = ZERO_BN;
@@ -53,6 +54,10 @@ contract('PaymentAggregator', async (accounts) => {
     let couponPayment1 = ZERO_BN;
     let combinedPayment1 = ZERO_BN;
     let crossPayment1 = ZERO_BN;
+
+    let closeOutPayment0 = ZERO_BN;
+    let closeOutPayment1 = ZERO_BN;
+    let closeOutNetPayment = ZERO_BN;
 
     let _1yearDealStart0;
     let _5yearDealStart0;
@@ -75,8 +80,11 @@ contract('PaymentAggregator', async (accounts) => {
         timeSlotTest = await TimeSlotTest.new();
         paymentAggregator = await PaymentAggregator.new();
 
+        closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
+
         aggregatorCaller = await PaymentAggregatorCallerMock.new(paymentAggregator.address);
         await paymentAggregator.addPaymentAggregatorUser(aggregatorCaller.address);
+        await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
         let status = await paymentAggregator.isPaymentAggregatorUser(aggregatorCaller.address);
         status.should.be.equal(true);
     });
@@ -84,7 +92,7 @@ contract('PaymentAggregator', async (accounts) => {
     describe('Prepare time slot identifiers', async () => {
         it('Add Prepare time slot identifiers', async () => {
             now = await getLatestTimestamp();
-            let slotTime = await timeLibrary.addMonths(now, 3);
+            let slotTime = await timeLibrary.addDays(now, 90);
             let slotDate = await timeLibrary.timestampToDate(slotTime);
             _3monthTimeSlot = await timeSlotTest.position(slotDate.year, slotDate.month, slotDate.day);
     
@@ -111,6 +119,9 @@ contract('PaymentAggregator', async (accounts) => {
             combinedPayment0 = combinedPayment0.add(totalPayment0);
             crossPayment0 = crossPayment0.add(totalPayment0);
 
+            closeOutPayment0 = closeOutPayment0.add(totalPayment0);
+            closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
+            
             await aggregatorCaller.registerPayments(alice, bob, testCcy, term, notional, rate, 0, true, false);
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _1yearTimeSlot);
@@ -118,6 +129,11 @@ contract('PaymentAggregator', async (accounts) => {
             timeSlot.totalPayment1.toString().should.be.equal(totalPayment0.toString());
             timeSlot.netPayment.toString().should.be.equal(totalPayment0.toString());
             timeSlot.flipped.should.be.equal(true);
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(true);
+            closeOut.closed.should.be.equal(false);
         });
 
         it('Expect revert on adding payments for unsupported term', async () => {
@@ -141,6 +157,9 @@ contract('PaymentAggregator', async (accounts) => {
             couponPayment0 = notional.mul(toBN(rate)).div(IR_BASE);
             crossPayment0 = crossPayment0.add(couponPayment0);
             totalPayment0 = notional.add(couponPayment0);
+
+            closeOutPayment0 = closeOutPayment0.add(notional.add(couponPayment0.mul(toBN('5'))));
+            closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
 
             await aggregatorCaller.registerPayments(alice, bob, testCcy, term, notional, rate, 0, true, false);
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _1yearTimeSlot);
@@ -172,6 +191,11 @@ contract('PaymentAggregator', async (accounts) => {
             timeSlot.totalPayment1.toString().should.be.equal(totalPayment0.toString());
             timeSlot.netPayment.toString().should.be.equal(totalPayment0.toString());
             timeSlot.flipped.should.be.equal(true);
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(true);
+            closeOut.closed.should.be.equal(false);
         });
 
         it('Add payments for 3 month deal with Alice as borrower', async () => {
@@ -183,6 +207,9 @@ contract('PaymentAggregator', async (accounts) => {
             couponPayment0 = notional.mul(toBN(actualRate)).div(IR_BASE);
             totalPayment0 = notional.add(couponPayment0);
 
+            closeOutPayment0 = closeOutPayment0.add(totalPayment0);
+            closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
+
             await aggregatorCaller.registerPayments(alice, bob, testCcy, term, notional, rate, 0, true, false);
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _3monthTimeSlot);
@@ -191,6 +218,11 @@ contract('PaymentAggregator', async (accounts) => {
             timeSlot.totalPayment1.toString().should.be.equal(totalPayment0.toString());
             timeSlot.netPayment.toString().should.be.equal(totalPayment0.toString());
             timeSlot.flipped.should.be.equal(true);
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(true);
+            closeOut.closed.should.be.equal(false);
         });
 
         it('Add payments for 3 months deal with Bob as a borrower, expect slot to flip', async () => {
@@ -202,6 +234,9 @@ contract('PaymentAggregator', async (accounts) => {
             couponPayment1 = notional.mul(toBN(actualRate)).div(IR_BASE);
             totalPayment1 = notional.add(couponPayment1);
 
+            closeOutPayment1 = closeOutPayment1.add(totalPayment1);
+            closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
+
             await aggregatorCaller.registerPayments(bob, alice, testCcy, term, notional, rate, 0, true, false);
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _3monthTimeSlot);
@@ -210,6 +245,11 @@ contract('PaymentAggregator', async (accounts) => {
             timeSlot.totalPayment1.toString().should.be.equal(totalPayment0.toString());
             timeSlot.netPayment.should.be.equal(delta.toString());
             timeSlot.flipped.should.be.equal(false);
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(true);
+            closeOut.closed.should.be.equal(false);
         });
 
         it('Add payments for 1 year deal with Bob as a borrower, expect slot to flip', async () => {
@@ -223,6 +263,9 @@ contract('PaymentAggregator', async (accounts) => {
             couponPayment1 = notional.mul(toBN(rate)).div(IR_BASE);
             totalPayment1 = notional.add(couponPayment1);
 
+            closeOutPayment1 = closeOutPayment1.add(totalPayment1);
+            closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
+
             await aggregatorCaller.registerPayments(bob, alice, testCcy, term, notional, rate, 0, true, false);
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _1yearTimeSlot);
@@ -232,6 +275,11 @@ contract('PaymentAggregator', async (accounts) => {
             timeSlot.totalPayment1.toString().should.be.equal(crossPayment0.toString());
             timeSlot.netPayment.should.be.equal(delta.toString());
             timeSlot.flipped.should.be.equal(false);
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(true);
+            closeOut.closed.should.be.equal(false);
         });
     });
 
@@ -247,6 +295,9 @@ contract('PaymentAggregator', async (accounts) => {
             crossPayment0 = crossPayment0.sub(totalPayment0);
             let delta = totalPayment1.sub(crossPayment0);
 
+            closeOutPayment0 = closeOutPayment0.sub(totalPayment0);
+            closeOutNetPayment = closeOutPayment1.sub(closeOutPayment0);
+
             await aggregatorCaller.removePayments(alice, bob, testCcy, _1yearDealStart0, term, notional, rate, 0, true, false);
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _1yearTimeSlot);
@@ -254,6 +305,11 @@ contract('PaymentAggregator', async (accounts) => {
             timeSlot.totalPayment1.toString().should.be.equal(crossPayment0.toString());
             timeSlot.netPayment.should.be.equal(delta.toString());
             timeSlot.flipped.should.be.equal(false);
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(false);
+            closeOut.closed.should.be.equal(false);
         });
 
         it('Expect revert on removing bigger than registered payments for 1 year timeSlot with Bob as borrower', async () => {
@@ -280,18 +336,33 @@ contract('PaymentAggregator', async (accounts) => {
 
             let _5yearCouponPayment0 = toEther(5000).mul(toBN(1000)).div(IR_BASE);
 
+            let couponPayment = notional.mul(toBN(rate)).div(IR_BASE);
+            let totalPayment = notional.add(couponPayment);
+
+            closeOutPayment1 = closeOutPayment1.sub(totalPayment);
+            closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
+
             await aggregatorCaller.removePayments(bob, alice, testCcy, _1yearDealStart1, term, notional, rate, 0, true, false);
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _1yearTimeSlot);
             timeSlot.totalPayment0.toString().should.be.equal('0');
             timeSlot.totalPayment1.toString().should.be.equal(_5yearCouponPayment0.toString());
             timeSlot.netPayment.should.be.equal(_5yearCouponPayment0.toString());
             timeSlot.flipped.should.be.equal(true);
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(true);
+            closeOut.closed.should.be.equal(false);
         });
 
         it('Remove payments for 5 year loan deal with Alice as a borrower, expect all state being cleared', async () => {
             let term = 5;
             let notional = toEther(5000);
             let rate = 1000; // 10% interest rate
+
+            couponPayment = notional.mul(toBN(rate)).div(IR_BASE);
+            closeOutPayment0 = closeOutPayment0.sub(notional.add(couponPayment.mul(toBN('5'))));
+            closeOutNetPayment = closeOutPayment1.sub(closeOutPayment0);
 
             await aggregatorCaller.removePayments(alice, bob, testCcy, _5yearDealStart0, term, notional, rate, 0, true, false);
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _1yearTimeSlot);
@@ -324,6 +395,10 @@ contract('PaymentAggregator', async (accounts) => {
             timeSlot.netPayment.toString().should.be.equal('0');
             timeSlot.flipped.should.be.equal(true);
 
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(false);
+            closeOut.closed.should.be.equal(false);
         });
     });
 
@@ -342,15 +417,15 @@ contract('PaymentAggregator', async (accounts) => {
 
         let netPayment = totalPayment1.sub(totalPayment0);
 
-        it('Expect revert on payment verification for 3 month deal without time shift', async () => {
-            slotTime = await timeLibrary.addMonths(now, 3);
-
-            await expectRevert(
-                aggregatorCaller.verifyPayment(bob, testCcy, slotTime, netPayment, testTxHash, { from: alice }), "OUT OF SETTLEMENT WINDOW"
-            );
+        it('Expect revert on payment verification for 3 month deal without time shift', async () => {    
+            slotTime = await timeLibrary.addDays(now, 90);
 
             await expectRevert(
                 aggregatorCaller.verifyPayment(alice, testCcy, slotTime, netPayment, testTxHash, { from: bob }), "OUT OF SETTLEMENT WINDOW"
+            );
+
+            await expectRevert(
+                aggregatorCaller.verifyPayment(bob, testCcy, slotTime, netPayment, testTxHash, { from: alice }), "OUT OF SETTLEMENT WINDOW"
             );
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _3monthTimeSlot);
@@ -360,35 +435,42 @@ contract('PaymentAggregator', async (accounts) => {
 
         it('Shift time for 89 days, successfully verify payment', async () => {
             await advanceTimeAndBlock(89 * ONE_DAY);
-            await aggregatorCaller.verifyPayment(bob, testCcy, slotTime, netPayment, testTxHash, { from: alice })
+            await aggregatorCaller.verifyPayment(alice, testCcy, slotTime, netPayment, testTxHash, { from: bob })
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _3monthTimeSlot);
             timeSlot.paymentProof.should.be.equal(testTxHash);
-            timeSlot.verificationParty.should.be.equal(alice);
+            timeSlot.verificationParty.should.be.equal(bob);
             timeSlot.netPayment.toString().should.be.equal(netPayment.toString());
             timeSlot.isSettled.should.be.equal(false);
         });
 
         it('Try to settle the net payment, expect revert on incorrect party', async () => {
             await expectRevert(
-                aggregatorCaller.settlePayment(bob, testCcy, slotTime, testTxHash, { from: alice }), "INCORRECT_COUNTERPARTY"
+                aggregatorCaller.settlePayment(alice, testCcy, slotTime, testTxHash, { from: bob }), "INCORRECT_COUNTERPARTY"
             );
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _3monthTimeSlot);
             timeSlot.paymentProof.should.be.equal(testTxHash);
-            timeSlot.verificationParty.should.be.equal(alice);
+            timeSlot.verificationParty.should.be.equal(bob);
             timeSlot.netPayment.toString().should.be.equal(netPayment.toString());
             timeSlot.isSettled.should.be.equal(false);
         });
 
         it('Successfully settle net payment for 3 month deal', async () => {
-            await aggregatorCaller.settlePayment(alice, testCcy, slotTime, testTxHash, { from: bob });
+            await aggregatorCaller.settlePayment(bob, testCcy, slotTime, testTxHash, { from: alice });
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, testCcy, _3monthTimeSlot);
             timeSlot.paymentProof.should.be.equal(testTxHash);
-            timeSlot.verificationParty.should.be.equal(alice);
-            timeSlot.netPayment.toString().should.be.equal(netPayment.toString());
+            timeSlot.verificationParty.should.be.equal(bob);
+            timeSlot.netPayment.should.be.equal(netPayment.toString());
             timeSlot.isSettled.should.be.equal(true);
+            
+            closeOutNetPayment = closeOutNetPayment.add(toBN(timeSlot.netPayment));
+
+            let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, testCcy);
+            closeOut.netPayment.toString().should.be.equal(closeOutNetPayment.toString());
+            closeOut.flipped.should.be.equal(false);
+            closeOut.closed.should.be.equal(false);
         });
     });
 

@@ -72,6 +72,11 @@ interface ICollateralAggregator {
         view
         returns (uint256, uint256);
 
+    function getExposedCurrencies(address partyA, address partyB) 
+        external 
+        view 
+        returns (bytes32[] memory);
+
     function isCovered(
         address party0,
         address party1,

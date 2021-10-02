@@ -3,7 +3,6 @@ pragma solidity ^0.6.12;
 
 import "./BokkyPooBahsDateTimeLibrary.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "hardhat/console.sol";
 
 library TimeSlot {
     using BokkyPooBahsDateTimeLibrary for uint256;
@@ -100,7 +99,7 @@ library TimeSlot {
             timeSlot.flipped = true;
         }
 
-        return true;
+        return timeSlot.flipped;
     }
 
     /** 
@@ -135,7 +134,7 @@ library TimeSlot {
             timeSlot.flipped = true;
         }
 
-        return true;
+        return timeSlot.flipped;
     }
 
     /** 

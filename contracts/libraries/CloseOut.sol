@@ -13,7 +13,7 @@ library CloseOut {
     struct Payment {
         uint256 netPayment;
         bool flipped;
-        bytes32 paymentProof;
+        bool closed;
     }
 
     /**
@@ -63,6 +63,8 @@ library CloseOut {
                 closeOut.netPayment = closeOut.netPayment.add(payment0).sub(payment1);
             }
         }
+
+        return closeOut.flipped;
     }
 
     /** 
@@ -97,10 +99,11 @@ library CloseOut {
         } else {
             closeOut.netPayment = substraction ? closeOut.netPayment.sub(paymentDelta) : closeOut.netPayment.add(paymentDelta);
         }
+
+        return closeOut.flipped;
     }
 
-
-    /** 
+    /**
     * @dev Closes the close out payment if both parties don't have any trading activities anymore
     * @param self The mapping with all close out netting payments
     * @param addr Packed addresses for counterparties
@@ -109,12 +112,11 @@ library CloseOut {
     function close(
         mapping(bytes32 => mapping(bytes32 => CloseOut.Payment)) storage self,
         bytes32 addr,
-        bytes32 ccy,
-        bytes32 txHash
+        bytes32 ccy
     ) internal {
         CloseOut.Payment storage closeOut = self[addr][ccy];
 
-        closeOut.paymentProof = txHash;
+        closeOut.closed = true;
     }
 
     /** 

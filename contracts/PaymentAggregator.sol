@@ -9,6 +9,7 @@ import "./ProtocolTypes.sol";
 import "./libraries/TimeSlot.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
+import "./interfaces/ICloseOutNetting.sol";
 
 /**
  * @title Payment Aggregator contract is used to aggregate payments  
@@ -24,6 +25,8 @@ contract PaymentAggregator is ProtocolTypes {
     using TimeSlot for TimeSlot.Slot;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    event UpdateCloseOutNetting(address indexed prevContract, address indexed closeOutNetting);
+
     event RegisterPayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment0, uint256 payment1);
     event VerifyPayment(address indexed verifier, address indexed counterparty, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
     event SettlePayment(address indexed verifier, address indexed counterparty, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
@@ -35,6 +38,7 @@ contract PaymentAggregator is ProtocolTypes {
 
     // Linked contract addresses
     EnumerableSet.AddressSet private paymentAggregatorUsers;
+    ICloseOutNetting private closeOutNetting;
 
     // Mapping structure for storing TimeSlots
     mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) _timeSlots;
@@ -108,6 +112,15 @@ contract PaymentAggregator is ProtocolTypes {
     }
 
     /**
+    * @dev Modifier to make a function callable only by passing contract address checks.
+    */
+    modifier onlyContractAddr(address addr) {
+        require(addr != address(0), "INVALID_ADDRESS");
+        require(addr.isContract(), "NOT_CONTRACT");
+        _;
+    }
+
+    /**
     * @dev Contract constructor function.
     *
     * @notice sets contract deployer as owner of this contract
@@ -151,6 +164,18 @@ contract PaymentAggregator is ProtocolTypes {
         return paymentAggregatorUsers.contains(_user);
     }
 
+    /**
+    * @dev Trigers to set close out netting smart contract
+    * @param _contract CloseOutNetting smart contract address
+    *
+    * @notice Trigers only be contract owner
+    * @notice Reverts on saving 0x0 address
+    */
+    function setCloseOutNetting(address _contract) public onlyOwner onlyContractAddr(_contract) {
+        emit UpdateCloseOutNetting(address(closeOutNetting), _contract);
+        closeOutNetting = ICloseOutNetting(_contract);
+    }
+
     struct TimeSlotPaymentsLocalVars {
         bytes32 packedAddrs;
         bool flipped;
@@ -161,6 +186,8 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 coupon1;
         uint256 lastPayment0;
         uint256 lastPayment1;
+        uint256 totalPayment0;
+        uint256 totalPayment1;
         bytes32 slotPosition;
     }
 
@@ -210,12 +237,18 @@ contract PaymentAggregator is ProtocolTypes {
                 vars.lastPayment0 = repayment0 ? notional.add(vars.coupon0) : vars.coupon0;
                 vars.lastPayment1 = repayment1 ? notional.add(vars.coupon1) : vars.coupon1;
 
+                vars.totalPayment0 = vars.totalPayment0.add(vars.lastPayment0);
+                vars.totalPayment1 = vars.totalPayment1.add(vars.lastPayment1);
+
                 if (vars.flipped) {
                     TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment1, vars.lastPayment0);
                 } else {
                     TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment0, vars.lastPayment1);
                 }
             } else {
+                vars.totalPayment0 = vars.totalPayment0.add(vars.coupon0);
+                vars.totalPayment1 = vars.totalPayment1.add(vars.coupon1);
+
                 if (vars.flipped) {
                     TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.coupon1, vars.coupon0);
                 } else {
@@ -223,6 +256,8 @@ contract PaymentAggregator is ProtocolTypes {
                 }
             }
         }
+        
+        closeOutNetting.addPayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);
     }
 
     struct PaymentSettlementLocalVars {
@@ -250,6 +285,7 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 payment,
         bytes32 txHash
     ) external {
+        // TODO: Add verification counterparty checks
         require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
         PaymentSettlementLocalVars memory vars;
 
@@ -279,6 +315,7 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 timestamp,
         bytes32 txHash
     ) external {
+        // TODO: Add settlement counterparty checks
         require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
         PaymentSettlementLocalVars memory vars;
 
@@ -288,8 +325,12 @@ contract PaymentAggregator is ProtocolTypes {
         (vars.packedAddrs, ) = AddressPacking.pack(verifier, counterparty);
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         vars.slotPosition = TimeSlot.position(year, month, day);
+        
+        TimeSlot.Slot memory timeSlot = TimeSlot.get(_timeSlots, vars.packedAddrs, ccy, year, month, day);
 
         TimeSlot.settlePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.txHash, vars.verifier);
+
+        closeOutNetting.removePayments(verifier, counterparty, ccy, timeSlot.netPayment, 0);
     }
 
     /**
@@ -341,12 +382,18 @@ contract PaymentAggregator is ProtocolTypes {
                 vars.lastPayment0 = repayment0 ? notional.add(vars.coupon0) : vars.coupon0;
                 vars.lastPayment1 = repayment1 ? notional.add(vars.coupon1) : vars.coupon1;
 
+                vars.totalPayment0 = vars.totalPayment0.add(vars.lastPayment0);
+                vars.totalPayment1 = vars.totalPayment1.add(vars.lastPayment1);
+
                 if (vars.flipped) {
                     TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment1, vars.lastPayment0);
                 } else {
                     TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment0, vars.lastPayment1);
                 }
             } else {
+                vars.totalPayment0 = vars.totalPayment0.add(vars.coupon0);
+                vars.totalPayment1 = vars.totalPayment1.add(vars.coupon1);
+
                 if (vars.flipped) {
                     TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.coupon1, vars.coupon0);
                 } else {
@@ -354,6 +401,8 @@ contract PaymentAggregator is ProtocolTypes {
                 }
             }
         }
+
+        closeOutNetting.removePayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);
     }
 
     /**
@@ -398,12 +447,8 @@ contract PaymentAggregator is ProtocolTypes {
     * @return Updated timestamp and TimeSlot position
     */
     function _slotPositionPlusDays(uint256 timestamp, uint256 numSeconds) internal pure returns (bytes32) {
-        if (numSeconds >= 2592000) {
-            uint256 numMonths = numSeconds.div(2592000);
-            timestamp = BokkyPooBahsDateTimeLibrary.addMonths(timestamp, numMonths);
-        } else {
-            timestamp = BokkyPooBahsDateTimeLibrary.addSeconds(timestamp, numSeconds);
-        }
+        uint256 numDays = numSeconds.div(86400);
+        timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 

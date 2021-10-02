@@ -580,7 +580,7 @@ contract CollateralAggregator is ProtocolTypes {
         address party0, 
         address party1
     ) public view returns (uint256, uint256) {
-        (address _party0, address _party1, bool flipped) = _checkAddresses(party0, party1);
+        (, , bool flipped) = _checkAddresses(party0, party1);
 
         if (!flipped) {
             (uint256 amt0, uint256 amt1) = _calcCollateralForRebalance(party0, party1, "", 0, 0, false);
@@ -873,6 +873,21 @@ contract CollateralAggregator is ProtocolTypes {
         CcyNetting memory netting = ccyNettings[_partyA][_partyB][ccy];
 
         return netting;
+    }
+
+    function getExposedCurrencies(address partyA, address partyB) public view returns (bytes32[] memory) {
+        (address _partyA, address _partyB, ) = _checkAddresses(partyA, partyB);
+        EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[_partyA][_partyB];
+
+        uint256 numCcy = expCcy.length();
+        bytes32[] memory currencies = new bytes32[](numCcy);
+
+        for (uint256 i = 0; i < numCcy; i++) {
+            bytes32 ccy = expCcy.at(i);
+            currencies[i] = ccy;
+        }
+
+        return currencies;
     }
 
     // =========== INTERNAL FUNCTIONS ===========

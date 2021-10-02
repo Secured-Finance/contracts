@@ -194,9 +194,9 @@ contract('CloseOutTest', async (accounts) => {
             let addrPack = await addressPacking.pack(alice, bob);
             let sampleTxHash = toBytes32("sampleTxHash");
             
-            await closeOutTest.close(addrPack[0], sampleTxHash);
+            await closeOutTest.close(addrPack[0]);
             closeOutPayment = await closeOutTest.get(addrPack[0]);
-            closeOutPayment.paymentProof.should.be.equal(sampleTxHash);
+            closeOutPayment.closed.should.be.equal(true);
         });
     });
 
