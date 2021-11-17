@@ -19,7 +19,7 @@ contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes {
   uint256 constant public override version = 0;
   address public owner;
 
-  Ccy public priceFeedCcy;
+  bytes32 public priceFeedCcy;
   uint8 public override decimals;
   int256 public override latestAnswer;
   uint256 public override latestTimestamp;
@@ -31,7 +31,7 @@ contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes {
 
   constructor(
     uint8 _decimals,
-    Ccy _ccy,
+    bytes32 _ccy,
     int256 _initialAnswer
   ) public {
     owner = msg.sender;

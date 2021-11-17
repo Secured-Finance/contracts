@@ -48,12 +48,10 @@ interface IPaymentAggregator {
         address party0,
         address party1,
         bytes32 ccy,
-        uint8 term,
-        uint256 notional,
-        uint256 rate0,
-        uint256 rate1,
-        bool repayment0,
-        bool repayment1
+        bytes32 dealId,
+        uint256[6] memory timestamps,
+        uint256[6] memory payments0,
+        uint256[6] memory payments1
     ) external;
 
     function removePaymentAggregatorUser(address _user) external returns (bool);
@@ -62,13 +60,10 @@ interface IPaymentAggregator {
         address party0,
         address party1,
         bytes32 ccy,
-        uint256 startDate,
-        uint8 term,
-        uint256 notional,
-        uint256 rate0,
-        uint256 rate1,
-        bool repayment0,
-        bool repayment1
+        bytes32 dealId,
+        uint256[6] calldata timestamps,
+        uint256[6] calldata payments0,
+        uint256[6] calldata payments1
     ) external;
 
     function settlePayment(
@@ -87,4 +82,11 @@ interface IPaymentAggregator {
         uint256 payment,
         bytes32 txHash
     ) external;
+
+    function isSettled(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        uint256 timestamp
+    ) external view returns (bool status);
 }

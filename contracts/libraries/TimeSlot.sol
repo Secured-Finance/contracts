@@ -48,8 +48,8 @@ library TimeSlot {
         uint256 year,
         uint256 month,
         uint256 day
-    ) internal view returns (TimeSlot.Slot storage slot) {
-        slot = self[addr][ccy][keccak256(abi.encodePacked(year, month, day))];
+    ) internal view returns (TimeSlot.Slot memory) {
+        return getBySlotId(self, addr, ccy, keccak256(abi.encodePacked(year, month, day)));
     }
 
     /**
@@ -63,8 +63,18 @@ library TimeSlot {
         bytes32 addr,
         bytes32 ccy,
         bytes32 slotId
-    ) internal view returns (TimeSlot.Slot storage slot) {
-        slot = self[addr][ccy][slotId];
+    ) internal view returns (TimeSlot.Slot memory) {
+        TimeSlot.Slot memory timeSlot = self[addr][ccy][slotId];
+
+        if (timeSlot.totalPayment1 > timeSlot.totalPayment0) { // if Alice is party1, Bob is party0
+            timeSlot.netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);
+            timeSlot.flipped = true;
+        } else {
+            timeSlot.netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
+            timeSlot.flipped = false;
+        }
+
+        return timeSlot;
     }
 
     /** 
@@ -75,7 +85,6 @@ library TimeSlot {
     * @param slot Time slot identifier to be updated
     * @param payment0 Payment obligated to the first counterparty
     * @param payment1 Payment obligated to the second counterparty
-    * @return Boolean wether timeslot was flipped during the update, if slot is flipped the net payment obligated to the second party and vice versa
     */
     function addPayment(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
@@ -84,22 +93,12 @@ library TimeSlot {
         bytes32 slot,
         uint256 payment0,
         uint256 payment1
-    ) internal returns (bool) {
+    ) internal {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
         require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
 
         timeSlot.totalPayment0 = timeSlot.totalPayment0.add(payment0);
         timeSlot.totalPayment1 = timeSlot.totalPayment1.add(payment1);
-        
-        if (timeSlot.totalPayment0 > timeSlot.totalPayment1) {
-            timeSlot.netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
-            timeSlot.flipped = false;
-        } else {
-            timeSlot.netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);
-            timeSlot.flipped = true;
-        }
-
-        return timeSlot.flipped;
     }
 
     /** 
@@ -110,7 +109,6 @@ library TimeSlot {
     * @param slot Time slot identifier to be updated
     * @param payment0 Payment amount to remove for the first counterparty
     * @param payment1 Payment amount to remove for the second counterparty
-    * @return Boolean wether timeslot was flipped during the update, if slot is flipped the net payment obligated to the second party and vice versa
     */
     function removePayment(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
@@ -119,22 +117,12 @@ library TimeSlot {
         bytes32 slot,
         uint256 payment0,
         uint256 payment1
-    ) internal returns (bool) {
+    ) internal {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
-        require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
+        if (timeSlot.isSettled) return;
 
         timeSlot.totalPayment0 = timeSlot.totalPayment0.sub(payment0);
         timeSlot.totalPayment1 = timeSlot.totalPayment1.sub(payment1);
-        
-        if (timeSlot.totalPayment0 > timeSlot.totalPayment1) {
-            timeSlot.netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
-            timeSlot.flipped = false;
-        } else {
-            timeSlot.netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);
-            timeSlot.flipped = true;
-        }
-
-        return timeSlot.flipped;
     }
 
     /** 
@@ -156,8 +144,16 @@ library TimeSlot {
         address verifier
     ) internal {
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
+        // TODO: Add counterparty checks based on flipped status of the time slot
         require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
-        require (timeSlot.netPayment == payment, "Incorrect settlement amount");
+        uint256 netPayment;
+
+        if (timeSlot.totalPayment0 > timeSlot.totalPayment1) {
+            netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
+        } else {
+            netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);
+        }
+        require (netPayment == payment, "Incorrect settlement amount");
         timeSlot.paymentProof = txHash;
         timeSlot.verificationParty = verifier;
     }

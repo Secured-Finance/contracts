@@ -2,9 +2,11 @@
 pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 library CloseOut {
     using SafeMath for uint256;
+    // TODO: Integrate address packing library directly with close out too perform counterparty checks
 
     /**
     * @dev Payment keeps track of net payment for close out netting
@@ -86,19 +88,33 @@ library CloseOut {
         CloseOut.Payment storage closeOut = self[addr][ccy];
         uint256 paymentDelta = payment0 > payment1 ? payment0.sub(payment1) : payment1.sub(payment0);
         bool substraction;
+        console.log('closeOut.flipped before is ', closeOut.flipped);
+        console.log('closeOut.netPayment before is ', closeOut.netPayment);
+
+        console.log('payment0 is ', payment0);
+        console.log('payment1 is ', payment1);
 
         if (closeOut.flipped) {
-            substraction = payment0 > payment1 ? false : true;
+            substraction = payment0 >= payment1 ? false : true;
         } else {
-            substraction = payment0 > payment1 ? true : false;
+            substraction = payment0 >= payment1 ? true : false;
         }
 
-        if (paymentDelta > closeOut.netPayment) {
-            closeOut.netPayment = paymentDelta.sub(closeOut.netPayment);
+        console.log('substraction is ', substraction);
+        console.log('paymentDelta is ', paymentDelta);
+        console.log('closeOut.netPayment is ', closeOut.netPayment);
+
+        if (paymentDelta >= closeOut.netPayment) {
+            console.log('paymentDelta  >= closeOut.netPayment is ', paymentDelta >= closeOut.netPayment);
+
+            closeOut.netPayment = substraction ? paymentDelta.sub(closeOut.netPayment) : closeOut.netPayment.add(paymentDelta);
             closeOut.flipped = !closeOut.flipped;
+            console.log('closee out flippeed 1 ');
         } else {
             closeOut.netPayment = substraction ? closeOut.netPayment.sub(paymentDelta) : closeOut.netPayment.add(paymentDelta);
         }
+        console.log('closeOut.flipped after is ', closeOut.flipped);
+        console.log('closeOut.netPayment after is ', closeOut.netPayment);
 
         return closeOut.flipped;
     }

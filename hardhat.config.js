@@ -3,6 +3,7 @@ require("hardhat-gas-reporter");
 require("solidity-coverage");
 require('hardhat-contract-sizer');
 require("@nomiclabs/hardhat-ethers");
+require("@nomiclabs/hardhat-ganache");
 
 module.exports = {
   defaultNetwork: "hardhat",

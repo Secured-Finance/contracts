@@ -1,0 +1,741 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
+
+import './interfaces/ICollateralAggregator.sol';
+import "./ProtocolTypes.sol";
+import './interfaces/ILendingMarketController.sol';
+import './interfaces/IPaymentAggregator.sol';
+import './interfaces/IProductWithOneLeg.sol';
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./libraries/DealId.sol";
+import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
+import './interfaces/IDiscountFactors.sol';
+
+/**
+ * @title LoanV2 contract is used to store Lending deals in Secured Finance  
+ * protocol. This contract handle the PV updates on lending market rate changes
+ * also allowing parties to mutually terminate their lending deals
+ *
+ * Contract linked to Lending Market contracts, LendingMarketController and Collateral contract.
+ */
+contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
+    using SafeMath for uint256;
+    
+    uint256 constant NOTICE = 2 weeks;
+    uint256 constant SETTLE = 2 days;
+    uint256 constant MAXPAYNUM = 6;
+    bytes4 constant prefix = 0x21aaa47b;
+    uint16 constant private VERSION = 1;
+    uint256 public settlementWindow = 2;
+
+    /** @dev
+        DAYCOUNTS CONVENTION TABLE for PAYMENTS and NOTICES
+     */
+    // for end date
+    uint256[NUMTERM] DAYS = [
+        90 days,
+        180 days,
+        365 days,
+        730 days,
+        1095 days,
+        1825 days
+    ];
+    // day count fractions for coupon calc (basis point based)
+    uint256[NUMTERM] DCFRAC = [
+        2500,
+        5000,
+        BP,
+        BP,
+        BP,
+        BP
+    ];
+    // for payments and notices
+    uint256[MAXPAYNUM] sched_3m = [90 days];
+    uint256[MAXPAYNUM] sched_6m = [180 days];
+    uint256[MAXPAYNUM] sched_1y = [365 days];
+    uint256[MAXPAYNUM] sched_2y = [365 days, 730 days];
+    uint256[MAXPAYNUM] sched_3y = [365 days, 730 days, 1095 days];
+    uint256[MAXPAYNUM] sched_5y = [
+        365 days,
+        730 days,
+        1095 days,
+        1460 days,
+        1825 days
+    ];
+    uint256[][NUMTERM] SCHEDULES = [
+        sched_3m,
+        sched_6m,
+        sched_1y,
+        sched_2y,
+        sched_3y,
+        sched_5y
+    ];
+
+    // for generate payments and notices schedules
+    uint256[NUMTERM] PAYNUMS = [
+        1,
+        1,
+        1,
+        2,
+        3,
+        5
+    ];
+
+    // seconds in DFTERM
+    uint256[NUMDF] SECONDS = [
+        86400 * 90,
+        86400 * 180,
+        86400 * 365,
+        86400 * 365 * 2,
+        86400 * 365 * 3,
+        86400 * 365 * 4,
+        86400 * 365 * 5
+    ];
+
+    struct LoanDeal {
+        address lender;
+        address borrower;
+        bytes32 ccy;
+        Term term;
+        uint256 notional;
+        uint256 rate;
+        uint256 start;
+        uint256 end;
+        uint256 pv;
+        bytes32 startTxHash;
+    }
+
+    struct Termination {
+        address terminationAsker;
+        uint256 terminationDate;
+    }
+
+    /**
+    * @dev Mapping for all storing LoanDeals per loanIDs.
+    */
+    mapping(bytes32 => LoanDeal) private loans;
+    mapping(bytes32 => Termination) private terminations;
+    mapping(bytes32 => bool) private isSettled;
+    
+    address public owner;
+    bool public isTransferable;
+    uint256 public last_loan_id = 0;
+
+    // Contracts
+    ICollateralAggregator collateralAggregator;
+    ILendingMarketController lendingController;
+    IPaymentAggregator paymentAggregator;
+    mapping(bytes32 => mapping(Term => address)) public lendingMarkets;
+
+    /**
+    * @dev Modifier to make a function callable only by contract owner.
+    */
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+    /**
+    * @dev Modifier to check if LendingMarket contract linked with this contract
+    * @param _ccy LendingMarket currency
+    * @param _term LendingMarket term
+    */
+    modifier lendingMarketExists(bytes32 _ccy, uint8 _term) {
+        require(lendingMarkets[_ccy][Term(_term)] == msg.sender);
+        _;
+    }
+
+    /**
+    * @dev Modifier to make a function callable only when the loan deal is active.
+    * @param loanId Loan deal ID
+    */
+    modifier workingLoan(bytes32 loanId) {
+        require(isSettled[loanId], "loan is not working");
+        _;
+    }
+
+    /**
+    * @dev Contract constructor function.
+    *
+    * @notice sets contract deployer as owner of this contract
+    */
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    /**
+    * @dev Triggers to link with LendingMarketController contract.
+    * @param addr LendingMarketController contract address 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setLendingControllerAddr(address addr) public onlyOwner {
+        lendingController = ILendingMarketController(addr);
+    }
+
+    /**
+    * @dev Triggers to link with Collateral contract.
+    * @param addr Collateral contract address 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setCollateralAddr(address addr) public onlyOwner {
+        collateralAggregator = ICollateralAggregator(addr);
+    }
+
+    /**
+    * @dev Triggers to link with PaymentAggregator contract.
+    * @param addr Payment Aggregator contract address 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setPaymentAggregator(address addr) public onlyOwner {
+        paymentAggregator = IPaymentAggregator(addr);
+    }
+
+    /**
+    * @dev Triggers to change ability to transfer loan ownership by lenders.
+    * @param isAccepted Boolean to 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setIsTransferable(bool isAccepted) public onlyOwner {
+        isTransferable = isAccepted;
+    }
+
+    /**
+    * @dev Triggers to link with existing LendingMarket.
+    * @param _ccy LendingMarket main currency
+    * @param _term LendingMarket term
+    * @param addr LendingMarket contract address
+    *
+    * @notice Executed only by contract owner
+    */
+    function addLendingMarket(bytes32 _ccy, Term _term, address addr) public onlyOwner {
+        require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
+        lendingMarkets[_ccy][_term] = addr;
+    }
+
+    /**
+    * @dev Internal function to generate deal id based on product prefix and deals counter
+    */
+    function _generateDealId() internal returns (bytes32 id) {
+        last_loan_id += 1;
+        id = DealId.generate(prefix, last_loan_id);
+    }
+
+    /**
+    * @dev Triggered to register new loan deal, also locks borrowers collateral.
+    * @param maker LendingMarket order market maker
+    * @param taker LendingMarket order market taker
+    * @param side MarketOrder side
+    * @param ccy Loan deal main currency
+    * @param term Loan deal term
+    * @param notional Notional amount of funds to lend/borrow
+    * @param rate Loan deal annual interest rate
+    *
+    * @notice Callable only by LendingMarket after matching orders
+    */
+    function register(
+        address maker,
+        address taker,
+        uint8 side,
+        bytes32 ccy,
+        uint8 term,
+        uint256 notional,
+        uint256 rate
+    ) public override lendingMarketExists(ccy, term) returns (bytes32 loanId) {
+        require(maker != taker, 'Same person deal is not allowed');
+        address lender;
+        address borrower;
+
+        if (Side(side) == Side.LEND) {
+            lender = maker;
+            borrower = taker;
+        } else if (Side(side) == Side.BORROW) {
+            lender = taker;
+            borrower = maker;
+        }
+
+        collateralAggregator.releaseUnsettledCollateral(lender, ccy, notional.mul(MKTMAKELEVEL).div(PCT));
+        collateralAggregator.useCollateral(lender, borrower, ccy, notional.mul(MKTMAKELEVEL).div(PCT), notional, false);
+
+        LoanDeal memory deal;
+        deal.lender = lender;
+        deal.borrower = borrower;
+        deal.ccy = ccy;
+        deal.term = Term(term);
+        deal.notional = notional;
+        deal.rate = rate;
+        deal.start = block.timestamp;
+        deal.end = block.timestamp.add(DAYS[uint256(term)]);
+
+        loanId = _generateDealId();
+        loans[loanId] = deal;
+
+        _registerPaymentSchedule(loanId, deal);
+
+        emit Register(lender, borrower, ccy, uint8(term), notional, rate, loanId);
+    }
+
+    /**
+    * @dev Triggers to get settlement status of loan deal.
+    * @param loanId Loan deal ID
+    */
+    function getDealSettlementStatus(bytes32 loanId) public view override returns (bool) {
+        return isSettled[loanId];
+    }
+
+    // /**
+    // * @dev Triggers to get the state of the deal by `dealId`.
+    // * @param loanId Loan deal ID
+    // */
+    // function getDealState(bytes32 loanId) public view override returns (uint8) {
+    //     return 0;
+    // }
+
+    /**
+    * @dev Triggers to get current information about Loan deal.
+    * @param loanId Loan deal ID
+    */
+    function getLoanDeal(bytes32 loanId) public view returns (LoanDeal memory) {
+        return loans[loanId];
+    }
+
+    /**
+    * @dev Triggers to get termination state for loan with `loanId`.
+    * @param loanId Loan deal ID
+    */
+    function getTerminationState(bytes32 loanId) public view returns (Termination memory) {
+        return terminations[loanId];
+    }
+
+    /**
+    * @dev Returns the payment schedule for a deal by `loanId`
+    * @param loanId Loan deal ID
+    */
+    function getPaymentSchedule(bytes32 loanId) public override view returns (Schedule memory) {
+        LoanDeal memory deal = loans[loanId];
+
+        return _constructSchedule(deal, true);
+    }
+
+    /**
+    * @dev Returns the timestamp of the last settled payment in payment schedule
+    * @param loanId Loan deal ID
+    */
+    function getLastSettledPayment(bytes32 loanId) external view returns (uint256 settlementTime) {
+        LoanDeal memory deal = loans[loanId];
+
+        uint256 payNums = PAYNUMS[uint256(deal.term)];
+        uint256[] memory daysArr = SCHEDULES[uint256(deal.term)];
+
+        for (uint256 i = payNums; i > 0; i--) {
+            uint256 time = _timeShift(deal.start, daysArr[i-1]);
+            bool status = paymentAggregator.isSettled(deal.lender, deal.borrower, deal.ccy, time);
+
+            if (status) {
+                settlementTime = time;
+            }
+        }
+    }
+
+    // =========== EARLY TERMINATION SECTION ===========
+
+    /**
+    * @dev Triggers to request early termination of the loan.
+    * @param loanId Loan deal ID
+    *
+    * @notice Executed only for working loan deal
+    */
+    function requestTermination(bytes32 loanId) public override {
+        Termination storage termination = terminations[loanId];
+        LoanDeal memory deal = loans[loanId];
+        require(msg.sender == deal.lender || msg.sender == deal.borrower, 'parties must request');
+        require(updateLoanPV(loanId), "failed MtM");
+
+        termination.terminationAsker = msg.sender;
+
+        emit RequestTermination(loanId, msg.sender);
+    }
+
+    /**
+    * @dev Triggers to accept early termination of the loan.
+    * @param loanId Loan deal ID
+    *
+    * @notice Executed only for working loan deal
+    */
+    function acceptTermination(bytes32 loanId) public override {
+        Termination storage termination = terminations[loanId];
+        require(termination.terminationAsker != address(0), 'no termination request');
+
+        LoanDeal memory deal = loans[loanId];
+
+        if (termination.terminationAsker == deal.lender) {
+            require(msg.sender == deal.borrower, 'borrower must accept');
+        } else {
+            require(msg.sender == deal.lender, 'lender must accept');
+        }
+
+        require(updateLoanPV(loanId), "failed MtM");
+
+        if (isSettled[loanId]) {
+            Schedule memory schedule = _constructSchedule(deal, true);
+
+            uint256 i;
+            for (i = 0; i < schedule.isSettled.length; i++) {
+                if (schedule.isSettled[i] == false) break;
+            }
+
+            uint256 deltaDays;
+
+            if (i == 0) {
+                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(deal.start, block.timestamp);
+            } else {
+                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(schedule.payments[i - 1], block.timestamp);
+            }
+
+            uint256 interestRatePerDay = deal.rate.mul(1e18).div(36500);
+            uint256 accuredInterestRate = interestRatePerDay.mul(deltaDays);
+            uint256 accuredInterest = deal.notional.mul(accuredInterestRate).div(1e20);
+            uint totalPayment = accuredInterest.add(deal.pv);
+
+            collateralAggregator.liquidate(deal.borrower, deal.lender, deal.ccy, totalPayment);
+            // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
+
+            emit EarlyTermination(loanId, msg.sender, totalPayment);
+
+        } else {
+            // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, deal.notional.mul(MKTMAKELEVEL).div(PCT), deal.notional, false);
+            emit EarlyTermination(loanId, msg.sender, 0);
+        }
+
+        _liquidateLoan(loanId);
+    }
+
+    /**
+    * @dev Triggers to reject early termination of the loan.
+    * @param loanId Loan deal ID
+    *
+    * @notice Executed only for working loan deal
+    */
+    function rejectTermination(bytes32 loanId) public override {
+        Termination memory termination = terminations[loanId];
+        require(termination.terminationAsker != address(0), 'no termination request');
+
+        LoanDeal memory deal = loans[loanId];
+        require(msg.sender == deal.lender || msg.sender == deal.borrower, 'parties must reject');
+        require(updateLoanPV(loanId), "failed MtM");
+
+        delete terminations[loanId];
+
+        emit RejectTermination(loanId, msg.sender);
+    }
+
+    /**
+    * @dev Triggers to transfer loan ownership.
+    * @param loanId Loan deal ID
+    * @param newOwner Address of new owner (lender)
+    *
+    * @notice Executed only by original lender
+    */
+    function novation(
+        bytes32 loanId,
+        address newOwner
+    ) public override workingLoan(loanId) {
+        LoanDeal storage deal = loans[loanId];
+        require(isTransferable, "transfers not allowed");
+
+        address prevLender = deal.lender;
+        require(msg.sender == prevLender, "lender must trasfer");
+        
+        _removePaymentSchedule(loanId, deal);
+        collateralAggregator.releaseCollateral(prevLender, deal.borrower, deal.ccy, 0, deal.pv, true);
+
+        deal.lender = newOwner;
+
+        _registerPaymentSchedule(loanId, deal);
+        collateralAggregator.useCollateral(newOwner, deal.borrower, deal.ccy, 0, deal.pv, true);
+
+        emit Novation(loanId, newOwner);
+    }
+
+    function liquidate(bytes32 loanId) external override {
+        _liquidateLoan(loanId);
+    }
+
+    // =========== MARK-TO-MARKET SECTION ===========
+
+    /**
+    * @dev Main function for mark-to-market: updates present value, 
+    * loan state and liquidates loan deal if collateral coverage <125%
+    * for every liquidation msg.sender get rewarded ~5% of loan deal PV.
+    * @param loanId Loan ID to update PV for
+    */
+    function markToMarket(bytes32 loanId) external override returns (bool) {
+        _verifyNotionalExchange(loanId);
+        require(updateLoanPV(loanId), "failed update PV");
+        // updateState(loanId);
+
+        return true;
+    }
+
+    /**
+    * @dev Triggers to adjust discount factors by interpolating to current loan maturity
+    * @param dfArr Array of discount factors for loan currency from lending markets
+    * @param date Date to calculate discount factors for 
+    *
+    * @notice Executed internally
+    */
+    function interpolateDF(uint256[NUMDF] memory dfArr, uint256 date)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 time = date.sub(block.timestamp);
+
+        if (time <= SECONDS[0]) {
+            uint256 left = SECONDS[0].sub(time);
+
+            return (BP.mul(left).add(dfArr[0].mul(time))).div(SECONDS[0]);
+        } else {
+            for (uint256 i = 1; i < NUMDF; i++) {
+                if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
+                    uint256 left = time.sub(SECONDS[i - 1]);
+                    uint256 right = SECONDS[i].sub(time);
+                    uint256 total = SECONDS[i].sub(SECONDS[i - 1]);
+                    return ((dfArr[i - 1].mul(right)).add((dfArr[i].mul(left))).div(total));
+                }
+            }
+        }
+    }
+
+    /**
+    * @dev Triggers to update present value of loan.
+    * @param loanId Loan ID to update PV for
+    *
+    * @notice Calculates discount factors based on lending markets rates, 
+    * and updates the state of the loan. Can be triggered to liquidate loan deal
+    * if borrower's collateral not enough.
+    */
+    function updateLoanPV(bytes32 loanId) internal returns (bool) {
+        uint256 pv = getDealPV(loanId);
+
+        if (pv != 0) {
+            LoanDeal storage deal = loans[loanId];
+            if (!isSettled[loanId]) return true;
+
+            uint256 oldPV = deal.pv;
+            deal.pv = pv;
+
+            collateralAggregator.updatePV(deal.lender, deal.borrower, deal.ccy, 0, oldPV, 0, deal.pv);
+
+            emit MarkToMarket(loanId, oldPV, pv);
+        }
+
+        return true;
+    }
+
+    /**
+    * @dev Triggers to get current present value of loan deal.
+    * @param loanId Loan ID to update PV for
+    */
+    function getDealPV(bytes32 loanId) public view returns (uint256 pv) {
+        LoanDeal memory deal = loans[loanId];
+        if (!isSettled[loanId]) return deal.notional;
+
+        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(deal.ccy);
+        uint256[NUMDF] memory dfArr = [
+            df.df3m,
+            df.df6m,
+            df.df1y,
+            df.df2y,
+            df.df3y,
+            df.df4y,
+            df.df5y
+        ];
+
+        Schedule memory schedule = _constructSchedule(deal, true);
+
+        for (uint256 i = 0; i < schedule.payments.length; i++) {
+            if (schedule.payments[i] < block.timestamp) continue;
+            uint256 d = interpolateDF(dfArr, schedule.payments[i]);
+
+            pv = pv.add((schedule.amounts[i].mul(d)));
+        }
+
+        return pv.div(BP);
+    }
+
+    /**
+    * @dev Triggers to calculate discount factors for updating the present value of loan.
+    * @param loanId Array of discount factors for loan currency from lending markets
+    * @param date Date to calculate discount factors for 
+    *
+    * @notice Executed internally
+    */
+    function getDF(bytes32 loanId, uint256 date)
+        public
+        view
+        returns (uint256)
+    {
+        LoanDeal memory item = loans[loanId];
+        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(item.ccy);
+        uint256[NUMDF] memory dfArr = [
+            df.df3m,
+            df.df6m,
+            df.df1y,
+            df.df2y,
+            df.df3y,
+            df.df4y,
+            df.df5y
+        ];
+
+        if (date <= now) return 0;
+        uint256 time = date.sub(block.timestamp);
+
+        if (time <= SECONDS[0]) {
+            uint256 left = SECONDS[0].sub(time);
+            return (BP.mul(left).add(dfArr[0].mul(time))).div(SECONDS[0]);
+            // return dfArr[0].mul(time).div(SECONDS[0]);
+        } else {
+            for (uint256 i = 1; i < NUMDF; i++) {
+                if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
+                    uint256 left = time.sub(SECONDS[i - 1]);
+                    uint256 right = SECONDS[i].sub(time);
+                    uint256 total = SECONDS[i].sub(SECONDS[i - 1]);
+
+                    uint256 result = ((dfArr[i - 1].mul(right)).add((dfArr[i].mul(left))).div(total));
+
+                    return result;
+                }
+            }
+        }
+    }
+
+    /**
+    * @dev Internal function to liquidate loan deal and remove all payments in timeslots
+    * @param loanId Loan deal ID
+    */
+    function _liquidateLoan(bytes32 loanId) internal {
+        LoanDeal memory deal = loans[loanId];
+        _removePaymentSchedule(loanId, deal);
+        collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
+        delete loans[loanId];
+    }
+
+    /**
+    * @dev Internal function to get TimeSlot position after adding days
+    * @param timestamp Timestamp to add days
+    * @param numSeconds number of seconds to add
+    * @return Updated timestamp and TimeSlot position
+    */
+    function _timeShift(uint256 timestamp, uint256 numSeconds) internal pure returns (uint256) {
+        uint256 numDays = numSeconds.div(86400);
+        timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
+
+        return timestamp;
+    }
+
+    /**
+    * @dev Internal function for registering payment schedule while registering new loan
+    * @param loanId Loan deal ID
+    * @param deal LoanDeal structure
+    */
+    function _registerPaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
+        Schedule memory schedule = _constructSchedule(deal, false);
+        uint256[MAXPAYNUM] memory lenderLeg;
+        lenderLeg[0] = deal.notional;
+
+        paymentAggregator.registerPayments(deal.lender, deal.borrower, deal.ccy, loanId, schedule.payments, lenderLeg, schedule.amounts);
+    }
+
+    /**
+    * @dev Internal function for registering payment schedule while registering new loan
+    * @param loanId Loan deal ID
+    * @param deal LoanDeal structure
+    */
+    function _removePaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
+        Schedule memory schedule = _constructSchedule(deal, false);
+        
+        uint256[MAXPAYNUM] memory lenderLeg;
+        if (!isSettled[loanId]) {
+            lenderLeg[0] = deal.notional;
+        }
+
+        paymentAggregator.removePayments(deal.lender, deal.borrower, deal.ccy, loanId, schedule.payments, lenderLeg, schedule.amounts);
+    }
+
+    struct ScheduleConstructionLocalVars {
+        uint256 payNums;
+        uint256[] daysArr;
+        uint256 coupon;
+        uint256 time;
+        bool status;
+    }
+
+    /**
+    * @dev Internal function to construct payment schedule using deal parameters
+    * @param deal Loan deal structure
+    * @param settlementStatus Boolean wether settlement status should be returned
+    * @return Payment schedule structure
+    */
+    function _constructSchedule(LoanDeal memory deal, bool settlementStatus) internal view returns (Schedule memory) {
+        Schedule memory schedule;
+        ScheduleConstructionLocalVars memory vars;
+
+        vars.payNums = PAYNUMS[uint256(deal.term)];
+        vars.daysArr = SCHEDULES[uint256(deal.term)];
+
+        vars.coupon = (deal.notional.mul(deal.rate).mul(DCFRAC[uint256(deal.term)])).div(BP).div(BP);
+
+        for (uint256 i = 1; i <= vars.payNums; i++) {
+            uint256 time = _timeShift(deal.start, vars.daysArr[i-1]);
+
+            schedule.payments[i] = time;
+
+            if (i == vars.payNums) {
+                schedule.amounts[i] = deal.notional.add(vars.coupon);
+            } else {
+                schedule.amounts[i] = vars.coupon;
+            }
+
+            if (settlementStatus) {
+                vars.status = paymentAggregator.isSettled(deal.lender, deal.borrower, deal.ccy, vars.time);
+                schedule.isSettled[i] = vars.status;
+            }
+        }
+
+        uint256 settlement = _timeShift(deal.start, 2 days);
+        schedule.payments[0] = settlement;
+
+        return schedule;
+    }
+
+    /**
+    * @dev Internal function to verify the settlement of notional exchange
+    * @param loanId Loan deal id
+    */
+    function _verifyNotionalExchange(bytes32 loanId) internal {
+        if (!isSettled[loanId]) {
+            LoanDeal storage deal = loans[loanId];
+            uint256 time = _timeShift(deal.start, 2 days);
+            bool status = paymentAggregator.isSettled(deal.lender, deal.borrower, deal.ccy, time);
+
+            if (status) {
+                isSettled[loanId] = true;
+                collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, deal.notional.mul(MKTMAKELEVEL).div(PCT), 0, false);
+                collateralAggregator.settleCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.notional);
+            }
+        }
+    }
+
+    /**
+    * @dev Triggers to return loan product implementation version
+    * @return implementation version
+    */
+    function getVersion() public override view returns (uint16) {
+        return VERSION;
+    }
+}

@@ -78,7 +78,6 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 unsettled1PV;
         uint256 party0PV;
         uint256 party1PV;
-        uint256 netPayment;
     }
 
     // Mapping for all collateral books.
@@ -340,6 +339,25 @@ contract CollateralAggregator is ProtocolTypes {
         // emit RebalancePositions
     }
 
+    function rebalanceFromPositionToBook(address _mainParty, address _counterparty, uint256 _amount) public acceptedContract registeredBook(_mainParty) {
+        (address _partyA, address _partyB, bool flipped) = _checkAddresses(_mainParty, _counterparty);
+        (uint256 maxWidthdraw0, uint256 maxWidthdraw1) = _calcMaxCollateralWidthdraw(_partyA, _partyB);
+        Book storage book = books[_mainParty];
+
+        if (!flipped) {
+            require(maxWidthdraw0 >= _amount, "positionFrom uncovered");
+            positions[_partyA][_partyB].lockedCollateralA -= _amount;
+        } else {
+            require(maxWidthdraw1 >= _amount, "positionFrom uncovered");
+            positions[_partyA][_partyB].lockedCollateralB -= _amount;
+        }
+
+        book.lockedCollateral = book.lockedCollateral.sub(_amount);
+        book.independentAmount = book.independentAmount.add(_amount);
+    }
+
+    // TODO: Rebalance from position to book once position coverage more than 150%
+
     /**
     * @dev Triggers to lock unsettled collateral on a global book for selected currency.
     * @param user User's address
@@ -423,8 +441,6 @@ contract CollateralAggregator is ProtocolTypes {
             }
         }
 
-        netting.netPayment = netting.party0PV > netting.party1PV ? netting.party0PV.sub(netting.party1PV) : netting.party1PV.sub(netting.party0PV);
-
         // updatePositionState(_partyA, _partyB);
         emit UseCollateral(_partyA, _partyB, ccy, amount0, amount1, isSettled);
     }
@@ -469,8 +485,6 @@ contract CollateralAggregator is ProtocolTypes {
                 netting.party0PV = netting.party0PV.add(amount1);
             }
         }
-
-        netting.netPayment = netting.party0PV > netting.party1PV ? netting.party0PV.sub(netting.party1PV) : netting.party1PV.sub(netting.party0PV);
 
         // updatePositionState(_partyA, _partyB);
         emit SettleCollateral(_partyA, _partyB, ccy, amount0, amount1);
@@ -671,8 +685,6 @@ contract CollateralAggregator is ProtocolTypes {
             }
         }
 
-        netting.netPayment = netting.party0PV > netting.party1PV ? netting.party0PV.sub(netting.party1PV) : netting.party1PV.sub(netting.party0PV);
-
         // updatePositionState(_partyA, _partyB);
         emit Release(_partyA, _partyB, ccy, amount0, amount1);
     }
@@ -771,7 +783,6 @@ contract CollateralAggregator is ProtocolTypes {
                 netting.party0PV = netting.party0PV.sub(prevPV1).add(currentPV1);
             }
         }
-        netting.netPayment = netting.party0PV > netting.party1PV ? netting.party0PV.sub(netting.party1PV) : netting.party1PV.sub(netting.party0PV);
         // updatePositionState(_party0, _party1);
         
         // emit UpdatePV(_party0, _party1, ccy, prevPV0, prevPV1, currentPV0, currentPV1);
@@ -842,6 +853,10 @@ contract CollateralAggregator is ProtocolTypes {
 
     function getCollateralBook(address addr) public view returns (Book memory) {
         return books[addr];
+    }
+
+    function checkRegisteredBook(address addr) public view returns (bool) {
+        return isRegistered[addr];
     }
 
     struct BilateralPositionLocalVars {
@@ -937,6 +952,9 @@ contract CollateralAggregator is ProtocolTypes {
     function _rebalanceFromBook(address _mainParty, address _counterparty, uint256 _amount) internal {
         (address _partyA, address _partyB, bool flipped) = _checkAddresses(_mainParty, _counterparty);
         Book storage book = books[_mainParty];
+
+        (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(_mainParty);
+        require(maxWidthdraw >= _amount, 'Invalid rebalance amount');
 
         book.independentAmount = book.independentAmount.sub(_amount); // includes overflow checks
         book.lockedCollateral = book.lockedCollateral.add(_amount);

@@ -45,7 +45,7 @@ contract TimeSlotTest {
         uint256 totalPaymentBefore0 = _timeSlots[addrPack][ccy][slot].totalPayment0;
         uint256 totalPaymentBefore1 = _timeSlots[addrPack][ccy][slot].totalPayment1;
 
-        require(TimeSlot.addPayment(_timeSlots, addrPack, ccy, slot, payment0, payment1), "CAN'T ADD PAYMENT");
+        TimeSlot.addPayment(_timeSlots, addrPack, ccy, slot, payment0, payment1);
 
         require(_timeSlots[addrPack][ccy][slot].totalPayment0 == totalPaymentBefore0.add(payment0), "PAYMENT0 CHANGED INCORRECTLY");
         require(_timeSlots[addrPack][ccy][slot].totalPayment1 == totalPaymentBefore1.add(payment1), "PAYMENT1 CHANGED INCORRECTLY");
@@ -61,7 +61,7 @@ contract TimeSlotTest {
         uint256 totalPaymentBefore0 = timeSlot.totalPayment0;
         uint256 totalPaymentBefore1 = timeSlot.totalPayment1;
 
-        require(TimeSlot.removePayment(_timeSlots, addrPack, ccy, slot, payment0, payment1), "CAN'T REMOVE PAYMENT");
+        TimeSlot.removePayment(_timeSlots, addrPack, ccy, slot, payment0, payment1);
 
         timeSlot = _timeSlots[addrPack][ccy][slot];
 

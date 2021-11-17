@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import './interfaces/ICollateralAggregator.sol';
-import './interfaces/ILoan.sol';
+import './interfaces/ILoanV2.sol';
 import './interfaces/ILendingMarketController.sol';
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
 import "./ProtocolTypes.sol";
@@ -23,7 +23,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
 
     // Contracts interfaces
     ICollateralAggregator collateralAggregator;
-    ILoan loan;
+    ILoanV2 loan;
 
     /**
     * @dev Emitted when market order created by market maker.
@@ -116,7 +116,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     * - Can be executed only by lending market controller owner.
     */
     function setLoan(address addr) public onlyLendingControllerAdmin {
-        loan = ILoan(addr);
+        loan = ILoanV2(addr);
     }
 
     /**
@@ -267,7 +267,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
             require(borrowOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
         }
 
-        loan.makeLoanDeal(order.maker, msg.sender, uint8(order.side), MarketCcy, uint8(MarketTerm), _amount, order.rate);
+        loan.register(order.maker, msg.sender, uint8(order.side), MarketCcy, uint8(MarketTerm), _amount, order.rate);
 
         emit TakeOrder(
             orderId,

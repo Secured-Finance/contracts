@@ -1,9 +1,11 @@
 const Collateral = artifacts.require('Collateral');
-const Loan = artifacts.require('Loan');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const FXRatesAggregator = artifacts.require('FXRatesAggregator');
 const LendingMarket = artifacts.require('LendingMarket');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
+const CurrencyController = artifacts.require('CurrencyController');
+const PaymentAggregator = artifacts.require('PaymentAggregator');
+const CloseOutNetting = artifacts.require('CloseOutNetting');
 
 const {web3} = require("@openzeppelin/test-environment");
 const { emitted, reverted, equal, notEqual, } = require('../test-utils').assert;
@@ -69,7 +71,21 @@ contract('Loan', async (accounts) => {
     let carolCurrentCollateral = web3.utils.toBN("0");
 
     before('deploy contracts', async () => {
-        loan = await Loan.new();
+        const DealId = await ethers.getContractFactory('DealId')
+        const dealIdLibrary = await DealId.deploy();
+        await dealIdLibrary.deployed();
+
+        const loanFactory = await ethers.getContractFactory(
+            'LoanV2',
+            {
+                libraries: {
+                    DealId: dealIdLibrary.address
+                }
+              }
+            )
+        loan = await loanFactory.deploy();
+        console.log("Loan contract address is " + loan.address);
+        console.log();
 
         collateral = await Collateral.new(loan.address);
         

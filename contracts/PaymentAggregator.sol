@@ -10,6 +10,7 @@ import "./libraries/TimeSlot.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import "./interfaces/ICloseOutNetting.sol";
+import './interfaces/IMarkToMarket.sol';
 
 /**
  * @title Payment Aggregator contract is used to aggregate payments  
@@ -24,8 +25,10 @@ contract PaymentAggregator is ProtocolTypes {
     using Address for address;
     using TimeSlot for TimeSlot.Slot;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     event UpdateCloseOutNetting(address indexed prevContract, address indexed closeOutNetting);
+    event UpdateMarkToMarket(address indexed prevContract, address indexed closeOutNetting);
 
     event RegisterPayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment0, uint256 payment1);
     event VerifyPayment(address indexed verifier, address indexed counterparty, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
@@ -34,14 +37,16 @@ contract PaymentAggregator is ProtocolTypes {
 
     address public owner;
     uint256 public settlementWindow = 2;
-    uint256 constant MAXPAYNUM = 5;
+    uint256 constant MAXPAYNUM = 6;
 
     // Linked contract addresses
     EnumerableSet.AddressSet private paymentAggregatorUsers;
     ICloseOutNetting private closeOutNetting;
+    IMarkToMarket private markToMarket;
 
     // Mapping structure for storing TimeSlots
     mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) _timeSlots;
+    mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => EnumerableSet.Bytes32Set))) private deals;
 
     /** 
      * @dev Array with number of days per term
@@ -176,84 +181,59 @@ contract PaymentAggregator is ProtocolTypes {
         closeOutNetting = ICloseOutNetting(_contract);
     }
 
+    /**
+    * @dev Trigers to set mark to market smart contract
+    * @param _contract MarkToMarket smart contract address
+    *
+    * @notice Trigers only be contract owner
+    * @notice Reverts on saving 0x0 address
+    */
+    function setMarkToMarket(address _contract) public onlyOwner onlyContractAddr(_contract) {
+        emit UpdateMarkToMarket(address(markToMarket), _contract);
+        markToMarket = IMarkToMarket(_contract);
+    }
+
     struct TimeSlotPaymentsLocalVars {
         bytes32 packedAddrs;
         bool flipped;
-        uint256 time;
-        uint256 payNums;
-        uint256 lastPayNum;
-        uint256 coupon0;
-        uint256 coupon1;
-        uint256 lastPayment0;
-        uint256 lastPayment1;
         uint256 totalPayment0;
         uint256 totalPayment1;
         bytes32 slotPosition;
     }
 
     /**
-    * @dev Triggered to construct payment schedule for new loan deal.
+    * @dev Triggered to add new payments for a deal
     * @param party0 First counterparty address
     * @param party1 Second counterparty address
     * @param ccy Main settlement currency in a deal
-    * @param term Product deal term
-    * @param notional Notional amount of funds in product
-    * @param rate0 Product interest rate for first party
-    * @param rate1 Product interest rate for second party
-    * @param repayment0 Boolean to identify if the first party should return notional
-    * @param repayment1 Boolean to identify if the second party should return notional
+    * @param dealId Deal unique ID with prefix
+    * @param timestamps Array of timestamps for timeslot identification
+    * @param payments0 Array of cashflows owed by the first party
+    * @param payments1 Array of cashflows owed by the second party
     */
     function registerPayments(
         address party0,
         address party1,
         bytes32 ccy,
-        Term term,
-        uint256 notional,
-        uint256 rate0,
-        uint256 rate1,
-        bool repayment0,
-        bool repayment1
+        bytes32 dealId,
+        uint256[MAXPAYNUM] memory timestamps,
+        uint256[MAXPAYNUM] memory payments0,
+        uint256[MAXPAYNUM] memory payments1
     ) external acceptedContract {
         TimeSlotPaymentsLocalVars memory vars;
-
-        vars.payNums = PAYNUMS[uint256(term)];
-        vars.lastPayNum = vars.payNums.sub(1);
-        vars.time = block.timestamp;
-        uint256[] memory daysArr = DAYS[uint256(term)];
         (vars.packedAddrs, vars.flipped) = AddressPacking.pack(party0, party1);
 
-        if (rate0 > 0) {
-            vars.coupon0 = (notional.mul(rate0).mul(DCFRAC[uint256(term)])).div(BP).div(BP);
-        }
+        for (uint256 i = 0; i < timestamps.length; i++) {
+            vars.slotPosition = _slotPosition(timestamps[i]);
+            deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);
 
-        if (rate1 > 0) {
-            vars.coupon1 = (notional.mul(rate1).mul(DCFRAC[uint256(term)])).div(BP).div(BP);
-        }
+            vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
+            vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
 
-        for (uint256 i = 0; i < vars.payNums; i++) {
-            vars.slotPosition = _slotPositionPlusDays(vars.time, daysArr[i]);
-
-            if (i == vars.lastPayNum) {
-                vars.lastPayment0 = repayment0 ? notional.add(vars.coupon0) : vars.coupon0;
-                vars.lastPayment1 = repayment1 ? notional.add(vars.coupon1) : vars.coupon1;
-
-                vars.totalPayment0 = vars.totalPayment0.add(vars.lastPayment0);
-                vars.totalPayment1 = vars.totalPayment1.add(vars.lastPayment1);
-
-                if (vars.flipped) {
-                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment1, vars.lastPayment0);
-                } else {
-                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment0, vars.lastPayment1);
-                }
+            if (vars.flipped) {
+                TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, payments1[i], payments0[i]);
             } else {
-                vars.totalPayment0 = vars.totalPayment0.add(vars.coupon0);
-                vars.totalPayment1 = vars.totalPayment1.add(vars.coupon1);
-
-                if (vars.flipped) {
-                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.coupon1, vars.coupon0);
-                } else {
-                    TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.coupon0, vars.coupon1);
-                }
+                TimeSlot.addPayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, payments0[i], payments1[i]);
             }
         }
         
@@ -262,6 +242,7 @@ contract PaymentAggregator is ProtocolTypes {
 
     struct PaymentSettlementLocalVars {
         bytes32 packedAddrs;
+        bool flipped;
         bytes32 slotPosition;
         uint256 payment;
         address verifier;
@@ -322,7 +303,7 @@ contract PaymentAggregator is ProtocolTypes {
         vars.txHash = txHash;
         vars.verifier = verifier;
 
-        (vars.packedAddrs, ) = AddressPacking.pack(verifier, counterparty);
+        (vars.packedAddrs, vars.flipped) = AddressPacking.pack(verifier, counterparty);
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         vars.slotPosition = TimeSlot.position(year, month, day);
         
@@ -330,78 +311,52 @@ contract PaymentAggregator is ProtocolTypes {
 
         TimeSlot.settlePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.txHash, vars.verifier);
 
-        closeOutNetting.removePayments(verifier, counterparty, ccy, timeSlot.netPayment, 0);
+        bytes32[] memory dealIds = getDealsFromSlot(vars.packedAddrs, ccy, vars.slotPosition);
+        markToMarket.updatePVs(dealIds);
+
+        if (vars.flipped) {
+            closeOutNetting.removePayments(verifier, counterparty, ccy, timeSlot.totalPayment1, timeSlot.totalPayment0);
+        } else {
+            closeOutNetting.removePayments(verifier, counterparty, ccy, timeSlot.totalPayment0, timeSlot.totalPayment1);
+        }
     }
 
     /**
-    * @dev External function to remove payments while liquidating a deal.
+    * @dev Triggered to remove existing payments for a deal
     * @param party0 First counterparty address
     * @param party1 Second counterparty address
     * @param ccy Main settlement currency in a deal
-    * @param startDate Product registration time
-    * @param term Product deal term
-    * @param notional Notional amount of funds in product
-    * @param rate0 Product interest rate for first party
-    * @param rate1 Product interest rate for second party
-    * @param repayment0 Boolean to identify the first party should return notional
-    * @param repayment1 Boolean to identify the second party should return notional
+    * @param dealId Deal unique ID with prefix
+    * @param timestamps Array of timestamps for timeslot identification
+    * @param payments0 Array of cashflows owed by the first party
+    * @param payments1 Array of cashflows owed by the second party
     */
     function removePayments(
         address party0,
         address party1,
         bytes32 ccy,
-        uint256 startDate,
-        Term term,
-        uint256 notional,
-        uint256 rate0,
-        uint256 rate1,
-        bool repayment0,
-        bool repayment1
+        bytes32 dealId,
+        uint256[MAXPAYNUM] calldata timestamps,
+        uint256[MAXPAYNUM] calldata payments0,
+        uint256[MAXPAYNUM] calldata payments1
     ) external acceptedContract {
         TimeSlotPaymentsLocalVars memory vars;
-
-        vars.payNums = PAYNUMS[uint256(term)];
-        vars.lastPayNum = vars.payNums.sub(1);
-        vars.time = startDate;
-        uint256[] memory daysArr = DAYS[uint256(term)];
         (vars.packedAddrs, vars.flipped) = AddressPacking.pack(party0, party1);
 
-        if (rate0 > 0) {
-            vars.coupon0 = (notional.mul(rate0).mul(DCFRAC[uint256(term)])).div(BP).div(BP);
-        } 
+        for (uint256 i = 0; i < timestamps.length; i++) {
+            vars.slotPosition = _slotPosition(timestamps[i]);
+            require(deals[vars.packedAddrs][ccy][vars.slotPosition].remove(dealId), "NON_REGISTERED_DEAL");
+            
+            vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
+            vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
 
-        if (rate1 > 0) {
-            vars.coupon1 = (notional.mul(rate1).mul(DCFRAC[uint256(term)])).div(BP).div(BP);
-        }
-
-        for (uint256 i = 0; i < vars.payNums; i++) {
-            vars.slotPosition = _slotPositionPlusDays(vars.time, daysArr[i]);
-
-            if (i == vars.lastPayNum) {
-
-                vars.lastPayment0 = repayment0 ? notional.add(vars.coupon0) : vars.coupon0;
-                vars.lastPayment1 = repayment1 ? notional.add(vars.coupon1) : vars.coupon1;
-
-                vars.totalPayment0 = vars.totalPayment0.add(vars.lastPayment0);
-                vars.totalPayment1 = vars.totalPayment1.add(vars.lastPayment1);
-
-                if (vars.flipped) {
-                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment1, vars.lastPayment0);
-                } else {
-                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.lastPayment0, vars.lastPayment1);
-                }
+            if (vars.flipped) {
+                TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, payments1[i], payments0[i]);
             } else {
-                vars.totalPayment0 = vars.totalPayment0.add(vars.coupon0);
-                vars.totalPayment1 = vars.totalPayment1.add(vars.coupon1);
-
-                if (vars.flipped) {
-                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.coupon1, vars.coupon0);
-                } else {
-                    TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, vars.coupon0, vars.coupon1);
-                }
+                TimeSlot.removePayment(_timeSlots, vars.packedAddrs, ccy, vars.slotPosition, payments0[i], payments1[i]);
             }
         }
-
+        
         closeOutNetting.removePayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);
     }
 
@@ -446,13 +401,46 @@ contract PaymentAggregator is ProtocolTypes {
     * @param numSeconds number of seconds to add
     * @return Updated timestamp and TimeSlot position
     */
-    function _slotPositionPlusDays(uint256 timestamp, uint256 numSeconds) internal pure returns (bytes32) {
+    function _slotPositionPlusDays(uint256 timestamp, uint256 numSeconds) internal pure returns (bytes32, uint256) {
         uint256 numDays = numSeconds.div(86400);
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
+        return (slotPosition, timestamp);
+    }
+
+    /**
+    * @dev Internal function to get TimeSlot position
+    * @param timestamp Timestamp for conversion
+    * @return TimeSlot position
+    */
+    function _slotPosition(uint256 timestamp) internal pure returns (bytes32) {
+        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
+        bytes32 slotPosition = TimeSlot.position(year, month, day);
+
         return slotPosition;
+    }
+
+    /**
+    * @dev Triggers settlement status of the time slot
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
+    * @param ccy Main payment settlement currency
+    * @param timestamp TimeSlot timestamp
+    * @return status Boolean if slot was settled
+    */
+    function isSettled(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        uint256 timestamp
+    ) external view returns (bool status) {
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
+        bytes32 slotPosition = TimeSlot.position(year, month, day);
+
+        status = TimeSlot.isSettled(_timeSlots, packedAddrs, ccy, slotPosition);
     }
 
     /**
@@ -465,6 +453,20 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 delta = BokkyPooBahsDateTimeLibrary.diffDays(time, targetTime);
 
         return !(delta >= settlementWindow);
+    }
+
+    function getDealsFromSlot(bytes32 packedAddrs, bytes32 ccy, bytes32 slotPosition) public view returns (bytes32[] memory) {
+        EnumerableSet.Bytes32Set storage set = deals[packedAddrs][ccy][slotPosition];
+
+        uint256 numDeals = set.length();
+        bytes32[] memory dealIds = new bytes32[](numDeals);
+
+        for (uint256 i = 0; i < numDeals; i++) {
+            bytes32 deal = set.at(i);
+            dealIds[i] = deal;
+        }
+
+        return dealIds;
     }
 
 }
