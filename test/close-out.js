@@ -34,18 +34,10 @@ contract('CloseOutTest', async (accounts) => {
 
             netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
 
-            if (addrPack[1] == true) {
-                await closeOutTest.addPayments(addrPack[0], bobPayment, alicePayment);
-                
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(false);
-            } else {
-                await closeOutTest.addPayments(addrPack[0], alicePayment, bobPayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(true);
-            }
+            await closeOutTest.addPayments(bob, alice, bobPayment, alicePayment);
+            closeOutPayment = await closeOutTest.get(alice, bob);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(true);
         });
 
         it('Add more payments into close out payment, expect close out to flip', async () => {
@@ -58,17 +50,10 @@ contract('CloseOutTest', async (accounts) => {
 
             netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
 
-            if (addrPack[1] == true) {
-                await closeOutTest.addPayments(addrPack[0], bobPayment, alicePayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(true);
-            } else {
-                await closeOutTest.addPayments(addrPack[0], alicePayment, bobPayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(false);
-            }
+            await closeOutTest.addPayments(alice, bob, alicePayment, bobPayment);
+            closeOutPayment = await closeOutTest.get(bob, alice);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(true);
         });
 
         it('Add payments into close out payment, expect close out net payment to be 0', async () => {
@@ -81,17 +66,10 @@ contract('CloseOutTest', async (accounts) => {
 
             netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
 
-            if (addrPack[1] == true) {
-                await closeOutTest.addPayments(addrPack[0], bobPayment, alicePayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(false);
-            } else {
-                await closeOutTest.addPayments(addrPack[0], alicePayment, bobPayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(true);
-            }
+            await closeOutTest.addPayments(alice, bob, alicePayment, bobPayment);
+            closeOutPayment = await closeOutTest.get(alice, bob);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(true);
         });
 
         it('Add payments into close out payment, expect close out to be not flipped', async () => {
@@ -104,17 +82,10 @@ contract('CloseOutTest', async (accounts) => {
 
             netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
 
-            if (addrPack[1] == true) {
-                await closeOutTest.addPayments(addrPack[0], bobPayment, alicePayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(false);
-            } else {
-                await closeOutTest.addPayments(addrPack[0], alicePayment, bobPayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(true);
-            }
+            await closeOutTest.addPayments(alice, bob, alicePayment, bobPayment);
+            closeOutPayment = await closeOutTest.get(alice, bob);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(true);
         });
 
         // it('Add payments into close out payment 5th', async () => {
@@ -126,17 +97,10 @@ contract('CloseOutTest', async (accounts) => {
         //     bobTotalPayment = bobTotalPayment + bobPayment;
         //     netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
 
-        //     if (addrPack[1] == true) {
-        //         await closeOutTest.addPayments(addrPack[0], alicePayment, bobPayment);
-        //         closeOutPayment = await closeOutTest.get(addrPack[0]);
-        //         closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-        //         closeOutPayment.flipped.should.be.equal(false);
-        //     } else {
-        //         await closeOutTest.addPayments(addrPack[0], bobPayment, alicePayment);
-        //         closeOutPayment = await closeOutTest.get(addrPack[0]);
-        //         closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-        //         closeOutPayment.flipped.should.be.equal(true);
-        //     }
+        //     await closeOutTest.addPayments(alice, bob, bobPayment, alicePayment);
+        //     closeOutPayment = await closeOutTest.get(alice, bob);
+        //     closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+        //     closeOutPayment.flipped.should.be.equal(true);
         // });
     });
 
@@ -152,17 +116,10 @@ contract('CloseOutTest', async (accounts) => {
 
             netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
 
-            if (addrPack[1] == true) {
-                await closeOutTest.removePayments(addrPack[0], bobPayment, alicePayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(false);
-            } else {
-                await closeOutTest.removePayments(addrPack[0], alicePayment, bobPayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(true);
-            }
+            await closeOutTest.removePayments(alice, bob, alicePayment, bobPayment);
+            closeOutPayment = await closeOutTest.get(alice, bob);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(true);
         });
 
         it('Remove more payments from close out payment, expect net payment to be increased', async () => {
@@ -175,17 +132,32 @@ contract('CloseOutTest', async (accounts) => {
             bobTotalPayment = bobTotalPayment - bobPayment;
             netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
 
-            if (addrPack[1] == true) {
-                await closeOutTest.removePayments(addrPack[0], alicePayment, bobPayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(true);
-            } else {
-                await closeOutTest.removePayments(addrPack[0], bobPayment, alicePayment);
-                closeOutPayment = await closeOutTest.get(addrPack[0]);
-                closeOutPayment.netPayment.should.be.equal(netPayment.toString());
-                closeOutPayment.flipped.should.be.equal(false);
-            }
+            await closeOutTest.removePayments(alice, bob, alicePayment, bobPayment);
+            closeOutPayment = await closeOutTest.get(alice, bob);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(true);
+        });
+
+        it('Remove more payments from close out payment, expect close out to flip', async () => {
+            let addrPack = await addressPacking.pack(bob, alice);
+            let alicePayment = 0;
+            let bobPayment = 65000;
+            let closeOutPayment;
+
+            aliceTotalPayment = aliceTotalPayment - alicePayment;
+            bobTotalPayment = bobTotalPayment - bobPayment;
+            netPayment = aliceTotalPayment > bobTotalPayment ? aliceTotalPayment - bobTotalPayment : bobTotalPayment - aliceTotalPayment;
+
+            await closeOutTest.removePayments(alice, bob, alicePayment, bobPayment);
+            closeOutPayment = await closeOutTest.get(alice, bob);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(false);
+        });
+
+        it('Get close out with addresses passed backwards, expect flipped result', async () => {
+            closeOutPayment = await closeOutTest.get(bob, alice);
+            closeOutPayment.netPayment.should.be.equal(netPayment.toString());
+            closeOutPayment.flipped.should.be.equal(true);
         });
     });
 
@@ -194,8 +166,8 @@ contract('CloseOutTest', async (accounts) => {
             let addrPack = await addressPacking.pack(alice, bob);
             let sampleTxHash = toBytes32("sampleTxHash");
             
-            await closeOutTest.close(addrPack[0]);
-            closeOutPayment = await closeOutTest.get(addrPack[0]);
+            await closeOutTest.close(alice, bob);
+            closeOutPayment = await closeOutTest.get(alice, bob);
             closeOutPayment.closed.should.be.equal(true);
         });
     });

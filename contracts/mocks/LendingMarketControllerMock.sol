@@ -12,9 +12,11 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
 
     address public override owner;
+    uint256 public override numberOfMarkets = 0;
 
-    mapping(bytes32 => mapping(uint8 => uint256)) public lendRates;
-    mapping(bytes32 => mapping(uint8 => uint256)) public borrowRates;
+    mapping(bytes32 => mapping(uint256 => uint256)) public lendRates;
+    mapping(bytes32 => mapping(uint256 => uint256)) public borrowRates;
+    mapping(bytes32 => uint256[]) public supportedTerms;
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -32,7 +34,7 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
     * @dev Sets owner of the controller market.
     * @param _owner Address of new owner
     */
-    function setOwner(address _owner) public override onlyOwner {
+    function setOwner(address _owner) public onlyOwner {
         require(_owner != address(0), "new owner is the zero address");
         emit OwnerChanged(owner, _owner);
         owner = _owner;
@@ -124,13 +126,13 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
 
     // =========== UNUSED FUNCTIONS ===========
 
-    function deployLendingMarket(bytes32 _ccy,uint8 _term) public override returns (address) {
+    function deployLendingMarket(bytes32 _ccy,uint256 _term) public override returns (address) {
         _ccy;
         _term;
         return address(0);
     }
 
-    function lendingMarkets(bytes32 _ccy,uint8 _term) public override view returns (address) {
+    function lendingMarkets(bytes32 _ccy,uint256 _term) public override view returns (address) {
         _ccy;
         _term;
         return address(0);
@@ -149,6 +151,10 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
     function placeBulkOrders(Order[] memory orders) public override returns (bool) {
         orders;
         return true;
+    }
+
+    function getSupportedTerms(bytes32 _ccy) public view override returns (uint256[] memory) {
+        return supportedTerms[_ccy];
     }
 
 }

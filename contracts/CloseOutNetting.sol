@@ -21,7 +21,6 @@ contract CloseOutNetting {
     using SafeMath for uint256;
     using Address for address;
     using CloseOut for CloseOut.Payment;
-    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     event UpdatePaymentAggregator(address indexed prevAddr, address indexed addr);
     event UpdateCollateralAggregator(address indexed prevAddr, address indexed addr);
@@ -132,8 +131,7 @@ contract CloseOutNetting {
         address party1,
         bytes32 ccy
     ) public view returns (CloseOut.Payment memory payment) {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        payment = CloseOut.get(_closeOuts, packedAddrs, ccy);
+        payment = CloseOut.get(_closeOuts, party0, party1, ccy);
     }
 
     /**
@@ -153,13 +151,7 @@ contract CloseOutNetting {
         uint256 payment0,
         uint256 payment1
     ) external onlyPaymentAggregator {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
-
-        if (flipped) {
-            CloseOut.addPayments(_closeOuts, packedAddrs, ccy, payment1, payment0);
-        } else {
-            CloseOut.addPayments(_closeOuts, packedAddrs, ccy, payment0, payment1);
-        }
+        CloseOut.addPayments(_closeOuts, party0, party1, ccy, payment0, payment1);
 
         emit AddCloseOutPayments(party0, party1, ccy, payment0, payment1);
     }
@@ -181,13 +173,7 @@ contract CloseOutNetting {
         uint256 payment0,
         uint256 payment1
     ) external onlyPaymentAggregator {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
-
-        if (flipped) {
-            CloseOut.removePayments(_closeOuts, packedAddrs, ccy, payment1, payment0);
-        } else {
-            CloseOut.removePayments(_closeOuts, packedAddrs, ccy, payment0, payment1);
-        }
+        CloseOut.removePayments(_closeOuts, party0, party1, ccy, payment0, payment1);
 
         emit RemoveCloseOutPayments(party0, party1, ccy, payment0, payment1);
     }
@@ -216,29 +202,20 @@ contract CloseOutNetting {
         address party1
     ) internal  {
         require(_isDefaulted[party0] || _isDefaulted[party1], "NON_DEFAULTED_PARTIES");
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         bytes32[] memory currencies = collateralAggregator.getExposedCurrencies(party0, party1);
 
         for (uint256 i = 0; i < currencies.length; i++) {
             bytes32 ccy = currencies[i];
 
-            CloseOut.Payment memory payment = CloseOut.get(_closeOuts, packedAddrs, ccy);
+            CloseOut.Payment memory payment = CloseOut.get(_closeOuts, party0, party1, ccy);
 
             if (payment.flipped) {
-                if (flipped) {
-                    collateralAggregator.liquidate(party0, party1, ccy, payment.netPayment);
-                } else {
-                    collateralAggregator.liquidate(party1, party0, ccy, payment.netPayment);
-                }
+                collateralAggregator.liquidate(party1, party0, ccy, payment.netPayment);
             } else {
-                if (flipped) {
-                    collateralAggregator.liquidate(party1, party0, ccy, payment.netPayment);
-                } else {
-                    collateralAggregator.liquidate(party0, party1, ccy, payment.netPayment);
-                }
+                collateralAggregator.liquidate(party0, party1, ccy, payment.netPayment);
             }
 
-            CloseOut.close(_closeOuts, packedAddrs, ccy);
+            CloseOut.close(_closeOuts, party0, party1, ccy);
         }
     }
 

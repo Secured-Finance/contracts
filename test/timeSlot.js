@@ -69,72 +69,54 @@ contract('TimeSlotTest', async (accounts) => {
             let alicePayment = 5000;
             let bobPayment = 10000;
 
-            if (packedAddresses[1] != true) {
-                tx = await timeSlotTest.addPayment(packedAddresses[0], position, alicePayment, bobPayment);
-            } else {
-                tx = await timeSlotTest.addPayment(packedAddresses[0], position, bobPayment, alicePayment);
-            }
+            tx = await timeSlotTest.addPayment(alice, bob, position, alicePayment, bobPayment);
 
-            let slot = await timeSlotTest.get(packedAddresses[0], 2021, 10, 6);
-            slot.totalPayment0.should.be.equal('10000');
-            slot.totalPayment1.should.be.equal('5000');
+            let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
+            slot.totalPayment0.should.be.equal('5000');
+            slot.totalPayment1.should.be.equal('10000');
             slot.netPayment.should.be.equal('5000');
-            slot.flipped.should.be.equal(false);
+            slot.flipped.should.be.equal(true);
         });
 
         it('Add one more payment for time slot at the same date', async () => {
             let alicePayment = 15000;
             let bobPayment = 0;
 
-            if (packedAddresses[1] != true) {
-                await timeSlotTest.addPayment(packedAddresses[0], position, alicePayment, bobPayment);
-            } else {
-                await timeSlotTest.addPayment(packedAddresses[0], position, bobPayment, alicePayment);
-            }
+            await timeSlotTest.addPayment(alice, bob, position, alicePayment, bobPayment);
 
-            let slot = await timeSlotTest.get(packedAddresses[0], 2021, 10, 6);
-            slot.totalPayment0.should.be.equal('10000');
-            slot.totalPayment1.should.be.equal('20000');
+            let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
+            slot.totalPayment0.should.be.equal('20000');
+            slot.totalPayment1.should.be.equal('10000');
             slot.netPayment.should.be.equal('10000');
-            slot.flipped.should.be.equal(true);
+            slot.flipped.should.be.equal(false);
         });
 
         it('Remove one payment from time slot at the same date', async () => {
             let alicePayment = 15000;
             let bobPayment = 0;
 
-            if (packedAddresses[1] != true) {
-                await timeSlotTest.removePayment(packedAddresses[0], position, alicePayment, bobPayment);
-            } else {
-                await timeSlotTest.removePayment(packedAddresses[0], position, bobPayment, alicePayment);
-            }
+            await timeSlotTest.removePayment(alice, bob, position, alicePayment, bobPayment);
 
-            let slot = await timeSlotTest.get(packedAddresses[0], 2021, 10, 6);
-            slot.totalPayment0.should.be.equal('10000');
-            slot.totalPayment1.should.be.equal('5000');
+            let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
+            slot.totalPayment0.should.be.equal('5000');
+            slot.totalPayment1.should.be.equal('10000');
             slot.netPayment.should.be.equal('5000');
-            slot.flipped.should.be.equal(false);
+            slot.flipped.should.be.equal(true);
         });
 
         it('Expect revert on removing payment bigger than available total payment', async () => {
             let alicePayment = 10000;
             let bobPayment = 15000;
 
-            if (packedAddresses[1] != true) {
-                await expectRevert(
-                    timeSlotTest.removePayment(packedAddresses[0], position, alicePayment, bobPayment), "SafeMath: subtraction overflow"
-                );
-            } else {
-                await expectRevert(
-                    timeSlotTest.removePayment(packedAddresses[0], position, bobPayment, alicePayment), "SafeMath: subtraction overflow"
-                );
-            }
+            await expectRevert(
+                timeSlotTest.removePayment(alice, bob, position, alicePayment, bobPayment), "SafeMath: subtraction overflow"
+            );
         });
 
         it('Verify net payment from time slot at the same date', async () => {
-            await timeSlotTest.verifyPayment(packedAddresses[0], position, 5000, firstTxHash, { from: bob });
+            await timeSlotTest.verifyPayment(alice, position, 5000, firstTxHash, { from: bob });
 
-            let slot = await timeSlotTest.get(packedAddresses[0], 2021, 10, 6);
+            let slot = await timeSlotTest.get(bob, alice, 2021, 10, 6);
             slot.netPayment.should.be.equal('5000');
             slot.flipped.should.be.equal(false);
             slot.paymentProof.should.be.equal(firstTxHash);
@@ -143,33 +125,33 @@ contract('TimeSlotTest', async (accounts) => {
         });
         
         it('Settle net payment from time slot at the same date', async () => {
-            await timeSlotTest.settlePayment(packedAddresses[0], position, firstTxHash, { from: alice });
-            (await timeSlotTest.isSettled(packedAddresses[0], position)).should.be.equal(true);
+            await timeSlotTest.settlePayment(bob, position, firstTxHash, { from: alice });
+            (await timeSlotTest.isSettled(bob, alice, position)).should.be.equal(true);
 
-            let slot = await timeSlotTest.get(packedAddresses[0], 2021, 10, 6);
+            let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
             slot.netPayment.should.be.equal('5000');
-            slot.flipped.should.be.equal(false);
+            slot.flipped.should.be.equal(true);
             slot.paymentProof.should.be.equal(firstTxHash);
             slot.verificationParty.should.be.equal(bob);
             slot.isSettled.should.be.equal(true);
         });
 
         it('Gas cost for isSettled validation', async () => {
-            let gasCost = await timeSlotTest.getGasCostOfIsSettled(packedAddresses[0], position);
+            let gasCost = await timeSlotTest.getGasCostOfIsSettled(alice, bob, position);
 
             console.log("Gas cost for isSettled validation is " + gasCost.toString() + " gas");
         });
 
         it('Try to remove payment from settled time slot, expect revert', async () => {
             await expectRevert(
-                timeSlotTest.removePayment(packedAddresses[0], position, 10000, 5000), "TIMESLOT SETTLED ALREADY"
+                timeSlotTest.removePayment(alice, bob, position, 10000, 5000), "TIMESLOT SETTLED ALREADY"
             );
         });
 
         it('Clear time slot state', async () => {
-            await timeSlotTest.clear(packedAddresses[0], position);
+            await timeSlotTest.clear(alice, bob, position);
 
-            let slot = await timeSlotTest.get(packedAddresses[0], 2021, 10, 6);
+            let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
             slot.totalPayment0.should.be.equal('0');
             slot.totalPayment1.should.be.equal('0');
             slot.netPayment.should.be.equal('0');

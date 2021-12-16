@@ -51,6 +51,34 @@ interface IProduct {
     // function getDealState(bytes32 dealId) external view returns (uint8);
     
     /**
+     * Returns the main currency of the deal.
+     * @param dealId Deal unique id in bytes32 word.
+     *
+     * @return Currency short identifier.
+     */
+    function getDealCurrency(bytes32 dealId) external view returns (bytes32);
+
+    /**
+     * Returns previously saved present value of the deal.
+     * @param dealId Deal unique id in bytes32 word.
+     *
+     * @return Present value previously saved during mark-to-market.
+     */
+    function getDealLastPV(
+        address party0, 
+        address party1, 
+        bytes32 dealId
+    ) external view returns (uint256, uint256);
+
+    /**
+     * Triggers to recalculate and return current present value of the deal.
+     * @param dealId Deal unique id in bytes32 word.
+     *
+     * @return Present value at the time of execution.
+     */
+    function getDealPV(bytes32 dealId) external view returns (uint256);
+
+    /**
      * Returns settlement status of the deal by `dealId`
      * @param dealId Deal unique id in bytes32 word.
      *

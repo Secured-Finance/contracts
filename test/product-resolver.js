@@ -3,7 +3,7 @@ const BytesConversion = artifacts.require('BytesConversion');
 const LendingMarketControllerMock = artifacts.require('LendingMarketControllerMock');
 
 const { should } = require('chai');
-const { toBytes32 } = require('../test-utils').strings;
+const { zeroAddress, loanPrefix, loanName } = require('../test-utils').strings;
 const { ethers } = require('hardhat');
 const utils = require('web3-utils');
 const { emitted, reverted, equal } = require('../test-utils').assert;
@@ -18,8 +18,6 @@ contract('ProductAddressResolver contract test', async (accounts) => {
     
     let loan;
     let lendingController;
-    let loanName = "0xLoan";
-    let loanPrefix = "0x21aaa47b";
 
     const generatePrefix = (val) => {
         let encodedPosition = ethers.utils.defaultAbiCoder.encode([ "string" ], [ val ]);
@@ -38,7 +36,6 @@ contract('ProductAddressResolver contract test', async (accounts) => {
     };
 
     before('deploy Product Address Resolver contract', async () => {
-        productResolver = await ProductAddressResolverTest.new();
         bytesConversion = await BytesConversion.new();
 
         signers = await ethers.getSigners();
@@ -46,6 +43,17 @@ contract('ProductAddressResolver contract test', async (accounts) => {
         const DealId = await ethers.getContractFactory('DealId')
         const dealIdLibrary = await DealId.deploy();
         await dealIdLibrary.deployed();
+
+        const productResolverFactory = await ethers.getContractFactory(
+            'ProductAddressResolverTest',
+            {
+                libraries: {
+                    DealId: dealIdLibrary.address
+                }
+              }
+            )
+        productResolver = await productResolverFactory.deploy();
+
 
         const loanFactory = await ethers.getContractFactory(
             'LoanV2',
@@ -68,8 +76,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
             let productPrefix = await bytesConversion.getBytes4(loanName);
             prefix.should.be.equal(productPrefix);
 
-            let tx = await productResolver.registerProduct(productPrefix, loan.address, lendingController.address, {from: owner});
-            await emitted(tx, 'RegisterProduct');
+            await productResolver.registerProduct(productPrefix, loan.address, lendingController.address, {from: owner});
 
             let id = generateId(12, productPrefix);
             let parsedId = id.slice(0,10);
@@ -89,22 +96,18 @@ contract('ProductAddressResolver contract test', async (accounts) => {
             prefix.should.be.equal(productPrefix);
 
             await reverted(
-                productResolver.registerProduct(productPrefix, loan.address, lendingController.address, {from: alice}), 
+                productResolver.connect(signers[1]).registerProduct(productPrefix, loan.address, lendingController.address, {from: alice}),
                 "INVALID_ACCESS"
             );
 
             let id = generateId(12412, productPrefix);
             let parsedId = id.slice(0,10);
 
-            await reverted(
-                productResolver.getProductContract(parsedId), 
-                "INVALID_ADDRESS"
-            );
+            let product = await productResolver.getProductContract(parsedId);
+            product.should.be.equal(zeroAddress);
 
-            await reverted(
-                productResolver.getControllerContract(parsedId), 
-                "INVALID_ADDRESS"
-            );
+            let controller = await productResolver.getControllerContract(parsedId);
+            controller.should.be.equal(zeroAddress);
         });
 
         it("Expect revert on adding non-contract addresses", async () => {
@@ -112,12 +115,12 @@ contract('ProductAddressResolver contract test', async (accounts) => {
             let prefix = generatePrefix(productName);
 
             await reverted(
-                productResolver.registerProduct(prefix, alice, lendingController.address, {from: owner}), 
+                productResolver.connect(signers[0]).registerProduct(prefix, alice, lendingController.address), 
                 "Can't add non-contract address"
             );
 
             await reverted(
-                productResolver.registerProduct(prefix, loan.address, bob, {from: owner}), 
+                productResolver.registerProduct(prefix, loan.address, bob), 
                 "Can't add non-contract address"
             );
         });
@@ -129,8 +132,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
             let productPrefix = await bytesConversion.getBytes4(productName);
             prefix.should.be.equal(productPrefix);
 
-            let tx = await productResolver.registerProduct(productPrefix, loan.address, lendingController.address, {from: owner});
-            await emitted(tx, 'RegisterProduct');
+            await productResolver.registerProduct(productPrefix, loan.address, lendingController.address);
 
             let id = generateId(6753, productPrefix);
             let parsedId = id.slice(0,10);
@@ -152,8 +154,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
             let productAddreesses = [loan.address, loan.address];
             let controllers = [lendingController.address, lendingController.address];
 
-            let tx = await productResolver.registerProducts(prefixes, productAddreesses, controllers, {from: owner});
-            await emitted(tx, 'RegisterProduct');
+            await productResolver.registerProducts(prefixes, productAddreesses, controllers, {from: owner});
         });
 
         it("Expect revert on adding products with different number of variables", async () => {
@@ -170,7 +171,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
             );
 
             await reverted(
-                productResolver.registerProducts(prefixes, [loan.address, loan.address], [lendingController.address, lendingController.address], {from: bob}),
+                productResolver.connect(signers[2]).registerProducts(prefixes, [loan.address, loan.address], [lendingController.address, lendingController.address]),
                 "INVALID_ACCESS"
             );
         });    

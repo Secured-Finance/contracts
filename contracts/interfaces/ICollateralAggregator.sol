@@ -82,7 +82,8 @@ interface ICollateralAggregator {
         address party1,
         bytes32 _ccy,
         uint256 _party0PV,
-        uint256 _party1PV
+        uint256 _party1PV,
+        bool _isSettled
     ) external view returns (bool, bool);
 
     function liquidateUnsettled(

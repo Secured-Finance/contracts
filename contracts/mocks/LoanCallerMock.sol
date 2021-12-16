@@ -18,7 +18,7 @@ contract LoanCallerMock is ProtocolTypes {
         address taker,
         uint8 side,
         bytes32 ccy,
-        uint8 term,
+        uint256 term,
         uint256 notional,
         uint256 rate
     ) public returns (bytes32 loanId) {

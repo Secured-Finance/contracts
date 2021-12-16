@@ -12,34 +12,47 @@ contract CloseOutTest {
     mapping(bytes32 => mapping (bytes32 => CloseOut.Payment)) _closeOuts;
     bytes32 ccy = "0xSampleCCY";
 
-    function get(bytes32 addrPack) external view returns (CloseOut.Payment memory payment) {
-        payment = CloseOut.get(_closeOuts, addrPack, ccy);
+    function get(
+        address party0,
+        address party1
+    ) external view returns (CloseOut.Payment memory payment) {
+        payment = CloseOut.get(_closeOuts, party0, party1, ccy);
     }
 
     function addPayments(
-        bytes32 addrPack,
+        address party0,
+        address party1,
         uint256 payment0,
         uint256 payment1
     ) external {
-        CloseOut.addPayments(_closeOuts, addrPack, ccy, payment0, payment1);
+        CloseOut.addPayments(_closeOuts, party0, party1, ccy, payment0, payment1);
     }
     
     function removePayments(
-        bytes32 addrPack,
+        address party0,
+        address party1,
         uint256 payment0,
         uint256 payment1
     ) external {
-        CloseOut.removePayments(_closeOuts, addrPack, ccy, payment0, payment1);
+        CloseOut.removePayments(_closeOuts, party0, party1, ccy, payment0, payment1);
     }
 
-    function close(bytes32 addrPack) external {
-        CloseOut.close(_closeOuts, addrPack, ccy);
-        require(_closeOuts[addrPack][ccy].closed == true, "PAYMENTS NOT SETTLED");
+    function close(
+        address party0,
+        address party1
+    ) external {
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        CloseOut.close(_closeOuts, party0, party1, ccy);
+        require(_closeOuts[packedAddrs][ccy].closed == true, "PAYMENTS NOT SETTLED");
     }
 
-    function clear(bytes32 addrPack) external {
-        CloseOut.clear(_closeOuts, addrPack, ccy);
-        require(_closeOuts[addrPack][ccy].netPayment == 0, "PAYMENTS NOT CLEARED");
+    function clear(
+        address party0,
+        address party1
+    ) external {
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        CloseOut.clear(_closeOuts, party0, party1, ccy);
+        require(_closeOuts[packedAddrs][ccy].netPayment == 0, "PAYMENTS NOT CLEARED");
     }
 
 }

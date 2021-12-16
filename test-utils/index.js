@@ -7,4 +7,5 @@ module.exports = {
   helper: require('./src/helper'),
   strings: require('./src/strings'),
   numbers: require('./src/numbers'),
+  terms: require('./src/terms'),
 };

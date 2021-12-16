@@ -1,15 +1,21 @@
-const LendingMarketController = artifacts.require('LendingMarketController');
 const LendingMarket = artifacts.require('LendingMarket');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const CloseOutNetting = artifacts.require('CloseOutNetting');
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const CurrencyController = artifacts.require('CurrencyController');
-const ProductAddressResolver = artifacts.require('ProductAddressResolver');
+const MarkToMarket = artifacts.require('MarkToMarket');
+const Liquidations = artifacts.require('Liquidations');
 
 const { emitted, reverted, equal } = require('../test-utils').assert;
-const {Ccy, Term} = require('../test-utils').constants;
-const {toBytes32} = require('../test-utils').strings;
+const { hexFILString, hexBTCString, hexETHString, loanPrefix, zeroAddress } = require('../test-utils').strings;
+const { 
+    sortedTermDays,
+    sortedTermsDfFracs, 
+    sortedTermsNumPayments, 
+    sortedTermsSchedules,
+} = require('../test-utils').terms;
+
 const { toBN } = require('../test-utils').numbers;
 const { should } = require('chai');
 const utils = require('web3-utils');
@@ -37,6 +43,8 @@ contract('CollateralAggregator', async (accounts) => {
     let lendingController;
     let lendingMarket;
     let btcLendingMarket;
+    let termStructure;
+    let currencyController;
 
     let filToETHRate = web3.utils.toBN("67175250000000000");
     let ethToUSDRate = web3.utils.toBN("232612637168");
@@ -46,15 +54,9 @@ contract('CollateralAggregator', async (accounts) => {
 
     let filToETHPriceFeed;
     let btcToETHPriceFeed;
-    let usdcToETHPriceFeed;
 
     let lendingMarkets = [];
     let btcLendingMarkets = [];
-    let usdcLendingMarkets = [];
-
-    let hexFILString = toBytes32("FIL");
-    let hexETHString = toBytes32("ETH");
-    let hexBTCString = toBytes32("BTC");
 
     let aliceOrdersSum = 0;
     let bobOrdersSum = 0;
@@ -82,6 +84,32 @@ contract('CollateralAggregator', async (accounts) => {
         const dealIdLibrary = await DealId.deploy();
         await dealIdLibrary.deployed();
 
+        const QuickSort = await ethers.getContractFactory('QuickSort')
+        const quickSortLibrary = await QuickSort.deploy();
+        await quickSortLibrary.deployed();
+
+        currencyController = await CurrencyController.new();
+        
+        const productResolverFactory = await ethers.getContractFactory(
+            'ProductAddressResolver',
+            {
+                libraries: {
+                    DealId: dealIdLibrary.address
+                }
+              }
+            )
+        productResolver = await productResolverFactory.deploy();
+
+        const termStructureFactory = await ethers.getContractFactory(
+            'TermStructure',
+            {
+                libraries: {
+                    QuickSort: quickSortLibrary.address
+                }
+              }
+            )
+        termStructure = await termStructureFactory.deploy(currencyController.address, productResolver.address);
+
         const loanFactory = await ethers.getContractFactory(
             'LoanV2',
             {
@@ -94,17 +122,7 @@ contract('CollateralAggregator', async (accounts) => {
         console.log("Loan contract address is " + loan.address);
         console.log();
 
-        productResolver = await ProductAddressResolver.new();
-
-        const markToMarketFactory = await ethers.getContractFactory(
-            'MarkToMarket',
-            {
-                libraries: {
-                    DealId: dealIdLibrary.address
-                }
-              }
-            )
-        markToMarket = await markToMarketFactory.deploy(productResolver.address);
+        markToMarket = await MarkToMarket.new(productResolver.address);
 
         collateral = await CollateralAggregator.new();
         console.log("Collateral Aggregator contract address is " + collateral.address);
@@ -113,7 +131,12 @@ contract('CollateralAggregator', async (accounts) => {
         paymentAggregator = await PaymentAggregator.new();
         closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
 
-        currencyController = await CurrencyController.new();
+        liquidations = await Liquidations.new(owner, 10);
+        await liquidations.setCollateralAggregator(collateral.address, {from: owner});
+        await liquidations.setProductAddressResolver(productResolver.address, {from: owner});
+        await liquidations.linkContract(loan.address, {from: owner});
+        await collateral.addCollateralUser(liquidations.address, {from: owner});
+
         filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, filToETHRate);
         ethToUSDPriceFeed = await MockV3Aggregator.new(8, hexETHString, ethToUSDRate);
         btcToETHPriceFeed = await MockV3Aggregator.new(18, hexBTCString, btcToETHRate);
@@ -140,63 +163,89 @@ contract('CollateralAggregator', async (accounts) => {
         await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
         let status = await paymentAggregator.isPaymentAggregatorUser(loan.address);
         status.should.be.equal(true);
+
         await paymentAggregator.setMarkToMarket(markToMarket.address);
 
-        await loan.setPaymentAggregator(paymentAggregator.address, {from: owner});    
+        await loan.setPaymentAggregator(paymentAggregator.address, {from: owner});
+        await loan.setLiquidations(liquidations.address, {from: owner});
 
-        lendingController = await LendingMarketController.new({from: owner});
-
+        const lendingControllerFactory = await ethers.getContractFactory(
+            'LendingMarketController',
+            {
+                libraries: {
+                    QuickSort: quickSortLibrary.address
+                }
+              }
+            )
+        lendingController = await lendingControllerFactory.deploy();
         console.log("LendingMarketController contract address is " + lendingController.address);
         console.log();
 
-        tx = await productResolver.registerProduct(prefix, loan.address, lendingController.address, {from: owner});
-        await emitted(tx, 'RegisterProduct');
+        await productResolver.registerProduct(loanPrefix, loan.address, lendingController.address, {from: owner});
 
-        let contract = await productResolver.getProductContract(prefix);
+        let contract = await productResolver.getProductContract(loanPrefix);
         contract.should.be.equal(loan.address);
 
-        contract = await productResolver.getControllerContract(prefix);
+        contract = await productResolver.getControllerContract(loanPrefix);
         contract.should.be.equal(lendingController.address);
 
-        tx = await lendingController.setCurrencyController(currencyController.address, {from: owner});
+        for (i = 0; i < sortedTermDays.length; i++) {
+            await termStructure.supportTerm(
+                sortedTermDays[i], 
+                sortedTermsDfFracs[i], 
+                sortedTermsNumPayments[i], 
+                sortedTermsSchedules[i], 
+                [loanPrefix], 
+                [hexFILString, hexBTCString, hexETHString]
+            );
+
+            let term = await termStructure.getTerm(sortedTermDays[i]);
+            term[0].toString().should.be.equal(sortedTermDays[i].toString());
+            term[1].toString().should.be.equal(sortedTermsDfFracs[i].toString());
+            term[2].toString().should.be.equal(sortedTermsNumPayments[i].toString());
+
+            let paymentSchedule = await termStructure.getTermSchedule(sortedTermDays[i]);
+            paymentSchedule.map((days, j) => {
+                days.toString().should.be.equal(sortedTermsSchedules[i][j])
+            });
+        }
+
+        await lendingController.setCurrencyController(currencyController.address, {from: owner});
+        await lendingController.setTermStructure(termStructure.address);
         await loan.setLendingControllerAddr(lendingController.address, {from: owner});    
+        await loan.setTermStructure(termStructure.address);
         await collateral.addCollateralUser(loan.address, {from: owner});
     });
 
     describe('Prepare markets and users for lending deals', async () => {
         it('Deploy Lending Markets with each Term for FIL market', async () => {
-            for (i=0; i < 6; i++) {
-                let market = await lendingController.deployLendingMarket(hexFILString, i, {from: owner});
-                await emitted(market, "LendingMarketCreated");
-
-                console.log("Lending market created with " + i + "term on address: " + market.logs[0].args.marketAddr);
-                console.log();
-        
-                lendingMarkets.push(market.logs[0].args.marketAddr);
-
-                let lendingMarket = await LendingMarket.at(market.logs[0].args.marketAddr);
+            for (i = 0; i < sortedTermDays.length; i++) {
+                const tx = await lendingController.deployLendingMarket(hexFILString, sortedTermDays[i]);
+                const receipt = await tx.wait();
+                lendingMarkets.push(receipt.events[0].args.marketAddr);
+                
+                let lendingMarket = await LendingMarket.at(receipt.events[0].args.marketAddr);
                 await lendingMarket.setCollateral(collateral.address, {from: owner});
                 await lendingMarket.setLoan(loan.address, {from: owner});
-
                 await collateral.addCollateralUser(lendingMarket.address, {from: owner});
-                await loan.addLendingMarket(hexFILString, i, lendingMarket.address, {from: owner});
+                await loan.addLendingMarket(hexFILString, sortedTermDays[i], lendingMarket.address);
             }
 
             lendingMarket = await LendingMarket.at(lendingMarkets[2]);
         });
 
         it('Deploy Lending Markets with each Term for BTC market', async () => {
-            for (i=0; i < 6; i++) {
-                let market = await lendingController.deployLendingMarket(hexBTCString, i, {from: owner});
-                await emitted(market, "LendingMarketCreated");
-                btcLendingMarkets.push(market.logs[0].args.marketAddr);
+            for (i = 0; i < sortedTermDays.length; i++) {
+                const tx = await lendingController.deployLendingMarket(hexBTCString, sortedTermDays[i]);
+                const receipt = await tx.wait();
+                btcLendingMarkets.push(receipt.events[0].args.marketAddr);
 
-                let btcLendingMarket = await LendingMarket.at(market.logs[0].args.marketAddr);
+                let btcLendingMarket = await LendingMarket.at(receipt.events[0].args.marketAddr);
                 await btcLendingMarket.setCollateral(collateral.address, {from: owner});
                 await btcLendingMarket.setLoan(loan.address, {from: owner});
 
                 await collateral.addCollateralUser(btcLendingMarket.address, {from: owner});
-                await loan.addLendingMarket(hexBTCString, i, btcLendingMarket.address, {from: owner});
+                await loan.addLendingMarket(hexBTCString, sortedTermDays[i], btcLendingMarket.address, {from: owner});
             }
 
             btcLendingMarket = await LendingMarket.at(btcLendingMarkets[5]);
@@ -205,12 +254,12 @@ contract('CollateralAggregator', async (accounts) => {
         it('Check if collateral users linked correctly', async() => {
             let result;
 
-            for (i=0; i < 6; i++) {
+            for (i=0; i < sortedTermDays.length; i++) {
                 let result = await collateral.isCollateralUser(lendingMarkets[i]);
                 result.should.be.equal(true);
             }
 
-            for (i=0; i < 6; i++) {
+            for (i=0; i < sortedTermDays.length; i++) {
                 let result = await collateral.isCollateralUser(btcLendingMarkets[i]);
                 result.should.be.equal(true);
             }
@@ -880,6 +929,40 @@ contract('CollateralAggregator', async (accounts) => {
             // let rebalance = await collateral.getRebalanceCollateralAmounts(alice, bob);
             // rebalance[1].toString().should.be.equal('0');
             // rebalance[0].toString().should.be.equal('0');
+        });
+
+        describe("Test Liquidations for registered loans", async () => {
+            it('Increase FIL exchange rate by 25%, check collateral coverage', async () => {
+                const newPrice = (filToETHRate.mul(web3.utils.toBN("125"))).div(web3.utils.toBN("100"));
+                await filToETHPriceFeed.updateAnswer(newPrice);
+
+                let coverage = await collateral.getCoverage(alice, bob);
+                console.log("");
+                console.log("Collateral coverage for Alice (borrower) of 1 BTC and lender of 30 FIL is " + coverage[0].toString());
+                console.log("Collateral coverage for Bob (lender) of 1 BTC and borrower of 30 FIL is " + coverage[1].toString());
+            });
+
+            it ('Try to liquidate deals', async () => {
+                await liquidations.liquidateDeals(alice, bob);
+
+                let loanId = generateId(1); // first loan in loan contract
+                let deal = await loan.getLoanDeal(loanId);
+                deal.lender.should.be.equal(zeroAddress);
+                deal.borrower.should.be.equal(zeroAddress);
+
+                loanId = generateId(2); // first loan in loan contract
+                deal = await loan.getLoanDeal(loanId);
+                deal.lender.should.be.equal(zeroAddress);
+                deal.borrower.should.be.equal(zeroAddress);
+
+                let bilateralPosition = await collateral.getBilateralPosition(alice, bob);
+                console.log(bilateralPosition);
+
+                let coverage = await collateral.getCoverage(alice, bob);
+                console.log("");
+                console.log("Collateral coverage for Alice (borrower) after liquidating all deals is " + coverage[0].toString());
+                console.log("Collateral coverage for Bob (lender) after liquidating all deals is " + coverage[1].toString());
+            });
         });
 
     });

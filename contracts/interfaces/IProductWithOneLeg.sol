@@ -20,7 +20,7 @@ interface IProductWithOneLeg is IProduct {
         address indexed lender, 
         address indexed borrower, 
         bytes32 ccy, 
-        uint8 term,
+        uint256 term,
         uint256 notional,
         uint256 rate,
         bytes32 indexed dealId
@@ -43,7 +43,7 @@ interface IProductWithOneLeg is IProduct {
      * @param rate Annual interest rate
      * @return dealId bytes32 string.
      */
-    function register(address maker, address taker, uint8 side, bytes32 ccy, uint8 term, uint256 notional, uint256 rate) external returns (bytes32 dealId);
+    function register(address maker, address taker, uint8 side, bytes32 ccy, uint256 term, uint256 notional, uint256 rate) external returns (bytes32 dealId);
     
     /**
      * Triggered to transfer lending obligations from msg.sender ot newOwner

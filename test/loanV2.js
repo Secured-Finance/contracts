@@ -6,14 +6,30 @@ const CollateralAggregatorCallerMock = artifacts.require('CollateralAggregatorCa
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 const CurrencyController = artifacts.require('CurrencyController');
-const ProductAddressResolver = artifacts.require('ProductAddressResolver');
+const MarkToMarket = artifacts.require('MarkToMarket');
 const BokkyPooBahsDateTimeContract = artifacts.require('BokkyPooBahsDateTimeContract');
 const TimeSlotTest = artifacts.require('TimeSlotTest');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { emitted, reverted} = require('../test-utils').assert;
 const { should } = require('chai');
-const { toBytes32 } = require('../test-utils').strings;
+
+const { 
+    toBytes32, 
+    loanName, 
+    loanPrefix,
+    hexFILString,
+    hexBTCString,
+    hexETHString,
+} = require('../test-utils').strings;
+
+const { 
+    sortedTermDays,
+    sortedTermsDfFracs, 
+    sortedTermsNumPayments, 
+    sortedTermsSchedules 
+} = require('../test-utils').terms;
+
 const { toEther, toBN } = require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } = require('../test-utils').time;
 const utils = require('web3-utils');
@@ -31,16 +47,9 @@ contract('LoanV2', async (accounts) => {
 
     let signers;
 
-    let hexFILString = toBytes32("FIL");
-    let hexETHString = toBytes32("ETH");
-    let hexBTCString = toBytes32("BTC");
-
     let filToETHRate = web3.utils.toBN("67175250000000000");
     let ethToUSDRate = web3.utils.toBN("232612637168");
     let btcToETHRate = web3.utils.toBN("23889912590000000000");
-
-    let loanName = "0xLoan";
-    let loanPrefix = "0x21aaa47b";
 
     let _1yearTimeSlot;
     let _2yearTimeSlot;
@@ -78,7 +87,20 @@ contract('LoanV2', async (accounts) => {
         const DealId = await ethers.getContractFactory('DealId')
         const dealIdLibrary = await DealId.deploy();
         await dealIdLibrary.deployed();
-        productResolver = await ProductAddressResolver.new();
+
+        const QuickSort = await ethers.getContractFactory('QuickSort')
+        const quickSortLibrary = await QuickSort.deploy();
+        await quickSortLibrary.deployed();
+
+        const productResolverFactory = await ethers.getContractFactory(
+            'ProductAddressResolver',
+            {
+                libraries: {
+                    DealId: dealIdLibrary.address
+                }
+              }
+            )
+        productResolver = await productResolverFactory.deploy();
 
         const loanFactory = await ethers.getContractFactory(
             'LoanV2',
@@ -90,15 +112,7 @@ contract('LoanV2', async (accounts) => {
             )
         loan = await loanFactory.deploy();
 
-        const markToMarketFactory = await ethers.getContractFactory(
-            'MarkToMarket',
-            {
-                libraries: {
-                    DealId: dealIdLibrary.address
-                }
-              }
-            )
-        markToMarket = await markToMarketFactory.deploy(productResolver.address);
+        markToMarket = await MarkToMarket.new(productResolver.address);
 
         loanCaller = await LoanCallerMock.new(loan.address);
         paymentAggregator = await PaymentAggregator.new();
@@ -107,8 +121,8 @@ contract('LoanV2', async (accounts) => {
         collateralCaller = await CollateralAggregatorCallerMock.new(collateral.address);
         lendingController = await LendingMarketControllerMock.new();
 
-        await loan.addLendingMarket(hexFILString, 5, loanCaller.address);
-        await loan.addLendingMarket(hexFILString, 0, loanCaller.address);
+        await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
+        await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
         await loan.setPaymentAggregator(paymentAggregator.address);
         await loan.setCollateralAddr(collateral.address);
         await loan.setLendingControllerAddr(lendingController.address);
@@ -142,8 +156,29 @@ contract('LoanV2', async (accounts) => {
         await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
         await paymentAggregator.setMarkToMarket(markToMarket.address);
 
-        tx = await productResolver.registerProduct(loanPrefix, loan.address, lendingController.address, {from: owner});
-        await emitted(tx, 'RegisterProduct');
+        await productResolver.connect(signers[0]).registerProduct(loanPrefix, loan.address, lendingController.address);
+
+        const termStructureFactory = await ethers.getContractFactory(
+            'TermStructure',
+            {
+                libraries: {
+                    QuickSort: quickSortLibrary.address
+                }
+              }
+            )
+        termStructure = await termStructureFactory.deploy(currencyController.address, productResolver.address);
+        await loan.setTermStructure(termStructure.address);
+
+        for (i = 0; i < sortedTermDays.length; i++) {
+            await termStructure.supportTerm(
+                sortedTermDays[i], 
+                sortedTermsDfFracs[i], 
+                sortedTermsNumPayments[i], 
+                sortedTermsSchedules[i], 
+                [loanPrefix], 
+                [hexBTCString, hexFILString, hexETHString]
+            );
+        }
 
         addressPacking = await AddressPackingTest.new();
 
@@ -209,7 +244,7 @@ contract('LoanV2', async (accounts) => {
 
             await collateralCaller.useUnsettledCollateral(alice, hexFILString, filUsed);
 
-            await loanCaller.register(alice, bob, 0, hexFILString, 5, filAmount, rate);
+            await loanCaller.register(alice, bob, 0, hexFILString, '1825', filAmount, rate);
             start = await timeLibrary._now();
             maturity = await timeLibrary.addDays(start, 1825);
 
@@ -224,7 +259,7 @@ contract('LoanV2', async (accounts) => {
             deal.lender.should.be.equal(alice);
             deal.borrower.should.be.equal(bob);
             deal.ccy.should.be.equal(hexFILString);
-            deal.term.should.be.equal(5);
+            deal.term.toString().should.be.equal('1825');
             deal.notional.toString().should.be.equal(filAmount.toString());
             deal.rate.toString().should.be.equal(rate);
             deal.start.toString().should.be.equal(start.toString());
@@ -256,6 +291,7 @@ contract('LoanV2', async (accounts) => {
 
             let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, hexFILString);
             closeOut.netPayment.toString().should.be.equal(closeOutPayment.toString());
+            closeOut.flipped.should.be.equal(true);
         });
 
         it('Check locked collateral amounts', async () => {
@@ -299,6 +335,7 @@ contract('LoanV2', async (accounts) => {
             
             let closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, hexFILString);
             closeOut.netPayment.toString().should.be.equal(closeOutPayment.toString());
+            closeOut.flipped.should.be.equal(true);
 
             await paymentAggregator.settlePayment(bob, alice, hexFILString, slotTime, testTxHash, { from: bob });
     
@@ -310,6 +347,7 @@ contract('LoanV2', async (accounts) => {
 
             closeOut = await closeOutNetting.getCloseOutPayment(alice, bob, hexFILString);
             closeOut.netPayment.toString().should.be.equal((closeOutPayment.add(filAmount)).toString());
+            closeOut.flipped.should.be.equal(true);
 
             let payment = await loan.getLastSettledPayment(dealId);
             payment.toString().should.be.equal('0');
@@ -429,7 +467,7 @@ contract('LoanV2', async (accounts) => {
         it('Register new loan deal between Bob and Alice', async () => {
             await collateralCaller.useUnsettledCollateral(bob, hexFILString, filUsed);
 
-            await loanCaller.register(bob, alice, 0, hexFILString, 0, filAmount, rate);
+            await loanCaller.register(bob, alice, 0, hexFILString, '90', filAmount, rate);
             start = await timeLibrary._now();
             maturity = await timeLibrary.addDays(start, 90);
             slotDate = await timeLibrary.timestampToDate(maturity);
@@ -439,7 +477,7 @@ contract('LoanV2', async (accounts) => {
             deal.lender.should.be.equal(bob);
             deal.borrower.should.be.equal(alice);
             deal.ccy.should.be.equal(hexFILString);
-            deal.term.should.be.equal(0);
+            deal.term.toString().should.be.equal('90');
             deal.notional.toString().should.be.equal(filAmount.toString());
             deal.rate.toString().should.be.equal(rate.toString());
             deal.start.toString().should.be.equal(start.toString());

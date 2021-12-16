@@ -3,6 +3,7 @@ pragma solidity ^0.6.12;
 
 import "./BokkyPooBahsDateTimeLibrary.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./AddressPacking.sol";
 
 library TimeSlot {
     using BokkyPooBahsDateTimeLibrary for uint256;
@@ -35,7 +36,8 @@ library TimeSlot {
 
     /**
     * @dev Returns the time slot information from the mapping and preconfigured time
-    * @param addr Packed addresses for counterparties
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
     * @param ccy Main currency for the time slot
     * @param year Year in which to find a timeslot
     * @param month Month in which to find a timeslot
@@ -43,30 +45,40 @@ library TimeSlot {
     */
     function get(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address party0,
+        address party1,
         bytes32 ccy,
         uint256 year,
         uint256 month,
         uint256 day
     ) internal view returns (TimeSlot.Slot memory) {
-        return getBySlotId(self, addr, ccy, keccak256(abi.encodePacked(year, month, day)));
+        return getBySlotId(self, party0, party1, ccy, keccak256(abi.encodePacked(year, month, day)));
     }
 
     /**
     * @dev Returns the time slot information from the mapping
-    * @param addr Packed addresses for counterparties
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
     * @param ccy Main currency for the time slot
     * @param slotId Time slot identifier
     */
     function getBySlotId(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address party0,
+        address party1,
         bytes32 ccy,
         bytes32 slotId
     ) internal view returns (TimeSlot.Slot memory) {
+        (bytes32 addr, bool flipped) = AddressPacking.pack(party0, party1);
         TimeSlot.Slot memory timeSlot = self[addr][ccy][slotId];
+        if (flipped) {
+            uint256 oldPayment0 = timeSlot.totalPayment0;
+            uint256 oldPayment1 = timeSlot.totalPayment1;
+            timeSlot.totalPayment0 = oldPayment1;
+            timeSlot.totalPayment1 = oldPayment0;
+        }
 
-        if (timeSlot.totalPayment1 > timeSlot.totalPayment0) { // if Alice is party1, Bob is party0
+        if (timeSlot.totalPayment1 > timeSlot.totalPayment0) {
             timeSlot.netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);
             timeSlot.flipped = true;
         } else {
@@ -80,7 +92,8 @@ library TimeSlot {
     /** 
     * @dev Adds payment into the time slot with provided information
     * @param self The mapping with all time slots
-    * @param addr Packed addresses for counterparties
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
     * @param ccy Main currency for the time slot
     * @param slot Time slot identifier to be updated
     * @param payment0 Payment obligated to the first counterparty
@@ -88,23 +101,26 @@ library TimeSlot {
     */
     function addPayment(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address party0,
+        address party1,
         bytes32 ccy,
         bytes32 slot,
         uint256 payment0,
         uint256 payment1
     ) internal {
-        TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
+        TimeSlot.Slot storage timeSlot = self[packedAddrs][ccy][slot];
         require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
 
-        timeSlot.totalPayment0 = timeSlot.totalPayment0.add(payment0);
-        timeSlot.totalPayment1 = timeSlot.totalPayment1.add(payment1);
+        timeSlot.totalPayment0 = flipped ? timeSlot.totalPayment0.add(payment1) : timeSlot.totalPayment0.add(payment0);
+        timeSlot.totalPayment1 = flipped ? timeSlot.totalPayment1.add(payment0) : timeSlot.totalPayment1.add(payment1);
     }
 
     /** 
     * @dev Removes payment from the time slot with provided information
     * @param self The mapping with all time slots
-    * @param addr Packed addresses for counterparties
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
     * @param ccy Main currency for the time slot
     * @param slot Time slot identifier to be updated
     * @param payment0 Payment amount to remove for the first counterparty
@@ -112,23 +128,26 @@ library TimeSlot {
     */
     function removePayment(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address party0,
+        address party1,
         bytes32 ccy,
         bytes32 slot,
         uint256 payment0,
         uint256 payment1
     ) internal {
-        TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
+        TimeSlot.Slot storage timeSlot = self[packedAddrs][ccy][slot];
         if (timeSlot.isSettled) return;
 
-        timeSlot.totalPayment0 = timeSlot.totalPayment0.sub(payment0);
-        timeSlot.totalPayment1 = timeSlot.totalPayment1.sub(payment1);
+        timeSlot.totalPayment0 = flipped ? timeSlot.totalPayment0.sub(payment1) : timeSlot.totalPayment0.sub(payment0);
+        timeSlot.totalPayment1 = flipped ? timeSlot.totalPayment1.sub(payment0) : timeSlot.totalPayment1.sub(payment1);
     }
 
     /** 
     * @dev Verifies the net payment for time slot
     * @param self The mapping with all time slots
-    * @param addr Packed addresses for counterparties
+    * @param verifier Payment verifier address
+    * @param counterparty Verifier's counterparty address
     * @param ccy Main currency for the time slot
     * @param slot Time slot identifier to be verified
     * @param payment Net payment amount
@@ -136,24 +155,28 @@ library TimeSlot {
     */
     function verifyPayment(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address verifier,
+        address counterparty,
         bytes32 ccy,
         bytes32 slot,
         uint256 payment,
-        bytes32 txHash,
-        address verifier
+        bytes32 txHash
     ) internal {
+        (bytes32 addr, bool flipped) = AddressPacking.pack(verifier, counterparty);
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
-        // TODO: Add counterparty checks based on flipped status of the time slot
         require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
         uint256 netPayment;
 
-        if (timeSlot.totalPayment0 > timeSlot.totalPayment1) {
-            netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
-        } else {
+        if (flipped) {
+            require(timeSlot.totalPayment1 > timeSlot.totalPayment0, "Incorrect verification party");
             netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);
+        } else {
+            require(timeSlot.totalPayment0 > timeSlot.totalPayment1, "Incorrect verification party");
+            netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
         }
+
         require (netPayment == payment, "Incorrect settlement amount");
+
         timeSlot.paymentProof = txHash;
         timeSlot.verificationParty = verifier;
     }
@@ -161,19 +184,21 @@ library TimeSlot {
     /** 
     * @dev Settles the net payment for time slot
     * @param self The mapping with all time slots
-    * @param addr Packed addresses for counterparties
+    * @param verifier Settlement verifier address
+    * @param counterparty Verifier's counterparty address
     * @param ccy Main currency for the time slot
     * @param slot Time slot identifier to be settled
     * @param txHash Transaction hash to signal successfull settlement of payment
     */
     function settlePayment(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address verifier,
+        address counterparty,
         bytes32 ccy,
         bytes32 slot,
-        bytes32 txHash,
-        address verifier
+        bytes32 txHash
     ) internal {
+        (bytes32 addr, ) = AddressPacking.pack(verifier, counterparty);
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
         require (!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
         require (timeSlot.paymentProof == txHash, "INCORRECT_TX_HASH");
@@ -184,34 +209,40 @@ library TimeSlot {
     /** 
     * @dev Clears the time slot, triggered only when the timeslot has empty payments for both parties and 0 net payment
     * @param self The mapping with all time slots
-    * @param addr Packed addresses for counterparties
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
     * @param ccy Main currency for the time slot
     * @param slot TimeSlot identifier to be cleared
     */
     function clear(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address party0,
+        address party1,
         bytes32 ccy,
         bytes32 slot
     ) internal {
-        delete self[addr][ccy][slot];
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        delete self[packedAddrs][ccy][slot];
     }
 
     /** 
     * @dev Verifies if TimeSlot was settled
     * @param self The mapping with all time slots
-    * @param addr Packed addresses for counterparties
+    * @param party0 First counterparty address
+    * @param party1 Second counterparty address
     * @param ccy Main currency for the time slot
     * @param slot TimeSlot identifier to be cleared
     * @return Boolean of settlement status
     */
     function isSettled(
         mapping(bytes32 => mapping(bytes32 => mapping (bytes32 => TimeSlot.Slot))) storage self,
-        bytes32 addr,
+        address party0,
+        address party1,
         bytes32 ccy,
         bytes32 slot
     ) internal view returns (bool) {
-        return self[addr][ccy][slot].isSettled;
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        return self[packedAddrs][ccy][slot].isSettled;
     }
 
 }

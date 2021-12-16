@@ -1,54 +1,110 @@
-const Collateral = artifacts.require('Collateral');
+const CollateralAggregator = artifacts.require('CollateralAggregator');
 const LendingMarket = artifacts.require('LendingMarket');
-const LendingMarketController = artifacts.require('LendingMarketController');
-const Loan = artifacts.require('Loan');
-const FXRatesAggregator = artifacts.require('FXRatesAggregator');
+const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
 should();
 
-const {Ccy, Term, sample} = require('../test-utils').constants;
+const { hexFILString, loanPrefix } = require('../test-utils').strings;
+const { termDays, termsDfFracs, termsNumPayments, termsSchedules, sortedTermDays } = require('../test-utils').terms;
 const { emitted, reverted } = require('../test-utils').assert;
 const { orders } = require("./orders");
 
 const expectRevert = reverted;
-const effectiveSec = 60 * 60 * 24 * 14; // 14 days
-
-/* Helper */
-const val = (obj) => {
-    if (obj.addrFIL) obj.addrFIL = web3.utils.asciiToHex(obj.addrFIL);
-    return Object.values(obj);
-};  
 
 contract('LendingMarketController', async (accounts) => {
     const [owner, alice, bob, carol] = accounts;
     const users = [alice, bob, carol]; // without owner
     const filRate = web3.utils.toBN("67175250000000000");
-    const filAddr = web3.utils.utf8ToHex("f01523555");
-    const btcAddr = web3.utils.utf8ToHex("3LvFB9E2rqjnvHmjUbQqpcc4gingrN45Y4");
+    let filToETHPriceFeed;
 
+    let currencyController;
     let collateral;
-    let loan;  
+    let signers;
+    let loan;
     let lendingController;
     let lendingMarkets = [];
     let orderList;
+    let productResolver;
+    let termStructure;
 
     before('deploy LendingMarketController', async () => {
-        loan = await Loan.new();
+        signers = await ethers.getSigners();
+        const DealId = await ethers.getContractFactory('DealId')
+        const dealIdLibrary = await DealId.deploy();
+        await dealIdLibrary.deployed();
 
-        collateral = await Collateral.new(loan.address);
+        const QuickSort = await ethers.getContractFactory('QuickSort')
+        const quickSortLibrary = await QuickSort.deploy();
+        await quickSortLibrary.deployed();
+
+        const productResolverFactory = await ethers.getContractFactory(
+            'ProductAddressResolver',
+            {
+                libraries: {
+                    DealId: dealIdLibrary.address
+                }
+              }
+            )
+        productResolver = await productResolverFactory.deploy();
+
+        currencyController = await CurrencyController.new();
+        filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, filRate);
+        let tx = await currencyController.supportCurrency(hexFILString, "Filecoin", 461, filToETHPriceFeed.address, 7500);
+        await emitted(tx, 'CcyAdded');
+
+        const termStructureFactory = await ethers.getContractFactory(
+            'TermStructure',
+            {
+                libraries: {
+                    QuickSort: quickSortLibrary.address
+                }
+              }
+            )
+        termStructure = await termStructureFactory.deploy(currencyController.address, productResolver.address);
+
+        const loanFactory = await ethers.getContractFactory(
+            'LoanV2',
+            {
+                libraries: {
+                    DealId: dealIdLibrary.address
+                }
+              }
+            )
+        loan = await loanFactory.deploy();
+        collateral = await CollateralAggregator.new();
+
         await loan.setCollateralAddr(collateral.address, {from: owner});
-        
-        ratesAggregator = await FXRatesAggregator.new();
-        filToETHPriceFeed = await MockV3Aggregator.new(18, Ccy.FIL, filRate);
-        setPriceFeedTx = await ratesAggregator.linkPriceFeed(Ccy.FIL, filToETHPriceFeed.address, true);
-        await emitted(setPriceFeedTx, 'PriceFeedAdded');
-
-        await collateral.setRatesAggregatorAddr(ratesAggregator.address, {from: owner});
+        await collateral.setCurrencyControler(currencyController.address, {from: owner});
     
         orderList = orders;
-        lendingController = await LendingMarketController.new();
+
+        const lendingControllerFactory = await ethers.getContractFactory(
+            'LendingMarketController',
+            {
+                libraries: {
+                    QuickSort: quickSortLibrary.address
+                }
+              }
+            )
+        lendingController = await lendingControllerFactory.deploy();
+        await lendingController.setCurrencyController(currencyController.address);
+        await lendingController.setTermStructure(termStructure.address);
+        await loan.setLendingControllerAddr(lendingController.address);
+
+        await productResolver.registerProduct(loanPrefix, loan.address, lendingController.address);
+
+        for (i = 0; i < termDays.length; i++) {
+            await termStructure.supportTerm(
+                termDays[i], 
+                termsDfFracs[i], 
+                termsNumPayments[i], 
+                termsSchedules[i], 
+                [loanPrefix], 
+                [hexFILString]
+            );
+        }
 
         console.log();
         console.log('lending market controller addr is', lendingController.address);
@@ -57,102 +113,34 @@ contract('LendingMarketController', async (accounts) => {
 
     describe('Init Collateral with 100,000 Wei for Bob', async () => {
         it('Register collateral book with 100,000 Wei payment', async () => {
-            let result = await collateral.register("Bob", "f01523555", "3LvFB9E2rqjnvHmjUbQqpcc4gingrN45Y4", {from: bob, value: 100000});
+            let result = await collateral.register({from: bob, value: 100000});
             await emitted(result, 'Register');
         });
+    });
 
-        it('Get Bob collateral book and check values', async () => {
-            const book = await collateral.getOneBook(bob);
-            
-            book[0].should.be.equal('Bob');
-            book[1].should.be.equal(filAddr);
-            book[2].should.be.equal(btcAddr);
-            book[3].should.be.equal('100000');
-            book[4].should.be.equal('0');
-            book[5].should.be.equal('0');
-            book[6].should.be.equal('0');
-            book[7].should.be.equal('0');
-            book[8].should.be.equal(true);
-            book[9].should.be.equal('1');
-        });
-      });
-  
     describe('deploy Lending Markets for each term of FIL market', async () => {
-        it('deploy Lending Market for 3 month FIL market', async () => {
-            _3mMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._3m);
-            await emitted(_3mMarket, "LendingMarketCreated");
-            lendingMarkets.push(_3mMarket.logs[0].args.marketAddr);
-
-            let lendingMarket = await LendingMarket.at(_3mMarket.logs[0].args.marketAddr);
-            await lendingMarket.setCollateral(collateral.address, {from: owner});
-            await lendingMarket.setLoan(loan.address, {from: owner});
-            await collateral.addLendingMarket(Ccy.FIL, Term._3m, lendingMarket.address, {from: owner});
-            await loan.addLendingMarket(Ccy.FIL, Term._3m, lendingMarket.address, {from: owner});        
-        });
-
-        it('deploy Lending Market for 6 month FIL market', async () => {
-            _6mMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._6m);
-            await emitted(_6mMarket, "LendingMarketCreated");
-            lendingMarkets.push(_6mMarket.logs[0].args.marketAddr);
-
-            let lendingMarket = await LendingMarket.at(_6mMarket.logs[0].args.marketAddr);
-            await lendingMarket.setCollateral(collateral.address, {from: owner});
-            await lendingMarket.setLoan(loan.address, {from: owner});
-            await collateral.addLendingMarket(Ccy.FIL, Term._6m, lendingMarket.address, {from: owner});
-            await loan.addLendingMarket(Ccy.FIL, Term._6m, lendingMarket.address, {from: owner});        
-        });
-
-        it('deploy Lending Market for 1 year FIL market', async () => {
-            _1yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._1y);
-            await emitted(_1yMarket, "LendingMarketCreated");
-            lendingMarkets.push(_1yMarket.logs[0].args.marketAddr);
-
-            let lendingMarket = await LendingMarket.at(_1yMarket.logs[0].args.marketAddr);
-            await lendingMarket.setCollateral(collateral.address, {from: owner});
-            await lendingMarket.setLoan(loan.address, {from: owner});
-            await collateral.addLendingMarket(Ccy.FIL, Term._1y, lendingMarket.address, {from: owner});
-            await loan.addLendingMarket(Ccy.FIL, Term._1y, lendingMarket.address, {from: owner});        
-        });
-
-        it('deploy Lending Market for 2 year FIL market', async () => {
-            _2yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._2y);
-            await emitted(_2yMarket, "LendingMarketCreated");
-            lendingMarkets.push(_2yMarket.logs[0].args.marketAddr);
-
-            let lendingMarket = await LendingMarket.at(_2yMarket.logs[0].args.marketAddr);
-            await lendingMarket.setCollateral(collateral.address, {from: owner});
-            await lendingMarket.setLoan(loan.address, {from: owner});
-            await collateral.addLendingMarket(Ccy.FIL, Term._2y, lendingMarket.address, {from: owner});
-            await loan.addLendingMarket(Ccy.FIL, Term._2y, lendingMarket.address, {from: owner});        
-        });
-
-        it('deploy Lending Market for 3 year FIL market', async () => {
-            _3yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._3y);
-            await emitted(_3yMarket, "LendingMarketCreated");
-            lendingMarkets.push(_3yMarket.logs[0].args.marketAddr);
-
-            let lendingMarket = await LendingMarket.at(_3yMarket.logs[0].args.marketAddr);
-            await lendingMarket.setCollateral(collateral.address, {from: owner});
-            await lendingMarket.setLoan(loan.address, {from: owner});
-            await collateral.addLendingMarket(Ccy.FIL, Term._3y, lendingMarket.address, {from: owner});
-            await loan.addLendingMarket(Ccy.FIL, Term._3y, lendingMarket.address, {from: owner});        
-        });
-
-        it('deploy Lending Market for 5 year FIL market', async () => {
-            _5yMarket = await lendingController.deployLendingMarket(Ccy.FIL, Term._5y);
-            await emitted(_5yMarket, "LendingMarketCreated");
-            lendingMarkets.push(_5yMarket.logs[0].args.marketAddr);
-
-            let lendingMarket = await LendingMarket.at(_5yMarket.logs[0].args.marketAddr);
-            await lendingMarket.setCollateral(collateral.address, {from: owner});
-            await lendingMarket.setLoan(loan.address, {from: owner});
-            await collateral.addLendingMarket(Ccy.FIL, Term._5y, lendingMarket.address, {from: owner});
-            await loan.addLendingMarket(Ccy.FIL, Term._5y, lendingMarket.address, {from: owner});        
+        it('deploy Lending Markets for each term for FIL market', async () => {
+            for (let i=0; i<termDays.length; i++) {
+                const tx = await lendingController.deployLendingMarket(hexFILString, termDays[i]);
+                const receipt = await tx.wait();
+                lendingMarkets.push(receipt.events[0].args.marketAddr);
+                
+                let lendingMarket = await LendingMarket.at(receipt.events[0].args.marketAddr);
+                await lendingMarket.setCollateral(collateral.address, {from: owner});
+                await lendingMarket.setLoan(loan.address, {from: owner});
+                await collateral.addCollateralUser(lendingMarket.address, {from: owner});
+                await loan.addLendingMarket(hexFILString, termDays[i], lendingMarket.address);
+            }
+        
+            let terms = await lendingController.getSupportedTerms(hexFILString);
+            terms.map((term, i) => {
+                term.toString().should.be.equal(sortedTermDays[i].toString());
+            })
         });
 
         it('Expect revert on adding new 3m FIL market', async () => {
             await expectRevert(
-                lendingController.deployLendingMarket(Ccy.FIL, Term._3m),
+                lendingController.deployLendingMarket(hexFILString, termDays[0]),
                 "Couldn't rewrite existing market",
             );
         });
@@ -164,7 +152,7 @@ contract('LendingMarketController', async (accounts) => {
                 orderId = orderList[i]["orderId"];
                 rate = orderList[i]["rate"];
       
-                let marketOrder = await lendingMarket.order(0, amount, rate, effectiveSec, {from: bob});
+                let marketOrder = await lendingMarket.order(0, amount, rate, {from: bob});
                 await emitted(marketOrder, 'MakeOrder');      
             }
         });
@@ -176,7 +164,7 @@ contract('LendingMarketController', async (accounts) => {
                 orderId = orderList[i]["orderId"];
                 rate = orderList[i]["rate"];
       
-                let marketOrder = await lendingMarket.order(1, amount, rate+25, effectiveSec, {from: bob});
+                let marketOrder = await lendingMarket.order(1, amount, rate+25, {from: bob});
                 await emitted(marketOrder, 'MakeOrder');      
             }
         });
@@ -206,7 +194,7 @@ contract('LendingMarketController', async (accounts) => {
         });
 
         it('get lend rates from lending controller for FIL', async () => {
-            let rate = await lendingController.getLendRatesForCcy(Ccy.FIL, {from: bob});
+            let rate = await lendingController.getLendRatesForCcy(hexFILString);
             rate[0].toNumber().should.be.equal(800);
             rate[1].toNumber().should.be.equal(800);
             rate[2].toNumber().should.be.equal(800);
@@ -216,7 +204,7 @@ contract('LendingMarketController', async (accounts) => {
         });
 
         it('get borrow rates from lending controller for FIL', async () => {
-            let rate = await lendingController.getBorrowRatesForCcy(Ccy.FIL, {from: bob});
+            let rate = await lendingController.getBorrowRatesForCcy(hexFILString);
             rate[0].toNumber().should.be.equal(825);
             rate[1].toNumber().should.be.equal(825);
             rate[2].toNumber().should.be.equal(825);
@@ -226,7 +214,7 @@ contract('LendingMarketController', async (accounts) => {
         });
 
         it('get mid rates from lending controller for FIL', async () => {
-            let rate = await lendingController.getMidRatesForCcy(Ccy.FIL, {from: bob});
+            let rate = await lendingController.getMidRatesForCcy(hexFILString);
             rate[0].toNumber().should.be.equal(812);
             rate[1].toNumber().should.be.equal(812);
             rate[2].toNumber().should.be.equal(812);
@@ -236,7 +224,7 @@ contract('LendingMarketController', async (accounts) => {
         });
 
         it('get discount factors from lending controller for FIL', async () => {
-            let rate = await lendingController.getDiscountFactorsForCcy(Ccy.FIL, {from: bob});
+            let rate = await lendingController.getDiscountFactorsForCcy(hexFILString);
             console.log("df3m: " + rate[0]);
             console.log("df6m: " + rate[1]);
             console.log("df1y: " + rate[2]);

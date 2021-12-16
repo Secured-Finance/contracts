@@ -832,7 +832,7 @@ contract CollateralAggregator is ProtocolTypes {
         require(collateralUsers.contains(msg.sender), "incorrect liquidator");
         (address _partyA, address _partyB, bool flipped) = _checkAddresses(from, to);
         uint256 amt = currencyController.convertToETH(ccy, amount);
-
+        // TODO: rebalance required amount of collateral, transfer excess into global book
         Position storage position = positions[_partyA][_partyB];
         
         if (!flipped) {

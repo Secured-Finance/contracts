@@ -11,6 +11,8 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/DealId.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import './interfaces/IDiscountFactors.sol';
+import './interfaces/ITermStructureGetter.sol';
+import './interfaces/ILiquidations.sol';
 
 /**
  * @title LoanV2 contract is used to store Lending deals in Secured Finance  
@@ -29,59 +31,6 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     uint16 constant private VERSION = 1;
     uint256 public settlementWindow = 2;
 
-    /** @dev
-        DAYCOUNTS CONVENTION TABLE for PAYMENTS and NOTICES
-     */
-    // for end date
-    uint256[NUMTERM] DAYS = [
-        90 days,
-        180 days,
-        365 days,
-        730 days,
-        1095 days,
-        1825 days
-    ];
-    // day count fractions for coupon calc (basis point based)
-    uint256[NUMTERM] DCFRAC = [
-        2500,
-        5000,
-        BP,
-        BP,
-        BP,
-        BP
-    ];
-    // for payments and notices
-    uint256[MAXPAYNUM] sched_3m = [90 days];
-    uint256[MAXPAYNUM] sched_6m = [180 days];
-    uint256[MAXPAYNUM] sched_1y = [365 days];
-    uint256[MAXPAYNUM] sched_2y = [365 days, 730 days];
-    uint256[MAXPAYNUM] sched_3y = [365 days, 730 days, 1095 days];
-    uint256[MAXPAYNUM] sched_5y = [
-        365 days,
-        730 days,
-        1095 days,
-        1460 days,
-        1825 days
-    ];
-    uint256[][NUMTERM] SCHEDULES = [
-        sched_3m,
-        sched_6m,
-        sched_1y,
-        sched_2y,
-        sched_3y,
-        sched_5y
-    ];
-
-    // for generate payments and notices schedules
-    uint256[NUMTERM] PAYNUMS = [
-        1,
-        1,
-        1,
-        2,
-        3,
-        5
-    ];
-
     // seconds in DFTERM
     uint256[NUMDF] SECONDS = [
         86400 * 90,
@@ -97,7 +46,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
         address lender;
         address borrower;
         bytes32 ccy;
-        Term term;
+        uint256 term;
         uint256 notional;
         uint256 rate;
         uint256 start;
@@ -126,7 +75,10 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     ICollateralAggregator collateralAggregator;
     ILendingMarketController lendingController;
     IPaymentAggregator paymentAggregator;
-    mapping(bytes32 => mapping(Term => address)) public lendingMarkets;
+    ITermStructureGetter termStructure;
+    ILiquidations liquidations;
+
+    mapping(bytes32 => mapping(uint256 => address)) public lendingMarkets;
 
     /**
     * @dev Modifier to make a function callable only by contract owner.
@@ -141,8 +93,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     * @param _ccy LendingMarket currency
     * @param _term LendingMarket term
     */
-    modifier lendingMarketExists(bytes32 _ccy, uint8 _term) {
-        require(lendingMarkets[_ccy][Term(_term)] == msg.sender);
+    modifier lendingMarketExists(bytes32 _ccy, uint256 _term) {
+        require(lendingMarkets[_ccy][_term] == msg.sender);
         _;
     }
 
@@ -152,6 +104,11 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     */
     modifier workingLoan(bytes32 loanId) {
         require(isSettled[loanId], "loan is not working");
+        _;
+    }
+
+    modifier onlyLiquidationContract() {
+        require(msg.sender == address(liquidations), "INVALID_ACCESS");
         _;
     }
 
@@ -195,6 +152,26 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     }
 
     /**
+    * @dev Triggers to link with TermStructure contract.
+    * @param addr TermStructure contract address 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setTermStructure(address addr) public onlyOwner {
+        termStructure = ITermStructureGetter(addr);
+    }
+
+    /**
+    * @dev Triggers to link with Liquidations contract.
+    * @param addr Liquidations contract address 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setLiquidations(address addr) public onlyOwner {
+        liquidations = ILiquidations(addr);
+    }
+
+    /**
     * @dev Triggers to change ability to transfer loan ownership by lenders.
     * @param isAccepted Boolean to 
     *
@@ -212,7 +189,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     *
     * @notice Executed only by contract owner
     */
-    function addLendingMarket(bytes32 _ccy, Term _term, address addr) public onlyOwner {
+    function addLendingMarket(bytes32 _ccy, uint256 _term, address addr) public onlyOwner {
         require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
         lendingMarkets[_ccy][_term] = addr;
     }
@@ -242,7 +219,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
         address taker,
         uint8 side,
         bytes32 ccy,
-        uint8 term,
+        uint256 term,
         uint256 notional,
         uint256 rate
     ) public override lendingMarketExists(ccy, term) returns (bytes32 loanId) {
@@ -265,18 +242,19 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
         deal.lender = lender;
         deal.borrower = borrower;
         deal.ccy = ccy;
-        deal.term = Term(term);
+        deal.term = term;
         deal.notional = notional;
         deal.rate = rate;
         deal.start = block.timestamp;
-        deal.end = block.timestamp.add(DAYS[uint256(term)]);
+        deal.end = block.timestamp.add(deal.term.mul(86400));
 
         loanId = _generateDealId();
         loans[loanId] = deal;
 
         _registerPaymentSchedule(loanId, deal);
+        liquidations.addDealToLiquidationQueue(lender, borrower, loanId);
 
-        emit Register(lender, borrower, ccy, uint8(term), notional, rate, loanId);
+        emit Register(lender, borrower, ccy, term, notional, rate, loanId);
     }
 
     /**
@@ -294,6 +272,15 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     // function getDealState(bytes32 loanId) public view override returns (uint8) {
     //     return 0;
     // }
+
+
+    /**
+    * @dev Triggers to get main currency the deal by `dealId`.
+    * @param loanId Loan deal ID
+    */
+    function getDealCurrency(bytes32 loanId) public override view returns (bytes32) {
+        return loans[loanId].ccy;
+    }
 
     /**
     * @dev Triggers to get current information about Loan deal.
@@ -328,8 +315,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     function getLastSettledPayment(bytes32 loanId) external view returns (uint256 settlementTime) {
         LoanDeal memory deal = loans[loanId];
 
-        uint256 payNums = PAYNUMS[uint256(deal.term)];
-        uint256[] memory daysArr = SCHEDULES[uint256(deal.term)];
+        uint256 payNums = termStructure.getNumPayments(deal.term);
+        uint256[] memory daysArr = termStructure.getTermSchedule(deal.term);
 
         for (uint256 i = payNums; i > 0; i--) {
             uint256 time = _timeShift(deal.start, daysArr[i-1]);
@@ -339,6 +326,30 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
                 settlementTime = time;
             }
         }
+    }
+
+    /**
+    * @dev Triggers to get stored present value of loan deal.
+    * @param loanId Loan ID to update PV for
+    */
+    function getDealLastPV(
+        address party0,
+        address party1,
+        bytes32 loanId
+    ) public override view returns (uint256, uint256) {
+        LoanDeal memory deal = loans[loanId];
+
+        if (deal.pv == 0) {
+            deal.pv = getDealPV(loanId);
+        }
+
+        if (party0 == deal.lender && party1 == deal.borrower) {
+            return (0, deal.pv);
+        } else if (party0 == deal.borrower && party1 == deal.lender) {
+            return (deal.pv, 0);
+        }
+        
+        return (0, 0);
     }
 
     // =========== EARLY TERMINATION SECTION ===========
@@ -538,10 +549,12 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     }
 
     /**
-    * @dev Triggers to get current present value of loan deal.
+    * @dev Triggers to recalculate present value of loan deal.
     * @param loanId Loan ID to update PV for
     */
-    function getDealPV(bytes32 loanId) public view returns (uint256 pv) {
+    function getDealPV(
+        bytes32 loanId
+    ) public override view returns (uint256 pv) {
         LoanDeal memory deal = loans[loanId];
         if (!isSettled[loanId]) return deal.notional;
 
@@ -628,11 +641,10 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     /**
     * @dev Internal function to get TimeSlot position after adding days
     * @param timestamp Timestamp to add days
-    * @param numSeconds number of seconds to add
+    * @param numDays number of days to add
     * @return Updated timestamp and TimeSlot position
     */
-    function _timeShift(uint256 timestamp, uint256 numSeconds) internal pure returns (uint256) {
-        uint256 numDays = numSeconds.div(86400);
+    function _timeShift(uint256 timestamp, uint256 numDays) internal pure returns (uint256) {
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
 
         return timestamp;
@@ -670,6 +682,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     struct ScheduleConstructionLocalVars {
         uint256 payNums;
         uint256[] daysArr;
+        uint256 dfFrac;
         uint256 coupon;
         uint256 time;
         bool status;
@@ -685,16 +698,16 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
         Schedule memory schedule;
         ScheduleConstructionLocalVars memory vars;
 
-        vars.payNums = PAYNUMS[uint256(deal.term)];
-        vars.daysArr = SCHEDULES[uint256(deal.term)];
+        vars.payNums = termStructure.getNumPayments(deal.term);
+        vars.daysArr = termStructure.getTermSchedule(deal.term);
+        vars.dfFrac = termStructure.getDfFrac(deal.term);
 
-        vars.coupon = (deal.notional.mul(deal.rate).mul(DCFRAC[uint256(deal.term)])).div(BP).div(BP);
+        vars.coupon = (deal.notional.mul(deal.rate).mul(vars.dfFrac)).div(BP).div(BP);
 
         for (uint256 i = 1; i <= vars.payNums; i++) {
             uint256 time = _timeShift(deal.start, vars.daysArr[i-1]);
 
             schedule.payments[i] = time;
-
             if (i == vars.payNums) {
                 schedule.amounts[i] = deal.notional.add(vars.coupon);
             } else {
@@ -707,7 +720,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
             }
         }
 
-        uint256 settlement = _timeShift(deal.start, 2 days);
+        uint256 settlement = _timeShift(deal.start, 2);
         schedule.payments[0] = settlement;
 
         return schedule;
@@ -720,7 +733,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     function _verifyNotionalExchange(bytes32 loanId) internal {
         if (!isSettled[loanId]) {
             LoanDeal storage deal = loans[loanId];
-            uint256 time = _timeShift(deal.start, 2 days);
+            uint256 time = _timeShift(deal.start, 2);
             bool status = paymentAggregator.isSettled(deal.lender, deal.borrower, deal.ccy, time);
 
             if (status) {

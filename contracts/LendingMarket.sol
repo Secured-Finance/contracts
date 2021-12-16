@@ -28,7 +28,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     /**
     * @dev Emitted when market order created by market maker.
     */
-    event MakeOrder(uint256 orderId, address indexed maker, Side side, bytes32 ccy, Term term, uint amount, uint rate);
+    event MakeOrder(uint256 orderId, address indexed maker, Side side, bytes32 ccy, uint256 term, uint amount, uint rate);
     
     /**
     * @dev Emitted when market order canceled by market maker.
@@ -50,7 +50,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
 
     uint256 public last_order_id;
     bytes32 public MarketCcy;
-    Term public MarketTerm;
+    uint256 public MarketTerm;
     address public lendingController;
 
     struct MarketOrder {
@@ -72,7 +72,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     * @param _ccy The main currency for order book lending deals
     * @param _term The main term for order book lending deals
     */
-    constructor(bytes32 _ccy, Term _term, address _lendingController) public {
+    constructor(bytes32 _ccy, uint256 _term, address _lendingController) public {
         MarketCcy = _ccy;
         MarketTerm = _term;
         lendingController = _lendingController;
@@ -267,7 +267,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
             require(borrowOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
         }
 
-        loan.register(order.maker, msg.sender, uint8(order.side), MarketCcy, uint8(MarketTerm), _amount, order.rate);
+        loan.register(order.maker, msg.sender, uint8(order.side), MarketCcy, MarketTerm, _amount, order.rate);
 
         emit TakeOrder(
             orderId,

@@ -9,7 +9,6 @@ import './interfaces/IPaymentAggregator.sol';
 import './interfaces/IProduct.sol';
 import './interfaces/IMarketConroller.sol';
 import './interfaces/IProductAddressResolver.sol';
-import "./libraries/DealId.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract MarkToMarket is ProtocolTypes, IMarkToMarket {
@@ -53,12 +52,9 @@ contract MarkToMarket is ProtocolTypes, IMarkToMarket {
     * @param dealId Deal ID to update PV for
     */
     function updatePV(bytes32 dealId) public override {
-        PresentValueCalcLocalVars memory vars;
-        
-        vars.prefix = DealId.getPrefix(dealId);
-        vars.product = productResolver.getProductContract(vars.prefix);
+        address product = productResolver.getProductContractByDealId(dealId);
 
-        require(IProduct(vars.product).markToMarket(dealId), "CAN'T DO MARK-TO-MARKET");
+        require(IProduct(product).markToMarket(dealId), "CAN'T DO MARK-TO-MARKET");
     }
 
     /**
@@ -71,8 +67,7 @@ contract MarkToMarket is ProtocolTypes, IMarkToMarket {
         for (uint256 i = 0; i < dealIds.length; i++) {
             bytes32 dealId = dealIds[i];
             
-            vars.prefix = DealId.getPrefix(dealId);
-            vars.product = productResolver.getProductContract(vars.prefix);
+            vars.product = productResolver.getProductContractByDealId(dealId);
             // vars.controller = productResolver.getControllerContract(vars.prefix);
 
             require(IProduct(vars.product).markToMarket(dealId), "CAN'T DO MARK-TO-MARKET");
