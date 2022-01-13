@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "./libraries/AddressPacking.sol";
 import './interfaces/IProductAddressResolver.sol';
-import './interfaces/ICollateralAggregator.sol';
+import './interfaces/ICollateralAggregatorV2.sol';
+import './interfaces/ICurrencyController.sol';
 import './interfaces/IProduct.sol';
 import './interfaces/ILiquidations.sol';
-import "./ProtocolTypes.sol";
 
-contract Liquidations is ProtocolTypes, ILiquidations {
+contract Liquidations is ILiquidations {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -21,18 +20,13 @@ contract Liquidations is ProtocolTypes, ILiquidations {
     EnumerableSet.AddressSet private liquidationAgents;
     EnumerableSet.AddressSet private linkedContracts;
 
-    // Bytes32Set for an internal use only
-    EnumerableSet.Bytes32Set private exposedCurrencies;
-
     // Mapping structure for storing liquidation queue to bilateral position
     mapping(bytes32 => EnumerableSet.Bytes32Set) private liquidationQueue;
-
-    // Mapping for an internal use only
-    mapping (bytes32 => CcyNotionalExpLocalVars) ccyNotionals;
 
     // Contracts
     IProductAddressResolver productResolver;
     ICollateralAggregator collateralAggregator;
+    ICurrencyController currencyController;
 
     /**
     * @dev Modifier to make a function callable only by contract owner.
@@ -88,6 +82,16 @@ contract Liquidations is ProtocolTypes, ILiquidations {
     */
     function setCollateralAggregator(address addr) public onlyOwner {
         collateralAggregator = ICollateralAggregator(addr);
+    }
+
+    /**
+    * @dev Triggers to link with CurrencyController contract.
+    * @param addr CurrencyController contract address 
+    *
+    * @notice Executed only by contract owner
+    */
+    function setCurrencyController(address addr) public onlyOwner {
+        currencyController = ICurrencyController(addr);
     }
 
     /**
@@ -165,25 +169,6 @@ contract Liquidations is ProtocolTypes, ILiquidations {
         DealRemovedFromLiquidationQueue(party0, party1, dealId);
     }
 
-    struct LiquidationLocalVars {
-        bytes32 dealId;
-        bool coverage0;
-        bool coverage1;
-        uint256 totalLiquidationPV0;
-        uint256 totalLiquidationPV1;
-        uint256 numCcy;
-        bytes32 currency;
-        // CcyNotionalExpLocalVars ccyNotionalExp;
-        uint256 totalExp;
-        bytes4 prefix;
-        address product;
-    }
-
-    struct CcyNotionalExpLocalVars {
-        uint256 totalLiquidationPV0;
-        uint256 totalLiquidationPV1;
-    }
-
     /**
     * @dev Triggers to liquidate multiple deals according to the liquidation queue
     * @param party0 First counterparty address
@@ -230,6 +215,17 @@ contract Liquidations is ProtocolTypes, ILiquidations {
         _liquidateDeals(party0, party1, dealIds);
     }
 
+    struct LiquidationLocalVars {
+        bytes32 dealId;
+        uint256 dealPV0;
+        uint256 dealPV1;
+        uint256 totalLiquidationPVInETH0;
+        uint256 totalLiquidationPVInETH1;
+        uint256 exchangeRate;
+        bytes32 currency;
+        address product;
+    }
+
     function _liquidateDeals(
         address party0, 
         address party1, 
@@ -242,39 +238,37 @@ contract Liquidations is ProtocolTypes, ILiquidations {
             vars.product = productResolver.getProductContractByDealId(vars.dealId);
 
             vars.currency = IProduct(vars.product).getDealCurrency(vars.dealId); 
+            
+            (
+                vars.dealPV0, 
+                vars.dealPV1
+            ) = IProduct(vars.product).getDealLastPV(party0, party1, vars.dealId);
 
-            exposedCurrencies.add(vars.currency);
+            vars.exchangeRate = uint256(currencyController.getLastETHPrice(vars.currency));
+            
+            vars.dealPV0 = vars.dealPV0.mul(vars.exchangeRate).div(1e18);
+            vars.dealPV1 = vars.dealPV1.mul(vars.exchangeRate).div(1e18);
 
-            (vars.totalLiquidationPV0, vars.totalLiquidationPV1) = IProduct(vars.product).getDealLastPV(party0, party1, vars.dealId);
-
-            CcyNotionalExpLocalVars storage ccyNotionalExp = ccyNotionals[vars.currency];
-
-            ccyNotionalExp.totalLiquidationPV0 = ccyNotionalExp.totalLiquidationPV0.add(vars.totalLiquidationPV0);
-            ccyNotionalExp.totalLiquidationPV1 = ccyNotionalExp.totalLiquidationPV1.add(vars.totalLiquidationPV1);
+            vars.totalLiquidationPVInETH0 = vars.totalLiquidationPVInETH0.add(vars.dealPV0);
+            vars.totalLiquidationPVInETH1 = vars.totalLiquidationPVInETH1.add(vars.dealPV1);
 
             IProduct(vars.product).liquidate(vars.dealId);
         }
 
-        vars.numCcy = exposedCurrencies.length();
-
-        for (uint256 i = 0; i < vars.numCcy; i) {
-            vars.currency = exposedCurrencies.at(i);
-            CcyNotionalExpLocalVars storage ccyNotionalExp = ccyNotionals[vars.currency];
-
-            if (ccyNotionalExp.totalLiquidationPV0 > 0) {
-                collateralAggregator.liquidate(party0, party1, vars.currency, ccyNotionalExp.totalLiquidationPV0);
-            }
-
-            if (ccyNotionalExp.totalLiquidationPV1 > 0) {
-                collateralAggregator.liquidate(party1, party0, vars.currency, ccyNotionalExp.totalLiquidationPV1);
-            }
-
-            exposedCurrencies.remove(vars.currency);
-            delete ccyNotionals[vars.currency];
-            vars.numCcy = vars.numCcy - 1;
+        if (vars.totalLiquidationPVInETH0 > 0) {
+            collateralAggregator.liquidate(
+                party0, 
+                party1, 
+                vars.totalLiquidationPVInETH0
+            );
         }
 
-        // (vars.coverage0, vars.coverage1) = collateralAggregator.isCovered(party0, party1, "", 0, 0, false);
-        // require(vars.coverage0 && vars.coverage1);
+        if (vars.totalLiquidationPVInETH1 > 0) {
+            collateralAggregator.liquidate(
+                party1, 
+                party0, 
+                vars.totalLiquidationPVInETH1
+            );
+        }
     }
 }

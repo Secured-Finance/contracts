@@ -9,8 +9,8 @@ import './interfaces/IPaymentAggregator.sol';
 import './interfaces/IProductWithOneLeg.sol';
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/DealId.sol";
+import "./libraries/DiscountFactor.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
-import './interfaces/IDiscountFactors.sol';
 import './interfaces/ITermStructureGetter.sol';
 import './interfaces/ILiquidations.sol';
 
@@ -21,7 +21,7 @@ import './interfaces/ILiquidations.sol';
  *
  * Contract linked to Lending Market contracts, LendingMarketController and Collateral contract.
  */
-contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
+contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     using SafeMath for uint256;
     
     uint256 constant NOTICE = 2 weeks;
@@ -30,17 +30,6 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     bytes4 constant prefix = 0x21aaa47b;
     uint16 constant private VERSION = 1;
     uint256 public settlementWindow = 2;
-
-    // seconds in DFTERM
-    uint256[NUMDF] SECONDS = [
-        86400 * 90,
-        86400 * 180,
-        86400 * 365,
-        86400 * 365 * 2,
-        86400 * 365 * 3,
-        86400 * 365 * 4,
-        86400 * 365 * 5
-    ];
 
     struct LoanDeal {
         address lender;
@@ -493,36 +482,6 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     }
 
     /**
-    * @dev Triggers to adjust discount factors by interpolating to current loan maturity
-    * @param dfArr Array of discount factors for loan currency from lending markets
-    * @param date Date to calculate discount factors for 
-    *
-    * @notice Executed internally
-    */
-    function interpolateDF(uint256[NUMDF] memory dfArr, uint256 date)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 time = date.sub(block.timestamp);
-
-        if (time <= SECONDS[0]) {
-            uint256 left = SECONDS[0].sub(time);
-
-            return (BP.mul(left).add(dfArr[0].mul(time))).div(SECONDS[0]);
-        } else {
-            for (uint256 i = 1; i < NUMDF; i++) {
-                if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
-                    uint256 left = time.sub(SECONDS[i - 1]);
-                    uint256 right = SECONDS[i].sub(time);
-                    uint256 total = SECONDS[i].sub(SECONDS[i - 1]);
-                    return ((dfArr[i - 1].mul(right)).add((dfArr[i].mul(left))).div(total));
-                }
-            }
-        }
-    }
-
-    /**
     * @dev Triggers to update present value of loan.
     * @param loanId Loan ID to update PV for
     *
@@ -558,73 +517,21 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
         LoanDeal memory deal = loans[loanId];
         if (!isSettled[loanId]) return deal.notional;
 
-        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(deal.ccy);
-        uint256[NUMDF] memory dfArr = [
-            df.df3m,
-            df.df6m,
-            df.df1y,
-            df.df2y,
-            df.df3y,
-            df.df4y,
-            df.df5y
-        ];
+        (
+            uint256[] memory dfs,
+            uint256[] memory terms
+        ) = lendingController.getDiscountFactorsForCcy(deal.ccy);
 
         Schedule memory schedule = _constructSchedule(deal, true);
 
         for (uint256 i = 0; i < schedule.payments.length; i++) {
             if (schedule.payments[i] < block.timestamp) continue;
-            uint256 d = interpolateDF(dfArr, schedule.payments[i]);
+            uint256 d = DiscountFactor.interpolateDF(dfs, terms, schedule.payments[i]);
 
             pv = pv.add((schedule.amounts[i].mul(d)));
         }
 
         return pv.div(BP);
-    }
-
-    /**
-    * @dev Triggers to calculate discount factors for updating the present value of loan.
-    * @param loanId Array of discount factors for loan currency from lending markets
-    * @param date Date to calculate discount factors for 
-    *
-    * @notice Executed internally
-    */
-    function getDF(bytes32 loanId, uint256 date)
-        public
-        view
-        returns (uint256)
-    {
-        LoanDeal memory item = loans[loanId];
-        DiscountFactor memory df = lendingController.getDiscountFactorsForCcy(item.ccy);
-        uint256[NUMDF] memory dfArr = [
-            df.df3m,
-            df.df6m,
-            df.df1y,
-            df.df2y,
-            df.df3y,
-            df.df4y,
-            df.df5y
-        ];
-
-        if (date <= now) return 0;
-        uint256 time = date.sub(block.timestamp);
-
-        if (time <= SECONDS[0]) {
-            uint256 left = SECONDS[0].sub(time);
-            return (BP.mul(left).add(dfArr[0].mul(time))).div(SECONDS[0]);
-            // return dfArr[0].mul(time).div(SECONDS[0]);
-        } else {
-            for (uint256 i = 1; i < NUMDF; i++) {
-                if (SECONDS[i - 1] < time && time <= SECONDS[i]) {
-                    uint256 left = time.sub(SECONDS[i - 1]);
-                    uint256 right = SECONDS[i].sub(time);
-                    uint256 total = SECONDS[i].sub(SECONDS[i - 1]);
-
-                    uint256 result = ((dfArr[i - 1].mul(right)).add((dfArr[i].mul(left))).div(total));
-
-                    return result;
-                }
-            }
-        }
     }
 
     /**
@@ -635,6 +542,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
         LoanDeal memory deal = loans[loanId];
         _removePaymentSchedule(loanId, deal);
         collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
+
+        emit Liquidate(loanId);
         delete loans[loanId];
     }
 
@@ -732,7 +641,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, IDiscountFactors {
     */
     function _verifyNotionalExchange(bytes32 loanId) internal {
         if (!isSettled[loanId]) {
-            LoanDeal storage deal = loans[loanId];
+            LoanDeal memory deal = loans[loanId];
             uint256 time = _timeShift(deal.start, 2);
             bool status = paymentAggregator.isSettled(deal.lender, deal.borrower, deal.ccy, time);
 

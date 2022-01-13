@@ -575,6 +575,22 @@ contract CollateralAggregator is ProtocolTypes {
     }
 
     /**
+    * @dev Triggers to get maximum amount of ETH available to 
+    * widthdraw from bilateral position between `party0` and `_party1`.
+    * @param _party0 Counterparty A address
+    * @param _party1 Counterparty B address
+    */
+    function getMaxCollateralWidthdraw(
+        address _party0,
+        address _party1
+    ) public view returns (uint256, uint256) {
+        (address _partyA, address _partyB, bool flipped) = _checkAddresses(_party0, _party1);
+        (uint256 maxWidthdraw0, uint256 maxWidthdraw1) = _calcMaxCollateralWidthdraw(_partyA, _partyB);
+
+        return (maxWidthdraw0, maxWidthdraw1);
+    }
+
+    /**
     * @dev Triggers to get coverage of the global collateral book against all unsettled exposure.
     * @param _user User's address
     */
@@ -699,9 +715,9 @@ contract CollateralAggregator is ProtocolTypes {
         Book storage book = books[msg.sender];
         (uint256 maxWidthdraw, uint256 totalUnsettledExp) = _calcMaxCollateralWidthdrawFromBook(msg.sender);
 
-        if (totalUnsettledExp == 0) {
-            maxWidthdraw = book.independentAmount;
-        }
+        // if (totalUnsettledExp == 0) {
+        //     maxWidthdraw = book.independentAmount;
+        // }
 
         if (_amt > maxWidthdraw) {
             book.independentAmount = book.independentAmount.sub(maxWidthdraw);

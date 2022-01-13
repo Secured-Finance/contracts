@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../libraries/TimeSlot.sol";
 import "../libraries/AddressPacking.sol";
-import "../libraries/BokkyPooBahsDateTimeLibrary.sol";
 
 contract TimeSlotTest {
     using TimeSlot for TimeSlot.Slot;

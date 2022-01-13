@@ -4,11 +4,10 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/QuickSort.sol";
-import "./ProtocolTypes.sol";
+import "./libraries/DiscountFactor.sol";
 import "./LendingMarket.sol";
 import './interfaces/ILendingMarketController.sol';
 import './interfaces/ILendingMarket.sol';
-import './interfaces/IDiscountFactors.sol';
 import './interfaces/ICurrencyController.sol';
 import './interfaces/ITermStructure.sol';
 
@@ -19,14 +18,9 @@ import './interfaces/ITermStructure.sol';
  *
  * It will store lending market addresses by ccy and term in lendingMarkets mapping.
  */
-contract LendingMarketController is ProtocolTypes, ILendingMarketController {
+contract LendingMarketController is ILendingMarketController {
     using SafeMath for uint256;
     using QuickSort for uint256[];
-
-    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
-    event LendingMarketCreated(bytes32 ccy, uint256 term, address indexed marketAddr);
-    event LendingMarketsPaused(bytes32 ccy);
-    event LendingMarketsUnpaused(bytes32 ccy);
     
     bytes4 constant prefix = 0x21aaa47b;
     address public override owner;
@@ -85,7 +79,7 @@ contract LendingMarketController is ProtocolTypes, ILendingMarketController {
     * @dev Triggers to get borrow rates for selected currency.
     * @param _ccy Currency
     */
-    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[NUMTERM] memory rates) {
+    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
         uint256[] memory terms = supportedTerms[_ccy];
 
         for (uint256 i = 0; i < terms.length; i++) {
@@ -101,7 +95,7 @@ contract LendingMarketController is ProtocolTypes, ILendingMarketController {
     * @dev Triggers to get lend rates for selected currency.
     * @param _ccy Currency
     */
-    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[NUMTERM] memory rates) {
+    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
         uint256[] memory terms = supportedTerms[_ccy];
 
         for (uint256 i = 0; i < terms.length; i++) {
@@ -117,7 +111,7 @@ contract LendingMarketController is ProtocolTypes, ILendingMarketController {
     * @dev Triggers to get mid rates for selected currency.
     * @param _ccy Currency
     */
-    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[NUMTERM] memory rates) {
+    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
         uint256[] memory terms = supportedTerms[_ccy];
 
         for (uint256 i = 0; i < terms.length; i++) {
@@ -131,24 +125,12 @@ contract LendingMarketController is ProtocolTypes, ILendingMarketController {
 
     // =========== DISCOUNT FACTORS CALCULATION ===========
 
-    // helper to generate DF
-    function genDF(uint256[NUMDF] memory rates) private pure returns (DiscountFactor memory) {
-        DiscountFactor memory df;
-        // bootstrap in BasisPoint scale
-        df.df3m = BP.mul(BP).div((BP.add(rates[0].mul(90).div(360))));
-        df.df6m = BP.mul(BP).div((BP.add(rates[1].mul(180).div(360))));
-        df.df1y = BP.mul(BP).div((BP.add(rates[2]))); 
-        df.df2y = BP.mul(BP.sub(rates[3].mul(df.df1y).div(BP))).div(BP.add(rates[3]));
-        df.df3y = BP.mul(BP.sub(rates[4].mul(df.df1y.add(df.df2y)).div(BP))).div(BP.add(rates[4]));
-        df.df4y = BP.mul(BP.sub(rates[5].mul(df.df1y.add(df.df2y).add(df.df3y)).div(BP))).div(BP.add(rates[5]));
-        df.df5y = BP.mul(BP.sub(rates[6].mul(df.df1y.add(df.df2y).add(df.df3y).add(df.df4y)).div(BP))).div(BP.add(rates[6]));
-        return df;
-    }
-
-    function getDiscountFactorsForCcy(bytes32 _ccy) public view override returns (DiscountFactor memory) {
-        uint256[NUMTERM] memory mkt = getMidRatesForCcy(_ccy);
-        uint256[NUMDF] memory rates = [mkt[0], mkt[1], mkt[2], mkt[3], mkt[4], ((mkt[4].add(mkt[5])).div(2)), mkt[5]];
-        return genDF(rates);
+    function getDiscountFactorsForCcy(bytes32 _ccy) public view override returns (
+        uint256[] memory,
+        uint256[] memory
+    ) {
+        uint256[] memory rates = getMidRatesForCcy(_ccy);
+        return DiscountFactor.calculateDFs(rates, supportedTerms[_ccy]);
     }
 
     function getSupportedTerms(bytes32 _ccy) public view override returns (uint256[] memory) {

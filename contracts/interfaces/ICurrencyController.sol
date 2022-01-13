@@ -25,6 +25,7 @@ interface ICurrencyController {
 
     function convertBulkToETH(bytes32 _ccy, uint256[] memory _amounts) external view returns (uint256[] memory);
     function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256);
+    function convertFromETH(bytes32 _ccy, uint256 _amountETH) external view returns (uint256);
     function currencies(bytes32) external view returns (bool isSupported, string memory name, uint8 chainId);
     function ethDecimals(bytes32) external view returns (uint8);
     function ethPriceFeeds(bytes32) external view returns (address);

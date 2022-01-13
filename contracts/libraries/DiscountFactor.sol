@@ -5,67 +5,178 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 library DiscountFactor {
     using SafeMath for uint256;
-    uint8 internal constant NUMDF = 7; // number of discount factors
-    uint256 internal constant BP = 10000; // basis point
 
-    // Mark to market mechanism
-    struct DF {
-        uint256 df3m;
-        uint256 df6m;
-        uint256 df1y;
-        uint256 df2y;
-        uint256 df3y;
-        uint256 df4y;
-        uint256 df5y;
+    uint256 internal constant BP = 10000; // basis point
+    uint256 internal constant NON_ANNUAL_TERMS = 3;
+
+    function determineDF(
+        uint256 rate, 
+        uint256 term, 
+        uint256[] memory cache, 
+        uint256 index
+    ) internal pure returns (uint256 df) { 
+        if (term < 365) {
+            df = BP.mul(BP).div((BP.add(rate.mul(term).div(360))));
+        } else if (term == 365) {
+            df = BP.mul(BP).div((BP.add(rate)));
+        } else {
+            df = BP.mul(BP.sub(rate.mul(cache[index.sub(1)]).div(BP))).div(BP.add(rate));
+        }
+
+        cache[index] = df;
     }
 
-    // helper to generate DF
-    function genDF(DF memory self, uint256[NUMDF] memory rates) private pure returns (DF memory) {
-        self.df3m = BP.mul(BP).div((BP.add(rates[0].mul(90).div(360))));
-        self.df6m = BP.mul(BP).div((BP.add(rates[1].mul(180).div(360))));
-        self.df1y = BP.mul(BP).div((BP.add(rates[2]))); 
-        self.df2y = BP.mul(BP.sub(rates[3].mul(self.df1y).div(BP))).div(BP.add(rates[3]));
-        self.df3y = BP.mul(BP.sub(rates[4].mul(self.df1y.add(self.df2y)).div(BP))).div(BP.add(rates[4]));
-        self.df4y = BP.mul(BP.sub(rates[5].mul(self.df1y.add(self.df2y).add(self.df3y)).div(BP))).div(BP.add(rates[5]));
-        self.df5y = BP.mul(BP.sub(rates[6].mul(self.df1y.add(self.df2y).add(self.df3y).add(self.df4y)).div(BP))).div(BP.add(rates[6]));
-        return self;
+    function calculateDFs(
+        uint256[] memory rates, 
+        uint256[] memory terms
+    ) public pure returns (
+        uint256[] memory,
+        uint256[] memory
+    ) {
+        require(rates.length == terms.length, "INVALID_PARAMS");
+
+        (
+            uint256[] memory bootstrapedRates, 
+            uint256[] memory bootstrapedTerms
+        ) = bootstrapTerms(rates, terms);
+
+        uint len = bootstrapedTerms.length;
+        uint256[] memory dfs = new uint256[](len);
+
+        for (uint i = 0; i < len; i++) {
+            determineDF(bootstrapedRates[i], bootstrapedTerms[i], dfs, i);
+        }
+
+        return (dfs, bootstrapedTerms);
+    }
+
+    function maxDFs(uint maxTerm) internal pure returns(uint) { 
+        return maxTerm.div(365).add(NON_ANNUAL_TERMS);
+    }
+
+    struct TermBootstrapingLocalVars {
+        uint extendedTerms;
+        uint256 delta;
+        uint256 numItems;
+        uint256 lastKnownRate;
+        uint256 nextKnownRate;
+        uint256 nextKnownTerm;
+        bool upwards;
+        uint256 deltaRate;
+        uint256 step;
+    }
+
+    function bootstrapTerms(
+        uint256[] memory rates, 
+        uint256[] memory terms
+    ) public pure returns (uint256[] memory, uint256[] memory) {
+        uint len = maxDFs(terms[terms.length - 1]);
+
+        uint256[] memory filledRates = new uint256[](len);
+        uint256[] memory filledTerms = new uint256[](len);
+        TermBootstrapingLocalVars memory vars;
+
+        for (uint256 i = 0; i < terms.length.sub(1); i++) {
+            if (terms[i] < 365) {
+                filledRates[i] = rates[i];
+                filledTerms[i] = terms[i];
+                continue;
+            }
+            vars.delta = terms[i + 1].sub(terms[i]);
+
+            if (vars.delta <= 365) {
+                filledRates[i] = rates[i]; 
+                filledTerms[i] = terms[i];
+                continue;
+            }
+
+            vars.numItems = vars.delta.div(365);
+            vars.lastKnownRate = rates[i];
+
+            if (vars.extendedTerms == 0) {
+                filledRates[i] = vars.lastKnownRate;
+                filledTerms[i] = terms[i];
+            }
+            vars.nextKnownRate = rates[i + 1];
+            vars.nextKnownTerm = terms[i + 1];
+            vars.upwards = vars.nextKnownRate > vars.lastKnownRate ? true : false;
+            vars.deltaRate = vars.upwards ? vars.nextKnownRate.sub(vars.lastKnownRate) : vars.lastKnownRate.sub(vars.nextKnownRate);
+            vars.step = vars.deltaRate.div(vars.numItems);
+
+            for (uint256 j = 1; j < vars.numItems; j++) {
+                vars.extendedTerms = vars.extendedTerms.add(1);
+
+                uint256 newIndex = i.add(vars.extendedTerms);
+                uint256 missedRate = vars.upwards ? filledRates[newIndex.sub(1)].add(vars.step) : filledRates[newIndex.sub(1)].sub(vars.step);
+                uint256 missedTerm = terms[i].add(uint256(365).mul(j));
+
+                filledRates[newIndex] = missedRate;
+                filledTerms[newIndex] = missedTerm;
+
+                if (j == vars.numItems.sub(1)) {
+                    uint shifterIndex = newIndex.add(1);
+
+                    filledRates[shifterIndex] = vars.nextKnownRate;
+                    filledTerms[shifterIndex] = vars.nextKnownTerm;
+                }
+            }
+        }
+
+        return (filledRates, filledTerms);
+    }
+
+    struct DFInterpolationLocalVars {
+        uint256 timeDelta;
+        uint256 termSeconds;
+        uint256 prevTermSeconds;
+        uint256 left;
+        uint256 right;
+        uint256 total;
     }
 
     /**
     * @dev Triggers to adjust discount factors by interpolating to current loan maturity
-    * @param self Discount factor structure
+    * @param discountFactors Discount factors array
+    * @param terms Array of terms
     * @param date Date to calculate discount factors for 
     *
-    * @notice Executed internally
     */
-    function interpolateDF(DF memory self, uint256 date, uint256[NUMDF] memory sec)
-        internal
+    function interpolateDF(
+        uint256[] memory discountFactors, 
+        uint256[] memory terms,
+        uint256 date)
+        public
         view
         returns (uint256)
     {
-        uint256[NUMDF] memory dfArr = [
-            self.df3m,
-            self.df6m,
-            self.df1y,
-            self.df2y,
-            self.df3y,
-            self.df4y,
-            self.df5y
-        ];
+        DFInterpolationLocalVars memory vars;
+        vars.timeDelta = date.sub(block.timestamp);
 
-        uint256 time = date.sub(block.timestamp);
+        if (vars.timeDelta <= terms[0].mul(86400)) {
+            vars.termSeconds = terms[0].mul(86400);
+            vars.left = vars.termSeconds.sub(vars.timeDelta);
 
-        if (time <= sec[0]) {
-            uint256 left = sec[0].sub(time);
-
-            return (BP.mul(left).add(dfArr[0].mul(time))).div(sec[0]);
+            return (BP.mul(vars.left).add(discountFactors[0].mul(vars.timeDelta))).div(vars.termSeconds);
         } else {
-            for (uint256 i = 1; i < NUMDF; i++) {
-                if (sec[i - 1] < time && time <= sec[i]) {
-                    uint256 left = time.sub(sec[i - 1]);
-                    uint256 right = sec[i].sub(time);
-                    uint256 total = sec[i].sub(sec[i - 1]);
-                    return ((dfArr[i - 1].mul(right)).add((dfArr[i].mul(left))).div(total));
+            for (uint256 i = 1; i < terms.length; i++) {
+                vars.termSeconds = terms[i].mul(86400);
+                vars.prevTermSeconds = terms[i - 1].mul(86400);
+
+                if (vars.prevTermSeconds < vars.timeDelta && vars.timeDelta <= vars.termSeconds) {
+                    vars.left = vars.timeDelta.sub(vars.prevTermSeconds);
+
+                    if (vars.left == 0) {
+                        return discountFactors[i]; // gas savings only
+                    }
+
+                    vars.right = vars.termSeconds.sub(vars.timeDelta);
+                    if (vars.right == 0) {
+                        return discountFactors[i];
+                    }
+
+                    vars.total = vars.termSeconds.sub(vars.prevTermSeconds);
+
+                    return ((discountFactors[i - 1].mul(vars.right)).add((discountFactors[i].mul(vars.left))).div(vars.total));
                 }
             }
         }

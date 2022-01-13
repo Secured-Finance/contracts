@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
 
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/math/SignedSafeMath.sol";
@@ -12,9 +11,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  *
  * Contract links new currencies to ETH Chainlink price feeds, without existing price feed 
  * contract owner is not able to add a new currency into the protocol
- * 
- * Currency controller contract copies the logic of FXRatesAggregator contract, and 
- * will replace that contract in connection with Collateral Aggregator
  */
 contract CurrencyController {
     using SignedSafeMath for int256;
@@ -316,9 +312,9 @@ contract CurrencyController {
     }
 
     /**
-    * @dev Triggers to get converted amount of currency in ETH.
+    * @dev Triggers to get converted amounts of currency to ETH.
     * @param _ccy Currency that has to be convered to ETH
-    * @param _amounts Amount of funds to be converted
+    * @param _amounts Array with amounts of funds to be converted
     */
     function convertBulkToETH(bytes32 _ccy, uint256[] memory _amounts) public view returns (uint256[] memory) {
         if(_isETH(_ccy)) return _amounts;
@@ -338,6 +334,20 @@ contract CurrencyController {
         }
 
         return amounts;
+    }
+
+    /**
+    * @dev Triggers to convert ETH amount of funds to specified currency.
+    * @param _ccy Currency that has to be convered from ETH
+    * @param _amountETH Amount of funds in ETH to be converted
+    */
+    function convertFromETH(bytes32 _ccy, uint256 _amountETH) public view returns (uint256) {
+        if(_isETH(_ccy)) return _amountETH;
+
+        AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
+        (, int256 price, ,  , ) =  priceFeed.latestRoundData();
+
+        return _amountETH.mul(1e18).div(uint256(price)); // add decimals checks
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {

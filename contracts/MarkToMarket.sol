@@ -3,15 +3,14 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "./ProtocolTypes.sol";
-import './interfaces/IMarketConroller.sol';
+import './interfaces/IMarketController.sol';
 import './interfaces/IMarkToMarket.sol';
 import './interfaces/IPaymentAggregator.sol';
 import './interfaces/IProduct.sol';
-import './interfaces/IMarketConroller.sol';
 import './interfaces/IProductAddressResolver.sol';
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract MarkToMarket is ProtocolTypes, IMarkToMarket {
+contract MarkToMarket is IMarkToMarket {
     using SafeMath for uint256;
     
     uint256 constant NOTICE = 2 weeks;
@@ -42,7 +41,7 @@ contract MarkToMarket is ProtocolTypes, IMarkToMarket {
     struct PresentValueCalcLocalVars {
         bytes4 prefix;
         address controller;
-        IMarketConroller controllerContract;
+        IMarketController controllerContract;
         address product;
         IProduct productContract;
     }
