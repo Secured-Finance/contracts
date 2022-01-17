@@ -3,18 +3,23 @@ pragma solidity ^0.6.12;
 
 interface ICollateralVault {
     event Deposit(address user, uint256 amount);
-    event Liquidate(address from, address to, uint256 amount);
     event PositionDeposit(
         address party0,
         address party1,
         uint256 amount0,
         uint256 amount1
     );
-    event PositionWithdraw(address from, address counterparty, uint256 amount);
-    event RebalanceBetween(address user, address counterparty, uint256 amount);
+    event RebalanceBetween(
+        address user, 
+        address fromCounterparty, 
+        address toCounterparty, 
+        uint256 amount
+    );
     event RebalanceFrom(address user, address counterparty, uint256 amount);
     event RebalanceTo(address user, address counterparty, uint256 amount);
     event Withdraw(address from, uint256 amount);
+    event PositionWithdraw(address from, address counterparty, uint256 amount);
+    event Liquidate(address from, address to, uint256 amount);
 
     function ccy() external view returns (bytes32);
     function tokenAddress() external view returns (address);

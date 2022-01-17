@@ -2,24 +2,6 @@
 pragma solidity ^0.6.12;
 
 interface ICollateralAggregator {
-    event CollateralUserAdded(address indexed user);
-    event CollateralUserRemoved(address indexed user);
-    event CollateralVaultLinked(
-        address indexed vault,
-        bytes32 ccy,
-        address tokenAddress
-    );
-    event CollateralVaultRemoved(
-        address indexed vault,
-        bytes32 ccy,
-        address tokenAddress
-    );
-    event CurrencyControllerUpdated(address indexed controller);
-    event LiquidationEngineUpdated(address indexed liquidations);
-    event LiquidationPriceUpdated(uint256 previousPrice, uint256 price);
-    event LiquidationThresholdUpdated(uint256 previousRatio, uint256 ratio);
-    event MarginCallThresholdUpdated(uint256 previousRatio, uint256 ratio);
-    event MinCollateralRatioUpdated(uint256 previousRatio, uint256 price);
     event Register(address indexed addr, uint256 id, uint256 amount);
     event Release(
         address indexed partyA,
@@ -58,19 +40,6 @@ interface ICollateralAggregator {
         bytes32 ccy,
         uint256 amount
     );
-
-    function liquidationEngine() external view returns (address);
-    function currencyController() external view returns (address);
-
-    function AUTOLQLEVEL() external view returns (uint256);
-    function LQLEVEL() external view returns (uint256);
-    function MARGINLEVEL() external view returns (uint256);
-    function MIN_COLLATERAL_RATIO() external view returns (uint256);
-
-    function addCollateralUser(address _user) external returns (bool);
-    function isCollateralUser(address _user) external view returns (bool);
-
-    function isCollateralVault(address _vault) external view returns (bool);
 
     function checkRegisteredUser(address addr) external view returns (bool);
 
@@ -153,8 +122,6 @@ interface ICollateralAggregator {
         uint256 _unsettledExp
     ) external view returns (bool);
 
-    function linkCollateralVault(address _vault) external returns (bool);
-
     function liquidate(
         address from,
         address to,
@@ -169,9 +136,8 @@ interface ICollateralAggregator {
         bool isSettled
     ) external;
 
-    function owner() external view returns (address);
-    function register() external payable;
-    function register(uint256 id) external payable;
+    function register() external;
+    function register(uint256 id) external;
 
     function releaseCollateral(
         address partyA,
@@ -188,14 +154,6 @@ interface ICollateralAggregator {
         uint256 amount
     ) external;
 
-    function removeCollateralUser(address _user) external returns (bool);
-
-    function removeCollateralVault(address _vault) external returns (bool);
-
-    function setCurrencyControler(address _addr) external;
-
-    function setLiquidationEngine(address _addr) external;
-
     function settleCollateral(
         address partyA,
         address partyB,
@@ -203,14 +161,6 @@ interface ICollateralAggregator {
         uint256 amount0,
         uint256 amount1
     ) external;
-
-    function updateLiquidationPrice(uint256 _price) external;
-
-    function updateLiquidationThreshold(uint256 _ratio) external;
-
-    function updateMarginCallThreshold(uint256 _ratio) external;
-
-    function updateMinCollateralRatio(uint256 _ratio) external;
 
     function updatePV(
         address party0,
@@ -236,4 +186,11 @@ interface ICollateralAggregator {
         bytes32 ccy,
         uint256 amount
     ) external;
+
+    function getUsedVaults(address user) external view returns (address[] memory);
+
+    function getUsedVaults(
+        address party0, 
+        address party1
+    ) external view returns (address[] memory);
 }

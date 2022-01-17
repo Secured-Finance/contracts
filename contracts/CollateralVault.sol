@@ -3,7 +3,7 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "./interfaces/ICollateralAggregator.sol";
+import "./interfaces/ICollateralAggregatorV2.sol";
 import "./interfaces/ICurrencyController.sol";
 import "./interfaces/ICollateralVault.sol";
 import "./libraries/SafeTransfer.sol";
@@ -46,23 +46,11 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     // Mapping for bilateral collateral positions between 2 counterparties.
     mapping(bytes32 => CollateralPosition.Position) private _positions;
 
-    event Deposit(address user, uint256 amount);
-    event PositionDeposit(address party0, address party1, uint256 amount0, uint256 amount1);
-
-    event RebalanceTo(address user, address counterparty, uint256 amount);
-    event RebalanceFrom(address user, address counterparty, uint256 amount);
-    event RebalanceBetween(address user, address counterparty, uint256 amount);
-
-    event Withdraw(address from, uint256 amount);
-    event PositionWithdraw(address from, address counterparty, uint256 amount);
-
-    event Liquidate(address from, address to, uint256 amount);
-
     /**
     * @dev Modifier to check if user registered on collateral aggregator
     */
-    modifier registeredBookOnly() {
-        require(collateralAggregator.checkRegisteredBook(msg.sender), "NON_REGISTERED_USER");
+    modifier registeredUserOnly() {
+        require(collateralAggregator.checkRegisteredUser(msg.sender), "NON_REGISTERED_USER");
         _;
     }
 
@@ -100,12 +88,12 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
      * @dev Trigers to deposit funds by the msg.sender into collateral book
      * @param _amount Number of funds to deposit
      */
-    function deposit(uint256 _amount) public override registeredBookOnly {
+    function deposit(uint256 _amount) public override registeredUserOnly {
         require(_amount > 0, 'INVALID_AMOUNT');
         _safeTransferFrom(tokenAddress, msg.sender, _amount);
 
         Book storage book = books[msg.sender];
-        book.independentAmount.add(_amount);
+        book.independentAmount = book.independentAmount.add(_amount);
 
         _afterTransfer();
 
@@ -120,11 +108,15 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     function deposit(
         address _counterparty, 
         uint256 _amount
-    ) public override registeredBookOnly {
+    ) public override registeredUserOnly {
         require(_amount > 0, 'INVALID_AMOUNT');
         _safeTransferFrom(tokenAddress, msg.sender, _amount);
 
         CollateralPosition.deposit(_positions, msg.sender, _counterparty, _amount);
+
+        Book storage book = books[msg.sender];
+        book.lockedCollateral = book.lockedCollateral.add(_amount);
+
         _afterTransfer(_counterparty);
 
         emit PositionDeposit(msg.sender, _counterparty, _amount, 0);
@@ -160,10 +152,16 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         Book storage book = books[_user];
         
         vars.rebalanceAmount = book.independentAmount >= vars.target ? vars.target : book.independentAmount;
-        book.independentAmount = book.independentAmount.sub(vars.rebalanceAmount);
-        book.lockedCollateral = book.lockedCollateral.add(vars.rebalanceAmount);
 
-        CollateralPosition.deposit(_positions, _user, _counterparty, vars.rebalanceAmount);
+        if (vars.rebalanceAmount > 0) {
+            book.independentAmount = book.independentAmount.sub(vars.rebalanceAmount);
+            book.lockedCollateral = book.lockedCollateral.add(vars.rebalanceAmount);
+
+            CollateralPosition.deposit(_positions, _user, _counterparty, vars.rebalanceAmount);
+            _afterTransfer(_user, _counterparty);
+
+            emit RebalanceTo(_user, _counterparty, vars.rebalanceAmount);
+        }
 
         vars.left = vars.target.sub(vars.rebalanceAmount);
 
@@ -192,9 +190,15 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
         vars.rebalanceAmount = CollateralPosition.withdraw(_positions, _user, _counterparty, vars.target);
 
-        Book storage book = books[_user];
-        book.lockedCollateral = book.lockedCollateral.sub(vars.rebalanceAmount);
-        book.independentAmount = book.independentAmount.add(vars.rebalanceAmount);
+        if (vars.rebalanceAmount > 0) {
+            Book storage book = books[_user];
+            book.lockedCollateral = book.lockedCollateral.sub(vars.rebalanceAmount);
+            book.independentAmount = book.independentAmount.add(vars.rebalanceAmount);
+
+            _afterTransfer(_user, _counterparty);
+
+            emit RebalanceFrom(_user, _counterparty, vars.rebalanceAmount);
+        }
 
         vars.left = vars.target.sub(vars.rebalanceAmount);
 
@@ -225,6 +229,11 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
         vars.rebalanceAmount = CollateralPosition.rebalance(_positions, _user, _fromParty, _toParty, vars.target);
         vars.left = vars.target.sub(vars.rebalanceAmount);
+
+        _afterTransfer(_user, _fromParty);
+        _afterTransfer(_user, _toParty);
+
+        emit RebalanceBetween(_user, _fromParty, _toParty, vars.rebalanceAmount);
 
         return vars.left.mul(uint256(vars.exchangeRate)).div(1e18);
     }
@@ -267,13 +276,14 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
      * @notice Trigers to withdraw funds by the msg.sender from non-locked funds
      * @param _amount Number of funds to withdraw.
      */
-    function withdraw(uint256 _amount) public override registeredBookOnly { // fix according to collateral aggregator
+    function withdraw(uint256 _amount) public override registeredUserOnly { // fix according to collateral aggregator
         require(_amount > 0, 'INVALID_AMOUNT');
 
         address user = msg.sender;
         uint256 maxWidthdrawETH = collateralAggregator.getMaxCollateralBookWidthdraw(user);
         uint256 maxWidthdraw = currencyController.convertFromETH(ccy, maxWidthdrawETH);
-        uint withdrawAmt = _amount > maxWidthdraw ? maxWidthdraw : _amount;
+
+        uint256 withdrawAmt = _amount > maxWidthdraw ? maxWidthdraw : _amount;
 
         Book storage book = books[user];
         book.independentAmount = book.independentAmount.sub(withdrawAmt);
@@ -294,7 +304,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     function withdrawFrom(
         address _counterparty, 
         uint256 _amount
-    ) public override registeredBookOnly { // fix according to collateral aggregator
+    ) public override registeredUserOnly {
         require(_amount > 0, 'INVALID_AMOUNT');
         address user = msg.sender;
         
@@ -410,12 +420,19 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     }
 
     function _afterTransfer(address _counterparty) internal {
-        (uint256 locked0, uint256 locked1) = CollateralPosition.get(_positions, msg.sender, _counterparty);
+        _afterTransfer(msg.sender, _counterparty);
+    }
+
+    function _afterTransfer(
+        address _user,
+        address _counterparty
+    ) internal {
+        (uint256 locked0, uint256 locked1) = CollateralPosition.get(_positions, _user, _counterparty);
 
         if (locked0 > 0 || locked1 > 0) {
-            collateralAggregator.enterVault(msg.sender, _counterparty);
+            collateralAggregator.enterVault(_user, _counterparty);
         } else {
-            collateralAggregator.exitVault(msg.sender, _counterparty);
+            collateralAggregator.exitVault(_user, _counterparty);
         }
     }
 

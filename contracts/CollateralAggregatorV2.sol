@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "./interfaces/ICollateralAggregatorV2.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
 import "./ProtocolTypes.sol";
@@ -23,30 +24,10 @@ import "./CollateralManagement.sol";
  * Contract linked to Product based contracts (like Loan, Swap, etc), 
  * LendingMarkets, CurrencyController contracts and Liquidation Engine.
  */
-contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
+contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, CollateralManagement {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using NetPV for NetPV.CcyNetting;
-
-    event Register(address indexed addr, uint256 id, uint256 amount);
-    
-    event UseCollateral(address indexed partyA, address indexed partyB, bytes32 ccy, uint256 amount0, uint256 amount1, bool isSettled);
-    event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
-
-    event SettleCollateral(address indexed partyA, address indexed partyB, bytes32 ccy, uint256 amount0, uint256 amount1);
-
-    event Release(address indexed partyA, address indexed partyB, bytes32 ccy, uint256 amount0, uint256 amount1);
-    event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
-
-    event UpdatePV(
-        address indexed partyA, 
-        address indexed partyB, 
-        bytes32 ccy,
-        uint256 prevPV0, 
-        uint256 prevPV1,
-        uint256 currentPV0,
-        uint256 currentPV1 
-    );
 
     // Mapping for total amount of collateral locked against independent collateral from all books.
     mapping(address => mapping(bytes32 => uint256)) private unsettledCollateral;
@@ -93,7 +74,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     *
     * @notice Payable function, if user sends ETH msg.value adds to independentAmount
     */
-    function register(uint256 id) public payable nonRegisteredUser(msg.sender) {
+    function register(uint256 id) public override nonRegisteredUser(msg.sender) {
         _register(id);
     }
 
@@ -102,7 +83,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     *
     * @notice Payable function, if user sends ETH msg.value adds to independentAmount
     */
-    function register() public payable nonRegisteredUser(msg.sender) {
+    function register() public override nonRegisteredUser(msg.sender) {
         _register(0);
     }
 
@@ -120,7 +101,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external acceptedContract {
+    ) external override acceptedContract {
         exposedUnsettledCurrencies[user].add(ccy);
         require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
         
@@ -146,7 +127,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         uint256 amount0,
         uint256 amount1,
         bool isSettled
-    ) external acceptedContract {
+    ) external override acceptedContract {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
         exposedCurrencies[packedAddrs].add(ccy);
 
@@ -172,7 +153,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         bytes32 ccy,
         uint256 amount0,
         uint256 amount1
-    ) external acceptedContract {
+    ) external override acceptedContract {
         NetPV.settle(ccyNettings, partyA, partyB, ccy, amount0, amount1);
 
         emit SettleCollateral(partyA, partyB, ccy, amount0, amount1);
@@ -185,6 +166,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     function getTotalUnsettledExp(address _user) 
         public
         view
+        override 
         returns (uint256)
     {
         return _netTotalUnsettledAndHypotheticalPV(_user, "", 0);
@@ -198,7 +180,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     function getNetAndTotalPV(
         address _party0, 
         address _party1
-    ) public view returns (
+    ) public view override returns (
         uint256, 
         uint256, 
         uint256, 
@@ -222,7 +204,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         address _user, 
         bytes32 _ccy,
         uint256 _unsettledExp
-    ) public view returns (bool) {
+    ) public view override returns (bool) {
         (uint256 coverage, ) = _calculateUnsettledCoverageAndTotalExposure(_user, _ccy, _unsettledExp);
         return coverage >= MARGINLEVEL;
     }
@@ -242,7 +224,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         uint256 _party0PV,
         uint256 _party1PV,
         bool _isSettled
-    ) public view returns (bool, bool) {
+    ) public view override returns (bool, bool) {
         (
             uint256 cover0, 
             uint256 cover1
@@ -264,7 +246,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     */
     function getMaxCollateralBookWidthdraw(
         address _user
-    ) public view returns (uint256 maxWithdraw) {
+    ) public view override virtual returns (uint256 maxWithdraw) {
         (maxWithdraw, ) = _calcMaxCollateralWidthdrawFromBook(_user);
     }
 
@@ -277,7 +259,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     function getMaxCollateralWidthdraw(
         address _party0,
         address _party1
-    ) public view returns (uint256, uint256) {
+    ) public view override virtual returns (uint256, uint256) {
         uint256 colAdjustment0;
         bool isWithdraw0;
         uint256 colAdjustment1;
@@ -302,7 +284,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     */
     function getUnsettledCoverage(
         address _user
-    ) public view returns (uint256 coverage) {
+    ) public view override returns (uint256 coverage) {
         (coverage, ) = _calculateUnsettledCoverageAndTotalExposure(_user, "", 0);
     }
 
@@ -314,7 +296,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     function getRebalanceCollateralAmounts(
         address _party0, 
         address _party1
-    ) public view returns (uint256, uint256) {
+    ) public view override returns (uint256, uint256) {
         uint256 colAdjustment0;
         bool isWithdraw0;
         uint256 colAdjustment1;
@@ -341,7 +323,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     function getCoverage(
         address _party0, 
         address _party1
-    ) public view returns (uint256, uint256) {
+    ) public view override returns (uint256, uint256) {
         return _calculateCoverage(
             _party0, 
             _party1, 
@@ -361,7 +343,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external acceptedContract {
+    ) external override acceptedContract {
         unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].sub(amount);
 
         if (unsettledCollateral[user][ccy] == 0) {
@@ -388,7 +370,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         uint256 amount0,
         uint256 amount1,
         bool isSettled
-    ) external acceptedContract {
+    ) external override acceptedContract {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
         require(exposedCurrencies[packedAddrs].contains(ccy), "non-used ccy");
 
@@ -418,7 +400,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         uint256 prevPV1,
         uint256 currentPV0,
         uint256 currentPV1
-    ) external acceptedContract {
+    ) external override acceptedContract {
         NetPV.update(
             ccyNettings, 
             party0, 
@@ -447,7 +429,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         address from,
         address to,
         uint256 liquidationInETH
-    ) external onlyLiquidationEngine {
+    ) external override onlyLiquidationEngine {
         require(
             _liquidateCollateralAcrossVaults(from, to, liquidationInETH),
             "INCORRECT_LIQUIDATION_ACROSS_VAULTS"
@@ -472,7 +454,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         bytes32 ccy,
         uint256 liquidationAmount,
         bool isSettled
-    ) external onlyLiquidationEngine {
+    ) external override onlyLiquidationEngine {
         uint256 liqudationInETH = currencyController.convertToETH(ccy, liquidationAmount);
 
         require(
@@ -493,7 +475,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         emit Release(from, to, ccy, liquidationAmount, 0);
     }
 
-    function checkRegisteredUser(address addr) public view returns (bool) {
+    function checkRegisteredUser(address addr) public view override returns (bool) {
         return isRegistered[addr];
     }
 
@@ -501,7 +483,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         address partyA, 
         address partyB, 
         bytes32 ccy
-    ) public view returns (
+    ) public view override returns (
             uint256, 
             uint256, 
             uint256, 
@@ -519,7 +501,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         );
     }
 
-    function getExposedCurrencies(address partyA, address partyB) public view returns (bytes32[] memory) {
+    function getExposedCurrencies(address partyA, address partyB) public view override returns (bytes32[] memory) {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
         EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[packedAddrs];
 
@@ -532,6 +514,38 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         }
 
         return currencies;
+    }
+
+    function getUsedVaults(
+        address party0, 
+        address party1
+    ) public view override returns (address[] memory) {
+        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
+        EnumerableSet.AddressSet storage vaultsSet = usedVaultsInPosition[packedAddrs];
+
+        uint256 numVaults = vaultsSet.length();
+        address[] memory vaults = new address[](numVaults);
+
+        for (uint256 i = 0; i < numVaults; i++) {
+            address vault = vaultsSet.at(i);
+            vaults[i] = vault;
+        }
+
+        return vaults;
+    }
+
+    function getUsedVaults(address user) public view override returns (address[] memory) {
+        EnumerableSet.AddressSet storage vaultsSet = usedVaults[user];
+
+        uint256 numVaults = vaultsSet.length();
+        address[] memory vaults = new address[](numVaults);
+
+        for (uint256 i = 0; i < numVaults; i++) {
+            address vault = vaultsSet.at(i);
+            vaults[i] = vault;
+        }
+
+        return vaults;
     }
 
     // =========== INTERNAL FUNCTIONS ===========
@@ -1093,18 +1107,18 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
         }
     }
 
-    function enterVault(address _user) external onlyCollateralVault {
+    function enterVault(address _user) external override onlyCollateralVault {
         usedVaults[_user].add(msg.sender);
     }
 
-    function exitVault(address _user) external onlyCollateralVault {
+    function exitVault(address _user) external override onlyCollateralVault {
         usedVaults[_user].remove(msg.sender);
     }
 
     function enterVault(
         address _party0, 
         address _party1
-    ) external onlyCollateralVault {
+    ) external override onlyCollateralVault {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
         usedVaultsInPosition[packedAddrs].add(msg.sender);
     }
@@ -1112,7 +1126,7 @@ contract CollateralAggregatorV2 is ProtocolTypes, CollateralManagement {
     function exitVault(
         address _party0, 
         address _party1
-    ) external onlyCollateralVault {
+    ) external override onlyCollateralVault {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
         usedVaultsInPosition[packedAddrs].remove(msg.sender);
     }

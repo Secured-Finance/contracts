@@ -53,7 +53,7 @@ contract SafeTransfer {
                 // 0xa9059cbb = bytes4(keccak256("transfer(address,uint256)"))
                 abi.encodeWithSelector(0xa9059cbb, to, amount)
             );
-        require(success && (data.length == 0 || abi.decode(data, (bool)))); // ERC20 Transfer failed
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: TRANSFER_FROM_FAILED'); // ERC20 Transfer failed
     }
 
     function _safeTransferFrom(
@@ -67,7 +67,7 @@ contract SafeTransfer {
                 // 0x23b872dd = bytes4(keccak256("transferFrom(address,address,uint256)"))
                 abi.encodeWithSelector(0x23b872dd, from, address(this), amount)
             );
-        require(success && (data.length == 0 || abi.decode(data, (bool)))); // ERC20 TransferFrom failed
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'TransferHelper: TRANSFER_FROM_FAILED'); // ERC20 TransferFrom failed
     }
 
     function _safeTransferFrom(address token, address from, address to, uint value) internal {

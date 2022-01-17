@@ -24,19 +24,6 @@ contract CollateralManagement is ICollateralManagement {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    event CollateralUserAdded(address indexed user);
-    event CollateralUserRemoved(address indexed user);
-    event CollateralVaultLinked(address indexed vault, bytes32 ccy, address tokenAddress);
-    event CollateralVaultRemoved(address indexed vault, bytes32 ccy, address tokenAddress);
-
-    event CurrencyControllerUpdated(address indexed controller);
-    event LiquidationEngineUpdated(address indexed liquidations);
-
-    event AutoLiquidationThresholdUpdated(uint256 previousRatio, uint256 ratio);
-    event MarginCallThresholdUpdated(uint256 previousRatio, uint256 ratio);
-    event LiquidationPriceUpdated(uint256 previousPrice, uint256 price);
-    event MinCollateralRatioUpdated(uint256 previousRatio, uint256 price);
-
     uint256 public override LQLEVEL; // 120% for liquidation price
     uint256 public override MARGINLEVEL; // 150% margin call threshold
     uint256 public override AUTOLQLEVEL; // 125% auto liquidation
