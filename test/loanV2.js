@@ -30,8 +30,8 @@ const {
     sortedTermsSchedules 
 } = require('../test-utils').terms;
 
-const { toEther, toBN } = require('../test-utils').numbers;
-const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } = require('../test-utils').time;
+const { toEther, toBN, IR_BASE } = require('../test-utils').numbers;
+const { getLatestTimestamp, ONE_DAY, advanceTime } = require('../test-utils').time;
 const utils = require('web3-utils');
 
 should();
@@ -41,8 +41,6 @@ const expectRevert = reverted;
 contract('LoanV2', async (accounts) => {
     const [owner, alice, bob, carol] = accounts;
 
-    const ZERO_BN = toBN('0');
-    const IR_BASE = toBN('10000');
     const DFRAC_3M = toBN('90').div(toBN('360'));
 
     let signers;
@@ -92,6 +90,10 @@ contract('LoanV2', async (accounts) => {
         const quickSortLibrary = await QuickSort.deploy();
         await quickSortLibrary.deployed();
 
+        const DiscountFactor = await ethers.getContractFactory('DiscountFactor')
+        const discountFactor = await DiscountFactor.deploy();
+        await discountFactor.deployed();
+
         const productResolverFactory = await ethers.getContractFactory(
             'ProductAddressResolver',
             {
@@ -101,25 +103,41 @@ contract('LoanV2', async (accounts) => {
               }
             )
         productResolver = await productResolverFactory.deploy();
+        console.log('productResolver is ' + productResolver.address);
 
         const loanFactory = await ethers.getContractFactory(
             'LoanV2',
             {
                 libraries: {
-                    DealId: dealIdLibrary.address
+                    DealId: dealIdLibrary.address,
+                    DiscountFactor: discountFactor.address,
                 }
               }
             )
         loan = await loanFactory.deploy();
+        console.log('loan is ' + loan.address);
 
         markToMarket = await MarkToMarket.new(productResolver.address);
 
         loanCaller = await LoanCallerMock.new(loan.address);
         paymentAggregator = await PaymentAggregator.new();
+        console.log('paymentAggregator is ' + paymentAggregator.address);
+
         closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
+        console.log('closeOutNetting is ' + closeOutNetting.address);
+
         collateral = await CollateralAggregator.new();
         collateralCaller = await CollateralAggregatorCallerMock.new(collateral.address);
-        lendingController = await LendingMarketControllerMock.new();
+
+        const lendingControllerFactory = await ethers.getContractFactory(
+            'LendingMarketControllerMock',
+            {
+                libraries: {
+                    DiscountFactor: discountFactor.address,
+                }
+              }
+            )
+        lendingController = await lendingControllerFactory.deploy();
 
         await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
         await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
@@ -131,6 +149,8 @@ contract('LoanV2', async (accounts) => {
         await collateral.addCollateralUser(collateralCaller.address);
 
         currencyController = await CurrencyController.new();
+        console.log('currencyController is ' + currencyController.address);
+
         filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, filToETHRate);
         ethToUSDPriceFeed = await MockV3Aggregator.new(8, hexETHString, ethToUSDRate);
         btcToETHPriceFeed = await MockV3Aggregator.new(18, hexBTCString, btcToETHRate);
@@ -168,6 +188,7 @@ contract('LoanV2', async (accounts) => {
             )
         termStructure = await termStructureFactory.deploy(currencyController.address, productResolver.address);
         await loan.setTermStructure(termStructure.address);
+        console.log('termStructure is ' + termStructure.address);
 
         for (i = 0; i < sortedTermDays.length; i++) {
             await termStructure.supportTerm(
@@ -179,6 +200,10 @@ contract('LoanV2', async (accounts) => {
                 [hexBTCString, hexFILString, hexETHString]
             );
         }
+        
+        await lendingController.setSupportedTerms(hexETHString, sortedTermDays);
+        await lendingController.setSupportedTerms(hexFILString, sortedTermDays);
+        await lendingController.setSupportedTerms(hexBTCString, sortedTermDays);
 
         addressPacking = await AddressPackingTest.new();
 
@@ -304,9 +329,17 @@ contract('LoanV2', async (accounts) => {
             book = await collateral.getCollateralBook(bob);
             book.lockedCollateral.should.be.equal(bobFILInETH.toString());
 
+            let flipped;
+            alice < bob ? (flipped = false) : (flipped = true);
+
             let position = await collateral.getBilateralPosition(alice, bob);
-            position.lockedCollateralA.should.be.equal(bobFILInETH.toString());
-            position.lockedCollateralB.should.be.equal(aliceFILInETH.toString());
+            if (flipped) {
+                position.lockedCollateralA.should.be.equal(bobFILInETH.toString());
+                position.lockedCollateralB.should.be.equal(aliceFILInETH.toString());    
+            } else {
+                position.lockedCollateralA.should.be.equal(aliceFILInETH.toString());
+                position.lockedCollateralB.should.be.equal(bobFILInETH.toString());    
+            }
         });
 
         it('Try to get last settled payment, verify payment from lender', async () => {
@@ -401,7 +434,7 @@ contract('LoanV2', async (accounts) => {
         });
 
         it('Try to successfully terminate the deal after 30 days', async () => {
-            await advanceTimeAndBlock(30 * ONE_DAY);
+            await advanceTime(30 * ONE_DAY);
 
             await loan.connect(signers[1]).requestTermination(dealId);
             await loan.connect(signers[2]).acceptTermination(dealId);

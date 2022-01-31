@@ -1,32 +1,61 @@
 pragma solidity 0.6.12;
 
-contract SafeTransfer {
+import "../interfaces/IWETH9.sol";
+import "hardhat/console.sol";
 
-    address private constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+abstract contract SafeTransfer {
 
-    /// @dev Helper function to handle both ETH and ERC20 payments
-    function _safeTokenPayment(
+    address public immutable WETH9;
+
+    constructor(address _WETH9) public {
+        WETH9 = _WETH9;
+    }
+
+    receive() external payable {
+        require(msg.sender == WETH9, 'Not WETH9');
+    }
+
+    function _depositAssets(
         address _token,
-        address payable _to,
+        address _payer, 
+        address _receiver, 
         uint256 _amount
     ) internal {
-        if (address(_token) == ETH_ADDRESS) {
-            _safeTransferETH(_to,_amount );
+        if (address(_token) == WETH9 && address(this).balance >= _amount) {
+            _wrapWETH(_receiver, _amount);
+        } else if (_receiver == address(this)) {
+            _safeTransferFrom(_token, _payer, _amount);
         } else {
-            _safeTransfer(_token, _to, _amount);
+            _safeTransferFrom(_token, _payer, _receiver, _amount);
         }
     }
 
-    /// @dev Helper function to handle both ETH and ERC20 payments
-    function _tokenPayment(
-        address _token,
-        address payable _to,
+    function _withdrawAssets(
+        address _token, 
+        address _receiver, 
         uint256 _amount
     ) internal {
-        if (address(_token) == ETH_ADDRESS) {
-            _to.transfer(_amount);
+        if (address(_token) == WETH9) {
+            _unwrapWETH(_receiver, _amount);
         } else {
-            _safeTransfer(_token, _to, _amount);
+            _safeTransfer(_token, _receiver, _amount);
+        }
+    }
+
+    function _wrapWETH(address _receiver, uint256 _amount) internal {
+        _amount = msg.value;
+
+        IWETH9(WETH9).deposit{value: _amount}();
+        IWETH9(WETH9).transfer(_receiver, _amount);
+    }
+
+    function _unwrapWETH(address _receiver, uint256 _amount) internal {
+        uint256 balanceWETH9 = IWETH9(WETH9).balanceOf(address(this));
+        require(balanceWETH9 >= _amount, 'Insufficient WETH9');
+
+        if (balanceWETH9 > 0) {
+            IWETH9(WETH9).withdraw(balanceWETH9);
+            _safeTransferETH(_receiver, balanceWETH9);
         }
     }
 

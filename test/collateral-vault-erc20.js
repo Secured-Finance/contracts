@@ -1,5 +1,6 @@
 const CollateralAggregatorMock = artifacts.require('CollateralAggregatorMock');
 const ERC20Mock = artifacts.require('ERC20Mock');
+const WETH9Mock = artifacts.require('WETH9Mock');
 const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
@@ -55,6 +56,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
             aliceTokenBalance
         );
 
+        wETHToken = await WETH9Mock.new();
+
         collateral = await CollateralAggregatorMock.new();
         await collateral.setCurrencyControler(currencyController.address, { from: owner });
 
@@ -64,7 +67,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
             hexFILString,
             tokenContract.address,
             collateral.address,
-            currencyController.address
+            currencyController.address,
+            wETHToken.address
         );
 
         await collateral.linkCollateralVault(vault.address, { from: owner });
@@ -263,8 +267,10 @@ contract('ERC20 based CollateralVault', async (accounts) => {
             lockedCollateral.toString().should.be.equal(carolLockedInPositionWithAlice.toString());
         });
 
-        it('Try to liquidate empty collateral from Alice to Carol, expect no state changes', async () => {
+        it('Try to liquidate collateral from empty side Alice to Carol using independent collateral, validate state changes', async () => {
             let liquidationAmt = decimalBase.mul(toBN('100'));
+            carolLockedInPositionWithAlice = carolLockedInPositionWithAlice.add(liquidationAmt);
+
             liquidationAmt = await currencyController.convertToETH(hexFILString, liquidationAmt);
 
             await collateral.liquidate(alice, carol, liquidationAmt, vault.address);

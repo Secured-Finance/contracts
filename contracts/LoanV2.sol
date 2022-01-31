@@ -241,7 +241,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         loans[loanId] = deal;
 
         _registerPaymentSchedule(loanId, deal);
-        liquidations.addDealToLiquidationQueue(lender, borrower, loanId);
+        // liquidations.addDealToLiquidationQueue(lender, borrower, loanId);
 
         emit Register(lender, borrower, ccy, term, notional, rate, loanId);
     }

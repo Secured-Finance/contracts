@@ -45,8 +45,9 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
     * @dev Triggers to get borrow rates for selected currency.
     * @param _ccy Currency short identifier
     */
-    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
+    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
+        uint256[] memory rates = new uint256[](terms.length);
 
         for (uint8 i = 0; i < terms.length; i++) {
             uint256 borrowRate = borrowRates[_ccy][i];
@@ -61,8 +62,9 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
     * @dev Triggers to get lend rates for selected currency.
     * @param _ccy Currency short identifier
     */
-    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
+    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
+        uint256[] memory rates = new uint256[](terms.length);
 
         for (uint8 i = 0; i < terms.length; i++) {
             uint256 lendRate = lendRates[_ccy][i];
@@ -77,8 +79,9 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
     * @dev Triggers to get mid rates for selected currency.
     * @param _ccy Currency short identifier
     */
-    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
+    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
+        uint256[] memory rates = new uint256[](terms.length);
 
         for (uint8 i = 0; i < terms.length; i++) {
             uint256 borrowRate = borrowRates[_ccy][i];
@@ -116,6 +119,7 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
         uint256[] memory
     ) {
         uint256[] memory rates = getMidRatesForCcy(_ccy);
+
         return DiscountFactor.calculateDFs(rates, supportedTerms[_ccy]);
     }
 
@@ -147,6 +151,11 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes 
         orders;
         return true;
     }
+
+    function setSupportedTerms(bytes32 _ccy, uint256[] memory terms) public {
+        supportedTerms[_ccy] = terms;
+    }
+
 
     function getSupportedTerms(bytes32 _ccy) public view override returns (uint256[] memory) {
         return supportedTerms[_ccy];

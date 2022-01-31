@@ -4,6 +4,7 @@ require("solidity-coverage");
 require('hardhat-contract-sizer');
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-ganache");
+require("@nomiclabs/hardhat-waffle");
 
 module.exports = {
   defaultNetwork: "hardhat",

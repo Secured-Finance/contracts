@@ -274,7 +274,7 @@ contract CurrencyController {
     * @param _ccy Currency
     */
     function getLastETHPrice(bytes32 _ccy) public view returns (int256) {
-        if(_isETH(_ccy)) return 1;
+        if(_isETH(_ccy)) return 1e18;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
         (, int256 price, ,  , ) =  priceFeed.latestRoundData();
@@ -288,7 +288,7 @@ contract CurrencyController {
     * @param _roundId RoundId
     */
     function getHistoricalETHPrice(bytes32 _ccy, uint80 _roundId) public view returns (int256) {
-        if(_isETH(_ccy)) return 1;
+        if(_isETH(_ccy)) return 1e18;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
         (, int256 price, , uint256 timeStamp, ) =  priceFeed.getRoundData(_roundId);
@@ -347,7 +347,7 @@ contract CurrencyController {
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
         (, int256 price, ,  , ) =  priceFeed.latestRoundData();
 
-        return _amountETH.mul(1e18).div(uint256(price)); // add decimals checks
+        return (_amountETH.mul(1e18)).div(uint256(price)); // add decimals checks
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {

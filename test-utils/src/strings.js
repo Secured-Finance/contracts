@@ -12,6 +12,7 @@ const hexBTCString = toBytes32("BTC");
 const loanPrefix = "0x21aaa47b";
 const loanName = "0xLoan";
 const zeroAddress = '0x0000000000000000000000000000000000000000';
+const ethTokenAddress = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
  module.exports = {
      toBytes32,
@@ -19,4 +20,5 @@ const zeroAddress = '0x0000000000000000000000000000000000000000';
      hexFILString, hexBTCString, hexETHString,
      loanPrefix, loanName,
      zeroAddress,
+     ethTokenAddress,
  }

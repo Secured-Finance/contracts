@@ -8,6 +8,7 @@ import "./interfaces/ICurrencyController.sol";
 import "./interfaces/ICollateralVault.sol";
 import "./libraries/SafeTransfer.sol";
 import "./libraries/CollateralPosition.sol";
+import "hardhat/console.sol";
 
 /**
  * @title CollateralVault is the main implementation contract for storing and keeping user's collateral
@@ -72,8 +73,9 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         bytes32 _ccy,
         address _tokenAddress,
         address _collateralAggregator, 
-        address _currencyController
-    ) public {
+        address _currencyController,
+        address _WETH9
+    ) public SafeTransfer(_WETH9) {
         owner = msg.sender;
         tokenAddress = _tokenAddress;
         ccy = _ccy;
@@ -88,9 +90,9 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
      * @dev Trigers to deposit funds by the msg.sender into collateral book
      * @param _amount Number of funds to deposit
      */
-    function deposit(uint256 _amount) public override registeredUserOnly {
+    function deposit(uint256 _amount) public payable override registeredUserOnly {
         require(_amount > 0, 'INVALID_AMOUNT');
-        _safeTransferFrom(tokenAddress, msg.sender, _amount);
+        _depositAssets(tokenAddress, msg.sender, address(this), _amount);
 
         Book storage book = books[msg.sender];
         book.independentAmount = book.independentAmount.add(_amount);
@@ -110,7 +112,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         uint256 _amount
     ) public override registeredUserOnly {
         require(_amount > 0, 'INVALID_AMOUNT');
-        _safeTransferFrom(tokenAddress, msg.sender, _amount);
+        _depositAssets(tokenAddress, msg.sender, address(this), _amount);
 
         CollateralPosition.deposit(_positions, msg.sender, _counterparty, _amount);
 
@@ -149,9 +151,15 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         vars.exchangeRate = currencyController.getLastETHPrice(ccy);
         vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
 
+        console.log('');
+        console.log('start rebalancing to');
+        console.log('rebalance to ', _user);
+        console.log('rebalance amount is ', _amountETH);
+        console.log('rebalance amount in vault ccy is ', vars.target);
+
         Book storage book = books[_user];
-        
         vars.rebalanceAmount = book.independentAmount >= vars.target ? vars.target : book.independentAmount;
+        console.log('rebalanced is ', vars.rebalanceAmount);
 
         if (vars.rebalanceAmount > 0) {
             book.independentAmount = book.independentAmount.sub(vars.rebalanceAmount);
@@ -186,9 +194,18 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     ) external override aggregatorOnly returns (uint256) {
         RebalanceLocalVars memory vars;
 
+        console.log('');
+        console.log('start rebalancing from');
+        console.log('rebalance from ', _user);
+        console.log('rebalance amount is ', _amountETH);
+
         vars.exchangeRate = currencyController.getLastETHPrice(ccy);
         vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
+        console.log('rebalance amount in vault ccy is ', vars.target);
+
         vars.rebalanceAmount = CollateralPosition.withdraw(_positions, _user, _counterparty, vars.target);
+
+        console.log('rebalanced is ', vars.rebalanceAmount);
 
         if (vars.rebalanceAmount > 0) {
             Book storage book = books[_user];
@@ -255,8 +272,13 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         uint256 _amountETH
     ) external override aggregatorOnly returns (uint256 liquidationLeftETH) {
         int256 exchangeRate = currencyController.getLastETHPrice(ccy);
+        console.log('liquidating collateral ');
+        console.log('exchangeRate ', uint256(exchangeRate));
+        console.log('_amountETH ', _amountETH);
         uint256 liquidationTarget = _amountETH.mul(1e18).div(uint256(exchangeRate));
         uint256 liquidated = CollateralPosition.liquidate(_positions, _from, _to, liquidationTarget);
+        console.log('liquidationTarget ', liquidationTarget);
+        console.log('liquidated ', liquidated);
 
         Book storage book = books[_from];
         book.lockedCollateral = book.lockedCollateral.sub(liquidated);
@@ -264,12 +286,49 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         book = books[_to];
         book.lockedCollateral = book.lockedCollateral.add(liquidated);
 
+        if (liquidated > 0) {
+            _afterTransfer(_from, _to);
+            emit Liquidate(_from, _to, liquidated);
+        }
+
         uint256 liquidationLeft = liquidationTarget.sub(liquidated);
+        console.log('liquidationLeft ', liquidationLeft);
 
         if (liquidationLeft > 0) {
-            liquidationLeftETH = liquidationLeft.mul(uint256(exchangeRate)).div(1e18);
+            uint256 independentLiquidation = _tryLiquidateIndependentCollateral(_from, _to, liquidationLeft);
+            liquidationLeft = liquidationLeft.sub(independentLiquidation);
+            console.log('liquidationLeft ', liquidationLeft);
         }
-        emit Liquidate(_from, _to, liquidated);
+
+        liquidationLeftETH = liquidationLeft.mul(uint256(exchangeRate)).div(1e18);
+        console.log('liquidationLeftETH ', liquidationLeftETH);
+    }
+
+    function _tryLiquidateIndependentCollateral(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) internal returns (uint256 liquidated) {
+        console.log('liquidating independent collateral ');
+        uint256 maxWidthdrawETH = collateralAggregator.getMaxCollateralBookWidthdraw(_from);
+        console.log('maxWidthdrawETH is ', maxWidthdrawETH);
+
+        uint256 maxLiquidation = currencyController.convertFromETH(ccy, maxWidthdrawETH);
+        console.log('maxLiquidation is ', maxLiquidation);
+
+        liquidated = _amount > maxLiquidation ? maxLiquidation : _amount;
+        console.log('independent to be liquidated is ', liquidated);
+
+        Book storage book = books[_from];
+        console.log('independent available before liquidation is ', book.independentAmount);
+        book.independentAmount = book.independentAmount.sub(liquidated);
+
+        book = books[_to];
+        book.lockedCollateral = book.lockedCollateral.add(liquidated);
+
+        CollateralPosition.deposit(_positions, _to, _from, liquidated);
+
+        emit LiquidateIndependent(_from, _to, liquidated);
     }
 
     /**
@@ -281,14 +340,18 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
 
         address user = msg.sender;
         uint256 maxWidthdrawETH = collateralAggregator.getMaxCollateralBookWidthdraw(user);
+        console.log('maxWidthdrawETH is ', maxWidthdrawETH);
+
         uint256 maxWidthdraw = currencyController.convertFromETH(ccy, maxWidthdrawETH);
+        console.log('maxWidthdraw is ', maxWidthdraw);
 
         uint256 withdrawAmt = _amount > maxWidthdraw ? maxWidthdraw : _amount;
+        console.log('withdrawAmt is ', withdrawAmt);
 
         Book storage book = books[user];
         book.independentAmount = book.independentAmount.sub(withdrawAmt);
 
-        _safeTransfer(tokenAddress, msg.sender, withdrawAmt);
+        _withdrawAssets(tokenAddress, msg.sender, withdrawAmt);
         _afterTransfer();
 
         emit Withdraw(msg.sender, withdrawAmt);
@@ -317,7 +380,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         Book storage book = books[user];
         book.lockedCollateral = book.lockedCollateral.sub(withdrawn);
 
-        _safeTransfer(tokenAddress, msg.sender, withdrawn);
+        _withdrawAssets(tokenAddress, msg.sender, withdrawn);
         _afterTransfer(_counterparty);
 
         emit PositionWithdraw(user, _counterparty, withdrawn);
@@ -428,6 +491,14 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         address _counterparty
     ) internal {
         (uint256 locked0, uint256 locked1) = CollateralPosition.get(_positions, _user, _counterparty);
+
+        if (locked0 > 0) {
+            collateralAggregator.enterVault(_user);   
+        }
+
+        if (locked1 > 0) {
+            collateralAggregator.enterVault(_counterparty);   
+        }
 
         if (locked0 > 0 || locked1 > 0) {
             collateralAggregator.enterVault(_user, _counterparty);

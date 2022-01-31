@@ -2,7 +2,7 @@
 pragma solidity ^0.6.12;
 
 interface ICollateralAggregator {
-    event Register(address indexed addr, uint256 id, uint256 amount);
+    event Register(address indexed addr);
     event Release(
         address indexed partyA,
         address indexed partyB,
@@ -137,7 +137,6 @@ interface ICollateralAggregator {
     ) external;
 
     function register() external;
-    function register(uint256 id) external;
 
     function releaseCollateral(
         address partyA,

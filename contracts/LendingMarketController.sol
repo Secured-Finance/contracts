@@ -32,7 +32,7 @@ contract LendingMarketController is ILendingMarketController {
     mapping(bytes32 => uint256[]) public supportedTerms;
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "INVALID_ACCESS");
         _;
     }
 
@@ -79,8 +79,9 @@ contract LendingMarketController is ILendingMarketController {
     * @dev Triggers to get borrow rates for selected currency.
     * @param _ccy Currency
     */
-    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
+    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
+        uint256[] memory rates = new uint256[](terms.length);
 
         for (uint256 i = 0; i < terms.length; i++) {
             uint256 term = terms[i];
@@ -95,8 +96,9 @@ contract LendingMarketController is ILendingMarketController {
     * @dev Triggers to get lend rates for selected currency.
     * @param _ccy Currency
     */
-    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
+    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
+        uint256[] memory rates = new uint256[](terms.length);
 
         for (uint256 i = 0; i < terms.length; i++) {
             uint256 term = terms[i];
@@ -111,8 +113,9 @@ contract LendingMarketController is ILendingMarketController {
     * @dev Triggers to get mid rates for selected currency.
     * @param _ccy Currency
     */
-    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory rates) {
+    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
+        uint256[] memory rates = new uint256[](terms.length);
 
         for (uint256 i = 0; i < terms.length; i++) {
             uint256 term = terms[i];

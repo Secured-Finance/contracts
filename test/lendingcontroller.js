@@ -39,6 +39,10 @@ contract('LendingMarketController', async (accounts) => {
         const quickSortLibrary = await QuickSort.deploy();
         await quickSortLibrary.deployed();
 
+        const DiscountFactor = await ethers.getContractFactory('DiscountFactor')
+        const discountFactor = await DiscountFactor.deploy();
+        await discountFactor.deployed();
+
         const productResolverFactory = await ethers.getContractFactory(
             'ProductAddressResolver',
             {
@@ -68,7 +72,8 @@ contract('LendingMarketController', async (accounts) => {
             'LoanV2',
             {
                 libraries: {
-                    DealId: dealIdLibrary.address
+                    DealId: dealIdLibrary.address,
+                    DiscountFactor: discountFactor.address,
                 }
               }
             )
@@ -84,7 +89,8 @@ contract('LendingMarketController', async (accounts) => {
             'LendingMarketController',
             {
                 libraries: {
-                    QuickSort: quickSortLibrary.address
+                    QuickSort: quickSortLibrary.address,
+                    DiscountFactor: discountFactor.address,
                 }
               }
             )
@@ -126,6 +132,7 @@ contract('LendingMarketController', async (accounts) => {
                 lendingMarkets.push(receipt.events[0].args.marketAddr);
                 
                 let lendingMarket = await LendingMarket.at(receipt.events[0].args.marketAddr);
+                console.log('deployed market with ' + receipt.events[0].args.marketAddr + ' address');
                 await lendingMarket.setCollateral(collateral.address, {from: owner});
                 await lendingMarket.setLoan(loan.address, {from: owner});
                 await collateral.addCollateralUser(lendingMarket.address, {from: owner});
@@ -225,13 +232,13 @@ contract('LendingMarketController', async (accounts) => {
 
         it('get discount factors from lending controller for FIL', async () => {
             let rate = await lendingController.getDiscountFactorsForCcy(hexFILString);
-            console.log("df3m: " + rate[0]);
-            console.log("df6m: " + rate[1]);
-            console.log("df1y: " + rate[2]);
-            console.log("df2y: " + rate[3]);
-            console.log("df3y: " + rate[4]);
-            console.log("df4y: " + rate[5]);
-            console.log("df5y: " + rate[6]);
+            console.log("df3m: " + rate[0][0]);
+            console.log("df6m: " + rate[0][1]);
+            console.log("df1y: " + rate[0][2]);
+            console.log("df2y: " + rate[0][3]);
+            console.log("df3y: " + rate[0][4]);
+            console.log("df4y: " + rate[0][5]);
+            console.log("df5y: " + rate[0][6]);
         });
     });
 });

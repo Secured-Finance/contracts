@@ -20,12 +20,13 @@ interface ICollateralVault {
     event Withdraw(address from, uint256 amount);
     event PositionWithdraw(address from, address counterparty, uint256 amount);
     event Liquidate(address from, address to, uint256 amount);
+    event LiquidateIndependent(address from, address to, uint256 amount);
 
     function ccy() external view returns (bytes32);
     function tokenAddress() external view returns (address);
 
     function deposit(address _counterparty, uint256 _amount) external;
-    function deposit(uint256 _amount) external;
+    function deposit(uint256 _amount) external payable;
 
     function getIndependentCollateral(address _user)
         external

@@ -41,7 +41,7 @@ contract CollateralManagement is ICollateralManagement {
     * @dev Modifier to make a function callable only by contract owner.
     */
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "INVALID_ACCESS");
         _;
     }
 

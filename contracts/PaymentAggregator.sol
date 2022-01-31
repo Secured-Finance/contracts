@@ -385,7 +385,7 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 time = block.timestamp;
         uint256 delta = BokkyPooBahsDateTimeLibrary.diffDays(time, targetTime);
 
-        return !(delta >= settlementWindow);
+        return !(delta > settlementWindow);
     }
 
     function getDealsFromSlot(

@@ -46,7 +46,7 @@ contract BokkyPooBahsDateTimeContract {
     uint public constant DOW_SUN = 7;
 
     function _now() public view returns (uint timestamp) {
-        timestamp = now;
+        timestamp = block.timestamp;
     }
     function _nowDateTime() public view returns (uint year, uint month, uint day, uint hour, uint minute, uint second) {
         (year, month, day, hour, minute, second) = BokkyPooBahsDateTimeLibrary.timestampToDateTime(now);

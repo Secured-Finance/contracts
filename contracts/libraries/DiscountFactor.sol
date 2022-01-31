@@ -13,17 +13,22 @@ library DiscountFactor {
         uint256 rate, 
         uint256 term, 
         uint256[] memory cache, 
+        uint256 dfSum,
         uint256 index
     ) internal pure returns (uint256 df) { 
         if (term < 365) {
             df = BP.mul(BP).div((BP.add(rate.mul(term).div(360))));
         } else if (term == 365) {
             df = BP.mul(BP).div((BP.add(rate)));
+            dfSum = dfSum.add(df);
         } else {
-            df = BP.mul(BP.sub(rate.mul(cache[index.sub(1)]).div(BP))).div(BP.add(rate));
+            df = BP.mul(BP.sub(rate.mul(dfSum).div(BP))).div(BP.add(rate));            
+            dfSum = dfSum.add(df);            
         }
 
         cache[index] = df;
+
+        return dfSum;
     }
 
     function calculateDFs(
@@ -42,9 +47,10 @@ library DiscountFactor {
 
         uint len = bootstrapedTerms.length;
         uint256[] memory dfs = new uint256[](len);
+        uint256 dfSum;
 
         for (uint i = 0; i < len; i++) {
-            determineDF(bootstrapedRates[i], bootstrapedTerms[i], dfs, i);
+            dfSum = determineDF(bootstrapedRates[i], bootstrapedTerms[i], dfs, dfSum, i);
         }
 
         return (dfs, bootstrapedTerms);

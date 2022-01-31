@@ -8,4 +8,5 @@ module.exports = {
   strings: require('./src/strings'),
   numbers: require('./src/numbers'),
   terms: require('./src/terms'),
+  dealId: require('./src/deal-id'),
 };

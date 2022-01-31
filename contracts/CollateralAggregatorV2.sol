@@ -9,6 +9,7 @@ import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
 import "./ProtocolTypes.sol";
 import "./CollateralManagement.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Collateral Aggregator contract is used to manage Secured Finance
@@ -30,7 +31,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
     using NetPV for NetPV.CcyNetting;
 
     // Mapping for total amount of collateral locked against independent collateral from all books.
-    mapping(address => mapping(bytes32 => uint256)) private unsettledCollateral;
+    mapping(address => mapping(bytes32 => uint256)) public unsettledCollateral;
 
     // Mapping for used currencies in unsettled exposures.
     mapping(address => EnumerableSet.Bytes32Set) private exposedUnsettledCurrencies;
@@ -70,21 +71,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
 
     /**
     * @dev Register user and store collateral book
-    * @param id Gateway token ID for KYC'd addresses
-    *
-    * @notice Payable function, if user sends ETH msg.value adds to independentAmount
-    */
-    function register(uint256 id) public override nonRegisteredUser(msg.sender) {
-        _register(id);
-    }
-
-    /**
-    * @dev Register user without KYC gateway token
-    *
-    * @notice Payable function, if user sends ETH msg.value adds to independentAmount
     */
     function register() public override nonRegisteredUser(msg.sender) {
-        _register(0);
+        _register();
     }
 
     // TODO: Rebalance from position to book once position coverage more than 150%
@@ -131,8 +120,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
         exposedCurrencies[packedAddrs].add(ccy);
 
-        _rebalanceIfRequired(partyA, partyB, ccy, amount0, amount1, isSettled);
         NetPV.use(ccyNettings, partyA, partyB, ccy, amount0, amount1, isSettled);
+        _rebalanceIfRequired(partyA, partyB, true);
 
         emit UseCollateral(partyA, partyB, ccy, amount0, amount1, isSettled);
     }
@@ -155,6 +144,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         uint256 amount1
     ) external override acceptedContract {
         NetPV.settle(ccyNettings, partyA, partyB, ccy, amount0, amount1);
+        _rebalanceIfRequired(partyA, partyB, true);
 
         emit SettleCollateral(partyA, partyB, ccy, amount0, amount1);
     }
@@ -270,7 +260,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             isWithdraw0,
             colAdjustment1,
             isWithdraw1
-        ) = _calcCollateralAdjustment(_party0, _party1, "", 0, 0, false);
+        ) = _calcCollateralAdjustment(_party0, _party1, "", 0, 0, false, true);
 
         return (
             isWithdraw0 ? colAdjustment0 : 0,
@@ -307,7 +297,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             isWithdraw0,
             colAdjustment1,
             isWithdraw1
-        ) = _calcCollateralAdjustment(_party0, _party1, "", 0, 0, false);
+        ) = _calcCollateralAdjustment(_party0, _party1, "", 0, 0, false, true);
 
         return (
             isWithdraw0 ? 0 : colAdjustment0,
@@ -375,6 +365,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         require(exposedCurrencies[packedAddrs].contains(ccy), "non-used ccy");
 
         NetPV.release(ccyNettings, partyA, partyB, ccy, amount0, amount1, isSettled);
+        _rebalanceIfRequired(partyA, partyB, true);
 
         emit Release(partyA, partyB, ccy, amount0, amount1);
     }
@@ -412,6 +403,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             currentPV1
         );
         
+        _rebalanceIfRequired(party0, party1, true);
+
         emit UpdatePV(party0, party1, ccy, prevPV0, prevPV1, currentPV0, currentPV1);
     }
 
@@ -455,7 +448,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         uint256 liquidationAmount,
         bool isSettled
     ) external override onlyLiquidationEngine {
-        uint256 liqudationInETH = currencyController.convertToETH(ccy, liquidationAmount);
+        uint256 liquidationTarget = liquidationAmount.mul(LQLEVEL).div(BP);
+        uint256 liqudationInETH = currencyController.convertToETH(ccy, liquidationTarget);
+        // console.log('liqudationInETH ', liqudationInETH);
 
         require(
             _liquidateCollateralAcrossVaults(from, to, liqudationInETH),
@@ -473,6 +468,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         );
 
         emit Release(from, to, ccy, liquidationAmount, 0);
+
+        _rebalanceIfRequired(from, to, true);
     }
 
     function checkRegisteredUser(address addr) public view override returns (bool) {
@@ -552,13 +549,12 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
 
     /**
     * @dev Triggers internaly to store new collateral book
-    * @param id Gateway token ID for KYC'd addresses
     */
-    function _register(uint256 id) internal {
+    function _register() internal {
         isRegistered[msg.sender] = true;
         // perform onboarding steps here
 
-        emit Register(msg.sender, id, msg.value);
+        emit Register(msg.sender);
     }
 
     struct NetAndTotalPVLocalVars {
@@ -631,8 +627,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             vars.ltvRatio = currencyController.getLTV(vars.ccy);
 
             vars.totalPV0inETH = vars.totalPV0inETH.add(vars.netting.party0PV);
-            vars.totalPV1inETH = vars.totalPV1inETH.add(vars.netting.party0PV);
-            
+            vars.totalPV1inETH = vars.totalPV1inETH.add(vars.netting.party1PV);
             vars.totalLTV0 = vars.totalLTV0.add(vars.netting.party0PV.mul(vars.ltvRatio).div(BP));
             vars.totalLTV1 = vars.totalLTV1.add(vars.netting.party1PV.mul(vars.ltvRatio).div(BP));
         }
@@ -664,7 +659,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             netting.party0PV = netting.party0PV.mul(exchangeRate).div(1e18);
         }
 
-        if (netting.party0PV > 0) {
+        if (netting.party1PV > 0) {
             netting.party1PV = netting.party1PV.mul(exchangeRate).div(1e18);
         }
 
@@ -767,7 +762,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             _party1PV, 
             _isSettled
         );
-        
+        // console.log('vars.req0 ', vars.req0);
+        // console.log('vars.req1 ', vars.req1);
+
         (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(_party0, _party1);
 
         if (vars.req0 > 0) {
@@ -798,7 +795,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         bytes32 _ccy,
         uint256 _amount0,
         uint256 _amount1,
-        bool _isSettled
+        bool _isSettled,
+        bool _safeRebalance
     ) internal view returns (
         uint256, 
         bool, 
@@ -816,6 +814,14 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             _amount1, 
             _isSettled
         );
+
+        if (_safeRebalance) {
+            vars.targetReq0 = vars.targetReq0.mul(MARGINLEVEL).div(BP);
+            vars.targetReq1 = vars.targetReq1.mul(MARGINLEVEL).div(BP);
+        }
+
+        // console.log('vars.targetReq0 is ', vars.targetReq0);
+        // console.log('vars.targetReq1 is ', vars.targetReq1);
 
         (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(_party0, _party1);
 
@@ -979,6 +985,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         
         TotalLockedCollateralLocalVars memory vars;
         vars.len = vaults.length();
+        // console.log('number of vaults ', vars.len);
 
         for (uint256 i = 0; i < vars.len; i++) {
             address vaultAddr = vaults.at(i);
@@ -987,10 +994,15 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
                 _party0, 
                 _party1
             );
+            // console.log('vars.lockedCollateral0 ', vars.lockedCollateral0);
+            // console.log('vars.lockedCollateral1 ', vars.lockedCollateral1);
 
             vars.totalCollateral0 = vars.totalCollateral0.add(vars.lockedCollateral0);
             vars.totalCollateral1 = vars.totalCollateral1.add(vars.lockedCollateral1);
         }
+            // console.log('vars.totalCollateral0 ', vars.totalCollateral0);
+            // console.log('vars.totalCollateral1 ', vars.totalCollateral1);
+
 
         return (
             vars.totalCollateral0, 
@@ -1020,8 +1032,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         address _to,
         uint256 _liquidationTarget
     ) internal returns (bool) {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(_from, _to);
-        EnumerableSet.AddressSet storage vaults = usedVaultsInPosition[packedAddrs];
+        EnumerableSet.AddressSet storage vaults = usedVaults[_from];
         uint256 len = vaults.length();
         uint256 i = 0;
 
@@ -1033,6 +1044,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
                 _liquidationTarget
             );
 
+            // console.log('_liquidationTarget ', _liquidationTarget);
             i += 1;
         }
 
@@ -1047,10 +1059,10 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         uint256 _rebalanceTarget,
         bool isRebalanceFrom
     ) internal returns (bool) {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        EnumerableSet.AddressSet storage vaults = usedVaultsInPosition[packedAddrs];
+        EnumerableSet.AddressSet storage vaults = usedVaults[_party0];
         uint256 len = vaults.length();
         uint256 i = 0;
+        // console.log('used vaults for rebalance ', len);
 
         while (_rebalanceTarget != 0 && i < len) {
             address vaultAddr = vaults.at(i);
@@ -1080,17 +1092,19 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
     function _rebalanceIfRequired(
         address _party0,
         address _party1,
-        bytes32 _ccy,
-        uint256 _amount0,
-        uint256 _amount1,
-        bool _isSettled
+        bool _safeRebalance
     ) internal {
         (
             uint256 rebalance0, 
             bool isRebalanceFrom0,
             uint256 rebalance1,
             bool isRebalanceFrom1
-        ) = _calcCollateralAdjustment(_party0, _party1, _ccy, _amount0, _amount1, _isSettled);
+        ) = _calcCollateralAdjustment(
+            _party0, 
+            _party1, 
+            "", 0, 0, false,
+            _safeRebalance
+        );
         
         if (rebalance0 > 0) {
             require(
@@ -1101,7 +1115,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
 
         if (rebalance1 > 0) {
             require(
-                _rebalanceCollateralAcrossVaults(_party0, _party1, rebalance1, isRebalanceFrom1),
+                _rebalanceCollateralAcrossVaults(_party1, _party0, rebalance1, isRebalanceFrom1),
                 "NON_ENOUGH_FUNDS_FOR_REBALANCE"
             );
         }

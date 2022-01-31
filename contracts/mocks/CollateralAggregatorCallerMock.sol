@@ -3,7 +3,7 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "../ProtocolTypes.sol";
-import "../interfaces/ICollateralAggregator.sol";
+import "../interfaces/ICollateralAggregatorV2.sol";
 
 contract CollateralAggregatorCallerMock is ProtocolTypes {
     
@@ -59,6 +59,36 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         bool isSettled
     ) public {
         collateralAggregator.releaseCollateral(partyA, partyB, ccy, amount0, amount1, isSettled);
+    }
+
+    function updatePV(
+        address partyA,
+        address partyB,
+        bytes32 ccy,
+        uint256 prevPV0,
+        uint256 prevPV1,
+        uint256 currentPV0,
+        uint256 currentPV1
+    ) external {
+        collateralAggregator.updatePV(partyA, partyB, ccy, prevPV0, prevPV1, currentPV0, currentPV1);
+    }
+
+    function liquidate(
+        address from,
+        address to,
+        bytes32 ccy,
+        uint256 liquidationAmount,
+        bool isSettled
+    ) external {
+        collateralAggregator.liquidate(from, to, ccy, liquidationAmount, isSettled);
+    }
+
+    function liquidate(
+        address from,
+        address to,
+        uint256 liquidationInETH
+    ) external {
+        collateralAggregator.liquidate(from, to, liquidationInETH);
     }
 
 }

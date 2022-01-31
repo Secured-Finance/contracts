@@ -8,7 +8,7 @@ const AddressPackingTest = artifacts.require('AddressPackingTest');
 const { reverted} = require('../test-utils').assert;
 const { should } = require('chai');
 const { toBytes32 } = require('../test-utils').strings;
-const { toEther, toBN } = require('../test-utils').numbers;
+const { toEther, toBN, IR_BASE, ZERO_BN } = require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } = require('../test-utils').time;
 should();
 
@@ -16,9 +16,6 @@ const expectRevert = reverted;
 
 contract('PaymentAggregator', async (accounts) => {
     const [owner, alice, bob, carol] = accounts;
-
-    const ZERO_BN = toBN('0');
-    const IR_BASE = toBN('10000');
 
     const firstDealId = '0x21aaa47b00000000000000000000000000000000000000000000000000000000';
     const secondDealId = "0x21aaa47b00000000000000000000000000000000000000000000000000000001";
