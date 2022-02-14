@@ -4,6 +4,7 @@ pragma solidity ^0.6.12;
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./interfaces/ICurrencyController.sol";
 
 /**
  * @dev Currency Controller contract is responsible for managing supported 
@@ -12,24 +13,12 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  * Contract links new currencies to ETH Chainlink price feeds, without existing price feed 
  * contract owner is not able to add a new currency into the protocol
  */
-contract CurrencyController {
+contract CurrencyController is ICurrencyController {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
 
-    event CcyAdded(bytes32 indexed ccy, string name, uint16 chainId, uint256 ltv);
-    event LTVUpdated(bytes32 indexed ccy, uint256 ltv);
-    event MinMarginUpdated(bytes32 indexed ccy, uint256 minMargin);
-
-    event CcySupportUpdate(bytes32 indexed ccy, bool isSupported);
-    event CcyCollateralUpdate(bytes32 indexed ccy, bool isCollateral);
-
-    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
-
-    event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
-    event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
-
-    address public owner;
-    uint8 public last_ccy_index;
+    address public override owner;
+    uint8 public override last_ccy_index;
 
     struct Currency {
         bool isSupported;
@@ -38,18 +27,18 @@ contract CurrencyController {
     }
 
     // Protocol currencies storage
-    mapping(bytes32 => Currency) public currencies;
-    mapping(bytes32 => uint256) public ltvs;
-    mapping(bytes32 => uint256) public minMargins;
-    mapping(bytes32 => bool) public isCollateral;
+    mapping(bytes32 => Currency) public override currencies;
+    mapping(bytes32 => uint256) public override haircuts;
+    mapping(bytes32 => uint256) public override minMargins;
+    mapping(bytes32 => bool) public override isCollateral;
 
     // PriceFeed storage
-    mapping(bytes32 => AggregatorV3Interface) public usdPriceFeeds;
-    mapping(bytes32 => AggregatorV3Interface) public ethPriceFeeds;
-    mapping(bytes32 => uint8) public usdDecimals;
-    mapping(bytes32 => uint8) public ethDecimals;
+    mapping(bytes32 => AggregatorV3Interface) private usdPriceFeeds;
+    mapping(bytes32 => AggregatorV3Interface) private ethPriceFeeds;
+    mapping(bytes32 => uint8) public override usdDecimals;
+    mapping(bytes32 => uint8) public override ethDecimals;
 
-    uint8 public supportedCurrencies;
+    uint8 public override supportedCurrencies;
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -72,7 +61,7 @@ contract CurrencyController {
     * @dev Sets owner of the controller market.
     * @param _owner Address of new owner
     */
-    function setOwner(address _owner) public onlyOwner {
+    function setOwner(address _owner) public override onlyOwner {
         require(_owner != address(0), "new owner is the zero address");
         emit OwnerChanged(owner, _owner);
         owner = _owner;
@@ -87,7 +76,7 @@ contract CurrencyController {
     * @param _chainId Chain ID for conversion from bytes32 to bytes
     * @param _ethPriceFeed Address for ETH price feed   
     */
-    function supportCurrency(bytes32 _ccy, string memory _name, uint16 _chainId, address _ethPriceFeed, uint256 _ltv) onlyOwner public returns (bool) {
+    function supportCurrency(bytes32 _ccy, string memory _name, uint16 _chainId, address _ethPriceFeed, uint256 _haircut) onlyOwner public override returns (bool) {
         last_ccy_index = last_ccy_index++;
 
         Currency memory currency;
@@ -96,14 +85,14 @@ contract CurrencyController {
         currency.isSupported = true;
 
         currencies[_ccy] = currency;
-        ltvs[_ccy] = _ltv;
+        haircuts[_ccy] = _haircut;
 
         if (_ccy != "ETH") {
             require(linkPriceFeed(_ccy, _ethPriceFeed, true), "Invalid PriceFeed");
         } else {
             require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
         }
-        emit CcyAdded(_ccy, _name, _chainId, _ltv);
+        emit CcyAdded(_ccy, _name, _chainId, _haircut);
     }
 
     /**
@@ -111,7 +100,7 @@ contract CurrencyController {
     * @param _ccy Currency short ticket
     * @param _isSupported Boolean whether currency supported as collateral or not   
     */
-    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) onlyOwner public returns (bool) {
+    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) onlyOwner public override returns (bool) {
         Currency storage currency = currencies[_ccy];
         currency.isSupported = _isSupported;
 
@@ -123,24 +112,24 @@ contract CurrencyController {
     * @param _ccy Currency short ticket
     * @param _isSupported Boolean whether currency supported as collateral or not   
     */
-    function updateCollateralSupport(bytes32 _ccy, bool _isSupported) onlyOwner supportedCcyOnly(_ccy) public returns (bool) {
+    function updateCollateralSupport(bytes32 _ccy, bool _isSupported) onlyOwner supportedCcyOnly(_ccy) public override returns (bool) {
         isCollateral[_ccy] = _isSupported;
 
         emit CcyCollateralUpdate(_ccy, _isSupported);
     }
 
     /**
-    * @dev Triggers to update the loan-to-value ratio for supported currency
+    * @dev Triggers to update the haircut ratio for supported currency
     * @param _ccy Currency short ticket
-    * @param _ltv Currency LTV value used to calculate in collateral calculations
+    * @param _haircut Currency haircut ratio used to calculate in collateral calculations
     */
-    function updateCcyLTV(bytes32 _ccy, uint256 _ltv) onlyOwner supportedCcyOnly(_ccy) public returns (bool) {
-        require(_ltv > 0, "Incorrect LTV");
-        require(_ltv <= 10000, "LTV overflow");
+    function updateCcyHaircut(bytes32 _ccy, uint256 _haircut) onlyOwner supportedCcyOnly(_ccy) public override returns (bool) {
+        require(_haircut > 0, "Incorrect haircut ratio");
+        require(_haircut <= 10000, "Haircut ratio overflow");
         
-        ltvs[_ccy] = _ltv;
+        haircuts[_ccy] = _haircut;
 
-        emit LTVUpdated(_ccy, _ltv);
+        emit HaircutUpdated(_ccy, _haircut);
     }
 
     /**
@@ -148,7 +137,7 @@ contract CurrencyController {
     * @param _ccy Currency short ticket
     * @param _minMargin Currency minimal margin ratio used to calculate collateral coverage
     */
-    function updateMinMargin(bytes32 _ccy, uint256 _minMargin) onlyOwner supportedCcyOnly(_ccy) public returns (bool) {
+    function updateMinMargin(bytes32 _ccy, uint256 _minMargin) onlyOwner supportedCcyOnly(_ccy) public override returns (bool) {
         require(_minMargin > 0, "Incorrect MinMargin");
         require(_minMargin <= 10000, "MinMargin overflow");
         require(isCollateral[_ccy], "Unable to set MinMargin");
@@ -161,19 +150,19 @@ contract CurrencyController {
     // =========== EXTERNAL GET FUNCTIONS ===========
 
     /**
-    * @dev Triggers to get LTV percentage for specific currency. 
-    * LTV is used to apply haircut percentage on bilateral netting cross-calculation.
+    * @dev Triggers to get haircut ratio for specific currency. 
+    * Haircut is used in bilateral netting cross-calculation.
     * @param _ccy Currency short ticket
     */
-    function getLTV(bytes32 _ccy) external view returns (uint256) {
-        return ltvs[_ccy];
+    function getHaircut(bytes32 _ccy) external view override returns (uint256) {
+        return haircuts[_ccy];
     }
 
     /**
     * @dev Triggers to get minimal margin percentage for specific currency.
     * @param _ccy Currency short ticket
     */
-    function getMinMargin(bytes32 _ccy) external view returns (uint256) {
+    function getMinMargin(bytes32 _ccy) external view override returns (uint256) {
         require(isCollateral[_ccy], "Unable to get MinMargin");
         return minMargins[_ccy];
     }
@@ -182,7 +171,7 @@ contract CurrencyController {
     * @dev Triggers to get if specified currency is supported.
     * @param _ccy Currency short ticket
     */
-    function isSupportedCcy(bytes32 _ccy) public view returns (bool) {
+    function isSupportedCcy(bytes32 _ccy) public view override returns (bool) {
         return currencies[_ccy].isSupported;
     }
 
@@ -195,7 +184,7 @@ contract CurrencyController {
     * @param _priceFeedAddr Chainlink price feed contract address
     * @param _isEthPriceFeed Boolean for price feed with ETH price
     */
-    function linkPriceFeed(bytes32 _ccy, address _priceFeedAddr, bool _isEthPriceFeed) public onlyOwner returns (bool) {
+    function linkPriceFeed(bytes32 _ccy, address _priceFeedAddr, bool _isEthPriceFeed) public onlyOwner override returns (bool) {
         require(_priceFeedAddr != address(0), "Couldn't link 0x0 address");
         AggregatorV3Interface priceFeed = AggregatorV3Interface(_priceFeedAddr);
         (, int256 price, ,  , ) =  priceFeed.latestRoundData();
@@ -223,7 +212,7 @@ contract CurrencyController {
     * @param _ccy Specified currency
     * @param _isEthPriceFeed Boolean for price feed with ETH price
     */
-    function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external onlyOwner supportedCcyOnly(_ccy) {        
+    function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external onlyOwner supportedCcyOnly(_ccy) override {        
         if (_isEthPriceFeed == true) {
             address priceFeed = address(ethPriceFeeds[_ccy]);
 
@@ -249,7 +238,7 @@ contract CurrencyController {
     * @dev Triggers to get last price in USD for selected currency.
     * @param _ccy Currency
     */
-    function getLastUSDPrice(bytes32 _ccy) public view returns (int256) {
+    function getLastUSDPrice(bytes32 _ccy) public view override returns (int256) {
         AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
         (, int256 price, ,  , ) =  priceFeed.latestRoundData();
 
@@ -261,7 +250,7 @@ contract CurrencyController {
     * @param _ccy Currency
     * @param _roundId RoundId
     */
-    function getHistoricalUSDPrice(bytes32 _ccy, uint80 _roundId) public view returns (int256) {
+    function getHistoricalUSDPrice(bytes32 _ccy, uint80 _roundId) public view override returns (int256) {
         AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
         (, int256 price, , uint256 timeStamp, ) =  priceFeed.getRoundData(_roundId);
 
@@ -273,7 +262,7 @@ contract CurrencyController {
     * @dev Triggers to get last price in ETH for selected currency.
     * @param _ccy Currency
     */
-    function getLastETHPrice(bytes32 _ccy) public view returns (int256) {
+    function getLastETHPrice(bytes32 _ccy) public view override returns (int256) {
         if(_isETH(_ccy)) return 1e18;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
@@ -287,7 +276,7 @@ contract CurrencyController {
     * @param _ccy Currency
     * @param _roundId RoundId
     */
-    function getHistoricalETHPrice(bytes32 _ccy, uint80 _roundId) public view returns (int256) {
+    function getHistoricalETHPrice(bytes32 _ccy, uint80 _roundId) public view override returns (int256) {
         if(_isETH(_ccy)) return 1e18;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
@@ -302,7 +291,7 @@ contract CurrencyController {
     * @param _ccy Currency that has to be convered to ETH
     * @param _amount Amount of funds to be converted
     */
-    function convertToETH(bytes32 _ccy, uint256 _amount) public view returns (uint256) {
+    function convertToETH(bytes32 _ccy, uint256 _amount) public view override returns (uint256) {
         if(_isETH(_ccy)) return _amount;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
@@ -316,7 +305,7 @@ contract CurrencyController {
     * @param _ccy Currency that has to be convered to ETH
     * @param _amounts Array with amounts of funds to be converted
     */
-    function convertBulkToETH(bytes32 _ccy, uint256[] memory _amounts) public view returns (uint256[] memory) {
+    function convertBulkToETH(bytes32 _ccy, uint256[] memory _amounts) public view override returns (uint256[] memory) {
         if(_isETH(_ccy)) return _amounts;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
@@ -341,7 +330,7 @@ contract CurrencyController {
     * @param _ccy Currency that has to be convered from ETH
     * @param _amountETH Amount of funds in ETH to be converted
     */
-    function convertFromETH(bytes32 _ccy, uint256 _amountETH) public view returns (uint256) {
+    function convertFromETH(bytes32 _ccy, uint256 _amountETH) public view override returns (uint256) {
         if(_isETH(_ccy)) return _amountETH;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];

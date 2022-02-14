@@ -23,7 +23,6 @@ contract ProtocolTypes {
         BORROW
     }
     enum Ccy {ETH, FIL, USDC, BTC}
-    enum Term {_3m, _6m, _1y, _2y, _3y, _5y}
 
     // Loan common types
     enum LoanState {REGISTERED, WORKING, DUE, PAST_DUE, CLOSED, TERMINATED}
@@ -42,4 +41,13 @@ contract ProtocolTypes {
     // FXMarket common types
     enum CcyPair {FILETH, FILUSDC, ETHUSDC, BTCUSDC, BTCETH, BTCFIL}
     enum FXSide {BID, OFFER}
+
+    enum PaymentFrequency {
+        ANNUAL,
+        SEMI_ANNUAL,
+        QUARTERLY,
+        MONTHLY,
+        FORWARD
+    }
+
 }

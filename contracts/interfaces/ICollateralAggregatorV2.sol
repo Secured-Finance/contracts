@@ -8,7 +8,8 @@ interface ICollateralAggregator {
         address indexed partyB,
         bytes32 ccy,
         uint256 amount0,
-        uint256 amount1
+        uint256 amount1,
+        bool isSettled
     );
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event SettleCollateral(

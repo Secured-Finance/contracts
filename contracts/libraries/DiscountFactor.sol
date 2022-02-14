@@ -150,7 +150,8 @@ library DiscountFactor {
     function interpolateDF(
         uint256[] memory discountFactors, 
         uint256[] memory terms,
-        uint256 date)
+        uint256 date
+    )
         public
         view
         returns (uint256)

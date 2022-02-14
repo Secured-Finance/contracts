@@ -81,7 +81,7 @@ contract('CollateralAggregator', async (accounts) => {
         tx = await currencyController.updateMinMargin(hexETHString, 2500);
         await emitted(tx, 'MinMarginUpdated');
 
-        await collateral.setCurrencyControler(currencyController.address, {from: owner});
+        await collateral.setCurrencyController(currencyController.address, {from: owner});
         await loan.setCollateralAddr(collateral.address, {from: owner});
 
         lendingController = await LendingMarketController.new({from: owner});
@@ -294,13 +294,13 @@ contract('CollateralAggregator', async (accounts) => {
 
         it('Try to set FXRatesAggregator by Bob, expect revert', async () => {
             await expectRevert(
-                collateral.setCurrencyControler(loan.address, {from: bob}), ""
+                collateral.setCurrencyController(loan.address, {from: bob}), ""
             );
         });
 
         it('Try to set FXRatesAggregator with zero address by Owner, expect revert', async () => {
             await expectRevert(
-                collateral.setCurrencyControler('0x0000000000000000000000000000000000000000', {from: owner}), "Zero address"
+                collateral.setCurrencyController('0x0000000000000000000000000000000000000000', {from: owner}), "Zero address"
             );
         });
     });

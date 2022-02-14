@@ -37,6 +37,14 @@ const utils = require('web3-utils');
 should();
 
 const expectRevert = reverted;
+  
+const hashPosition = (year, month, day) => {
+    let encodedPosition = ethers.utils.defaultAbiCoder.encode([ "uint256", "uint256", "uint256" ], [ year, month, day ]);
+    console.log('encodedPosition is ' + encodedPosition)
+    console.log('position hash is ' + ethers.utils.keccak256(encodedPosition))
+
+    return ethers.utils.keccak256(encodedPosition);
+}
 
 contract('LoanV2', async (accounts) => {
     const [owner, alice, bob, carol] = accounts;
@@ -170,7 +178,7 @@ contract('LoanV2', async (accounts) => {
         tx = await currencyController.updateMinMargin(hexETHString, 2500);
         await emitted(tx, 'MinMarginUpdated');
 
-        await collateral.setCurrencyControler(currencyController.address, {from: owner});
+        await collateral.setCurrencyController(currencyController.address, {from: owner});
 
         await paymentAggregator.addPaymentAggregatorUser(loan.address);
         await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
@@ -193,9 +201,6 @@ contract('LoanV2', async (accounts) => {
         for (i = 0; i < sortedTermDays.length; i++) {
             await termStructure.supportTerm(
                 sortedTermDays[i], 
-                sortedTermsDfFracs[i], 
-                sortedTermsNumPayments[i], 
-                sortedTermsSchedules[i], 
                 [loanPrefix], 
                 [hexBTCString, hexFILString, hexETHString]
             );
@@ -298,6 +303,10 @@ contract('LoanV2', async (accounts) => {
                     amount.toString().should.be.equal(repayment.toString())
                 }
             });
+
+            let slotTimeTest = await timeLibrary.addDays(start, 365);
+            let slotDateTest = await timeLibrary.timestampToDate(slotTimeTest);
+            hashPosition(slotDateTest.year.toNumber(), slotDateTest.month.toNumber(), slotDateTest.day.toNumber());
 
             let timeSlot = await paymentAggregator.getTimeSlotBySlotId(alice, bob, hexFILString, _1yearTimeSlot);
             timeSlot.netPayment.toString().should.be.equal(coupon.toString());

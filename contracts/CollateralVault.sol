@@ -121,7 +121,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
 
         _afterTransfer(_counterparty);
 
-        emit PositionDeposit(msg.sender, _counterparty, _amount, 0);
+        emit PositionDeposit(msg.sender, _counterparty, _amount);
     }
 
     struct RebalanceLocalVars {

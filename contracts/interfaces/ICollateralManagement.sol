@@ -31,7 +31,7 @@ interface ICollateralManagement {
     function MARGINLEVEL() external view returns (uint256);
     function MIN_COLLATERAL_RATIO() external view returns (uint256);
 
-    function setCurrencyControler(address _addr) external;
+    function setCurrencyController(address _addr) external;
     function setLiquidationEngine(address _addr) external;
 
     function addCollateralUser(address _user) external returns (bool);

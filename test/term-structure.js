@@ -72,6 +72,10 @@ contract('TermStructure', async (accounts) => {
         const quickSortLibrary = await QuickSort.deploy();
         await quickSortLibrary.deployed();
 
+        const DiscountFactor = await ethers.getContractFactory('DiscountFactor')
+        const discountFactor = await DiscountFactor.deploy();
+        await discountFactor.deployed();
+
         const productResolverFactory = await ethers.getContractFactory(
             'ProductAddressResolverTest',
             {
@@ -96,13 +100,22 @@ contract('TermStructure', async (accounts) => {
             'LoanV2',
             {
                 libraries: {
-                    DealId: dealIdLibrary.address
+                    DealId: dealIdLibrary.address,
+                    DiscountFactor: discountFactor.address,
                 }
               }
             )
         loan = await loanFactory.deploy();
 
-        lendingController = await LendingMarketControllerMock.new();
+        const lendingControllerFactory = await ethers.getContractFactory(
+            'LendingMarketControllerMock',
+            {
+                libraries: {
+                    DiscountFactor: discountFactor.address,
+                }
+              }
+            )
+        lendingController = await lendingControllerFactory.deploy();
 
         await productResolver.registerProduct(loanPrefix, loan.address, lendingController.address, {from: owner});
 
@@ -118,33 +131,55 @@ contract('TermStructure', async (accounts) => {
         it('Succesfully add new term via supportTerm function and check term creation', async () => {
             let schedule = ['180'];
             await termStructure.supportTerm(
-                180, 5000, 1, [180], [loanPrefix], [hexETHString, hexBTCString, hexFILString], {from: owner}
+                180, [loanPrefix], [hexETHString, hexBTCString, hexFILString], {from: owner}
             );
 
-            let term = await termStructure.getTerm(180);
+            let term = await termStructure.getTerm(180, 0);
             term[0].toString().should.be.equal('180');
             term[1].toString().should.be.equal('5000');
             term[2].toString().should.be.equal('1');
 
-            let paymentSchedule = await termStructure.getTermSchedule(90);
-            paymentSchedule.map((days, i) => {
-                days.toString().should.be.equal(schedule[i])
-            });
+            let paymentSchedule = await termStructure.getTermSchedule(180, 0);
+            console.log(paymentSchedule.toString())
+            console.log()
+
+            paymentSchedule = await termStructure.getTermSchedule(180, 1);
+            console.log(paymentSchedule.toString())
+            console.log()
+
+            paymentSchedule = await termStructure.getTermSchedule(180, 2);
+            console.log(paymentSchedule.toString())
+            console.log()
+
+            paymentSchedule = await termStructure.getTermSchedule(180, 3);
+            console.log(paymentSchedule.toString())
+            console.log()
+
+            paymentSchedule = await termStructure.getTermSchedule(180, 4);
+            console.log(paymentSchedule.toString())
+            console.log()
+
+            // paymentSchedule.map((days, i) => {
+            //     days.toString().should.be.equal(schedule[i])
+            // });
         });
 
         it('Try to add term by Alice, expect revert', async () => {
             await expectRevert(
                 termStructure.connect(signers[1]).supportTerm(
-                    90, 2500, 1, [90], [loanPrefix], [hexFILString],
+                    90, [loanPrefix], [hexFILString],
                     {from: alice}), ""
             );
-            let term = await termStructure.connect(signers[0]).getTerm(90);
+            let term = await termStructure.connect(signers[0]).getTerm(90, 4);
             term[0].toString().should.be.equal('0');
         });
 
         it('Succesfully add the rest of terms using supportTerm', async () => {
             let days = [90,1825,365,1095,730];
-            let numPayments = [1,5,1,3,2];
+            let annualPayments = [1,5,1,3,2];
+            let monthlyPayments = [3,60,12,36,24];
+            let quartelyPayments = [1,20,4,12,8];
+            let semiAnnualPayments = [1,10,2,6,4];
             let dfFracs = [2500, 10000, 10000, 10000, 10000];
             let schedules = [
                 ['90'],
@@ -157,22 +192,47 @@ contract('TermStructure', async (accounts) => {
             for (i = 0; i < days.length; i++) {
                 await termStructure.supportTerm(
                     days[i], 
-                    dfFracs[i], 
-                    numPayments[i], 
-                    schedules[i], 
                     [loanPrefix], 
                     [hexETHString, hexBTCString, hexFILString]
                 );
 
-                let term = await termStructure.getTerm(days[i]);
+                let term = await termStructure.getTerm(days[i], 0);
                 term[0].toString().should.be.equal(days[i].toString());
                 term[1].toString().should.be.equal(dfFracs[i].toString());
-                term[2].toString().should.be.equal(numPayments[i].toString());
+                term[2].toString().should.be.equal(annualPayments[i].toString());
     
-                let paymentSchedule = await termStructure.getTermSchedule(days[i]);
-                paymentSchedule.map((days, j) => {
-                    days.toString().should.be.equal(schedules[i][j])
-                });
+                term = await termStructure.getTerm(days[i], 1);
+                term[2].toString().should.be.equal(semiAnnualPayments[i].toString());
+
+                term = await termStructure.getTerm(days[i], 2);
+                term[2].toString().should.be.equal(quartelyPayments[i].toString());
+
+                term = await termStructure.getTerm(days[i], 3);
+                term[2].toString().should.be.equal(monthlyPayments[i].toString());
+
+                let paymentSchedule = await termStructure.getTermSchedule(days[i], 0);
+                console.log(paymentSchedule.toString())
+                console.log()
+
+                paymentSchedule = await termStructure.getTermSchedule(days[i], 1);
+                console.log(paymentSchedule.toString())
+                console.log()
+
+                paymentSchedule = await termStructure.getTermSchedule(days[i], 2);
+                console.log(paymentSchedule.toString())
+                console.log()
+
+                paymentSchedule = await termStructure.getTermSchedule(days[i], 3);
+                console.log(paymentSchedule.toString())
+                console.log()
+
+                paymentSchedule = await termStructure.getTermSchedule(days[i], 4);
+                console.log(paymentSchedule.toString())
+                console.log()
+
+                // paymentSchedule.map((days, j) => {
+                //     days.toString().should.be.equal(schedules[i][j])
+                // });
             }
         });
     });
@@ -190,11 +250,23 @@ contract('TermStructure', async (accounts) => {
 
     describe("Report gas consumption of view functions", async () => {
         it('Gas costs for getting contract addresses', async () => {
-            let gasCost = await termStructure.getGasCostOfGetTerm(90);
-            console.log("Gas cost for getting term information is " + gasCost.toString() + " gas");
+            let gasCost = await termStructure.getGasCostOfGetTerm(90, 3);
+            console.log("Gas cost for getting term information with monthly payment schedule is " + gasCost.toString() + " gas");
 
-            gasCost = await termStructure.getGasCostOfGetTermSchedule(90);
-            console.log("Gas cost for getting term schedule is " + gasCost.toString() + " gas");
+            gasCost = await termStructure.getGasCostOfGetTermSchedule(1825, 3);
+            console.log("Gas cost for getting term monthly schedule is " + gasCost.toString() + " gas");
+
+            gasCost = await termStructure.getGasCostOfGetTermSchedule(1825, 0);
+            console.log("Gas cost for getting term annual schedule is " + gasCost.toString() + " gas");
+
+            gasCost = await termStructure.getGasCostOfGetTermSchedule(1825, 1);
+            console.log("Gas cost for getting term semi-annual schedule is " + gasCost.toString() + " gas");
+
+            gasCost = await termStructure.getGasCostOfGetTermSchedule(1095, 2);
+            console.log("Gas cost for getting term quartely schedule is " + gasCost.toString() + " gas");
+
+            gasCost = await termStructure.getGasCostOfGetTermSchedule(730, 4);
+            console.log("Gas cost for getting term forward schedule is " + gasCost.toString() + " gas");
 
             gasCost = await termStructure.getGasCostOfGetNumDays(180);
             console.log("Gas cost for getting term number of days is " + gasCost.toString() + " gas");
@@ -202,9 +274,21 @@ contract('TermStructure', async (accounts) => {
             gasCost = await termStructure.getGasCostOfGetDfFrac(365);
             console.log("Gas cost for getting term discount factor fractions is " + gasCost.toString() + " gas");
 
-            gasCost = await termStructure.getGasCostOfGetNumPayments(365);
-            console.log("Gas cost for getting term number of payments is " + gasCost.toString() + " gas");
+            gasCost = await termStructure.getGasCostOfGetNumPayments(365, 0);
+            console.log("Gas cost for getting term number of annual payments is " + gasCost.toString() + " gas");
             
+            gasCost = await termStructure.getGasCostOfGetNumPayments(1825, 1);
+            console.log("Gas cost for getting term number of semi-anual payments is " + gasCost.toString() + " gas");
+
+            gasCost = await termStructure.getGasCostOfGetNumPayments(730, 2);
+            console.log("Gas cost for getting term number of quarterly payments is " + gasCost.toString() + " gas");
+
+            gasCost = await termStructure.getGasCostOfGetNumPayments(1825, 3);
+            console.log("Gas cost for getting term number of monthly payments is " + gasCost.toString() + " gas");
+
+            gasCost = await termStructure.getGasCostOfGetNumPayments(1095, 4);
+            console.log("Gas cost for getting term number of forward payments is " + gasCost.toString() + " gas");
+
             gasCost = await termStructure.getGasCostOfIsSupportedTerm(730, loanPrefix, hexBTCString);
             console.log("Gas cost for verifying if term is supported is " + gasCost.toString() + " gas");
 

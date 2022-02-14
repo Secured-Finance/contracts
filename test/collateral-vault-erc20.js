@@ -7,6 +7,7 @@ const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const { emitted, reverted, equal } = require('../test-utils').assert;
 const { toBytes32, hexFILString } = require('../test-utils').strings;
 const { ZERO_BN, decimalBase, toBN } = require('../test-utils').numbers;
+const { checkTokenBalances } = require('../test-utils').balances;
 const utils = require('web3-utils');
 const { should } = require('chai');
 
@@ -33,13 +34,6 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
     let aliceLockedInPositionWithCarol;
 
-    const checkTokenBalances = async (parties, balances) => {
-        for (i=0; i < parties.length; i++) {
-            let actualBalance = await tokenContract.balanceOf(parties[i]);
-            actualBalance.toString().should.be.equal(balances[i].toString());
-        }
-    }
-
     before('deploy CollateralVault, CollateralAggregator, CurrencyController, price feeds and ERC20 mock contracts', async () => {
         signers = await ethers.getSigners();
 
@@ -59,7 +53,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         wETHToken = await WETH9Mock.new();
 
         collateral = await CollateralAggregatorMock.new();
-        await collateral.setCurrencyControler(currencyController.address, { from: owner });
+        await collateral.setCurrencyController(currencyController.address, { from: owner });
 
         const CollateralVault = await ethers.getContractFactory("CollateralVault");
     

@@ -200,7 +200,7 @@ contract CollateralAggregator is ProtocolTypes {
     * @notice Trigers only be contract owner
     * @notice Reverts on saving 0x0 address
     */
-    function setCurrencyControler(address _addr) public onlyOwner {
+    function setCurrencyController(address _addr) public onlyOwner {
         require(_addr != address(0), "Zero address");
         require(_addr.isContract(), "Can't add non-contract address");
 
@@ -996,9 +996,9 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 totalPV1inETH;
         uint256 totalCombinedPV0inETH;
         uint256 totalCombinedPV1inETH;
-        uint256 totalLTV0;
-        uint256 totalLTV1;
-        uint256 ltvRatio;
+        uint256 totalHaircutPV0;
+        uint256 totalHaircutPV1;
+        uint256 haircutRatio;
         uint256 expDiff0;
         uint256 expDiff1;
         uint256 netExp0; 
@@ -1053,17 +1053,17 @@ contract CollateralAggregator is ProtocolTypes {
             vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH.add(vars.unsettledExp0);
             vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH.add(vars.unsettledExp1);
 
-            vars.ltvRatio = currencyController.getLTV(ccy);
+            vars.haircutRatio = currencyController.getHaircut(ccy);
 
             vars.totalPV0inETH = vars.totalPV0inETH.add(vars.exp0);
             vars.totalPV1inETH = vars.totalPV1inETH.add(vars.exp1);
             
-            vars.totalLTV0 = vars.totalLTV0.add(vars.exp0.mul(vars.ltvRatio).div(BP));
-            vars.totalLTV1 = vars.totalLTV1.add(vars.exp1.mul(vars.ltvRatio).div(BP));
+            vars.totalHaircutPV0 = vars.totalHaircutPV0.add(vars.exp0.mul(vars.haircutRatio).div(BP));
+            vars.totalHaircutPV1 = vars.totalHaircutPV1.add(vars.exp1.mul(vars.haircutRatio).div(BP));
         }
 
-        vars.expDiff0 = vars.totalPV0inETH >= vars.totalLTV1 ? vars.totalPV0inETH.sub(vars.totalLTV1) : 0;
-        vars.expDiff1 = vars.totalPV1inETH >= vars.totalLTV0 ? vars.totalPV1inETH.sub(vars.totalLTV0) : 0;
+        vars.expDiff0 = vars.totalPV0inETH >= vars.totalHaircutPV1 ? vars.totalPV0inETH.sub(vars.totalHaircutPV1) : 0;
+        vars.expDiff1 = vars.totalPV1inETH >= vars.totalHaircutPV0 ? vars.totalPV1inETH.sub(vars.totalHaircutPV0) : 0;
 
         (vars.netExp0, vars.netExp1) = vars.expDiff0 > vars.expDiff1 ? (vars.expDiff0.sub(vars.expDiff1).add(vars.totalUnsettledPV0inETH), vars.totalUnsettledPV1inETH) : (vars.totalUnsettledPV0inETH, vars.expDiff1.sub(vars.expDiff0).add(vars.totalUnsettledPV1inETH));
 

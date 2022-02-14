@@ -7,16 +7,16 @@ contract TermStructureTest is TermStructure {
 
     constructor(address _currencyController, address _productAddressResolver) TermStructure(_currencyController, _productAddressResolver) public {}
 
-    function getGasCostOfGetTerm(uint256 _numDays) external view returns (uint256) {
+    function getGasCostOfGetTerm(uint256 _numDays, uint8 frequency) external view returns (uint256) {
         uint256 gasBefore = gasleft();
-        getTerm(_numDays);
+        getTerm(_numDays, frequency);
         
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfGetTermSchedule(uint256 _numDays) external view returns (uint256) {
+    function getGasCostOfGetTermSchedule(uint256 _numDays, uint8 frequency) external view returns (uint256) {
         uint256 gasBefore = gasleft();
-        getTermSchedule(_numDays);
+        getTermSchedule(_numDays, frequency);
         
         return gasBefore - gasleft();
     }
@@ -35,9 +35,9 @@ contract TermStructureTest is TermStructure {
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfGetNumPayments(uint256 _numDays) external view returns (uint256) {
+    function getGasCostOfGetNumPayments(uint256 _numDays, uint8 frequency) external view returns (uint256) {
         uint256 gasBefore = gasleft();
-        getNumPayments(_numDays);
+        getNumPayments(_numDays, frequency);
         
         return gasBefore - gasleft();
     }

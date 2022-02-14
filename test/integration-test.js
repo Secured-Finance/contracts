@@ -2,10 +2,11 @@ const LendingMarket = artifacts.require('LendingMarket');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const CloseOutNetting = artifacts.require('CloseOutNetting');
-const CollateralAggregator = artifacts.require('CollateralAggregator');
+const CollateralAggregatorV2 = artifacts.require('CollateralAggregatorV2');
 const CurrencyController = artifacts.require('CurrencyController');
 const MarkToMarket = artifacts.require('MarkToMarket');
 const Liquidations = artifacts.require('Liquidations');
+const WETH9Mock = artifacts.require('WETH9Mock');
 
 const { emitted, reverted, equal } = require('../test-utils').assert;
 const { hexFILString, hexBTCString, hexETHString, loanPrefix, zeroAddress } = require('../test-utils').strings;
@@ -15,6 +16,7 @@ const {
     sortedTermsNumPayments, 
     sortedTermsSchedules,
 } = require('../test-utils').terms;
+const { checkTokenBalances } = require('../test-utils').balances;
 
 const { toBN } = require('../test-utils').numbers;
 const { should } = require('chai');
@@ -88,6 +90,10 @@ contract('CollateralAggregator', async (accounts) => {
         const quickSortLibrary = await QuickSort.deploy();
         await quickSortLibrary.deployed();
 
+        const DiscountFactor = await ethers.getContractFactory('DiscountFactor')
+        const discountFactor = await DiscountFactor.deploy();
+        await discountFactor.deployed();
+
         currencyController = await CurrencyController.new();
         
         const productResolverFactory = await ethers.getContractFactory(
@@ -114,7 +120,8 @@ contract('CollateralAggregator', async (accounts) => {
             'LoanV2',
             {
                 libraries: {
-                    DealId: dealIdLibrary.address
+                    DealId: dealIdLibrary.address,
+                    DiscountFactor: discountFactor.address,
                 }
               }
             )
@@ -124,7 +131,10 @@ contract('CollateralAggregator', async (accounts) => {
 
         markToMarket = await MarkToMarket.new(productResolver.address);
 
-        collateral = await CollateralAggregator.new();
+        wETHToken = await WETH9Mock.new();
+
+        collateral = await CollateralAggregatorV2.new();
+        await collateral.setCurrencyController(currencyController.address);
         console.log("Collateral Aggregator contract address is " + collateral.address);
         console.log();
 
@@ -135,7 +145,7 @@ contract('CollateralAggregator', async (accounts) => {
         await liquidations.setCollateralAggregator(collateral.address, {from: owner});
         await liquidations.setProductAddressResolver(productResolver.address, {from: owner});
         await liquidations.linkContract(loan.address, {from: owner});
-        await collateral.addCollateralUser(liquidations.address, {from: owner});
+        await collateral.setLiquidationEngine(liquidations.address);
 
         filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, filToETHRate);
         ethToUSDPriceFeed = await MockV3Aggregator.new(8, hexETHString, ethToUSDRate);
@@ -156,8 +166,21 @@ contract('CollateralAggregator', async (accounts) => {
         tx = await currencyController.updateMinMargin(hexETHString, 2500);
         await emitted(tx, 'MinMarginUpdated');
 
-        await collateral.setCurrencyControler(currencyController.address, {from: owner});
+        await collateral.setCurrencyController(currencyController.address, {from: owner});
+        await liquidations.setCurrencyController(currencyController.address, {from: owner});
         await loan.setCollateralAddr(collateral.address, {from: owner});
+
+        const CollateralVault = await ethers.getContractFactory("CollateralVault");
+    
+        ethVault = await CollateralVault.deploy(
+            hexETHString,
+            wETHToken.address,
+            collateral.address,
+            currencyController.address,
+            wETHToken.address
+        );
+        await collateral.linkCollateralVault(ethVault.address);
+        console.log('ethVault is ' + ethVault.address);
 
         await paymentAggregator.addPaymentAggregatorUser(loan.address);
         await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
@@ -173,7 +196,8 @@ contract('CollateralAggregator', async (accounts) => {
             'LendingMarketController',
             {
                 libraries: {
-                    QuickSort: quickSortLibrary.address
+                    QuickSort: quickSortLibrary.address,
+                    DiscountFactor: discountFactor.address,
                 }
               }
             )
@@ -192,19 +216,16 @@ contract('CollateralAggregator', async (accounts) => {
         for (i = 0; i < sortedTermDays.length; i++) {
             await termStructure.supportTerm(
                 sortedTermDays[i], 
-                sortedTermsDfFracs[i], 
-                sortedTermsNumPayments[i], 
-                sortedTermsSchedules[i], 
                 [loanPrefix], 
                 [hexFILString, hexBTCString, hexETHString]
             );
 
-            let term = await termStructure.getTerm(sortedTermDays[i]);
+            let term = await termStructure.getTerm(sortedTermDays[i], 0);
             term[0].toString().should.be.equal(sortedTermDays[i].toString());
             term[1].toString().should.be.equal(sortedTermsDfFracs[i].toString());
             term[2].toString().should.be.equal(sortedTermsNumPayments[i].toString());
 
-            let paymentSchedule = await termStructure.getTermSchedule(sortedTermDays[i]);
+            let paymentSchedule = await termStructure.getTermSchedule(sortedTermDays[i], 0);
             paymentSchedule.map((days, j) => {
                 days.toString().should.be.equal(sortedTermsSchedules[i][j])
             });
@@ -272,16 +293,34 @@ contract('CollateralAggregator', async (accounts) => {
         });
 
         it('Register collateral book for Carol with 90 ETH and check Carol collateral book', async () => {
-            let carolBalance;
-            web3.eth.getBalance(alice).then((res) => carolBalance = web3.utils.toBN(res));
+            const [ , , , carolSigner] = await ethers.getSigners();
+            await collateral.register({ from: carol });
 
-            let result = await collateral.register({from: carol, value: carolInitialCollateral});
-            await emitted(result, 'Register');
+            await checkTokenBalances(
+                [ethVault.address],
+                [ZERO_BN],
+                wETHToken
+            );
 
-            const book = await collateral.getCollateralBook(carol);    
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(carolInitialCollateral.toString());
-            book[2].should.be.equal('0');
+            await (await ethVault.connect(carolSigner)['deposit(uint256)'](
+                carolInitialCollateral.toString(),
+                { value: carolInitialCollateral.toString() }
+            )).wait();
+
+            await checkTokenBalances(
+                [ethVault.address],
+                [carolInitialCollateral],
+                wETHToken
+            );
+
+            let vaults = await collateral.getUsedVaults(carol);
+            vaults.includes(ethVault.address).should.be.equal(true);
+
+            let independentCollateral = await ethVault.getIndependentCollateral(carol);
+            independentCollateral.should.be.equal(carolInitialCollateral.toString());
+
+            let lockedCollateral = await ethVault['getLockedCollateral(address)'](carol);
+            lockedCollateral.should.be.equal('0');
         });
 
         it('Make lend orders by Carol', async () => {
@@ -409,29 +448,14 @@ contract('CollateralAggregator', async (accounts) => {
         });
     });
 
-    describe("Register collateral book for Alice", async () => {
+    describe("Test Deposit and Withraw collateral by Alice", async () => {
         it('Register collateral book without payment', async () => {
             let result = await collateral.register({from: alice});
             await emitted(result, 'Register');
         });
 
-        it('Revert on second register collateral book', async () => {
-            await expectRevert(
-                collateral.register({from: alice}), 
-                "book registered already"
-            );
-        });
-
-        it('Get Alice collateral book and check values', async () => {
-            const book = await collateral.getCollateralBook(alice);    
-            book[0].should.be.equal('0');
-            book[1].should.be.equal('0');
-            book[2].should.be.equal('0');
-        });
-    });
-
-    describe("Test Deposit and Withraw collateral by Alice", async () => {
         it('Deposit 10 ETH by Alice in Collateral contract', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
             let balance;
             let gasPrice;
             web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
@@ -439,18 +463,27 @@ contract('CollateralAggregator', async (accounts) => {
             web3.eth.getBalance(alice).then((res) => balance = web3.utils.toBN(res));
             let depositAmt = web3.utils.toBN('10000000000000000000');
 
-            let tx = await collateral.deposit({from: alice, value: depositAmt});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
+            let receipt = await (await ethVault.connect(aliceSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
             }
-            await emitted(tx, 'Deposit');
+
+            await checkTokenBalances(
+                [ethVault.address],
+                [carolInitialCollateral.add(depositAmt)],
+                wETHToken
+            );
+
+            let vaults = await collateral.getUsedVaults(alice);
+            vaults.includes(ethVault.address).should.be.equal(true);
+
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(depositAmt.toString());
             
             aliceIndependentAmount = await depositAmt;
-
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal('0');
 
             web3.eth.getBalance(alice).then((res) => {
                 res.should.be.equal(balance.sub(aliceIndependentAmount).toString());
@@ -458,6 +491,7 @@ contract('CollateralAggregator', async (accounts) => {
         });
 
         it('Deposit 13,5252524 ETH by Alice in Collateral contract', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
             let balance;
             let gasPrice;
             web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
@@ -465,18 +499,19 @@ contract('CollateralAggregator', async (accounts) => {
             web3.eth.getBalance(alice).then((res) => balance = web3.utils.toBN(res));
             let depositAmt = web3.utils.toBN('13525252400000000000');
 
-            let tx = await collateral.deposit({from: alice, value: depositAmt});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
+            let receipt = await (await ethVault.connect(aliceSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
+
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
             }
-            await emitted(tx, 'Deposit');
             
             aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
 
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal('0');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
 
             web3.eth.getBalance(alice).then((res) => {
                 res.should.be.equal(balance.sub(depositAmt).toString());
@@ -484,57 +519,68 @@ contract('CollateralAggregator', async (accounts) => {
         });
 
         it('Try to Withdraw 30 ETH from Collateral by Alice but withdraw maximum amount of independent collateral, ', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
             let balance;
             let gasPrice;
+            let withdrawal = web3.utils.toBN("30000000000000000000");
             web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
 
             web3.eth.getBalance(alice).then((res) => balance = web3.utils.toBN(res));
 
-            let tx = await collateral.withdraw(web3.utils.toBN("30000000000000000000"), {from: alice});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
+            let receipt = await (await ethVault.connect(aliceSigner)['withdraw(uint256)'](withdrawal.toString())).wait(); 
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
             }
-            await emitted(tx, 'Withdraw');
 
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal('0');
-            book[2].should.be.equal('0');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal('0');
 
-            await web3.eth.getBalance(alice).then((res) => {
-                res.should.be.equal(balance.add(aliceIndependentAmount).toString());
-            });
+            // await web3.eth.getBalance(alice).then((res) => {
+            //     res.should.be.equal(balance.add(aliceIndependentAmount).toString());
+            // });
 
             aliceIndependentAmount = await aliceIndependentAmount.sub(aliceIndependentAmount);
         });
 
         it('Register collateral book by Bob with 1 ETH deposit', async () => {
-            let result = await collateral.register({from: bob, value: 1000000000000000000});
+            let result = await collateral.register({from: bob});
             await emitted(result, 'Register');
 
-            const book = await collateral.getCollateralBook(bob);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal('1000000000000000000');
-            book[2].should.be.equal('0');
+            const [ , , bobSigner] = await ethers.getSigners();
+            let depositAmt = web3.utils.toBN('1000000000000000000');
+
+            await (await ethVault.connect(bobSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
+
+            let vaults = await collateral.getUsedVaults(bob);
+            vaults.includes(ethVault.address).should.be.equal(true);
+
+            let independentCollateral = await ethVault.getIndependentCollateral(bob);
+            independentCollateral.should.be.equal(depositAmt.toString());
         });
 
         it('Deposit 2 ETH by Bob in Collateral contract', async () => {
+            const [ , , bobSigner] = await ethers.getSigners();
             let balance;
             let gasPrice;
             web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
 
             web3.eth.getBalance(bob).then((res) => balance = web3.utils.toBN(res));
             
-            let tx = await collateral.deposit({from: bob, value: 2000000000000000000});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
-            }
-            await emitted(tx, 'Deposit');
+            let depositAmt = web3.utils.toBN('2000000000000000000');
+            let receipt = await (await ethVault.connect(bobSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
 
-            const book = await collateral.getCollateralBook(bob);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal('3000000000000000000');
-            book[2].should.be.equal('0');
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
+            }
+
+            let independentCollateral = await ethVault.getIndependentCollateral(bob);
+            independentCollateral.should.be.equal('3000000000000000000');
 
             web3.eth.getBalance(bob).then((res) => {
                 res.should.be.equal(balance.sub(web3.utils.toBN("2000000000000000000")).toString());
@@ -542,50 +588,54 @@ contract('CollateralAggregator', async (accounts) => {
         });
 
         it('Try to withdraw 1 ETH from empty collateral book by Alice, expect no change in Alice balance', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
             let balance;
             let gasPrice;
+            let withdrawal = web3.utils.toBN("1000000000000000000");
 
             await web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
             await web3.eth.getBalance(alice).then((res) => {
                 balance = web3.utils.toBN(res)
             });
 
-            let tx = await collateral.withdraw(web3.utils.toBN("1000000000000000000"), {from: alice});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
+            let receipt = await (await ethVault.connect(aliceSigner)['withdraw(uint256)'](withdrawal.toString())).wait(); 
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
             }
 
-            web3.eth.getBalance(alice).then((res) => {
-                res.should.be.equal(balance.sub(web3.utils.toBN("0")).toString());
-            });
+            // web3.eth.getBalance(alice).then((res) => {
+            //     res.should.be.equal(balance.sub(web3.utils.toBN("0")).toString());
+            // });
         });
     });
 
     describe("Test making new orders on FIL LendingMarket, and check collateral usage", async () => {
         it('Deposit 1 ETH by Alice in Collateral contract', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
             let balance;
-            let gasPrice;
-            web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
+            let gasPrice;            
+            let depositAmt = web3.utils.toBN('1000000000000000000');
 
+            web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
             web3.eth.getBalance(alice).then((res) => balance = web3.utils.toBN(res));
             
-            let depositAmt = web3.utils.toBN("1000000000000000000")
-            let tx = await collateral.deposit({from: alice, value: depositAmt});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
+            let receipt = await (await ethVault.connect(aliceSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
+
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
             }
-            await emitted(tx, 'Deposit');
 
             aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
             
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal('0');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
 
-            web3.eth.getBalance(alice).then((res) => {
-                res.should.be.equal(balance.sub(web3.utils.toBN("1000000000000000000")).toString());
-            });
+            // web3.eth.getBalance(alice).then((res) => {
+            //     res.should.be.equal(balance.sub(web3.utils.toBN("1000000000000000000")).toString());
+            // });
         });
 
         it('Expect revert on making order for 100 FIL', async () => {
@@ -607,45 +657,44 @@ contract('CollateralAggregator', async (accounts) => {
             let exp = await collateral.getTotalUnsettledExp(alice);
             exp.toString().should.be.equal(filInETH.toString());
 
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal('0');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
         });
 
         it('Calculate collateral coverage of the global collateral book, expect to be equal with manual calculations', async () => {
-            const book = await collateral.getCollateralBook(alice);
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
             let coverage = await collateral.getUnsettledCoverage(alice);
 
             const totalUnsettledExp = await collateral.getTotalUnsettledExp(alice);
-            let manualCoverage = (web3.utils.toBN(book.independentAmount).mul(web3.utils.toBN(10000))).div(totalUnsettledExp);
+            let manualCoverage = (web3.utils.toBN(independentCollateral).mul(web3.utils.toBN(10000))).div(totalUnsettledExp);
             coverage.toNumber().should.be.equal(manualCoverage.toNumber());
         });
 
         it('Expect withdrawing maximum available amount instead of widthdrawing 0.9 ETH by Alice', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
+            let withdrawal = web3.utils.toBN("900000000000000000");
             let maxWidthdrawal = await collateral.getMaxCollateralBookWidthdraw(alice);
-            let widthdrawal = await collateral.withdraw(web3.utils.toBN("900000000000000000"), {from: alice});
-            await emitted(widthdrawal, 'Withdraw');
+            
+            (await ethVault.connect(aliceSigner)['withdraw(uint256)'](withdrawal.toString())).wait(); 
 
             aliceIndependentAmount = await aliceIndependentAmount.sub(maxWidthdrawal);
 
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal('0');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
         });
 
         it('Expect withdrawing 0 instead of widthdrawing 0.1 ETH by Alice', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
             let maxWidthdrawal = await collateral.getMaxCollateralBookWidthdraw(alice);
-            let widthdrawal = await collateral.withdraw(web3.utils.toBN("100000000000000000"), {from: alice});
-            await emitted(widthdrawal, 'Withdraw');
+            let withdrawal = web3.utils.toBN("100000000000000000");
+
+            (await ethVault.connect(aliceSigner)['withdraw(uint256)'](withdrawal.toString())).wait(); 
 
             aliceIndependentAmount = await aliceIndependentAmount.sub(maxWidthdrawal);
 
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal('0');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
         });
     });
 
@@ -675,26 +724,16 @@ contract('CollateralAggregator', async (accounts) => {
         });
 
         it('Successfully widthdraw left collateral by Alice', async () => {
-            let balance;
-            let gasPrice;
-            await web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
-            await web3.eth.getBalance(alice).then((res) => balance = web3.utils.toBN(res));
+            const [ , aliceSigner] = await ethers.getSigners();
             let maxWidthdrawal = await collateral.getMaxCollateralBookWidthdraw(alice);
+            let withdrawal = web3.utils.toBN("1000000000000000000");
 
-            let tx = await collateral.withdraw(web3.utils.toBN("1000000000000000000"), {from: alice});
-            await emitted(tx, 'Withdraw');
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
-            }
+            aliceIndependentAmount = await aliceIndependentAmount.sub(maxWidthdrawal);
 
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal('0');
-            book[2].should.be.equal('0');
+            (await ethVault.connect(aliceSigner)['withdraw(uint256)'](withdrawal.toString())).wait(); 
 
-            web3.eth.getBalance(alice).then((res) => {
-                res.should.be.equal(balance.add(maxWidthdrawal).toString());
-            });
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal('0');
 
             aliceIndependentAmount = await aliceIndependentAmount.sub(maxWidthdrawal)
         });
@@ -706,25 +745,27 @@ contract('CollateralAggregator', async (accounts) => {
         let filAmount = web3.utils.toBN("30000000000000000000")
 
         it('Deposit 1 ETH by Alice in Collateral contract', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
+            let depositAmt = web3.utils.toBN('1000000000000000000');
             let balance;
             let gasPrice;
+            
             web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
-
             web3.eth.getBalance(alice).then((res) => balance = web3.utils.toBN(res));
             
-            let depositAmt = web3.utils.toBN("1000000000000000000")
-            let tx = await collateral.deposit({from: alice, value: depositAmt});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
+            let receipt = await (await ethVault.connect(aliceSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
+
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
             }
-            await emitted(tx, 'Deposit');
 
             aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
             
-            const book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal('0');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
 
             web3.eth.getBalance(alice).then((res) => {
                 res.should.be.equal(balance.sub(web3.utils.toBN("1000000000000000000")).toString());
@@ -732,6 +773,7 @@ contract('CollateralAggregator', async (accounts) => {
         });
 
         it('Successfully make order for 30 FIL by Alice, take this order by Bob', async () => {
+            const [ , aliceSigner, bobSigner] = await ethers.getSigners();
             let depositAmt = web3.utils.toBN('1000000000000000000');
             let marketOrder = await lendingMarket.order(0, filAmount, 725, {from: alice});
             await emitted(marketOrder, 'MakeOrder');
@@ -740,8 +782,10 @@ contract('CollateralAggregator', async (accounts) => {
             console.log("Alice ETH address " + alice);
             console.log("Bob ETH address " + bob);
 
-            let tx = await collateral.deposit({from: bob, value: depositAmt});
-            await emitted(tx, 'Deposit');
+            let receipt = await (await ethVault.connect(bobSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
 
             let filUsed = (filAmount.mul(web3.utils.toBN(15000))).div(web3.utils.toBN(10000));
             let filInETH = await currencyController.convertToETH(hexFILString, filAmount, {from: alice});
@@ -778,6 +822,9 @@ contract('CollateralAggregator', async (accounts) => {
             // await advanceTimeAndBlock(90 * ONE_DAY);
             tx = await loan.functions['markToMarket(bytes32)'](loanId);
             // await emitted(tx, 'MarkToMarket');
+
+            let deal = await loan.getLoanDeal(loanId);
+            console.log(deal);
 
             const pv = await loan.getDealPV(loanId);
             const settlementLock = toBN(pv.toString()).mul(SETTLEMENT_LOCK).div(BP_BASE);
@@ -943,15 +990,17 @@ contract('CollateralAggregator', async (accounts) => {
             });
 
             it ('Try to liquidate deals', async () => {
-                await liquidations.liquidateDeals(alice, bob);
+                let firstLoanId = generateId(1); // first loan in loan contract
+                let secondLoanId = generateId(2); // first loan in loan contract
 
-                let loanId = generateId(1); // first loan in loan contract
-                let deal = await loan.getLoanDeal(loanId);
+                await liquidations.liquidateDeals(alice, bob, [firstLoanId, secondLoanId]);
+
+                let deal = await loan.getLoanDeal(firstLoanId);
+                console.log(deal);
                 deal.lender.should.be.equal(zeroAddress);
                 deal.borrower.should.be.equal(zeroAddress);
 
-                loanId = generateId(2); // first loan in loan contract
-                deal = await loan.getLoanDeal(loanId);
+                deal = await loan.getLoanDeal(secondLoanId);
                 deal.lender.should.be.equal(zeroAddress);
                 deal.borrower.should.be.equal(zeroAddress);
 

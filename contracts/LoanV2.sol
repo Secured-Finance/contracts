@@ -2,7 +2,7 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import './interfaces/ICollateralAggregator.sol';
+import './interfaces/ICollateralAggregatorV2.sol';
 import "./ProtocolTypes.sol";
 import './interfaces/ILendingMarketController.sol';
 import './interfaces/IPaymentAggregator.sol';
@@ -13,6 +13,7 @@ import "./libraries/DiscountFactor.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import './interfaces/ITermStructureGetter.sol';
 import './interfaces/ILiquidations.sol';
+import "hardhat/console.sol";
 
 /**
  * @title LoanV2 contract is used to store Lending deals in Secured Finance  
@@ -30,6 +31,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     bytes4 constant prefix = 0x21aaa47b;
     uint16 constant private VERSION = 1;
     uint256 public settlementWindow = 2;
+    uint8 public paymentFrequency = uint8(PaymentFrequency.ANNUAL);
 
     struct LoanDeal {
         address lender;
@@ -304,8 +306,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     function getLastSettledPayment(bytes32 loanId) external view returns (uint256 settlementTime) {
         LoanDeal memory deal = loans[loanId];
 
-        uint256 payNums = termStructure.getNumPayments(deal.term);
-        uint256[] memory daysArr = termStructure.getTermSchedule(deal.term);
+        uint256 payNums = termStructure.getNumPayments(deal.term, paymentFrequency);
+        uint256[] memory daysArr = termStructure.getTermSchedule(deal.term, paymentFrequency);
 
         for (uint256 i = payNums; i > 0; i--) {
             uint256 time = _timeShift(deal.start, daysArr[i-1]);
@@ -401,7 +403,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             uint256 accuredInterest = deal.notional.mul(accuredInterestRate).div(1e20);
             uint totalPayment = accuredInterest.add(deal.pv);
 
-            collateralAggregator.liquidate(deal.borrower, deal.lender, deal.ccy, totalPayment);
+            collateralAggregator.liquidate(deal.borrower, deal.lender, deal.ccy, totalPayment, true);
             // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
 
             emit EarlyTermination(loanId, msg.sender, totalPayment);
@@ -540,6 +542,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     */
     function _liquidateLoan(bytes32 loanId) internal {
         LoanDeal memory deal = loans[loanId];
+        console.log('deal id for liquidation is ');
+        console.logBytes32(loanId);
         _removePaymentSchedule(loanId, deal);
         collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
 
@@ -607,8 +611,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         Schedule memory schedule;
         ScheduleConstructionLocalVars memory vars;
 
-        vars.payNums = termStructure.getNumPayments(deal.term);
-        vars.daysArr = termStructure.getTermSchedule(deal.term);
+        vars.payNums = termStructure.getNumPayments(deal.term, paymentFrequency);
+        vars.daysArr = termStructure.getTermSchedule(deal.term, paymentFrequency);
         vars.dfFrac = termStructure.getDfFrac(deal.term);
 
         vars.coupon = (deal.notional.mul(deal.rate).mul(vars.dfFrac)).div(BP).div(BP);

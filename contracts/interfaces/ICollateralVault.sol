@@ -3,12 +3,7 @@ pragma solidity ^0.6.12;
 
 interface ICollateralVault {
     event Deposit(address user, uint256 amount);
-    event PositionDeposit(
-        address party0,
-        address party1,
-        uint256 amount0,
-        uint256 amount1
-    );
+    event PositionDeposit(address user, address counterparty, uint256 amount);
     event RebalanceBetween(
         address user, 
         address fromCounterparty, 

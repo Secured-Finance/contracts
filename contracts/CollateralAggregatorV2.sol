@@ -367,7 +367,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         NetPV.release(ccyNettings, partyA, partyB, ccy, amount0, amount1, isSettled);
         _rebalanceIfRequired(partyA, partyB, true);
 
-        emit Release(partyA, partyB, ccy, amount0, amount1);
+        emit Release(partyA, partyB, ccy, amount0, amount1, isSettled);
     }
 
     /**
@@ -467,7 +467,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             isSettled
         );
 
-        emit Release(from, to, ccy, liquidationAmount, 0);
+        emit Release(from, to, ccy, liquidationAmount, 0, isSettled);
 
         _rebalanceIfRequired(from, to, true);
     }
@@ -568,9 +568,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         uint256 totalPV1inETH;
         uint256 totalCombinedPV0inETH;
         uint256 totalCombinedPV1inETH;
-        uint256 totalLTV0;
-        uint256 totalLTV1;
-        uint256 ltvRatio;
+        uint256 totalHaircutPV0;
+        uint256 totalHaircutPV1;
+        uint256 haircutRatio;
         uint256 pvDiff0;
         uint256 pvDiff1;
         uint256 netPV0; 
@@ -624,16 +624,16 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH.add(vars.netting.unsettled0PV);
             vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH.add(vars.netting.unsettled1PV);
 
-            vars.ltvRatio = currencyController.getLTV(vars.ccy);
+            vars.haircutRatio = currencyController.getHaircut(vars.ccy);
 
             vars.totalPV0inETH = vars.totalPV0inETH.add(vars.netting.party0PV);
             vars.totalPV1inETH = vars.totalPV1inETH.add(vars.netting.party1PV);
-            vars.totalLTV0 = vars.totalLTV0.add(vars.netting.party0PV.mul(vars.ltvRatio).div(BP));
-            vars.totalLTV1 = vars.totalLTV1.add(vars.netting.party1PV.mul(vars.ltvRatio).div(BP));
+            vars.totalHaircutPV0 = vars.totalHaircutPV0.add(vars.netting.party0PV.mul(vars.haircutRatio).div(BP));
+            vars.totalHaircutPV1 = vars.totalHaircutPV1.add(vars.netting.party1PV.mul(vars.haircutRatio).div(BP));
         }
 
-        vars.pvDiff0 = vars.totalPV0inETH >= vars.totalLTV1 ? vars.totalPV0inETH.sub(vars.totalLTV1) : 0;
-        vars.pvDiff1 = vars.totalPV1inETH >= vars.totalLTV0 ? vars.totalPV1inETH.sub(vars.totalLTV0) : 0;
+        vars.pvDiff0 = vars.totalPV0inETH >= vars.totalHaircutPV1 ? vars.totalPV0inETH.sub(vars.totalHaircutPV1) : 0;
+        vars.pvDiff1 = vars.totalPV1inETH >= vars.totalHaircutPV0 ? vars.totalPV1inETH.sub(vars.totalHaircutPV0) : 0;
 
         (vars.netPV0, vars.netPV1) = vars.pvDiff0 > vars.pvDiff1 ? (vars.pvDiff0.sub(vars.pvDiff1).add(vars.totalUnsettledPV0inETH), vars.totalUnsettledPV1inETH) : (vars.totalUnsettledPV0inETH, vars.pvDiff1.sub(vars.pvDiff0).add(vars.totalUnsettledPV1inETH));
 

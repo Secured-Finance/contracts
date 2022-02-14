@@ -8,6 +8,8 @@ import './interfaces/ITermStructure.sol';
 import './interfaces/ICurrencyController.sol';
 import './interfaces/IProductAddressResolver.sol';
 import "./libraries/QuickSort.sol";
+import "./libraries/TermSchedule.sol";
+import "hardhat/console.sol";
 
 /**
  * @dev Term Structure contract is responsible for managing supported 
@@ -31,8 +33,7 @@ contract TermStructure is ITermStructure {
         uint256 numPayments;
     }
 
-    mapping(uint256 => Term) private terms;
-    mapping(uint256 => uint256[]) private termSchedules;
+    mapping(uint256 => uint256) private terms;
     mapping(bytes4 => mapping(bytes32 => EnumerableSet.UintSet)) private termsForProductAndCcy;
 
     modifier onlyOwner() {
@@ -41,7 +42,7 @@ contract TermStructure is ITermStructure {
     }
 
     modifier existingTermOnly(uint256 _numDays) {
-        require(terms[_numDays].numDays != 0, "NON EXISTING TERM");
+        require(terms[_numDays] == _numDays, "NON EXISTING TERM");
         _;
     }
 
@@ -77,29 +78,17 @@ contract TermStructure is ITermStructure {
     /**
     * @dev Triggers to add new term into the protocol
     * @param _numDays Number of calendar days in a term
-    * @param _dfFrac Discount factor fractions (for terms less that 365 days)
-    * @param _numPayments Number of coupon payments
-    * @param _couponSchedule Schedule of days used to construct term structure of a deal
     * @param _currencies Array of currencies supporting this term
     * @param _products Array of products supporting this term
     */
     function supportTerm(
         uint256 _numDays,
-        uint256 _dfFrac,
-        uint256 _numPayments,
-        uint256[] memory _couponSchedule,
         bytes4[] memory _products,
         bytes32[] memory _currencies
     ) onlyOwner public override returns (bool) {
         last_term_index = last_term_index++;
 
-        Term memory term;
-        term.numDays = _numDays;
-        term.dfFrac = _dfFrac;
-        term.numPayments = _numPayments;
-
-        terms[_numDays] = term;
-        termSchedules[_numDays] = _couponSchedule;
+        terms[_numDays] = _numDays;
 
         if (_products.length > 0) {
             for (uint256 i = 0; i < _products.length ; i++) {
@@ -112,7 +101,7 @@ contract TermStructure is ITermStructure {
             }
         }
 
-        emit TermAdded(_numDays, _dfFrac, _numPayments);
+        emit TermAdded(_numDays);
     }
 
     /**
@@ -139,8 +128,13 @@ contract TermStructure is ITermStructure {
     * @dev Triggers to get term structure.
     * @param _numDays Number of days in term
     */
-    function getTerm(uint256 _numDays) public override view returns (uint256, uint256, uint256) {
-        Term memory term = terms[_numDays];
+    function getTerm(uint256 _numDays, uint8 _frequency) public override view returns (uint256, uint256, uint256) {
+        Term memory term;
+
+        term.numDays = terms[_numDays];
+        term.dfFrac = getDfFrac(_numDays);
+        term.numPayments = getNumPayments(_numDays, _frequency);
+
         return (
             term.numDays, 
             term.dfFrac,
@@ -149,12 +143,13 @@ contract TermStructure is ITermStructure {
     }
 
     /**
-    * @dev Triggers to get number of days for supported term. 
+    * @dev Triggers to get payment schedule for supported term according to the payment frequency 
     * number of days follows ACT365 market convention 
     * @param _numDays Number of days in term
+    * @param _frequency Payment frequency (like annual, semi-annual, etc.)
     */
-    function getTermSchedule(uint256 _numDays) public override view returns (uint256[] memory) {
-        return termSchedules[_numDays];
+    function getTermSchedule(uint256 _numDays, uint8 _frequency) public override view returns (uint256[] memory) {
+        return TermSchedule.getTermSchedule(_numDays, _frequency);
     }
 
     /**
@@ -163,7 +158,7 @@ contract TermStructure is ITermStructure {
     * @param _numDays Number of days in term
     */
     function getNumDays(uint256 _numDays) public override view returns (uint256) {
-        return terms[_numDays].numDays;
+        return terms[_numDays];
     }
 
     /**
@@ -171,15 +166,16 @@ contract TermStructure is ITermStructure {
     * @param _numDays Number of days in term
     */
     function getDfFrac(uint256 _numDays) public override view returns (uint256) {
-        return terms[_numDays].dfFrac;
+        return TermSchedule.getDfFrac(_numDays);
     }
 
     /**
     * @dev Triggers to get number of coupon payments.
     * @param _numDays Number of days in term
+    * @param _frequency Payment frequency (like annual, semi-annual, etc.)
     */
-    function getNumPayments(uint256 _numDays) public override view returns (uint256) {
-        return terms[_numDays].numPayments;
+    function getNumPayments(uint256 _numDays, uint8 _frequency) public override view returns (uint256) {
+        return TermSchedule.getNumPayments(_numDays, _frequency);
     }
 
     /**

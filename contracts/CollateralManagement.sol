@@ -177,7 +177,7 @@ contract CollateralManagement is ICollateralManagement {
     * @notice Trigers only be contract owner
     * @notice Reverts on saving 0x0 address
     */
-    function setCurrencyControler(address _addr) public override onlyOwner {
+    function setCurrencyController(address _addr) public override onlyOwner {
         require(_addr != address(0), "Zero address");
         require(_addr.isContract(), "Can't add non-contract address");
 

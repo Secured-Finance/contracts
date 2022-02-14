@@ -81,7 +81,7 @@ contract('LendingMarketController', async (accounts) => {
         collateral = await CollateralAggregator.new();
 
         await loan.setCollateralAddr(collateral.address, {from: owner});
-        await collateral.setCurrencyControler(currencyController.address, {from: owner});
+        await collateral.setCurrencyController(currencyController.address, {from: owner});
     
         orderList = orders;
 
@@ -104,9 +104,6 @@ contract('LendingMarketController', async (accounts) => {
         for (i = 0; i < termDays.length; i++) {
             await termStructure.supportTerm(
                 termDays[i], 
-                termsDfFracs[i], 
-                termsNumPayments[i], 
-                termsSchedules[i], 
                 [loanPrefix], 
                 [hexFILString]
             );

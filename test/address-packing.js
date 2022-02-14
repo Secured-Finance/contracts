@@ -13,9 +13,6 @@ const packAddresses = (addr0, addr1) => {
   
   addr0 < addr1 ? (_addr0 = addr0, _addr1 = addr1) : (_addr0 = addr1, _addr1 = addr0);
 
-  console.log(_addr0);
-  console.log(_addr1);
-
   if (_addr0 != addr0) {
       encodedAddrs = ethers.utils.defaultAbiCoder.encode([ "address", "address" ], [ _addr0, _addr1 ]);
       let packed = ethers.utils.keccak256(encodedAddrs);
@@ -25,8 +22,6 @@ const packAddresses = (addr0, addr1) => {
       let packed = ethers.utils.keccak256(encodedAddrs);
       return [packed, false];
   }
-
-  // return ethers.utils.keccak256(encodedAddrs);
 }
 
 contract('AddressPacking', async (accounts) => {

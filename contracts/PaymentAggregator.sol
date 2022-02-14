@@ -30,10 +30,49 @@ contract PaymentAggregator is ProtocolTypes {
     event UpdateCloseOutNetting(address indexed prevContract, address indexed closeOutNetting);
     event UpdateMarkToMarket(address indexed prevContract, address indexed closeOutNetting);
 
-    event RegisterPayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment0, uint256 payment1);
-    event VerifyPayment(address indexed verifier, address indexed counterparty, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
-    event SettlePayment(address indexed verifier, address indexed counterparty, bytes32 ccy, bytes32 timeSlot, uint256 payment, bytes32 txHash);
-    event RemovePayment(address indexed party0, address indexed party1, bytes32 ccy, bytes32 timeSlot, uint256 payment0, uint256 payment1);
+    event RegisterPayment(
+        address indexed party0, 
+        address indexed party1, 
+        bytes32 ccy, 
+        bytes32 timeSlot, 
+        uint256 year, 
+        uint256 month, 
+        uint256 day, 
+        uint256 payment0, 
+        uint256 payment1
+    );
+    event VerifyPayment(
+        address indexed verifier, 
+        address indexed counterparty, 
+        bytes32 ccy, 
+        bytes32 timeSlot, 
+        uint256 year, 
+        uint256 month, 
+        uint256 day, 
+        uint256 payment, 
+        bytes32 txHash
+    );
+    event SettlePayment(
+        address indexed verifier, 
+        address indexed counterparty, 
+        bytes32 ccy, 
+        bytes32 timeSlot, 
+        uint256 year, 
+        uint256 month, 
+        uint256 day, 
+        bytes32 txHash
+    );
+    event RemovePayment(
+        address indexed party0, 
+        address indexed party1, 
+        bytes32 ccy, 
+        bytes32 timeSlot, 
+        uint256 year, 
+        uint256 month, 
+        uint256 day, 
+        uint256 payment0, 
+        uint256 payment1
+    );
 
     address public owner;
     uint256 public settlementWindow = 2;
@@ -174,13 +213,16 @@ contract PaymentAggregator is ProtocolTypes {
         for (uint256 i = 0; i < timestamps.length; i++) {
             if (timestamps[i] == 0) continue; 
 
-            vars.slotPosition = _slotPosition(timestamps[i]);
+            (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamps[i]);
+            vars.slotPosition = TimeSlot.position(year, month, day);
             deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);
 
             vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
             vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
 
             TimeSlot.addPayment(_timeSlots, party0, party1, ccy, vars.slotPosition, payments0[i], payments1[i]);
+
+            emit RegisterPayment(party0, party1, ccy, vars.slotPosition, year, month, day, payments0[i], payments1[i]);
         }
         
         closeOutNetting.addPayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);
@@ -223,6 +265,8 @@ contract PaymentAggregator is ProtocolTypes {
         vars.slotPosition = TimeSlot.position(year, month, day);
 
         TimeSlot.verifyPayment(_timeSlots, verifier, counterparty, ccy, vars.slotPosition, vars.payment, vars.txHash);
+        
+        emit VerifyPayment(verifier, counterparty, ccy, vars.slotPosition, year, month, day, payment, txHash);
     }
 
     /**
@@ -257,6 +301,8 @@ contract PaymentAggregator is ProtocolTypes {
         markToMarket.updatePVs(dealIds);
 
         closeOutNetting.removePayments(verifier, counterparty, ccy, timeSlot.totalPayment0, timeSlot.totalPayment1);
+        
+        emit SettlePayment(verifier, counterparty, ccy, vars.slotPosition, year, month, day, txHash);
     }
 
     /**
@@ -284,13 +330,17 @@ contract PaymentAggregator is ProtocolTypes {
         for (uint256 i = 0; i < timestamps.length; i++) {
             if (timestamps[i] == 0) continue;
             
-            vars.slotPosition = _slotPosition(timestamps[i]);
+            (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamps[i]);
+            vars.slotPosition = TimeSlot.position(year, month, day);
+
             require(deals[vars.packedAddrs][ccy][vars.slotPosition].remove(dealId), "NON_REGISTERED_DEAL");
             
             vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
             vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
 
             TimeSlot.removePayment(_timeSlots, party0, party1, ccy, vars.slotPosition, payments0[i], payments1[i]);
+
+            emit RemovePayment(party0, party1, ccy, vars.slotPosition, year, month, day, payments0[i], payments1[i]);
         }
         
         closeOutNetting.removePayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);

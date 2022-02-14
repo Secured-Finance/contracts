@@ -1,3 +1,10 @@
+const checkTokenBalances = async (parties, balances, token) => {
+  for (i=0; i < parties.length; i++) {
+      let actualBalance = await token.balanceOf(parties[i]);
+      actualBalance.toString().should.be.equal(balances[i].toString());
+  }
+}
+
 module.exports = {
   async allowances(account, withdrawer, allowances) {
     let index = allowances.length
@@ -36,4 +43,5 @@ module.exports = {
     }
     return true
   },
+  checkTokenBalances
 }

@@ -11,6 +11,7 @@ const Liquidations = artifacts.require('Liquidations');
 const LoanCallerMock = artifacts.require('LoanCallerMock');
 
 const { emitted, reverted, equal } = require('../test-utils').assert;
+const { checkTokenBalances } = require('../test-utils').balances;
 const { 
     toBytes32, 
     hexFILString, 
@@ -65,13 +66,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
     let bob_ETH_locked;
     let bob_ETH_balance;
 
-    const checkTokenBalances = async (parties, balances, token) => {
-        for (i=0; i < parties.length; i++) {
-            let actualBalance = await token.balanceOf(parties[i]);
-            actualBalance.toString().should.be.equal(balances[i].toString());
-        }
-    }
-
     const netBilateralPVs = async (
         unsettled0PV,
         unsettled1PV,
@@ -81,15 +75,15 @@ contract('CollateralAggregatorV2', async (accounts) => {
         let netPV0, netPV1;
         let expDiff0 = ZERO_BN;
         let expDiff1 = ZERO_BN;
-        let ltvPV0 = party0PV.mul(toBN('750')).div(toBN('1000'));
-        let ltvPV1 = party1PV.mul(toBN('750')).div(toBN('1000'));
+        let haircutPV0 = party0PV.mul(toBN('750')).div(toBN('1000'));
+        let haircutPV1 = party1PV.mul(toBN('750')).div(toBN('1000'));
 
-        if (party0PV.gt(ltvPV1)) {
-            expDiff0 = party0PV.sub(ltvPV1);
+        if (party0PV.gt(haircutPV1)) {
+            expDiff0 = party0PV.sub(haircutPV1);
         }
 
-        if (party1PV.gt(ltvPV0)) {
-            expDiff1 = party1PV.sub(ltvPV0);
+        if (party1PV.gt(haircutPV0)) {
+            expDiff1 = party1PV.sub(haircutPV0);
         }
 
         if (expDiff0.gt(expDiff1)) {
@@ -161,9 +155,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
         for (i = 0; i < sortedTermDays.length; i++) {
             await termStructure.supportTerm(
                 sortedTermDays[i], 
-                sortedTermsDfFracs[i], 
-                sortedTermsNumPayments[i], 
-                sortedTermsSchedules[i], 
                 [], 
                 []
             );
@@ -180,8 +171,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
         wETHToken = await WETH9Mock.new();
 
         collateral = await CollateralAggregatorV2.new();
+        console.log('collateral is ' + collateral.address);
         collateralCaller = await CollateralAggregatorCallerMock.new(collateral.address);
-        await collateral.setCurrencyControler(currencyController.address);
+        await collateral.setCurrencyController(currencyController.address);
         await collateral.addCollateralUser(collateralCaller.address);
 
         liquidations = await Liquidations.new(owner, 10);
@@ -200,6 +192,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
         );
         await collateral.linkCollateralVault(filVault.address);
 
+        console.log('filVault is ' + filVault.address);
+
         ethVault = await CollateralVault.deploy(
             hexETHString,
             wETHToken.address,
@@ -208,6 +202,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
             wETHToken.address
         );
         await collateral.linkCollateralVault(ethVault.address);
+        console.log('ethVault is ' + ethVault.address);
 
         const lendingControllerFactory = await ethers.getContractFactory(
             'LendingMarketControllerMock',
