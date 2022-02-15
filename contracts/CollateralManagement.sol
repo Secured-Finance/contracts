@@ -66,6 +66,11 @@ contract CollateralManagement is ICollateralManagement {
         _;
     }
 
+    modifier onlyLiquidationEngineOrCollateralUser() {
+        require(msg.sender == address(liquidationEngine) || collateralUsers.contains(msg.sender),"NOR_LIQUIDATION_ENGINE_COLLATERAL_USER");
+        _;
+    }
+
     /**
     * @dev Contract constructor function.
     *

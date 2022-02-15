@@ -1,7 +1,6 @@
 pragma solidity 0.6.12;
 
 import "../interfaces/IWETH9.sol";
-import "hardhat/console.sol";
 
 abstract contract SafeTransfer {
 
@@ -54,8 +53,8 @@ abstract contract SafeTransfer {
         require(balanceWETH9 >= _amount, 'Insufficient WETH9');
 
         if (balanceWETH9 > 0) {
-            IWETH9(WETH9).withdraw(balanceWETH9);
-            _safeTransferETH(_receiver, balanceWETH9);
+            IWETH9(WETH9).withdraw(_amount);
+            _safeTransferETH(_receiver, _amount);
         }
     }
 

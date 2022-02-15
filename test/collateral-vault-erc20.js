@@ -83,7 +83,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
             await checkTokenBalances(
                 [alice, vault.address],
-                [aliceTokenBalance, aliceLockedTokens]
+                [aliceTokenBalance, aliceLockedTokens],
+                tokenContract
             );
 
             let independentCollateral = await vault.getIndependentCollateral(alice);
@@ -321,7 +322,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
             checkTokenBalances(
                 [alice],
-                [aliceMaxWithdrawTokens]
+                [aliceMaxWithdrawTokens],
+                tokenContract
             );
 
             independentCollateral = await vault.getIndependentCollateral(alice);
@@ -340,14 +342,16 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
             checkTokenBalances(
                 [bob],
-                [bobTokenBalance]
+                [bobTokenBalance],
+                tokenContract
             )
 
             await vault.connect(bobSigner)['withdraw(uint256)'](withdrawAmt.toString());
 
             checkTokenBalances(
                 [bob, vault.address],
-                [bobTokenBalance, vaultBalanceBefore]
+                [bobTokenBalance, vaultBalanceBefore],
+                tokenContract
             );
         });
 
@@ -377,7 +381,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
             checkTokenBalances(
                 [bob, vault.address],
-                [bobTokenBalance, vaultBalanceBefore]
+                [bobTokenBalance, vaultBalanceBefore],
+                tokenContract
             );
         });
 
@@ -399,7 +404,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
             
             checkTokenBalances(
                 [bob, vault.address],
-                [bobTokenBalance, vaultBalanceBefore.sub(bobTokenBalance)]
+                [bobTokenBalance, vaultBalanceBefore.sub(bobTokenBalance)],
+                tokenContract
             );
         });
     });

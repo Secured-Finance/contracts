@@ -37,7 +37,7 @@ const ZERO_BN = toBN('0');
 const BP_BASE = toBN('10000');
 const SETTLEMENT_LOCK = toBN('2000');
 
-contract('CollateralAggregator', async (accounts) => {
+contract('Integration test', async (accounts) => {
     const [owner, alice, bob, carol] = accounts;
 
     let collateral;
@@ -734,8 +734,6 @@ contract('CollateralAggregator', async (accounts) => {
 
             let independentCollateral = await ethVault.getIndependentCollateral(alice);
             independentCollateral.should.be.equal('0');
-
-            aliceIndependentAmount = await aliceIndependentAmount.sub(maxWidthdrawal)
         });
     });
 
@@ -799,9 +797,10 @@ contract('CollateralAggregator', async (accounts) => {
             marketOrder = await lendingMarket.order(1, filAmount, 725, {from: bob});
             await emitted(marketOrder, 'TakeOrder');
 
-            let aliceReqCollateral = await collateral.getBilateralPosition(alice, bob);
-            aliceLockedCollateral = aliceReqCollateral.lockedCollateralB;
-            aliceIndependentAmount = await aliceIndependentAmount.sub(web3.utils.toBN(aliceReqCollateral.lockedCollateralB));
+            let lockedCollaterals = await ethVault['getLockedCollateral(address,address)'](alice, bob);
+            aliceLockedCollateral = lockedCollaterals[0];
+
+            aliceIndependentAmount = await aliceIndependentAmount.sub(toBN(aliceLockedCollateral));
 
             let rebalance = await collateral.getRebalanceCollateralAmounts(alice, bob);
             rebalance[1].toString().should.be.equal('0');
@@ -823,9 +822,6 @@ contract('CollateralAggregator', async (accounts) => {
             tx = await loan.functions['markToMarket(bytes32)'](loanId);
             // await emitted(tx, 'MarkToMarket');
 
-            let deal = await loan.getLoanDeal(loanId);
-            console.log(deal);
-
             const pv = await loan.getDealPV(loanId);
             const settlementLock = toBN(pv.toString()).mul(SETTLEMENT_LOCK).div(BP_BASE);
 
@@ -834,18 +830,8 @@ contract('CollateralAggregator', async (accounts) => {
             console.log("");
 
             const ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
-
-            if (alice < bob) {
-                ccyExp.unsettled0PV.toString().should.be.equal(settlementLock.toString());
-                ccyExp.unsettled1PV.toString().should.be.equal(pv.toString());
-                ccyExp.party0PV.should.be.equal('0');
-                ccyExp.party1PV.should.be.equal('0');    
-            } else {
-                ccyExp.unsettled0PV.toString().should.be.equal(pv.toString());
-                ccyExp.unsettled1PV.toString().should.be.equal(settlementLock.toString());
-                ccyExp.party0PV.should.be.equal('0');
-                ccyExp.party1PV.should.be.equal('0');    
-            }
+            ccyExp[0].toString().should.be.equal(settlementLock.toString());
+            ccyExp[1].toString().should.be.equal(pv.toString());
         });
     });
 
@@ -856,26 +842,30 @@ contract('CollateralAggregator', async (accounts) => {
         let btcAmount = web3.utils.toBN("1000000000000000000")
 
         it('Deposit 45 ETH by Alice in Collateral contract', async () => {
+            const [ , aliceSigner] = await ethers.getSigners();
+            const depositAmt = web3.utils.toBN("45000000000000000000");
             let balance;
             let gasPrice;
             web3.eth.getGasPrice().then((res) => gasPrice = web3.utils.toBN(res));
 
             web3.eth.getBalance(alice).then((res) => balance = web3.utils.toBN(res));
             
-            let depositAmt = web3.utils.toBN("45000000000000000000")
-            let tx = await collateral.deposit({from: alice, value: depositAmt});
-            if (tx.receipt.gasUsed != null) {
-                balance = await (balance.sub(web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice)));
+            let receipt = await (await ethVault.connect(aliceSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
+
+            if (receipt.gasUsed != null) {
+                balance = await (balance.sub(web3.utils.toBN(receipt.gasUsed).mul(gasPrice)));
             }
-            await emitted(tx, 'Deposit');
 
             aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
             
-            const book = await collateral.getCollateralBook(alice);
+            const independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceIndependentAmount.toString());
 
-            book[0].should.be.equal('0');
-            book[1].should.be.equal(aliceIndependentAmount.toString());
-            book[2].should.be.equal(aliceLockedCollateral.toString());
+            const lockedCollateral = await ethVault['getLockedCollateral(address)'](alice);
+            lockedCollateral.should.be.equal(aliceLockedCollateral.toString());
 
             web3.eth.getBalance(alice).then((res) => {
                 res.should.be.equal(balance.sub(depositAmt).toString());
@@ -883,10 +873,13 @@ contract('CollateralAggregator', async (accounts) => {
         });
 
         it('Successfully make order for 1 BTC by Bob, deposit 15 ETH by Bob, take this order by Alice', async () => {
+            const [ , , bobSigner] = await ethers.getSigners();
             let depositAmt = web3.utils.toBN('15000000000000000000');
 
-            let tx = await collateral.deposit({from: bob, value: depositAmt});
-            await emitted(tx, 'Deposit');
+            await (await ethVault.connect(bobSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
 
             console.log("Making a new order to lend 1 BTC for 5 years by Bob");
             console.log("");
@@ -902,9 +895,11 @@ contract('CollateralAggregator', async (accounts) => {
 
             let btcUsed = (btcAmount.mul(web3.utils.toBN(15000))).div(web3.utils.toBN(10000));
             let btcInETH = await currencyController.convertToETH(hexBTCString, btcAmount, {from: alice});
-            let aliceReqCollateral = await collateral.getBilateralPosition(alice, bob);
-            aliceLockedCollateral = aliceReqCollateral.lockedCollateralB;
-            aliceIndependentAmount = await aliceIndependentAmount.sub(web3.utils.toBN(aliceReqCollateral.lockedCollateralB));
+
+            let lockedCollaterals = await ethVault['getLockedCollateral(address,address)'](alice, bob);
+            aliceLockedCollateral = lockedCollaterals[0];
+
+            aliceIndependentAmount = await aliceIndependentAmount.sub(toBN(aliceLockedCollateral));
 
             console.log("BTC in ETH is: " + btcInETH);
             console.log("");
@@ -957,21 +952,8 @@ contract('CollateralAggregator', async (accounts) => {
             console.log("Collateral coverage for Alice (borrower) of 1 BTC is " + tx[0].toString());
 
             const ccyExp = await collateral.getCcyExposures(alice, bob, hexBTCString);
-
-            if (alice < bob) {
-                ccyExp.unsettled0PV.toString().should.be.equal(pv.toString());
-                ccyExp.unsettled1PV.toString().should.be.equal(settlementLock.toString());
-                ccyExp.party0PV.should.be.equal('0');
-                ccyExp.party1PV.should.be.equal('0');
-            } else {
-                ccyExp.unsettled0PV.toString().should.be.equal(settlementLock.toString());
-                ccyExp.unsettled1PV.toString().should.be.equal(pv.toString());
-                ccyExp.party0PV.should.be.equal('0');
-                ccyExp.party1PV.should.be.equal('0');
-            }
-
-            // const book = await collateral.getCollateralBook(alice);
-            // console.log(book);
+            ccyExp[0].toString().should.be.equal(pv.toString());
+            ccyExp[1].toString().should.be.equal(settlementLock.toString());
 
             // let rebalance = await collateral.getRebalanceCollateralAmounts(alice, bob);
             // rebalance[1].toString().should.be.equal('0');
@@ -996,7 +978,6 @@ contract('CollateralAggregator', async (accounts) => {
                 await liquidations.liquidateDeals(alice, bob, [firstLoanId, secondLoanId]);
 
                 let deal = await loan.getLoanDeal(firstLoanId);
-                console.log(deal);
                 deal.lender.should.be.equal(zeroAddress);
                 deal.borrower.should.be.equal(zeroAddress);
 
@@ -1004,8 +985,8 @@ contract('CollateralAggregator', async (accounts) => {
                 deal.lender.should.be.equal(zeroAddress);
                 deal.borrower.should.be.equal(zeroAddress);
 
-                let bilateralPosition = await collateral.getBilateralPosition(alice, bob);
-                console.log(bilateralPosition);
+                let lockedCollaterals = await ethVault['getLockedCollateral(address,address)'](alice, bob);
+                console.log(lockedCollaterals);
 
                 let coverage = await collateral.getCoverage(alice, bob);
                 console.log("");

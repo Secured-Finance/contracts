@@ -1,15 +1,15 @@
 const LoanCallerMock = artifacts.require('LoanCallerMock');
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const CloseOutNetting = artifacts.require('CloseOutNetting');
-const LendingMarketControllerMock = artifacts.require('LendingMarketControllerMock');
 const CollateralAggregatorCallerMock = artifacts.require('CollateralAggregatorCallerMock');
-const CollateralAggregator = artifacts.require('CollateralAggregator');
+const CollateralAggregatorV2 = artifacts.require('CollateralAggregatorV2');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 const CurrencyController = artifacts.require('CurrencyController');
 const MarkToMarket = artifacts.require('MarkToMarket');
 const BokkyPooBahsDateTimeContract = artifacts.require('BokkyPooBahsDateTimeContract');
 const TimeSlotTest = artifacts.require('TimeSlotTest');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
+const WETH9Mock = artifacts.require('WETH9Mock');
 
 const { emitted, reverted} = require('../test-utils').assert;
 const { should } = require('chai');
@@ -134,7 +134,9 @@ contract('LoanV2', async (accounts) => {
         closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
         console.log('closeOutNetting is ' + closeOutNetting.address);
 
-        collateral = await CollateralAggregator.new();
+        collateral = await CollateralAggregatorV2.new();
+        console.log('collateral aggregator is ' + collateral.address);
+
         collateralCaller = await CollateralAggregatorCallerMock.new(collateral.address);
 
         const lendingControllerFactory = await ethers.getContractFactory(
@@ -179,6 +181,20 @@ contract('LoanV2', async (accounts) => {
         await emitted(tx, 'MinMarginUpdated');
 
         await collateral.setCurrencyController(currencyController.address, {from: owner});
+
+        const CollateralVault = await ethers.getContractFactory("CollateralVault");
+        wETHToken = await WETH9Mock.new();
+
+        ethVault = await CollateralVault.deploy(
+            hexETHString,
+            wETHToken.address,
+            collateral.address,
+            currencyController.address,
+            wETHToken.address
+        );
+        console.log('collateral eth vault is ' + ethVault.address);
+
+        await collateral.linkCollateralVault(ethVault.address);
 
         await paymentAggregator.addPaymentAggregatorUser(loan.address);
         await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
@@ -252,21 +268,31 @@ contract('LoanV2', async (accounts) => {
         });
 
         it('Register collateral books for Bob and Alice', async () => {
-            let result = await collateral.register({from: alice, value: 1000000000000000000});
+            const [ , aliceSigner, bobSigner] = await ethers.getSigners();
+            const aliceDepositAmt = toBN('1000000000000000000');
+            const bobDepositAmt = toBN('10000000000000000000');
+
+            let result = await collateral.register({from: alice});
             await emitted(result, 'Register');
 
-            let book = await collateral.getCollateralBook(alice);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal('1000000000000000000');
-            book[2].should.be.equal('0');
+            await (await ethVault.connect(aliceSigner)['deposit(uint256)'](
+                aliceDepositAmt.toString(),
+                { value: aliceDepositAmt.toString() }
+            )).wait();
 
-            result = await collateral.register({from: bob, value: 10000000000000000000});
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(aliceDepositAmt.toString());
+
+            result = await collateral.register({from: bob});
             await emitted(result, 'Register');
 
-            book = await collateral.getCollateralBook(bob);
-            book[0].should.be.equal('0');
-            book[1].should.be.equal('10000000000000000000');
-            book[2].should.be.equal('0');
+            await (await ethVault.connect(bobSigner)['deposit(uint256)'](
+                bobDepositAmt.toString(),
+                { value: bobDepositAmt.toString() }
+            )).wait();
+
+            independentCollateral = await ethVault.getIndependentCollateral(bob);
+            independentCollateral.should.be.equal(bobDepositAmt.toString());
         });
         
         it('Register new loan deal between Alice and Bob', async () => {
@@ -296,7 +322,7 @@ contract('LoanV2', async (accounts) => {
             deal.end.toString().should.be.equal(maturity.toString());
             
             let schedule = await loan.getPaymentSchedule(dealId);
-            schedule.amounts.map((amount, i) => {
+            schedule[1].map((amount, i) => {
                 if (i != 5 && i != 0) {
                     amount.toString().should.be.equal(coupon.toString())
                 } else if (i != 0) {
@@ -332,23 +358,15 @@ contract('LoanV2', async (accounts) => {
             let aliceFILInETH = await currencyController.convertToETH(hexFILString, aliceFIlUsed);
             let bobFILInETH = await currencyController.convertToETH(hexFILString, bobFILUsed);
 
-            let book = await collateral.getCollateralBook(alice);
-            book.lockedCollateral.should.be.equal(aliceFILInETH.toString());
+            let lockedCollateral = await ethVault['getLockedCollateral(address)'](alice);
+            lockedCollateral.should.be.equal(aliceFILInETH.toString());
 
-            book = await collateral.getCollateralBook(bob);
-            book.lockedCollateral.should.be.equal(bobFILInETH.toString());
+            lockedCollateral = await ethVault['getLockedCollateral(address)'](bob);
+            lockedCollateral.should.be.equal(bobFILInETH.toString());
 
-            let flipped;
-            alice < bob ? (flipped = false) : (flipped = true);
-
-            let position = await collateral.getBilateralPosition(alice, bob);
-            if (flipped) {
-                position.lockedCollateralA.should.be.equal(bobFILInETH.toString());
-                position.lockedCollateralB.should.be.equal(aliceFILInETH.toString());    
-            } else {
-                position.lockedCollateralA.should.be.equal(aliceFILInETH.toString());
-                position.lockedCollateralB.should.be.equal(bobFILInETH.toString());    
-            }
+            let lockedCollaterals = await ethVault['getLockedCollateral(address,address)'](alice, bob);
+            lockedCollaterals[0].should.be.equal(aliceFILInETH.toString());
+            lockedCollaterals[1].should.be.equal(bobFILInETH.toString());
         });
 
         it('Try to get last settled payment, verify payment from lender', async () => {
@@ -496,14 +514,18 @@ contract('LoanV2', async (accounts) => {
         let testTxHash = toBytes32("0xTestTxHash2");
 
         it('Deposit more collateral for Alice', async () => {
-            let book = await collateral.getCollateralBook(alice);
-            let initialIndependentAmount = book.independentAmount;
+            const [ , aliceSigner] = await ethers.getSigners();
+            const depositAmt = toBN('9000000000000000000');
+            let independentCollateral = await ethVault.getIndependentCollateral(alice);
+            let initialIndependentAmount = toBN(independentCollateral);
 
-            let result = await collateral.deposit({from: alice, value: 9000000000000000000});
-            await emitted(result, 'Deposit');
+            await (await ethVault.connect(aliceSigner)['deposit(uint256)'](
+                depositAmt.toString(),
+                { value: depositAmt.toString() }
+            )).wait();
 
-            book = await collateral.getCollateralBook(alice);
-            book.independentAmount.should.be.equal(toBN(initialIndependentAmount).add(toBN('9000000000000000000')).toString());
+            independentCollateral = await ethVault.getIndependentCollateral(alice);
+            independentCollateral.should.be.equal(initialIndependentAmount.add(toBN('9000000000000000000')).toString());
         });
 
         it('Register new loan deal between Bob and Alice', async () => {
@@ -526,8 +548,8 @@ contract('LoanV2', async (accounts) => {
             deal.end.toString().should.be.equal(maturity.toString());
 
             let schedule = await loan.getPaymentSchedule(dealId);
-            schedule.amounts[1].toString().should.be.equal(repayment.toString());
-            schedule.payments[1].toString().should.be.equal(maturity.toString());
+            schedule[1][1].toString().should.be.equal(repayment.toString());
+            schedule[0][1].toString().should.be.equal(maturity.toString());
 
             timeSlot = await paymentAggregator.getTimeSlotBySlotId(bob, alice, hexFILString, slotPosition);
             timeSlot.netPayment.toString().should.be.equal(repayment.toString());

@@ -11,6 +11,8 @@ import "./libraries/AddressPacking.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import "./interfaces/ICloseOutNetting.sol";
 import './interfaces/IMarkToMarket.sol';
+import './interfaces/IPaymentAggregator.sol';
+import "hardhat/console.sol";
 
 /**
  * @title Payment Aggregator contract is used to aggregate payments  
@@ -20,62 +22,15 @@ import './interfaces/IMarkToMarket.sol';
  *
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
-contract PaymentAggregator is ProtocolTypes {
+contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
     using SafeMath for uint256;
     using Address for address;
     using TimeSlot for TimeSlot.Slot;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    event UpdateCloseOutNetting(address indexed prevContract, address indexed closeOutNetting);
-    event UpdateMarkToMarket(address indexed prevContract, address indexed closeOutNetting);
-
-    event RegisterPayment(
-        address indexed party0, 
-        address indexed party1, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
-        uint256 payment0, 
-        uint256 payment1
-    );
-    event VerifyPayment(
-        address indexed verifier, 
-        address indexed counterparty, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
-        uint256 payment, 
-        bytes32 txHash
-    );
-    event SettlePayment(
-        address indexed verifier, 
-        address indexed counterparty, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
-        bytes32 txHash
-    );
-    event RemovePayment(
-        address indexed party0, 
-        address indexed party1, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
-        uint256 payment0, 
-        uint256 payment1
-    );
-
-    address public owner;
-    uint256 public settlementWindow = 2;
+    address public override owner;
+    uint256 public override settlementWindow = 2;
     uint256 constant MAXPAYNUM = 6;
 
     // Linked contract addresses
@@ -128,7 +83,7 @@ contract PaymentAggregator is ProtocolTypes {
     * @notice Trigers only be contract owner
     * @notice Reverts on saving 0x0 address
     */
-    function addPaymentAggregatorUser(address _user) public onlyOwner returns (bool) {
+    function addPaymentAggregatorUser(address _user) public onlyOwner override returns (bool) {
         require(_user != address(0), "Zero address");
         require(_user.isContract(), "Can't add non-contract address");
         require(!paymentAggregatorUsers.contains(_user), "Can't add existing address");
@@ -142,7 +97,7 @@ contract PaymentAggregator is ProtocolTypes {
     * @notice Trigers only be contract owner
     * @notice Reverts on removing non-existing payment aggregator user
     */
-    function removePaymentAggregatorUser(address _user) public onlyOwner returns (bool) {
+    function removePaymentAggregatorUser(address _user) public onlyOwner override returns (bool) {
         require(paymentAggregatorUsers.contains(_user), "Can't remove non-existing user");
         return paymentAggregatorUsers.remove(_user);
     }
@@ -152,7 +107,7 @@ contract PaymentAggregator is ProtocolTypes {
     * @param _user Contract address to check if it's a payment aggregator user
     *
     */
-    function isPaymentAggregatorUser(address _user) public view returns (bool) {
+    function isPaymentAggregatorUser(address _user) public view override returns (bool) {
         return paymentAggregatorUsers.contains(_user);
     }
 
@@ -186,6 +141,9 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 totalPayment0;
         uint256 totalPayment1;
         bytes32 slotPosition;
+        uint256 year;
+        uint256 month;
+        uint256 day;
     }
 
     /**
@@ -203,26 +161,31 @@ contract PaymentAggregator is ProtocolTypes {
         address party1,
         bytes32 ccy,
         bytes32 dealId,
-        uint256[MAXPAYNUM] memory timestamps,
-        uint256[MAXPAYNUM] memory payments0,
-        uint256[MAXPAYNUM] memory payments1
-    ) external acceptedContract {
+        uint256[] memory timestamps,
+        uint256[] memory payments0,
+        uint256[] memory payments1
+    ) external override acceptedContract {
         TimeSlotPaymentsLocalVars memory vars;
         (vars.packedAddrs, ) = AddressPacking.pack(party0, party1);
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             if (timestamps[i] == 0) continue; 
 
-            (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamps[i]);
-            vars.slotPosition = TimeSlot.position(year, month, day);
+            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamps[i]);
+            vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
             deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);
 
-            vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
-            vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
+            if (payments0[i] > 0) {
+                vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
+            }
+
+            if(payments1[i] > 0) {
+                vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
+            }
 
             TimeSlot.addPayment(_timeSlots, party0, party1, ccy, vars.slotPosition, payments0[i], payments1[i]);
 
-            emit RegisterPayment(party0, party1, ccy, vars.slotPosition, year, month, day, payments0[i], payments1[i]);
+            emit RegisterPayment(party0, party1, ccy, vars.slotPosition, vars.year, vars.month, vars.day, payments0[i], payments1[i]);
         }
         
         closeOutNetting.addPayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);
@@ -235,6 +198,9 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 payment;
         address verifier;
         bytes32 txHash;
+        uint256 year;
+        uint256 month;
+        uint256 day;
     }
 
     /**
@@ -253,7 +219,7 @@ contract PaymentAggregator is ProtocolTypes {
         uint256 timestamp,
         uint256 payment,
         bytes32 txHash
-    ) external {
+    ) external override {
         require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
         PaymentSettlementLocalVars memory vars;
 
@@ -261,12 +227,12 @@ contract PaymentAggregator is ProtocolTypes {
         vars.txHash = txHash;
         vars.verifier = verifier;
 
-        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
-        vars.slotPosition = TimeSlot.position(year, month, day);
+        (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
+        vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
 
         TimeSlot.verifyPayment(_timeSlots, verifier, counterparty, ccy, vars.slotPosition, vars.payment, vars.txHash);
         
-        emit VerifyPayment(verifier, counterparty, ccy, vars.slotPosition, year, month, day, payment, txHash);
+        emit VerifyPayment(verifier, counterparty, ccy, vars.slotPosition, vars.year, vars.month, vars.day, payment, txHash);
     }
 
     /**
@@ -283,17 +249,17 @@ contract PaymentAggregator is ProtocolTypes {
         bytes32 ccy,
         uint256 timestamp,
         bytes32 txHash
-    ) external {
+    ) external override {
         require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
         PaymentSettlementLocalVars memory vars;
 
         vars.txHash = txHash;
         vars.verifier = verifier;
 
-        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
-        vars.slotPosition = TimeSlot.position(year, month, day);
+        (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
+        vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
         
-        TimeSlot.Slot memory timeSlot = TimeSlot.get(_timeSlots, verifier, counterparty, ccy, year, month, day);
+        TimeSlot.Slot memory timeSlot = TimeSlot.get(_timeSlots, verifier, counterparty, ccy, vars.year, vars.month, vars.day);
 
         TimeSlot.settlePayment(_timeSlots, verifier, counterparty, ccy, vars.slotPosition, vars.txHash);
 
@@ -302,7 +268,7 @@ contract PaymentAggregator is ProtocolTypes {
 
         closeOutNetting.removePayments(verifier, counterparty, ccy, timeSlot.totalPayment0, timeSlot.totalPayment1);
         
-        emit SettlePayment(verifier, counterparty, ccy, vars.slotPosition, year, month, day, txHash);
+        emit SettlePayment(verifier, counterparty, ccy, vars.slotPosition, vars.year, vars.month, vars.day, txHash);
     }
 
     /**
@@ -320,18 +286,18 @@ contract PaymentAggregator is ProtocolTypes {
         address party1,
         bytes32 ccy,
         bytes32 dealId,
-        uint256[MAXPAYNUM] calldata timestamps,
-        uint256[MAXPAYNUM] calldata payments0,
-        uint256[MAXPAYNUM] calldata payments1
-    ) external acceptedContract {
+        uint256[] calldata timestamps,
+        uint256[] calldata payments0,
+        uint256[] calldata payments1
+    ) external acceptedContract override {
         TimeSlotPaymentsLocalVars memory vars;
         (vars.packedAddrs, ) = AddressPacking.pack(party0, party1);
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             if (timestamps[i] == 0) continue;
             
-            (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamps[i]);
-            vars.slotPosition = TimeSlot.position(year, month, day);
+            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamps[i]);
+            vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
 
             require(deals[vars.packedAddrs][ccy][vars.slotPosition].remove(dealId), "NON_REGISTERED_DEAL");
             
@@ -340,7 +306,7 @@ contract PaymentAggregator is ProtocolTypes {
 
             TimeSlot.removePayment(_timeSlots, party0, party1, ccy, vars.slotPosition, payments0[i], payments1[i]);
 
-            emit RemovePayment(party0, party1, ccy, vars.slotPosition, year, month, day, payments0[i], payments1[i]);
+            emit RemovePayment(party0, party1, ccy, vars.slotPosition, vars.year, vars.month, vars.day, payments0[i], payments1[i]);
         }
         
         closeOutNetting.removePayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);
@@ -419,7 +385,7 @@ contract PaymentAggregator is ProtocolTypes {
         address party1,
         bytes32 ccy,
         uint256 timestamp
-    ) external view returns (bool status) {
+    ) external view override returns (bool status) {
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
@@ -443,7 +409,7 @@ contract PaymentAggregator is ProtocolTypes {
         address party1, 
         bytes32 ccy, 
         bytes32 slotPosition
-    ) public view returns (bytes32[] memory) {
+    ) public view override returns (bytes32[] memory) {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
         EnumerableSet.Bytes32Set storage set = deals[packedAddrs][ccy][slotPosition];
 

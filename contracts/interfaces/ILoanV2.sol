@@ -16,12 +16,6 @@ struct LoanDeal {
     uint8 state; 
 }
 
-struct Schedule { 
-    uint256[] payments;
-    uint256[] amounts;
-    bool[] isSettled; 
-}
-
 interface ILoanV2 {
 
     event EarlyTermination(bytes32 dealId,address indexed acceptedBy,uint256 payment);
@@ -40,7 +34,11 @@ interface ILoanV2 {
     function getDealSettlementStatus(bytes32 loanId) external view returns (bool);
     function getLastSettledPayment(bytes32 loanId) external view returns (uint256);
     function getLoanDeal(bytes32 loanId) external view returns (LoanDeal memory);
-    function getPaymentSchedule(bytes32 loanId) external view returns (Schedule memory);
+    function getPaymentSchedule(bytes32 loanId) external view returns (
+        uint256[] memory,
+        uint256[] memory,
+        bool[] memory
+    );
     function getVersion() external view returns (uint16);
     function isTransferable() external view returns (bool);
     function last_loan_id() external view returns (uint256);

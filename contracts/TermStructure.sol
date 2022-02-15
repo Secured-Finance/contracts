@@ -9,7 +9,6 @@ import './interfaces/ICurrencyController.sol';
 import './interfaces/IProductAddressResolver.sol';
 import "./libraries/QuickSort.sol";
 import "./libraries/TermSchedule.sol";
-import "hardhat/console.sol";
 
 /**
  * @dev Term Structure contract is responsible for managing supported 

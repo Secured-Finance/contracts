@@ -13,7 +13,6 @@ import "./libraries/DiscountFactor.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import './interfaces/ITermStructureGetter.sol';
 import './interfaces/ILiquidations.sol';
-import "hardhat/console.sol";
 
 /**
  * @title LoanV2 contract is used to store Lending deals in Secured Finance  
@@ -293,7 +292,11 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     * @dev Returns the payment schedule for a deal by `loanId`
     * @param loanId Loan deal ID
     */
-    function getPaymentSchedule(bytes32 loanId) public override view returns (Schedule memory) {
+    function getPaymentSchedule(bytes32 loanId) public override view returns (
+        uint256[] memory,
+        uint256[] memory,
+        bool[] memory
+    ) {
         LoanDeal memory deal = loans[loanId];
 
         return _constructSchedule(deal, true);
@@ -383,11 +386,14 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         require(updateLoanPV(loanId), "failed MtM");
 
         if (isSettled[loanId]) {
-            Schedule memory schedule = _constructSchedule(deal, true);
+            (
+                uint256[] memory payments, ,
+                bool[] memory settlements
+            ) = _constructSchedule(deal, true);
 
             uint256 i;
-            for (i = 0; i < schedule.isSettled.length; i++) {
-                if (schedule.isSettled[i] == false) break;
+            for (i = 0; i < settlements.length; i++) {
+                if (settlements[i] == false) break;
             }
 
             uint256 deltaDays;
@@ -395,14 +401,13 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             if (i == 0) {
                 deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(deal.start, block.timestamp);
             } else {
-                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(schedule.payments[i - 1], block.timestamp);
+                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(payments[i - 1], block.timestamp);
             }
 
             uint256 interestRatePerDay = deal.rate.mul(1e18).div(36500);
             uint256 accuredInterestRate = interestRatePerDay.mul(deltaDays);
             uint256 accuredInterest = deal.notional.mul(accuredInterestRate).div(1e20);
             uint totalPayment = accuredInterest.add(deal.pv);
-
             collateralAggregator.liquidate(deal.borrower, deal.lender, deal.ccy, totalPayment, true);
             // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
 
@@ -524,13 +529,16 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             uint256[] memory terms
         ) = lendingController.getDiscountFactorsForCcy(deal.ccy);
 
-        Schedule memory schedule = _constructSchedule(deal, true);
+        (
+            uint256[] memory payments,
+            uint256[] memory amounts,
+        ) = _constructSchedule(deal, false);
 
-        for (uint256 i = 0; i < schedule.payments.length; i++) {
-            if (schedule.payments[i] < block.timestamp) continue;
-            uint256 d = DiscountFactor.interpolateDF(dfs, terms, schedule.payments[i]);
+        for (uint256 i = 0; i < payments.length; i++) {
+            if (payments[i] < block.timestamp) continue;
+            uint256 d = DiscountFactor.interpolateDF(dfs, terms, payments[i]);
 
-            pv = pv.add((schedule.amounts[i].mul(d)));
+            pv = pv.add((amounts[i].mul(d)));
         }
 
         return pv.div(BP);
@@ -542,10 +550,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     */
     function _liquidateLoan(bytes32 loanId) internal {
         LoanDeal memory deal = loans[loanId];
-        console.log('deal id for liquidation is ');
-        console.logBytes32(loanId);
         _removePaymentSchedule(loanId, deal);
-        collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
+        // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
 
         emit Liquidate(loanId);
         delete loans[loanId];
@@ -569,11 +575,15 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     * @param deal LoanDeal structure
     */
     function _registerPaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
-        Schedule memory schedule = _constructSchedule(deal, false);
-        uint256[MAXPAYNUM] memory lenderLeg;
+        (
+            uint256[] memory payments,
+            uint256[] memory amounts,
+        ) = _constructSchedule(deal, false);
+
+        uint256[] memory lenderLeg = new uint256[](payments.length);
         lenderLeg[0] = deal.notional;
 
-        paymentAggregator.registerPayments(deal.lender, deal.borrower, deal.ccy, loanId, schedule.payments, lenderLeg, schedule.amounts);
+        paymentAggregator.registerPayments(deal.lender, deal.borrower, deal.ccy, loanId, payments, lenderLeg, amounts);
     }
 
     /**
@@ -582,14 +592,17 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     * @param deal LoanDeal structure
     */
     function _removePaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
-        Schedule memory schedule = _constructSchedule(deal, false);
+        (
+            uint256[] memory payments,
+            uint256[] memory amounts,
+        ) = _constructSchedule(deal, false);
         
-        uint256[MAXPAYNUM] memory lenderLeg;
+        uint256[] memory lenderLeg = new uint256[](payments.length);
         if (!isSettled[loanId]) {
             lenderLeg[0] = deal.notional;
         }
 
-        paymentAggregator.removePayments(deal.lender, deal.borrower, deal.ccy, loanId, schedule.payments, lenderLeg, schedule.amounts);
+        paymentAggregator.removePayments(deal.lender, deal.borrower, deal.ccy, loanId, payments, lenderLeg, amounts);
     }
 
     struct ScheduleConstructionLocalVars {
@@ -607,8 +620,14 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     * @param settlementStatus Boolean wether settlement status should be returned
     * @return Payment schedule structure
     */
-    function _constructSchedule(LoanDeal memory deal, bool settlementStatus) internal view returns (Schedule memory) {
-        Schedule memory schedule;
+    function _constructSchedule(
+        LoanDeal memory deal, 
+        bool settlementStatus
+    ) internal view returns (
+        uint256[] memory,
+        uint256[] memory,
+        bool[] memory
+    ) {
         ScheduleConstructionLocalVars memory vars;
 
         vars.payNums = termStructure.getNumPayments(deal.term, paymentFrequency);
@@ -617,26 +636,31 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
 
         vars.coupon = (deal.notional.mul(deal.rate).mul(vars.dfFrac)).div(BP).div(BP);
 
+        uint256 len = vars.payNums.add(1);
+        uint256[] memory payments = new uint256[](len);
+        uint256[] memory amounts = new uint256[](len);
+        bool[] memory settlements = new bool[](len);
+
         for (uint256 i = 1; i <= vars.payNums; i++) {
             uint256 time = _timeShift(deal.start, vars.daysArr[i-1]);
 
-            schedule.payments[i] = time;
+            payments[i] = time;
             if (i == vars.payNums) {
-                schedule.amounts[i] = deal.notional.add(vars.coupon);
+                amounts[i] = deal.notional.add(vars.coupon);
             } else {
-                schedule.amounts[i] = vars.coupon;
+                amounts[i] = vars.coupon;
             }
 
             if (settlementStatus) {
                 vars.status = paymentAggregator.isSettled(deal.lender, deal.borrower, deal.ccy, vars.time);
-                schedule.isSettled[i] = vars.status;
+                settlements[i] = vars.status;
             }
         }
 
         uint256 settlement = _timeShift(deal.start, 2);
-        schedule.payments[0] = settlement;
+        payments[0] = settlement;
 
-        return schedule;
+        return (payments, amounts, settlements);
     }
 
     /**

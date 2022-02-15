@@ -11,9 +11,9 @@ import "./IProduct.sol";
 interface IProductWithOneLeg is IProduct {
 
     struct Schedule {
-        uint256[6] payments;
-        uint256[6] amounts;
-        bool[6] isSettled;
+        uint256[] payments;
+        uint256[] amounts;
+        bool[] isSettled;
     }
 
     event Register(
@@ -56,8 +56,12 @@ interface IProductWithOneLeg is IProduct {
      * Returns the payment schedule of the deal
      * @param dealId Deal unique id in bytes32 word.
      *
-     * @return Payment schedule
+     * @return Payment schedule payment timestamps, payment amounts and settlement statuses
      */
-    function getPaymentSchedule(bytes32 dealId) external view returns (Schedule memory);
+    function getPaymentSchedule(bytes32 dealId) external view returns (
+        uint256[] memory,
+        uint256[] memory,
+        bool[] memory
+    );
 
 }

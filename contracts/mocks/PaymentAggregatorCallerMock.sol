@@ -18,9 +18,9 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
         address party1,
         bytes32 ccy,
         bytes32 dealId,
-        uint256[6] memory timestamps,
-        uint256[6] memory payments0,
-        uint256[6] memory payments1
+        uint256[] memory timestamps,
+        uint256[] memory payments0,
+        uint256[] memory payments1
     ) public {
         paymentAggregator.registerPayments(party0, party1, ccy, dealId, timestamps, payments0, payments1);
     }
@@ -30,9 +30,9 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
         address party1,
         bytes32 ccy,
         bytes32 dealId,
-        uint256[6] calldata timestamps,
-        uint256[6] calldata payments0,
-        uint256[6] calldata payments1
+        uint256[] calldata timestamps,
+        uint256[] calldata payments0,
+        uint256[] calldata payments1
     ) public {
         paymentAggregator.removePayments(party0, party1, ccy, dealId, timestamps, payments0, payments1);
     }

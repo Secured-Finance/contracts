@@ -9,7 +9,6 @@ import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
 import "./ProtocolTypes.sol";
 import "./CollateralManagement.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Collateral Aggregator contract is used to manage Secured Finance
@@ -447,10 +446,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         bytes32 ccy,
         uint256 liquidationAmount,
         bool isSettled
-    ) external override onlyLiquidationEngine {
+    ) external override onlyLiquidationEngineOrCollateralUser {
         uint256 liquidationTarget = liquidationAmount.mul(LQLEVEL).div(BP);
         uint256 liqudationInETH = currencyController.convertToETH(ccy, liquidationTarget);
-        // console.log('liqudationInETH ', liqudationInETH);
 
         require(
             _liquidateCollateralAcrossVaults(from, to, liqudationInETH),
@@ -762,8 +760,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             _party1PV, 
             _isSettled
         );
-        // console.log('vars.req0 ', vars.req0);
-        // console.log('vars.req1 ', vars.req1);
 
         (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(_party0, _party1);
 
@@ -819,9 +815,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
             vars.targetReq0 = vars.targetReq0.mul(MARGINLEVEL).div(BP);
             vars.targetReq1 = vars.targetReq1.mul(MARGINLEVEL).div(BP);
         }
-
-        // console.log('vars.targetReq0 is ', vars.targetReq0);
-        // console.log('vars.targetReq1 is ', vars.targetReq1);
 
         (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(_party0, _party1);
 
@@ -985,7 +978,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         
         TotalLockedCollateralLocalVars memory vars;
         vars.len = vaults.length();
-        // console.log('number of vaults ', vars.len);
 
         for (uint256 i = 0; i < vars.len; i++) {
             address vaultAddr = vaults.at(i);
@@ -994,15 +986,10 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
                 _party0, 
                 _party1
             );
-            // console.log('vars.lockedCollateral0 ', vars.lockedCollateral0);
-            // console.log('vars.lockedCollateral1 ', vars.lockedCollateral1);
 
             vars.totalCollateral0 = vars.totalCollateral0.add(vars.lockedCollateral0);
             vars.totalCollateral1 = vars.totalCollateral1.add(vars.lockedCollateral1);
         }
-            // console.log('vars.totalCollateral0 ', vars.totalCollateral0);
-            // console.log('vars.totalCollateral1 ', vars.totalCollateral1);
-
 
         return (
             vars.totalCollateral0, 
@@ -1044,7 +1031,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
                 _liquidationTarget
             );
 
-            // console.log('_liquidationTarget ', _liquidationTarget);
             i += 1;
         }
 
@@ -1062,7 +1048,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, Collate
         EnumerableSet.AddressSet storage vaults = usedVaults[_party0];
         uint256 len = vaults.length();
         uint256 i = 0;
-        // console.log('used vaults for rebalance ', len);
 
         while (_rebalanceTarget != 0 && i < len) {
             address vaultAddr = vaults.at(i);
