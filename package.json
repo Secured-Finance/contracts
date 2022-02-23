@@ -1,14 +1,13 @@
 {
   "name": "secured-finance",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Secured Finance protocol smart contracts",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "hardhat test",
-    "compile": "hardhat compile",
-    "build": "truffle compile && typechain --target truffle --outDir types/truffle-contracts './build/contracts/*.json'"
+    "compile": "hardhat compile"
   },
   "author": "Secured Finance",
   "license": "ISC",

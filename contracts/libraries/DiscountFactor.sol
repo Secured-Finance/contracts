@@ -22,7 +22,12 @@ library DiscountFactor {
             df = BP.mul(BP).div((BP.add(rate)));
             dfSum = dfSum.add(df);
         } else {
-            df = BP.mul(BP.sub(rate.mul(dfSum).div(BP))).div(BP.add(rate));            
+            uint256 rateSum = (rate.mul(dfSum)).div(BP);
+            if (rateSum > BP) {
+                df = 0;
+            } else {
+                df = BP.mul(BP.sub(rate.mul(dfSum).div(BP))).div(BP.add(rate));
+            }
             dfSum = dfSum.add(df);            
         }
 

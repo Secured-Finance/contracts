@@ -2,6 +2,7 @@ const BokkyPooBahsDateTimeContract = artifacts.require('BokkyPooBahsDateTimeCont
 const { should } = require('chai');
 const { ethers } = require('hardhat');
 const utils = require('web3-utils');
+const { ZERO_BN, toBN } = require('../test-utils').numbers;
 
 should();
 
@@ -10,7 +11,7 @@ contract('Discount Factor Test', async () => {
     let discountFactor;
     let timeLibrary;
 
-    const BP = utils.toBN('10000');
+    const BP = toBN('10000');
 
     let rates15y = [200, 300, 400, 500, 600, 700, 900, 1250, 1750];
     let terms15y = [30, 90, 180, 365, 730, 1095, 1825, 3650, 5475];
@@ -18,27 +19,35 @@ contract('Discount Factor Test', async () => {
     let rates5y = [200, 300, 400, 500, 600, 700, 900];
     let terms5y = [30, 90, 180, 365, 730, 1095, 1825];
 
-    function calculateDF(rate, term, prevDF) {
-        rate = utils.toBN(rate);
+    function calculateDF(rate, term, dfSum) {
+        rate = toBN(rate);
 
         if (term < 365) {
-            df = BP.mul(BP).div((BP.add(rate.mul(utils.toBN(term)).div(utils.toBN(360)))));
+            df = BP.mul(BP).div((BP.add(rate.mul(toBN(term)).div(toBN(360)))));
         } else if (term == 365) {
             df = BP.mul(BP).div((BP.add(rate)));
+            dfSum = dfSum.add(df);
         } else {
-            prevDF = utils.toBN(prevDF);
-
-            df = BP.mul(BP.sub(rate.mul(prevDF).div(BP))).div(BP.add(rate));
+            let rateSum = (rate.mul(dfSum)).div(BP);
+            if (rateSum.toNumber() > toBN('10000')) {
+                df = ZERO_BN;
+            } else {
+                df = BP.mul(BP.sub(rateSum)).div(BP.add(rate));
+            }
+            dfSum = dfSum.add(df);
         }
 
-        return df;
+        return [df, dfSum];
     }
 
     function calculateDFs(rates, terms) {
         let dfs = new Array();
+        let dfSum = ZERO_BN;
 
         for (i = 0; i < rates.length; i++) {
-            dfs[i] = calculateDF(rates[i], terms[i], dfs[i-1]);
+            let res = calculateDF(rates[i], terms[i], dfSum);
+            dfs[i] = res[0];
+            dfSum = res[1];
         }
 
         return dfs;
@@ -94,6 +103,7 @@ contract('Discount Factor Test', async () => {
         it('Test calculation of discount factors for terms up to 15 year maturity', async () => {
             let interpolatedRates = await discountFactorTest.bootstrapTerms(rates15y, terms15y);
             let df = calculateDFs(interpolatedRates[0], interpolatedRates[1]);
+            console.log(df.toString())
             let discountFactors = await discountFactorTest.calculateDFs(rates15y, terms15y);
 
             df.toString().should.be.equal(discountFactors[0].toString());
@@ -116,7 +126,7 @@ contract('Discount Factor Test', async () => {
                 shiftedTime.toString()
             );
 
-            const expectedDF = (BP.add(utils.toBN(discountFactors[0][0]))).div(utils.toBN(2));
+            const expectedDF = (BP.add(toBN(discountFactors[0][0]))).div(toBN(2));
             expectedDF.toString().should.be.equal(interpolatedDF.toString());
         });
 
@@ -131,7 +141,7 @@ contract('Discount Factor Test', async () => {
                 shiftedTime.toString()
             );
 
-            const expectedDF = (utils.toBN(discountFactors[0][1]).add(utils.toBN(discountFactors[0][2]))).div(utils.toBN(2));
+            const expectedDF = (toBN(discountFactors[0][1]).add(toBN(discountFactors[0][2]))).div(toBN(2));
             expectedDF.toString().should.be.equal(interpolatedDF.toString());
         });
 

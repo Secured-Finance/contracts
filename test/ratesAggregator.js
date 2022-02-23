@@ -2,6 +2,7 @@ const FXRatesAggregator = artifacts.require('FXRatesAggregator');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { emitted, reverted, equal } = require('../test-utils').assert;
+const { hexFILString, hexBTCString, hexETHString } = require('../test-utils').strings;
 
 const expectRevert = reverted;
 
@@ -14,43 +15,33 @@ contract('FXRatesAggregator', async (accounts) => {
     let ethToUSDPriceFeed;
     let filToUSDPriceFeed;
     let filToETHPriceFeed;
-    let usdctoUSDPriceFeed;
-    let usdctoETHPriceFeed;
 
     before('deploy FXRatesAggregator and Mock Chainlink price feeds', async () => {
         fxRatesAggregator = await FXRatesAggregator.new();
 
-        btcToUSDPriceFeed = await MockV3Aggregator.new(8, 3, 5612587723563);
+        btcToUSDPriceFeed = await MockV3Aggregator.new(8, hexBTCString, 5612587723563);
         let setPriceFeedTx = await fxRatesAggregator.linkPriceFeed(3, btcToUSDPriceFeed.address, false);
         await emitted(setPriceFeedTx, 'PriceFeedAdded');
     
-        filToUSDPriceFeed = await MockV3Aggregator.new(8, 1, 15804000000);
+        filToUSDPriceFeed = await MockV3Aggregator.new(8, hexFILString, 15804000000);
         setPriceFeedTx = await fxRatesAggregator.linkPriceFeed(1, filToUSDPriceFeed.address, false);
         await emitted(setPriceFeedTx, 'PriceFeedAdded');
 
-        ethToUSDPriceFeed = await MockV3Aggregator.new(8, 0, 232612637168);
+        ethToUSDPriceFeed = await MockV3Aggregator.new(8, hexETHString, 232612637168);
         setPriceFeedTx = await fxRatesAggregator.linkPriceFeed(0, ethToUSDPriceFeed.address, false);
-        await emitted(setPriceFeedTx, 'PriceFeedAdded');
-
-        usdctoUSDPriceFeed = await MockV3Aggregator.new(8, 2, 100009541);
-        setPriceFeedTx = await fxRatesAggregator.linkPriceFeed(2, usdctoUSDPriceFeed.address, false);
         await emitted(setPriceFeedTx, 'PriceFeedAdded');
 
         await expectRevert(
             fxRatesAggregator.linkPriceFeed(0, ethToUSDPriceFeed.address, true), 
-            "Can't link ETH price feed for ETH"
+            "Can't link ETH PriceFeed"
         );
 
-        btcToETHPriceFeed = await MockV3Aggregator.new(18, 3, web3.utils.toBN(23889912590000000000));
+        btcToETHPriceFeed = await MockV3Aggregator.new(18, hexBTCString, web3.utils.toBN(23889912590000000000));
         setPriceFeedTx = await fxRatesAggregator.linkPriceFeed(3, btcToETHPriceFeed.address, true);
         await emitted(setPriceFeedTx, 'PriceFeedAdded');
         
-        filToETHPriceFeed = await MockV3Aggregator.new(18, 1, web3.utils.toBN(67175250000000000));
+        filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, web3.utils.toBN(67175250000000000));
         setPriceFeedTx = await fxRatesAggregator.linkPriceFeed(1, filToETHPriceFeed.address, true);
-        await emitted(setPriceFeedTx, 'PriceFeedAdded');
-
-        usdctoETHPriceFeed = await MockV3Aggregator.new(18, 2, web3.utils.toBN(440220000000000));
-        setPriceFeedTx = await fxRatesAggregator.linkPriceFeed(2, usdctoETHPriceFeed.address, true);
         await emitted(setPriceFeedTx, 'PriceFeedAdded');
     });
 
@@ -96,20 +87,6 @@ contract('FXRatesAggregator', async (accounts) => {
         });
     });
 
-    describe('Test getLastUSDPrice and getHistoricalPrice for USDC', async () => {
-        it('Succesfully get last price for USDC in USD', async () => {
-            let price = await fxRatesAggregator.getLastUSDPrice(2, {from: bob});
-            await equal(price.toString(), '100009541');
-        });
-
-        it('Try to get later round price, expect revert', async () => {
-            await expectRevert(
-                fxRatesAggregator.getHistoricalUSDPrice(2, 2, {from: bob}), 
-                "Round not completed yet"
-            );
-        });
-    });
-
     describe('Test getLastETHPrice and getHistoricalPrice for BTC in ETH', async () => {
         it('Succesfully get last price for BTC in ETH', async () => {
             await btcToETHPriceFeed.updateAnswer(web3.utils.toBN(23889912590000000000), {from: owner});
@@ -137,20 +114,6 @@ contract('FXRatesAggregator', async (accounts) => {
         it('Try to get later round price, expect revert', async () => {
             await expectRevert(
                 fxRatesAggregator.getHistoricalETHPrice(1, 3, {from: bob}), 
-                "Round not completed yet"
-            );
-        });
-    });
-
-    describe('Test getLastETHPrice and getHistoricalPrice for USDC in ETH', async () => {
-        it('Succesfully get last price for FIL in ETH', async () => {            
-            let price = await fxRatesAggregator.getLastETHPrice(2, {from: bob});
-            await equal(price.toString(), '440220000000000');
-        });
-
-        it('Try to get later round price, expect revert', async () => {
-            await expectRevert(
-                fxRatesAggregator.getHistoricalETHPrice(2, 2, {from: bob}), 
                 "Round not completed yet"
             );
         });

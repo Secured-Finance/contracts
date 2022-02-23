@@ -9,7 +9,6 @@ import './interfaces/ICollateralAggregatorV2.sol';
 import './interfaces/ICurrencyController.sol';
 import './interfaces/IProduct.sol';
 import './interfaces/ILiquidations.sol';
-import "hardhat/console.sol";
 
 contract Liquidations is ILiquidations {
     using SafeMath for uint256;
@@ -244,7 +243,6 @@ contract Liquidations is ILiquidations {
                 vars.dealPV0, 
                 vars.dealPV1
             ) = IProduct(vars.product).getDealLastPV(party0, party1, vars.dealId);
-            console.log('deal 1 pv for liquidation is ', vars.dealPV1);
             vars.exchangeRate = uint256(currencyController.getLastETHPrice(vars.currency));
             
             vars.dealPV0 = vars.dealPV0.mul(vars.exchangeRate).div(1e18);

@@ -1,60 +1,45 @@
-# Secured Finance Smart Contracts
+# Secured Finance Protocol
 
-[![badge](https://img.shields.io/badge/submit%20for-HackFS-blue)](https://hack.ethglobal.co/showcase/secured-finance-recTkx6c1RDoLeaQm) [![badge](https://img.shields.io/badge/submit%20for-ETHOnline-ffe4b4)](https://hack.ethglobal.co/showcase/secured-finance-recJiyE8KWrV5VyHi)
+The [Secured Finance](https://secured-finance.com/) protocol is institutional-grade peer-to-peer derivatives exchange with automatic collateral management and built-in mark-to-market mechanisms. The protocol is designed to replicate [40-years](https://en.wikipedia.org/wiki/Swap_(finance)#History) of knowledge of an industry-standard that manages [558 trillion dollars of OTC (i.e., peer-to-peer) interest-rate derivative transactions](https://stats.bis.org/statx/srs/table/d5.1) and made the interbank market system open to the public. The range of products on Secured Finance markets starts with loans, interest rate swaps, and expands to other types of interest-rate products.
 
-This contains Solidity smartcontracts to deploy to Ethereum network using Truffle framework or Web3.js.
+**Disclaimer:** Secured Finance is not an intermediary service provider, nor a custodian; it is a decentralized protocol developer. Since this is a peer-to-peer platform, the ownership of funds and private keys remain on users; therefore, financial activity and decision making such as funds transfer, sending confirmations are to be made solely by users.
+
+This repository contains the core smart contracts of the Secured Finance Protocol, as well as a testing environment to set up a protocol localy.
 
 ## Quick Start
 
-1. Set environment variables in `.env` file
-2. type `truffle compile`, `truffle develop` and then `migrate --reset`
-3. type `npm test` to interact with a pre-deployed smart contract.
+1. Make sure you're using Node >= 14, or use established node version by running `nvm use`
+2. Install repository dependencies by running `npm install`
+3. Run `hardhat compile` to compile smart contracts
+4. Execute `hardhat test` to run the tests.
 
 ## Smart Contracts
 
-Contracts written in Solidity will be placed in `./contracts` directory. (see truffle-config.js to modify the directory)
-
-- Migrations.sol: This is provided by Truffle and used for deployment by `truffle migrate`.
-- Market.sol: This file contains MoneyMarket contract and FXMarket contract.
-- Collateral.sol: This is a collateral manager to control funds ownership based on its states `EMPTY`, `AVAILABLE`, `IN_USE`, `MARGIN_CALL`, `LIQUIDATION_IN_PROGRESS`, `LIQUIDATION`.
-- Loan.sol: This is a loan manager for payment scheduling and mark to markets for margin call, and update its states `REGISTERED`, `WORKING`, `DUE`, `PAST_DUE`, `CLOSED`, `TERMINATED`.
+Contracts written in Solidity are stored in `./contracts` directory.
 
 ## Environment variables
 
-Please refer to `.env.sample` and create `.env` to provide secret info such as private keys, Infura ID.
+Please refer to `.env.sample` and create `.env` to provide secret info such as private keys, Infura ID. 
+Private keys are used in order to deploy smart contracts on one of the Ethereum networks.
 
 ## Compile
 
-To compile smart contracts, type `truffle compile`. Use `--all` option to recompile everyting if needed.
+To compile smart contracts, type `hardhat compile`. Use `--force` option to recompile everyting if needed.
 
-The compiled output is a json file called Artifacts and saved in `./contracts` directory. (Hello.token.json. See truffle-config.js to modify the directory) ABI and bytecode will be saved in the json file.
+The compiled output is a json file called Artifacts and saved in `./build/contracts` directory per contract basis. 
+ABI and bytecode associated with the smart contract will be saved in the json file.
 
-## Deploy
+## Deployment
 
-There are two ways to deploy. By A) Truffle or B) Web3.js.
+Deployment instructions would be provided at a later stage
 
-### A) Truffle
+## Testing 
 
-1. `truffle develop` to launch local network. (see truffle-config.js to modify the host `127.0.0.1:9545`)
+### Hardhat EVM testing
 
-2. `migrate` to deploy smartcontracts specified in `./migrations/2_deploy_contracts.js`.
+1. Run `npx hardhat test` to run all tests from `./test` directory in a local hardhat javascript EVM.
 
-### B) Web3.js
+### On-chain ganache testing
 
-A sample test file `./test/web3Test.ts` is provided. It uses `./src/services/web3/web3.service.ts` library.
-
-The web3.service is created to deploy smart contracts, send transactions, and interact with smart contracts.
-
-### On-chain test (default)
-
-1. `truffle develop` to prepare for local network.
-2. `truffle test` or `npm run test` to run all the test files under test/ directry.
-
-### Off-chain test (simulate blockchain)
-
-`npm run test2` to run test2/Loan.js using @openzappelin/test-environment
-
-### On-chain test (small tests)
-
-1. `truffle develop` to prepare for local network
-2. `truffle exec ./scripts/test.js` to run test.js using truffle exec
+1. Run `hardhat node` or `ganache` to start a local blockchain node
+2. Execute `hardhat test --network localhost` to run tests on a local blockchain node

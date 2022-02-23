@@ -28,14 +28,14 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
 
             let dateTime = await timeLibrary.timestampToDate(now);
             dateTime.year.toString().should.be.equal(date.utc().year().toString());
-            dateTime.month.toString().should.be.equal((date.utc().month() + 1).toString());
+            dateTime.month.toString().should.be.equal((date.utc().month()).toString());
             dateTime.day.toString().should.be.equal(date.utc().date().toString());
 
             let days = await timeLibrary.getDaysInMonth(now);
             days.toString().should.be.equal(date.daysInMonth().toString());
 
             days = await timeLibrary._getDaysInMonth('2016', '12');
-            days.toString().should.be.equal((date.daysInMonth("2016-12", "YYYY-MM") + 1).toString());
+            days.toString().should.be.equal((date.daysInMonth("2016-12", "YYYY-MM")).toString());
 
             let day = await timeLibrary.getDayOfWeek(now);
             day.toString().should.be.equal(date.utc().days().toString());
@@ -44,7 +44,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
             year.toString().should.be.equal(date.utc().year().toString());
 
             let month = await timeLibrary.getMonth(now);
-            month.toString().should.be.equal((date.utc().month() + 1).toString());
+            month.toString().should.be.equal((date.utc().month()).toString());
 
             day = await timeLibrary.getDay(now);
             day.toString().should.be.equal(date.utc().date().toString());
@@ -69,7 +69,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
 
             let addedMonths = await timeLibrary.addMonths(time, 2);
             let months = await timeLibrary.getMonth(addedMonths);
-            months.toString().should.be.equal((date.utc().add(2, "M").month() + 1).toString());
+            months.toString().should.be.equal((date.utc().add(2, "M").month()).toString());
 
             let addedDays = await timeLibrary.addDays(time, 15);
             let days = await timeLibrary.getDay(addedDays);
@@ -97,7 +97,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
 
             let subMonths = await timeLibrary.subMonths(time, 2);
             let months = await timeLibrary.getMonth(subMonths);
-            months.toString().should.be.equal((date.utc().subtract(2, "M").month() + 1).toString());
+            months.toString().should.be.equal((date.utc().subtract(2, "M").month()).toString());
 
             let subDays = await timeLibrary.subDays(time, 15);
             let days = await timeLibrary.getDay(subDays);
