@@ -122,7 +122,6 @@ const printMoneyMkt = (book) => {
     console.log('book is not value');
     return;
   }
-  let addr;
   for (let side = 0; side < Side.length; side++) {
     console.log(`[${Side[side]}]`);
     for (let ccy = 0; ccy < Ccy.length; ccy++) {
@@ -130,7 +129,6 @@ const printMoneyMkt = (book) => {
       for (let term = 0; term < Term.length; term++) {
         let item = book[side][ccy][term];
         if (!item.isAvailable) continue;
-        addr = item.addr;
         console.log(
           `\t${t(term)} ${item.amt} ${item.rate / 100}% ${toDateTime(
             item.goodtil,
