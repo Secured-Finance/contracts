@@ -3,13 +3,13 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 /**
- * @dev Currency Controller contract is responsible for managing supported 
+ * @dev Currency Controller contract is responsible for managing supported
  * currencies in Secured Finance Protocol
  *
- * Contract links new currencies to ETH Chainlink price feeds, without existing price feed 
+ * Contract links new currencies to ETH Chainlink price feeds, without existing price feed
  * contract owner is not able to add a new currency into the protocol
- * 
- * Currency controller contract copies the logic of FXRatesAggregator contract, and 
+ *
+ * Currency controller contract copies the logic of FXRatesAggregator contract, and
  * will replace that contract in connection with Collateral Aggregator
  */
 interface ICurrencyController {

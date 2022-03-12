@@ -13,50 +13,56 @@ struct Slot {
 }
 
 interface IPaymentAggregator {
-    event UpdateCloseOutNetting(address indexed prevContract, address indexed closeOutNetting);
-    event UpdateMarkToMarket(address indexed prevContract, address indexed closeOutNetting);
+    event UpdateCloseOutNetting(
+        address indexed prevContract,
+        address indexed closeOutNetting
+    );
+    event UpdateMarkToMarket(
+        address indexed prevContract,
+        address indexed closeOutNetting
+    );
 
     event RegisterPayment(
-        address indexed party0, 
-        address indexed party1, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
-        uint256 payment0, 
+        address indexed party0,
+        address indexed party1,
+        bytes32 ccy,
+        bytes32 timeSlot,
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        uint256 payment0,
         uint256 payment1
     );
     event VerifyPayment(
-        address indexed verifier, 
-        address indexed counterparty, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
-        uint256 payment, 
+        address indexed verifier,
+        address indexed counterparty,
+        bytes32 ccy,
+        bytes32 timeSlot,
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        uint256 payment,
         bytes32 txHash
     );
     event SettlePayment(
-        address indexed verifier, 
-        address indexed counterparty, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
+        address indexed verifier,
+        address indexed counterparty,
+        bytes32 ccy,
+        bytes32 timeSlot,
+        uint256 year,
+        uint256 month,
+        uint256 day,
         bytes32 txHash
     );
     event RemovePayment(
-        address indexed party0, 
-        address indexed party1, 
-        bytes32 ccy, 
-        bytes32 timeSlot, 
-        uint256 year, 
-        uint256 month, 
-        uint256 day, 
-        uint256 payment0, 
+        address indexed party0,
+        address indexed party1,
+        bytes32 ccy,
+        bytes32 timeSlot,
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        uint256 payment0,
         uint256 payment1
     );
 
@@ -119,7 +125,7 @@ interface IPaymentAggregator {
         address party0,
         address party1,
         bytes32 ccy,
-        bytes32 slotPosition 
+        bytes32 slotPosition
     ) external view returns (bytes32[] memory);
 
     // function getTimeSlotByDate(
@@ -140,4 +146,3 @@ interface IPaymentAggregator {
 
     function settlementWindow() external view returns (uint256);
 }
-

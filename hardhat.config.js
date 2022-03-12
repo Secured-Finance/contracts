@@ -1,16 +1,15 @@
-require("@nomiclabs/hardhat-truffle5");
-require("hardhat-gas-reporter");
-require("solidity-coverage");
+require('@nomiclabs/hardhat-truffle5');
+require('hardhat-gas-reporter');
+require('solidity-coverage');
 require('hardhat-contract-sizer');
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-ganache");
-require("@nomiclabs/hardhat-waffle");
+require('@nomiclabs/hardhat-ethers');
+require('@nomiclabs/hardhat-ganache');
+require('@nomiclabs/hardhat-waffle');
 
 module.exports = {
-  defaultNetwork: "hardhat",
+  defaultNetwork: 'hardhat',
   networks: {
-    hardhat: {
-    },
+    hardhat: {},
     development: {
       url: 'http://0.0.0.0:8545', // Localhost (default: none)
       chainId: 1337,
@@ -19,23 +18,23 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.6.12",
+    version: '0.6.12',
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
-    }
+        runs: 200,
+      },
+    },
   },
   paths: {
-    sources: "./contracts",
-    tests: "./test",
-    cache: "./cache",
-    artifacts: "./build"
+    sources: './contracts',
+    tests: './test',
+    cache: './cache',
+    artifacts: './build',
   },
   gasReporter: {
     currency: 'USD',
-    gasPrice: 125
+    gasPrice: 125,
   },
   mocha: {
     timeout: 100000,
@@ -46,4 +45,4 @@ module.exports = {
     runOnCompile: false,
     disambiguatePaths: false,
   },
-}
+};

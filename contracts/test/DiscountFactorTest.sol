@@ -4,16 +4,16 @@ pragma solidity ^0.6.12;
 import "../libraries/DiscountFactor.sol";
 
 contract DiscountFactorTest {
-
-    function bootstrapTerms(
-        uint256[] memory rates, 
-        uint256[] memory terms
-    ) external view returns (uint256[] memory, uint256[] memory) {
+    function bootstrapTerms(uint256[] memory rates, uint256[] memory terms)
+        external
+        view
+        returns (uint256[] memory, uint256[] memory)
+    {
         return DiscountFactor.bootstrapTerms(rates, terms);
     }
 
     function getGasCostOfBootstrapTerms(
-        uint256[] memory rates, 
+        uint256[] memory rates,
         uint256[] memory terms
     ) external view returns (uint256) {
         uint256 gasBefore = gasleft();
@@ -22,18 +22,16 @@ contract DiscountFactorTest {
         return gasBefore - gasleft();
     }
 
-    function calculateDFs(
-        uint256[] memory rates, 
-        uint256[] memory terms
-    ) external view returns (
-        uint256[] memory,
-        uint256[] memory
-    ) {
+    function calculateDFs(uint256[] memory rates, uint256[] memory terms)
+        external
+        view
+        returns (uint256[] memory, uint256[] memory)
+    {
         return DiscountFactor.calculateDFs(rates, terms);
     }
 
     function getGasCostOfCalculateDFs(
-        uint256[] memory rates, 
+        uint256[] memory rates,
         uint256[] memory terms
     ) external view returns (uint256) {
         uint256 gasBefore = gasleft();
@@ -43,7 +41,7 @@ contract DiscountFactorTest {
     }
 
     function interpolateDF(
-        uint256[] memory discountFactors, 
+        uint256[] memory discountFactors,
         uint256[] memory terms,
         uint256 date
     ) external view returns (uint256) {
@@ -51,7 +49,7 @@ contract DiscountFactorTest {
     }
 
     function getGasCostOfInterpolateDF(
-        uint256[] memory discountFactors, 
+        uint256[] memory discountFactors,
         uint256[] memory terms,
         uint256 date
     ) external view returns (uint256) {
@@ -60,5 +58,4 @@ contract DiscountFactorTest {
 
         return gasBefore - gasleft();
     }
-
 }

@@ -6,7 +6,6 @@ import "../ProtocolTypes.sol";
 import "../interfaces/IPaymentAggregator.sol";
 
 contract PaymentAggregatorCallerMock is ProtocolTypes {
-    
     IPaymentAggregator public paymentAggregator;
 
     constructor(address _paymentAggregator) public {
@@ -22,7 +21,15 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
         uint256[] memory payments0,
         uint256[] memory payments1
     ) public {
-        paymentAggregator.registerPayments(party0, party1, ccy, dealId, timestamps, payments0, payments1);
+        paymentAggregator.registerPayments(
+            party0,
+            party1,
+            ccy,
+            dealId,
+            timestamps,
+            payments0,
+            payments1
+        );
     }
 
     function removePayments(
@@ -34,7 +41,15 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
         uint256[] calldata payments0,
         uint256[] calldata payments1
     ) public {
-        paymentAggregator.removePayments(party0, party1, ccy, dealId, timestamps, payments0, payments1);
+        paymentAggregator.removePayments(
+            party0,
+            party1,
+            ccy,
+            dealId,
+            timestamps,
+            payments0,
+            payments1
+        );
     }
 
     function verifyPayment(
@@ -44,7 +59,14 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
         uint256 payment,
         bytes32 txHash
     ) public {
-        paymentAggregator.verifyPayment(msg.sender, counterparty, ccy, timestamp, payment, txHash);
+        paymentAggregator.verifyPayment(
+            msg.sender,
+            counterparty,
+            ccy,
+            timestamp,
+            payment,
+            txHash
+        );
     }
 
     function settlePayment(
@@ -53,7 +75,12 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
         uint256 timestamp,
         bytes32 txHash
     ) public {
-        paymentAggregator.settlePayment(msg.sender, counterparty, ccy, timestamp, txHash);
+        paymentAggregator.settlePayment(
+            msg.sender,
+            counterparty,
+            ccy,
+            timestamp,
+            txHash
+        );
     }
-
 }

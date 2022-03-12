@@ -6,7 +6,6 @@ import "../ProtocolTypes.sol";
 import "../interfaces/ICollateralAggregatorV2.sol";
 
 contract CollateralAggregatorCallerMock is ProtocolTypes {
-    
     ICollateralAggregator public collateralAggregator;
 
     constructor(address _collateralAggregator) public {
@@ -29,7 +28,14 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 amount1,
         bool isSettled
     ) public {
-        collateralAggregator.useCollateral(partyA, partyB, ccy, amount0, amount1, isSettled);
+        collateralAggregator.useCollateral(
+            partyA,
+            partyB,
+            ccy,
+            amount0,
+            amount1,
+            isSettled
+        );
     }
 
     function settleCollateral(
@@ -39,7 +45,13 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 amount0,
         uint256 amount1
     ) public {
-        collateralAggregator.settleCollateral(partyA, partyB, ccy, amount0, amount1);
+        collateralAggregator.settleCollateral(
+            partyA,
+            partyB,
+            ccy,
+            amount0,
+            amount1
+        );
     }
 
     function releaseUnsettledCollateral(
@@ -58,7 +70,14 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 amount1,
         bool isSettled
     ) public {
-        collateralAggregator.releaseCollateral(partyA, partyB, ccy, amount0, amount1, isSettled);
+        collateralAggregator.releaseCollateral(
+            partyA,
+            partyB,
+            ccy,
+            amount0,
+            amount1,
+            isSettled
+        );
     }
 
     function updatePV(
@@ -70,7 +89,15 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 currentPV0,
         uint256 currentPV1
     ) external {
-        collateralAggregator.updatePV(partyA, partyB, ccy, prevPV0, prevPV1, currentPV0, currentPV1);
+        collateralAggregator.updatePV(
+            partyA,
+            partyB,
+            ccy,
+            prevPV0,
+            prevPV1,
+            currentPV0,
+            currentPV1
+        );
     }
 
     function liquidate(
@@ -80,7 +107,13 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 liquidationAmount,
         bool isSettled
     ) external {
-        collateralAggregator.liquidate(from, to, ccy, liquidationAmount, isSettled);
+        collateralAggregator.liquidate(
+            from,
+            to,
+            ccy,
+            liquidationAmount,
+            isSettled
+        );
     }
 
     function liquidate(
@@ -90,5 +123,4 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
     ) external {
         collateralAggregator.liquidate(from, to, liquidationInETH);
     }
-
 }

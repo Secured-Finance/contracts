@@ -5,9 +5,9 @@ interface ICollateralVault {
     event Deposit(address user, uint256 amount);
     event PositionDeposit(address user, address counterparty, uint256 amount);
     event RebalanceBetween(
-        address user, 
-        address fromCounterparty, 
-        address toCounterparty, 
+        address user,
+        address fromCounterparty,
+        address toCounterparty,
         uint256 amount
     );
     event RebalanceFrom(address user, address counterparty, uint256 amount);
@@ -18,9 +18,11 @@ interface ICollateralVault {
     event LiquidateIndependent(address from, address to, uint256 amount);
 
     function ccy() external view returns (bytes32);
+
     function tokenAddress() external view returns (address);
 
     function deposit(address _counterparty, uint256 _amount) external;
+
     function deposit(uint256 _amount) external payable;
 
     function getIndependentCollateral(address _user)
@@ -78,5 +80,6 @@ interface ICollateralVault {
     ) external returns (uint256);
 
     function withdraw(uint256 _amount) external;
+
     function withdrawFrom(address _counterparty, uint256 _amount) external;
 }

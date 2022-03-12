@@ -1,7 +1,6 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-# npm run prettier:check
+npm run prettier:check
 # npm run lint:check
 # npm run test
-exit 0

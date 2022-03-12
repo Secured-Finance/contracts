@@ -2,7 +2,8 @@ const MoneyMarket = artifacts.require('MoneyMarket');
 const FXMarket = artifacts.require('FXMarket');
 const Collateral = artifacts.require('Collateral');
 const Loan = artifacts.require('Loan');
-const {Side, Ccy, CcyPair, Term, LoanState, ColState, sample} = require('../test-utils').constants;
+const { Side, Ccy, CcyPair, Term, LoanState, ColState, sample } =
+  require('../test-utils').constants;
 const {
   toDate,
   printDate,
@@ -32,9 +33,16 @@ module.exports = async function main(callback) {
 
     const moneyMarket = await MoneyMarket.new();
     const fxMarket = await FXMarket.new();
-    const collateral = await Collateral.new(moneyMarket.address, fxMarket.address);
-    loan = await Loan.new(moneyMarket.address, fxMarket.address, collateral.address);
-    await collateral.setLoanAddr(loan.address, {from: accounts[0]});
+    const collateral = await Collateral.new(
+      moneyMarket.address,
+      fxMarket.address,
+    );
+    loan = await Loan.new(
+      moneyMarket.address,
+      fxMarket.address,
+      collateral.address,
+    );
+    await collateral.setLoanAddr(loan.address, { from: accounts[0] });
     await moneyMarket.setColAddr(collateral.address);
 
     console.log('moneyMarket addr is', moneyMarket.address);
@@ -64,22 +72,39 @@ module.exports = async function main(callback) {
       });
     });
 
-    await collateral.registerFILCustodyAddr(web3.utils.asciiToHex('cid_custody_FIL_0'), accounts[0]);
-    await collateral.registerFILCustodyAddr(web3.utils.asciiToHex('cid_custody_FIL_1'), accounts[1]);
-    await collateral.registerFILCustodyAddr(web3.utils.asciiToHex('cid_custody_FIL_2'), accounts[2]);
+    await collateral.registerFILCustodyAddr(
+      web3.utils.asciiToHex('cid_custody_FIL_0'),
+      accounts[0],
+    );
+    await collateral.registerFILCustodyAddr(
+      web3.utils.asciiToHex('cid_custody_FIL_1'),
+      accounts[1],
+    );
+    await collateral.registerFILCustodyAddr(
+      web3.utils.asciiToHex('cid_custody_FIL_2'),
+      accounts[2],
+    );
 
     // Collateralize test
-    await printCol(collateral, accounts[2], 'collateral state before upSizeETH');
+    await printCol(
+      collateral,
+      accounts[2],
+      'collateral state before upSizeETH',
+    );
     await collateral.upSizeETH({
       from: accounts[2],
       value: 1240, // 1240 ETH can cover about 820 ETH = 10000 FIL
     });
-    await printCol(collateral, accounts[2], 'collateral state after upSizeETH for accounts[2]');
+    await printCol(
+      collateral,
+      accounts[2],
+      'collateral state after upSizeETH for accounts[2]',
+    );
 
     // Init FXMarket with sample data
     sample.FXMarket.forEach(async (item) => {
-      let res = await fxMarket.setFXBook(...val(item), {from: accounts[0]});
-      expectEvent(res, 'SetFXBook', {addr: alice});
+      let res = await fxMarket.setFXBook(...val(item), { from: accounts[0] });
+      expectEvent(res, 'SetFXBook', { addr: alice });
     });
     let midRates = await fxMarket.getMidRates();
     console.log('FX midRates is', midRates.join(' '), '\n');
@@ -121,7 +146,7 @@ module.exports = async function main(callback) {
     beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
 
     loanId = 0; // available from event
-    await loan.makeLoanDeal(...deal, {from: taker});
+    await loan.makeLoanDeal(...deal, { from: taker });
     // await printState(loan, collateral, maker, taker, loanId, 'makeLoanDeal');
 
     // await loan.confirmPayment(maker, taker, ...item, loanId, {from: taker}); // taker is borrower
@@ -129,18 +154,29 @@ module.exports = async function main(callback) {
 
     // lender - notifyPayment with txHash
     const txHash = web3.utils.asciiToHex('0x_this_is_sample_tx_hash');
-    await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {from: maker});
+    await loan.notifyPayment(maker, taker, ...val(item), loanId, txHash, {
+      from: maker,
+    });
 
     // borrower check -> confirmPayment to ensure finality
-    await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {from: taker});
-    await printState(loan, collateral, maker, taker, loanId, '[confirmPayment]');
+    await loan.confirmPayment(maker, taker, ...val(item), loanId, txHash, {
+      from: taker,
+    });
+    await printState(
+      loan,
+      collateral,
+      maker,
+      taker,
+      loanId,
+      '[confirmPayment]',
+    );
 
     afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
     console.log('Loan amt before', beforeLoan.amt, 'after', afterLoan.amt);
 
     /* 2. Swap notional exchange */
     // upsize taker collateral with FIL from maker
-    await collateral.upSizeFIL(10000, txHash, {from: taker});
+    await collateral.upSizeFIL(10000, txHash, { from: taker });
     await printCol(collateral, taker, 'collateral upsized with FIL Loan');
 
     console.log('FIL LEND SCHEDULE');
@@ -155,11 +191,15 @@ module.exports = async function main(callback) {
     beforeLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
 
     loanId = 0;
-    await loan.makeLoanDeal(...deal, {from: taker});
+    await loan.makeLoanDeal(...deal, { from: taker });
     await printState(loan, collateral, taker, taker, loanId, 'makeLoanDeal');
 
-    await loan.notifyPayment(taker, maker, ...val(item), loanId, txHash, {from: maker});
-    await loan.confirmPayment(taker, maker, ...val(item), loanId, txHash, {from: taker}); // maker is USDC borrower
+    await loan.notifyPayment(taker, maker, ...val(item), loanId, txHash, {
+      from: maker,
+    });
+    await loan.confirmPayment(taker, maker, ...val(item), loanId, txHash, {
+      from: taker,
+    }); // maker is USDC borrower
     await printState(loan, collateral, taker, maker, loanId, 'confirmPayment');
 
     afterLoan = await moneyMarket.getOneItem(...deal.slice(0, 4));
@@ -168,7 +208,7 @@ module.exports = async function main(callback) {
     /* 4. Swap notional exchange */
     // upsize maker collateral with USDC from taker
     // TODO - upSizeUSDC, for now upSizeETH
-    await collateral.upSizeETH({value: 820, from: maker});
+    await collateral.upSizeETH({ value: 820, from: maker });
     await printCol(collateral, maker, 'collateral upsized with USDC Loan');
 
     console.log('USDC BORROW SCHEDULE');
