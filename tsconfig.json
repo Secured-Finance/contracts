@@ -13,15 +13,8 @@
   },
   "exclude": ["node_modules", "dist"],
   "typeAcquisition": {
-    "include": [
-      "jest"
-    ]
+    "include": ["jest"]
   },
-  "include": [
-    "src/**/*.ts",
-    "mongo/seed/**/*.ts"
-  ],
-  "typeRoots": [
-    "node_modules/@types"
-  ]
+  "include": ["src/**/*.ts", "mongo/seed/**/*.ts"],
+  "typeRoots": ["node_modules/@types"]
 }

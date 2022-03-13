@@ -8,8 +8,8 @@ import "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
- * @dev FX Rates Aggregator contract is using for accessing Chainlink price feeds  
- * prices in USD/ETH for Secured Finance protocol and converts 
+ * @dev FX Rates Aggregator contract is using for accessing Chainlink price feeds
+ * prices in USD/ETH for Secured Finance protocol and converts
  * FX rates to USDT/USDC/ETH internally
  *
  * Contract stores chainlink price feeds by ccy in usdPriceFeeds and ethPriceFeeds mappings.
@@ -20,7 +20,11 @@ contract FXRatesAggregator is ProtocolTypes {
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
     event PriceFeedAdded(Ccy ccy, string secondCcy, address indexed priceFeed);
-    event PriceFeedRemoved(Ccy ccy, string secondCcy, address indexed priceFeed);
+    event PriceFeedRemoved(
+        Ccy ccy,
+        string secondCcy,
+        address indexed priceFeed
+    );
 
     address public owner;
 
@@ -39,9 +43,9 @@ contract FXRatesAggregator is ProtocolTypes {
     }
 
     /**
-    * @dev Sets owner of the controller market.
-    * @param _owner Address of new owner
-    */
+     * @dev Sets owner of the controller market.
+     * @param _owner Address of new owner
+     */
     function setOwner(address _owner) public onlyOwner {
         require(_owner != address(0), "new owner is the zero address");
         emit OwnerChanged(owner, _owner);
@@ -51,15 +55,19 @@ contract FXRatesAggregator is ProtocolTypes {
     // =========== SET CHAINLINK PRICE FEED FUNCTIONS ===========
 
     /**
-    * @dev Links the contract to existing chainlink price feed.
-    * @param _ccy Specified currency
-    * @param _priceFeedAddr Chainlink price feed contract address
-    * @param _isEthPriceFeed Boolean for price feed with ETH price
-    */
-    function linkPriceFeed(Ccy _ccy, address _priceFeedAddr, bool _isEthPriceFeed) public onlyOwner returns (bool) {
+     * @dev Links the contract to existing chainlink price feed.
+     * @param _ccy Specified currency
+     * @param _priceFeedAddr Chainlink price feed contract address
+     * @param _isEthPriceFeed Boolean for price feed with ETH price
+     */
+    function linkPriceFeed(
+        Ccy _ccy,
+        address _priceFeedAddr,
+        bool _isEthPriceFeed
+    ) public onlyOwner returns (bool) {
         require(_priceFeedAddr != address(0), "Couldn't link 0x0 address");
         AggregatorV3Interface priceFeed = AggregatorV3Interface(_priceFeedAddr);
-        (, int256 price, ,  , ) =  priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.latestRoundData();
         require(price >= 0, "PriceFeed is invalid");
 
         uint8 decimals = priceFeed.decimals();
@@ -80,11 +88,14 @@ contract FXRatesAggregator is ProtocolTypes {
     }
 
     /**
-    * @dev Triggers to remove existing chainlink price feed.
-    * @param _ccy Specified currency
-    * @param _isEthPriceFeed Boolean for price feed with ETH price
-    */
-    function removePriceFeed(Ccy _ccy, bool _isEthPriceFeed) external onlyOwner {        
+     * @dev Triggers to remove existing chainlink price feed.
+     * @param _ccy Specified currency
+     * @param _isEthPriceFeed Boolean for price feed with ETH price
+     */
+    function removePriceFeed(Ccy _ccy, bool _isEthPriceFeed)
+        external
+        onlyOwner
+    {
         if (_isEthPriceFeed == true) {
             address priceFeed = address(ethPriceFeeds[_ccy]);
 
@@ -107,81 +118,101 @@ contract FXRatesAggregator is ProtocolTypes {
     // =========== GET PRICE FUNCTIONS ===========
 
     /**
-    * @dev Triggers to get last price in USD for selected currency.
-    * @param _ccy Currency
-    */
+     * @dev Triggers to get last price in USD for selected currency.
+     * @param _ccy Currency
+     */
     function getLastUSDPrice(Ccy _ccy) public view returns (int256) {
         AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
-        (, int256 price, ,  , ) =  priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return price;
     }
 
     /**
-    * @dev Triggers to get historical price in USD for selected currency.
-    * @param _ccy Currency
-    * @param _roundId RoundId
-    */
-    function getHistoricalUSDPrice(Ccy _ccy, uint80 _roundId) public view returns (int256) {
+     * @dev Triggers to get historical price in USD for selected currency.
+     * @param _ccy Currency
+     * @param _roundId RoundId
+     */
+    function getHistoricalUSDPrice(Ccy _ccy, uint80 _roundId)
+        public
+        view
+        returns (int256)
+    {
         AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
-        (, int256 price, , uint256 timeStamp, ) =  priceFeed.getRoundData(_roundId);
+        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(
+            _roundId
+        );
 
         require(timeStamp > 0, "Round not completed yet");
         return price;
     }
 
     /**
-    * @dev Triggers to get last price in ETH for selected currency.
-    * @param _ccy Currency
-    */
+     * @dev Triggers to get last price in ETH for selected currency.
+     * @param _ccy Currency
+     */
     function getLastETHPrice(Ccy _ccy) public view returns (int256) {
-        if(_isETH(_ccy)) return 1;
+        if (_isETH(_ccy)) return 1;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
-        (, int256 price, ,  , ) =  priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return price;
     }
 
     /**
-    * @dev Triggers to get historical price in ETH for selected currency.
-    * @param _ccy Currency
-    * @param _roundId RoundId
-    */
-    function getHistoricalETHPrice(Ccy _ccy, uint80 _roundId) public view returns (int256) {
-        if(_isETH(_ccy)) return 1;
+     * @dev Triggers to get historical price in ETH for selected currency.
+     * @param _ccy Currency
+     * @param _roundId RoundId
+     */
+    function getHistoricalETHPrice(Ccy _ccy, uint80 _roundId)
+        public
+        view
+        returns (int256)
+    {
+        if (_isETH(_ccy)) return 1;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
-        (, int256 price, , uint256 timeStamp, ) =  priceFeed.getRoundData(_roundId);
+        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(
+            _roundId
+        );
 
         require(timeStamp > 0, "Round not completed yet");
         return price;
     }
 
     /**
-    * @dev Triggers to get converted amount of currency in ETH.
-    * @param _ccy Currency that has to be convered to ETH
-    * @param _amount Amount of funds to be converted
-    */
-    function convertToETH(Ccy _ccy, uint256 _amount) public view returns (uint256) {
-        if(_isETH(_ccy)) return _amount;
+     * @dev Triggers to get converted amount of currency in ETH.
+     * @param _ccy Currency that has to be convered to ETH
+     * @param _amount Amount of funds to be converted
+     */
+    function convertToETH(Ccy _ccy, uint256 _amount)
+        public
+        view
+        returns (uint256)
+    {
+        if (_isETH(_ccy)) return _amount;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
-        (, int256 price, ,  , ) =  priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return _amount.mul(uint256(price)).div(1e18);
     }
 
     /**
-    * @dev Triggers to get converted amount of currency in ETH.
-    * @param _ccy Currency that has to be convered to ETH
-    * @param _amounts Amount of funds to be converted
-    */
-    function convertBulkToETH(Ccy _ccy, uint256[] memory _amounts) public view returns (uint256[] memory) {
-        if(_isETH(_ccy)) return _amounts;
+     * @dev Triggers to get converted amount of currency in ETH.
+     * @param _ccy Currency that has to be convered to ETH
+     * @param _amounts Amount of funds to be converted
+     */
+    function convertBulkToETH(Ccy _ccy, uint256[] memory _amounts)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        if (_isETH(_ccy)) return _amounts;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
-        (, int256 price, ,  , ) =  priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.latestRoundData();
         uint256[] memory amounts = new uint256[](_amounts.length);
 
         for (uint256 i = 0; i < _amounts.length; i++) {

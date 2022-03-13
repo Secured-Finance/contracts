@@ -32,170 +32,427 @@ pragma solidity ^0.6.12;
 import "../libraries/BokkyPooBahsDateTimeLibrary.sol";
 
 contract BokkyPooBahsDateTimeContract {
-    uint public constant SECONDS_PER_DAY = 24 * 60 * 60;
-    uint public constant SECONDS_PER_HOUR = 60 * 60;
-    uint public constant SECONDS_PER_MINUTE = 60;
-    int public constant OFFSET19700101 = 2440588;
+    uint256 public constant SECONDS_PER_DAY = 24 * 60 * 60;
+    uint256 public constant SECONDS_PER_HOUR = 60 * 60;
+    uint256 public constant SECONDS_PER_MINUTE = 60;
+    int256 public constant OFFSET19700101 = 2440588;
 
-    uint public constant DOW_MON = 1;
-    uint public constant DOW_TUE = 2;
-    uint public constant DOW_WED = 3;
-    uint public constant DOW_THU = 4;
-    uint public constant DOW_FRI = 5;
-    uint public constant DOW_SAT = 6;
-    uint public constant DOW_SUN = 7;
+    uint256 public constant DOW_MON = 1;
+    uint256 public constant DOW_TUE = 2;
+    uint256 public constant DOW_WED = 3;
+    uint256 public constant DOW_THU = 4;
+    uint256 public constant DOW_FRI = 5;
+    uint256 public constant DOW_SAT = 6;
+    uint256 public constant DOW_SUN = 7;
 
-    function _now() public view returns (uint timestamp) {
+    function _now() public view returns (uint256 timestamp) {
         timestamp = block.timestamp;
     }
-    function _nowDateTime() public view returns (uint year, uint month, uint day, uint hour, uint minute, uint second) {
-        (year, month, day, hour, minute, second) = BokkyPooBahsDateTimeLibrary.timestampToDateTime(now);
-    }
-    function _daysFromDate(uint year, uint month, uint day) public pure returns (uint _days) {
-        return BokkyPooBahsDateTimeLibrary._daysFromDate(year, month, day);
-    }
-    function _daysToDate(uint _days) public pure returns (uint year, uint month, uint day) {
-        return BokkyPooBahsDateTimeLibrary._daysToDate(_days);
-    }
-    function timestampFromDate(uint year, uint month, uint day) public pure returns (uint timestamp) {
-        return BokkyPooBahsDateTimeLibrary.timestampFromDate(year, month, day);
-    }
-    function timestampFromDateTime(uint year, uint month, uint day, uint hour, uint minute, uint second) public pure returns (uint timestamp) {
-        return BokkyPooBahsDateTimeLibrary.timestampFromDateTime(year, month, day, hour, minute, second);
-    }
-    function timestampToDate(uint timestamp) public pure returns (uint year, uint month, uint day) {
-        (year, month, day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
-    }
-    function timestampToDateTime(uint timestamp) public pure returns (uint year, uint month, uint day, uint hour, uint minute, uint second) {
-        (year, month, day, hour, minute, second) = BokkyPooBahsDateTimeLibrary.timestampToDateTime(timestamp);
+
+    function _nowDateTime()
+        public
+        view
+        returns (
+            uint256 year,
+            uint256 month,
+            uint256 day,
+            uint256 hour,
+            uint256 minute,
+            uint256 second
+        )
+    {
+        (year, month, day, hour, minute, second) = BokkyPooBahsDateTimeLibrary
+            .timestampToDateTime(now);
     }
 
-    function isValidDate(uint year, uint month, uint day) public pure returns (bool valid) {
+    function _daysFromDate(
+        uint256 year,
+        uint256 month,
+        uint256 day
+    ) public pure returns (uint256 _days) {
+        return BokkyPooBahsDateTimeLibrary._daysFromDate(year, month, day);
+    }
+
+    function _daysToDate(uint256 _days)
+        public
+        pure
+        returns (
+            uint256 year,
+            uint256 month,
+            uint256 day
+        )
+    {
+        return BokkyPooBahsDateTimeLibrary._daysToDate(_days);
+    }
+
+    function timestampFromDate(
+        uint256 year,
+        uint256 month,
+        uint256 day
+    ) public pure returns (uint256 timestamp) {
+        return BokkyPooBahsDateTimeLibrary.timestampFromDate(year, month, day);
+    }
+
+    function timestampFromDateTime(
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        uint256 hour,
+        uint256 minute,
+        uint256 second
+    ) public pure returns (uint256 timestamp) {
+        return
+            BokkyPooBahsDateTimeLibrary.timestampFromDateTime(
+                year,
+                month,
+                day,
+                hour,
+                minute,
+                second
+            );
+    }
+
+    function timestampToDate(uint256 timestamp)
+        public
+        pure
+        returns (
+            uint256 year,
+            uint256 month,
+            uint256 day
+        )
+    {
+        (year, month, day) = BokkyPooBahsDateTimeLibrary.timestampToDate(
+            timestamp
+        );
+    }
+
+    function timestampToDateTime(uint256 timestamp)
+        public
+        pure
+        returns (
+            uint256 year,
+            uint256 month,
+            uint256 day,
+            uint256 hour,
+            uint256 minute,
+            uint256 second
+        )
+    {
+        (year, month, day, hour, minute, second) = BokkyPooBahsDateTimeLibrary
+            .timestampToDateTime(timestamp);
+    }
+
+    function isValidDate(
+        uint256 year,
+        uint256 month,
+        uint256 day
+    ) public pure returns (bool valid) {
         valid = BokkyPooBahsDateTimeLibrary.isValidDate(year, month, day);
     }
-    function isValidDateTime(uint year, uint month, uint day, uint hour, uint minute, uint second) public pure returns (bool valid) {
-        valid = BokkyPooBahsDateTimeLibrary.isValidDateTime(year, month, day, hour, minute, second);
+
+    function isValidDateTime(
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        uint256 hour,
+        uint256 minute,
+        uint256 second
+    ) public pure returns (bool valid) {
+        valid = BokkyPooBahsDateTimeLibrary.isValidDateTime(
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second
+        );
     }
-    function isLeapYear(uint timestamp) public pure returns (bool leapYear) {
+
+    function isLeapYear(uint256 timestamp) public pure returns (bool leapYear) {
         leapYear = BokkyPooBahsDateTimeLibrary.isLeapYear(timestamp);
     }
-    function _isLeapYear(uint year) public pure returns (bool leapYear) {
+
+    function _isLeapYear(uint256 year) public pure returns (bool leapYear) {
         leapYear = BokkyPooBahsDateTimeLibrary._isLeapYear(year);
     }
-    function isWeekDay(uint timestamp) public pure returns (bool weekDay) {
+
+    function isWeekDay(uint256 timestamp) public pure returns (bool weekDay) {
         weekDay = BokkyPooBahsDateTimeLibrary.isWeekDay(timestamp);
     }
-    function isWeekEnd(uint timestamp) public pure returns (bool weekEnd) {
+
+    function isWeekEnd(uint256 timestamp) public pure returns (bool weekEnd) {
         weekEnd = BokkyPooBahsDateTimeLibrary.isWeekEnd(timestamp);
     }
 
-    function getDaysInMonth(uint timestamp) public pure returns (uint daysInMonth) {
+    function getDaysInMonth(uint256 timestamp)
+        public
+        pure
+        returns (uint256 daysInMonth)
+    {
         daysInMonth = BokkyPooBahsDateTimeLibrary.getDaysInMonth(timestamp);
     }
-    function _getDaysInMonth(uint year, uint month) public pure returns (uint daysInMonth) {
+
+    function _getDaysInMonth(uint256 year, uint256 month)
+        public
+        pure
+        returns (uint256 daysInMonth)
+    {
         daysInMonth = BokkyPooBahsDateTimeLibrary._getDaysInMonth(year, month);
     }
-    function getDayOfWeek(uint timestamp) public pure returns (uint dayOfWeek) {
+
+    function getDayOfWeek(uint256 timestamp)
+        public
+        pure
+        returns (uint256 dayOfWeek)
+    {
         dayOfWeek = BokkyPooBahsDateTimeLibrary.getDayOfWeek(timestamp);
     }
 
-    function getYear(uint timestamp) public pure returns (uint year) {
+    function getYear(uint256 timestamp) public pure returns (uint256 year) {
         year = BokkyPooBahsDateTimeLibrary.getYear(timestamp);
     }
-    function getMonth(uint timestamp) public pure returns (uint month) {
+
+    function getMonth(uint256 timestamp) public pure returns (uint256 month) {
         month = BokkyPooBahsDateTimeLibrary.getMonth(timestamp);
     }
-    function getDay(uint timestamp) public pure returns (uint day) {
+
+    function getDay(uint256 timestamp) public pure returns (uint256 day) {
         day = BokkyPooBahsDateTimeLibrary.getDay(timestamp);
     }
-    function getHour(uint timestamp) public pure returns (uint hour) {
+
+    function getHour(uint256 timestamp) public pure returns (uint256 hour) {
         hour = BokkyPooBahsDateTimeLibrary.getHour(timestamp);
     }
-    function getMinute(uint timestamp) public pure returns (uint minute) {
+
+    function getMinute(uint256 timestamp) public pure returns (uint256 minute) {
         minute = BokkyPooBahsDateTimeLibrary.getMinute(timestamp);
     }
-    function getSecond(uint timestamp) public pure returns (uint second) {
+
+    function getSecond(uint256 timestamp) public pure returns (uint256 second) {
         second = BokkyPooBahsDateTimeLibrary.getSecond(timestamp);
     }
 
-    function addYears(uint timestamp, uint _years) public pure returns (uint newTimestamp) {
+    function addYears(uint256 timestamp, uint256 _years)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addYears(timestamp, _years);
     }
-    function getGasCostofAddYears(uint timestamp, uint _years) public view returns (uint) {
+
+    function getGasCostofAddYears(uint256 timestamp, uint256 _years)
+        public
+        view
+        returns (uint256)
+    {
         uint256 gasBefore = gasleft();
         BokkyPooBahsDateTimeLibrary.addYears(timestamp, _years);
-        
+
         return gasBefore - gasleft();
     }
-    function addMonths(uint timestamp, uint _months) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(timestamp, _months);
+
+    function addMonths(uint256 timestamp, uint256 _months)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.addMonths(
+            timestamp,
+            _months
+        );
     }
-    function getGasCostofAddMonths(uint timestamp, uint _months) public view returns (uint) {
+
+    function getGasCostofAddMonths(uint256 timestamp, uint256 _months)
+        public
+        view
+        returns (uint256)
+    {
         uint256 gasBefore = gasleft();
         BokkyPooBahsDateTimeLibrary.addMonths(timestamp, _months);
-        
+
         return gasBefore - gasleft();
     }
-    function addDays(uint timestamp, uint _days) public pure returns (uint newTimestamp) {
+
+    function addDays(uint256 timestamp, uint256 _days)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, _days);
     }
-    function getGasCostofAddDays(uint timestamp, uint _days) public view returns (uint) {
+
+    function getGasCostofAddDays(uint256 timestamp, uint256 _days)
+        public
+        view
+        returns (uint256)
+    {
         uint256 gasBefore = gasleft();
         BokkyPooBahsDateTimeLibrary.addDays(timestamp, _days);
-        
+
         return gasBefore - gasleft();
     }
-    function addHours(uint timestamp, uint _hours) public pure returns (uint newTimestamp) {
+
+    function addHours(uint256 timestamp, uint256 _hours)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
         newTimestamp = BokkyPooBahsDateTimeLibrary.addHours(timestamp, _hours);
     }
-    function addMinutes(uint timestamp, uint _minutes) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.addMinutes(timestamp, _minutes);
+
+    function addMinutes(uint256 timestamp, uint256 _minutes)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.addMinutes(
+            timestamp,
+            _minutes
+        );
     }
-    function addSeconds(uint timestamp, uint _seconds) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.addSeconds(timestamp, _seconds);
+
+    function addSeconds(uint256 timestamp, uint256 _seconds)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.addSeconds(
+            timestamp,
+            _seconds
+        );
     }
-    function getGasCostofAddSeconds(uint timestamp, uint _seconds) public view returns (uint) {
+
+    function getGasCostofAddSeconds(uint256 timestamp, uint256 _seconds)
+        public
+        view
+        returns (uint256)
+    {
         uint256 gasBefore = gasleft();
         BokkyPooBahsDateTimeLibrary.addSeconds(timestamp, _seconds);
-        
+
         return gasBefore - gasleft();
     }
 
-    function subYears(uint timestamp, uint _years) public pure returns (uint newTimestamp) {
+    function subYears(uint256 timestamp, uint256 _years)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
         newTimestamp = BokkyPooBahsDateTimeLibrary.subYears(timestamp, _years);
     }
-    function subMonths(uint timestamp, uint _months) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.subMonths(timestamp, _months);
-    }
-    function subDays(uint timestamp, uint _days) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.subDays(timestamp, _days);
-    }
-    function subHours(uint timestamp, uint _hours) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.subHours(timestamp, _hours);
-    }
-    function subMinutes(uint timestamp, uint _minutes) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.subMinutes(timestamp, _minutes);
-    }
-    function subSeconds(uint timestamp, uint _seconds) public pure returns (uint newTimestamp) {
-        newTimestamp = BokkyPooBahsDateTimeLibrary.subSeconds(timestamp, _seconds);
+
+    function subMonths(uint256 timestamp, uint256 _months)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.subMonths(
+            timestamp,
+            _months
+        );
     }
 
-    function diffYears(uint fromTimestamp, uint toTimestamp) public pure returns (uint _years) {
-        _years = BokkyPooBahsDateTimeLibrary.diffYears(fromTimestamp, toTimestamp);
+    function subDays(uint256 timestamp, uint256 _days)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.subDays(timestamp, _days);
     }
-    function diffMonths(uint fromTimestamp, uint toTimestamp) public pure returns (uint _months) {
-        _months = BokkyPooBahsDateTimeLibrary.diffMonths(fromTimestamp, toTimestamp);
+
+    function subHours(uint256 timestamp, uint256 _hours)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.subHours(timestamp, _hours);
     }
-    function diffDays(uint fromTimestamp, uint toTimestamp) public pure returns (uint _days) {
-        _days = BokkyPooBahsDateTimeLibrary.diffDays(fromTimestamp, toTimestamp);
+
+    function subMinutes(uint256 timestamp, uint256 _minutes)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.subMinutes(
+            timestamp,
+            _minutes
+        );
     }
-    function diffHours(uint fromTimestamp, uint toTimestamp) public pure returns (uint _hours) {
-        _hours = BokkyPooBahsDateTimeLibrary.diffHours(fromTimestamp, toTimestamp);
+
+    function subSeconds(uint256 timestamp, uint256 _seconds)
+        public
+        pure
+        returns (uint256 newTimestamp)
+    {
+        newTimestamp = BokkyPooBahsDateTimeLibrary.subSeconds(
+            timestamp,
+            _seconds
+        );
     }
-    function diffMinutes(uint fromTimestamp, uint toTimestamp) public pure returns (uint _minutes) {
-        _minutes = BokkyPooBahsDateTimeLibrary.diffMinutes(fromTimestamp, toTimestamp);
+
+    function diffYears(uint256 fromTimestamp, uint256 toTimestamp)
+        public
+        pure
+        returns (uint256 _years)
+    {
+        _years = BokkyPooBahsDateTimeLibrary.diffYears(
+            fromTimestamp,
+            toTimestamp
+        );
     }
-    function diffSeconds(uint fromTimestamp, uint toTimestamp) public pure returns (uint _seconds) {
-        _seconds = BokkyPooBahsDateTimeLibrary.diffSeconds(fromTimestamp, toTimestamp);
+
+    function diffMonths(uint256 fromTimestamp, uint256 toTimestamp)
+        public
+        pure
+        returns (uint256 _months)
+    {
+        _months = BokkyPooBahsDateTimeLibrary.diffMonths(
+            fromTimestamp,
+            toTimestamp
+        );
+    }
+
+    function diffDays(uint256 fromTimestamp, uint256 toTimestamp)
+        public
+        pure
+        returns (uint256 _days)
+    {
+        _days = BokkyPooBahsDateTimeLibrary.diffDays(
+            fromTimestamp,
+            toTimestamp
+        );
+    }
+
+    function diffHours(uint256 fromTimestamp, uint256 toTimestamp)
+        public
+        pure
+        returns (uint256 _hours)
+    {
+        _hours = BokkyPooBahsDateTimeLibrary.diffHours(
+            fromTimestamp,
+            toTimestamp
+        );
+    }
+
+    function diffMinutes(uint256 fromTimestamp, uint256 toTimestamp)
+        public
+        pure
+        returns (uint256 _minutes)
+    {
+        _minutes = BokkyPooBahsDateTimeLibrary.diffMinutes(
+            fromTimestamp,
+            toTimestamp
+        );
+    }
+
+    function diffSeconds(uint256 fromTimestamp, uint256 toTimestamp)
+        public
+        pure
+        returns (uint256 _seconds)
+    {
+        _seconds = BokkyPooBahsDateTimeLibrary.diffSeconds(
+            fromTimestamp,
+            toTimestamp
+        );
     }
 }

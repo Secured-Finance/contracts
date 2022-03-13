@@ -25,9 +25,23 @@ const Term = {
   _5y: 5,
 };
 
-const LoanState = {REGISTERED: 0, WORKING: 1, DUE: 2, PAST_DUE: 3, CLOSED: 4, TERMINATED: 5};
+const LoanState = {
+  REGISTERED: 0,
+  WORKING: 1,
+  DUE: 2,
+  PAST_DUE: 3,
+  CLOSED: 4,
+  TERMINATED: 5,
+};
 
-const ColState = {EMPTY: 0, AVAILABLE: 1, IN_USE: 2, MARGIN_CALL: 3, LIQUIDATION_IN_PROGRESS: 4, LIQUIDATION: 5};
+const ColState = {
+  EMPTY: 0,
+  AVAILABLE: 1,
+  IN_USE: 2,
+  MARGIN_CALL: 3,
+  LIQUIDATION_IN_PROGRESS: 4,
+  LIQUIDATION: 5,
+};
 
 const effectiveSec = 60 * 60 * 24 * 14; // 14 days
 
@@ -199,7 +213,7 @@ const sample = {
         [1, 2000, 710, effectiveSec],
       ],
     },
-  ]
+  ],
 };
 
 module.exports = {

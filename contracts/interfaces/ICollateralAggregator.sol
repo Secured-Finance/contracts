@@ -72,9 +72,9 @@ interface ICollateralAggregator {
         view
         returns (uint256, uint256);
 
-    function getExposedCurrencies(address partyA, address partyB) 
-        external 
-        view 
+    function getExposedCurrencies(address partyA, address partyB)
+        external
+        view
         returns (bytes32[] memory);
 
     function isCovered(
@@ -179,19 +179,24 @@ interface ICollateralAggregator {
     function withdraw(uint256 _amt) external;
 
     function withdrawFrom(address _counterparty, uint256 _amt) external;
-    
+
     function checkRegisteredBook(address addr) external view returns (bool);
 
-    function getMaxCollateralWidthdraw(
-        address _party0,
-        address _party1
-    ) external view returns (uint256, uint256);
+    function getMaxCollateralWidthdraw(address _party0, address _party1)
+        external
+        view
+        returns (uint256, uint256);
 
-    function getMaxCollateralBookWidthdraw(address _user) external view returns (uint256);
+    function getMaxCollateralBookWidthdraw(address _user)
+        external
+        view
+        returns (uint256);
 
     function enterVault(address _user) external;
-    function enterVault(address _party0, address _party1) external;
-    function exitVault(address _user) external;
-    function exitVault(address _party0, address _party1) external;
 
+    function enterVault(address _party0, address _party1) external;
+
+    function exitVault(address _user) external;
+
+    function exitVault(address _party0, address _party1) external;
 }

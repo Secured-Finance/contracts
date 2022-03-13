@@ -2,14 +2,17 @@
 pragma solidity ^0.6.12;
 
 /**
- * @title IProduct is a common interface for various products on secured finance protocol 
+ * @title IProduct is a common interface for various products on secured finance protocol
  */
 interface IProduct {
-    
     event Liquidate(bytes32 dealId);
     event RequestTermination(bytes32 dealId, address indexed requestedBy);
     event RejectTermination(bytes32 dealId, address indexed rejectedBy);
-    event EarlyTermination(bytes32 dealId, address indexed acceptedBy, uint256 payment);
+    event EarlyTermination(
+        bytes32 dealId,
+        address indexed acceptedBy,
+        uint256 payment
+    );
     event MarkToMarket(bytes32 dealId, uint256 prevPV, uint256 currPV);
 
     /**
@@ -49,7 +52,7 @@ interface IProduct {
     //  * @return State identifier
     //  */
     // function getDealState(bytes32 dealId) external view returns (uint8);
-    
+
     /**
      * Returns the main currency of the deal.
      * @param dealId Deal unique id in bytes32 word.
@@ -65,8 +68,8 @@ interface IProduct {
      * @return Present value previously saved during mark-to-market.
      */
     function getDealLastPV(
-        address party0, 
-        address party1, 
+        address party0,
+        address party1,
         bytes32 dealId
     ) external view returns (uint256, uint256);
 
@@ -84,7 +87,10 @@ interface IProduct {
      *
      * @return Settlement bool identifier
      */
-    function getDealSettlementStatus(bytes32 dealId) external view returns (bool);
+    function getDealSettlementStatus(bytes32 dealId)
+        external
+        view
+        returns (bool);
 
     /**
      * Get the version of the underlying contract.
@@ -92,5 +98,4 @@ interface IProduct {
      * @return Version number.
      */
     function getVersion() external view returns (uint16);
-
 }

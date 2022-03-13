@@ -1,0 +1,39 @@
+name: Build Smart Contracts
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+jobs:
+  static-code-analysis:
+    name: Static Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Dependencies
+        run: npm install
+      - name: Run Prettier
+        run: npm run prettier:check
+      - name: Run ESLint
+        run: npm run eslint:check
+      - name: Run solhint
+        run: npm run solhint:check
+  build-and-unit-test:
+    name: Build and Unit Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Smart Contracts
+        run: npm run compile
+      - name: Run Unit Tests
+        run: npm run test
