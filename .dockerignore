@@ -1,0 +1,8 @@
+build
+.vscode
+cache
+*Dockerfile*
+*docker-compose*
+node_modules
+.env
+.git
