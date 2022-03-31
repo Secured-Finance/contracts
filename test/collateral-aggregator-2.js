@@ -216,6 +216,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
       await liquidations.setProductAddressResolver(productResolver.address);
       await collateral.setLiquidationEngine(collateralCaller.address);
 
+      const crosschainResolverFactory = await ethers.getContractFactory('CrosschainAddressResolver');
+      crosschainResolver = await crosschainResolverFactory.deploy(collateral.address);
+      await crosschainResolver.deployed();
+      await collateral.setCrosschainAddressResolver(crosschainResolver.address);
+
       const CollateralVault = await ethers.getContractFactory(
         'CollateralVault',
       );
@@ -370,7 +375,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
   describe('Test collateral deposits and withdraws in different vaults', async () => {
     it('Deposit all tFIL tokens into the vault by Alice, validate token balances', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      await collateral.register({ from: alice });
+      let btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
+      let filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
+
+      collateral.methods['register(string[],uint256[])']([btcAddress, filAddress], [0, 461], { from: alice });
+
       await tFILToken.approveInternal(
         alice,
         filVault.address,

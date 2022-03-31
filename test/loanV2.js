@@ -225,6 +225,11 @@ contract('LoanV2', async (accounts) => {
       from: owner,
     });
 
+    const crosschainResolverFactory = await ethers.getContractFactory('CrosschainAddressResolver');
+    crosschainResolver = await crosschainResolverFactory.deploy(collateral.address);
+    await crosschainResolver.deployed();
+    await collateral.setCrosschainAddressResolver(crosschainResolver.address);
+
     const CollateralVault = await ethers.getContractFactory('CollateralVault');
     wETHToken = await WETH9Mock.new();
 
@@ -343,7 +348,7 @@ contract('LoanV2', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceDepositAmt.toString());
+      independentCollateral.toString().should.be.equal(aliceDepositAmt.toString());
 
       result = await collateral.register({ from: bob });
       await emitted(result, 'Register');
@@ -357,7 +362,7 @@ contract('LoanV2', async (accounts) => {
       ).wait();
 
       independentCollateral = await ethVault.getIndependentCollateral(bob);
-      independentCollateral.should.be.equal(bobDepositAmt.toString());
+      independentCollateral.toString().should.be.equal(bobDepositAmt.toString());
     });
 
     it('Register new loan deal between Alice and Bob', async () => {
@@ -482,16 +487,16 @@ contract('LoanV2', async (accounts) => {
       let lockedCollateral = await ethVault['getLockedCollateral(address)'](
         alice,
       );
-      lockedCollateral.should.be.equal(aliceFILInETH.toString());
+      lockedCollateral.toString().should.be.equal(aliceFILInETH.toString());
 
       lockedCollateral = await ethVault['getLockedCollateral(address)'](bob);
-      lockedCollateral.should.be.equal(bobFILInETH.toString());
+      lockedCollateral.toString().should.be.equal(bobFILInETH.toString());
 
       let lockedCollaterals = await ethVault[
         'getLockedCollateral(address,address)'
       ](alice, bob);
-      lockedCollaterals[0].should.be.equal(aliceFILInETH.toString());
-      lockedCollaterals[1].should.be.equal(bobFILInETH.toString());
+      lockedCollaterals[0].toString().should.be.equal(aliceFILInETH.toString());
+      lockedCollaterals[1].toString().should.be.equal(bobFILInETH.toString());
     });
 
     it('Try to get last settled payment, verify payment from lender', async () => {
@@ -744,7 +749,7 @@ contract('LoanV2', async (accounts) => {
       ).wait();
 
       independentCollateral = await ethVault.getIndependentCollateral(alice);
-      independentCollateral.should.be.equal(
+      independentCollateral.toString().should.be.equal(
         initialIndependentAmount.add(toBN('9000000000000000000')).toString(),
       );
     });
