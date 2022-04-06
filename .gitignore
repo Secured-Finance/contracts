@@ -9,11 +9,11 @@ node_modules
 .DS_Store
 .vscode
 .gitattributes
-package-lock.json
 contracts/artifacts
 types/
 cache/
 build/
 coverage/
 coverage.json
-yarn.lock
+
+deployments/localhost/
