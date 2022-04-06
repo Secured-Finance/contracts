@@ -104,6 +104,9 @@ contract('Integration test', async (accounts) => {
     await discountFactor.deployed();
 
     currencyController = await CurrencyController.new();
+    console.log(
+      'CurrencyController contract address is ' + currencyController.address,
+    );
 
     const productResolverFactory = await ethers.getContractFactory(
       'ProductAddressResolver',
@@ -114,6 +117,9 @@ contract('Integration test', async (accounts) => {
       },
     );
     productResolver = await productResolverFactory.deploy();
+    console.log(
+      'ProductAddressResolver contract address is ' + productResolver.address,
+    );
 
     const termStructureFactory = await ethers.getContractFactory(
       'TermStructure',
@@ -126,6 +132,9 @@ contract('Integration test', async (accounts) => {
     termStructure = await termStructureFactory.deploy(
       currencyController.address,
       productResolver.address,
+    );
+    console.log(
+      'TermStructure contract address is ' + termStructure.address,
     );
 
     const loanFactory = await ethers.getContractFactory('LoanV2', {
@@ -150,7 +159,14 @@ contract('Integration test', async (accounts) => {
     console.log();
 
     paymentAggregator = await PaymentAggregator.new();
+    console.log(
+      'PaymentAggregator contract address is ' + paymentAggregator.address,
+    );
+
     closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
+    console.log(
+      'CloseOutNetting contract address is ' + closeOutNetting.address,
+    );
 
     liquidations = await Liquidations.new(owner, 10);
     await liquidations.setCollateralAggregator(collateral.address, {
@@ -222,6 +238,9 @@ contract('Integration test', async (accounts) => {
     const crosschainResolverFactory = await ethers.getContractFactory('CrosschainAddressResolver');
     crosschainResolver = await crosschainResolverFactory.deploy(collateral.address);
     await crosschainResolver.deployed();
+    console.log(
+      'CrosschainAddressResolver contract address is ' + crosschainResolver.address,
+    );
     await collateral.setCrosschainAddressResolver(crosschainResolver.address);
 
     const CollateralVault = await ethers.getContractFactory('CollateralVault');
@@ -597,7 +616,10 @@ contract('Integration test', async (accounts) => {
 
   describe('Test Deposit and Withraw collateral by Alice', async () => {
     it('Register collateral book without payment', async () => {
-      let result = await collateral.register({ from: alice });
+      let btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
+      let filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
+      let result = await collateral.methods['register(string[],uint256[])']([btcAddress, filAddress], [0, 461], { from: alice });
+
       await emitted(result, 'Register');
     });
 

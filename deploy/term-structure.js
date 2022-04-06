@@ -14,7 +14,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
             QuickSort: quickSortLibrary.address
         }
     });
-    
+    console.log('Deployed TermStructure at ' + termStructure.address);
 }
 
 module.exports.tags = ["TermStructure"]

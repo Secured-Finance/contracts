@@ -12,12 +12,14 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         from: deployer,
         args: [deployer, 10]
     });
+    console.log('Deployed Liquidations at ' + liquidations.address);
+
     const liquidationsContract = await ethers.getContractAt("Liquidations", liquidations.address);
 
-    await liquidationsContract.setCollateralAggregator(collateralAggregator.address, { from: deployer });
-    await liquidationsContract.setProductAddressResolver(productResolver.address, { from: deployer });
-    await liquidationsContract.setCurrencyController(currencyController.address, { from: deployer });
-    await collateralContract.setLiquidationEngine(liquidations.address);
+    await (await liquidationsContract.setCollateralAggregator(collateralAggregator.address, { from: deployer })).wait();
+    await (await liquidationsContract.setProductAddressResolver(productResolver.address, { from: deployer })).wait();
+    await (await liquidationsContract.setCurrencyController(currencyController.address, { from: deployer })).wait();
+    await (await collateralContract.setLiquidationEngine(liquidations.address)).wait();
 
 }
 
