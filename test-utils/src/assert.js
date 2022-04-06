@@ -1,5 +1,5 @@
-const assert = require('assert')
-const truffleAssert = require('truffle-assertions')
+const assert = require('assert');
+const truffleAssert = require('truffle-assertions');
 
 module.exports = {
   notEmitted: truffleAssert.eventNotEmitted,
@@ -12,4 +12,4 @@ module.exports = {
   notEqual: assert.notStrictEqual,
   isTrue: assert.isTrue,
   ok: assert.ok,
-}
+};
