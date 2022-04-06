@@ -10,9 +10,9 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         from: deployer,
         args: [paymentAggregator.address]
     })
+    console.log('Deployed CloseOutNetting at ' + closeOutNetting.address);
 
     await paymentAggregatorContract.setCloseOutNetting(closeOutNetting.address)
-
 }
 
 module.exports.tags = ["CloseOutNetting"]

@@ -34,14 +34,15 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
             DealId: dealIdLibrary.address,
         }
     });
+    console.log('Deployed LoanV2 at ' + loanV2.address);
 
     const loanV2Contract = await ethers.getContractAt("LoanV2", loanV2.address);
 
-    await paymentAggregatorContract.addPaymentAggregatorUser(loanV2.address);
-    await loanV2Contract.setCollateralAddr(collateralAggregator.address);
-    await loanV2Contract.setTermStructure(termStructure.address);
-    await loanV2Contract.setPaymentAggregator(paymentAggregator.address);
-    await loanV2Contract.setLiquidations(liquidations.address);
+    await (await paymentAggregatorContract.addPaymentAggregatorUser(loanV2.address)).wait();
+    await (await loanV2Contract.setCollateralAddr(collateralAggregator.address)).wait();
+    await (await loanV2Contract.setTermStructure(termStructure.address)).wait();
+    await (await loanV2Contract.setPaymentAggregator(paymentAggregator.address)).wait();
+    await (await loanV2Contract.setLiquidations(liquidations.address)).wait();
 
     const lendingController = await deploy("LendingMarketController", {
         from: deployer,
@@ -51,27 +52,28 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     }
     });
     const lendingControllerContract = await ethers.getContractAt("LendingMarketController", lendingController.address);
+    console.log('Deployed LendingMarketController at ' + lendingController.address);
 
-    await productResolverContract.registerProduct(
+    await (await productResolverContract.registerProduct(
         loanPrefix,
         loanV2.address,
         lendingControllerContract.address,
         { from: deployer },
-    );
+    )).wait();
 
     for (i = 0; i < sortedTermDays.length; i++) {
-        await termStructureContract.supportTerm(
+        await (await termStructureContract.supportTerm(
             sortedTermDays[i],
             [loanPrefix],
             [hexFILString, hexBTCString, hexETHString],
-        );
+        )).wait();
     }
   
-    await lendingControllerContract.setCurrencyController(currencyController.address, { from: deployer });
-    await lendingControllerContract.setTermStructure(termStructure.address);
-    await loanV2Contract.setLendingControllerAddr(lendingController.address, { from: deployer });
-    await collateralContract.addCollateralUser(loanV2.address, { from: deployer });
-    await liquidationsContract.linkContract(loanV2.address, { from: deployer });
+    await (await lendingControllerContract.setCurrencyController(currencyController.address, { from: deployer })).wait();
+    await (await lendingControllerContract.setTermStructure(termStructure.address)).wait();
+    await (await loanV2Contract.setLendingControllerAddr(lendingController.address, { from: deployer })).wait();
+    await (await collateralContract.addCollateralUser(loanV2.address, { from: deployer })).wait();
+    await (await liquidationsContract.linkContract(loanV2.address, { from: deployer })).wait();
 
 }
 

@@ -78,7 +78,22 @@ contract CollateralAggregatorV2 is
      * @dev Register user and store collateral book
      */
     function register() public override nonRegisteredUser(msg.sender) {
-        _register();
+        string[] memory _addresses = new string[](0);
+        uint256[] memory _chainIds = new uint256[](0);
+        
+        _register(_addresses, _chainIds);
+    }
+
+    /**
+     * @dev Register user and store collateral book
+     * @param _addresses Array of other blockchain addresses
+     * @param _chainIds Array of chain ids for other blockchains
+     */
+    function register(
+        string[] memory _addresses, 
+        uint256[] memory _chainIds
+    ) public override nonRegisteredUser(msg.sender) {
+        _register(_addresses, _chainIds);
     }
 
     // TODO: Rebalance from position to book once position coverage more than 150%
@@ -628,9 +643,14 @@ contract CollateralAggregatorV2 is
     /**
      * @dev Triggers internaly to store new collateral book
      */
-    function _register() internal {
+    function _register(
+        string[] memory _addresses, 
+        uint256[] memory _chainIds
+    ) internal {
         isRegistered[msg.sender] = true;
         // perform onboarding steps here
+
+        crosschainAddressResolver.updateAddresses(msg.sender, _chainIds, _addresses);
 
         emit Register(msg.sender);
     }

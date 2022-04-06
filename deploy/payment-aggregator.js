@@ -6,6 +6,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     const paymentAggregator = await deploy("PaymentAggregator", {
         from: deployer,
     });
+    console.log('Deployed PaymentAggregator at ' + paymentAggregator.address);
 
 }
 

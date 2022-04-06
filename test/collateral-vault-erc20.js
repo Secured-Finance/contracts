@@ -69,6 +69,11 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         from: owner,
       });
 
+      const crosschainResolverFactory = await ethers.getContractFactory('CrosschainAddressResolver');
+      crosschainResolver = await crosschainResolverFactory.deploy(collateral.address);
+      await crosschainResolver.deployed();
+      await collateral.setCrosschainAddressResolver(crosschainResolver.address);
+
       const CollateralVault = await ethers.getContractFactory(
         'CollateralVault',
       );

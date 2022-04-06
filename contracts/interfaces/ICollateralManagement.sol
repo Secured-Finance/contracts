@@ -18,7 +18,8 @@ interface ICollateralManagement {
 
     event CurrencyControllerUpdated(address indexed controller);
     event LiquidationEngineUpdated(address indexed liquidations);
-
+    event CrosschainAddressResolverUpdated(address indexed crosschainAddressResolver);
+    
     event LiquidationPriceUpdated(uint256 previousPrice, uint256 price);
     event AutoLiquidationThresholdUpdated(uint256 previousRatio, uint256 ratio);
     event MarginCallThresholdUpdated(uint256 previousRatio, uint256 ratio);
@@ -37,6 +38,8 @@ interface ICollateralManagement {
     function setCurrencyController(address _addr) external;
 
     function setLiquidationEngine(address _addr) external;
+
+    function setCrosschainAddressResolver(address _addr) external;
 
     function addCollateralUser(address _user) external returns (bool);
 

@@ -5,6 +5,7 @@ import "./interfaces/ICollateralManagement.sol";
 import "./interfaces/ICurrencyController.sol";
 import "./interfaces/ICollateralVault.sol";
 import "./interfaces/ILiquidations.sol";
+import "./interfaces/ICrosschainAddressResolver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
@@ -34,6 +35,7 @@ contract CollateralManagement is ICollateralManagement {
     // Linked contract addresses
     ICurrencyController public currencyController;
     ILiquidations public liquidationEngine;
+    ICrosschainAddressResolver public crosschainAddressResolver;
     EnumerableSet.AddressSet private collateralUsers;
     EnumerableSet.AddressSet private collateralVaults;
 
@@ -252,6 +254,23 @@ contract CollateralManagement is ICollateralManagement {
 
         emit LiquidationEngineUpdated(_addr);
     }
+
+    /**
+     * @dev Trigers to set cros-chain address resolver contract address
+     * @param _addr CrosschainAddressResolver smart contract address
+     *
+     * @notice Trigers only be contract owner
+     * @notice Reverts on saving 0x0 address
+     */
+    function setCrosschainAddressResolver(address _addr) public override onlyOwner {
+        require(_addr != address(0), "Zero address");
+        require(_addr.isContract(), "Can't add non-contract address");
+
+        crosschainAddressResolver = ICrosschainAddressResolver(_addr);
+
+        emit CrosschainAddressResolverUpdated(_addr);
+    }
+
 
     /**
      * @dev Trigers to safely update main collateral parameters this function

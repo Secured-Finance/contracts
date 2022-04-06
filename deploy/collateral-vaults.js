@@ -6,22 +6,25 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     const { deployer } = await getNamedAccounts()
 
     const wETHToken = await deploy("WETH9Mock", { from: deployer });
+    console.log('Deployed wETHToken at ' + wETHToken.address);
 
     const currencyController = await deployments.get("CurrencyController")
     const collateralAggregator = await deployments.get("CollateralAggregatorV2")
     const collateralContract = await ethers.getContractAt("CollateralAggregatorV2", collateralAggregator.address);
 
-    const CollateralVault = await ethers.getContractFactory('CollateralVault');
+    const ethVault = await deploy("CollateralVault", {
+      from: deployer,
+      args: [
+        hexETHString,
+        wETHToken.address,
+        collateralAggregator.address,
+        currencyController.address,
+        wETHToken.address,  
+      ]
+    });
+    console.log('Deployed ETH CollateralVault at ' + ethVault.address);
 
-    const ethVault = await CollateralVault.deploy(
-      hexETHString,
-      wETHToken.address,
-      collateralAggregator.address,
-      currencyController.address,
-      wETHToken.address,
-    );
-    await collateralContract.linkCollateralVault(ethVault.address);
-
+    await (await collateralContract.linkCollateralVault(ethVault.address)).wait();
 }
 
 module.exports.tags = ["CollateralVaults"]

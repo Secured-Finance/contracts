@@ -11,6 +11,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
             DealId: dealIdLibrary.address
         }
     });
+    console.log('Deployed ProductAddressResolver at ' + productResolver.address);
 
 }
 

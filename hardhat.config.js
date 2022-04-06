@@ -1,3 +1,4 @@
+require('dotenv/config');
 require('@nomiclabs/hardhat-truffle5');
 require('hardhat-gas-reporter');
 require('solidity-coverage');
@@ -9,7 +10,8 @@ require('@nomiclabs/hardhat-ganache');
 module.exports = {
   defaultNetwork: 'hardhat',
   namedAccounts: {
-    deployer: 0
+    deployer: 0,
+    alice: 1,
   }, 
   networks: {
     hardhat: {},
@@ -18,6 +20,16 @@ module.exports = {
       chainId: 1337,
       // port: 8545, // Standard Ethereum port (default: none)
       // network_id: '*', // Any network (default: none)
+    },
+    ropsten: {
+      url: `https://ropsten.infura.io/v3/${process.env.WEB3_INFURA_ID}`,
+      chainId: 3,
+      accounts: [process.env.PRIVATE_KEY],
+      live: true,
+      saveDeployments: true,
+      gasPrice: 11000000000,
+      gasMultiplier: 3,
+      timeout: 240000,
     },
   },
   solidity: {

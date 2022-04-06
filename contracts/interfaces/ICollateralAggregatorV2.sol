@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
 
 interface ICollateralAggregator {
     event Register(address indexed addr);
@@ -141,6 +142,11 @@ interface ICollateralAggregator {
     ) external;
 
     function register() external;
+
+    function register(
+        string[] memory _addresses, 
+        uint256[] memory _chainIds
+    ) external;
 
     function releaseCollateral(
         address partyA,

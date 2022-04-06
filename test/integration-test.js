@@ -104,6 +104,9 @@ contract('Integration test', async (accounts) => {
     await discountFactor.deployed();
 
     currencyController = await CurrencyController.new();
+    console.log(
+      'CurrencyController contract address is ' + currencyController.address,
+    );
 
     const productResolverFactory = await ethers.getContractFactory(
       'ProductAddressResolver',
@@ -114,6 +117,9 @@ contract('Integration test', async (accounts) => {
       },
     );
     productResolver = await productResolverFactory.deploy();
+    console.log(
+      'ProductAddressResolver contract address is ' + productResolver.address,
+    );
 
     const termStructureFactory = await ethers.getContractFactory(
       'TermStructure',
@@ -126,6 +132,9 @@ contract('Integration test', async (accounts) => {
     termStructure = await termStructureFactory.deploy(
       currencyController.address,
       productResolver.address,
+    );
+    console.log(
+      'TermStructure contract address is ' + termStructure.address,
     );
 
     const loanFactory = await ethers.getContractFactory('LoanV2', {
@@ -150,7 +159,14 @@ contract('Integration test', async (accounts) => {
     console.log();
 
     paymentAggregator = await PaymentAggregator.new();
+    console.log(
+      'PaymentAggregator contract address is ' + paymentAggregator.address,
+    );
+
     closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
+    console.log(
+      'CloseOutNetting contract address is ' + closeOutNetting.address,
+    );
 
     liquidations = await Liquidations.new(owner, 10);
     await liquidations.setCollateralAggregator(collateral.address, {
@@ -218,6 +234,14 @@ contract('Integration test', async (accounts) => {
       from: owner,
     });
     await loan.setCollateralAddr(collateral.address, { from: owner });
+
+    const crosschainResolverFactory = await ethers.getContractFactory('CrosschainAddressResolver');
+    crosschainResolver = await crosschainResolverFactory.deploy(collateral.address);
+    await crosschainResolver.deployed();
+    console.log(
+      'CrosschainAddressResolver contract address is ' + crosschainResolver.address,
+    );
+    await collateral.setCrosschainAddressResolver(crosschainResolver.address);
 
     const CollateralVault = await ethers.getContractFactory('CollateralVault');
 
@@ -409,12 +433,12 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         carol,
       );
-      independentCollateral.should.be.equal(carolInitialCollateral.toString());
+      independentCollateral.toString().should.be.equal(carolInitialCollateral.toString());
 
       let lockedCollateral = await ethVault['getLockedCollateral(address)'](
         carol,
       );
-      lockedCollateral.should.be.equal('0');
+      lockedCollateral.toString().should.be.equal('0');
     });
 
     it('Make lend orders by Carol', async () => {
@@ -592,7 +616,10 @@ contract('Integration test', async (accounts) => {
 
   describe('Test Deposit and Withraw collateral by Alice', async () => {
     it('Register collateral book without payment', async () => {
-      let result = await collateral.register({ from: alice });
+      let btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
+      let filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
+      let result = await collateral.methods['register(string[],uint256[])']([btcAddress, filAddress], [0, 461], { from: alice });
+
       await emitted(result, 'Register');
     });
 
@@ -632,7 +659,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(depositAmt.toString());
+      independentCollateral.toString().should.be.equal(depositAmt.toString());
 
       aliceIndependentAmount = await depositAmt;
 
@@ -671,7 +698,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
 
       web3.eth.getBalance(alice).then((res) => {
         res.should.be.equal(balance.sub(depositAmt).toString());
@@ -703,7 +730,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal('0');
+      independentCollateral.toString().should.be.equal('0');
 
       // await web3.eth.getBalance(alice).then((res) => {
       //     res.should.be.equal(balance.add(aliceIndependentAmount).toString());
@@ -733,7 +760,7 @@ contract('Integration test', async (accounts) => {
       vaults.includes(ethVault.address).should.be.equal(true);
 
       let independentCollateral = await ethVault.getIndependentCollateral(bob);
-      independentCollateral.should.be.equal(depositAmt.toString());
+      independentCollateral.toString().should.be.equal(depositAmt.toString());
     });
 
     it('Deposit 2 ETH by Bob in Collateral contract', async () => {
@@ -760,7 +787,7 @@ contract('Integration test', async (accounts) => {
       }
 
       let independentCollateral = await ethVault.getIndependentCollateral(bob);
-      independentCollateral.should.be.equal('3000000000000000000');
+      independentCollateral.toString().should.be.equal('3000000000000000000');
 
       web3.eth.getBalance(bob).then((res) => {
         res.should.be.equal(
@@ -830,7 +857,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
 
       // web3.eth.getBalance(alice).then((res) => {
       //     res.should.be.equal(balance.sub(web3.utils.toBN("1000000000000000000")).toString());
@@ -873,14 +900,14 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
     });
 
     it('Calculate collateral coverage of the global collateral book, expect to be equal with manual calculations', async () => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
       let coverage = await collateral.getUnsettledCoverage(alice);
 
       const totalUnsettledExp = await collateral.getTotalUnsettledExp(alice);
@@ -909,7 +936,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
     });
 
     it('Expect withdrawing 0 instead of widthdrawing 0.1 ETH by Alice', async () => {
@@ -930,7 +957,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
     });
   });
 
@@ -987,7 +1014,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal('0');
+      independentCollateral.toString().should.be.equal('0');
     });
   });
 
@@ -1026,7 +1053,7 @@ contract('Integration test', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
 
       web3.eth.getBalance(alice).then((res) => {
         res.should.be.equal(
@@ -1167,12 +1194,12 @@ contract('Integration test', async (accounts) => {
       const independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.should.be.equal(aliceIndependentAmount.toString());
+      independentCollateral.toString().should.be.equal(aliceIndependentAmount.toString());
 
       const lockedCollateral = await ethVault['getLockedCollateral(address)'](
         alice,
       );
-      lockedCollateral.should.be.equal(aliceLockedCollateral.toString());
+      lockedCollateral.toString().should.be.equal(aliceLockedCollateral.toString());
 
       web3.eth.getBalance(alice).then((res) => {
         res.should.be.equal(balance.sub(depositAmt).toString());
