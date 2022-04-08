@@ -12,7 +12,7 @@ module.exports = {
   namedAccounts: {
     deployer: 0,
     alice: 1,
-  }, 
+  },
   networks: {
     hardhat: {},
     development: {

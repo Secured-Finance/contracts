@@ -216,8 +216,12 @@ contract('CollateralAggregatorV2', async (accounts) => {
       await liquidations.setProductAddressResolver(productResolver.address);
       await collateral.setLiquidationEngine(collateralCaller.address);
 
-      const crosschainResolverFactory = await ethers.getContractFactory('CrosschainAddressResolver');
-      crosschainResolver = await crosschainResolverFactory.deploy(collateral.address);
+      const crosschainResolverFactory = await ethers.getContractFactory(
+        'CrosschainAddressResolver',
+      );
+      crosschainResolver = await crosschainResolverFactory.deploy(
+        collateral.address,
+      );
       await crosschainResolver.deployed();
       await collateral.setCrosschainAddressResolver(crosschainResolver.address);
 
@@ -378,7 +382,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
       let btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
       let filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
 
-      collateral.methods['register(string[],uint256[])']([btcAddress, filAddress], [0, 461], { from: alice });
+      collateral.methods['register(string[],uint256[])'](
+        [btcAddress, filAddress],
+        [0, 461],
+        { from: alice },
+      );
 
       await tFILToken.approveInternal(
         alice,

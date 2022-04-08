@@ -51,6 +51,10 @@ contract('ProductAddressResolver contract test', async (accounts) => {
     const dealIdLibrary = await DealId.deploy();
     await dealIdLibrary.deployed();
 
+    const DiscountFactor = await ethers.getContractFactory('DiscountFactor');
+    const discountFactorLibrary = await DiscountFactor.deploy();
+    await discountFactorLibrary.deployed();
+
     const productResolverFactory = await ethers.getContractFactory(
       'ProductAddressResolverTest',
       {
@@ -64,11 +68,20 @@ contract('ProductAddressResolver contract test', async (accounts) => {
     const loanFactory = await ethers.getContractFactory('LoanV2', {
       libraries: {
         DealId: dealIdLibrary.address,
+        DiscountFactor: discountFactorLibrary.address,
       },
     });
     loan = await loanFactory.deploy();
 
-    lendingController = await LendingMarketControllerMock.new();
+    const lendingControllerFactory = await ethers.getContractFactory(
+      'LendingMarketControllerMock',
+      {
+        libraries: {
+          DiscountFactor: discountFactorLibrary.address,
+        },
+      },
+    );
+    lendingController = await lendingControllerFactory.deploy();
   });
 
   describe('Test register product function', async () => {

@@ -262,7 +262,11 @@ contract CollateralManagement is ICollateralManagement {
      * @notice Trigers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
-    function setCrosschainAddressResolver(address _addr) public override onlyOwner {
+    function setCrosschainAddressResolver(address _addr)
+        public
+        override
+        onlyOwner
+    {
         require(_addr != address(0), "Zero address");
         require(_addr.isContract(), "Can't add non-contract address");
 
@@ -270,7 +274,6 @@ contract CollateralManagement is ICollateralManagement {
 
         emit CrosschainAddressResolverUpdated(_addr);
     }
-
 
     /**
      * @dev Trigers to safely update main collateral parameters this function

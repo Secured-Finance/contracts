@@ -143,10 +143,8 @@ interface ICollateralAggregator {
 
     function register() external;
 
-    function register(
-        string[] memory _addresses, 
-        uint256[] memory _chainIds
-    ) external;
+    function register(string[] memory _addresses, uint256[] memory _chainIds)
+        external;
 
     function releaseCollateral(
         address partyA,

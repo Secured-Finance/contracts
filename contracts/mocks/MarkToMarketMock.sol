@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract MarkToMarketMock {
-
     function updatePV(bytes32 dealId) public pure {
         return;
     }

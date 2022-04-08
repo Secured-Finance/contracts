@@ -18,8 +18,10 @@ interface ICollateralManagement {
 
     event CurrencyControllerUpdated(address indexed controller);
     event LiquidationEngineUpdated(address indexed liquidations);
-    event CrosschainAddressResolverUpdated(address indexed crosschainAddressResolver);
-    
+    event CrosschainAddressResolverUpdated(
+        address indexed crosschainAddressResolver
+    );
+
     event LiquidationPriceUpdated(uint256 previousPrice, uint256 price);
     event AutoLiquidationThresholdUpdated(uint256 previousRatio, uint256 ratio);
     event MarginCallThresholdUpdated(uint256 previousRatio, uint256 ratio);

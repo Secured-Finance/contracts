@@ -3,12 +3,7 @@ pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
 interface ICrosschainAddressResolver {
-
-    event UpdateAddress(
-        address _user, 
-        uint256 _chainId, 
-        string _address
-    );
+    event UpdateAddress(address _user, uint256 _chainId, string _address);
 
     /**
      * @dev Trigers to register multiple cross-chain addresses per chainId for user
@@ -31,10 +26,7 @@ interface ICrosschainAddressResolver {
      * @param _address Target blockchain address
      *
      */
-    function updateAddress(
-        uint256 _chainId,
-        string memory _address
-    ) external;
+    function updateAddress(uint256 _chainId, string memory _address) external;
 
     /**
      * @dev Trigers to register cross-chain address per chainId by user
@@ -54,12 +46,8 @@ interface ICrosschainAddressResolver {
      * @param _user Ethereum address of the Secured Finance user
      * @param _user Chain ID number
      */
-    function getUserAddress(
-        address _user, 
-        uint256 _chainId
-    )
+    function getUserAddress(address _user, uint256 _chainId)
         external
         view
         returns (string memory);
-
 }

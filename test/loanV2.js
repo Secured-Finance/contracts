@@ -225,8 +225,12 @@ contract('LoanV2', async (accounts) => {
       from: owner,
     });
 
-    const crosschainResolverFactory = await ethers.getContractFactory('CrosschainAddressResolver');
-    crosschainResolver = await crosschainResolverFactory.deploy(collateral.address);
+    const crosschainResolverFactory = await ethers.getContractFactory(
+      'CrosschainAddressResolver',
+    );
+    crosschainResolver = await crosschainResolverFactory.deploy(
+      collateral.address,
+    );
     await crosschainResolver.deployed();
     await collateral.setCrosschainAddressResolver(crosschainResolver.address);
 
@@ -348,7 +352,9 @@ contract('LoanV2', async (accounts) => {
       let independentCollateral = await ethVault.getIndependentCollateral(
         alice,
       );
-      independentCollateral.toString().should.be.equal(aliceDepositAmt.toString());
+      independentCollateral
+        .toString()
+        .should.be.equal(aliceDepositAmt.toString());
 
       result = await collateral.register({ from: bob });
       await emitted(result, 'Register');
@@ -362,7 +368,9 @@ contract('LoanV2', async (accounts) => {
       ).wait();
 
       independentCollateral = await ethVault.getIndependentCollateral(bob);
-      independentCollateral.toString().should.be.equal(bobDepositAmt.toString());
+      independentCollateral
+        .toString()
+        .should.be.equal(bobDepositAmt.toString());
     });
 
     it('Register new loan deal between Alice and Bob', async () => {
@@ -749,9 +757,11 @@ contract('LoanV2', async (accounts) => {
       ).wait();
 
       independentCollateral = await ethVault.getIndependentCollateral(alice);
-      independentCollateral.toString().should.be.equal(
-        initialIndependentAmount.add(toBN('9000000000000000000')).toString(),
-      );
+      independentCollateral
+        .toString()
+        .should.be.equal(
+          initialIndependentAmount.add(toBN('9000000000000000000')).toString(),
+        );
     });
 
     it('Register new loan deal between Bob and Alice', async () => {

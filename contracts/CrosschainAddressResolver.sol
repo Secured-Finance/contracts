@@ -73,10 +73,10 @@ contract CrosschainAddressResolver is ICrosschainAddressResolver {
      * @notice This function triggers by the user, and stores addresses for `msg.sender`
      *
      */
-    function updateAddress(
-        uint256 _chainId,
-        string memory _address
-    ) public override {
+    function updateAddress(uint256 _chainId, string memory _address)
+        public
+        override
+    {
         _updateAddress(msg.sender, _chainId, _address);
     }
 
@@ -126,5 +126,4 @@ contract CrosschainAddressResolver is ICrosschainAddressResolver {
         _crosschainAddreses[_user][_chainId] = _address;
         emit UpdateAddress(_user, _chainId, _address);
     }
-
 }
