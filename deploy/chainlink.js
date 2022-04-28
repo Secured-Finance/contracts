@@ -27,7 +27,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const oracleContract = await ethers.getContractAt('Operator', oracle.address);
   const tx1 = await oracleContract.setAuthorizedSenders([
-    process.env.CHAINLINK_NONDE_ACCOUNT,
+    process.env.CHAINLINK_NODE_ACCOUNT,
   ]);
   await tx1.wait();
 
@@ -35,7 +35,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'ChainlinkSettlementAdaptor',
     {
       from: deployer,
-      args: [linkTokenAddress],
+      args: [
+        process.env.CHAINLINK_ORACLE_CONTRACT_ADDRESS,
+        process.env.CHAINLINK_JOB_ID,
+        process.env.CHAINLINK_REQUEST_FEE,
+        linkTokenAddress,
+      ],
     },
   );
   console.log(

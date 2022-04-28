@@ -17,16 +17,30 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
         uint256 value;
         uint256 timestamp;
     }
-    // TODO: remove tmp data
-    mapping(bytes32 => FulfillData) public results;
+    mapping(bytes32 => FulfillData) public results; // TODO: remove tmp data
+    bytes32 public jobId;
+    uint256 public requestFee;
 
     /**
      * @dev Contract constructor function.
-     * @param _link contract address of LINK Token
+     * @param _oracle The address of the oracle contract
+     * @param _jobId The job id on the Cahinlink node
+     * @param _requestFee The amount of LINK sent for the request
+     * @param _link The address of the LINK token contract
      *
      * @notice `_link` is provided for development usage
      */
-    constructor(address _link) public Ownable() {
+    constructor(
+        address _oracle,
+        bytes32 _jobId,
+        uint256 _requestFee,
+        address _link
+    ) public Ownable() {
+        setChainlinkOracle(_oracle);
+        jobId = _jobId;
+
+        requestFee = _requestFee;
+
         if (_link == address(0)) {
             setPublicChainlinkToken();
         } else {
@@ -35,47 +49,63 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
     }
 
     /**
-     * @dev Triggers to get contract address of LINK Token that is set at constructor
+     * @dev Triggers to get contract address of the LINK token that is set at constructor
      *
-     * @return address LINK Token address
+     * @return address The address of the LINK token
      */
     function getChainlinkToken() public view returns (address) {
         return chainlinkTokenAddress();
     }
 
     /**
+     * @dev Triggers to get contract address of the oracle that is set at constructor
+     *
+     * @return address The address of the oracle contract
+     */
+    function getChainlinkOracle() public view returns (address) {
+        return chainlinkOracleAddress();
+    }
+
+    function updateChainlinkOracle(address _oracle) public onlyOwner {
+        setChainlinkOracle(_oracle);
+    }
+
+    function updateJobId(bytes32 _jobId) public onlyOwner {
+        jobId = _jobId;
+    }
+
+    function updateRequestFee(uint256 _requestFee) public onlyOwner {
+        requestFee = _requestFee;
+    }
+
+    /**
      * @dev Triggers to request the data from Chainlink External Adaptor.
      * The function name is specified when `buildChainlinkRequest` is called
-     * @param _oracle oracle contract address
-     * @param _jobId job id on the Cahinlink node
-     * @param _payment amount of LIKE Token to pay
-     * @param _messageId id that is the key to get data
+     * @param _txHash The hash that is specify the data to get
      */
     // TODO: replace modifier for other contracts to call
-    function createRequestTo(
-        address _oracle,
-        bytes32 _jobId,
-        uint256 _payment,
-        string memory _messageId
-    ) public onlyOwner returns (bytes32 requestId) {
+    function createRequest(string memory _txHash)
+        public
+        onlyOwner
+        returns (bytes32 requestId)
+    {
         Chainlink.Request memory req = buildChainlinkRequest(
-            _jobId,
+            jobId,
             address(this),
             this.fulfill.selector
         );
-        req.add("messageId", _messageId);
-        requestId = sendChainlinkRequestTo(_oracle, req, _payment);
+        req.add("txHash", _txHash);
+        requestId = sendChainlinkRequest(req, requestFee);
     }
 
     function cancelRequest(
         bytes32 _requestId,
-        uint256 _payment,
         bytes4 _callbackFunctionId,
         uint256 _expiration
     ) public onlyOwner {
         cancelChainlinkRequest(
             _requestId,
-            _payment,
+            requestFee,
             _callbackFunctionId,
             _expiration
         );
@@ -84,11 +114,11 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
     /**
      * @dev Triggers to receive the data from a job that is specified by `createRequestTo` function.
      * The function name is specified when `buildChainlinkRequest` is called
-     * @param _requestId id to specify a request
-     * @param _from from address of the specific message
-     * @param _to to address of the specific message
-     * @param _value value of the specific message
-     * @param _timestamp timestamp of the specific message
+     * @param _requestId The id to specify a request
+     * @param _from The from address of the data received
+     * @param _to The to address of the data received
+     * @param _value The value of the data received
+     * @param _timestamp The timestamp of the data received
      */
     function fulfill(
         bytes32 _requestId,

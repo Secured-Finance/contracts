@@ -37,7 +37,7 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY],
       live: true,
       saveDeployments: true,
-      gasPrice: 30000000000,
+      gasPrice: 11000000000,
       gasMultiplier: 3,
       timeout: 240000,
     },
