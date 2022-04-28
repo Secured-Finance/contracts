@@ -5,8 +5,7 @@ import "@chainlink/contracts/src/v0.7/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @dev ChainlinkSettlementAdaptor contract is managing requests for Chainlink
- * This contract is triggered by another contract to send a request to Chainlink.
+ * @title ChainlinkSettlementAdaptor is managing requests to Chainlink for a settlement process.
  */
 contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
     using Chainlink for Chainlink.Request;
@@ -49,7 +48,7 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
     }
 
     /**
-     * @dev Triggers to get contract address of the LINK token that is set at constructor
+     * @dev Gets contract address of the LINK token that is set at constructor
      *
      * @return address The address of the LINK token
      */
@@ -58,7 +57,7 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
     }
 
     /**
-     * @dev Triggers to get contract address of the oracle that is set at constructor
+     * @dev Gets contract address of the oracle that is set at constructor
      *
      * @return address The address of the oracle contract
      */
@@ -66,21 +65,33 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
         return chainlinkOracleAddress();
     }
 
+    /**
+     * @dev Updates the stored oracle address
+     * @param _oracle The address of the oracle contract
+     */
     function updateChainlinkOracle(address _oracle) public onlyOwner {
         setChainlinkOracle(_oracle);
     }
 
+    /**
+     * @dev Updates the stored job id
+     * @param _oracle The address of the oracle contract
+     */
     function updateJobId(bytes32 _jobId) public onlyOwner {
         jobId = _jobId;
     }
 
+    /**
+     * @dev Updates the stored amount of LINK to send for the request
+     * @param _oracle The address of the oracle contract
+     */
     function updateRequestFee(uint256 _requestFee) public onlyOwner {
         requestFee = _requestFee;
     }
 
     /**
      * @dev Triggers to request the data from Chainlink External Adaptor.
-     * The function name is specified when `buildChainlinkRequest` is called
+     * This function specify a callback function name
      * @param _txHash The hash that is specify the data to get
      */
     // TODO: replace modifier for other contracts to call
@@ -98,6 +109,12 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
         requestId = sendChainlinkRequest(req, requestFee);
     }
 
+    /**
+     * @dev Triggers to cancell a request if it has not been fulfilled
+     * @param _requestId The id to specify a request
+     * @param _callbackFunc The callback function specified for the request
+     * @param _expiration The time of the expiration for the request
+     */
     function cancelRequest(
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
@@ -113,7 +130,7 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
 
     /**
      * @dev Triggers to receive the data from a job that is specified by `createRequestTo` function.
-     * The function name is specified when `buildChainlinkRequest` is called
+     * This function name is specified when `buildChainlinkRequest` is called
      * @param _requestId The id to specify a request
      * @param _from The from address of the data received
      * @param _to The to address of the data received
