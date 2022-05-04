@@ -57,7 +57,7 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
         bytes32 ccy,
         uint256 timestamp,
         uint256 payment,
-        string memory txHash
+        bytes32 settlementId
     ) public {
         paymentAggregator.verifyPayment(
             msg.sender,
@@ -65,7 +65,7 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
             ccy,
             timestamp,
             payment,
-            txHash
+            settlementId
         );
     }
 }

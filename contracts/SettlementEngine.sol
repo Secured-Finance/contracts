@@ -13,6 +13,7 @@ import "./interfaces/ILiquidations.sol";
 import "./interfaces/IPaymentAggregator.sol";
 import "./interfaces/ICrosschainAddressResolver.sol";
 import "./interfaces/IExternalAdapterTxResponse.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Settlement Engine contract is used in settlement operations
@@ -30,7 +31,6 @@ contract SettlementEngine is
     using SafeMath for uint256;
     using Address for address;
     using Strings for string;
-    using Strings for bytes32;
 
     struct SettlementRequest {
         address payer;
@@ -209,13 +209,15 @@ contract SettlementEngine is
         SettlementRequest memory request = settlementRequests[_requestId];
         _validateSettlementRequest(chainId, request, _txData);
 
+        bytes32 _settlementId = keccak256(abi.encodePacked(_txData.txHash));
+
         paymentAggregator.verifyPayment(
             request.payer,
             request.receiver,
             _ccy,
             request.timestamp,
             _txData.value,
-            _txData.txHash
+            _settlementId
         );
 
         delete settlementRequests[_requestId];
@@ -236,6 +238,11 @@ contract SettlementEngine is
         string memory _txHash
     ) internal returns (bytes32) {
         require(msg.value == 0, "INCORRECT_ETH_VALUE");
+        require(
+            paymentAggregator.checkSettlementWindow(_timestamp),
+            "OUT_OF_SETTLEMENT_WINDOW"
+        );
+
         address adapterAddr = externalAdapters[_chainId];
         require(adapterAddr != address(0), "ADAPTER_DOESN'T_EXIST");
         IExternalAdapter adapter = IExternalAdapter(adapterAddr);
@@ -292,9 +299,9 @@ contract SettlementEngine is
             _safeTransferFrom(token, _payer, _counterparty, _payment);
         }
 
-        string memory _hash = keccak256(
+        bytes32 _settlementId = keccak256(
             abi.encodePacked(_payer, _counterparty, _ccy, _payment, _timestamp)
-        ).toHex();
+        );
 
         paymentAggregator.verifyPayment(
             _payer,
@@ -302,7 +309,7 @@ contract SettlementEngine is
             _ccy,
             _timestamp,
             _payment,
-            _hash
+            _settlementId
         );
     }
 

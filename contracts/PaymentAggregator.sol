@@ -270,7 +270,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         address verifier;
         address counterparty;
         bytes32 ccy;
-        string txHash;
+        bytes32 settlementId;
         uint256 year;
         uint256 month;
         uint256 day;
@@ -286,7 +286,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
      * @param ccy Main payment settlement currency
      * @param timestamp Main timestamp for TimeSlot
      * @param payment Main payment settlement currency
-     * @param txHash Main payment settlement currency
+     * @param settlementId Main payment settlement id
      */
     function verifyPayment(
         address verifier,
@@ -294,14 +294,14 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         bytes32 ccy,
         uint256 timestamp,
         uint256 payment,
-        string memory txHash
+        bytes32 settlementId
     ) external override {
         require(_onlySettlementEngine(), "NOT_SETTLEMENT_ENGINE");
-        require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
+        require(checkSettlementWindow(timestamp), "OUT_OF_SETTLEMENT_WINDOW");
         PaymentSettlementLocalVars memory vars;
 
         vars.payment = payment;
-        vars.txHash = txHash;
+        vars.settlementId = settlementId;
         vars.verifier = verifier;
         vars.counterparty = counterparty;
         vars.ccy = ccy;
@@ -317,7 +317,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
             vars.ccy,
             vars.slotPosition,
             vars.payment,
-            vars.txHash
+            vars.settlementId
         );
 
         emit VerifyPayment(
@@ -329,7 +329,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
             vars.month,
             vars.day,
             vars.payment,
-            vars.txHash
+            vars.settlementId
         );
 
         vars.isSettled = TimeSlot.isSettled(
@@ -385,7 +385,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
             vars.year,
             vars.month,
             vars.day,
-            vars.txHash
+            vars.settlementId
         );
     }
 
@@ -518,6 +518,64 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
     }
 
     /**
+     * @dev Returns the time slot between parties using slot id.
+     * @param party0 First counterparty address
+     * @param party1 Second counterparty address
+     * @param ccy Main payment settlement currency
+     * @param year Calendar year of the settlement
+     * @param month Calendar month of the settlement
+     * @param day Calendar day of the settlement
+     * @param settlementId Settlement payment confirmation identifier
+     */
+    function getTimeSlotPaymentConfirmation(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        bytes32 settlementId
+    ) public view returns (address, uint256) {
+        return
+            TimeSlot.getPaymentConfirmation(
+                _timeSlots,
+                party0,
+                party1,
+                ccy,
+                year,
+                month,
+                day,
+                settlementId
+            );
+    }
+
+    /**
+     * @dev Returns the time slot between parties using slot id.
+     * @param party0 First counterparty address
+     * @param party1 Second counterparty address
+     * @param ccy Main payment settlement currency
+     * @param slot TimeSlot position
+     * @param settlementId Settlement payment confirmation identifier
+     */
+    function getTimeSlotPaymentConfirmationById(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        bytes32 slot,
+        bytes32 settlementId
+    ) public view returns (address, uint256) {
+        return
+            TimeSlot.getPaymentConfirmationById(
+                _timeSlots,
+                party0,
+                party1,
+                ccy,
+                slot,
+                settlementId
+            );
+    }
+
+    /**
      * @dev Internal function to get TimeSlot position after adding days
      * @param timestamp Timestamp to add days
      * @param numSeconds number of seconds to add
@@ -582,9 +640,10 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
      * @param targetTime target time for settlement of time slot
      * @return Boolean if slot within the settlement window
      */
-    function _checkSettlementWindow(uint256 targetTime)
-        internal
+    function checkSettlementWindow(uint256 targetTime)
+        public
         view
+        override
         returns (bool)
     {
         uint256 time = block.timestamp;

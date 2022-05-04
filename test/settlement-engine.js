@@ -25,8 +25,19 @@ const MarkToMarketMock = artifacts.require('MarkToMarketMock');
 const { reverted } = require('../test-utils').assert;
 const { should } = require('chai');
 const { zeroAddress } = require('ethereumjs-util');
-const { hexFILString, hexETHString, hexUSDCString, toBytes32 } =
-  require('../test-utils').strings;
+const {
+  hexFILString,
+  hexETHString,
+  hexUSDCString,
+  toBytes32,
+  testCcy,
+  testJobId,
+  testTxHash,
+  aliceFILAddress,
+  bobFILAddress,
+  secondTxHash,
+  thirdTxHash,
+} = require('../test-utils').strings;
 const {
   toEther,
   toBN,
@@ -36,6 +47,7 @@ const {
   ethToUSDRate,
   usdcToUSDRate,
   decimalBase,
+  oracleRequestFee,
 } = require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } =
   require('../test-utils').time;
@@ -75,17 +87,6 @@ contract('SettlementEngine', async (accounts) => {
   let _3monthCoupon1 = ZERO_BN;
   let _3monthTotal0 = ZERO_BN;
   let _3monthTotal1 = ZERO_BN;
-
-  const aliceFILAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
-  const bobFILAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpafsfalcvty';
-
-  const testCcy = toBytes32('0xTestCcy');
-  const testJobId = toBytes32('0xTestJobId');
-  const testTxHash = toBytes32('0xTestTxHash');
-  const oracleRequestFee = toBN('100000000000000000');
-
-  const secondTxHash = toBytes32('0xSecondTxHash');
-  const thirdTxHash = toBytes32('0xThirdTxHash');
 
   let aliceRequestId;
   let bobRequestId;
@@ -162,17 +163,8 @@ contract('SettlementEngine', async (accounts) => {
       zeroAddress(),
     );
 
-    const StringsFactory = await ethers.getContractFactory('Strings');
-    const stringLibrary = await StringsFactory.deploy();
-    await stringLibrary.deployed();
-
     const SettlementEngineFactory = await ethers.getContractFactory(
       'SettlementEngine',
-      {
-        libraries: {
-          Strings: stringLibrary.address,
-        },
-      },
     );
     settlementEngine = await SettlementEngineFactory.deploy(
       paymentAggregator.address,
@@ -302,7 +294,23 @@ contract('SettlementEngine', async (accounts) => {
       );
     });
 
+    it('Should revert on trying to verify payment too early', async () => {
+      await expectRevert(
+        settlementEngine
+          .connect(aliceSigner)
+          .verifyPayment(
+            bob,
+            hexFILString,
+            _3monthCoupon0.toString(),
+            _3monthTime.toString(),
+            testTxHash,
+          ),
+        'OUT_OF_SETTLEMENT_WINDOW',
+      );
+    });
+
     it('Should try to verify p2p transfer in FIL chain, validate state changes', async () => {
+      await advanceTimeAndBlock(89 * ONE_DAY);
       await linkToken.transfer(
         settlementAdapter.address,
         toBN('100000000000000000000'),
@@ -343,22 +351,7 @@ contract('SettlementEngine', async (accounts) => {
       );
     });
 
-    it('Should revert on trying to settle oracle request too early', async () => {
-      await expectRevert(
-        settlementAdapter.fulfill(
-          aliceRequestId,
-          aliceFILAddress,
-          bobFILAddress,
-          _3monthCoupon0.toString(),
-          _3monthTime.toString(),
-          testTxHash,
-        ),
-        'OUT OF SETTLEMENT WINDOW',
-      );
-    });
-
     it('Should revert on validating oracle request with incorrect addresses', async () => {
-      await advanceTimeAndBlock(89 * ONE_DAY);
       await expectRevert(
         settlementAdapter.fulfill(
           aliceRequestId,

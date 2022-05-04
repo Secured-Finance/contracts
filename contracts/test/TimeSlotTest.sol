@@ -59,7 +59,7 @@ contract TimeSlotTest {
         uint256 year,
         uint256 month,
         uint256 day,
-        string memory txHash
+        bytes32 settlementId
     ) external view returns (address, uint256) {
         return
             TimeSlot.getPaymentConfirmation(
@@ -70,7 +70,7 @@ contract TimeSlotTest {
                 year,
                 month,
                 day,
-                txHash
+                settlementId
             );
     }
 
@@ -171,7 +171,7 @@ contract TimeSlotTest {
         address counterparty,
         bytes32 slot,
         uint256 payment,
-        string memory txHash
+        bytes32 settlementId
     ) external {
         (bytes32 addrPack, ) = AddressPacking.pack(msg.sender, counterparty);
         TimeSlot.Slot storage timeSlot = _timeSlots[addrPack][ccy][slot];
@@ -182,41 +182,20 @@ contract TimeSlotTest {
             ccy,
             slot,
             payment,
-            txHash
+            settlementId
         );
 
         timeSlot = _timeSlots[addrPack][ccy][slot];
 
         require(
-            timeSlot.confirmations[txHash].verificationParty == msg.sender,
+            timeSlot.confirmations[settlementId].verificationParty ==
+                msg.sender,
             "INCORRECT VERIFIER"
         );
         require(
-            timeSlot.confirmations[txHash].amount == payment,
+            timeSlot.confirmations[settlementId].amount == payment,
             "INCORRECT PAYMENT AMOUNT"
         );
-    }
-
-    function settlePayment(
-        address counterparty,
-        bytes32 slot,
-        string memory txHash
-    ) external {
-        (bytes32 addrPack, ) = AddressPacking.pack(msg.sender, counterparty);
-        TimeSlot.Slot memory timeSlot = _timeSlots[addrPack][ccy][slot];
-        // TimeSlot.settlePayment(
-        //     _timeSlots,
-        //     msg.sender,
-        //     counterparty,
-        //     ccy,
-        //     slot,
-        //     txHash
-        // );
-
-        // timeSlot = _timeSlots[addrPack][ccy][slot];
-
-        // require(timeSlot.isSettled, "PAYMENT NOT SETTLED");
-        // require(timeSlot.paymentProof == txHash, "INCORRECT TxHash");
     }
 
     function clear(

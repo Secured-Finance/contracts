@@ -157,6 +157,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         60,
         ethToUSDPriceFeed.address,
         7500,
+        zeroAddress,
       );
       await currencyController.supportCurrency(
         hexFILString,
@@ -164,6 +165,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         461,
         filToETHPriceFeed.address,
         7500,
+        zeroAddress,
       );
       await currencyController.supportCurrency(
         hexBTCString,
@@ -171,6 +173,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         0,
         btcToETHPriceFeed.address,
         7500,
+        zeroAddress,
       );
 
       await currencyController.updateCollateralSupport(hexETHString, true);

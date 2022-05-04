@@ -21,7 +21,7 @@ library TimeSlot {
         uint256 paidAmount;
         bool flipped;
         bool isSettled;
-        mapping(string => PaymentConfirmation) confirmations;
+        mapping(bytes32 => PaymentConfirmation) confirmations;
     }
 
     struct PaymentConfirmation {
@@ -91,7 +91,7 @@ library TimeSlot {
      * @param year Year in which to find a timeslot
      * @param month Month in which to find a timeslot
      * @param day Day in which to find a timeslot
-     * @param txHash Transaction hash to find payment confirmation for
+     * @param settlementId Unique settlement id to find payment confirmation for
      */
     function getPaymentConfirmation(
         mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
@@ -102,14 +102,42 @@ library TimeSlot {
         uint256 year,
         uint256 month,
         uint256 day,
-        string memory txHash
+        bytes32 settlementId
+    ) internal view returns (address, uint256) {
+        return
+            getPaymentConfirmationById(
+                self,
+                party0,
+                party1,
+                ccy,
+                keccak256(abi.encodePacked(year, month, day)),
+                settlementId
+            );
+    }
+
+    /**
+     * @dev Returns timeSlot payment confirmation for a transaction with specified `txHash`
+     * @param party0 First counterparty address
+     * @param party1 Second counterparty address
+     * @param ccy Main currency for the time slot
+     * @param slotId Time slot identifier
+     * @param settlementId Unique settlement id to find payment confirmation for
+     */
+    function getPaymentConfirmationById(
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
+            storage self,
+        address party0,
+        address party1,
+        bytes32 ccy,
+        bytes32 slotId,
+        bytes32 settlementId
     ) internal view returns (address, uint256) {
         (bytes32 addr, ) = AddressPacking.pack(party0, party1);
-        bytes32 slotId = keccak256(abi.encodePacked(year, month, day));
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slotId];
 
         TimeSlot.PaymentConfirmation memory confirmation = timeSlot
-            .confirmations[txHash];
+            .confirmations[settlementId];
+
         return (confirmation.verificationParty, confirmation.amount);
     }
 
@@ -248,7 +276,7 @@ library TimeSlot {
      * @param ccy Main currency for the time slot
      * @param slot Time slot identifier to be verified
      * @param payment Net payment amount
-     * @param txHash Transaction hash to signal successfull payment
+     * @param settlementId Unique settlement id of the successfull payment
      */
     function verifyPayment(
         mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
@@ -258,7 +286,7 @@ library TimeSlot {
         bytes32 ccy,
         bytes32 slot,
         uint256 payment,
-        string memory txHash
+        bytes32 settlementId
     ) internal {
         (bytes32 addr, bool flipped) = AddressPacking.pack(sender, recipient);
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
@@ -285,8 +313,7 @@ library TimeSlot {
         TimeSlot.PaymentConfirmation memory confirmation;
         confirmation.amount = payment;
         confirmation.verificationParty = sender;
-
-        timeSlot.confirmations[txHash] = confirmation;
+        timeSlot.confirmations[settlementId] = confirmation;
 
         if (netPayment.sub(timeSlot.paidAmount) == 0) {
             timeSlot.isSettled = true;

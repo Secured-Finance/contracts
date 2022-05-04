@@ -46,7 +46,7 @@ interface IPaymentAggregator {
         uint256 month,
         uint256 day,
         uint256 payment,
-        string txHash
+        bytes32 settlementId
     );
     event SettlePayment(
         address indexed verifier,
@@ -56,7 +56,7 @@ interface IPaymentAggregator {
         uint256 year,
         uint256 month,
         uint256 day,
-        string txHash
+        bytes32 settlementId
     );
     event RemovePayment(
         address indexed party0,
@@ -107,7 +107,7 @@ interface IPaymentAggregator {
         bytes32 ccy,
         uint256 timestamp,
         uint256 payment,
-        string memory txHash
+        bytes32 settlementId
     ) external;
 
     function isSettled(
@@ -141,4 +141,9 @@ interface IPaymentAggregator {
     // ) external view returns (Slot memory timeSlot);
 
     function settlementWindow() external view returns (uint256);
+
+    function checkSettlementWindow(uint256 targetTime)
+        external
+        view
+        returns (bool);
 }

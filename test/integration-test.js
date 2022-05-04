@@ -198,6 +198,7 @@ contract('Integration test', async (accounts) => {
       60,
       ethToUSDPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 
@@ -207,6 +208,7 @@ contract('Integration test', async (accounts) => {
       461,
       filToETHPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 
@@ -216,6 +218,7 @@ contract('Integration test', async (accounts) => {
       0,
       btcToETHPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 

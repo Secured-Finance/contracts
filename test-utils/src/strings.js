@@ -14,6 +14,14 @@ const loanPrefix = '0x21aaa47b';
 const loanName = '0xLoan';
 const zeroAddress = '0x0000000000000000000000000000000000000000';
 const ethTokenAddress = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+const aliceFILAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
+const bobFILAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpafsfalcvty';
+
+const testCcy = toBytes32('0xTestCcy');
+const testJobId = toBytes32('0xTestJobId');
+const testTxHash = toBytes32('0xTestTxHash');
+const secondTxHash = toBytes32('0xSecondTxHash');
+const thirdTxHash = toBytes32('0xThirdTxHash');
 
 module.exports = {
   toBytes32,
@@ -26,4 +34,11 @@ module.exports = {
   zeroAddress,
   ethTokenAddress,
   hexUSDCString,
+  aliceFILAddress,
+  bobFILAddress,
+  testCcy,
+  testJobId,
+  testTxHash,
+  secondTxHash,
+  thirdTxHash,
 };
