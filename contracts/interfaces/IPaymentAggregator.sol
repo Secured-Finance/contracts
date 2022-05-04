@@ -21,6 +21,10 @@ interface IPaymentAggregator {
         address indexed prevContract,
         address indexed closeOutNetting
     );
+    event UpdateSettlementEngine(
+        address indexed prevContract,
+        address indexed settlementEngine
+    );
 
     event RegisterPayment(
         address indexed party0,
@@ -42,7 +46,7 @@ interface IPaymentAggregator {
         uint256 month,
         uint256 day,
         uint256 payment,
-        bytes32 txHash
+        string txHash
     );
     event SettlePayment(
         address indexed verifier,
@@ -52,7 +56,7 @@ interface IPaymentAggregator {
         uint256 year,
         uint256 month,
         uint256 day,
-        bytes32 txHash
+        string txHash
     );
     event RemovePayment(
         address indexed party0,
@@ -97,21 +101,13 @@ interface IPaymentAggregator {
         uint256[] calldata payments1
     ) external;
 
-    function settlePayment(
-        address verifier,
-        address counterparty,
-        bytes32 ccy,
-        uint256 timestamp,
-        bytes32 txHash
-    ) external;
-
     function verifyPayment(
         address verifier,
         address counterparty,
         bytes32 ccy,
         uint256 timestamp,
         uint256 payment,
-        bytes32 txHash
+        string memory txHash
     ) external;
 
     function isSettled(

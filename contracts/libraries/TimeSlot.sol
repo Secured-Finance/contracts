@@ -18,10 +18,15 @@ library TimeSlot {
         uint256 totalPayment0;
         uint256 totalPayment1;
         uint256 netPayment;
+        uint256 paidAmount;
         bool flipped;
-        bytes32 paymentProof;
-        address verificationParty;
         bool isSettled;
+        mapping(string => PaymentConfirmation) confirmations;
+    }
+
+    struct PaymentConfirmation {
+        address verificationParty;
+        uint256 amount;
     }
 
     /**
@@ -56,7 +61,18 @@ library TimeSlot {
         uint256 year,
         uint256 month,
         uint256 day
-    ) internal view returns (TimeSlot.Slot memory) {
+    )
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            bool
+        )
+    {
         return
             getBySlotId(
                 self,
@@ -65,6 +81,36 @@ library TimeSlot {
                 ccy,
                 keccak256(abi.encodePacked(year, month, day))
             );
+    }
+
+    /**
+     * @dev Returns timeSlot payment confirmation for a transaction with specified `txHash`
+     * @param party0 First counterparty address
+     * @param party1 Second counterparty address
+     * @param ccy Main currency for the time slot
+     * @param year Year in which to find a timeslot
+     * @param month Month in which to find a timeslot
+     * @param day Day in which to find a timeslot
+     * @param txHash Transaction hash to find payment confirmation for
+     */
+    function getPaymentConfirmation(
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
+            storage self,
+        address party0,
+        address party1,
+        bytes32 ccy,
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        string memory txHash
+    ) internal view returns (address, uint256) {
+        (bytes32 addr, ) = AddressPacking.pack(party0, party1);
+        bytes32 slotId = keccak256(abi.encodePacked(year, month, day));
+        TimeSlot.Slot storage timeSlot = self[addr][ccy][slotId];
+
+        TimeSlot.PaymentConfirmation memory confirmation = timeSlot
+            .confirmations[txHash];
+        return (confirmation.verificationParty, confirmation.amount);
     }
 
     /**
@@ -81,7 +127,18 @@ library TimeSlot {
         address party1,
         bytes32 ccy,
         bytes32 slotId
-    ) internal view returns (TimeSlot.Slot memory) {
+    )
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            bool
+        )
+    {
         (bytes32 addr, bool flipped) = AddressPacking.pack(party0, party1);
         TimeSlot.Slot memory timeSlot = self[addr][ccy][slotId];
         if (flipped) {
@@ -103,7 +160,14 @@ library TimeSlot {
             timeSlot.flipped = false;
         }
 
-        return timeSlot;
+        return (
+            timeSlot.totalPayment0,
+            timeSlot.totalPayment1,
+            timeSlot.netPayment,
+            timeSlot.paidAmount,
+            timeSlot.flipped,
+            timeSlot.isSettled
+        );
     }
 
     /**
@@ -179,8 +243,8 @@ library TimeSlot {
     /**
      * @dev Verifies the net payment for time slot
      * @param self The mapping with all time slots
-     * @param verifier Payment verifier address
-     * @param counterparty Verifier's counterparty address
+     * @param sender Payment sender address
+     * @param recipient Resipient's counterparty address
      * @param ccy Main currency for the time slot
      * @param slot Time slot identifier to be verified
      * @param payment Net payment amount
@@ -189,17 +253,14 @@ library TimeSlot {
     function verifyPayment(
         mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
             storage self,
-        address verifier,
-        address counterparty,
+        address sender,
+        address recipient,
         bytes32 ccy,
         bytes32 slot,
         uint256 payment,
-        bytes32 txHash
+        string memory txHash
     ) internal {
-        (bytes32 addr, bool flipped) = AddressPacking.pack(
-            verifier,
-            counterparty
-        );
+        (bytes32 addr, bool flipped) = AddressPacking.pack(sender, recipient);
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
         require(!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
         uint256 netPayment;
@@ -218,39 +279,18 @@ library TimeSlot {
             netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
         }
 
-        require(netPayment == payment, "Incorrect settlement amount");
+        timeSlot.paidAmount = timeSlot.paidAmount.add(payment);
+        require(timeSlot.paidAmount <= netPayment, "Payment overflow");
 
-        timeSlot.paymentProof = txHash;
-        timeSlot.verificationParty = verifier;
-    }
+        TimeSlot.PaymentConfirmation memory confirmation;
+        confirmation.amount = payment;
+        confirmation.verificationParty = sender;
 
-    /**
-     * @dev Settles the net payment for time slot
-     * @param self The mapping with all time slots
-     * @param verifier Settlement verifier address
-     * @param counterparty Verifier's counterparty address
-     * @param ccy Main currency for the time slot
-     * @param slot Time slot identifier to be settled
-     * @param txHash Transaction hash to signal successfull settlement of payment
-     */
-    function settlePayment(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
-        address verifier,
-        address counterparty,
-        bytes32 ccy,
-        bytes32 slot,
-        bytes32 txHash
-    ) internal {
-        (bytes32 addr, ) = AddressPacking.pack(verifier, counterparty);
-        TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];
-        require(!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
-        require(timeSlot.paymentProof == txHash, "INCORRECT_TX_HASH");
-        require(
-            verifier != timeSlot.verificationParty,
-            "INCORRECT_COUNTERPARTY"
-        );
-        timeSlot.isSettled = true;
+        timeSlot.confirmations[txHash] = confirmation;
+
+        if (netPayment.sub(timeSlot.paidAmount) == 0) {
+            timeSlot.isSettled = true;
+        }
     }
 
     /**
