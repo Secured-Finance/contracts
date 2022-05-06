@@ -13,7 +13,6 @@ const ChainlinkSettlementAdaptor = artifacts.require(
 );
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
-// const OperatorMock = artifacts.require('OperatorMock');
 
 contract('ChainlinkSettlementAdaptor', (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -27,7 +26,7 @@ contract('ChainlinkSettlementAdaptor', (accounts) => {
   before('deploy ChainlinkSettlementAdaptor', async () => {
     linkToken = await LinkToken.new();
     operator = await Operator.new(linkToken.address, owner);
-    // operator = await OperatorMock.new();
+
     chainlinkSettlementAdaptor = await ChainlinkSettlementAdaptor.new(
       operator.address,
       jobId,
