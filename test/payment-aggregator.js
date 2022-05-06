@@ -50,6 +50,8 @@ const {
 } = require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } =
   require('../test-utils').time;
+const { computeNativeSettlementId, computeCrosschainSettlementId } =
+  require('../test-utils').settlementId;
 should();
 
 const expectRevert = reverted;
@@ -136,23 +138,6 @@ contract('PaymentAggregator', async (accounts) => {
     timeSlot[5].should.be.equal(isSettled);
   };
 
-  const computeNativeSettlementId = (
-    address0,
-    address1,
-    ccy,
-    payment,
-    slotTime,
-  ) => {
-    return ethers.utils.solidityKeccak256(
-      ['address', 'address', 'bytes32', 'uint256', 'uint256'],
-      [address0, address1, ccy, payment.toString(), slotTime.toString()],
-    );
-  };
-
-  const computeCrosschainSettlementId = (txHash) => {
-    return ethers.utils.solidityKeccak256(['string'], [txHash]);
-  };
-
   let timeLibrary;
   let paymentAggregator;
   let aggregatorCaller;
@@ -233,7 +218,7 @@ contract('PaymentAggregator', async (accounts) => {
     await currencyController.supportCurrency(
       hexETHString,
       'Ethereum',
-      0,
+      60,
       ethToUSDPriceFeed.address,
       7500,
       zeroAddress,
@@ -242,7 +227,7 @@ contract('PaymentAggregator', async (accounts) => {
     await currencyController.supportCurrency(
       hexUSDCString,
       'USDC',
-      0,
+      60,
       usdcToUSDPriceFeed.address,
       7500,
       usdcToken.address,

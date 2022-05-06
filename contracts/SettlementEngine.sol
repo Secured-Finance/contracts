@@ -13,7 +13,6 @@ import "./interfaces/ILiquidations.sol";
 import "./interfaces/IPaymentAggregator.sol";
 import "./interfaces/ICrosschainAddressResolver.sol";
 import "./interfaces/IExternalAdapterTxResponse.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Settlement Engine contract is used in settlement operations
@@ -98,7 +97,7 @@ contract SettlementEngine is
         require(currencyController.isSupportedCcy(_ccy), "NON_SUPPORTED_CCY");
 
         uint16 chainId = currencyController.getChainId(_ccy);
-        require(chainId != 0, "NOT_ANOTHER_CHAIN");
+        require(chainId != 60, "NOT_ANOTHER_CHAIN");
         require(
             externalAdapters[chainId] == address(0),
             "CAN'T_REPLACE_EXTERNAL_ADAPTER"
@@ -165,7 +164,7 @@ contract SettlementEngine is
             "TIMESLOT_SETTLED_ALREADY"
         );
 
-        if (chainId == 0) {
+        if (chainId == 60) {
             _performNativeSettlement(
                 msg.sender,
                 _counterparty,

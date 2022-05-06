@@ -105,6 +105,7 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         address to,
         bytes32 ccy,
         uint256 liquidationAmount,
+        uint256 pvForRelease,
         bool isSettled
     ) external {
         collateralAggregator.liquidate(
@@ -112,6 +113,7 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
             to,
             ccy,
             liquidationAmount,
+            pvForRelease,
             isSettled
         );
     }

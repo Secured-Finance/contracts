@@ -139,7 +139,7 @@ contract('SettlementEngine', async (accounts) => {
     await currencyController.supportCurrency(
       hexETHString,
       'Ethereum',
-      0,
+      60,
       ethToUSDPriceFeed.address,
       7500,
       zeroAddress(),
@@ -148,7 +148,7 @@ contract('SettlementEngine', async (accounts) => {
     await currencyController.supportCurrency(
       hexUSDCString,
       'USDC',
-      0,
+      60,
       usdcToUSDPriceFeed.address,
       7500,
       usdcToken.address,
@@ -706,7 +706,7 @@ contract('SettlementEngine', async (accounts) => {
             _6monthTime.toString(),
             '',
           ),
-        'INVALID_TOKEN_ADDRESS',
+        "ADAPTER_DOESN'T_EXIST",
       );
     });
   });

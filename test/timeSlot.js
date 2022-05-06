@@ -1,7 +1,6 @@
 const TimeSlotTest = artifacts.require('TimeSlotTest');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 
-const { ethers } = require('hardhat');
 const { reverted } = require('../test-utils').assert;
 const { should } = require('chai');
 const { toBytes32, zeroAddress } = require('../test-utils').strings;
@@ -9,14 +8,7 @@ should();
 
 const expectRevert = reverted;
 
-const hashPosition = (year, month, day) => {
-  let encodedPosition = ethers.utils.defaultAbiCoder.encode(
-    ['uint256', 'uint256', 'uint256'],
-    [year, month, day],
-  );
-
-  return ethers.utils.keccak256(encodedPosition);
-};
+const { hashPosition } = require('../test-utils').timeSlot;
 
 contract('TimeSlotTest', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;

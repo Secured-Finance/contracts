@@ -1,4 +1,7 @@
 module.exports = async function ({ deployments }) {
+  const { deploy } = deployments;
+  const { deployer } = await getNamedAccounts();
+
   const collateralAggregator = await deployments.get('CollateralAggregatorV2');
   const ethVault = await deployments.get('CollateralVault');
   const collateralContract = await ethers.getContractAt(
@@ -6,13 +9,10 @@ module.exports = async function ({ deployments }) {
     collateralAggregator.address,
   );
 
-  const crosschainResolverFactory = await ethers.getContractFactory(
-    'CrosschainAddressResolver',
-  );
-  const crosschainResolver = await crosschainResolverFactory.deploy(
-    collateralAggregator.address,
-  );
-  await crosschainResolver.deployed();
+  const crosschainResolver = await deploy('CrosschainAddressResolver', {
+    from: deployer,
+    args: [collateralAggregator.address],
+  });
 
   await (
     await collateralContract.setCrosschainAddressResolver(
@@ -46,4 +46,4 @@ module.exports = async function ({ deployments }) {
 };
 
 module.exports.tags = ['CrossChainAddressResolver'];
-module.exports.dependencies = ['CollateralAggregator'];
+module.exports.dependencies = ['CollateralAggregator', 'CollateralVaults'];

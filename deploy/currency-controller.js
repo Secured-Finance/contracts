@@ -1,3 +1,5 @@
+const { zeroAddress } = require('../test-utils/src/strings');
+
 const { filToETHRate, ethToUSDRate, btcToETHRate } =
   require('../test-utils').numbers;
 const { hexFILString, hexBTCString, hexETHString } =
@@ -51,6 +53,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       60,
       ethToUSDPriceFeed.address,
       7500,
+      zeroAddress,
     )
   ).wait();
 
@@ -61,6 +64,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       461,
       filToETHPriceFeed.address,
       7500,
+      zeroAddress,
     )
   ).wait();
 
@@ -71,6 +75,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       0,
       btcToETHPriceFeed.address,
       7500,
+      zeroAddress,
     )
   ).wait();
 

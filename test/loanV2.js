@@ -14,45 +14,47 @@ const BokkyPooBahsDateTimeContract = artifacts.require(
 const TimeSlotTest = artifacts.require('TimeSlotTest');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const WETH9Mock = artifacts.require('WETH9Mock');
+const CrosschainAddressResolver = artifacts.require(
+  'CrosschainAddressResolver',
+);
+const Operator = artifacts.require('Operator');
+const LinkToken = artifacts.require('LinkToken');
+const ChainlinkSettlementAdapterMock = artifacts.require(
+  'ChainlinkSettlementAdapterMock',
+);
 
 const { emitted, reverted } = require('../test-utils').assert;
 const { should } = require('chai');
 
 const {
   toBytes32,
-  loanName,
   loanPrefix,
   hexFILString,
   hexBTCString,
   hexETHString,
+  testJobId,
+  testTxHash,
+  secondTxHash,
+  aliceFILAddress,
+  bobFILAddress,
 } = require('../test-utils').strings;
 
-const {
-  sortedTermDays,
-  sortedTermsDfFracs,
-  sortedTermsNumPayments,
-  sortedTermsSchedules,
-} = require('../test-utils').terms;
+const { sortedTermDays } = require('../test-utils').terms;
 
-const { toEther, toBN, IR_BASE } = require('../test-utils').numbers;
+const { toEther, toBN, IR_BASE, oracleRequestFee } =
+  require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTime } =
   require('../test-utils').time;
+
+const { computeCrosschainSettlementId } = require('../test-utils').settlementId;
+const { hashPosition } = require('../test-utils').timeSlot;
+
 const utils = require('web3-utils');
+const { zeroAddress } = require('../test-utils/src/strings');
 
 should();
 
 const expectRevert = reverted;
-
-const hashPosition = (year, month, day) => {
-  let encodedPosition = ethers.utils.defaultAbiCoder.encode(
-    ['uint256', 'uint256', 'uint256'],
-    [year, month, day],
-  );
-  console.log('encodedPosition is ' + encodedPosition);
-  console.log('position hash is ' + ethers.utils.keccak256(encodedPosition));
-
-  return ethers.utils.keccak256(encodedPosition);
-};
 
 contract('LoanV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -70,6 +72,8 @@ contract('LoanV2', async (accounts) => {
   let _3yearTimeSlot;
   let _4yearTimeSlot;
   let _5yearTimeSlot;
+
+  let aliceRequestId;
 
   const generateId = (value, prefix) => {
     let right = utils.toBN(utils.rightPad(prefix, 64));
@@ -101,6 +105,8 @@ contract('LoanV2', async (accounts) => {
 
   before('deploy smart contracts for testing LoanV2', async () => {
     signers = await ethers.getSigners();
+    aliceSigner = signers[1];
+    bobSigner = signers[2];
 
     const DealId = await ethers.getContractFactory('DealId');
     const dealIdLibrary = await DealId.deploy();
@@ -194,6 +200,7 @@ contract('LoanV2', async (accounts) => {
       60,
       ethToUSDPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 
@@ -203,6 +210,7 @@ contract('LoanV2', async (accounts) => {
       461,
       filToETHPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 
@@ -212,6 +220,7 @@ contract('LoanV2', async (accounts) => {
       0,
       btcToETHPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 
@@ -225,13 +234,10 @@ contract('LoanV2', async (accounts) => {
       from: owner,
     });
 
-    const crosschainResolverFactory = await ethers.getContractFactory(
-      'CrosschainAddressResolver',
-    );
-    crosschainResolver = await crosschainResolverFactory.deploy(
+    crosschainResolver = await CrosschainAddressResolver.new(
       collateral.address,
     );
-    await crosschainResolver.deployed();
+
     await collateral.setCrosschainAddressResolver(crosschainResolver.address);
 
     const CollateralVault = await ethers.getContractFactory('CollateralVault');
@@ -288,8 +294,50 @@ contract('LoanV2', async (accounts) => {
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     timeSlotTest = await TimeSlotTest.new();
 
-    let status = await paymentAggregator.isPaymentAggregatorUser(loan.address);
-    status.should.be.equal(true);
+    const SettlementEngineFactory = await ethers.getContractFactory(
+      'SettlementEngine',
+    );
+    settlementEngine = await SettlementEngineFactory.deploy(
+      paymentAggregator.address,
+      currencyController.address,
+      crosschainResolver.address,
+      wETHToken.address,
+    );
+
+    await paymentAggregator.setSettlementEngine(settlementEngine.address);
+
+    linkToken = await LinkToken.new();
+    oracleOperator = await Operator.new(linkToken.address, owner);
+    settlementAdapter = await ChainlinkSettlementAdapterMock.new(
+      oracleOperator.address,
+      testJobId,
+      oracleRequestFee,
+      linkToken.address,
+      hexFILString,
+      settlementEngine.address,
+    );
+
+    await settlementEngine.addExternalAdapter(
+      settlementAdapter.address,
+      hexFILString,
+    );
+
+    await linkToken.transfer(
+      settlementAdapter.address,
+      toBN('100000000000000000000'),
+    );
+
+    await crosschainResolver.methods['updateAddress(uint256,string)'](
+      461,
+      aliceFILAddress,
+      { from: alice },
+    );
+
+    await crosschainResolver.methods['updateAddress(uint256,string)'](
+      461,
+      bobFILAddress,
+      { from: bob },
+    );
   });
 
   describe('Test the execution of loan deal between Alice and Bob', async () => {
@@ -313,8 +361,6 @@ contract('LoanV2', async (accounts) => {
 
     let start;
     let maturity;
-
-    let testTxHash = toBytes32('0xTestTxHash');
 
     it('Prepare the yield curve', async () => {
       const lendRates = [920, 1020, 1120, 1220, 1320, 1520];
@@ -423,13 +469,21 @@ contract('LoanV2', async (accounts) => {
         }
       });
 
-      let slotTimeTest = await timeLibrary.addDays(start, 365);
-      let slotDateTest = await timeLibrary.timestampToDate(slotTimeTest);
-      hashPosition(
+      const slotTimeTest = await timeLibrary.addDays(start, 365);
+      const slotDateTest = await timeLibrary.timestampToDate(slotTimeTest);
+      const slotPosition = hashPosition(
         slotDateTest.year.toNumber(),
         slotDateTest.month.toNumber(),
         slotDateTest.day.toNumber(),
       );
+
+      const actualSlotPosition = await timeSlotTest.position(
+        slotDateTest.year,
+        slotDateTest.month,
+        slotDateTest.day,
+      );
+
+      slotPosition.should.be.equal(actualSlotPosition);
 
       let timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -437,7 +491,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _1yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal(coupon.toString());
+      timeSlot[2].toString().should.be.equal(coupon.toString());
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -445,7 +499,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _2yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal(coupon.toString());
+      timeSlot[2].toString().should.be.equal(coupon.toString());
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -453,7 +507,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _3yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal(coupon.toString());
+      timeSlot[2].toString().should.be.equal(coupon.toString());
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -461,7 +515,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _4yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal(coupon.toString());
+      timeSlot[2].toString().should.be.equal(coupon.toString());
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -469,7 +523,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _5yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal(repayment.toString());
+      timeSlot[2].toString().should.be.equal(repayment.toString());
 
       let closeOut = await closeOutNetting.getCloseOutPayment(
         alice,
@@ -520,29 +574,31 @@ contract('LoanV2', async (accounts) => {
         slotDate.day,
       );
 
-      await paymentAggregator.verifyPayment(
-        alice,
-        bob,
-        hexFILString,
-        slotTime,
-        filAmount,
-        testTxHash,
-        { from: alice },
-      );
+      const requestId = await (
+        await settlementEngine
+          .connect(aliceSigner)
+          .verifyPayment(
+            bob,
+            hexFILString,
+            filAmount.toString(),
+            slotTime.toString(),
+            testTxHash,
+          )
+      ).wait();
 
-      let timeSlot = await paymentAggregator.getTimeSlotBySlotId(
-        alice,
-        bob,
-        hexFILString,
-        slotPosition,
+      aliceRequestId =
+        requestId.events[requestId.events.length - 1].args.requestId;
+
+      let presentValue = await loan.getDealPV(dealId);
+
+      console.log(
+        'Present value of the loan for 30 FIL between Alice and Bob before notional exchange: ' +
+          presentValue.toString(),
       );
-      timeSlot.paymentProof.should.be.equal(testTxHash);
-      timeSlot.verificationParty.should.be.equal(alice);
-      timeSlot.netPayment.toString().should.be.equal(filAmount.toString());
-      timeSlot.isSettled.should.be.equal(false);
+      console.log('');
     });
 
-    it('Try to settle payment by Bob (borrower) and check last settlement payment', async () => {
+    it('Try to settle payment by chainlink external adapter and check last settlement payment', async () => {
       now = await getLatestTimestamp();
       let slotTime = await timeLibrary.addDays(now, 2);
       let slotDate = await timeLibrary.timestampToDate(slotTime);
@@ -562,13 +618,13 @@ contract('LoanV2', async (accounts) => {
         .should.be.equal(closeOutPayment.toString());
       closeOut.flipped.should.be.equal(true);
 
-      await paymentAggregator.settlePayment(
-        bob,
-        alice,
-        hexFILString,
-        slotTime,
+      await settlementAdapter.fulfill(
+        aliceRequestId,
+        aliceFILAddress,
+        bobFILAddress,
+        filAmount.toString(),
+        slotTime.toString(),
         testTxHash,
-        { from: bob },
       );
 
       let timeSlot = await paymentAggregator.getTimeSlotBySlotId(
@@ -577,10 +633,25 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         slotPosition,
       );
-      timeSlot.paymentProof.should.be.equal(testTxHash);
-      timeSlot.verificationParty.should.be.equal(alice);
-      timeSlot.netPayment.toString().should.be.equal(filAmount.toString());
-      timeSlot.isSettled.should.be.equal(true);
+      timeSlot[0].toString().should.be.equal(filAmount.toString());
+      timeSlot[1].toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal(filAmount.toString());
+      timeSlot[3].toString().should.be.equal(filAmount.toString());
+      timeSlot[4].should.be.equal(false);
+      timeSlot[5].should.be.equal(true);
+
+      let settlementId = computeCrosschainSettlementId(testTxHash);
+
+      let confirmation =
+        await paymentAggregator.getTimeSlotPaymentConfirmationById(
+          bob,
+          alice,
+          hexFILString,
+          slotPosition,
+          settlementId,
+        );
+      confirmation[0].should.be.equal(alice);
+      confirmation[1].toString().should.be.equal(filAmount.toString());
 
       closeOut = await closeOutNetting.getCloseOutPayment(
         alice,
@@ -662,6 +733,13 @@ contract('LoanV2', async (accounts) => {
     it('Try to successfully terminate the deal after 30 days', async () => {
       await advanceTime(30 * ONE_DAY);
 
+      let presentValue = await loan.getDealPV(dealId);
+      console.log(
+        'Present value of the loan for 30 FIL between Alice and Bob after 1 month shift: ' +
+          presentValue.toString(),
+      );
+      console.log('');
+
       await loan.connect(signers[1]).requestTermination(dealId);
       await loan.connect(signers[2]).acceptTermination(dealId);
 
@@ -671,7 +749,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _1yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal('0');
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -679,7 +757,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _2yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal('0');
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -687,7 +765,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _3yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal('0');
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -695,7 +773,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _4yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal('0');
 
       timeSlot = await paymentAggregator.getTimeSlotBySlotId(
         alice,
@@ -703,7 +781,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         _5yearTimeSlot,
       );
-      timeSlot.netPayment.toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal('0');
 
       let closeOut = await closeOutNetting.getCloseOutPayment(
         alice,
@@ -805,7 +883,7 @@ contract('LoanV2', async (accounts) => {
         hexFILString,
         slotPosition,
       );
-      timeSlot.netPayment.toString().should.be.equal(repayment.toString());
+      timeSlot[2].toString().should.be.equal(repayment.toString());
 
       let closeOut = await closeOutNetting.getCloseOutPayment(
         alice,
@@ -835,43 +913,55 @@ contract('LoanV2', async (accounts) => {
         slotDate.day,
       );
 
-      await paymentAggregator.verifyPayment(
-        bob,
-        alice,
-        hexFILString,
-        slotTime,
-        filAmount,
-        testTxHash,
-        { from: bob },
+      const requestId = await (
+        await settlementEngine
+          .connect(bobSigner)
+          .verifyPayment(
+            alice,
+            hexFILString,
+            filAmount.toString(),
+            slotTime.toString(),
+            secondTxHash,
+          )
+      ).wait();
+
+      bobRequestId =
+        requestId.events[requestId.events.length - 1].args.requestId;
+
+      await settlementAdapter.fulfill(
+        bobRequestId,
+        bobFILAddress,
+        aliceFILAddress,
+        filAmount.toString(),
+        slotTime.toString(),
+        secondTxHash,
       );
 
       let timeSlot = await paymentAggregator.getTimeSlotBySlotId(
-        alice,
         bob,
+        alice,
         hexFILString,
         slotPosition,
       );
-      timeSlot.paymentProof.should.be.equal(testTxHash);
-      timeSlot.verificationParty.should.be.equal(bob);
-      timeSlot.netPayment.toString().should.be.equal(filAmount.toString());
-      timeSlot.isSettled.should.be.equal(false);
+      timeSlot[0].toString().should.be.equal(filAmount.toString());
+      timeSlot[1].toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal(filAmount.toString());
+      timeSlot[3].toString().should.be.equal(filAmount.toString());
+      timeSlot[4].should.be.equal(false);
+      timeSlot[5].should.be.equal(true);
 
-      await paymentAggregator.settlePayment(
-        alice,
-        bob,
-        hexFILString,
-        slotTime,
-        testTxHash,
-        { from: alice },
-      );
+      let settlementId = computeCrosschainSettlementId(secondTxHash);
 
-      timeSlot = await paymentAggregator.getTimeSlotBySlotId(
-        alice,
-        bob,
-        hexFILString,
-        slotPosition,
-      );
-      timeSlot.isSettled.should.be.equal(true);
+      let confirmation =
+        await paymentAggregator.getTimeSlotPaymentConfirmationById(
+          alice,
+          bob,
+          hexFILString,
+          slotPosition,
+          settlementId,
+        );
+      confirmation[0].should.be.equal(bob);
+      confirmation[1].toString().should.be.equal(filAmount.toString());
 
       let presentValue = await loan.getDealPV(dealId);
       // presentValue.toString().should.be.equal(filAmount.toString());

@@ -12,6 +12,12 @@ interface ICollateralAggregator {
         uint256 amount1,
         bool isSettled
     );
+    event Liquidate(
+        address indexed from,
+        address indexed to,
+        bytes32 ccy,
+        uint256 amount
+    );
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event SettleCollateral(
         address indexed partyA,
@@ -138,6 +144,7 @@ interface ICollateralAggregator {
         address to,
         bytes32 ccy,
         uint256 liquidationAmount,
+        uint256 pv,
         bool isSettled
     ) external;
 

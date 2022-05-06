@@ -22,7 +22,4 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 };
 
 module.exports.tags = ['CollateralAggregator'];
-module.exports.dependencies = [
-  'CurrencyController',
-  'CrosschainAddressResolver',
-];
+module.exports.dependencies = ['CurrencyController'];

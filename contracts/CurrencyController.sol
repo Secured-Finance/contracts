@@ -91,9 +91,12 @@ contract CurrencyController is ICurrencyController {
         currency.name = _name;
         if (_chainId != 0) {
             currency.chainId = _chainId;
-        } else {
+        }
+
+        if (_tokenAddress != address(0)) {
             tokenAddresses[_ccy] = _tokenAddress;
         }
+
         currency.isSupported = true;
 
         currencies[_ccy] = currency;

@@ -7,10 +7,36 @@ const CurrencyController = artifacts.require('CurrencyController');
 const MarkToMarket = artifacts.require('MarkToMarket');
 const Liquidations = artifacts.require('Liquidations');
 const WETH9Mock = artifacts.require('WETH9Mock');
+const CrosschainAddressResolver = artifacts.require(
+  'CrosschainAddressResolver',
+);
+const Operator = artifacts.require('Operator');
+const LinkToken = artifacts.require('LinkToken');
+const ChainlinkSettlementAdapterMock = artifacts.require(
+  'ChainlinkSettlementAdapterMock',
+);
+const BokkyPooBahsDateTimeContract = artifacts.require(
+  'BokkyPooBahsDateTimeContract',
+);
 
 const { emitted, reverted, equal } = require('../test-utils').assert;
-const { hexFILString, hexBTCString, hexETHString, loanPrefix, zeroAddress } =
-  require('../test-utils').strings;
+const {
+  hexFILString,
+  hexBTCString,
+  hexETHString,
+  loanPrefix,
+  zeroAddress,
+  testJobId,
+  secondJobId,
+  testTxHash,
+  secondTxHash,
+  aliceFILAddress,
+  aliceBTCAddress,
+  bobFILAddress,
+  bobBTCAddress,
+} = require('../test-utils').strings;
+const { computeCrosschainSettlementId } = require('../test-utils').settlementId;
+
 const {
   sortedTermDays,
   sortedTermsDfFracs,
@@ -19,10 +45,11 @@ const {
 } = require('../test-utils').terms;
 const { checkTokenBalances } = require('../test-utils').balances;
 
-const { toBN } = require('../test-utils').numbers;
+const { toBN, IR_BASE, decimalBase, oracleRequestFee } =
+  require('../test-utils').numbers;
 const { should } = require('chai');
 const utils = require('web3-utils');
-const BigNumber = require('bignumber.js');
+const { hashPosition } = require('../test-utils/src/timeSlot');
 
 const {
   ONE_MINUTE,
@@ -102,6 +129,8 @@ contract('Integration test', async (accounts) => {
     const DiscountFactor = await ethers.getContractFactory('DiscountFactor');
     const discountFactor = await DiscountFactor.deploy();
     await discountFactor.deployed();
+
+    timeLibrary = await BokkyPooBahsDateTimeContract.new();
 
     currencyController = await CurrencyController.new();
     console.log(
@@ -236,18 +265,66 @@ contract('Integration test', async (accounts) => {
     });
     await loan.setCollateralAddr(collateral.address, { from: owner });
 
-    const crosschainResolverFactory = await ethers.getContractFactory(
-      'CrosschainAddressResolver',
-    );
-    crosschainResolver = await crosschainResolverFactory.deploy(
+    crosschainResolver = await CrosschainAddressResolver.new(
       collateral.address,
     );
-    await crosschainResolver.deployed();
     console.log(
       'CrosschainAddressResolver contract address is ' +
         crosschainResolver.address,
     );
     await collateral.setCrosschainAddressResolver(crosschainResolver.address);
+
+    const SettlementEngineFactory = await ethers.getContractFactory(
+      'SettlementEngine',
+    );
+    settlementEngine = await SettlementEngineFactory.deploy(
+      paymentAggregator.address,
+      currencyController.address,
+      crosschainResolver.address,
+      wETHToken.address,
+    );
+
+    await paymentAggregator.setSettlementEngine(settlementEngine.address);
+
+    linkToken = await LinkToken.new();
+    oracleOperator = await Operator.new(linkToken.address, owner);
+    settlementAdapter = await ChainlinkSettlementAdapterMock.new(
+      oracleOperator.address,
+      testJobId,
+      oracleRequestFee,
+      linkToken.address,
+      hexFILString,
+      settlementEngine.address,
+    );
+
+    btcSettlementAdapter = await ChainlinkSettlementAdapterMock.new(
+      oracleOperator.address,
+      secondJobId,
+      oracleRequestFee,
+      linkToken.address,
+      hexBTCString,
+      settlementEngine.address,
+    );
+
+    await settlementEngine.addExternalAdapter(
+      settlementAdapter.address,
+      hexFILString,
+    );
+
+    await settlementEngine.addExternalAdapter(
+      btcSettlementAdapter.address,
+      hexBTCString,
+    );
+
+    await linkToken.transfer(
+      settlementAdapter.address,
+      toBN('100000000000000000000'),
+    );
+
+    await linkToken.transfer(
+      btcSettlementAdapter.address,
+      toBN('100000000000000000000'),
+    );
 
     const CollateralVault = await ethers.getContractFactory('CollateralVault');
 
@@ -624,10 +701,8 @@ contract('Integration test', async (accounts) => {
 
   describe('Test Deposit and Withraw collateral by Alice', async () => {
     it('Register collateral book without payment', async () => {
-      let btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
-      let filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
       let result = await collateral.methods['register(string[],uint256[])'](
-        [btcAddress, filAddress],
+        [aliceBTCAddress, aliceFILAddress],
         [0, 461],
         { from: alice },
       );
@@ -756,7 +831,12 @@ contract('Integration test', async (accounts) => {
     });
 
     it('Register collateral book by Bob with 1 ETH deposit', async () => {
-      let result = await collateral.register({ from: bob });
+      let result = await collateral.methods['register(string[],uint256[])'](
+        [bobBTCAddress, bobFILAddress],
+        [0, 461],
+        { from: bob },
+      );
+
       await emitted(result, 'Register');
 
       const [, , bobSigner] = await ethers.getSigners();
@@ -1046,6 +1126,14 @@ contract('Integration test', async (accounts) => {
     const txHash = web3.utils.asciiToHex('0x_this_is_sample_tx_hash');
     let loanId = generateId(1); // first loan in loan contract
     let filAmount = web3.utils.toBN('30000000000000000000');
+    let _1yearDealStart0;
+    let slotTime;
+    let slotDate;
+    let _1yearTimeSlot;
+    let rate = 725;
+    let coupon;
+    let totalPayment;
+    let aliceRequestId;
 
     it('Deposit 1 ETH by Alice in Collateral contract', async () => {
       const [, aliceSigner] = await ethers.getSigners();
@@ -1091,7 +1179,7 @@ contract('Integration test', async (accounts) => {
     it('Successfully make order for 30 FIL by Alice, take this order by Bob', async () => {
       const [, aliceSigner, bobSigner] = await ethers.getSigners();
       let depositAmt = web3.utils.toBN('1000000000000000000');
-      let marketOrder = await lendingMarket.order(0, filAmount, 725, {
+      let marketOrder = await lendingMarket.order(0, filAmount, rate, {
         from: alice,
       });
       await emitted(marketOrder, 'MakeOrder');
@@ -1123,7 +1211,9 @@ contract('Integration test', async (accounts) => {
       console.log('Taking order for 30 FIL, and using collateral');
       console.log('');
 
-      marketOrder = await lendingMarket.order(1, filAmount, 725, { from: bob });
+      marketOrder = await lendingMarket.order(1, filAmount, rate, {
+        from: bob,
+      });
       await emitted(marketOrder, 'TakeOrder');
 
       let lockedCollaterals = await ethVault[
@@ -1134,6 +1224,14 @@ contract('Integration test', async (accounts) => {
       aliceIndependentAmount = await aliceIndependentAmount.sub(
         toBN(aliceLockedCollateral),
       );
+
+      let independentCollateral = await ethVault.getIndependentCollateral(
+        alice,
+      );
+
+      independentCollateral
+        .toString()
+        .should.be.equal(aliceIndependentAmount.toString());
 
       let rebalance = await collateral.getRebalanceCollateralAmounts(
         alice,
@@ -1161,32 +1259,160 @@ contract('Integration test', async (accounts) => {
       console.log('');
     });
 
-    it('Shift time by 3 month, perform mark-to-market and present value updates', async () => {
-      // await advanceTimeAndBlock(90 * ONE_DAY);
-      tx = await loan.functions['markToMarket(bytes32)'](loanId);
-      // await emitted(tx, 'MarkToMarket');
+    it('Check cashflow structure of the loan deal between Alice and Bob', async () => {
+      now = await getLatestTimestamp();
+      _1yearDealStart0 = now;
+      slotTime = await timeLibrary.addDays(now, 365);
+      slotDate = await timeLibrary.timestampToDate(slotTime);
+      _1yearTimeSlot = await hashPosition(
+        slotDate.year,
+        slotDate.month,
+        slotDate.day,
+      );
+
+      coupon = filAmount.mul(toBN(rate)).div(IR_BASE);
+      totalPayment = filAmount.add(coupon);
+
+      const deal = await loan.getLoanDeal(loanId);
+      deal.lender.should.be.equal(alice);
+      deal.borrower.should.be.equal(bob);
+      deal.ccy.should.be.equal(hexFILString);
+      deal.term.toString().should.be.equal('365');
+      deal.notional.toString().should.be.equal(filAmount.toString());
+      deal.rate.toString().should.be.equal(rate.toString());
+
+      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+        alice,
+        bob,
+        hexFILString,
+        _1yearTimeSlot,
+      );
+      timeSlot[0].toString().should.be.equal('0');
+      timeSlot[1].toString().should.be.equal(totalPayment.toString());
+      timeSlot[2].toString().should.be.equal(totalPayment.toString());
+      timeSlot[3].toString().should.be.equal('0');
+      timeSlot[4].should.be.equal(true);
+      timeSlot[5].should.be.equal(false);
+    });
+
+    it('Try to verify notional payment from lender for 30 FIL deal', async () => {
+      const [, aliceSigner] = await ethers.getSigners();
+      const pv = await loan.getDealPV(loanId);
+      console.log(
+        'Present value of the loan for 30 FIL between Alice and Bob before notional payment settlement: ' +
+          pv,
+      );
+      console.log('');
+
+      now = await getLatestTimestamp();
+      slotTime = await timeLibrary.addDays(now, 2);
+
+      const requestId = await (
+        await settlementEngine
+          .connect(aliceSigner)
+          .verifyPayment(
+            bob,
+            hexFILString,
+            filAmount.toString(),
+            slotTime.toString(),
+            testTxHash,
+          )
+      ).wait();
+
+      aliceRequestId =
+        requestId.events[requestId.events.length - 1].args.requestId;
+    });
+
+    it('Validate settlement request by chainlink external adapter and check present value', async () => {
+      slotDate = await timeLibrary.timestampToDate(slotTime);
+      _2daysTimeSlot = await hashPosition(
+        slotDate.year,
+        slotDate.month,
+        slotDate.day,
+      );
+
+      await settlementAdapter.fulfill(
+        aliceRequestId,
+        aliceFILAddress,
+        bobFILAddress,
+        filAmount.toString(),
+        slotTime.toString(),
+        testTxHash,
+      );
+
+      let timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+        alice,
+        bob,
+        hexFILString,
+        _2daysTimeSlot,
+      );
+      timeSlot[0].toString().should.be.equal(filAmount.toString());
+      timeSlot[1].toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal(filAmount.toString());
+      timeSlot[3].toString().should.be.equal(filAmount.toString());
+      timeSlot[4].should.be.equal(false);
+      timeSlot[5].should.be.equal(true);
+
+      const settlementId = computeCrosschainSettlementId(testTxHash);
+
+      let confirmation =
+        await paymentAggregator.getTimeSlotPaymentConfirmationById(
+          bob,
+          alice,
+          hexFILString,
+          _2daysTimeSlot,
+          settlementId,
+        );
+      confirmation[0].should.be.equal(alice);
+      confirmation[1].toString().should.be.equal(filAmount.toString());
+
+      aliceIndependentAmount = await aliceIndependentAmount.add(
+        toBN(aliceLockedCollateral),
+      );
+
+      const independentCollateral = await ethVault.getIndependentCollateral(
+        alice,
+      );
+
+      independentCollateral
+        .toString()
+        .should.be.equal(aliceIndependentAmount.toString());
 
       const pv = await loan.getDealPV(loanId);
-      const settlementLock = toBN(pv.toString())
-        .mul(SETTLEMENT_LOCK)
-        .div(BP_BASE);
+
+      console.log(
+        'Present value of the loan for 30 FIL between Alice and Bob after notional exchange: ' +
+          pv.toString(),
+      );
+      console.log('');
+    });
+
+    it('Shift time by 3 month, perform mark-to-market and present value updates', async () => {
+      await advanceTimeAndBlock(90 * ONE_DAY);
+      await loan.functions['markToMarket(bytes32)'](loanId);
+
+      const pv = await loan.getDealPV(loanId);
 
       console.log('Performing second mark-to-market after 3 month');
       console.log(
-        'Present value of the loan for 30 FIL between Alice and Bob after first payment settlment: ' +
+        'Present value of the loan for 30 FIL between Alice and Bob after first payment settlement: ' +
           pv,
       );
       console.log('');
 
       const ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
-      ccyExp[0].toString().should.be.equal(settlementLock.toString());
-      ccyExp[1].toString().should.be.equal(pv.toString());
+      ccyExp[0].toString().should.be.equal('0');
+      ccyExp[1].toString().should.be.equal('0');
+      ccyExp[2].toString().should.be.equal('0');
+      ccyExp[3].toString().should.be.equal(pv.toString());
     });
   });
 
   describe('Test second loan by Alice and Bob for 1 BTC', async () => {
     const txHash = web3.utils.asciiToHex('0x_this_is_sample_tx_hash');
     loanId = generateId(2);
+    let rate = 305;
+    let bobRequestId;
 
     let btcAmount = web3.utils.toBN('1000000000000000000');
 
@@ -1227,9 +1453,7 @@ contract('Integration test', async (accounts) => {
       const lockedCollateral = await ethVault['getLockedCollateral(address)'](
         alice,
       );
-      lockedCollateral
-        .toString()
-        .should.be.equal(aliceLockedCollateral.toString());
+      lockedCollateral.toString().should.be.equal('0');
 
       web3.eth.getBalance(alice).then((res) => {
         res.should.be.equal(balance.sub(depositAmt).toString());
@@ -1251,7 +1475,7 @@ contract('Integration test', async (accounts) => {
       console.log('Making a new order to lend 1 BTC for 5 years by Bob');
       console.log('');
 
-      let marketOrder = await btcLendingMarket.order(0, btcAmount, 305, {
+      let marketOrder = await btcLendingMarket.order(0, btcAmount, rate, {
         from: bob,
       });
       await emitted(marketOrder, 'MakeOrder');
@@ -1261,7 +1485,7 @@ contract('Integration test', async (accounts) => {
       );
       console.log('');
 
-      marketOrder = await btcLendingMarket.order(1, btcAmount, 305, {
+      marketOrder = await btcLendingMarket.order(1, btcAmount, rate, {
         from: alice,
       });
       await emitted(marketOrder, 'TakeOrder');
@@ -1310,12 +1534,144 @@ contract('Integration test', async (accounts) => {
       );
     });
 
-    it('Shift time by 6 month, perform mark-to-market and present value updates', async () => {
-      const dfs = await lendingController.getDiscountFactorsForCcy(
-        hexBTCString,
+    it('Check cashflow structure of the second loan deal between Alice and Bob', async () => {
+      now = await getLatestTimestamp();
+      _1yearDealStart0 = now;
+      slotTime = await timeLibrary.addDays(now, 365);
+      slotDate = await timeLibrary.timestampToDate(slotTime);
+      _1yearTimeSlot = await hashPosition(
+        slotDate.year,
+        slotDate.month,
+        slotDate.day,
       );
-      // console.log(dfs);
 
+      slotTime = await timeLibrary.addDays(now, 1825);
+      slotDate = await timeLibrary.timestampToDate(slotTime);
+      _5yearTimeSlot = await hashPosition(
+        slotDate.year,
+        slotDate.month,
+        slotDate.day,
+      );
+
+      coupon = btcAmount.mul(toBN(rate)).div(IR_BASE);
+      totalPayment = btcAmount.add(coupon);
+
+      const deal = await loan.getLoanDeal(loanId);
+      deal.lender.should.be.equal(bob);
+      deal.borrower.should.be.equal(alice);
+      deal.ccy.should.be.equal(hexBTCString);
+      deal.term.toString().should.be.equal('1825');
+      deal.notional.toString().should.be.equal(btcAmount.toString());
+      deal.rate.toString().should.be.equal(rate.toString());
+
+      let timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+        bob,
+        alice,
+        hexBTCString,
+        _1yearTimeSlot,
+      );
+      timeSlot[0].toString().should.be.equal('0');
+      timeSlot[1].toString().should.be.equal(coupon.toString());
+      timeSlot[2].toString().should.be.equal(coupon.toString());
+      timeSlot[3].toString().should.be.equal('0');
+      timeSlot[4].should.be.equal(true);
+      timeSlot[5].should.be.equal(false);
+
+      timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+        bob,
+        alice,
+        hexBTCString,
+        _5yearTimeSlot,
+      );
+      timeSlot[0].toString().should.be.equal('0');
+      timeSlot[1].toString().should.be.equal(totalPayment.toString());
+      timeSlot[2].toString().should.be.equal(totalPayment.toString());
+      timeSlot[3].toString().should.be.equal('0');
+      timeSlot[4].should.be.equal(true);
+      timeSlot[5].should.be.equal(false);
+    });
+
+    it('Successfully verify notional payment from lender for 1 BTC deal', async () => {
+      const [, , bobSigner] = await ethers.getSigners();
+      const pv = await loan.getDealPV(loanId);
+      console.log(
+        'Present value of the loan for 1 BTC deal between Bob and Alice before notional payment settlement: ' +
+          pv,
+      );
+      console.log('');
+
+      now = await getLatestTimestamp();
+      slotTime = await timeLibrary.addDays(now, 2);
+
+      const requestId = await (
+        await settlementEngine
+          .connect(bobSigner)
+          .verifyPayment(
+            alice,
+            hexBTCString,
+            btcAmount.toString(),
+            slotTime.toString(),
+            secondTxHash,
+          )
+      ).wait();
+
+      bobRequestId =
+        requestId.events[requestId.events.length - 1].args.requestId;
+    });
+
+    it('Validate settlement request by chainlink external adapter and check present value', async () => {
+      slotDate = await timeLibrary.timestampToDate(slotTime);
+      _2daysTimeSlot = await hashPosition(
+        slotDate.year,
+        slotDate.month,
+        slotDate.day,
+      );
+
+      await btcSettlementAdapter.fulfill(
+        bobRequestId,
+        bobBTCAddress,
+        aliceBTCAddress,
+        btcAmount.toString(),
+        slotTime.toString(),
+        secondTxHash,
+      );
+
+      let timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+        bob,
+        alice,
+        hexBTCString,
+        _2daysTimeSlot,
+      );
+      timeSlot[0].toString().should.be.equal(btcAmount.toString());
+      timeSlot[1].toString().should.be.equal('0');
+      timeSlot[2].toString().should.be.equal(btcAmount.toString());
+      timeSlot[3].toString().should.be.equal(btcAmount.toString());
+      timeSlot[4].should.be.equal(false);
+      timeSlot[5].should.be.equal(true);
+
+      const settlementId = computeCrosschainSettlementId(secondTxHash);
+
+      const confirmation =
+        await paymentAggregator.getTimeSlotPaymentConfirmationById(
+          bob,
+          alice,
+          hexBTCString,
+          _2daysTimeSlot,
+          settlementId,
+        );
+      confirmation[0].should.be.equal(bob);
+      confirmation[1].toString().should.be.equal(btcAmount.toString());
+
+      const pv = await loan.getDealPV(loanId);
+
+      console.log(
+        'Present value of the loan for 30 FIL between Alice and Bob after notional exchange: ' +
+          pv.toString(),
+      );
+      console.log('');
+    });
+
+    it('Shift time by 6 month, perform mark-to-market and present value updates', async () => {
       let midBTCRates = await lendingController.getMidRatesForCcy(hexBTCString);
       console.log(midBTCRates[5].toString());
 
@@ -1336,7 +1692,6 @@ contract('Integration test', async (accounts) => {
 
       await advanceTimeAndBlock(180 * ONE_DAY);
       let tx = await loan.markToMarket(loanId);
-      // await emitted(tx, 'MarkToMarket');
 
       const pv = await loan.getDealPV(loanId);
       console.log(pv.toString());
@@ -1362,8 +1717,10 @@ contract('Integration test', async (accounts) => {
       );
 
       const ccyExp = await collateral.getCcyExposures(alice, bob, hexBTCString);
-      ccyExp[0].toString().should.be.equal(pv.toString());
-      ccyExp[1].toString().should.be.equal(settlementLock.toString());
+      ccyExp[0].toString().should.be.equal('0');
+      ccyExp[1].toString().should.be.equal('0');
+      ccyExp[2].toString().should.be.equal(pv.toString());
+      ccyExp[3].toString().should.be.equal('0');
 
       // let rebalance = await collateral.getRebalanceCollateralAmounts(alice, bob);
       // rebalance[1].toString().should.be.equal('0');

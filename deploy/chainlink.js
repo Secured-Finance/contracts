@@ -63,3 +63,4 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 };
 
 module.exports.tags = ['ChainlinkSettlementAdaptor'];
+module.exports.dependencies = ['SettlementEngine'];

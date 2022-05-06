@@ -13,7 +13,6 @@ import "./interfaces/ICloseOutNetting.sol";
 import "./interfaces/IMarkToMarket.sol";
 import "./interfaces/IPaymentAggregator.sol";
 import "./interfaces/ISettlementEngine.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Payment Aggregator contract is used to aggregate payments
