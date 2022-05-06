@@ -6,14 +6,26 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deployer } = await getNamedAccounts();
   const network = getNetworkName();
 
-  let linkTokenAddress = process.env.LINK_CONTRACT_ADDRESS;
-
-  if (network === 'hardhat') {
-    const linkToken = await deploy('LinkToken', { from: deployer });
-    linkTokenAddress = linkToken.address;
-    console.log('Deployed LinkToken at ' + linkToken.address);
-  } else if (network === 'mainnet') {
-    linkTokenAddress = '0x0000000000000000000000000000000000000000';
+  let linkTokenAddress;
+  switch (network) {
+    case 'hardhat': {
+      const linkToken = await deploy('LinkToken', { from: deployer });
+      linkTokenAddress = linkToken.address;
+      console.log('Deployed LinkToken at ' + linkToken.address);
+      break;
+    }
+    case 'rinkeby': {
+      linkTokenAddress = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
+      break;
+    }
+    case 'mainnet': {
+      linkTokenAddress = '0x0000000000000000000000000000000000000000';
+      break;
+    }
+    default: {
+      linkTokenAddress = process.env.LINK_CONTRACT_ADDRESS;
+      break;
+    }
   }
 
   console.log('LinkToken Address is ' + linkTokenAddress);
@@ -36,7 +48,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     {
       from: deployer,
       args: [
-        process.env.CHAINLINK_ORACLE_CONTRACT_ADDRESS,
+        oracle.address,
         process.env.CHAINLINK_JOB_ID,
         process.env.CHAINLINK_REQUEST_FEE,
         linkTokenAddress,
