@@ -3,3 +3,5 @@ dist/
 scripts/
 test/
 migrations/
+coverage/
+coverage.json

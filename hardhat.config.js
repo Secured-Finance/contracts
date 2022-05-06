@@ -31,15 +31,39 @@ module.exports = {
       gasMultiplier: 3,
       timeout: 240000,
     },
+    rinkeby: {
+      url: `https://rinkeby.infura.io/v3/${process.env.WEB3_INFURA_ID}`,
+      chainId: 4,
+      accounts: [process.env.PRIVATE_KEY],
+      live: true,
+      saveDeployments: true,
+      gasPrice: 11000000000,
+      gasMultiplier: 3,
+      timeout: 240000,
+    },
   },
   solidity: {
-    version: '0.6.12',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    compilers: [
+      {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
       },
-    },
+      {
+        version: '0.7.0',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+      { version: '0.4.24' },
+    ],
   },
   paths: {
     sources: './contracts',

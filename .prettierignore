@@ -1,3 +1,6 @@
 cache/
 build/
 node_modules/
+deployments/
+coverage/
+coverage.json
