@@ -75,7 +75,7 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
 
     /**
      * @dev Updates the stored job id
-     * @param _jobId Chainlink job identifier
+     * @param _jobId The job id on the Cahinlink node
      */
     function updateJobId(bytes32 _jobId) public onlyOwner {
         jobId = _jobId;
@@ -83,7 +83,7 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
 
     /**
      * @dev Updates the stored amount of LINK to send for the request
-     * @param _requestFee Oracle request fee in LINK tokens
+     * @param _requestFee The amount of LINK sent for the request
      */
     function updateRequestFee(uint256 _requestFee) public onlyOwner {
         requestFee = _requestFee;
