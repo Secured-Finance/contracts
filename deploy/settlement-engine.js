@@ -25,7 +25,11 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   console.log('Deployed SettlementEngine at ' + settlementEngine.address);
 
-  await paymentAggregatorContract.setSettlementEngine(settlementEngine.address);
+  await (
+    await paymentAggregatorContract.setSettlementEngine(
+      settlementEngine.address,
+    )
+  ).wait();
 };
 
 module.exports.tags = ['SettlementEngine'];

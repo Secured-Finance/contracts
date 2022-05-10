@@ -38,10 +38,9 @@ module.exports = async function ({ deployments }) {
     )
   ).wait();
   await (
-    await ethVaultContract.functions['deposit(uint256)'](
-      '1000000000000000000',
-      { value: '1000000000000000000' },
-    )
+    await ethVaultContract.functions['deposit(uint256)']('10000000000000000', {
+      value: '10000000000000000',
+    })
   ).wait();
 };
 

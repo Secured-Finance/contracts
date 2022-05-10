@@ -1,0 +1,1346 @@
+{
+  "address": "0x7b97B03C3232a6560d6C9daAaE49f33037D9131C",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "timeSlot",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "year",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "month",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "day",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "payment0",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "payment1",
+          "type": "uint256"
+        }
+      ],
+      "name": "RegisterPayment",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "timeSlot",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "year",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "month",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "day",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "payment0",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "payment1",
+          "type": "uint256"
+        }
+      ],
+      "name": "RemovePayment",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "verifier",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "counterparty",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "timeSlot",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "year",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "month",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "day",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "settlementId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "SettlePayment",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "prevContract",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "closeOutNetting",
+          "type": "address"
+        }
+      ],
+      "name": "UpdateCloseOutNetting",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "prevContract",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "closeOutNetting",
+          "type": "address"
+        }
+      ],
+      "name": "UpdateMarkToMarket",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "prevContract",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "settlementEngine",
+          "type": "address"
+        }
+      ],
+      "name": "UpdateSettlementEngine",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "verifier",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "counterparty",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "timeSlot",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "year",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "month",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "day",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "payment",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "settlementId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "VerifyPayment",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        }
+      ],
+      "name": "addPaymentAggregatorUser",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "targetTime",
+          "type": "uint256"
+        }
+      ],
+      "name": "checkSettlementWindow",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "slotPosition",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getDealsFromSlot",
+      "outputs": [
+        {
+          "internalType": "bytes32[]",
+          "name": "",
+          "type": "bytes32[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "year",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "month",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "day",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTimeSlotByDate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "slot",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getTimeSlotBySlotId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "year",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "month",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "day",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "settlementId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getTimeSlotPaymentConfirmation",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "slot",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "settlementId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getTimeSlotPaymentConfirmationById",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        }
+      ],
+      "name": "isPaymentAggregatorUser",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "isSettled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "status",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "dealId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "timestamps",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "payments0",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "payments1",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "registerPayments",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        }
+      ],
+      "name": "removePaymentAggregatorUser",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "party0",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "party1",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "dealId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "timestamps",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "payments0",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "payments1",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "removePayments",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_contract",
+          "type": "address"
+        }
+      ],
+      "name": "setCloseOutNetting",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_contract",
+          "type": "address"
+        }
+      ],
+      "name": "setMarkToMarket",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_contract",
+          "type": "address"
+        }
+      ],
+      "name": "setSettlementEngine",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "settlementWindow",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "verifier",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "counterparty",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "ccy",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "payment",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "settlementId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "verifyPayment",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xc93be27d9b35e6ea7f30efce0d5df81bdedbbfe4071fbf1ddf6b59849465ebd5",
+  "receipt": {
+    "to": null,
+    "from": "0x57AB42d4fa756b6956b0cAf986a5f53bA90D9e28",
+    "contractAddress": "0x7b97B03C3232a6560d6C9daAaE49f33037D9131C",
+    "transactionIndex": 40,
+    "gasUsed": "2130535",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x568b0d0b9dad3f8844bad0713a1e9a5231815a06b20ef2efa3c11ab155e5424d",
+    "transactionHash": "0xc93be27d9b35e6ea7f30efce0d5df81bdedbbfe4071fbf1ddf6b59849465ebd5",
+    "logs": [],
+    "blockNumber": 10650589,
+    "cumulativeGasUsed": "16049776",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "c547b2e6a239b041ee2d79dd0b62b5b6",
+  "metadata": "{\"compiler\":{\"version\":\"0.6.12+commit.27d51765\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"timeSlot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"year\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"month\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"day\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"payment0\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"payment1\",\"type\":\"uint256\"}],\"name\":\"RegisterPayment\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"timeSlot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"year\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"month\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"day\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"payment0\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"payment1\",\"type\":\"uint256\"}],\"name\":\"RemovePayment\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"verifier\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"counterparty\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"timeSlot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"year\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"month\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"day\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"settlementId\",\"type\":\"bytes32\"}],\"name\":\"SettlePayment\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"prevContract\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"closeOutNetting\",\"type\":\"address\"}],\"name\":\"UpdateCloseOutNetting\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"prevContract\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"closeOutNetting\",\"type\":\"address\"}],\"name\":\"UpdateMarkToMarket\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"prevContract\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"settlementEngine\",\"type\":\"address\"}],\"name\":\"UpdateSettlementEngine\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"verifier\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"counterparty\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"timeSlot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"year\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"month\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"day\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"payment\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"settlementId\",\"type\":\"bytes32\"}],\"name\":\"VerifyPayment\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"addPaymentAggregatorUser\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"targetTime\",\"type\":\"uint256\"}],\"name\":\"checkSettlementWindow\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"slotPosition\",\"type\":\"bytes32\"}],\"name\":\"getDealsFromSlot\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"\",\"type\":\"bytes32[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"year\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"month\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"day\",\"type\":\"uint256\"}],\"name\":\"getTimeSlotByDate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"getTimeSlotBySlotId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"year\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"month\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"day\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"settlementId\",\"type\":\"bytes32\"}],\"name\":\"getTimeSlotPaymentConfirmation\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"settlementId\",\"type\":\"bytes32\"}],\"name\":\"getTimeSlotPaymentConfirmationById\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"isPaymentAggregatorUser\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"isSettled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"dealId\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"timestamps\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"payments0\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"payments1\",\"type\":\"uint256[]\"}],\"name\":\"registerPayments\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"}],\"name\":\"removePaymentAggregatorUser\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"party0\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"party1\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"dealId\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"timestamps\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"payments0\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"payments1\",\"type\":\"uint256[]\"}],\"name\":\"removePayments\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_contract\",\"type\":\"address\"}],\"name\":\"setCloseOutNetting\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_contract\",\"type\":\"address\"}],\"name\":\"setMarkToMarket\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_contract\",\"type\":\"address\"}],\"name\":\"setSettlementEngine\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"settlementWindow\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"verifier\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"counterparty\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"ccy\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"payment\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"settlementId\",\"type\":\"bytes32\"}],\"name\":\"verifyPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"addPaymentAggregatorUser(address)\":{\"details\":\"Trigers to add contract address to payment aggregator users address set\",\"params\":{\"_user\":\"Payment aggregator user smart contract address\"}},\"checkSettlementWindow(uint256)\":{\"details\":\"Internal function to check if settlement payment is within available timeline\",\"params\":{\"targetTime\":\"target time for settlement of time slot\"},\"returns\":{\"_0\":\"Boolean if slot within the settlement window\"}},\"constructor\":{\"details\":\"Contract constructor function.\"},\"getTimeSlotByDate(address,address,bytes32,uint256,uint256,uint256)\":{\"details\":\"Returns the time slot between parties using slot id.\",\"params\":{\"ccy\":\"Main payment settlement currency\",\"party0\":\"First counterparty address\",\"party1\":\"Second counterparty address\"}},\"getTimeSlotBySlotId(address,address,bytes32,bytes32)\":{\"details\":\"Returns the time slot between parties using slot id.\",\"params\":{\"ccy\":\"Main payment settlement currency\",\"party0\":\"First counterparty address\",\"party1\":\"Second counterparty address\",\"slot\":\"TimeSlot position\"}},\"getTimeSlotPaymentConfirmation(address,address,bytes32,uint256,uint256,uint256,bytes32)\":{\"details\":\"Returns the time slot between parties using slot id.\",\"params\":{\"ccy\":\"Main payment settlement currency\",\"day\":\"Calendar day of the settlement\",\"month\":\"Calendar month of the settlement\",\"party0\":\"First counterparty address\",\"party1\":\"Second counterparty address\",\"settlementId\":\"Settlement payment confirmation identifier\",\"year\":\"Calendar year of the settlement\"}},\"getTimeSlotPaymentConfirmationById(address,address,bytes32,bytes32,bytes32)\":{\"details\":\"Returns the time slot between parties using slot id.\",\"params\":{\"ccy\":\"Main payment settlement currency\",\"party0\":\"First counterparty address\",\"party1\":\"Second counterparty address\",\"settlementId\":\"Settlement payment confirmation identifier\",\"slot\":\"TimeSlot position\"}},\"isPaymentAggregatorUser(address)\":{\"details\":\"Trigers to check if provided `addr` is a payment aggregator user from address set\",\"params\":{\"_user\":\"Contract address to check if it's a payment aggregator user\"}},\"isSettled(address,address,bytes32,uint256)\":{\"details\":\"Triggers settlement status of the time slot\",\"params\":{\"ccy\":\"Main payment settlement currency\",\"party0\":\"First counterparty address\",\"party1\":\"Second counterparty address\",\"timestamp\":\"TimeSlot timestamp\"},\"returns\":{\"status\":\"Boolean if slot was settled\"}},\"registerPayments(address,address,bytes32,bytes32,uint256[],uint256[],uint256[])\":{\"details\":\"Triggered to add new payments for a deal\",\"params\":{\"ccy\":\"Main settlement currency in a deal\",\"dealId\":\"Deal unique ID with prefix\",\"party0\":\"First counterparty address\",\"party1\":\"Second counterparty address\",\"payments0\":\"Array of cashflows owed by the first party\",\"payments1\":\"Array of cashflows owed by the second party\",\"timestamps\":\"Array of timestamps for timeslot identification\"}},\"removePaymentAggregatorUser(address)\":{\"details\":\"Trigers to remove payment aggregator user from address set\",\"params\":{\"_user\":\"Payment aggregator user smart contract address\"}},\"removePayments(address,address,bytes32,bytes32,uint256[],uint256[],uint256[])\":{\"details\":\"Triggered to remove existing payments for a deal\",\"params\":{\"ccy\":\"Main settlement currency in a deal\",\"dealId\":\"Deal unique ID with prefix\",\"party0\":\"First counterparty address\",\"party1\":\"Second counterparty address\",\"payments0\":\"Array of cashflows owed by the first party\",\"payments1\":\"Array of cashflows owed by the second party\",\"timestamps\":\"Array of timestamps for timeslot identification\"}},\"setCloseOutNetting(address)\":{\"details\":\"Trigers to set close out netting smart contract\",\"params\":{\"_contract\":\"CloseOutNetting smart contract address\"}},\"setMarkToMarket(address)\":{\"details\":\"Trigers to set mark to market smart contract\",\"params\":{\"_contract\":\"MarkToMarket smart contract address\"}},\"verifyPayment(address,address,bytes32,uint256,uint256,bytes32)\":{\"details\":\"External function to verify payment by msg.sender, uses timestamp to identify TimeSlot.\",\"params\":{\"ccy\":\"Main payment settlement currency\",\"counterparty\":\"Counterparty address\",\"payment\":\"Main payment settlement currency\",\"settlementId\":\"Main payment settlement id\",\"timestamp\":\"Main timestamp for TimeSlot\",\"verifier\":\"Payment verifier address\"}}},\"title\":\"Payment Aggregator contract is used to aggregate payments between counterparties in bilateral relationships. Those payments are defined per counterparties addresses (packed into one bytes32), main settlement currency and payment date. Contract linked to all product based contracts like Loan, Swap, etc.\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"addPaymentAggregatorUser(address)\":{\"notice\":\"Trigers only be contract ownerReverts on saving 0x0 address\"},\"constructor\":\"sets contract deployer as owner of this contract\",\"removePaymentAggregatorUser(address)\":{\"notice\":\"Trigers only be contract ownerReverts on removing non-existing payment aggregator user\"},\"setCloseOutNetting(address)\":{\"notice\":\"Trigers only be contract ownerReverts on saving 0x0 address\"},\"setMarkToMarket(address)\":{\"notice\":\"Trigers only be contract ownerReverts on saving 0x0 address\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/PaymentAggregator.sol\":\"PaymentAggregator\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/math/SafeMath.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\n/**\\n * @dev Wrappers over Solidity's arithmetic operations with added overflow\\n * checks.\\n *\\n * Arithmetic operations in Solidity wrap on overflow. This can easily result\\n * in bugs, because programmers usually assume that an overflow raises an\\n * error, which is the standard behavior in high level programming languages.\\n * `SafeMath` restores this intuition by reverting the transaction when an\\n * operation overflows.\\n *\\n * Using this library instead of the unchecked operations eliminates an entire\\n * class of bugs, so it's recommended to use it always.\\n */\\nlibrary SafeMath {\\n    /**\\n     * @dev Returns the addition of two unsigned integers, with an overflow flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryAdd(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        uint256 c = a + b;\\n        if (c < a) return (false, 0);\\n        return (true, c);\\n    }\\n\\n    /**\\n     * @dev Returns the substraction of two unsigned integers, with an overflow flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function trySub(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        if (b > a) return (false, 0);\\n        return (true, a - b);\\n    }\\n\\n    /**\\n     * @dev Returns the multiplication of two unsigned integers, with an overflow flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryMul(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the\\n        // benefit is lost if 'b' is also tested.\\n        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522\\n        if (a == 0) return (true, 0);\\n        uint256 c = a * b;\\n        if (c / a != b) return (false, 0);\\n        return (true, c);\\n    }\\n\\n    /**\\n     * @dev Returns the division of two unsigned integers, with a division by zero flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryDiv(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        if (b == 0) return (false, 0);\\n        return (true, a / b);\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers, with a division by zero flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryMod(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        if (b == 0) return (false, 0);\\n        return (true, a % b);\\n    }\\n\\n    /**\\n     * @dev Returns the addition of two unsigned integers, reverting on\\n     * overflow.\\n     *\\n     * Counterpart to Solidity's `+` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Addition cannot overflow.\\n     */\\n    function add(uint256 a, uint256 b) internal pure returns (uint256) {\\n        uint256 c = a + b;\\n        require(c >= a, \\\"SafeMath: addition overflow\\\");\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the subtraction of two unsigned integers, reverting on\\n     * overflow (when the result is negative).\\n     *\\n     * Counterpart to Solidity's `-` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Subtraction cannot overflow.\\n     */\\n    function sub(uint256 a, uint256 b) internal pure returns (uint256) {\\n        require(b <= a, \\\"SafeMath: subtraction overflow\\\");\\n        return a - b;\\n    }\\n\\n    /**\\n     * @dev Returns the multiplication of two unsigned integers, reverting on\\n     * overflow.\\n     *\\n     * Counterpart to Solidity's `*` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Multiplication cannot overflow.\\n     */\\n    function mul(uint256 a, uint256 b) internal pure returns (uint256) {\\n        if (a == 0) return 0;\\n        uint256 c = a * b;\\n        require(c / a == b, \\\"SafeMath: multiplication overflow\\\");\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the integer division of two unsigned integers, reverting on\\n     * division by zero. The result is rounded towards zero.\\n     *\\n     * Counterpart to Solidity's `/` operator. Note: this function uses a\\n     * `revert` opcode (which leaves remaining gas untouched) while Solidity\\n     * uses an invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function div(uint256 a, uint256 b) internal pure returns (uint256) {\\n        require(b > 0, \\\"SafeMath: division by zero\\\");\\n        return a / b;\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),\\n     * reverting when dividing by zero.\\n     *\\n     * Counterpart to Solidity's `%` operator. This function uses a `revert`\\n     * opcode (which leaves remaining gas untouched) while Solidity uses an\\n     * invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function mod(uint256 a, uint256 b) internal pure returns (uint256) {\\n        require(b > 0, \\\"SafeMath: modulo by zero\\\");\\n        return a % b;\\n    }\\n\\n    /**\\n     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on\\n     * overflow (when the result is negative).\\n     *\\n     * CAUTION: This function is deprecated because it requires allocating memory for the error\\n     * message unnecessarily. For custom revert reasons use {trySub}.\\n     *\\n     * Counterpart to Solidity's `-` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Subtraction cannot overflow.\\n     */\\n    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b <= a, errorMessage);\\n        return a - b;\\n    }\\n\\n    /**\\n     * @dev Returns the integer division of two unsigned integers, reverting with custom message on\\n     * division by zero. The result is rounded towards zero.\\n     *\\n     * CAUTION: This function is deprecated because it requires allocating memory for the error\\n     * message unnecessarily. For custom revert reasons use {tryDiv}.\\n     *\\n     * Counterpart to Solidity's `/` operator. Note: this function uses a\\n     * `revert` opcode (which leaves remaining gas untouched) while Solidity\\n     * uses an invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b > 0, errorMessage);\\n        return a / b;\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),\\n     * reverting with custom message when dividing by zero.\\n     *\\n     * CAUTION: This function is deprecated because it requires allocating memory for the error\\n     * message unnecessarily. For custom revert reasons use {tryMod}.\\n     *\\n     * Counterpart to Solidity's `%` operator. This function uses a `revert`\\n     * opcode (which leaves remaining gas untouched) while Solidity uses an\\n     * invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b > 0, errorMessage);\\n        return a % b;\\n    }\\n}\\n\",\"keccak256\":\"0xcc78a17dd88fa5a2edc60c8489e2f405c0913b377216a5b26b35656b2d0dab52\",\"license\":\"MIT\"},\"@openzeppelin/contracts/utils/Address.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.2 <0.8.0;\\n\\n/**\\n * @dev Collection of functions related to the address type\\n */\\nlibrary Address {\\n    /**\\n     * @dev Returns true if `account` is a contract.\\n     *\\n     * [IMPORTANT]\\n     * ====\\n     * It is unsafe to assume that an address for which this function returns\\n     * false is an externally-owned account (EOA) and not a contract.\\n     *\\n     * Among others, `isContract` will return false for the following\\n     * types of addresses:\\n     *\\n     *  - an externally-owned account\\n     *  - a contract in construction\\n     *  - an address where a contract will be created\\n     *  - an address where a contract lived, but was destroyed\\n     * ====\\n     */\\n    function isContract(address account) internal view returns (bool) {\\n        // This method relies on extcodesize, which returns 0 for contracts in\\n        // construction, since the code is only stored at the end of the\\n        // constructor execution.\\n\\n        uint256 size;\\n        // solhint-disable-next-line no-inline-assembly\\n        assembly { size := extcodesize(account) }\\n        return size > 0;\\n    }\\n\\n    /**\\n     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to\\n     * `recipient`, forwarding all available gas and reverting on errors.\\n     *\\n     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost\\n     * of certain opcodes, possibly making contracts go over the 2300 gas limit\\n     * imposed by `transfer`, making them unable to receive funds via\\n     * `transfer`. {sendValue} removes this limitation.\\n     *\\n     * https://diligence.consensys.net/posts/2019/09/stop-using-soliditys-transfer-now/[Learn more].\\n     *\\n     * IMPORTANT: because control is transferred to `recipient`, care must be\\n     * taken to not create reentrancy vulnerabilities. Consider using\\n     * {ReentrancyGuard} or the\\n     * https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].\\n     */\\n    function sendValue(address payable recipient, uint256 amount) internal {\\n        require(address(this).balance >= amount, \\\"Address: insufficient balance\\\");\\n\\n        // solhint-disable-next-line avoid-low-level-calls, avoid-call-value\\n        (bool success, ) = recipient.call{ value: amount }(\\\"\\\");\\n        require(success, \\\"Address: unable to send value, recipient may have reverted\\\");\\n    }\\n\\n    /**\\n     * @dev Performs a Solidity function call using a low level `call`. A\\n     * plain`call` is an unsafe replacement for a function call: use this\\n     * function instead.\\n     *\\n     * If `target` reverts with a revert reason, it is bubbled up by this\\n     * function (like regular Solidity function calls).\\n     *\\n     * Returns the raw returned data. To convert to the expected return value,\\n     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].\\n     *\\n     * Requirements:\\n     *\\n     * - `target` must be a contract.\\n     * - calling `target` with `data` must not revert.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCall(address target, bytes memory data) internal returns (bytes memory) {\\n      return functionCall(target, data, \\\"Address: low-level call failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with\\n     * `errorMessage` as a fallback revert reason when `target` reverts.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {\\n        return functionCallWithValue(target, data, 0, errorMessage);\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],\\n     * but also transferring `value` wei to `target`.\\n     *\\n     * Requirements:\\n     *\\n     * - the calling contract must have an ETH balance of at least `value`.\\n     * - the called Solidity function must be `payable`.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {\\n        return functionCallWithValue(target, data, value, \\\"Address: low-level call with value failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but\\n     * with `errorMessage` as a fallback revert reason when `target` reverts.\\n     *\\n     * _Available since v3.1._\\n     */\\n    function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage) internal returns (bytes memory) {\\n        require(address(this).balance >= value, \\\"Address: insufficient balance for call\\\");\\n        require(isContract(target), \\\"Address: call to non-contract\\\");\\n\\n        // solhint-disable-next-line avoid-low-level-calls\\n        (bool success, bytes memory returndata) = target.call{ value: value }(data);\\n        return _verifyCallResult(success, returndata, errorMessage);\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],\\n     * but performing a static call.\\n     *\\n     * _Available since v3.3._\\n     */\\n    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {\\n        return functionStaticCall(target, data, \\\"Address: low-level static call failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],\\n     * but performing a static call.\\n     *\\n     * _Available since v3.3._\\n     */\\n    function functionStaticCall(address target, bytes memory data, string memory errorMessage) internal view returns (bytes memory) {\\n        require(isContract(target), \\\"Address: static call to non-contract\\\");\\n\\n        // solhint-disable-next-line avoid-low-level-calls\\n        (bool success, bytes memory returndata) = target.staticcall(data);\\n        return _verifyCallResult(success, returndata, errorMessage);\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],\\n     * but performing a delegate call.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {\\n        return functionDelegateCall(target, data, \\\"Address: low-level delegate call failed\\\");\\n    }\\n\\n    /**\\n     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],\\n     * but performing a delegate call.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function functionDelegateCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {\\n        require(isContract(target), \\\"Address: delegate call to non-contract\\\");\\n\\n        // solhint-disable-next-line avoid-low-level-calls\\n        (bool success, bytes memory returndata) = target.delegatecall(data);\\n        return _verifyCallResult(success, returndata, errorMessage);\\n    }\\n\\n    function _verifyCallResult(bool success, bytes memory returndata, string memory errorMessage) private pure returns(bytes memory) {\\n        if (success) {\\n            return returndata;\\n        } else {\\n            // Look for revert reason and bubble it up if present\\n            if (returndata.length > 0) {\\n                // The easiest way to bubble the revert reason is using memory via assembly\\n\\n                // solhint-disable-next-line no-inline-assembly\\n                assembly {\\n                    let returndata_size := mload(returndata)\\n                    revert(add(32, returndata), returndata_size)\\n                }\\n            } else {\\n                revert(errorMessage);\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x28911e614500ae7c607a432a709d35da25f3bc5ddc8bd12b278b66358070c0ea\",\"license\":\"MIT\"},\"@openzeppelin/contracts/utils/EnumerableSet.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\n/**\\n * @dev Library for managing\\n * https://en.wikipedia.org/wiki/Set_(abstract_data_type)[sets] of primitive\\n * types.\\n *\\n * Sets have the following properties:\\n *\\n * - Elements are added, removed, and checked for existence in constant time\\n * (O(1)).\\n * - Elements are enumerated in O(n). No guarantees are made on the ordering.\\n *\\n * ```\\n * contract Example {\\n *     // Add the library methods\\n *     using EnumerableSet for EnumerableSet.AddressSet;\\n *\\n *     // Declare a set state variable\\n *     EnumerableSet.AddressSet private mySet;\\n * }\\n * ```\\n *\\n * As of v3.3.0, sets of type `bytes32` (`Bytes32Set`), `address` (`AddressSet`)\\n * and `uint256` (`UintSet`) are supported.\\n */\\nlibrary EnumerableSet {\\n    // To implement this library for multiple types with as little code\\n    // repetition as possible, we write it in terms of a generic Set type with\\n    // bytes32 values.\\n    // The Set implementation uses private functions, and user-facing\\n    // implementations (such as AddressSet) are just wrappers around the\\n    // underlying Set.\\n    // This means that we can only create new EnumerableSets for types that fit\\n    // in bytes32.\\n\\n    struct Set {\\n        // Storage of set values\\n        bytes32[] _values;\\n\\n        // Position of the value in the `values` array, plus 1 because index 0\\n        // means a value is not in the set.\\n        mapping (bytes32 => uint256) _indexes;\\n    }\\n\\n    /**\\n     * @dev Add a value to a set. O(1).\\n     *\\n     * Returns true if the value was added to the set, that is if it was not\\n     * already present.\\n     */\\n    function _add(Set storage set, bytes32 value) private returns (bool) {\\n        if (!_contains(set, value)) {\\n            set._values.push(value);\\n            // The value is stored at length-1, but we add 1 to all indexes\\n            // and use 0 as a sentinel value\\n            set._indexes[value] = set._values.length;\\n            return true;\\n        } else {\\n            return false;\\n        }\\n    }\\n\\n    /**\\n     * @dev Removes a value from a set. O(1).\\n     *\\n     * Returns true if the value was removed from the set, that is if it was\\n     * present.\\n     */\\n    function _remove(Set storage set, bytes32 value) private returns (bool) {\\n        // We read and store the value's index to prevent multiple reads from the same storage slot\\n        uint256 valueIndex = set._indexes[value];\\n\\n        if (valueIndex != 0) { // Equivalent to contains(set, value)\\n            // To delete an element from the _values array in O(1), we swap the element to delete with the last one in\\n            // the array, and then remove the last element (sometimes called as 'swap and pop').\\n            // This modifies the order of the array, as noted in {at}.\\n\\n            uint256 toDeleteIndex = valueIndex - 1;\\n            uint256 lastIndex = set._values.length - 1;\\n\\n            // When the value to delete is the last one, the swap operation is unnecessary. However, since this occurs\\n            // so rarely, we still do the swap anyway to avoid the gas cost of adding an 'if' statement.\\n\\n            bytes32 lastvalue = set._values[lastIndex];\\n\\n            // Move the last value to the index where the value to delete is\\n            set._values[toDeleteIndex] = lastvalue;\\n            // Update the index for the moved value\\n            set._indexes[lastvalue] = toDeleteIndex + 1; // All indexes are 1-based\\n\\n            // Delete the slot where the moved value was stored\\n            set._values.pop();\\n\\n            // Delete the index for the deleted slot\\n            delete set._indexes[value];\\n\\n            return true;\\n        } else {\\n            return false;\\n        }\\n    }\\n\\n    /**\\n     * @dev Returns true if the value is in the set. O(1).\\n     */\\n    function _contains(Set storage set, bytes32 value) private view returns (bool) {\\n        return set._indexes[value] != 0;\\n    }\\n\\n    /**\\n     * @dev Returns the number of values on the set. O(1).\\n     */\\n    function _length(Set storage set) private view returns (uint256) {\\n        return set._values.length;\\n    }\\n\\n   /**\\n    * @dev Returns the value stored at position `index` in the set. O(1).\\n    *\\n    * Note that there are no guarantees on the ordering of values inside the\\n    * array, and it may change when more values are added or removed.\\n    *\\n    * Requirements:\\n    *\\n    * - `index` must be strictly less than {length}.\\n    */\\n    function _at(Set storage set, uint256 index) private view returns (bytes32) {\\n        require(set._values.length > index, \\\"EnumerableSet: index out of bounds\\\");\\n        return set._values[index];\\n    }\\n\\n    // Bytes32Set\\n\\n    struct Bytes32Set {\\n        Set _inner;\\n    }\\n\\n    /**\\n     * @dev Add a value to a set. O(1).\\n     *\\n     * Returns true if the value was added to the set, that is if it was not\\n     * already present.\\n     */\\n    function add(Bytes32Set storage set, bytes32 value) internal returns (bool) {\\n        return _add(set._inner, value);\\n    }\\n\\n    /**\\n     * @dev Removes a value from a set. O(1).\\n     *\\n     * Returns true if the value was removed from the set, that is if it was\\n     * present.\\n     */\\n    function remove(Bytes32Set storage set, bytes32 value) internal returns (bool) {\\n        return _remove(set._inner, value);\\n    }\\n\\n    /**\\n     * @dev Returns true if the value is in the set. O(1).\\n     */\\n    function contains(Bytes32Set storage set, bytes32 value) internal view returns (bool) {\\n        return _contains(set._inner, value);\\n    }\\n\\n    /**\\n     * @dev Returns the number of values in the set. O(1).\\n     */\\n    function length(Bytes32Set storage set) internal view returns (uint256) {\\n        return _length(set._inner);\\n    }\\n\\n   /**\\n    * @dev Returns the value stored at position `index` in the set. O(1).\\n    *\\n    * Note that there are no guarantees on the ordering of values inside the\\n    * array, and it may change when more values are added or removed.\\n    *\\n    * Requirements:\\n    *\\n    * - `index` must be strictly less than {length}.\\n    */\\n    function at(Bytes32Set storage set, uint256 index) internal view returns (bytes32) {\\n        return _at(set._inner, index);\\n    }\\n\\n    // AddressSet\\n\\n    struct AddressSet {\\n        Set _inner;\\n    }\\n\\n    /**\\n     * @dev Add a value to a set. O(1).\\n     *\\n     * Returns true if the value was added to the set, that is if it was not\\n     * already present.\\n     */\\n    function add(AddressSet storage set, address value) internal returns (bool) {\\n        return _add(set._inner, bytes32(uint256(uint160(value))));\\n    }\\n\\n    /**\\n     * @dev Removes a value from a set. O(1).\\n     *\\n     * Returns true if the value was removed from the set, that is if it was\\n     * present.\\n     */\\n    function remove(AddressSet storage set, address value) internal returns (bool) {\\n        return _remove(set._inner, bytes32(uint256(uint160(value))));\\n    }\\n\\n    /**\\n     * @dev Returns true if the value is in the set. O(1).\\n     */\\n    function contains(AddressSet storage set, address value) internal view returns (bool) {\\n        return _contains(set._inner, bytes32(uint256(uint160(value))));\\n    }\\n\\n    /**\\n     * @dev Returns the number of values in the set. O(1).\\n     */\\n    function length(AddressSet storage set) internal view returns (uint256) {\\n        return _length(set._inner);\\n    }\\n\\n   /**\\n    * @dev Returns the value stored at position `index` in the set. O(1).\\n    *\\n    * Note that there are no guarantees on the ordering of values inside the\\n    * array, and it may change when more values are added or removed.\\n    *\\n    * Requirements:\\n    *\\n    * - `index` must be strictly less than {length}.\\n    */\\n    function at(AddressSet storage set, uint256 index) internal view returns (address) {\\n        return address(uint160(uint256(_at(set._inner, index))));\\n    }\\n\\n\\n    // UintSet\\n\\n    struct UintSet {\\n        Set _inner;\\n    }\\n\\n    /**\\n     * @dev Add a value to a set. O(1).\\n     *\\n     * Returns true if the value was added to the set, that is if it was not\\n     * already present.\\n     */\\n    function add(UintSet storage set, uint256 value) internal returns (bool) {\\n        return _add(set._inner, bytes32(value));\\n    }\\n\\n    /**\\n     * @dev Removes a value from a set. O(1).\\n     *\\n     * Returns true if the value was removed from the set, that is if it was\\n     * present.\\n     */\\n    function remove(UintSet storage set, uint256 value) internal returns (bool) {\\n        return _remove(set._inner, bytes32(value));\\n    }\\n\\n    /**\\n     * @dev Returns true if the value is in the set. O(1).\\n     */\\n    function contains(UintSet storage set, uint256 value) internal view returns (bool) {\\n        return _contains(set._inner, bytes32(value));\\n    }\\n\\n    /**\\n     * @dev Returns the number of values on the set. O(1).\\n     */\\n    function length(UintSet storage set) internal view returns (uint256) {\\n        return _length(set._inner);\\n    }\\n\\n   /**\\n    * @dev Returns the value stored at position `index` in the set. O(1).\\n    *\\n    * Note that there are no guarantees on the ordering of values inside the\\n    * array, and it may change when more values are added or removed.\\n    *\\n    * Requirements:\\n    *\\n    * - `index` must be strictly less than {length}.\\n    */\\n    function at(UintSet storage set, uint256 index) internal view returns (uint256) {\\n        return uint256(_at(set._inner, index));\\n    }\\n}\\n\",\"keccak256\":\"0x1562cd9922fbf739edfb979f506809e2743789cbde3177515542161c3d04b164\",\"license\":\"MIT\"},\"contracts/PaymentAggregator.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\npragma experimental ABIEncoderV2;\\n\\nimport \\\"@openzeppelin/contracts/math/SafeMath.sol\\\";\\nimport \\\"@openzeppelin/contracts/utils/EnumerableSet.sol\\\";\\nimport \\\"@openzeppelin/contracts/utils/Address.sol\\\";\\nimport \\\"./ProtocolTypes.sol\\\";\\nimport \\\"./libraries/TimeSlot.sol\\\";\\nimport \\\"./libraries/AddressPacking.sol\\\";\\nimport \\\"./libraries/BokkyPooBahsDateTimeLibrary.sol\\\";\\nimport \\\"./interfaces/ICloseOutNetting.sol\\\";\\nimport \\\"./interfaces/IMarkToMarket.sol\\\";\\nimport \\\"./interfaces/IPaymentAggregator.sol\\\";\\nimport \\\"./interfaces/ISettlementEngine.sol\\\";\\n\\n/**\\n * @title Payment Aggregator contract is used to aggregate payments\\n * between counterparties in bilateral relationships. Those payments\\n * are defined per counterparties addresses (packed into one bytes32),\\n * main settlement currency and payment date.\\n *\\n * Contract linked to all product based contracts like Loan, Swap, etc.\\n */\\ncontract PaymentAggregator is IPaymentAggregator, ProtocolTypes {\\n    using SafeMath for uint256;\\n    using Address for address;\\n    using TimeSlot for TimeSlot.Slot;\\n    using EnumerableSet for EnumerableSet.AddressSet;\\n    using EnumerableSet for EnumerableSet.Bytes32Set;\\n\\n    address public override owner;\\n    uint256 public override settlementWindow = 2;\\n    uint256 constant MAXPAYNUM = 6;\\n\\n    // Linked contract addresses\\n    EnumerableSet.AddressSet private paymentAggregatorUsers;\\n    ICloseOutNetting private closeOutNetting;\\n    IMarkToMarket private markToMarket;\\n    ISettlementEngine private settlementEngine;\\n\\n    // Mapping structure for storing TimeSlots\\n    mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) _timeSlots;\\n    mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => EnumerableSet.Bytes32Set)))\\n        private deals;\\n\\n    /**\\n     * @dev Modifier to make a function callable only by contract owner.\\n     */\\n    modifier onlyOwner() {\\n        require(msg.sender == owner);\\n        _;\\n    }\\n\\n    /**\\n     * @dev Modifier to check if msg.sender is payment aggregator user\\n     */\\n    modifier acceptedContract() {\\n        require(\\n            paymentAggregatorUsers.contains(msg.sender),\\n            \\\"not allowed to use payment aggregator\\\"\\n        );\\n        _;\\n    }\\n\\n    /**\\n     * @dev Modifier to make a function callable only by passing contract address checks.\\n     */\\n    modifier onlyContractAddr(address addr) {\\n        require(addr != address(0), \\\"INVALID_ADDRESS\\\");\\n        require(addr.isContract(), \\\"NOT_CONTRACT\\\");\\n        _;\\n    }\\n\\n    /**\\n     * @dev Contract constructor function.\\n     *\\n     * @notice sets contract deployer as owner of this contract\\n     */\\n    constructor() public {\\n        owner = msg.sender;\\n    }\\n\\n    /**\\n     * @dev Trigers to add contract address to payment aggregator users address set\\n     * @param _user Payment aggregator user smart contract address\\n     *\\n     * @notice Trigers only be contract owner\\n     * @notice Reverts on saving 0x0 address\\n     */\\n    function addPaymentAggregatorUser(address _user)\\n        public\\n        override\\n        onlyOwner\\n        returns (bool)\\n    {\\n        require(_user != address(0), \\\"Zero address\\\");\\n        require(_user.isContract(), \\\"Can't add non-contract address\\\");\\n        require(\\n            !paymentAggregatorUsers.contains(_user),\\n            \\\"Can't add existing address\\\"\\n        );\\n        return paymentAggregatorUsers.add(_user);\\n    }\\n\\n    /**\\n     * @dev Trigers to remove payment aggregator user from address set\\n     * @param _user Payment aggregator user smart contract address\\n     *\\n     * @notice Trigers only be contract owner\\n     * @notice Reverts on removing non-existing payment aggregator user\\n     */\\n    function removePaymentAggregatorUser(address _user)\\n        public\\n        override\\n        onlyOwner\\n        returns (bool)\\n    {\\n        require(\\n            paymentAggregatorUsers.contains(_user),\\n            \\\"Can't remove non-existing user\\\"\\n        );\\n        return paymentAggregatorUsers.remove(_user);\\n    }\\n\\n    /**\\n     * @dev Trigers to check if provided `addr` is a payment aggregator user from address set\\n     * @param _user Contract address to check if it's a payment aggregator user\\n     *\\n     */\\n    function isPaymentAggregatorUser(address _user)\\n        public\\n        view\\n        override\\n        returns (bool)\\n    {\\n        return paymentAggregatorUsers.contains(_user);\\n    }\\n\\n    /**\\n     * @dev Trigers to set close out netting smart contract\\n     * @param _contract CloseOutNetting smart contract address\\n     *\\n     * @notice Trigers only be contract owner\\n     * @notice Reverts on saving 0x0 address\\n     */\\n    function setCloseOutNetting(address _contract)\\n        public\\n        onlyOwner\\n        onlyContractAddr(_contract)\\n    {\\n        emit UpdateCloseOutNetting(address(closeOutNetting), _contract);\\n        closeOutNetting = ICloseOutNetting(_contract);\\n    }\\n\\n    /**\\n     * @dev Trigers to set mark to market smart contract\\n     * @param _contract MarkToMarket smart contract address\\n     *\\n     * @notice Trigers only be contract owner\\n     * @notice Reverts on saving 0x0 address\\n     */\\n    function setMarkToMarket(address _contract)\\n        public\\n        onlyOwner\\n        onlyContractAddr(_contract)\\n    {\\n        emit UpdateMarkToMarket(address(markToMarket), _contract);\\n        markToMarket = IMarkToMarket(_contract);\\n    }\\n\\n    function setSettlementEngine(address _contract)\\n        public\\n        onlyOwner\\n        onlyContractAddr(_contract)\\n    {\\n        emit UpdateSettlementEngine(address(settlementEngine), _contract);\\n        settlementEngine = ISettlementEngine(_contract);\\n    }\\n\\n    struct TimeSlotPaymentsLocalVars {\\n        bytes32 packedAddrs;\\n        bool flipped;\\n        uint256 totalPayment0;\\n        uint256 totalPayment1;\\n        bytes32 slotPosition;\\n        uint256 year;\\n        uint256 month;\\n        uint256 day;\\n    }\\n\\n    /**\\n     * @dev Triggered to add new payments for a deal\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main settlement currency in a deal\\n     * @param dealId Deal unique ID with prefix\\n     * @param timestamps Array of timestamps for timeslot identification\\n     * @param payments0 Array of cashflows owed by the first party\\n     * @param payments1 Array of cashflows owed by the second party\\n     */\\n    function registerPayments(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 dealId,\\n        uint256[] memory timestamps,\\n        uint256[] memory payments0,\\n        uint256[] memory payments1\\n    ) external override acceptedContract {\\n        TimeSlotPaymentsLocalVars memory vars;\\n        (vars.packedAddrs, ) = AddressPacking.pack(party0, party1);\\n\\n        for (uint256 i = 0; i < timestamps.length; i++) {\\n            if (timestamps[i] == 0) continue;\\n\\n            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary\\n                .timestampToDate(timestamps[i]);\\n            vars.slotPosition = TimeSlot.position(\\n                vars.year,\\n                vars.month,\\n                vars.day\\n            );\\n            deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);\\n\\n            if (payments0[i] > 0) {\\n                vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);\\n            }\\n\\n            if (payments1[i] > 0) {\\n                vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);\\n            }\\n\\n            TimeSlot.addPayment(\\n                _timeSlots,\\n                party0,\\n                party1,\\n                ccy,\\n                vars.slotPosition,\\n                payments0[i],\\n                payments1[i]\\n            );\\n\\n            emit RegisterPayment(\\n                party0,\\n                party1,\\n                ccy,\\n                vars.slotPosition,\\n                vars.year,\\n                vars.month,\\n                vars.day,\\n                payments0[i],\\n                payments1[i]\\n            );\\n        }\\n\\n        closeOutNetting.addPayments(\\n            party0,\\n            party1,\\n            ccy,\\n            vars.totalPayment0,\\n            vars.totalPayment1\\n        );\\n    }\\n\\n    struct PaymentSettlementLocalVars {\\n        bytes32 slotPosition;\\n        uint256 payment;\\n        address verifier;\\n        address counterparty;\\n        bytes32 ccy;\\n        bytes32 settlementId;\\n        uint256 year;\\n        uint256 month;\\n        uint256 day;\\n        uint256 totalPayment0;\\n        uint256 totalPayment1;\\n        bool isSettled;\\n    }\\n\\n    /**\\n     * @dev External function to verify payment by msg.sender, uses timestamp to identify TimeSlot.\\n     * @param verifier Payment verifier address\\n     * @param counterparty Counterparty address\\n     * @param ccy Main payment settlement currency\\n     * @param timestamp Main timestamp for TimeSlot\\n     * @param payment Main payment settlement currency\\n     * @param settlementId Main payment settlement id\\n     */\\n    function verifyPayment(\\n        address verifier,\\n        address counterparty,\\n        bytes32 ccy,\\n        uint256 timestamp,\\n        uint256 payment,\\n        bytes32 settlementId\\n    ) external override {\\n        require(_onlySettlementEngine(), \\\"NOT_SETTLEMENT_ENGINE\\\");\\n        require(checkSettlementWindow(timestamp), \\\"OUT_OF_SETTLEMENT_WINDOW\\\");\\n        PaymentSettlementLocalVars memory vars;\\n\\n        vars.payment = payment;\\n        vars.settlementId = settlementId;\\n        vars.verifier = verifier;\\n        vars.counterparty = counterparty;\\n        vars.ccy = ccy;\\n\\n        (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary\\n            .timestampToDate(timestamp);\\n        vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);\\n\\n        TimeSlot.verifyPayment(\\n            _timeSlots,\\n            vars.verifier,\\n            vars.counterparty,\\n            vars.ccy,\\n            vars.slotPosition,\\n            vars.payment,\\n            vars.settlementId\\n        );\\n\\n        emit VerifyPayment(\\n            vars.verifier,\\n            vars.counterparty,\\n            vars.ccy,\\n            vars.slotPosition,\\n            vars.year,\\n            vars.month,\\n            vars.day,\\n            vars.payment,\\n            vars.settlementId\\n        );\\n\\n        vars.isSettled = TimeSlot.isSettled(\\n            _timeSlots,\\n            vars.verifier,\\n            vars.counterparty,\\n            vars.ccy,\\n            vars.slotPosition\\n        );\\n\\n        if (vars.isSettled) {\\n            _settlePayment(vars);\\n        }\\n    }\\n\\n    /**\\n     * @dev Internal function to settle payment using payment settlement local variables.\\n     * @param vars Local variables used in verifyPayment function\\n     */\\n    function _settlePayment(PaymentSettlementLocalVars memory vars) internal {\\n        // TODO: Rework the settlement workflow to reduce gas consumption\\n        (vars.totalPayment0, vars.totalPayment1, , , , ) = TimeSlot.get(\\n            _timeSlots,\\n            vars.verifier,\\n            vars.counterparty,\\n            vars.ccy,\\n            vars.year,\\n            vars.month,\\n            vars.day\\n        );\\n\\n        bytes32[] memory dealIds = getDealsFromSlot(\\n            vars.verifier,\\n            vars.counterparty,\\n            vars.ccy,\\n            vars.slotPosition\\n        );\\n        markToMarket.updatePVs(dealIds);\\n\\n        closeOutNetting.removePayments(\\n            vars.verifier,\\n            vars.counterparty,\\n            vars.ccy,\\n            vars.totalPayment0,\\n            vars.totalPayment1\\n        );\\n\\n        emit SettlePayment(\\n            vars.verifier,\\n            vars.counterparty,\\n            vars.ccy,\\n            vars.slotPosition,\\n            vars.year,\\n            vars.month,\\n            vars.day,\\n            vars.settlementId\\n        );\\n    }\\n\\n    /**\\n     * @dev Triggered to remove existing payments for a deal\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main settlement currency in a deal\\n     * @param dealId Deal unique ID with prefix\\n     * @param timestamps Array of timestamps for timeslot identification\\n     * @param payments0 Array of cashflows owed by the first party\\n     * @param payments1 Array of cashflows owed by the second party\\n     */\\n    function removePayments(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 dealId,\\n        uint256[] calldata timestamps,\\n        uint256[] calldata payments0,\\n        uint256[] calldata payments1\\n    ) external override acceptedContract {\\n        TimeSlotPaymentsLocalVars memory vars;\\n        (vars.packedAddrs, ) = AddressPacking.pack(party0, party1);\\n\\n        for (uint256 i = 0; i < timestamps.length; i++) {\\n            if (timestamps[i] == 0) continue;\\n\\n            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary\\n                .timestampToDate(timestamps[i]);\\n            vars.slotPosition = TimeSlot.position(\\n                vars.year,\\n                vars.month,\\n                vars.day\\n            );\\n\\n            require(\\n                deals[vars.packedAddrs][ccy][vars.slotPosition].remove(dealId),\\n                \\\"NON_REGISTERED_DEAL\\\"\\n            );\\n\\n            vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);\\n            vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);\\n\\n            TimeSlot.removePayment(\\n                _timeSlots,\\n                party0,\\n                party1,\\n                ccy,\\n                vars.slotPosition,\\n                payments0[i],\\n                payments1[i]\\n            );\\n\\n            emit RemovePayment(\\n                party0,\\n                party1,\\n                ccy,\\n                vars.slotPosition,\\n                vars.year,\\n                vars.month,\\n                vars.day,\\n                payments0[i],\\n                payments1[i]\\n            );\\n        }\\n\\n        closeOutNetting.removePayments(\\n            party0,\\n            party1,\\n            ccy,\\n            vars.totalPayment0,\\n            vars.totalPayment1\\n        );\\n    }\\n\\n    /**\\n     * @dev Returns the time slot between parties using slot id.\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main payment settlement currency\\n     */\\n    function getTimeSlotByDate(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day\\n    )\\n        public\\n        view\\n        returns (\\n            uint256,\\n            uint256,\\n            uint256,\\n            uint256,\\n            bool,\\n            bool\\n        )\\n    {\\n        return TimeSlot.get(_timeSlots, party0, party1, ccy, year, month, day);\\n    }\\n\\n    /**\\n     * @dev Returns the time slot between parties using slot id.\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main payment settlement currency\\n     * @param slot TimeSlot position\\n     */\\n    function getTimeSlotBySlotId(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slot\\n    )\\n        public\\n        view\\n        returns (\\n            uint256,\\n            uint256,\\n            uint256,\\n            uint256,\\n            bool,\\n            bool\\n        )\\n    {\\n        return TimeSlot.getBySlotId(_timeSlots, party0, party1, ccy, slot);\\n    }\\n\\n    /**\\n     * @dev Returns the time slot between parties using slot id.\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main payment settlement currency\\n     * @param year Calendar year of the settlement\\n     * @param month Calendar month of the settlement\\n     * @param day Calendar day of the settlement\\n     * @param settlementId Settlement payment confirmation identifier\\n     */\\n    function getTimeSlotPaymentConfirmation(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        bytes32 settlementId\\n    ) public view returns (address, uint256) {\\n        return\\n            TimeSlot.getPaymentConfirmation(\\n                _timeSlots,\\n                party0,\\n                party1,\\n                ccy,\\n                year,\\n                month,\\n                day,\\n                settlementId\\n            );\\n    }\\n\\n    /**\\n     * @dev Returns the time slot between parties using slot id.\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main payment settlement currency\\n     * @param slot TimeSlot position\\n     * @param settlementId Settlement payment confirmation identifier\\n     */\\n    function getTimeSlotPaymentConfirmationById(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slot,\\n        bytes32 settlementId\\n    ) public view returns (address, uint256) {\\n        return\\n            TimeSlot.getPaymentConfirmationById(\\n                _timeSlots,\\n                party0,\\n                party1,\\n                ccy,\\n                slot,\\n                settlementId\\n            );\\n    }\\n\\n    /**\\n     * @dev Internal function to get TimeSlot position after adding days\\n     * @param timestamp Timestamp to add days\\n     * @param numSeconds number of seconds to add\\n     * @return Updated timestamp and TimeSlot position\\n     */\\n    function _slotPositionPlusDays(uint256 timestamp, uint256 numSeconds)\\n        internal\\n        pure\\n        returns (bytes32, uint256)\\n    {\\n        uint256 numDays = numSeconds.div(86400);\\n        timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);\\n        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary\\n            .timestampToDate(timestamp);\\n        bytes32 slotPosition = TimeSlot.position(year, month, day);\\n\\n        return (slotPosition, timestamp);\\n    }\\n\\n    /**\\n     * @dev Internal function to get TimeSlot position\\n     * @param timestamp Timestamp for conversion\\n     * @return TimeSlot position\\n     */\\n    function _slotPosition(uint256 timestamp) internal pure returns (bytes32) {\\n        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary\\n            .timestampToDate(timestamp);\\n        bytes32 slotPosition = TimeSlot.position(year, month, day);\\n\\n        return slotPosition;\\n    }\\n\\n    /**\\n     * @dev Triggers settlement status of the time slot\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main payment settlement currency\\n     * @param timestamp TimeSlot timestamp\\n     * @return status Boolean if slot was settled\\n     */\\n    function isSettled(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 timestamp\\n    ) external view override returns (bool status) {\\n        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary\\n            .timestampToDate(timestamp);\\n        bytes32 slotPosition = TimeSlot.position(year, month, day);\\n\\n        status = TimeSlot.isSettled(\\n            _timeSlots,\\n            party0,\\n            party1,\\n            ccy,\\n            slotPosition\\n        );\\n    }\\n\\n    /**\\n     * @dev Internal function to check if settlement payment is within available timeline\\n     * @param targetTime target time for settlement of time slot\\n     * @return Boolean if slot within the settlement window\\n     */\\n    function checkSettlementWindow(uint256 targetTime)\\n        public\\n        view\\n        override\\n        returns (bool)\\n    {\\n        uint256 time = block.timestamp;\\n        uint256 delta = BokkyPooBahsDateTimeLibrary.diffDays(time, targetTime);\\n\\n        return !(delta > settlementWindow);\\n    }\\n\\n    function getDealsFromSlot(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slotPosition\\n    ) public view override returns (bytes32[] memory) {\\n        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);\\n        EnumerableSet.Bytes32Set storage set = deals[packedAddrs][ccy][\\n            slotPosition\\n        ];\\n\\n        uint256 numDeals = set.length();\\n        bytes32[] memory dealIds = new bytes32[](numDeals);\\n\\n        for (uint256 i = 0; i < numDeals; i++) {\\n            bytes32 deal = set.at(i);\\n            dealIds[i] = deal;\\n        }\\n\\n        return dealIds;\\n    }\\n\\n    function _onlySettlementEngine() internal view returns (bool) {\\n        return msg.sender == address(settlementEngine);\\n    }\\n}\\n\",\"keccak256\":\"0x3eb0aab077292a62615dbeafe5a401b33a181626b4705966e37eac63a16a9336\",\"license\":\"MIT\"},\"contracts/ProtocolTypes.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\n\\n/**\\n * @dev ProtocolTypes is a base-level contract that holds common Secured Finance protocol types\\n * @author Secured Finance\\n */\\ncontract ProtocolTypes {\\n    // Constant values\\n    uint8 internal constant NUMCCY = 3;\\n    uint8 internal constant NUMTERM = 6;\\n    uint8 internal constant NUMDF = 7; // number of discount factors\\n    uint256 internal constant BP = 10000; // basis point\\n\\n    uint256 internal constant PCT = 10000; // percentage point in basis\\n    uint256 internal constant PENALTYLEVEL = 1000; // 10% settlement failure penalty\\n    uint256 internal constant MKTMAKELEVEL = 2000; // 20% for market making\\n\\n    // Lending market common types\\n    enum Side {\\n        LEND,\\n        BORROW\\n    }\\n    enum Ccy {\\n        ETH,\\n        FIL,\\n        USDC,\\n        BTC\\n    }\\n\\n    // Loan common types\\n    enum LoanState {\\n        REGISTERED,\\n        WORKING,\\n        DUE,\\n        PAST_DUE,\\n        CLOSED,\\n        TERMINATED\\n    }\\n    enum DFTERM {\\n        _3m,\\n        _6m,\\n        _1y,\\n        _2y,\\n        _3y,\\n        _4y,\\n        _5y\\n    }\\n\\n    // Collateral common types\\n    enum CollateralState {\\n        EMPTY,\\n        AVAILABLE,\\n        IN_USE,\\n        MARGIN_CALL,\\n        LIQUIDATION_IN_PROGRESS,\\n        LIQUIDATION\\n    }\\n\\n    // FXMarket common types\\n    enum CcyPair {\\n        FILETH,\\n        FILUSDC,\\n        ETHUSDC,\\n        BTCUSDC,\\n        BTCETH,\\n        BTCFIL\\n    }\\n    enum FXSide {\\n        BID,\\n        OFFER\\n    }\\n\\n    enum PaymentFrequency {\\n        ANNUAL,\\n        SEMI_ANNUAL,\\n        QUARTERLY,\\n        MONTHLY,\\n        FORWARD\\n    }\\n}\\n\",\"keccak256\":\"0x72de205a94aefa6e5b79074f603b8056535f99918af5112343156e79b7eadd83\",\"license\":\"MIT\"},\"contracts/interfaces/ICloseOutNetting.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\npragma experimental ABIEncoderV2;\\n\\ninterface ICloseOutNetting {\\n    event AddCloseOutPayments(\\n        address indexed party0,\\n        address indexed party1,\\n        bytes32 ccy,\\n        uint256 payment0,\\n        uint256 payment1\\n    );\\n    event RemoveCloseOutPayments(\\n        address indexed party0,\\n        address indexed party1,\\n        bytes32 ccy,\\n        uint256 payment0,\\n        uint256 payment1\\n    );\\n    event SettleCloseOut(\\n        address indexed party0,\\n        address indexed party1,\\n        bytes32 ccy,\\n        uint256 netPayment,\\n        bytes32 txHash\\n    );\\n    event UpdateCollateralAggregator(\\n        address indexed prevAddr,\\n        address indexed addr\\n    );\\n    event UpdatePaymentAggregator(\\n        address indexed prevAddr,\\n        address indexed addr\\n    );\\n    event VerifyCloseOut(\\n        address indexed party0,\\n        address indexed party1,\\n        bytes32 ccy,\\n        uint256 netPayment,\\n        bytes32 txHash\\n    );\\n\\n    function addPayments(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 payment0,\\n        uint256 payment1\\n    ) external;\\n\\n    function checkDefault(address _party) external view returns (bool);\\n\\n    function owner() external view returns (address);\\n\\n    function removePayments(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 payment0,\\n        uint256 payment1\\n    ) external;\\n\\n    function updateCollateralAggregator(address addr) external;\\n\\n    function updatePaymentAggregator(address addr) external;\\n}\\n\",\"keccak256\":\"0xeb4b3924998cc8a39f908259c7f3367a9352c440a85cbdecb1bd2f262f02ebab\",\"license\":\"MIT\"},\"contracts/interfaces/IExternalAdapterTxResponse.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity >=0.6.12 <=0.7.0;\\npragma experimental ABIEncoderV2;\\n\\ninterface IExternalAdapterTxResponse {\\n    struct FulfillData {\\n        string from;\\n        string to;\\n        uint256 value;\\n        uint256 timestamp;\\n        string txHash;\\n    }\\n}\\n\",\"keccak256\":\"0xf327a0d3768b23f1f611093375cb3cc897314baf1eb5a0368c136b87ca54e431\",\"license\":\"MIT\"},\"contracts/interfaces/IMarkToMarket.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\npragma experimental ABIEncoderV2;\\n\\ninterface IMarkToMarket {\\n    function updatePV(bytes32 dealId) external;\\n\\n    function updatePVs(bytes32[] memory dealIds) external;\\n}\\n\",\"keccak256\":\"0x12c4c499ec5de5155b58fd7e0396e88f629406ff3d3c44b4ecd7680c878b9b6e\",\"license\":\"MIT\"},\"contracts/interfaces/IPaymentAggregator.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\npragma experimental ABIEncoderV2;\\n\\nstruct Slot {\\n    uint256 totalPayment0;\\n    uint256 totalPayment1;\\n    uint256 netPayment;\\n    bool flipped;\\n    bytes32 paymentProof;\\n    address verificationParty;\\n    bool isSettled;\\n}\\n\\ninterface IPaymentAggregator {\\n    event UpdateCloseOutNetting(\\n        address indexed prevContract,\\n        address indexed closeOutNetting\\n    );\\n    event UpdateMarkToMarket(\\n        address indexed prevContract,\\n        address indexed closeOutNetting\\n    );\\n    event UpdateSettlementEngine(\\n        address indexed prevContract,\\n        address indexed settlementEngine\\n    );\\n\\n    event RegisterPayment(\\n        address indexed party0,\\n        address indexed party1,\\n        bytes32 ccy,\\n        bytes32 timeSlot,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        uint256 payment0,\\n        uint256 payment1\\n    );\\n    event VerifyPayment(\\n        address indexed verifier,\\n        address indexed counterparty,\\n        bytes32 ccy,\\n        bytes32 timeSlot,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        uint256 payment,\\n        bytes32 settlementId\\n    );\\n    event SettlePayment(\\n        address indexed verifier,\\n        address indexed counterparty,\\n        bytes32 ccy,\\n        bytes32 timeSlot,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        bytes32 settlementId\\n    );\\n    event RemovePayment(\\n        address indexed party0,\\n        address indexed party1,\\n        bytes32 ccy,\\n        bytes32 timeSlot,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        uint256 payment0,\\n        uint256 payment1\\n    );\\n\\n    function addPaymentAggregatorUser(address _user) external returns (bool);\\n\\n    function isPaymentAggregatorUser(address _user)\\n        external\\n        view\\n        returns (bool);\\n\\n    function owner() external view returns (address);\\n\\n    function registerPayments(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 dealId,\\n        uint256[] memory timestamps,\\n        uint256[] memory payments0,\\n        uint256[] memory payments1\\n    ) external;\\n\\n    function removePaymentAggregatorUser(address _user) external returns (bool);\\n\\n    function removePayments(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 dealId,\\n        uint256[] calldata timestamps,\\n        uint256[] calldata payments0,\\n        uint256[] calldata payments1\\n    ) external;\\n\\n    function verifyPayment(\\n        address verifier,\\n        address counterparty,\\n        bytes32 ccy,\\n        uint256 timestamp,\\n        uint256 payment,\\n        bytes32 settlementId\\n    ) external;\\n\\n    function isSettled(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 timestamp\\n    ) external view returns (bool status);\\n\\n    function getDealsFromSlot(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slotPosition\\n    ) external view returns (bytes32[] memory);\\n\\n    // function getTimeSlotByDate(\\n    //     address party0,\\n    //     address party1,\\n    //     bytes32 ccy,\\n    //     uint256 year,\\n    //     uint256 month,\\n    //     uint256 day\\n    // ) external view returns (Slot memory timeSlot);\\n\\n    // function getTimeSlotBySlotId(\\n    //     address party0,\\n    //     address party1,\\n    //     bytes32 ccy,\\n    //     bytes32 slot\\n    // ) external view returns (Slot memory timeSlot);\\n\\n    function settlementWindow() external view returns (uint256);\\n\\n    function checkSettlementWindow(uint256 targetTime)\\n        external\\n        view\\n        returns (bool);\\n}\\n\",\"keccak256\":\"0xbcc6d9d768fab6932aa25c0aa988123a5540e031cba17db9dea2837e30338487\",\"license\":\"MIT\"},\"contracts/interfaces/ISettlementEngine.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// !! THIS FILE WAS AUTOGENERATED BY abi-to-sol v0.5.3. SEE SOURCE BELOW. !!\\npragma solidity >=0.6.12 <=0.7.0;\\npragma experimental ABIEncoderV2;\\n\\nimport \\\"./IExternalAdapterTxResponse.sol\\\";\\n\\ninterface ISettlementEngine {\\n    event CrosschainSettlementRequested(\\n        address payer,\\n        address receiver,\\n        uint16 chainId,\\n        uint256 timestamp,\\n        string txHash,\\n        bytes32 requestId\\n    );\\n    event CrosschainSettlementRequestFulfilled(\\n        string payer,\\n        string receiver,\\n        uint16 chainId,\\n        uint256 amount,\\n        uint256 timestamp,\\n        string txHash,\\n        bytes32 settlementId\\n    );\\n    event ExternalAdapterAdded(address indexed adapter, bytes32 ccy);\\n    event ExternalAdapterUpdated(address indexed adapter, bytes32 ccy);\\n\\n    function addExternalAdapter(address _adapter, bytes32 _ccy) external;\\n\\n    function externalAdapters(uint16) external view returns (address);\\n\\n    function fullfillSettlementRequest(\\n        bytes32 _requestId,\\n        IExternalAdapterTxResponse.FulfillData memory _txData,\\n        bytes32 _ccy\\n    ) external;\\n\\n    function getVersion() external view returns (uint16);\\n\\n    function owner() external view returns (address);\\n\\n    function replaceExternalAdapter(address _adapter, bytes32 _ccy) external;\\n\\n    function settlementRequests(bytes32)\\n        external\\n        view\\n        returns (\\n            address payer,\\n            address receiver,\\n            uint16 chainId,\\n            uint256 timestamp,\\n            string memory txHash\\n        );\\n\\n    function verifyPayment(\\n        address _counterparty,\\n        bytes32 _ccy,\\n        uint256 _payment,\\n        uint256 _timestamp,\\n        string calldata _txHash\\n    ) external payable returns (bytes32);\\n}\\n\",\"keccak256\":\"0x44abcc184a248d895bcba237c9a596e36287f9d9b0a69615472ea7bd68e0ed56\",\"license\":\"MIT\"},\"contracts/libraries/AddressPacking.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\n\\nlibrary AddressPacking {\\n    /**\\n     * @dev Packs two addresses into one hash to reduce the number of arguments\\n     * @param addr0 First address\\n     * @param addr1 Second address\\n     * @return Boolean to identify if addresses were flipped\\n     */\\n    function pack(address addr0, address addr1)\\n        internal\\n        pure\\n        returns (bytes32, bool)\\n    {\\n        require(addr0 != addr1, \\\"Identical addresses\\\");\\n        (address _addr0, address _addr1) = addr0 < addr1\\n            ? (addr0, addr1)\\n            : (addr1, addr0);\\n        require(_addr0 != address(0), \\\"Invalid address\\\");\\n\\n        if (_addr0 != addr0) {\\n            return (keccak256(abi.encode(_addr0, _addr1)), true);\\n        } else {\\n            return (keccak256(abi.encode(_addr0, _addr1)), false);\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xfe567a45d9e5739f3e89da206f5041692c8c7a2f9a837d23fa9e50117b81e773\",\"license\":\"MIT\"},\"contracts/libraries/BokkyPooBahsDateTimeLibrary.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\n\\n// ----------------------------------------------------------------------------\\n// BokkyPooBah's DateTime Library v1.01\\n//\\n// A gas-efficient Solidity date and time library\\n//\\n// https://github.com/bokkypoobah/BokkyPooBahsDateTimeLibrary\\n//\\n// Tested date range 1970/01/01 to 2345/12/31\\n//\\n// Conventions:\\n// Unit      | Range         | Notes\\n// :-------- |:-------------:|:-----\\n// timestamp | >= 0          | Unix timestamp, number of seconds since 1970/01/01 00:00:00 UTC\\n// year      | 1970 ... 2345 |\\n// month     | 1 ... 12      |\\n// day       | 1 ... 31      |\\n// hour      | 0 ... 23      |\\n// minute    | 0 ... 59      |\\n// second    | 0 ... 59      |\\n// dayOfWeek | 1 ... 7       | 1 = Monday, ..., 7 = Sunday\\n//\\n//\\n// Enjoy. (c) BokkyPooBah / Bok Consulting Pty Ltd 2018-2019. The MIT Licence.\\n// ----------------------------------------------------------------------------\\n\\nlibrary BokkyPooBahsDateTimeLibrary {\\n    uint256 constant SECONDS_PER_DAY = 24 * 60 * 60;\\n    uint256 constant SECONDS_PER_HOUR = 60 * 60;\\n    uint256 constant SECONDS_PER_MINUTE = 60;\\n    int256 constant OFFSET19700101 = 2440588;\\n\\n    uint256 constant DOW_MON = 1;\\n    uint256 constant DOW_TUE = 2;\\n    uint256 constant DOW_WED = 3;\\n    uint256 constant DOW_THU = 4;\\n    uint256 constant DOW_FRI = 5;\\n    uint256 constant DOW_SAT = 6;\\n    uint256 constant DOW_SUN = 7;\\n\\n    // ------------------------------------------------------------------------\\n    // Calculate the number of days from 1970/01/01 to year/month/day using\\n    // the date conversion algorithm from\\n    //   http://aa.usno.navy.mil/faq/docs/JD_Formula.php\\n    // and subtracting the offset 2440588 so that 1970/01/01 is day 0\\n    //\\n    // days = day\\n    //      - 32075\\n    //      + 1461 * (year + 4800 + (month - 14) / 12) / 4\\n    //      + 367 * (month - 2 - (month - 14) / 12 * 12) / 12\\n    //      - 3 * ((year + 4900 + (month - 14) / 12) / 100) / 4\\n    //      - offset\\n    // ------------------------------------------------------------------------\\n    function _daysFromDate(\\n        uint256 year,\\n        uint256 month,\\n        uint256 day\\n    ) internal pure returns (uint256 _days) {\\n        require(year >= 1970);\\n        int256 _year = int256(year);\\n        int256 _month = int256(month);\\n        int256 _day = int256(day);\\n\\n        int256 __days = _day -\\n            32075 +\\n            (1461 * (_year + 4800 + (_month - 14) / 12)) /\\n            4 +\\n            (367 * (_month - 2 - ((_month - 14) / 12) * 12)) /\\n            12 -\\n            (3 * ((_year + 4900 + (_month - 14) / 12) / 100)) /\\n            4 -\\n            OFFSET19700101;\\n\\n        _days = uint256(__days);\\n    }\\n\\n    // ------------------------------------------------------------------------\\n    // Calculate year/month/day from the number of days since 1970/01/01 using\\n    // the date conversion algorithm from\\n    //   http://aa.usno.navy.mil/faq/docs/JD_Formula.php\\n    // and adding the offset 2440588 so that 1970/01/01 is day 0\\n    //\\n    // int L = days + 68569 + offset\\n    // int N = 4 * L / 146097\\n    // L = L - (146097 * N + 3) / 4\\n    // year = 4000 * (L + 1) / 1461001\\n    // L = L - 1461 * year / 4 + 31\\n    // month = 80 * L / 2447\\n    // dd = L - 2447 * month / 80\\n    // L = month / 11\\n    // month = month + 2 - 12 * L\\n    // year = 100 * (N - 49) + year + L\\n    // ------------------------------------------------------------------------\\n    function _daysToDate(uint256 _days)\\n        internal\\n        pure\\n        returns (\\n            uint256 year,\\n            uint256 month,\\n            uint256 day\\n        )\\n    {\\n        int256 __days = int256(_days);\\n\\n        int256 L = __days + 68569 + OFFSET19700101;\\n        int256 N = (4 * L) / 146097;\\n        L = L - (146097 * N + 3) / 4;\\n        int256 _year = (4000 * (L + 1)) / 1461001;\\n        L = L - (1461 * _year) / 4 + 31;\\n        int256 _month = (80 * L) / 2447;\\n        int256 _day = L - (2447 * _month) / 80;\\n        L = _month / 11;\\n        _month = _month + 2 - 12 * L;\\n        _year = 100 * (N - 49) + _year + L;\\n\\n        year = uint256(_year);\\n        month = uint256(_month);\\n        day = uint256(_day);\\n    }\\n\\n    function timestampFromDate(\\n        uint256 year,\\n        uint256 month,\\n        uint256 day\\n    ) internal pure returns (uint256 timestamp) {\\n        timestamp = _daysFromDate(year, month, day) * SECONDS_PER_DAY;\\n    }\\n\\n    function timestampFromDateTime(\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        uint256 hour,\\n        uint256 minute,\\n        uint256 second\\n    ) internal pure returns (uint256 timestamp) {\\n        timestamp =\\n            _daysFromDate(year, month, day) *\\n            SECONDS_PER_DAY +\\n            hour *\\n            SECONDS_PER_HOUR +\\n            minute *\\n            SECONDS_PER_MINUTE +\\n            second;\\n    }\\n\\n    function timestampToDate(uint256 timestamp)\\n        internal\\n        pure\\n        returns (\\n            uint256 year,\\n            uint256 month,\\n            uint256 day\\n        )\\n    {\\n        (year, month, day) = _daysToDate(timestamp / SECONDS_PER_DAY);\\n    }\\n\\n    function timestampToDateTime(uint256 timestamp)\\n        internal\\n        pure\\n        returns (\\n            uint256 year,\\n            uint256 month,\\n            uint256 day,\\n            uint256 hour,\\n            uint256 minute,\\n            uint256 second\\n        )\\n    {\\n        (year, month, day) = _daysToDate(timestamp / SECONDS_PER_DAY);\\n        uint256 secs = timestamp % SECONDS_PER_DAY;\\n        hour = secs / SECONDS_PER_HOUR;\\n        secs = secs % SECONDS_PER_HOUR;\\n        minute = secs / SECONDS_PER_MINUTE;\\n        second = secs % SECONDS_PER_MINUTE;\\n    }\\n\\n    function isValidDate(\\n        uint256 year,\\n        uint256 month,\\n        uint256 day\\n    ) internal pure returns (bool valid) {\\n        if (year >= 1970 && month > 0 && month <= 12) {\\n            uint256 daysInMonth = _getDaysInMonth(year, month);\\n            if (day > 0 && day <= daysInMonth) {\\n                valid = true;\\n            }\\n        }\\n    }\\n\\n    function isValidDateTime(\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        uint256 hour,\\n        uint256 minute,\\n        uint256 second\\n    ) internal pure returns (bool valid) {\\n        if (isValidDate(year, month, day)) {\\n            if (hour < 24 && minute < 60 && second < 60) {\\n                valid = true;\\n            }\\n        }\\n    }\\n\\n    function isLeapYear(uint256 timestamp)\\n        internal\\n        pure\\n        returns (bool leapYear)\\n    {\\n        (uint256 year, , ) = _daysToDate(timestamp / SECONDS_PER_DAY);\\n        leapYear = _isLeapYear(year);\\n    }\\n\\n    function _isLeapYear(uint256 year) internal pure returns (bool leapYear) {\\n        leapYear = ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);\\n    }\\n\\n    function isWeekDay(uint256 timestamp) internal pure returns (bool weekDay) {\\n        weekDay = getDayOfWeek(timestamp) <= DOW_FRI;\\n    }\\n\\n    function isWeekEnd(uint256 timestamp) internal pure returns (bool weekEnd) {\\n        weekEnd = getDayOfWeek(timestamp) >= DOW_SAT;\\n    }\\n\\n    function getDaysInMonth(uint256 timestamp)\\n        internal\\n        pure\\n        returns (uint256 daysInMonth)\\n    {\\n        (uint256 year, uint256 month, ) = _daysToDate(\\n            timestamp / SECONDS_PER_DAY\\n        );\\n        daysInMonth = _getDaysInMonth(year, month);\\n    }\\n\\n    function _getDaysInMonth(uint256 year, uint256 month)\\n        internal\\n        pure\\n        returns (uint256 daysInMonth)\\n    {\\n        if (\\n            month == 1 ||\\n            month == 3 ||\\n            month == 5 ||\\n            month == 7 ||\\n            month == 8 ||\\n            month == 10 ||\\n            month == 12\\n        ) {\\n            daysInMonth = 31;\\n        } else if (month != 2) {\\n            daysInMonth = 30;\\n        } else {\\n            daysInMonth = _isLeapYear(year) ? 29 : 28;\\n        }\\n    }\\n\\n    // 1 = Monday, 7 = Sunday\\n    function getDayOfWeek(uint256 timestamp)\\n        internal\\n        pure\\n        returns (uint256 dayOfWeek)\\n    {\\n        uint256 _days = timestamp / SECONDS_PER_DAY;\\n        dayOfWeek = ((_days + 3) % 7) + 1;\\n    }\\n\\n    function getYear(uint256 timestamp) internal pure returns (uint256 year) {\\n        (year, , ) = _daysToDate(timestamp / SECONDS_PER_DAY);\\n    }\\n\\n    function getMonth(uint256 timestamp) internal pure returns (uint256 month) {\\n        (, month, ) = _daysToDate(timestamp / SECONDS_PER_DAY);\\n    }\\n\\n    function getDay(uint256 timestamp) internal pure returns (uint256 day) {\\n        (, , day) = _daysToDate(timestamp / SECONDS_PER_DAY);\\n    }\\n\\n    function getHour(uint256 timestamp) internal pure returns (uint256 hour) {\\n        uint256 secs = timestamp % SECONDS_PER_DAY;\\n        hour = secs / SECONDS_PER_HOUR;\\n    }\\n\\n    function getMinute(uint256 timestamp)\\n        internal\\n        pure\\n        returns (uint256 minute)\\n    {\\n        uint256 secs = timestamp % SECONDS_PER_HOUR;\\n        minute = secs / SECONDS_PER_MINUTE;\\n    }\\n\\n    function getSecond(uint256 timestamp)\\n        internal\\n        pure\\n        returns (uint256 second)\\n    {\\n        second = timestamp % SECONDS_PER_MINUTE;\\n    }\\n\\n    function addYears(uint256 timestamp, uint256 _years)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        (uint256 year, uint256 month, uint256 day) = _daysToDate(\\n            timestamp / SECONDS_PER_DAY\\n        );\\n        year += _years;\\n        uint256 daysInMonth = _getDaysInMonth(year, month);\\n        if (day > daysInMonth) {\\n            day = daysInMonth;\\n        }\\n        newTimestamp =\\n            _daysFromDate(year, month, day) *\\n            SECONDS_PER_DAY +\\n            (timestamp % SECONDS_PER_DAY);\\n        require(newTimestamp >= timestamp);\\n    }\\n\\n    function addMonths(uint256 timestamp, uint256 _months)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        (uint256 year, uint256 month, uint256 day) = _daysToDate(\\n            timestamp / SECONDS_PER_DAY\\n        );\\n        month += _months;\\n        year += (month - 1) / 12;\\n        month = ((month - 1) % 12) + 1;\\n        uint256 daysInMonth = _getDaysInMonth(year, month);\\n        if (day > daysInMonth) {\\n            day = daysInMonth;\\n        }\\n        newTimestamp =\\n            _daysFromDate(year, month, day) *\\n            SECONDS_PER_DAY +\\n            (timestamp % SECONDS_PER_DAY);\\n        require(newTimestamp >= timestamp);\\n    }\\n\\n    function addDays(uint256 timestamp, uint256 _days)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp + _days * SECONDS_PER_DAY;\\n        require(newTimestamp >= timestamp);\\n    }\\n\\n    function addHours(uint256 timestamp, uint256 _hours)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp + _hours * SECONDS_PER_HOUR;\\n        require(newTimestamp >= timestamp);\\n    }\\n\\n    function addMinutes(uint256 timestamp, uint256 _minutes)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp + _minutes * SECONDS_PER_MINUTE;\\n        require(newTimestamp >= timestamp);\\n    }\\n\\n    function addSeconds(uint256 timestamp, uint256 _seconds)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp + _seconds;\\n        require(newTimestamp >= timestamp);\\n    }\\n\\n    function subYears(uint256 timestamp, uint256 _years)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        (uint256 year, uint256 month, uint256 day) = _daysToDate(\\n            timestamp / SECONDS_PER_DAY\\n        );\\n        year -= _years;\\n        uint256 daysInMonth = _getDaysInMonth(year, month);\\n        if (day > daysInMonth) {\\n            day = daysInMonth;\\n        }\\n        newTimestamp =\\n            _daysFromDate(year, month, day) *\\n            SECONDS_PER_DAY +\\n            (timestamp % SECONDS_PER_DAY);\\n        require(newTimestamp <= timestamp);\\n    }\\n\\n    function subMonths(uint256 timestamp, uint256 _months)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        (uint256 year, uint256 month, uint256 day) = _daysToDate(\\n            timestamp / SECONDS_PER_DAY\\n        );\\n        uint256 yearMonth = year * 12 + (month - 1) - _months;\\n        year = yearMonth / 12;\\n        month = (yearMonth % 12) + 1;\\n        uint256 daysInMonth = _getDaysInMonth(year, month);\\n        if (day > daysInMonth) {\\n            day = daysInMonth;\\n        }\\n        newTimestamp =\\n            _daysFromDate(year, month, day) *\\n            SECONDS_PER_DAY +\\n            (timestamp % SECONDS_PER_DAY);\\n        require(newTimestamp <= timestamp);\\n    }\\n\\n    function subDays(uint256 timestamp, uint256 _days)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp - _days * SECONDS_PER_DAY;\\n        require(newTimestamp <= timestamp);\\n    }\\n\\n    function subHours(uint256 timestamp, uint256 _hours)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp - _hours * SECONDS_PER_HOUR;\\n        require(newTimestamp <= timestamp);\\n    }\\n\\n    function subMinutes(uint256 timestamp, uint256 _minutes)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp - _minutes * SECONDS_PER_MINUTE;\\n        require(newTimestamp <= timestamp);\\n    }\\n\\n    function subSeconds(uint256 timestamp, uint256 _seconds)\\n        internal\\n        pure\\n        returns (uint256 newTimestamp)\\n    {\\n        newTimestamp = timestamp - _seconds;\\n        require(newTimestamp <= timestamp);\\n    }\\n\\n    function diffYears(uint256 fromTimestamp, uint256 toTimestamp)\\n        internal\\n        pure\\n        returns (uint256 _years)\\n    {\\n        require(fromTimestamp <= toTimestamp);\\n        (uint256 fromYear, , ) = _daysToDate(fromTimestamp / SECONDS_PER_DAY);\\n        (uint256 toYear, , ) = _daysToDate(toTimestamp / SECONDS_PER_DAY);\\n        _years = toYear - fromYear;\\n    }\\n\\n    function diffMonths(uint256 fromTimestamp, uint256 toTimestamp)\\n        internal\\n        pure\\n        returns (uint256 _months)\\n    {\\n        require(fromTimestamp <= toTimestamp);\\n        (uint256 fromYear, uint256 fromMonth, ) = _daysToDate(\\n            fromTimestamp / SECONDS_PER_DAY\\n        );\\n        (uint256 toYear, uint256 toMonth, ) = _daysToDate(\\n            toTimestamp / SECONDS_PER_DAY\\n        );\\n        _months = toYear * 12 + toMonth - fromYear * 12 - fromMonth;\\n    }\\n\\n    function diffDays(uint256 fromTimestamp, uint256 toTimestamp)\\n        internal\\n        pure\\n        returns (uint256 _days)\\n    {\\n        require(fromTimestamp <= toTimestamp);\\n        _days = (toTimestamp - fromTimestamp) / SECONDS_PER_DAY;\\n    }\\n\\n    function diffHours(uint256 fromTimestamp, uint256 toTimestamp)\\n        internal\\n        pure\\n        returns (uint256 _hours)\\n    {\\n        require(fromTimestamp <= toTimestamp);\\n        _hours = (toTimestamp - fromTimestamp) / SECONDS_PER_HOUR;\\n    }\\n\\n    function diffMinutes(uint256 fromTimestamp, uint256 toTimestamp)\\n        internal\\n        pure\\n        returns (uint256 _minutes)\\n    {\\n        require(fromTimestamp <= toTimestamp);\\n        _minutes = (toTimestamp - fromTimestamp) / SECONDS_PER_MINUTE;\\n    }\\n\\n    function diffSeconds(uint256 fromTimestamp, uint256 toTimestamp)\\n        internal\\n        pure\\n        returns (uint256 _seconds)\\n    {\\n        require(fromTimestamp <= toTimestamp);\\n        _seconds = toTimestamp - fromTimestamp;\\n    }\\n}\\n\",\"keccak256\":\"0x70d42cd72420c6f792ca3f69e51657ab93eb8b948f0b503d0fd26e2c7a05976e\",\"license\":\"MIT\"},\"contracts/libraries/TimeSlot.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\n\\nimport \\\"./BokkyPooBahsDateTimeLibrary.sol\\\";\\nimport \\\"@openzeppelin/contracts/math/SafeMath.sol\\\";\\nimport \\\"./AddressPacking.sol\\\";\\n\\nlibrary TimeSlot {\\n    using BokkyPooBahsDateTimeLibrary for uint256;\\n    using SafeMath for uint256;\\n\\n    /**\\n     * @dev Slot keeps track of total payments to be settled per one day\\n     * by two counterparties per currency, net payment and\\n     * an indicator if parties obligations are flipped\\n     */\\n    struct Slot {\\n        uint256 totalPayment0;\\n        uint256 totalPayment1;\\n        uint256 netPayment;\\n        uint256 paidAmount;\\n        bool flipped;\\n        bool isSettled;\\n        mapping(bytes32 => PaymentConfirmation) confirmations;\\n    }\\n\\n    struct PaymentConfirmation {\\n        address verificationParty;\\n        uint256 amount;\\n    }\\n\\n    /**\\n     * @dev Computes the time slot position in the mapping by preconfigured time\\n     * @param year Year in which to find a timeslot\\n     * @param month Month in which to find a timeslot\\n     * @param day Day in which to find a timeslot\\n     */\\n    function position(\\n        uint256 year,\\n        uint256 month,\\n        uint256 day\\n    ) internal pure returns (bytes32) {\\n        return keccak256(abi.encodePacked(year, month, day));\\n    }\\n\\n    /**\\n     * @dev Returns the time slot information from the mapping and preconfigured time\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param year Year in which to find a timeslot\\n     * @param month Month in which to find a timeslot\\n     * @param day Day in which to find a timeslot\\n     */\\n    function get(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day\\n    )\\n        internal\\n        view\\n        returns (\\n            uint256,\\n            uint256,\\n            uint256,\\n            uint256,\\n            bool,\\n            bool\\n        )\\n    {\\n        return\\n            getBySlotId(\\n                self,\\n                party0,\\n                party1,\\n                ccy,\\n                keccak256(abi.encodePacked(year, month, day))\\n            );\\n    }\\n\\n    /**\\n     * @dev Returns timeSlot payment confirmation for a transaction with specified `txHash`\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param year Year in which to find a timeslot\\n     * @param month Month in which to find a timeslot\\n     * @param day Day in which to find a timeslot\\n     * @param settlementId Unique settlement id to find payment confirmation for\\n     */\\n    function getPaymentConfirmation(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 year,\\n        uint256 month,\\n        uint256 day,\\n        bytes32 settlementId\\n    ) internal view returns (address, uint256) {\\n        return\\n            getPaymentConfirmationById(\\n                self,\\n                party0,\\n                party1,\\n                ccy,\\n                keccak256(abi.encodePacked(year, month, day)),\\n                settlementId\\n            );\\n    }\\n\\n    /**\\n     * @dev Returns timeSlot payment confirmation for a transaction with specified `txHash`\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param slotId Time slot identifier\\n     * @param settlementId Unique settlement id to find payment confirmation for\\n     */\\n    function getPaymentConfirmationById(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slotId,\\n        bytes32 settlementId\\n    ) internal view returns (address, uint256) {\\n        (bytes32 addr, ) = AddressPacking.pack(party0, party1);\\n        TimeSlot.Slot storage timeSlot = self[addr][ccy][slotId];\\n\\n        TimeSlot.PaymentConfirmation memory confirmation = timeSlot\\n            .confirmations[settlementId];\\n\\n        return (confirmation.verificationParty, confirmation.amount);\\n    }\\n\\n    /**\\n     * @dev Returns the time slot information from the mapping\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param slotId Time slot identifier\\n     */\\n    function getBySlotId(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slotId\\n    )\\n        internal\\n        view\\n        returns (\\n            uint256,\\n            uint256,\\n            uint256,\\n            uint256,\\n            bool,\\n            bool\\n        )\\n    {\\n        (bytes32 addr, bool flipped) = AddressPacking.pack(party0, party1);\\n        TimeSlot.Slot memory timeSlot = self[addr][ccy][slotId];\\n        if (flipped) {\\n            uint256 oldPayment0 = timeSlot.totalPayment0;\\n            uint256 oldPayment1 = timeSlot.totalPayment1;\\n            timeSlot.totalPayment0 = oldPayment1;\\n            timeSlot.totalPayment1 = oldPayment0;\\n        }\\n\\n        if (timeSlot.totalPayment1 > timeSlot.totalPayment0) {\\n            timeSlot.netPayment = timeSlot.totalPayment1.sub(\\n                timeSlot.totalPayment0\\n            );\\n            timeSlot.flipped = true;\\n        } else {\\n            timeSlot.netPayment = timeSlot.totalPayment0.sub(\\n                timeSlot.totalPayment1\\n            );\\n            timeSlot.flipped = false;\\n        }\\n\\n        return (\\n            timeSlot.totalPayment0,\\n            timeSlot.totalPayment1,\\n            timeSlot.netPayment,\\n            timeSlot.paidAmount,\\n            timeSlot.flipped,\\n            timeSlot.isSettled\\n        );\\n    }\\n\\n    /**\\n     * @dev Adds payment into the time slot with provided information\\n     * @param self The mapping with all time slots\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param slot Time slot identifier to be updated\\n     * @param payment0 Payment obligated to the first counterparty\\n     * @param payment1 Payment obligated to the second counterparty\\n     */\\n    function addPayment(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slot,\\n        uint256 payment0,\\n        uint256 payment1\\n    ) internal {\\n        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(\\n            party0,\\n            party1\\n        );\\n        TimeSlot.Slot storage timeSlot = self[packedAddrs][ccy][slot];\\n        require(!timeSlot.isSettled, \\\"TIMESLOT SETTLED ALREADY\\\");\\n\\n        timeSlot.totalPayment0 = flipped\\n            ? timeSlot.totalPayment0.add(payment1)\\n            : timeSlot.totalPayment0.add(payment0);\\n        timeSlot.totalPayment1 = flipped\\n            ? timeSlot.totalPayment1.add(payment0)\\n            : timeSlot.totalPayment1.add(payment1);\\n    }\\n\\n    /**\\n     * @dev Removes payment from the time slot with provided information\\n     * @param self The mapping with all time slots\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param slot Time slot identifier to be updated\\n     * @param payment0 Payment amount to remove for the first counterparty\\n     * @param payment1 Payment amount to remove for the second counterparty\\n     */\\n    function removePayment(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slot,\\n        uint256 payment0,\\n        uint256 payment1\\n    ) internal {\\n        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(\\n            party0,\\n            party1\\n        );\\n        TimeSlot.Slot storage timeSlot = self[packedAddrs][ccy][slot];\\n        if (timeSlot.isSettled) return;\\n\\n        timeSlot.totalPayment0 = flipped\\n            ? timeSlot.totalPayment0.sub(payment1)\\n            : timeSlot.totalPayment0.sub(payment0);\\n        timeSlot.totalPayment1 = flipped\\n            ? timeSlot.totalPayment1.sub(payment0)\\n            : timeSlot.totalPayment1.sub(payment1);\\n    }\\n\\n    /**\\n     * @dev Verifies the net payment for time slot\\n     * @param self The mapping with all time slots\\n     * @param sender Payment sender address\\n     * @param recipient Resipient's counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param slot Time slot identifier to be verified\\n     * @param payment Net payment amount\\n     * @param settlementId Unique settlement id of the successfull payment\\n     */\\n    function verifyPayment(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address sender,\\n        address recipient,\\n        bytes32 ccy,\\n        bytes32 slot,\\n        uint256 payment,\\n        bytes32 settlementId\\n    ) internal {\\n        (bytes32 addr, bool flipped) = AddressPacking.pack(sender, recipient);\\n        TimeSlot.Slot storage timeSlot = self[addr][ccy][slot];\\n        require(!timeSlot.isSettled, \\\"TIMESLOT SETTLED ALREADY\\\");\\n        uint256 netPayment;\\n\\n        if (flipped) {\\n            require(\\n                timeSlot.totalPayment1 > timeSlot.totalPayment0,\\n                \\\"Incorrect verification party\\\"\\n            );\\n            netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);\\n        } else {\\n            require(\\n                timeSlot.totalPayment0 > timeSlot.totalPayment1,\\n                \\\"Incorrect verification party\\\"\\n            );\\n            netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);\\n        }\\n\\n        timeSlot.paidAmount = timeSlot.paidAmount.add(payment);\\n        require(timeSlot.paidAmount <= netPayment, \\\"Payment overflow\\\");\\n\\n        TimeSlot.PaymentConfirmation memory confirmation;\\n        confirmation.amount = payment;\\n        confirmation.verificationParty = sender;\\n        timeSlot.confirmations[settlementId] = confirmation;\\n\\n        if (netPayment.sub(timeSlot.paidAmount) == 0) {\\n            timeSlot.isSettled = true;\\n        }\\n    }\\n\\n    /**\\n     * @dev Clears the time slot, triggered only when the timeslot has empty payments for both parties and 0 net payment\\n     * @param self The mapping with all time slots\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param slot TimeSlot identifier to be cleared\\n     */\\n    function clear(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slot\\n    ) internal {\\n        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);\\n        delete self[packedAddrs][ccy][slot];\\n    }\\n\\n    /**\\n     * @dev Verifies if TimeSlot was settled\\n     * @param self The mapping with all time slots\\n     * @param party0 First counterparty address\\n     * @param party1 Second counterparty address\\n     * @param ccy Main currency for the time slot\\n     * @param slot TimeSlot identifier to be cleared\\n     * @return Boolean of settlement status\\n     */\\n    function isSettled(\\n        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))\\n            storage self,\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        bytes32 slot\\n    ) internal view returns (bool) {\\n        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);\\n        return self[packedAddrs][ccy][slot].isSettled;\\n    }\\n}\\n\",\"keccak256\":\"0xd0ef96fdd2131db5c3aa04093519e83c7dc83c27e0de5006fcfa1c0e3c77263b\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x6080604052600260015534801561001557600080fd5b50600080546001600160a01b031916331790556124c6806100376000396000f3fe608060405234801561001057600080fd5b50600436106101165760003560e01c80638da5cb5b116100a2578063b73cdacd11610071578063b73cdacd1461025b578063d0cd64801461026e578063dff7f74414610281578063ee0474c214610294578063f67ed3f7146102a757610116565b80638da5cb5b1461020b578063955c873614610220578063b116a25914610233578063b4a7bdf91461024657610116565b80634f0f141c116100e95780634f0f141c1461018c578063690a6800146101ad57806375dc0d21146101c057806381dc26c7146101d3578063891e3721146101f857610116565b806306710fff1461011b578063117979f4146101305780632eb4602314610159578063393b6e1714610179575b600080fd5b61012e610129366004611c64565b6102ba565b005b61014361013e366004611c64565b61038c565b6040516101509190612050565b60405180910390f35b61016c610167366004611c7f565b61039f565b604051610150919061200c565b61012e610187366004611d91565b61046a565b61019f61019a366004611e4c565b610729565b604051610150929190611ff3565b6101436101bb366004611f66565b610749565b6101436101ce366004611e9a565b610764565b6101e66101e1366004611c7f565b6107a3565b6040516101509695949392919061244c565b61012e610206366004611c64565b6107d1565b61021361089a565b6040516101509190611f94565b61012e61022e366004611eaf565b6108a9565b6101e6610241366004611eaf565b610a36565b61024e610a6a565b6040516101509190612443565b61012e610269366004611cc2565b610a70565b61019f61027c366004611f05565b610d1f565b61014361028f366004611c64565b610d43565b6101436102a2366004611c64565b610d8d565b61012e6102b5366004611c64565b610e2c565b6000546001600160a01b031633146102d157600080fd5b806001600160a01b0381166103015760405162461bcd60e51b81526004016102f8906120f5565b60405180910390fd5b610313816001600160a01b0316610ef5565b61032f5760405162461bcd60e51b81526004016102f89061241d565b6005546040516001600160a01b038085169216907ff378eee4e3430742e191ff7fea453b7eeba44c869e8b2f2ba2653b129b7b864390600090a350600580546001600160a01b0319166001600160a01b0392909216919091179055565b6000610399600283610efb565b92915050565b606060006103ad8686610f17565b506000818152600860209081526040808320888452825280832087845290915281209192506103db82611025565b905060608167ffffffffffffffff811180156103f657600080fd5b50604051908082528060200260200182016040528015610420578160200160208202803683370190505b50905060005b8281101561045d57600061043a8583611030565b90508083838151811061044957fe5b602090810291909101015250600101610426565b5098975050505050505050565b610475600233610efb565b6104915760405162461bcd60e51b81526004016102f89061233d565b610499611a76565b6104a38888610f17565b50815260005b84518110156106ac578481815181106104be57fe5b6020026020010151600014156104d3576106a4565b6104ef8582815181106104e257fe5b602002602001015161103c565b60e0850181905260c0850182905260a0850183905261050f92919061105b565b60808301908152825160009081526008602090815260408083208b8452825280832093518352929052206105439087611091565b50600084828151811061055257fe5b602002602001015111156105905761058a84828151811061056f57fe5b6020026020010151836040015161109d90919063ffffffff16565b60408301525b600083828151811061059e57fe5b602002602001015111156105dc576105d68382815181106105bb57fe5b6020026020010151836060015161109d90919063ffffffff16565b60608301525b61061660078a8a8a86608001518987815181106105f557fe5b602002602001015189888151811061060957fe5b60200260200101516110c2565b876001600160a01b0316896001600160a01b03167f7e5ab2f9d27f1d9cb69c5757129eba9a1250928ade66885dc5caec90c4b7641b8985608001518660a001518760c001518860e001518b898151811061066c57fe5b60200260200101518b8a8151811061068057fe5b602002602001015160405161069b9796959493929190612083565b60405180910390a35b6001016104a9565b50600480546040808401516060850151915163ca2da52960e01b81526001600160a01b039093169363ca2da529936106ed938e938e938e9391929101611fc2565b600060405180830381600087803b15801561070757600080fd5b505af115801561071b573d6000803e3d6000fd5b505050505050505050505050565b60008061073b6007888888888861117c565b915091509550959350505050565b6000428161075782856111fc565b6001541015949350505050565b6000806000806107738561103c565b925092509250600061078684848461105b565b905061079660078a8a8a85611217565b9998505050505050505050565b6000806000806000806107ba60078b8b8b8b611259565b949f939e50919c509a509850909650945050505050565b6000546001600160a01b031633146107e857600080fd5b806001600160a01b03811661080f5760405162461bcd60e51b81526004016102f8906120f5565b610821816001600160a01b0316610ef5565b61083d5760405162461bcd60e51b81526004016102f89061241d565b6004546040516001600160a01b038085169216907fe6834f0ea4acfb5ea8ca76f27d2246c6359d96899ec53f5c4bc96e56dcd146ce90600090a350600480546001600160a01b0319166001600160a01b0392909216919091179055565b6000546001600160a01b031681565b6108b1611381565b6108cd5760405162461bcd60e51b81526004016102f890612269565b6108d683610749565b6108f25760405162461bcd60e51b81526004016102f8906123e6565b6108fa611ac3565b6020810183905260a081018290526001600160a01b038088166040830152861660608201526080810185905261092f8461103c565b610100840181905260e0840182905260c0840183905261095092919061105b565b808252604082015160608301516080840151602085015160a086015161097d956007959493929091611392565b80606001516001600160a01b031681604001516001600160a01b03167fcb48cecc076f9cad1de25f21319ce962ff151d316749e31680b49ed5e2c6fa53836080015184600001518560c001518660e0015187610100015188602001518960a001516040516109f19796959493929190612083565b60405180910390a3610a1760078260400151836060015184608001518560000151611217565b158015610160830152610a2d57610a2d8161151c565b50505050505050565b600080600080600080610a4f60078d8d8d8d8d8d6116d5565b95509550955095509550955096509650965096509650969050565b60015481565b610a7b600233610efb565b610a975760405162461bcd60e51b81526004016102f89061233d565b610a9f611a76565b610aa98b8b610f17565b50815260005b86811015610c8e57878782818110610ac357fe5b9050602002013560001415610ad757610c86565b610af2888883818110610ae657fe5b9050602002013561103c565b60e0850181905260c0850182905260a08501839052610b1292919061105b565b60808301908152825160009081526008602090815260408083208e845282528083209351835292905220610b46908a611731565b610b625760405162461bcd60e51b81526004016102f890612382565b610b8b868683818110610b7157fe5b90506020020135836040015161109d90919063ffffffff16565b6040830152610bb9848483818110610b9f57fe5b90506020020135836060015161109d90919063ffffffff16565b826060018181525050610bfa60078d8d8d86608001518b8b88818110610bdb57fe5b905060200201358a8a89818110610bee57fe5b9050602002013561173d565b8a6001600160a01b03168c6001600160a01b03167fc90213e03f0aa26b07d0e75565000d17a8ff1134595b78597d0f4c3cf51aee208c85608001518660a001518760c001518860e001518d8d8a818110610c5057fe5b905060200201358c8c8b818110610c6357fe5b90506020020135604051610c7d9796959493929190612083565b60405180910390a35b600101610aaf565b50600460009054906101000a90046001600160a01b03166001600160a01b0316638c9165b08c8c8c856040015186606001516040518663ffffffff1660e01b8152600401610ce0959493929190611fc2565b600060405180830381600087803b158015610cfa57600080fd5b505af1158015610d0e573d6000803e3d6000fd5b505050505050505050505050505050565b600080610d3360078a8a8a8a8a8a8a6117d1565b9150915097509795505050505050565b600080546001600160a01b03163314610d5b57600080fd5b610d66600283610efb565b610d825760405162461bcd60e51b81526004016102f8906122cf565b61039960028361181d565b600080546001600160a01b03163314610da557600080fd5b6001600160a01b038216610dcb5760405162461bcd60e51b81526004016102f890612243565b610ddd826001600160a01b0316610ef5565b610df95760405162461bcd60e51b81526004016102f890612298565b610e04600283610efb565b15610e215760405162461bcd60e51b81526004016102f8906123af565b610399600283611832565b6000546001600160a01b03163314610e4357600080fd5b806001600160a01b038116610e6a5760405162461bcd60e51b81526004016102f8906120f5565b610e7c816001600160a01b0316610ef5565b610e985760405162461bcd60e51b81526004016102f89061241d565b6006546040516001600160a01b038085169216907fa245849bf73ebdf50710da5ba1a476f522a747a35edb3359ab90c6a991ad8a4490600090a350600680546001600160a01b0319166001600160a01b0392909216919091179055565b3b151590565b6000610f10836001600160a01b038416611847565b9392505050565b600080826001600160a01b0316846001600160a01b03161415610f4c5760405162461bcd60e51b81526004016102f89061211e565b600080846001600160a01b0316866001600160a01b031610610f6f578486610f72565b85855b90925090506001600160a01b038216610f9d5760405162461bcd60e51b81526004016102f890612175565b856001600160a01b0316826001600160a01b031614610fec578181604051602001610fc9929190611fa8565b60405160208183030381529060405280519060200120600193509350505061101e565b8181604051602001610fff929190611fa8565b6040516020818303038152906040528051906020012060009350935050505b9250929050565b60006103998261185f565b6000610f108383611863565b6000808061104e6201518085046118a8565b9196909550909350915050565b600083838360405160200161107293929190611f7e565b6040516020818303038152906040528051906020012090509392505050565b6000610f10838361193e565b600082820183811015610f105760405162461bcd60e51b81526004016102f8906121d5565b6000806110cf8888610f17565b600082815260208c815260408083208b845282528083208a84529091529020600481015492945090925090610100900460ff161561111f5760405162461bcd60e51b81526004016102f89061219e565b81611135578054611130908661109d565b611141565b8054611141908561109d565b81558161115c576001810154611157908561109d565b61116b565b600181015461116b908661109d565b600190910155505050505050505050565b600080600061118b8888610f17565b50600081815260208b815260408083208a8452825280832089845290915290209091506111b6611b27565b5060009485526005016020908152604094859020855180870190965280546001600160a01b03168087526001909101549590910185905299939850929650505050505050565b60008183111561120b57600080fd5b50620151809190030490565b6000806112248686610f17565b5060009081526020978852604080822095825294885284812093815292909652502060040154610100900460ff169392505050565b60008060008060008060008061126f8c8c610f17565b9150915061127b611b3e565b50600082815260208e815260408083208d845282528083208c8452825291829020825160c081018452815481526001820154928101929092526002810154928201929092526003820154606082015260049091015460ff8082161515608084015261010090910416151560a082015281156112fc5780516020820180518352525b80516020820151111561132a578051602082015161131991611988565b604082015260016080820152611347565b6020810151815161133a91611988565b6040820152600060808201525b806000015181602001518260400151836060015184608001518560a001519850985098509850985098505050509550955095509550955095565b6006546001600160a01b0316331490565b60008061139f8888610f17565b600082815260208c815260408083208b845282528083208a84529091529020600481015492945090925090610100900460ff16156113ef5760405162461bcd60e51b81526004016102f89061219e565b6000821561143257815460018301541161141b5760405162461bcd60e51b81526004016102f890612306565b8154600183015461142b91611988565b9050611469565b60018201548254116114565760405162461bcd60e51b81526004016102f890612306565b6001820154825461146691611988565b90505b6003820154611478908761109d565b6003830181905581101561149e5760405162461bcd60e51b81526004016102f89061214b565b6114a6611b27565b60208181018881526001600160a01b038d811684526000898152600587019093526040909220835181546001600160a01b03191693169290921782555160019091015560038301546114f9908390611988565b61071b5760048301805461ff001916610100179055505050505050505050505050565b61154560078260400151836060015184608001518560c001518660e001518761010001516116d5565b505050506101408301526101208201526040810151606080830151608084015184519293611576939092919061039f565b60055460405163134a0f5760e21b81529192506001600160a01b031690634d283d5c906115a790849060040161200c565b600060405180830381600087803b1580156115c157600080fd5b505af11580156115d5573d6000803e3d6000fd5b505060048054604080870151606088015160808901516101208a01516101408b015194516308c9165b60e41b81526001600160a01b039096169850638c9165b0975061162996939592949193909201611fc2565b600060405180830381600087803b15801561164357600080fd5b505af1158015611657573d6000803e3d6000fd5b5050505081606001516001600160a01b031682604001516001600160a01b03167f60d5560fb6dcb96ba7b9e138a06d94234a893a7e79def188502193bf71bc4663846080015185600001518660c001518760e001518861010001518960a001516040516116c99695949392919061205b565b60405180910390a35050565b6000806000806000806117158d8d8d8d8d8d8d6040516020016116fa93929190611f7e565b60405160208183030381529060405280519060200120611259565b9550955095509550955095509750975097509750975097915050565b6000610f1083836119b0565b60008061174a8888610f17565b600082815260208c815260408083208b845282528083208a84529091529020600481015492945090925090610100900460ff161561178a57505050610a2d565b816117a057805461179b9086611988565b6117ac565b80546117ac9085611988565b8155816117c25760018101546111579085611988565b600181015461116b9086611988565b60008061180c8a8a8a8a8a8a8a6040516020016117f093929190611f7e565b604051602081830303815290604052805190602001208861117c565b915091509850989650505050505050565b6000610f10836001600160a01b0384166119b0565b6000610f10836001600160a01b03841661193e565b60009081526001919091016020526040902054151590565b5490565b815460009082106118865760405162461bcd60e51b81526004016102f8906120b3565b82600001828154811061189557fe5b9060005260206000200154905092915050565b60008080836226496581018262023ab1600483020590506004600362023ab18302010590910390600062164b09610fa0600185010205905060046105b58202058303601f019250600061098f84605002816118ff57fe5b0590506000605061098f83020585039050600b820560301994909401606402929092018301996002600c90940290910392909201975095509350505050565b600061194a8383611847565b61198057508154600181810184556000848152602080822090930184905584548482528286019093526040902091909155610399565b506000610399565b6000828211156119aa5760405162461bcd60e51b81526004016102f89061220c565b50900390565b60008181526001830160205260408120548015611a6c57835460001980830191908101906000908790839081106119e357fe5b9060005260206000200154905080876000018481548110611a0057fe5b600091825260208083209091019290925582815260018981019092526040902090840190558654879080611a3057fe5b60019003818190600052602060002001600090559055866001016000878152602001908152602001600020600090556001945050505050610399565b6000915050610399565b604051806101000160405280600080191681526020016000151581526020016000815260200160008152602001600080191681526020016000815260200160008152602001600081525090565b6040805161018081018252600080825260208201819052918101829052606081018290526080810182905260a0810182905260c0810182905260e0810182905261010081018290526101208101829052610140810182905261016081019190915290565b604080518082019091526000808252602082015290565b6040518060c00160405280600081526020016000815260200160008152602001600081526020016000151581526020016000151581525090565b80356001600160a01b038116811461039957600080fd5b60008083601f840112611ba0578182fd5b50813567ffffffffffffffff811115611bb7578182fd5b602083019150836020808302850101111561101e57600080fd5b600082601f830112611be1578081fd5b813567ffffffffffffffff80821115611bf8578283fd5b602080830260405182828201018181108582111715611c15578687fd5b604052848152945081850192508582018187018301881015611c3657600080fd5b600091505b84821015611c59578035845292820192600191909101908201611c3b565b505050505092915050565b600060208284031215611c75578081fd5b610f108383611b78565b60008060008060808587031215611c94578283fd5b611c9e8686611b78565b9350611cad8660208701611b78565b93969395505050506040820135916060013590565b60008060008060008060008060008060e08b8d031215611ce0578586fd5b611cea8c8c611b78565b9950611cf98c60208d01611b78565b985060408b0135975060608b0135965060808b013567ffffffffffffffff80821115611d23578788fd5b611d2f8e838f01611b8f565b909850965060a08d0135915080821115611d47578586fd5b611d538e838f01611b8f565b909650945060c08d0135915080821115611d6b578384fd5b50611d788d828e01611b8f565b915080935050809150509295989b9194979a5092959850565b600080600080600080600060e0888a031215611dab578283fd5b611db58989611b78565b9650611dc48960208a01611b78565b95506040880135945060608801359350608088013567ffffffffffffffff80821115611dee578485fd5b611dfa8b838c01611bd1565b945060a08a0135915080821115611e0f578384fd5b611e1b8b838c01611bd1565b935060c08a0135915080821115611e30578283fd5b50611e3d8a828b01611bd1565b91505092959891949750929550565b600080600080600060a08688031215611e63578081fd5b611e6d8787611b78565b9450611e7c8760208801611b78565b94979496505050506040830135926060810135926080909101359150565b60008060008060808587031215611c94578384fd5b60008060008060008060c08789031215611ec7578182fd5b611ed18888611b78565b9550611ee08860208901611b78565b95989597505050506040840135936060810135936080820135935060a0909101359150565b600080600080600080600060e0888a031215611f1f578081fd5b8735611f2a81612478565b96506020880135611f3a81612478565b96999698505050506040850135946060810135946080820135945060a0820135935060c0909101359150565b600060208284031215611f77578081fd5b5035919050565b9283526020830191909152604082015260600190565b6001600160a01b0391909116815260200190565b6001600160a01b0392831681529116602082015260400190565b6001600160a01b03958616815293909416602084015260408301919091526060820152608081019190915260a00190565b6001600160a01b03929092168252602082015260400190565b6020808252825182820181905260009190848201906040850190845b8181101561204457835183529284019291840191600101612028565b50909695505050505050565b901515815260200190565b958652602086019490945260408501929092526060840152608083015260a082015260c00190565b968752602087019590955260408601939093526060850191909152608084015260a083015260c082015260e00190565b60208082526022908201527f456e756d657261626c655365743a20696e646578206f7574206f6620626f756e604082015261647360f01b606082015260800190565b6020808252600f908201526e494e56414c49445f4144445245535360881b604082015260600190565b6020808252601390820152724964656e746963616c2061646472657373657360681b604082015260600190565b60208082526010908201526f5061796d656e74206f766572666c6f7760801b604082015260600190565b6020808252600f908201526e496e76616c6964206164647265737360881b604082015260600190565b60208082526018908201527f54494d45534c4f5420534554544c454420414c52454144590000000000000000604082015260600190565b6020808252601b908201527f536166654d6174683a206164646974696f6e206f766572666c6f770000000000604082015260600190565b6020808252601e908201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604082015260600190565b6020808252600c908201526b5a65726f206164647265737360a01b604082015260600190565b6020808252601590820152744e4f545f534554544c454d454e545f454e47494e4560581b604082015260600190565b6020808252601e908201527f43616e277420616464206e6f6e2d636f6e747261637420616464726573730000604082015260600190565b6020808252601e908201527f43616e27742072656d6f7665206e6f6e2d6578697374696e6720757365720000604082015260600190565b6020808252601c908201527f496e636f727265637420766572696669636174696f6e20706172747900000000604082015260600190565b60208082526025908201527f6e6f7420616c6c6f77656420746f20757365207061796d656e7420616767726560408201526433b0ba37b960d91b606082015260800190565b6020808252601390820152721393d397d49151d254d51154915117d1115053606a1b604082015260600190565b6020808252601a908201527f43616e277420616464206578697374696e672061646472657373000000000000604082015260600190565b60208082526018908201527f4f55545f4f465f534554544c454d454e545f57494e444f570000000000000000604082015260600190565b6020808252600c908201526b1393d517d0d3d395149050d560a21b604082015260600190565b90815260200190565b95865260208601949094526040850192909252606084015215156080830152151560a082015260c00190565b6001600160a01b038116811461248d57600080fd5b5056fea2646970667358221220b6124e2555086d45d8a8c0b2acf97cfea35cdf1f28b1c4d18eab708eee61efcc64736f6c634300060c0033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106101165760003560e01c80638da5cb5b116100a2578063b73cdacd11610071578063b73cdacd1461025b578063d0cd64801461026e578063dff7f74414610281578063ee0474c214610294578063f67ed3f7146102a757610116565b80638da5cb5b1461020b578063955c873614610220578063b116a25914610233578063b4a7bdf91461024657610116565b80634f0f141c116100e95780634f0f141c1461018c578063690a6800146101ad57806375dc0d21146101c057806381dc26c7146101d3578063891e3721146101f857610116565b806306710fff1461011b578063117979f4146101305780632eb4602314610159578063393b6e1714610179575b600080fd5b61012e610129366004611c64565b6102ba565b005b61014361013e366004611c64565b61038c565b6040516101509190612050565b60405180910390f35b61016c610167366004611c7f565b61039f565b604051610150919061200c565b61012e610187366004611d91565b61046a565b61019f61019a366004611e4c565b610729565b604051610150929190611ff3565b6101436101bb366004611f66565b610749565b6101436101ce366004611e9a565b610764565b6101e66101e1366004611c7f565b6107a3565b6040516101509695949392919061244c565b61012e610206366004611c64565b6107d1565b61021361089a565b6040516101509190611f94565b61012e61022e366004611eaf565b6108a9565b6101e6610241366004611eaf565b610a36565b61024e610a6a565b6040516101509190612443565b61012e610269366004611cc2565b610a70565b61019f61027c366004611f05565b610d1f565b61014361028f366004611c64565b610d43565b6101436102a2366004611c64565b610d8d565b61012e6102b5366004611c64565b610e2c565b6000546001600160a01b031633146102d157600080fd5b806001600160a01b0381166103015760405162461bcd60e51b81526004016102f8906120f5565b60405180910390fd5b610313816001600160a01b0316610ef5565b61032f5760405162461bcd60e51b81526004016102f89061241d565b6005546040516001600160a01b038085169216907ff378eee4e3430742e191ff7fea453b7eeba44c869e8b2f2ba2653b129b7b864390600090a350600580546001600160a01b0319166001600160a01b0392909216919091179055565b6000610399600283610efb565b92915050565b606060006103ad8686610f17565b506000818152600860209081526040808320888452825280832087845290915281209192506103db82611025565b905060608167ffffffffffffffff811180156103f657600080fd5b50604051908082528060200260200182016040528015610420578160200160208202803683370190505b50905060005b8281101561045d57600061043a8583611030565b90508083838151811061044957fe5b602090810291909101015250600101610426565b5098975050505050505050565b610475600233610efb565b6104915760405162461bcd60e51b81526004016102f89061233d565b610499611a76565b6104a38888610f17565b50815260005b84518110156106ac578481815181106104be57fe5b6020026020010151600014156104d3576106a4565b6104ef8582815181106104e257fe5b602002602001015161103c565b60e0850181905260c0850182905260a0850183905261050f92919061105b565b60808301908152825160009081526008602090815260408083208b8452825280832093518352929052206105439087611091565b50600084828151811061055257fe5b602002602001015111156105905761058a84828151811061056f57fe5b6020026020010151836040015161109d90919063ffffffff16565b60408301525b600083828151811061059e57fe5b602002602001015111156105dc576105d68382815181106105bb57fe5b6020026020010151836060015161109d90919063ffffffff16565b60608301525b61061660078a8a8a86608001518987815181106105f557fe5b602002602001015189888151811061060957fe5b60200260200101516110c2565b876001600160a01b0316896001600160a01b03167f7e5ab2f9d27f1d9cb69c5757129eba9a1250928ade66885dc5caec90c4b7641b8985608001518660a001518760c001518860e001518b898151811061066c57fe5b60200260200101518b8a8151811061068057fe5b602002602001015160405161069b9796959493929190612083565b60405180910390a35b6001016104a9565b50600480546040808401516060850151915163ca2da52960e01b81526001600160a01b039093169363ca2da529936106ed938e938e938e9391929101611fc2565b600060405180830381600087803b15801561070757600080fd5b505af115801561071b573d6000803e3d6000fd5b505050505050505050505050565b60008061073b6007888888888861117c565b915091509550959350505050565b6000428161075782856111fc565b6001541015949350505050565b6000806000806107738561103c565b925092509250600061078684848461105b565b905061079660078a8a8a85611217565b9998505050505050505050565b6000806000806000806107ba60078b8b8b8b611259565b949f939e50919c509a509850909650945050505050565b6000546001600160a01b031633146107e857600080fd5b806001600160a01b03811661080f5760405162461bcd60e51b81526004016102f8906120f5565b610821816001600160a01b0316610ef5565b61083d5760405162461bcd60e51b81526004016102f89061241d565b6004546040516001600160a01b038085169216907fe6834f0ea4acfb5ea8ca76f27d2246c6359d96899ec53f5c4bc96e56dcd146ce90600090a350600480546001600160a01b0319166001600160a01b0392909216919091179055565b6000546001600160a01b031681565b6108b1611381565b6108cd5760405162461bcd60e51b81526004016102f890612269565b6108d683610749565b6108f25760405162461bcd60e51b81526004016102f8906123e6565b6108fa611ac3565b6020810183905260a081018290526001600160a01b038088166040830152861660608201526080810185905261092f8461103c565b610100840181905260e0840182905260c0840183905261095092919061105b565b808252604082015160608301516080840151602085015160a086015161097d956007959493929091611392565b80606001516001600160a01b031681604001516001600160a01b03167fcb48cecc076f9cad1de25f21319ce962ff151d316749e31680b49ed5e2c6fa53836080015184600001518560c001518660e0015187610100015188602001518960a001516040516109f19796959493929190612083565b60405180910390a3610a1760078260400151836060015184608001518560000151611217565b158015610160830152610a2d57610a2d8161151c565b50505050505050565b600080600080600080610a4f60078d8d8d8d8d8d6116d5565b95509550955095509550955096509650965096509650969050565b60015481565b610a7b600233610efb565b610a975760405162461bcd60e51b81526004016102f89061233d565b610a9f611a76565b610aa98b8b610f17565b50815260005b86811015610c8e57878782818110610ac357fe5b9050602002013560001415610ad757610c86565b610af2888883818110610ae657fe5b9050602002013561103c565b60e0850181905260c0850182905260a08501839052610b1292919061105b565b60808301908152825160009081526008602090815260408083208e845282528083209351835292905220610b46908a611731565b610b625760405162461bcd60e51b81526004016102f890612382565b610b8b868683818110610b7157fe5b90506020020135836040015161109d90919063ffffffff16565b6040830152610bb9848483818110610b9f57fe5b90506020020135836060015161109d90919063ffffffff16565b826060018181525050610bfa60078d8d8d86608001518b8b88818110610bdb57fe5b905060200201358a8a89818110610bee57fe5b9050602002013561173d565b8a6001600160a01b03168c6001600160a01b03167fc90213e03f0aa26b07d0e75565000d17a8ff1134595b78597d0f4c3cf51aee208c85608001518660a001518760c001518860e001518d8d8a818110610c5057fe5b905060200201358c8c8b818110610c6357fe5b90506020020135604051610c7d9796959493929190612083565b60405180910390a35b600101610aaf565b50600460009054906101000a90046001600160a01b03166001600160a01b0316638c9165b08c8c8c856040015186606001516040518663ffffffff1660e01b8152600401610ce0959493929190611fc2565b600060405180830381600087803b158015610cfa57600080fd5b505af1158015610d0e573d6000803e3d6000fd5b505050505050505050505050505050565b600080610d3360078a8a8a8a8a8a8a6117d1565b9150915097509795505050505050565b600080546001600160a01b03163314610d5b57600080fd5b610d66600283610efb565b610d825760405162461bcd60e51b81526004016102f8906122cf565b61039960028361181d565b600080546001600160a01b03163314610da557600080fd5b6001600160a01b038216610dcb5760405162461bcd60e51b81526004016102f890612243565b610ddd826001600160a01b0316610ef5565b610df95760405162461bcd60e51b81526004016102f890612298565b610e04600283610efb565b15610e215760405162461bcd60e51b81526004016102f8906123af565b610399600283611832565b6000546001600160a01b03163314610e4357600080fd5b806001600160a01b038116610e6a5760405162461bcd60e51b81526004016102f8906120f5565b610e7c816001600160a01b0316610ef5565b610e985760405162461bcd60e51b81526004016102f89061241d565b6006546040516001600160a01b038085169216907fa245849bf73ebdf50710da5ba1a476f522a747a35edb3359ab90c6a991ad8a4490600090a350600680546001600160a01b0319166001600160a01b0392909216919091179055565b3b151590565b6000610f10836001600160a01b038416611847565b9392505050565b600080826001600160a01b0316846001600160a01b03161415610f4c5760405162461bcd60e51b81526004016102f89061211e565b600080846001600160a01b0316866001600160a01b031610610f6f578486610f72565b85855b90925090506001600160a01b038216610f9d5760405162461bcd60e51b81526004016102f890612175565b856001600160a01b0316826001600160a01b031614610fec578181604051602001610fc9929190611fa8565b60405160208183030381529060405280519060200120600193509350505061101e565b8181604051602001610fff929190611fa8565b6040516020818303038152906040528051906020012060009350935050505b9250929050565b60006103998261185f565b6000610f108383611863565b6000808061104e6201518085046118a8565b9196909550909350915050565b600083838360405160200161107293929190611f7e565b6040516020818303038152906040528051906020012090509392505050565b6000610f10838361193e565b600082820183811015610f105760405162461bcd60e51b81526004016102f8906121d5565b6000806110cf8888610f17565b600082815260208c815260408083208b845282528083208a84529091529020600481015492945090925090610100900460ff161561111f5760405162461bcd60e51b81526004016102f89061219e565b81611135578054611130908661109d565b611141565b8054611141908561109d565b81558161115c576001810154611157908561109d565b61116b565b600181015461116b908661109d565b600190910155505050505050505050565b600080600061118b8888610f17565b50600081815260208b815260408083208a8452825280832089845290915290209091506111b6611b27565b5060009485526005016020908152604094859020855180870190965280546001600160a01b03168087526001909101549590910185905299939850929650505050505050565b60008183111561120b57600080fd5b50620151809190030490565b6000806112248686610f17565b5060009081526020978852604080822095825294885284812093815292909652502060040154610100900460ff169392505050565b60008060008060008060008061126f8c8c610f17565b9150915061127b611b3e565b50600082815260208e815260408083208d845282528083208c8452825291829020825160c081018452815481526001820154928101929092526002810154928201929092526003820154606082015260049091015460ff8082161515608084015261010090910416151560a082015281156112fc5780516020820180518352525b80516020820151111561132a578051602082015161131991611988565b604082015260016080820152611347565b6020810151815161133a91611988565b6040820152600060808201525b806000015181602001518260400151836060015184608001518560a001519850985098509850985098505050509550955095509550955095565b6006546001600160a01b0316331490565b60008061139f8888610f17565b600082815260208c815260408083208b845282528083208a84529091529020600481015492945090925090610100900460ff16156113ef5760405162461bcd60e51b81526004016102f89061219e565b6000821561143257815460018301541161141b5760405162461bcd60e51b81526004016102f890612306565b8154600183015461142b91611988565b9050611469565b60018201548254116114565760405162461bcd60e51b81526004016102f890612306565b6001820154825461146691611988565b90505b6003820154611478908761109d565b6003830181905581101561149e5760405162461bcd60e51b81526004016102f89061214b565b6114a6611b27565b60208181018881526001600160a01b038d811684526000898152600587019093526040909220835181546001600160a01b03191693169290921782555160019091015560038301546114f9908390611988565b61071b5760048301805461ff001916610100179055505050505050505050505050565b61154560078260400151836060015184608001518560c001518660e001518761010001516116d5565b505050506101408301526101208201526040810151606080830151608084015184519293611576939092919061039f565b60055460405163134a0f5760e21b81529192506001600160a01b031690634d283d5c906115a790849060040161200c565b600060405180830381600087803b1580156115c157600080fd5b505af11580156115d5573d6000803e3d6000fd5b505060048054604080870151606088015160808901516101208a01516101408b015194516308c9165b60e41b81526001600160a01b039096169850638c9165b0975061162996939592949193909201611fc2565b600060405180830381600087803b15801561164357600080fd5b505af1158015611657573d6000803e3d6000fd5b5050505081606001516001600160a01b031682604001516001600160a01b03167f60d5560fb6dcb96ba7b9e138a06d94234a893a7e79def188502193bf71bc4663846080015185600001518660c001518760e001518861010001518960a001516040516116c99695949392919061205b565b60405180910390a35050565b6000806000806000806117158d8d8d8d8d8d8d6040516020016116fa93929190611f7e565b60405160208183030381529060405280519060200120611259565b9550955095509550955095509750975097509750975097915050565b6000610f1083836119b0565b60008061174a8888610f17565b600082815260208c815260408083208b845282528083208a84529091529020600481015492945090925090610100900460ff161561178a57505050610a2d565b816117a057805461179b9086611988565b6117ac565b80546117ac9085611988565b8155816117c25760018101546111579085611988565b600181015461116b9086611988565b60008061180c8a8a8a8a8a8a8a6040516020016117f093929190611f7e565b604051602081830303815290604052805190602001208861117c565b915091509850989650505050505050565b6000610f10836001600160a01b0384166119b0565b6000610f10836001600160a01b03841661193e565b60009081526001919091016020526040902054151590565b5490565b815460009082106118865760405162461bcd60e51b81526004016102f8906120b3565b82600001828154811061189557fe5b9060005260206000200154905092915050565b60008080836226496581018262023ab1600483020590506004600362023ab18302010590910390600062164b09610fa0600185010205905060046105b58202058303601f019250600061098f84605002816118ff57fe5b0590506000605061098f83020585039050600b820560301994909401606402929092018301996002600c90940290910392909201975095509350505050565b600061194a8383611847565b61198057508154600181810184556000848152602080822090930184905584548482528286019093526040902091909155610399565b506000610399565b6000828211156119aa5760405162461bcd60e51b81526004016102f89061220c565b50900390565b60008181526001830160205260408120548015611a6c57835460001980830191908101906000908790839081106119e357fe5b9060005260206000200154905080876000018481548110611a0057fe5b600091825260208083209091019290925582815260018981019092526040902090840190558654879080611a3057fe5b60019003818190600052602060002001600090559055866001016000878152602001908152602001600020600090556001945050505050610399565b6000915050610399565b604051806101000160405280600080191681526020016000151581526020016000815260200160008152602001600080191681526020016000815260200160008152602001600081525090565b6040805161018081018252600080825260208201819052918101829052606081018290526080810182905260a0810182905260c0810182905260e0810182905261010081018290526101208101829052610140810182905261016081019190915290565b604080518082019091526000808252602082015290565b6040518060c00160405280600081526020016000815260200160008152602001600081526020016000151581526020016000151581525090565b80356001600160a01b038116811461039957600080fd5b60008083601f840112611ba0578182fd5b50813567ffffffffffffffff811115611bb7578182fd5b602083019150836020808302850101111561101e57600080fd5b600082601f830112611be1578081fd5b813567ffffffffffffffff80821115611bf8578283fd5b602080830260405182828201018181108582111715611c15578687fd5b604052848152945081850192508582018187018301881015611c3657600080fd5b600091505b84821015611c59578035845292820192600191909101908201611c3b565b505050505092915050565b600060208284031215611c75578081fd5b610f108383611b78565b60008060008060808587031215611c94578283fd5b611c9e8686611b78565b9350611cad8660208701611b78565b93969395505050506040820135916060013590565b60008060008060008060008060008060e08b8d031215611ce0578586fd5b611cea8c8c611b78565b9950611cf98c60208d01611b78565b985060408b0135975060608b0135965060808b013567ffffffffffffffff80821115611d23578788fd5b611d2f8e838f01611b8f565b909850965060a08d0135915080821115611d47578586fd5b611d538e838f01611b8f565b909650945060c08d0135915080821115611d6b578384fd5b50611d788d828e01611b8f565b915080935050809150509295989b9194979a5092959850565b600080600080600080600060e0888a031215611dab578283fd5b611db58989611b78565b9650611dc48960208a01611b78565b95506040880135945060608801359350608088013567ffffffffffffffff80821115611dee578485fd5b611dfa8b838c01611bd1565b945060a08a0135915080821115611e0f578384fd5b611e1b8b838c01611bd1565b935060c08a0135915080821115611e30578283fd5b50611e3d8a828b01611bd1565b91505092959891949750929550565b600080600080600060a08688031215611e63578081fd5b611e6d8787611b78565b9450611e7c8760208801611b78565b94979496505050506040830135926060810135926080909101359150565b60008060008060808587031215611c94578384fd5b60008060008060008060c08789031215611ec7578182fd5b611ed18888611b78565b9550611ee08860208901611b78565b95989597505050506040840135936060810135936080820135935060a0909101359150565b600080600080600080600060e0888a031215611f1f578081fd5b8735611f2a81612478565b96506020880135611f3a81612478565b96999698505050506040850135946060810135946080820135945060a0820135935060c0909101359150565b600060208284031215611f77578081fd5b5035919050565b9283526020830191909152604082015260600190565b6001600160a01b0391909116815260200190565b6001600160a01b0392831681529116602082015260400190565b6001600160a01b03958616815293909416602084015260408301919091526060820152608081019190915260a00190565b6001600160a01b03929092168252602082015260400190565b6020808252825182820181905260009190848201906040850190845b8181101561204457835183529284019291840191600101612028565b50909695505050505050565b901515815260200190565b958652602086019490945260408501929092526060840152608083015260a082015260c00190565b968752602087019590955260408601939093526060850191909152608084015260a083015260c082015260e00190565b60208082526022908201527f456e756d657261626c655365743a20696e646578206f7574206f6620626f756e604082015261647360f01b606082015260800190565b6020808252600f908201526e494e56414c49445f4144445245535360881b604082015260600190565b6020808252601390820152724964656e746963616c2061646472657373657360681b604082015260600190565b60208082526010908201526f5061796d656e74206f766572666c6f7760801b604082015260600190565b6020808252600f908201526e496e76616c6964206164647265737360881b604082015260600190565b60208082526018908201527f54494d45534c4f5420534554544c454420414c52454144590000000000000000604082015260600190565b6020808252601b908201527f536166654d6174683a206164646974696f6e206f766572666c6f770000000000604082015260600190565b6020808252601e908201527f536166654d6174683a207375627472616374696f6e206f766572666c6f770000604082015260600190565b6020808252600c908201526b5a65726f206164647265737360a01b604082015260600190565b6020808252601590820152744e4f545f534554544c454d454e545f454e47494e4560581b604082015260600190565b6020808252601e908201527f43616e277420616464206e6f6e2d636f6e747261637420616464726573730000604082015260600190565b6020808252601e908201527f43616e27742072656d6f7665206e6f6e2d6578697374696e6720757365720000604082015260600190565b6020808252601c908201527f496e636f727265637420766572696669636174696f6e20706172747900000000604082015260600190565b60208082526025908201527f6e6f7420616c6c6f77656420746f20757365207061796d656e7420616767726560408201526433b0ba37b960d91b606082015260800190565b6020808252601390820152721393d397d49151d254d51154915117d1115053606a1b604082015260600190565b6020808252601a908201527f43616e277420616464206578697374696e672061646472657373000000000000604082015260600190565b60208082526018908201527f4f55545f4f465f534554544c454d454e545f57494e444f570000000000000000604082015260600190565b6020808252600c908201526b1393d517d0d3d395149050d560a21b604082015260600190565b90815260200190565b95865260208601949094526040850192909252606084015215156080830152151560a082015260c00190565b6001600160a01b038116811461248d57600080fd5b5056fea2646970667358221220b6124e2555086d45d8a8c0b2acf97cfea35cdf1f28b1c4d18eab708eee61efcc64736f6c634300060c0033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "addPaymentAggregatorUser(address)": {
+        "details": "Trigers to add contract address to payment aggregator users address set",
+        "params": {
+          "_user": "Payment aggregator user smart contract address"
+        }
+      },
+      "checkSettlementWindow(uint256)": {
+        "details": "Internal function to check if settlement payment is within available timeline",
+        "params": {
+          "targetTime": "target time for settlement of time slot"
+        },
+        "returns": {
+          "_0": "Boolean if slot within the settlement window"
+        }
+      },
+      "constructor": {
+        "details": "Contract constructor function."
+      },
+      "getTimeSlotByDate(address,address,bytes32,uint256,uint256,uint256)": {
+        "details": "Returns the time slot between parties using slot id.",
+        "params": {
+          "ccy": "Main payment settlement currency",
+          "party0": "First counterparty address",
+          "party1": "Second counterparty address"
+        }
+      },
+      "getTimeSlotBySlotId(address,address,bytes32,bytes32)": {
+        "details": "Returns the time slot between parties using slot id.",
+        "params": {
+          "ccy": "Main payment settlement currency",
+          "party0": "First counterparty address",
+          "party1": "Second counterparty address",
+          "slot": "TimeSlot position"
+        }
+      },
+      "getTimeSlotPaymentConfirmation(address,address,bytes32,uint256,uint256,uint256,bytes32)": {
+        "details": "Returns the time slot between parties using slot id.",
+        "params": {
+          "ccy": "Main payment settlement currency",
+          "day": "Calendar day of the settlement",
+          "month": "Calendar month of the settlement",
+          "party0": "First counterparty address",
+          "party1": "Second counterparty address",
+          "settlementId": "Settlement payment confirmation identifier",
+          "year": "Calendar year of the settlement"
+        }
+      },
+      "getTimeSlotPaymentConfirmationById(address,address,bytes32,bytes32,bytes32)": {
+        "details": "Returns the time slot between parties using slot id.",
+        "params": {
+          "ccy": "Main payment settlement currency",
+          "party0": "First counterparty address",
+          "party1": "Second counterparty address",
+          "settlementId": "Settlement payment confirmation identifier",
+          "slot": "TimeSlot position"
+        }
+      },
+      "isPaymentAggregatorUser(address)": {
+        "details": "Trigers to check if provided `addr` is a payment aggregator user from address set",
+        "params": {
+          "_user": "Contract address to check if it's a payment aggregator user"
+        }
+      },
+      "isSettled(address,address,bytes32,uint256)": {
+        "details": "Triggers settlement status of the time slot",
+        "params": {
+          "ccy": "Main payment settlement currency",
+          "party0": "First counterparty address",
+          "party1": "Second counterparty address",
+          "timestamp": "TimeSlot timestamp"
+        },
+        "returns": {
+          "status": "Boolean if slot was settled"
+        }
+      },
+      "registerPayments(address,address,bytes32,bytes32,uint256[],uint256[],uint256[])": {
+        "details": "Triggered to add new payments for a deal",
+        "params": {
+          "ccy": "Main settlement currency in a deal",
+          "dealId": "Deal unique ID with prefix",
+          "party0": "First counterparty address",
+          "party1": "Second counterparty address",
+          "payments0": "Array of cashflows owed by the first party",
+          "payments1": "Array of cashflows owed by the second party",
+          "timestamps": "Array of timestamps for timeslot identification"
+        }
+      },
+      "removePaymentAggregatorUser(address)": {
+        "details": "Trigers to remove payment aggregator user from address set",
+        "params": {
+          "_user": "Payment aggregator user smart contract address"
+        }
+      },
+      "removePayments(address,address,bytes32,bytes32,uint256[],uint256[],uint256[])": {
+        "details": "Triggered to remove existing payments for a deal",
+        "params": {
+          "ccy": "Main settlement currency in a deal",
+          "dealId": "Deal unique ID with prefix",
+          "party0": "First counterparty address",
+          "party1": "Second counterparty address",
+          "payments0": "Array of cashflows owed by the first party",
+          "payments1": "Array of cashflows owed by the second party",
+          "timestamps": "Array of timestamps for timeslot identification"
+        }
+      },
+      "setCloseOutNetting(address)": {
+        "details": "Trigers to set close out netting smart contract",
+        "params": {
+          "_contract": "CloseOutNetting smart contract address"
+        }
+      },
+      "setMarkToMarket(address)": {
+        "details": "Trigers to set mark to market smart contract",
+        "params": {
+          "_contract": "MarkToMarket smart contract address"
+        }
+      },
+      "verifyPayment(address,address,bytes32,uint256,uint256,bytes32)": {
+        "details": "External function to verify payment by msg.sender, uses timestamp to identify TimeSlot.",
+        "params": {
+          "ccy": "Main payment settlement currency",
+          "counterparty": "Counterparty address",
+          "payment": "Main payment settlement currency",
+          "settlementId": "Main payment settlement id",
+          "timestamp": "Main timestamp for TimeSlot",
+          "verifier": "Payment verifier address"
+        }
+      }
+    },
+    "title": "Payment Aggregator contract is used to aggregate payments between counterparties in bilateral relationships. Those payments are defined per counterparties addresses (packed into one bytes32), main settlement currency and payment date. Contract linked to all product based contracts like Loan, Swap, etc.",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "addPaymentAggregatorUser(address)": {
+        "notice": "Trigers only be contract ownerReverts on saving 0x0 address"
+      },
+      "constructor": "sets contract deployer as owner of this contract",
+      "removePaymentAggregatorUser(address)": {
+        "notice": "Trigers only be contract ownerReverts on removing non-existing payment aggregator user"
+      },
+      "setCloseOutNetting(address)": {
+        "notice": "Trigers only be contract ownerReverts on saving 0x0 address"
+      },
+      "setMarkToMarket(address)": {
+        "notice": "Trigers only be contract ownerReverts on saving 0x0 address"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 17680,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 17684,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "settlementWindow",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 17689,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "paymentAggregatorUsers",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_struct(AddressSet)1812_storage"
+      },
+      {
+        "astId": 17691,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "closeOutNetting",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_contract(ICloseOutNetting)20634"
+      },
+      {
+        "astId": 17693,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "markToMarket",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_contract(IMarkToMarket)22896"
+      },
+      {
+        "astId": 17695,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "settlementEngine",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_contract(ISettlementEngine)23563"
+      },
+      {
+        "astId": 17703,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "_timeSlots",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_mapping(t_bytes32,t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Slot)32873_storage)))"
+      },
+      {
+        "astId": 17711,
+        "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+        "label": "deals",
+        "offset": 0,
+        "slot": "8",
+        "type": "t_mapping(t_bytes32,t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Bytes32Set)1727_storage)))"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_bytes32)dyn_storage": {
+        "base": "t_bytes32",
+        "encoding": "dynamic_array",
+        "label": "bytes32[]",
+        "numberOfBytes": "32"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_contract(ICloseOutNetting)20634": {
+        "encoding": "inplace",
+        "label": "contract ICloseOutNetting",
+        "numberOfBytes": "20"
+      },
+      "t_contract(IMarkToMarket)22896": {
+        "encoding": "inplace",
+        "label": "contract IMarkToMarket",
+        "numberOfBytes": "20"
+      },
+      "t_contract(ISettlementEngine)23563": {
+        "encoding": "inplace",
+        "label": "contract ISettlementEngine",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_bytes32,t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Bytes32Set)1727_storage)))": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => struct EnumerableSet.Bytes32Set)))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Bytes32Set)1727_storage))"
+      },
+      "t_mapping(t_bytes32,t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Slot)32873_storage)))": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => struct TimeSlot.Slot)))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Slot)32873_storage))"
+      },
+      "t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Bytes32Set)1727_storage))": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => mapping(bytes32 => struct EnumerableSet.Bytes32Set))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes32,t_struct(Bytes32Set)1727_storage)"
+      },
+      "t_mapping(t_bytes32,t_mapping(t_bytes32,t_struct(Slot)32873_storage))": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => mapping(bytes32 => struct TimeSlot.Slot))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_bytes32,t_struct(Slot)32873_storage)"
+      },
+      "t_mapping(t_bytes32,t_struct(Bytes32Set)1727_storage)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => struct EnumerableSet.Bytes32Set)",
+        "numberOfBytes": "32",
+        "value": "t_struct(Bytes32Set)1727_storage"
+      },
+      "t_mapping(t_bytes32,t_struct(PaymentConfirmation)32878_storage)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => struct TimeSlot.PaymentConfirmation)",
+        "numberOfBytes": "32",
+        "value": "t_struct(PaymentConfirmation)32878_storage"
+      },
+      "t_mapping(t_bytes32,t_struct(Slot)32873_storage)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => struct TimeSlot.Slot)",
+        "numberOfBytes": "32",
+        "value": "t_struct(Slot)32873_storage"
+      },
+      "t_mapping(t_bytes32,t_uint256)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => uint256)",
+        "numberOfBytes": "32",
+        "value": "t_uint256"
+      },
+      "t_struct(AddressSet)1812_storage": {
+        "encoding": "inplace",
+        "label": "struct EnumerableSet.AddressSet",
+        "members": [
+          {
+            "astId": 1811,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "_inner",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_struct(Set)1547_storage"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_struct(Bytes32Set)1727_storage": {
+        "encoding": "inplace",
+        "label": "struct EnumerableSet.Bytes32Set",
+        "members": [
+          {
+            "astId": 1726,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "_inner",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_struct(Set)1547_storage"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_struct(PaymentConfirmation)32878_storage": {
+        "encoding": "inplace",
+        "label": "struct TimeSlot.PaymentConfirmation",
+        "members": [
+          {
+            "astId": 32875,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "verificationParty",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address"
+          },
+          {
+            "astId": 32877,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "amount",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_struct(Set)1547_storage": {
+        "encoding": "inplace",
+        "label": "struct EnumerableSet.Set",
+        "members": [
+          {
+            "astId": 1542,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "_values",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_array(t_bytes32)dyn_storage"
+          },
+          {
+            "astId": 1546,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "_indexes",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_bytes32,t_uint256)"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_struct(Slot)32873_storage": {
+        "encoding": "inplace",
+        "label": "struct TimeSlot.Slot",
+        "members": [
+          {
+            "astId": 32858,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "totalPayment0",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 32860,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "totalPayment1",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 32862,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "netPayment",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 32864,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "paidAmount",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 32866,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "flipped",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_bool"
+          },
+          {
+            "astId": 32868,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "isSettled",
+            "offset": 1,
+            "slot": "4",
+            "type": "t_bool"
+          },
+          {
+            "astId": 32872,
+            "contract": "contracts/PaymentAggregator.sol:PaymentAggregator",
+            "label": "confirmations",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_bytes32,t_struct(PaymentConfirmation)32878_storage)"
+          }
+        ],
+        "numberOfBytes": "192"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

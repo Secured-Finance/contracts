@@ -283,6 +283,9 @@ contract('Integration test', async (accounts) => {
       crosschainResolver.address,
       wETHToken.address,
     );
+    console.log(
+      'SettlementEngine contract address is ' + settlementEngine.address,
+    );
 
     await paymentAggregator.setSettlementEngine(settlementEngine.address);
 

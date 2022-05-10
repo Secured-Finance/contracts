@@ -32,14 +32,13 @@ module.exports = {
       timeout: 240000,
     },
     rinkeby: {
-      url: `https://rinkeby.infura.io/v3/${process.env.WEB3_INFURA_ID}`,
+      url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: [process.env.PRIVATE_KEY, process.env.PRIVATE_KEY_3],
       live: true,
       saveDeployments: true,
-      gasPrice: 11000000000,
+      gasPrice: 1500000000,
       gasMultiplier: 3,
-      timeout: 240000,
     },
   },
   solidity: {

@@ -219,6 +219,16 @@ contract SettlementEngine is
             _settlementId
         );
 
+        emit CrosschainSettlementRequestFulfilled(
+            _txData.from,
+            _txData.to,
+            chainId,
+            _txData.value,
+            _txData.timestamp,
+            _txData.txHash,
+            _settlementId
+        );
+
         delete settlementRequests[_requestId];
     }
 

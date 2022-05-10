@@ -22,13 +22,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     lendingController.address,
   );
 
-  const lendingMarket = await ethers.getContractAt(
-    'LendingMarket',
-    '0x1723CA6fB3f9Bcd48c5aBBd8d393CE58aAa0c8F3',
-  );
-  await (await lendingMarket.order(0, 107500, 750)).wait();
-  await (await lendingMarket.order(1, 108500, 800)).wait();
-
   for (i = 0; i < sortedTermDays.length; i++) {
     const tx = await lendingControllerController.deployLendingMarket(
       hexFILString,

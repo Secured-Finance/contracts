@@ -14,6 +14,15 @@ interface ISettlementEngine {
         string txHash,
         bytes32 requestId
     );
+    event CrosschainSettlementRequestFulfilled(
+        string payer,
+        string receiver,
+        uint16 chainId,
+        uint256 amount,
+        uint256 timestamp,
+        string txHash,
+        bytes32 settlementId
+    );
     event ExternalAdapterAdded(address indexed adapter, bytes32 ccy);
     event ExternalAdapterUpdated(address indexed adapter, bytes32 ccy);
 
