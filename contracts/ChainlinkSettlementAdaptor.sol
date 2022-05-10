@@ -147,6 +147,7 @@ contract ChainlinkSettlementAdapter is
      * @param _to The to address of the data received
      * @param _value The value of the data received
      * @param _timestamp The timestamp of the data received
+     * @param _txHash The hash of the data received
      */
     function fulfill(
         bytes32 _requestId,
