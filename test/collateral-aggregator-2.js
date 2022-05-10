@@ -1044,6 +1044,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         bob,
         hexFILString,
         filAmount,
+        filAmount,
         true,
       );
 
@@ -1060,8 +1061,16 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
     it('Try to liquidate too much PV for Bob, expect revert on liquidation', async () => {
       filAmount = decimalBase.mul(toBN('40'));
+
       await expectRevert(
-        collateralCaller.liquidate(bob, alice, hexFILString, filAmount, true),
+        collateralCaller.liquidate(
+          bob,
+          alice,
+          hexFILString,
+          filAmount,
+          filAmount,
+          true,
+        ),
         'SafeMath: subtraction overflow',
       );
     });
@@ -1079,6 +1088,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         alice,
         hexFILString,
         filAmount,
+        filAmount,
         true,
       );
 
@@ -1092,8 +1102,16 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
     it('Try to liquidate empty PV for Bob, expect revert on release', async () => {
       filAmount = decimalBase.mul(toBN('5'));
+
       await expectRevert(
-        collateralCaller.liquidate(bob, alice, hexFILString, filAmount, true),
+        collateralCaller.liquidate(
+          bob,
+          alice,
+          hexFILString,
+          filAmount,
+          filAmount,
+          true,
+        ),
         'SafeMath: subtraction overflow',
       );
     });
