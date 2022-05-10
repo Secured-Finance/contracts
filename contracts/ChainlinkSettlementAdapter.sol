@@ -30,6 +30,8 @@ contract ChainlinkSettlementAdapter is
      * @param _jobId The job id on the Chainlink node
      * @param _requestFee The amount of LINK sent for the request
      * @param _link The address of the LINK token contract
+     * @param _ccy Settlement adapter currency identifier
+     * @param _settlementEngine Address of a SettlementEngine contract
      *
      * @notice `_link` is provided for development usage
      */
@@ -129,7 +131,7 @@ contract ChainlinkSettlementAdapter is
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration
-    ) public onlyOwner {
+    ) public {
         _onlySettlementEngine();
         cancelChainlinkRequest(
             _requestId,

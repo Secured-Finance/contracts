@@ -34,7 +34,7 @@ module.exports = {
     rinkeby: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
-      accounts: [process.env.PRIVATE_KEY, process.env.PRIVATE_KEY_3],
+      accounts: [process.env.PRIVATE_KEY],
       live: true,
       saveDeployments: true,
       gasPrice: 1500000000,
