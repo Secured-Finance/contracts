@@ -15,6 +15,7 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
         string to;
         uint256 value;
         uint256 timestamp;
+        string txHash;
     }
     mapping(bytes32 => FulfillData) public results; // TODO: remove tmp data
     bytes32 public jobId;
@@ -136,19 +137,22 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
      * @param _to The to address of the data received
      * @param _value The value of the data received
      * @param _timestamp The timestamp of the data received
+     * @param _txHash The hash of the data received
      */
     function fulfill(
         bytes32 _requestId,
         string calldata _from,
         string calldata _to,
         uint256 _value,
-        uint256 _timestamp
+        uint256 _timestamp,
+        string calldata _txHash
     ) public recordChainlinkFulfillment(_requestId) {
         results[_requestId] = FulfillData({
             from: _from,
             to: _to,
             value: _value,
-            timestamp: _timestamp
+            timestamp: _timestamp,
+            txHash: _txHash
         });
         // TODO: verify payment here
     }

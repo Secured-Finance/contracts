@@ -125,6 +125,7 @@ contract('ChainlinkSettlementAdaptor', (accounts) => {
         'to',
         100000,
         123456,
+        inputTxHash,
         { from: alice },
       );
 
@@ -148,6 +149,7 @@ contract('ChainlinkSettlementAdaptor', (accounts) => {
           'to',
           100000,
           123456,
+          inputTxHash,
           { from: bob },
         );
 
