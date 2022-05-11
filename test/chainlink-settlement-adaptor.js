@@ -205,6 +205,7 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
 
       const tx2 = await (
         await externalAdapterCaller.cancelRequest(
+          inputTxHash,
           requestId,
           callbackFunctionId,
           cancelExpiration.toString(),
@@ -241,6 +242,7 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
 
       const cancelRequest = () =>
         chainlinkSettlementAdapter.cancelRequest(
+          inputTxHash,
           requestId,
           callbackFunctionId,
           cancelExpiration,

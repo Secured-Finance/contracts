@@ -101,6 +101,7 @@ contract ChainlinkSettlementAdapterMock is
      * @param _expiration The time of the expiration for the request
      */
     function cancelRequest(
+        string memory _txHash,
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration

@@ -7,6 +7,7 @@ interface IExternalAdapter {
         returns (bytes32 requestId);
 
     function cancelRequest(
+        string memory _txHash,
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration

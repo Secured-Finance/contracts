@@ -123,16 +123,19 @@ contract ChainlinkSettlementAdapter is
 
     /**
      * @dev Triggers to cancell a request if it has not been fulfilled
+     * @param _txHash Trasaction hash that has been requested to fulfill
      * @param _requestId The id to specify a request
      * @param _callbackFunctionId The callback function specified for the request
      * @param _expiration The time of the expiration for the request
      */
     function cancelRequest(
+        string memory _txHash,
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration
     ) public {
         _onlySettlementEngine();
+        isRequested[_txHash] = false;
         cancelChainlinkRequest(
             _requestId,
             requestFee,

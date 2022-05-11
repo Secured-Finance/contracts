@@ -232,6 +232,8 @@ contract SettlementEngine is
         delete settlementRequests[_requestId];
     }
 
+    // TODO: Add cancel external adapter request function
+
     /**
      * @dev Internal function to create a settlement validation request for an external adapter
      * @param _payer Payer of the settlement transfer

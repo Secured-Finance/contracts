@@ -1,5 +1,4 @@
 require('dotenv/config');
-const { BigNumber } = require('ethers');
 const { hexFILString } = require('../test-utils/').strings;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
@@ -78,7 +77,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   );
   const tx2 = await linkContract.transfer(
     settlementAdapter.address,
-    BigNumber.from('10000000000000000000'),
+    process.env.CHAINLINK_LINK_DEPOSIT,
   );
   await tx2.wait();
   console.log('Sent 10 LINK to ' + settlementAdapter.address);

@@ -22,12 +22,18 @@ contract ExternalAdapterCallerMock is IExternalAdapterTxResponse {
     }
 
     function cancelRequest(
+        string memory _txHash,
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration
     ) public {
         return
-            adapter.cancelRequest(_requestId, _callbackFunctionId, _expiration);
+            adapter.cancelRequest(
+                _txHash,
+                _requestId,
+                _callbackFunctionId,
+                _expiration
+            );
     }
 
     function fullfillSettlementRequest(
