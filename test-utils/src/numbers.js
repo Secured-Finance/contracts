@@ -1,11 +1,16 @@
 const utils = require('web3-utils');
+const ethers = require('ethers');
 
-const toEther = (wei) => {
-  return utils.toWei(utils.toBN(wei), 'ether');
+const toEther = (ether) => {
+  return utils.toWei(utils.toBN(ether), 'ether');
 };
 
 const toBN = (number) => {
   return utils.toBN(number);
+};
+
+const fromWeiToEther = (wei) => {
+  return ethers.utils.formatEther(wei);
 };
 
 const ETH = utils.toBN('1000000000000000000');
@@ -23,6 +28,7 @@ const oracleRequestFee = toBN('100000000000000000');
 module.exports = {
   toEther,
   toBN,
+  fromWeiToEther,
   ETH,
   ZERO_BN,
   decimalBase,

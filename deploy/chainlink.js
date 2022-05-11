@@ -1,5 +1,6 @@
 require('dotenv/config');
 const { hexFILString } = require('../test-utils/').strings;
+const { fromWeiToEther } = require('../test-utils/').numbers;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy, getNetworkName } = deployments;
@@ -80,7 +81,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     process.env.CHAINLINK_LINK_DEPOSIT,
   );
   await tx2.wait();
-  console.log('Sent 10 LINK to ' + settlementAdapter.address);
+  console.log(
+    `Sent ${fromWeiToEther(process.env.CHAINLINK_LINK_DEPOSIT)} LINK to ` +
+      settlementAdapter.address,
+  );
 };
 
 module.exports.tags = ['ChainlinkSettlementAdaptor'];
