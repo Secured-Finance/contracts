@@ -22,4 +22,4 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 };
 
 module.exports.tags = ['MarkToMarket'];
-module.exports.dependencies = ['ProductAddressResolver'];
+module.exports.dependencies = ['ProductAddressResolver', 'PaymentAggregator'];

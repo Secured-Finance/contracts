@@ -1,5 +1,6 @@
 require('dotenv/config');
-const { BigNumber } = require('ethers');
+const { hexFILString } = require('../test-utils/').strings;
+const { fromWeiToEther } = require('../test-utils/').numbers;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy, getNetworkName } = deployments;
@@ -43,35 +44,48 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   ]);
   await tx1.wait();
 
-  const chainlinkSettlementAdaptor = await deploy(
-    'ChainlinkSettlementAdaptor',
-    {
-      from: deployer,
-      args: [
-        oracle.address,
-        process.env.CHAINLINK_JOB_ID,
-        process.env.CHAINLINK_REQUEST_FEE,
-        linkTokenAddress,
-      ],
-    },
-  );
-  console.log(
-    'Deployed ChainlinkSettlementAdaptor at ' +
-      chainlinkSettlementAdaptor.address,
+  const settlementEngine = await deployments.get('SettlementEngine');
+  const settlementEngineContract = await ethers.getContractAt(
+    'SettlementEngine',
+    settlementEngine.address,
   );
 
-  if (network === 'hardhat') {
-    const linkContract = await ethers.getContractAt(
-      'LinkToken',
+  const settlementAdapter = await deploy('ChainlinkSettlementAdapter', {
+    from: deployer,
+    args: [
+      oracle.address,
+      process.env.CHAINLINK_JOB_ID,
+      process.env.CHAINLINK_REQUEST_FEE,
       linkTokenAddress,
-    );
-    const tx2 = await linkContract.transfer(
-      chainlinkSettlementAdaptor.address,
-      BigNumber.from('100000000000000000000'),
-    );
-    await tx2.wait();
-    console.log('Sent 100 LINK to ' + chainlinkSettlementAdaptor.address);
-  }
+      hexFILString,
+      settlementEngine.address,
+    ],
+  });
+  console.log(
+    'Deployed ChainlinkSettlementAdapter at ' + settlementAdapter.address,
+  );
+
+  await (
+    await settlementEngineContract.addExternalAdapter(
+      settlementAdapter.address,
+      hexFILString,
+    )
+  ).wait();
+
+  const linkContract = await ethers.getContractAt(
+    'LinkToken',
+    linkTokenAddress,
+  );
+  const tx2 = await linkContract.transfer(
+    settlementAdapter.address,
+    process.env.CHAINLINK_LINK_DEPOSIT,
+  );
+  await tx2.wait();
+  console.log(
+    `Sent ${fromWeiToEther(process.env.CHAINLINK_LINK_DEPOSIT)} LINK to ` +
+      settlementAdapter.address,
+  );
 };
 
 module.exports.tags = ['ChainlinkSettlementAdaptor'];
+module.exports.dependencies = ['SettlementEngine'];

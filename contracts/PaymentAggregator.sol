@@ -12,7 +12,7 @@ import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import "./interfaces/ICloseOutNetting.sol";
 import "./interfaces/IMarkToMarket.sol";
 import "./interfaces/IPaymentAggregator.sol";
-import "hardhat/console.sol";
+import "./interfaces/ISettlementEngine.sol";
 
 /**
  * @title Payment Aggregator contract is used to aggregate payments
@@ -37,6 +37,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
     EnumerableSet.AddressSet private paymentAggregatorUsers;
     ICloseOutNetting private closeOutNetting;
     IMarkToMarket private markToMarket;
+    ISettlementEngine private settlementEngine;
 
     // Mapping structure for storing TimeSlots
     mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) _timeSlots;
@@ -168,6 +169,15 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         markToMarket = IMarkToMarket(_contract);
     }
 
+    function setSettlementEngine(address _contract)
+        public
+        onlyOwner
+        onlyContractAddr(_contract)
+    {
+        emit UpdateSettlementEngine(address(settlementEngine), _contract);
+        settlementEngine = ISettlementEngine(_contract);
+    }
+
     struct TimeSlotPaymentsLocalVars {
         bytes32 packedAddrs;
         bool flipped;
@@ -254,15 +264,18 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
     }
 
     struct PaymentSettlementLocalVars {
-        bytes32 packedAddrs;
-        bool flipped;
         bytes32 slotPosition;
         uint256 payment;
         address verifier;
-        bytes32 txHash;
+        address counterparty;
+        bytes32 ccy;
+        bytes32 settlementId;
         uint256 year;
         uint256 month;
         uint256 day;
+        uint256 totalPayment0;
+        uint256 totalPayment1;
+        bool isSettled;
     }
 
     /**
@@ -272,7 +285,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
      * @param ccy Main payment settlement currency
      * @param timestamp Main timestamp for TimeSlot
      * @param payment Main payment settlement currency
-     * @param txHash Main payment settlement currency
+     * @param settlementId Main payment settlement id
      */
     function verifyPayment(
         address verifier,
@@ -280,14 +293,17 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         bytes32 ccy,
         uint256 timestamp,
         uint256 payment,
-        bytes32 txHash
+        bytes32 settlementId
     ) external override {
-        require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
+        require(_onlySettlementEngine(), "NOT_SETTLEMENT_ENGINE");
+        require(checkSettlementWindow(timestamp), "OUT_OF_SETTLEMENT_WINDOW");
         PaymentSettlementLocalVars memory vars;
 
         vars.payment = payment;
-        vars.txHash = txHash;
+        vars.settlementId = settlementId;
         vars.verifier = verifier;
+        vars.counterparty = counterparty;
+        vars.ccy = ccy;
 
         (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary
             .timestampToDate(timestamp);
@@ -295,96 +311,80 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
 
         TimeSlot.verifyPayment(
             _timeSlots,
-            verifier,
-            counterparty,
-            ccy,
+            vars.verifier,
+            vars.counterparty,
+            vars.ccy,
             vars.slotPosition,
             vars.payment,
-            vars.txHash
+            vars.settlementId
         );
 
         emit VerifyPayment(
-            verifier,
-            counterparty,
-            ccy,
+            vars.verifier,
+            vars.counterparty,
+            vars.ccy,
             vars.slotPosition,
             vars.year,
             vars.month,
             vars.day,
-            payment,
-            txHash
+            vars.payment,
+            vars.settlementId
         );
+
+        vars.isSettled = TimeSlot.isSettled(
+            _timeSlots,
+            vars.verifier,
+            vars.counterparty,
+            vars.ccy,
+            vars.slotPosition
+        );
+
+        if (vars.isSettled) {
+            _settlePayment(vars);
+        }
     }
 
     /**
-     * @dev External function to settle payment using timestamp to identify TimeSlot.
-     * @param verifier Payment settlement verifier address
-     * @param counterparty Counterparty address
-     * @param ccy Main payment settlement currency
-     * @param timestamp Main timestamp for TimeSlot
-     * @param txHash Main payment settlement currency
+     * @dev Internal function to settle payment using payment settlement local variables.
+     * @param vars Local variables used in verifyPayment function
      */
-    function settlePayment(
-        address verifier,
-        address counterparty,
-        bytes32 ccy,
-        uint256 timestamp,
-        bytes32 txHash
-    ) external override {
-        require(_checkSettlementWindow(timestamp), "OUT OF SETTLEMENT WINDOW");
-        PaymentSettlementLocalVars memory vars;
-
-        vars.txHash = txHash;
-        vars.verifier = verifier;
-
-        (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary
-            .timestampToDate(timestamp);
-        vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
-
-        TimeSlot.Slot memory timeSlot = TimeSlot.get(
+    function _settlePayment(PaymentSettlementLocalVars memory vars) internal {
+        // TODO: Rework the settlement workflow to reduce gas consumption
+        (vars.totalPayment0, vars.totalPayment1, , , , ) = TimeSlot.get(
             _timeSlots,
-            verifier,
-            counterparty,
-            ccy,
+            vars.verifier,
+            vars.counterparty,
+            vars.ccy,
             vars.year,
             vars.month,
             vars.day
         );
 
-        TimeSlot.settlePayment(
-            _timeSlots,
-            verifier,
-            counterparty,
-            ccy,
-            vars.slotPosition,
-            vars.txHash
-        );
-
         bytes32[] memory dealIds = getDealsFromSlot(
-            verifier,
-            counterparty,
-            ccy,
+            vars.verifier,
+            vars.counterparty,
+            vars.ccy,
             vars.slotPosition
         );
         markToMarket.updatePVs(dealIds);
 
         closeOutNetting.removePayments(
-            verifier,
-            counterparty,
-            ccy,
-            timeSlot.totalPayment0,
-            timeSlot.totalPayment1
+            vars.verifier,
+            vars.counterparty,
+            vars.ccy,
+            vars.totalPayment0,
+            vars.totalPayment1
         );
 
         emit SettlePayment(
-            verifier,
-            counterparty,
-            ccy,
+            vars.verifier,
+            vars.counterparty,
+            vars.ccy,
             vars.slotPosition,
             vars.year,
             vars.month,
             vars.day,
-            txHash
+            vars.settlementId
         );
     }
 
@@ -474,16 +474,19 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         uint256 year,
         uint256 month,
         uint256 day
-    ) public view returns (TimeSlot.Slot memory timeSlot) {
-        timeSlot = TimeSlot.get(
-            _timeSlots,
-            party0,
-            party1,
-            ccy,
-            year,
-            month,
-            day
-        );
+    )
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            bool
+        )
+    {
+        return TimeSlot.get(_timeSlots, party0, party1, ccy, year, month, day);
     }
 
     /**
@@ -498,8 +501,77 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         address party1,
         bytes32 ccy,
         bytes32 slot
-    ) public view returns (TimeSlot.Slot memory timeSlot) {
-        timeSlot = TimeSlot.getBySlotId(_timeSlots, party0, party1, ccy, slot);
+    )
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            bool
+        )
+    {
+        return TimeSlot.getBySlotId(_timeSlots, party0, party1, ccy, slot);
+    }
+
+    /**
+     * @dev Returns the time slot between parties using slot id.
+     * @param party0 First counterparty address
+     * @param party1 Second counterparty address
+     * @param ccy Main payment settlement currency
+     * @param year Calendar year of the settlement
+     * @param month Calendar month of the settlement
+     * @param day Calendar day of the settlement
+     * @param settlementId Settlement payment confirmation identifier
+     */
+    function getTimeSlotPaymentConfirmation(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        uint256 year,
+        uint256 month,
+        uint256 day,
+        bytes32 settlementId
+    ) public view returns (address, uint256) {
+        return
+            TimeSlot.getPaymentConfirmation(
+                _timeSlots,
+                party0,
+                party1,
+                ccy,
+                year,
+                month,
+                day,
+                settlementId
+            );
+    }
+
+    /**
+     * @dev Returns the time slot between parties using slot id.
+     * @param party0 First counterparty address
+     * @param party1 Second counterparty address
+     * @param ccy Main payment settlement currency
+     * @param slot TimeSlot position
+     * @param settlementId Settlement payment confirmation identifier
+     */
+    function getTimeSlotPaymentConfirmationById(
+        address party0,
+        address party1,
+        bytes32 ccy,
+        bytes32 slot,
+        bytes32 settlementId
+    ) public view returns (address, uint256) {
+        return
+            TimeSlot.getPaymentConfirmationById(
+                _timeSlots,
+                party0,
+                party1,
+                ccy,
+                slot,
+                settlementId
+            );
     }
 
     /**
@@ -567,9 +639,10 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
      * @param targetTime target time for settlement of time slot
      * @return Boolean if slot within the settlement window
      */
-    function _checkSettlementWindow(uint256 targetTime)
-        internal
+    function checkSettlementWindow(uint256 targetTime)
+        public
         view
+        override
         returns (bool)
     {
         uint256 time = block.timestamp;
@@ -598,5 +671,9 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         }
 
         return dealIds;
+    }
+
+    function _onlySettlementEngine() internal view returns (bool) {
+        return msg.sender == address(settlementEngine);
     }
 }

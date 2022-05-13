@@ -31,6 +31,7 @@ contract CurrencyController is ICurrencyController {
     mapping(bytes32 => uint256) public override haircuts;
     mapping(bytes32 => uint256) public override minMargins;
     mapping(bytes32 => bool) public override isCollateral;
+    mapping(bytes32 => address) public override tokenAddresses;
 
     // PriceFeed storage
     mapping(bytes32 => AggregatorV3Interface) private usdPriceFeeds;
@@ -81,13 +82,21 @@ contract CurrencyController is ICurrencyController {
         string memory _name,
         uint16 _chainId,
         address _ethPriceFeed,
-        uint256 _haircut
+        uint256 _haircut,
+        address _tokenAddress
     ) public override onlyOwner returns (bool) {
         last_ccy_index = last_ccy_index++;
 
         Currency memory currency;
         currency.name = _name;
-        currency.chainId = _chainId;
+        if (_chainId != 0) {
+            currency.chainId = _chainId;
+        }
+
+        if (_tokenAddress != address(0)) {
+            tokenAddresses[_ccy] = _tokenAddress;
+        }
+
         currency.isSupported = true;
 
         currencies[_ccy] = currency;
@@ -213,6 +222,15 @@ contract CurrencyController is ICurrencyController {
      */
     function isSupportedCcy(bytes32 _ccy) public view override returns (bool) {
         return currencies[_ccy].isSupported;
+    }
+
+    /**
+     * @dev Triggers to get chainId for a specific currency.
+     * Chain ID is a unique identifier of another chain like Bitcoin, Filecoin, etc.
+     * @param _ccy Currency short ticket
+     */
+    function getChainId(bytes32 _ccy) external view override returns (uint16) {
+        return currencies[_ccy].chainId;
     }
 
     // =========== CHAINLINK PRICE FEED FUNCTIONS ===========

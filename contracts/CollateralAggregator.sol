@@ -757,7 +757,7 @@ contract CollateralAggregator is ProtocolTypes {
         view
         returns (uint256, uint256)
     {
-        (address _partyA, address _partyB, bool flipped) = _checkAddresses(
+        (address _partyA, address _partyB, ) = _checkAddresses(
             _party0,
             _party1
         );
@@ -943,10 +943,9 @@ contract CollateralAggregator is ProtocolTypes {
      */
     function withdraw(uint256 _amt) public registeredBook(msg.sender) {
         Book storage book = books[msg.sender];
-        (
-            uint256 maxWidthdraw,
-            uint256 totalUnsettledExp
-        ) = _calcMaxCollateralWidthdrawFromBook(msg.sender);
+        (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(
+            msg.sender
+        );
 
         // if (totalUnsettledExp == 0) {
         //     maxWidthdraw = book.independentAmount;

@@ -1,0 +1,279 @@
+{
+  "address": "0x10f1B36AD1F8Fd0FACfaDBfeb78535F082868060",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_collateralAggregator",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_chainId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "_address",
+          "type": "string"
+        }
+      ],
+      "name": "UpdateAddress",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_chainId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getUserAddress",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_chainId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_address",
+          "type": "string"
+        }
+      ],
+      "name": "updateAddress",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_chainId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_address",
+          "type": "string"
+        }
+      ],
+      "name": "updateAddress",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_chainIds",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "string[]",
+          "name": "_addresses",
+          "type": "string[]"
+        }
+      ],
+      "name": "updateAddresses",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x197182b697cac244c1f4c0374a8d512fabb09a7c234ae7fb538309c4846832c6",
+  "receipt": {
+    "to": null,
+    "from": "0x57AB42d4fa756b6956b0cAf986a5f53bA90D9e28",
+    "contractAddress": "0x10f1B36AD1F8Fd0FACfaDBfeb78535F082868060",
+    "transactionIndex": 36,
+    "gasUsed": "494098",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x30b059f0fbb17a84538d3a0d41341f4b16bb1926657d6887fb2aca25d5eaba07",
+    "transactionHash": "0x197182b697cac244c1f4c0374a8d512fabb09a7c234ae7fb538309c4846832c6",
+    "logs": [],
+    "blockNumber": 10650607,
+    "cumulativeGasUsed": "7990905",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0xC616D55499aacE74cFC3005061b07d239bB22125"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "c547b2e6a239b041ee2d79dd0b62b5b6",
+  "metadata": "{\"compiler\":{\"version\":\"0.6.12+commit.27d51765\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_collateralAggregator\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_chainId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"_address\",\"type\":\"string\"}],\"name\":\"UpdateAddress\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_chainId\",\"type\":\"uint256\"}],\"name\":\"getUserAddress\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_chainId\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_address\",\"type\":\"string\"}],\"name\":\"updateAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_chainId\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_address\",\"type\":\"string\"}],\"name\":\"updateAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"internalType\":\"uint256[]\",\"name\":\"_chainIds\",\"type\":\"uint256[]\"},{\"internalType\":\"string[]\",\"name\":\"_addresses\",\"type\":\"string[]\"}],\"name\":\"updateAddresses\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"constructor\":{\"details\":\"Contract constructor function.\"},\"getUserAddress(address,uint256)\":{\"details\":\"Trigers to get target blockchain address for a specific user.\",\"params\":{\"_user\":\"Chain ID number\"}},\"updateAddress(address,uint256,string)\":{\"details\":\"Trigers to register cross-chain address per chainId by user\",\"params\":{\"_address\":\"Target blockchain address\",\"_chainId\":\"Chain ID number\",\"_user\":\"Secured Finance user ETH address\"}},\"updateAddress(uint256,string)\":{\"details\":\"Trigers to register cross-chain address per chainId by user\",\"params\":{\"_address\":\"Target blockchain address\",\"_chainId\":\"Chain ID number\"}},\"updateAddresses(address,uint256[],string[])\":{\"details\":\"Trigers to register multiple cross-chain addresses per chainId for user\",\"params\":{\"_addresses\":\"Array of the target blockchain addresses\",\"_chainIds\":\"Array of chain ID number\",\"_user\":\"Secured Finance user ETH address\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"constructor\":\"sets contract deployer as owner of this contract and connects to the collateral aggregator contract\",\"updateAddress(address,uint256,string)\":{\"notice\":\"This function triggers by the Collateral Aggregator while user is registered in a system\"},\"updateAddress(uint256,string)\":{\"notice\":\"This function triggers by the user, and stores addresses for `msg.sender`\"},\"updateAddresses(address,uint256[],string[])\":{\"notice\":\"This function triggers by the Collateral Aggregator while user is registered in a system\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/CrosschainAddressResolver.sol\":\"CrosschainAddressResolver\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/math/SafeMath.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity >=0.6.0 <0.8.0;\\n\\n/**\\n * @dev Wrappers over Solidity's arithmetic operations with added overflow\\n * checks.\\n *\\n * Arithmetic operations in Solidity wrap on overflow. This can easily result\\n * in bugs, because programmers usually assume that an overflow raises an\\n * error, which is the standard behavior in high level programming languages.\\n * `SafeMath` restores this intuition by reverting the transaction when an\\n * operation overflows.\\n *\\n * Using this library instead of the unchecked operations eliminates an entire\\n * class of bugs, so it's recommended to use it always.\\n */\\nlibrary SafeMath {\\n    /**\\n     * @dev Returns the addition of two unsigned integers, with an overflow flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryAdd(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        uint256 c = a + b;\\n        if (c < a) return (false, 0);\\n        return (true, c);\\n    }\\n\\n    /**\\n     * @dev Returns the substraction of two unsigned integers, with an overflow flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function trySub(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        if (b > a) return (false, 0);\\n        return (true, a - b);\\n    }\\n\\n    /**\\n     * @dev Returns the multiplication of two unsigned integers, with an overflow flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryMul(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the\\n        // benefit is lost if 'b' is also tested.\\n        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522\\n        if (a == 0) return (true, 0);\\n        uint256 c = a * b;\\n        if (c / a != b) return (false, 0);\\n        return (true, c);\\n    }\\n\\n    /**\\n     * @dev Returns the division of two unsigned integers, with a division by zero flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryDiv(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        if (b == 0) return (false, 0);\\n        return (true, a / b);\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers, with a division by zero flag.\\n     *\\n     * _Available since v3.4._\\n     */\\n    function tryMod(uint256 a, uint256 b) internal pure returns (bool, uint256) {\\n        if (b == 0) return (false, 0);\\n        return (true, a % b);\\n    }\\n\\n    /**\\n     * @dev Returns the addition of two unsigned integers, reverting on\\n     * overflow.\\n     *\\n     * Counterpart to Solidity's `+` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Addition cannot overflow.\\n     */\\n    function add(uint256 a, uint256 b) internal pure returns (uint256) {\\n        uint256 c = a + b;\\n        require(c >= a, \\\"SafeMath: addition overflow\\\");\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the subtraction of two unsigned integers, reverting on\\n     * overflow (when the result is negative).\\n     *\\n     * Counterpart to Solidity's `-` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Subtraction cannot overflow.\\n     */\\n    function sub(uint256 a, uint256 b) internal pure returns (uint256) {\\n        require(b <= a, \\\"SafeMath: subtraction overflow\\\");\\n        return a - b;\\n    }\\n\\n    /**\\n     * @dev Returns the multiplication of two unsigned integers, reverting on\\n     * overflow.\\n     *\\n     * Counterpart to Solidity's `*` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Multiplication cannot overflow.\\n     */\\n    function mul(uint256 a, uint256 b) internal pure returns (uint256) {\\n        if (a == 0) return 0;\\n        uint256 c = a * b;\\n        require(c / a == b, \\\"SafeMath: multiplication overflow\\\");\\n        return c;\\n    }\\n\\n    /**\\n     * @dev Returns the integer division of two unsigned integers, reverting on\\n     * division by zero. The result is rounded towards zero.\\n     *\\n     * Counterpart to Solidity's `/` operator. Note: this function uses a\\n     * `revert` opcode (which leaves remaining gas untouched) while Solidity\\n     * uses an invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function div(uint256 a, uint256 b) internal pure returns (uint256) {\\n        require(b > 0, \\\"SafeMath: division by zero\\\");\\n        return a / b;\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),\\n     * reverting when dividing by zero.\\n     *\\n     * Counterpart to Solidity's `%` operator. This function uses a `revert`\\n     * opcode (which leaves remaining gas untouched) while Solidity uses an\\n     * invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function mod(uint256 a, uint256 b) internal pure returns (uint256) {\\n        require(b > 0, \\\"SafeMath: modulo by zero\\\");\\n        return a % b;\\n    }\\n\\n    /**\\n     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on\\n     * overflow (when the result is negative).\\n     *\\n     * CAUTION: This function is deprecated because it requires allocating memory for the error\\n     * message unnecessarily. For custom revert reasons use {trySub}.\\n     *\\n     * Counterpart to Solidity's `-` operator.\\n     *\\n     * Requirements:\\n     *\\n     * - Subtraction cannot overflow.\\n     */\\n    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b <= a, errorMessage);\\n        return a - b;\\n    }\\n\\n    /**\\n     * @dev Returns the integer division of two unsigned integers, reverting with custom message on\\n     * division by zero. The result is rounded towards zero.\\n     *\\n     * CAUTION: This function is deprecated because it requires allocating memory for the error\\n     * message unnecessarily. For custom revert reasons use {tryDiv}.\\n     *\\n     * Counterpart to Solidity's `/` operator. Note: this function uses a\\n     * `revert` opcode (which leaves remaining gas untouched) while Solidity\\n     * uses an invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b > 0, errorMessage);\\n        return a / b;\\n    }\\n\\n    /**\\n     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),\\n     * reverting with custom message when dividing by zero.\\n     *\\n     * CAUTION: This function is deprecated because it requires allocating memory for the error\\n     * message unnecessarily. For custom revert reasons use {tryMod}.\\n     *\\n     * Counterpart to Solidity's `%` operator. This function uses a `revert`\\n     * opcode (which leaves remaining gas untouched) while Solidity uses an\\n     * invalid opcode to revert (consuming all remaining gas).\\n     *\\n     * Requirements:\\n     *\\n     * - The divisor cannot be zero.\\n     */\\n    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {\\n        require(b > 0, errorMessage);\\n        return a % b;\\n    }\\n}\\n\",\"keccak256\":\"0xcc78a17dd88fa5a2edc60c8489e2f405c0913b377216a5b26b35656b2d0dab52\",\"license\":\"MIT\"},\"contracts/CrosschainAddressResolver.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\npragma experimental ABIEncoderV2;\\n\\nimport \\\"./ProtocolTypes.sol\\\";\\nimport \\\"./interfaces/ICrosschainAddressResolver.sol\\\";\\nimport \\\"./interfaces/ICollateralAggregatorV2.sol\\\";\\nimport \\\"@openzeppelin/contracts/math/SafeMath.sol\\\";\\n\\ncontract CrosschainAddressResolver is ICrosschainAddressResolver {\\n    using SafeMath for uint256;\\n\\n    address public owner;\\n\\n    // Mapping for storing user cross-chain addresses\\n    mapping(address => mapping(uint256 => string)) _crosschainAddreses;\\n\\n    // Contracts\\n    address collateralAggregator;\\n\\n    /**\\n     * @dev Modifier to make a function callable only by contract owner.\\n     */\\n    modifier onlyOwner() {\\n        require(msg.sender == owner);\\n        _;\\n    }\\n\\n    /**\\n     * @dev Modifier to make a function callable only by contract owner.\\n     */\\n    modifier onlyCollateralAggregator() {\\n        require(msg.sender == collateralAggregator);\\n        _;\\n    }\\n\\n    /**\\n     * @dev Contract constructor function.\\n     *\\n     * @notice sets contract deployer as owner of this contract and connects to the collateral aggregator contract\\n     */\\n    constructor(address _collateralAggregator) public {\\n        owner = msg.sender;\\n        collateralAggregator = _collateralAggregator;\\n    }\\n\\n    /**\\n     * @dev Trigers to register multiple cross-chain addresses per chainId for user\\n     * @param _user Secured Finance user ETH address\\n     * @param _chainIds Array of chain ID number\\n     * @param _addresses Array of the target blockchain addresses\\n     *\\n     * @notice This function triggers by the Collateral Aggregator while user is registered in a system\\n     *\\n     */\\n    function updateAddresses(\\n        address _user,\\n        uint256[] memory _chainIds,\\n        string[] memory _addresses\\n    ) public override onlyCollateralAggregator {\\n        require(_chainIds.length == _addresses.length, \\\"Invalid input lengths\\\");\\n\\n        for (uint256 i = 0; i < _chainIds.length; i++) {\\n            _updateAddress(_user, _chainIds[i], _addresses[i]);\\n        }\\n    }\\n\\n    /**\\n     * @dev Trigers to register cross-chain address per chainId by user\\n     * @param _chainId Chain ID number\\n     * @param _address Target blockchain address\\n     *\\n     * @notice This function triggers by the user, and stores addresses for `msg.sender`\\n     *\\n     */\\n    function updateAddress(uint256 _chainId, string memory _address)\\n        public\\n        override\\n    {\\n        _updateAddress(msg.sender, _chainId, _address);\\n    }\\n\\n    /**\\n     * @dev Trigers to register cross-chain address per chainId by user\\n     * @param _user Secured Finance user ETH address\\n     * @param _chainId Chain ID number\\n     * @param _address Target blockchain address\\n     *\\n     * @notice This function triggers by the Collateral Aggregator while user is registered in a system\\n     *\\n     */\\n    function updateAddress(\\n        address _user,\\n        uint256 _chainId,\\n        string memory _address\\n    ) public override onlyCollateralAggregator {\\n        _updateAddress(_user, _chainId, _address);\\n    }\\n\\n    /**\\n     * @dev Trigers to get target blockchain address for a specific user.\\n     * @param _user Ethereum address of the Secured Finance user\\n     * @param _user Chain ID number\\n     */\\n    function getUserAddress(address _user, uint256 _chainId)\\n        public\\n        view\\n        override\\n        returns (string memory)\\n    {\\n        return _crosschainAddreses[_user][_chainId];\\n    }\\n\\n    /**\\n     * @dev Internal function to store cross-chain addresses for user by chainID\\n     * @param _user Secured Finance user ETH address\\n     * @param _chainId Chain ID number\\n     * @param _address Target blockchain address\\n     *\\n     */\\n    function _updateAddress(\\n        address _user,\\n        uint256 _chainId,\\n        string memory _address\\n    ) internal {\\n        _crosschainAddreses[_user][_chainId] = _address;\\n        emit UpdateAddress(_user, _chainId, _address);\\n    }\\n}\\n\",\"keccak256\":\"0xee1ad14cb8906a74869e96b11d41986b8c2ba24beab130d978392b6d6bd0b0c4\",\"license\":\"MIT\"},\"contracts/ProtocolTypes.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\n\\n/**\\n * @dev ProtocolTypes is a base-level contract that holds common Secured Finance protocol types\\n * @author Secured Finance\\n */\\ncontract ProtocolTypes {\\n    // Constant values\\n    uint8 internal constant NUMCCY = 3;\\n    uint8 internal constant NUMTERM = 6;\\n    uint8 internal constant NUMDF = 7; // number of discount factors\\n    uint256 internal constant BP = 10000; // basis point\\n\\n    uint256 internal constant PCT = 10000; // percentage point in basis\\n    uint256 internal constant PENALTYLEVEL = 1000; // 10% settlement failure penalty\\n    uint256 internal constant MKTMAKELEVEL = 2000; // 20% for market making\\n\\n    // Lending market common types\\n    enum Side {\\n        LEND,\\n        BORROW\\n    }\\n    enum Ccy {\\n        ETH,\\n        FIL,\\n        USDC,\\n        BTC\\n    }\\n\\n    // Loan common types\\n    enum LoanState {\\n        REGISTERED,\\n        WORKING,\\n        DUE,\\n        PAST_DUE,\\n        CLOSED,\\n        TERMINATED\\n    }\\n    enum DFTERM {\\n        _3m,\\n        _6m,\\n        _1y,\\n        _2y,\\n        _3y,\\n        _4y,\\n        _5y\\n    }\\n\\n    // Collateral common types\\n    enum CollateralState {\\n        EMPTY,\\n        AVAILABLE,\\n        IN_USE,\\n        MARGIN_CALL,\\n        LIQUIDATION_IN_PROGRESS,\\n        LIQUIDATION\\n    }\\n\\n    // FXMarket common types\\n    enum CcyPair {\\n        FILETH,\\n        FILUSDC,\\n        ETHUSDC,\\n        BTCUSDC,\\n        BTCETH,\\n        BTCFIL\\n    }\\n    enum FXSide {\\n        BID,\\n        OFFER\\n    }\\n\\n    enum PaymentFrequency {\\n        ANNUAL,\\n        SEMI_ANNUAL,\\n        QUARTERLY,\\n        MONTHLY,\\n        FORWARD\\n    }\\n}\\n\",\"keccak256\":\"0x72de205a94aefa6e5b79074f603b8056535f99918af5112343156e79b7eadd83\",\"license\":\"MIT\"},\"contracts/interfaces/ICollateralAggregatorV2.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\npragma experimental ABIEncoderV2;\\n\\ninterface ICollateralAggregator {\\n    event Register(address indexed addr);\\n    event Release(\\n        address indexed partyA,\\n        address indexed partyB,\\n        bytes32 ccy,\\n        uint256 amount0,\\n        uint256 amount1,\\n        bool isSettled\\n    );\\n    event Liquidate(\\n        address indexed from,\\n        address indexed to,\\n        bytes32 ccy,\\n        uint256 amount\\n    );\\n    event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);\\n    event SettleCollateral(\\n        address indexed partyA,\\n        address indexed partyB,\\n        bytes32 ccy,\\n        uint256 amount0,\\n        uint256 amount1\\n    );\\n    event UpdatePV(\\n        address indexed partyA,\\n        address indexed partyB,\\n        bytes32 ccy,\\n        uint256 prevPV0,\\n        uint256 prevPV1,\\n        uint256 currentPV0,\\n        uint256 currentPV1\\n    );\\n    event UseCollateral(\\n        address indexed partyA,\\n        address indexed partyB,\\n        bytes32 ccy,\\n        uint256 amount0,\\n        uint256 amount1,\\n        bool isSettled\\n    );\\n    event UseUnsettledCollateral(\\n        address indexed party,\\n        bytes32 ccy,\\n        uint256 amount\\n    );\\n\\n    function checkRegisteredUser(address addr) external view returns (bool);\\n\\n    function enterVault(address _user) external;\\n\\n    function enterVault(address _party0, address _party1) external;\\n\\n    function exitVault(address _user) external;\\n\\n    function exitVault(address _party0, address _party1) external;\\n\\n    function getCcyExposures(\\n        address partyA,\\n        address partyB,\\n        bytes32 ccy\\n    )\\n        external\\n        view\\n        returns (\\n            uint256,\\n            uint256,\\n            uint256,\\n            uint256\\n        );\\n\\n    function getCoverage(address _party0, address _party1)\\n        external\\n        view\\n        returns (uint256, uint256);\\n\\n    function getExposedCurrencies(address partyA, address partyB)\\n        external\\n        view\\n        returns (bytes32[] memory);\\n\\n    function getMaxCollateralBookWidthdraw(address _user)\\n        external\\n        view\\n        returns (uint256 maxWithdraw);\\n\\n    function getMaxCollateralWidthdraw(address _party0, address _party1)\\n        external\\n        view\\n        returns (uint256, uint256);\\n\\n    function getNetAndTotalPV(address _party0, address _party1)\\n        external\\n        view\\n        returns (\\n            uint256,\\n            uint256,\\n            uint256,\\n            uint256\\n        );\\n\\n    function getRebalanceCollateralAmounts(address _party0, address _party1)\\n        external\\n        view\\n        returns (uint256, uint256);\\n\\n    function getTotalUnsettledExp(address _user)\\n        external\\n        view\\n        returns (uint256);\\n\\n    function getUnsettledCoverage(address _user)\\n        external\\n        view\\n        returns (uint256 coverage);\\n\\n    function isCovered(\\n        address _party0,\\n        address _party1,\\n        bytes32 _ccy,\\n        uint256 _party0PV,\\n        uint256 _party1PV,\\n        bool _isSettled\\n    ) external view returns (bool, bool);\\n\\n    function isCoveredUnsettled(\\n        address _user,\\n        bytes32 _ccy,\\n        uint256 _unsettledExp\\n    ) external view returns (bool);\\n\\n    function liquidate(\\n        address from,\\n        address to,\\n        uint256 liquidationInETH\\n    ) external;\\n\\n    function liquidate(\\n        address from,\\n        address to,\\n        bytes32 ccy,\\n        uint256 liquidationAmount,\\n        uint256 pv,\\n        bool isSettled\\n    ) external;\\n\\n    function register() external;\\n\\n    function register(string[] memory _addresses, uint256[] memory _chainIds)\\n        external;\\n\\n    function releaseCollateral(\\n        address partyA,\\n        address partyB,\\n        bytes32 ccy,\\n        uint256 amount0,\\n        uint256 amount1,\\n        bool isSettled\\n    ) external;\\n\\n    function releaseUnsettledCollateral(\\n        address user,\\n        bytes32 ccy,\\n        uint256 amount\\n    ) external;\\n\\n    function settleCollateral(\\n        address partyA,\\n        address partyB,\\n        bytes32 ccy,\\n        uint256 amount0,\\n        uint256 amount1\\n    ) external;\\n\\n    function updatePV(\\n        address party0,\\n        address party1,\\n        bytes32 ccy,\\n        uint256 prevPV0,\\n        uint256 prevPV1,\\n        uint256 currentPV0,\\n        uint256 currentPV1\\n    ) external;\\n\\n    function useCollateral(\\n        address partyA,\\n        address partyB,\\n        bytes32 ccy,\\n        uint256 amount0,\\n        uint256 amount1,\\n        bool isSettled\\n    ) external;\\n\\n    function useUnsettledCollateral(\\n        address user,\\n        bytes32 ccy,\\n        uint256 amount\\n    ) external;\\n\\n    function getUsedVaults(address user)\\n        external\\n        view\\n        returns (address[] memory);\\n\\n    function getUsedVaults(address party0, address party1)\\n        external\\n        view\\n        returns (address[] memory);\\n}\\n\",\"keccak256\":\"0x1e1d54ae5ea0a4d446d99ecce509f35cd2f42826c61abfccf6df109c0911cdab\",\"license\":\"MIT\"},\"contracts/interfaces/ICrosschainAddressResolver.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.6.12;\\npragma experimental ABIEncoderV2;\\n\\ninterface ICrosschainAddressResolver {\\n    event UpdateAddress(address _user, uint256 _chainId, string _address);\\n\\n    /**\\n     * @dev Trigers to register multiple cross-chain addresses per chainId for user\\n     * @param _user Secured Finance user ETH address\\n     * @param _chainIds Array of chain ID number\\n     * @param _addresses Array of the target blockchain addresses\\n     *\\n     * @notice This function triggers by the Collateral Aggregator while user is registered in a system\\n     *\\n     */\\n    function updateAddresses(\\n        address _user,\\n        uint256[] memory _chainIds,\\n        string[] memory _addresses\\n    ) external;\\n\\n    /**\\n     * @dev Trigers to register cross-chain address per chainId by user\\n     * @param _chainId Chain ID number\\n     * @param _address Target blockchain address\\n     *\\n     */\\n    function updateAddress(uint256 _chainId, string memory _address) external;\\n\\n    /**\\n     * @dev Trigers to register cross-chain address per chainId by user\\n     * @param _user Secured Finance user ETH address\\n     * @param _chainId Chain ID number\\n     * @param _address Target blockchain address\\n     *\\n     */\\n    function updateAddress(\\n        address _user,\\n        uint256 _chainId,\\n        string memory _address\\n    ) external;\\n\\n    /**\\n     * @dev Trigers to get target blockchain address for a specific user.\\n     * @param _user Ethereum address of the Secured Finance user\\n     * @param _user Chain ID number\\n     */\\n    function getUserAddress(address _user, uint256 _chainId)\\n        external\\n        view\\n        returns (string memory);\\n}\\n\",\"keccak256\":\"0x5ebf4b8928f6253eab963c52b0cc18364c7ba06491b0260399f88c8596c71825\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b506040516107c03803806107c083398101604081905261002f91610062565b60008054336001600160a01b031991821617909155600280549091166001600160a01b0392909216919091179055610090565b600060208284031215610073578081fd5b81516001600160a01b0381168114610089578182fd5b9392505050565b6107218061009f6000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80632f52af731461005c57806376c5f560146100715780638c72902c146100845780638da5cb5b146100ad578063e9ac42cb146100c2575b600080fd5b61006f61006a36600461053b565b6100d5565b005b61006f61007f366004610587565b6100fc565b610097610092366004610511565b61010b565b6040516100a4919061065b565b60405180910390f35b6100b56101bf565b6040516100a49190610617565b61006f6100d0366004610447565b6101ce565b6002546001600160a01b031633146100ec57600080fd5b6100f783838361025a565b505050565b61010733838361025a565b5050565b6001600160a01b038216600090815260016020818152604080842085855282529283902080548451600294821615610100026000190190911693909304601f810183900483028401830190945283835260609390918301828280156101b15780601f10610186576101008083540402835291602001916101b1565b820191906000526020600020905b81548152906001019060200180831161019457829003601f168201915b505050505090505b92915050565b6000546001600160a01b031681565b6002546001600160a01b031633146101e557600080fd5b805182511461020f5760405162461bcd60e51b815260040161020690610675565b60405180910390fd5b60005b82518110156102545761024c8484838151811061022b57fe5b602002602001015184848151811061023f57fe5b602002602001015161025a565b600101610212565b50505050565b6001600160a01b03831660009081526001602090815260408083208584528252909120825161028b928401906102cc565b507ff6cac44a10f1c5a7bad0ec6fc1a900092a2dbe6742f6c14cd2902c0d51bb008d8383836040516102bf9392919061062b565b60405180910390a1505050565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061030d57805160ff191683800117855561033a565b8280016001018555821561033a579182015b8281111561033a57825182559160200191906001019061031f565b5061034692915061034a565b5090565b5b80821115610346576000815560010161034b565b80356001600160a01b03811681146101b957600080fd5b600082601f830112610386578081fd5b8135610399610394826106cb565b6106a4565b818152915060208083019084810160005b848110156103d3576103c1888484358a01016103de565b845292820192908201906001016103aa565b505050505092915050565b600082601f8301126103ee578081fd5b813567ffffffffffffffff811115610404578182fd5b610417601f8201601f19166020016106a4565b915080825283602082850101111561042e57600080fd5b8060208401602084013760009082016020015292915050565b60008060006060848603121561045b578283fd5b610465858561035f565b925060208085013567ffffffffffffffff80821115610482578485fd5b818701915087601f830112610495578485fd5b81356104a3610394826106cb565b81815284810190848601868402860187018c10156104bf578889fd5b8895505b838610156104e15780358352600195909501949186019186016104c3565b509650505060408701359250808311156104f9578384fd5b505061050786828701610376565b9150509250925092565b60008060408385031215610523578182fd5b61052d848461035f565b946020939093013593505050565b60008060006060848603121561054f578283fd5b610559858561035f565b925060208401359150604084013567ffffffffffffffff81111561057b578182fd5b610507868287016103de565b60008060408385031215610599578182fd5b82359150602083013567ffffffffffffffff8111156105b6578182fd5b6105c2858286016103de565b9150509250929050565b60008151808452815b818110156105f1576020818501810151868301820152016105d5565b818111156106025782602083870101525b50601f01601f19169290920160200192915050565b6001600160a01b0391909116815260200190565b600060018060a01b03851682528360208301526060604083015261065260608301846105cc565b95945050505050565b60006020825261066e60208301846105cc565b9392505050565b602080825260159082015274496e76616c696420696e707574206c656e6774687360581b604082015260600190565b60405181810167ffffffffffffffff811182821017156106c357600080fd5b604052919050565b600067ffffffffffffffff8211156106e1578081fd5b506020908102019056fea2646970667358221220f4e9e78476c739285262682d351dcd1306149cc2446292a676b520a57d3c7c4864736f6c634300060c0033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100575760003560e01c80632f52af731461005c57806376c5f560146100715780638c72902c146100845780638da5cb5b146100ad578063e9ac42cb146100c2575b600080fd5b61006f61006a36600461053b565b6100d5565b005b61006f61007f366004610587565b6100fc565b610097610092366004610511565b61010b565b6040516100a4919061065b565b60405180910390f35b6100b56101bf565b6040516100a49190610617565b61006f6100d0366004610447565b6101ce565b6002546001600160a01b031633146100ec57600080fd5b6100f783838361025a565b505050565b61010733838361025a565b5050565b6001600160a01b038216600090815260016020818152604080842085855282529283902080548451600294821615610100026000190190911693909304601f810183900483028401830190945283835260609390918301828280156101b15780601f10610186576101008083540402835291602001916101b1565b820191906000526020600020905b81548152906001019060200180831161019457829003601f168201915b505050505090505b92915050565b6000546001600160a01b031681565b6002546001600160a01b031633146101e557600080fd5b805182511461020f5760405162461bcd60e51b815260040161020690610675565b60405180910390fd5b60005b82518110156102545761024c8484838151811061022b57fe5b602002602001015184848151811061023f57fe5b602002602001015161025a565b600101610212565b50505050565b6001600160a01b03831660009081526001602090815260408083208584528252909120825161028b928401906102cc565b507ff6cac44a10f1c5a7bad0ec6fc1a900092a2dbe6742f6c14cd2902c0d51bb008d8383836040516102bf9392919061062b565b60405180910390a1505050565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061030d57805160ff191683800117855561033a565b8280016001018555821561033a579182015b8281111561033a57825182559160200191906001019061031f565b5061034692915061034a565b5090565b5b80821115610346576000815560010161034b565b80356001600160a01b03811681146101b957600080fd5b600082601f830112610386578081fd5b8135610399610394826106cb565b6106a4565b818152915060208083019084810160005b848110156103d3576103c1888484358a01016103de565b845292820192908201906001016103aa565b505050505092915050565b600082601f8301126103ee578081fd5b813567ffffffffffffffff811115610404578182fd5b610417601f8201601f19166020016106a4565b915080825283602082850101111561042e57600080fd5b8060208401602084013760009082016020015292915050565b60008060006060848603121561045b578283fd5b610465858561035f565b925060208085013567ffffffffffffffff80821115610482578485fd5b818701915087601f830112610495578485fd5b81356104a3610394826106cb565b81815284810190848601868402860187018c10156104bf578889fd5b8895505b838610156104e15780358352600195909501949186019186016104c3565b509650505060408701359250808311156104f9578384fd5b505061050786828701610376565b9150509250925092565b60008060408385031215610523578182fd5b61052d848461035f565b946020939093013593505050565b60008060006060848603121561054f578283fd5b610559858561035f565b925060208401359150604084013567ffffffffffffffff81111561057b578182fd5b610507868287016103de565b60008060408385031215610599578182fd5b82359150602083013567ffffffffffffffff8111156105b6578182fd5b6105c2858286016103de565b9150509250929050565b60008151808452815b818110156105f1576020818501810151868301820152016105d5565b818111156106025782602083870101525b50601f01601f19169290920160200192915050565b6001600160a01b0391909116815260200190565b600060018060a01b03851682528360208301526060604083015261065260608301846105cc565b95945050505050565b60006020825261066e60208301846105cc565b9392505050565b602080825260159082015274496e76616c696420696e707574206c656e6774687360581b604082015260600190565b60405181810167ffffffffffffffff811182821017156106c357600080fd5b604052919050565b600067ffffffffffffffff8211156106e1578081fd5b506020908102019056fea2646970667358221220f4e9e78476c739285262682d351dcd1306149cc2446292a676b520a57d3c7c4864736f6c634300060c0033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "constructor": {
+        "details": "Contract constructor function."
+      },
+      "getUserAddress(address,uint256)": {
+        "details": "Trigers to get target blockchain address for a specific user.",
+        "params": {
+          "_user": "Chain ID number"
+        }
+      },
+      "updateAddress(address,uint256,string)": {
+        "details": "Trigers to register cross-chain address per chainId by user",
+        "params": {
+          "_address": "Target blockchain address",
+          "_chainId": "Chain ID number",
+          "_user": "Secured Finance user ETH address"
+        }
+      },
+      "updateAddress(uint256,string)": {
+        "details": "Trigers to register cross-chain address per chainId by user",
+        "params": {
+          "_address": "Target blockchain address",
+          "_chainId": "Chain ID number"
+        }
+      },
+      "updateAddresses(address,uint256[],string[])": {
+        "details": "Trigers to register multiple cross-chain addresses per chainId for user",
+        "params": {
+          "_addresses": "Array of the target blockchain addresses",
+          "_chainIds": "Array of chain ID number",
+          "_user": "Secured Finance user ETH address"
+        }
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "constructor": "sets contract deployer as owner of this contract and connects to the collateral aggregator contract",
+      "updateAddress(address,uint256,string)": {
+        "notice": "This function triggers by the Collateral Aggregator while user is registered in a system"
+      },
+      "updateAddress(uint256,string)": {
+        "notice": "This function triggers by the user, and stores addresses for `msg.sender`"
+      },
+      "updateAddresses(address,uint256[],string[])": {
+        "notice": "This function triggers by the Collateral Aggregator while user is registered in a system"
+      }
+    },
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 11712,
+        "contract": "contracts/CrosschainAddressResolver.sol:CrosschainAddressResolver",
+        "label": "owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 11718,
+        "contract": "contracts/CrosschainAddressResolver.sol:CrosschainAddressResolver",
+        "label": "_crosschainAddreses",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))"
+      },
+      {
+        "astId": 11720,
+        "contract": "contracts/CrosschainAddressResolver.sol:CrosschainAddressResolver",
+        "label": "collateralAggregator",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_address"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_address,t_mapping(t_uint256,t_string_storage))": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => mapping(uint256 => string))",
+        "numberOfBytes": "32",
+        "value": "t_mapping(t_uint256,t_string_storage)"
+      },
+      "t_mapping(t_uint256,t_string_storage)": {
+        "encoding": "mapping",
+        "key": "t_uint256",
+        "label": "mapping(uint256 => string)",
+        "numberOfBytes": "32",
+        "value": "t_string_storage"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

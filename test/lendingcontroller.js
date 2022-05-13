@@ -4,6 +4,7 @@ const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
+const { zeroAddress } = require('../test-utils/src/strings');
 should();
 
 const { hexFILString, loanPrefix } = require('../test-utils').strings;
@@ -67,6 +68,7 @@ contract('LendingMarketController', async (accounts) => {
       461,
       filToETHPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 

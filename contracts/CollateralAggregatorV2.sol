@@ -9,6 +9,7 @@ import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
 import "./ProtocolTypes.sol";
 import "./CollateralManagement.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Collateral Aggregator contract is used to manage Secured Finance
@@ -507,6 +508,7 @@ contract CollateralAggregatorV2 is
         address to,
         bytes32 ccy,
         uint256 liquidationAmount,
+        uint256 pv,
         bool isSettled
     ) external override onlyLiquidationEngineOrCollateralUser {
         uint256 liquidationTarget = liquidationAmount.mul(LQLEVEL).div(BP);
@@ -520,17 +522,11 @@ contract CollateralAggregatorV2 is
             "INCORRECT_LIQUIDATION_ACROSS_VAULTS"
         );
 
-        NetPV.release(
-            ccyNettings,
-            from,
-            to,
-            ccy,
-            liquidationAmount,
-            0,
-            isSettled
-        );
+        emit Liquidate(from, to, ccy, liquidationAmount);
 
-        emit Release(from, to, ccy, liquidationAmount, 0, isSettled);
+        NetPV.release(ccyNettings, from, to, ccy, pv, 0, isSettled);
+
+        emit Release(from, to, ccy, pv, 0, isSettled);
 
         _rebalanceIfRequired(from, to, true);
     }

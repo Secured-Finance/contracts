@@ -1,22 +1,14 @@
 const TimeSlotTest = artifacts.require('TimeSlotTest');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 
-const { ethers } = require('hardhat');
 const { reverted } = require('../test-utils').assert;
 const { should } = require('chai');
-const { toBytes32 } = require('../test-utils').strings;
+const { toBytes32, zeroAddress } = require('../test-utils').strings;
 should();
 
 const expectRevert = reverted;
 
-const hashPosition = (year, month, day) => {
-  let encodedPosition = ethers.utils.defaultAbiCoder.encode(
-    ['uint256', 'uint256', 'uint256'],
-    [year, month, day],
-  );
-
-  return ethers.utils.keccak256(encodedPosition);
-};
+const { hashPosition } = require('../test-utils').timeSlot;
 
 contract('TimeSlotTest', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -86,10 +78,11 @@ contract('TimeSlotTest', async (accounts) => {
       );
 
       let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
-      slot.totalPayment0.should.be.equal('5000');
-      slot.totalPayment1.should.be.equal('10000');
-      slot.netPayment.should.be.equal('5000');
-      slot.flipped.should.be.equal(true);
+      slot[0].toString().should.be.equal('5000');
+      slot[1].toString().should.be.equal('10000');
+      slot[2].toString().should.be.equal('5000');
+      slot[3].toString().should.be.equal('0');
+      slot[4].should.be.equal(true);
     });
 
     it('Add one more payment for time slot at the same date', async () => {
@@ -105,10 +98,11 @@ contract('TimeSlotTest', async (accounts) => {
       );
 
       let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
-      slot.totalPayment0.should.be.equal('20000');
-      slot.totalPayment1.should.be.equal('10000');
-      slot.netPayment.should.be.equal('10000');
-      slot.flipped.should.be.equal(false);
+      slot[0].toString().should.be.equal('20000');
+      slot[1].toString().should.be.equal('10000');
+      slot[2].toString().should.be.equal('10000');
+      slot[3].toString().should.be.equal('0');
+      slot[4].should.be.equal(false);
     });
 
     it('Remove one payment from time slot at the same date', async () => {
@@ -124,10 +118,11 @@ contract('TimeSlotTest', async (accounts) => {
       );
 
       let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
-      slot.totalPayment0.should.be.equal('5000');
-      slot.totalPayment1.should.be.equal('10000');
-      slot.netPayment.should.be.equal('5000');
-      slot.flipped.should.be.equal(true);
+      slot[0].toString().should.be.equal('5000');
+      slot[1].toString().should.be.equal('10000');
+      slot[2].toString().should.be.equal('5000');
+      slot[3].toString().should.be.equal('0');
+      slot[4].should.be.equal(true);
     });
 
     it('Expect revert on removing payment bigger than available total payment', async () => {
@@ -146,33 +141,76 @@ contract('TimeSlotTest', async (accounts) => {
       );
     });
 
-    it('Verify net payment from time slot at the same date', async () => {
-      await timeSlotTest.verifyPayment(alice, position, 5000, firstTxHash, {
+    it('Verify partial payment for a time slot at the same date', async () => {
+      await timeSlotTest.verifyPayment(alice, position, 1000, firstTxHash, {
         from: bob,
       });
 
       let slot = await timeSlotTest.get(bob, alice, 2021, 10, 6);
-      slot.netPayment.should.be.equal('5000');
-      slot.flipped.should.be.equal(false);
-      slot.paymentProof.should.be.equal(firstTxHash);
-      slot.verificationParty.should.be.equal(bob);
-      slot.isSettled.should.be.equal(false);
+      slot[2].toString().should.be.equal('5000');
+      slot[3].toString().should.be.equal('1000');
+      slot[4].should.be.equal(false);
+      slot[5].should.be.equal(false);
+
+      let confirmation = await timeSlotTest.getPaymentConfirmation(
+        bob,
+        alice,
+        2021,
+        10,
+        6,
+        firstTxHash,
+      );
+      confirmation[0].should.be.equal(bob);
+      confirmation[1].toString().should.be.equal('1000');
     });
 
-    it('Settle net payment from time slot at the same date', async () => {
-      await timeSlotTest.settlePayment(bob, position, firstTxHash, {
-        from: alice,
-      });
-      (await timeSlotTest.isSettled(bob, alice, position)).should.be.equal(
-        true,
+    it('Try to verify net payment for the same time slot, expect payment overflow', async () => {
+      await expectRevert(
+        timeSlotTest.verifyPayment(alice, position, 5000, secondTxHash, {
+          from: bob,
+        }),
+        'Payment overflow',
       );
 
-      let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
-      slot.netPayment.should.be.equal('5000');
-      slot.flipped.should.be.equal(true);
-      slot.paymentProof.should.be.equal(firstTxHash);
-      slot.verificationParty.should.be.equal(bob);
-      slot.isSettled.should.be.equal(true);
+      let slot = await timeSlotTest.get(bob, alice, 2021, 10, 6);
+      slot[2].toString().should.be.equal('5000');
+      slot[3].toString().should.be.equal('1000');
+      slot[4].should.be.equal(false);
+      slot[5].should.be.equal(false);
+
+      let confirmation = await timeSlotTest.getPaymentConfirmation(
+        bob,
+        alice,
+        2021,
+        10,
+        6,
+        secondTxHash,
+      );
+      confirmation[0].should.be.equal(zeroAddress);
+      confirmation[1].toString().should.be.equal('0');
+    });
+
+    it('Verify the rest of the payment for a time slot at the same date, expect correct settlement', async () => {
+      await timeSlotTest.verifyPayment(alice, position, 4000, secondTxHash, {
+        from: bob,
+      });
+
+      let slot = await timeSlotTest.get(bob, alice, 2021, 10, 6);
+      slot[2].toString().should.be.equal('5000');
+      slot[3].toString().should.be.equal('5000');
+      slot[4].should.be.equal(false);
+      slot[5].should.be.equal(true);
+
+      let confirmation = await timeSlotTest.getPaymentConfirmation(
+        bob,
+        alice,
+        2021,
+        10,
+        6,
+        secondTxHash,
+      );
+      confirmation[0].should.be.equal(bob);
+      confirmation[1].toString().should.be.equal('4000');
     });
 
     it('Gas cost for isSettled validation', async () => {
@@ -198,13 +236,12 @@ contract('TimeSlotTest', async (accounts) => {
       await timeSlotTest.clear(alice, bob, position);
 
       let slot = await timeSlotTest.get(alice, bob, 2021, 10, 6);
-      slot.totalPayment0.should.be.equal('0');
-      slot.totalPayment1.should.be.equal('0');
-      slot.netPayment.should.be.equal('0');
-      slot.flipped.should.be.equal(false);
-      slot.paymentProof.should.be.equal(zeroString);
-      slot.verificationParty.should.be.equal(zeroAddr);
-      slot.isSettled.should.be.equal(false);
+      slot[0].toString().should.be.equal('0');
+      slot[1].toString().should.be.equal('0');
+      slot[2].toString().should.be.equal('0');
+      slot[3].toString().should.be.equal('0');
+      slot[4].should.be.equal(false);
+      slot[5].should.be.equal(false);
     });
   });
 });

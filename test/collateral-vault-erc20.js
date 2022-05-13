@@ -10,6 +10,7 @@ const { ZERO_BN, decimalBase, toBN } = require('../test-utils').numbers;
 const { checkTokenBalances } = require('../test-utils').balances;
 const utils = require('web3-utils');
 const { should } = require('chai');
+const { zeroAddress } = require('../test-utils/src/strings');
 
 should();
 
@@ -51,6 +52,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         461,
         filToETHPriceFeed.address,
         7500,
+        zeroAddress,
       );
       await currencyController.updateCollateralSupport(hexFILString, true);
 

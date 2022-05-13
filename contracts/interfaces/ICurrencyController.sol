@@ -79,6 +79,8 @@ interface ICurrencyController {
 
     function getMinMargin(bytes32 _ccy) external view returns (uint256);
 
+    function getChainId(bytes32 _ccy) external view returns (uint16);
+
     function haircuts(bytes32) external view returns (uint256);
 
     function isCollateral(bytes32) external view returns (bool);
@@ -106,7 +108,8 @@ interface ICurrencyController {
         string memory _name,
         uint16 _chainId,
         address _ethPriceFeed,
-        uint256 _haircut
+        uint256 _haircut,
+        address _tokenAddress
     ) external returns (bool);
 
     function supportedCurrencies() external view returns (uint8);
@@ -128,4 +131,6 @@ interface ICurrencyController {
         returns (bool);
 
     function usdDecimals(bytes32) external view returns (uint8);
+
+    function tokenAddresses(bytes32) external view returns (address);
 }

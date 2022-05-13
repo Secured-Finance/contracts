@@ -480,6 +480,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
                 deal.lender,
                 deal.ccy,
                 totalPayment,
+                deal.pv,
                 true
             );
             // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
@@ -596,7 +597,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             LoanDeal storage deal = loans[loanId];
             if (!isSettled[loanId]) return true;
 
-            uint256 oldPV = deal.pv;
+            uint256 oldPV = deal.pv == 0 ? deal.notional : deal.pv;
             deal.pv = pv;
 
             collateralAggregator.updatePV(

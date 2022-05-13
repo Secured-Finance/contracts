@@ -10,6 +10,7 @@ const { toBytes32 } = require('../test-utils').strings;
 const { should } = require('chai');
 
 const utils = require('web3-utils');
+const { zeroAddress } = require('../test-utils/src/strings');
 
 const expectRevert = reverted;
 should();
@@ -67,6 +68,7 @@ contract('TermStructure', async (accounts) => {
       60,
       ethToUSDPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 
@@ -76,6 +78,7 @@ contract('TermStructure', async (accounts) => {
       461,
       filToETHPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 
@@ -85,6 +88,7 @@ contract('TermStructure', async (accounts) => {
       0,
       btcToETHPriceFeed.address,
       7500,
+      zeroAddress,
     );
     await emitted(tx, 'CcyAdded');
 

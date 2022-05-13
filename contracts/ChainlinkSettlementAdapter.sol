@@ -1,32 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
+pragma experimental ABIEncoderV2;
 
 import "@chainlink/contracts/src/v0.7/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/ISettlementEngine.sol";
+import "./interfaces/IExternalAdapterTxResponse.sol";
 
 /**
- * @title ChainlinkSettlementAdaptor is managing requests to Chainlink for a settlement process.
+ * @title ChainlinkSettlementAdapter is managing requests to Chainlink for a settlement process.
  */
-contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
+contract ChainlinkSettlementAdapter is
+    ChainlinkClient,
+    Ownable,
+    IExternalAdapterTxResponse
+{
     using Chainlink for Chainlink.Request;
 
-    struct FulfillData {
-        string from;
-        string to;
-        uint256 value;
-        uint256 timestamp;
-        string txHash;
-    }
-    mapping(bytes32 => FulfillData) public results; // TODO: remove tmp data
+    mapping(string => bool) public isRequested;
     bytes32 public jobId;
     uint256 public requestFee;
+    bytes32 public ccy;
+
+    ISettlementEngine private settlementEngine;
 
     /**
      * @dev Contract constructor function.
      * @param _oracle The address of the oracle contract
-     * @param _jobId The job id on the Cahinlink node
+     * @param _jobId The job id on the Chainlink node
      * @param _requestFee The amount of LINK sent for the request
      * @param _link The address of the LINK token contract
+     * @param _ccy Settlement adapter currency identifier
+     * @param _settlementEngine Address of a SettlementEngine contract
      *
      * @notice `_link` is provided for development usage
      */
@@ -34,12 +39,17 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
         address _oracle,
         bytes32 _jobId,
         uint256 _requestFee,
-        address _link
+        address _link,
+        bytes32 _ccy,
+        address _settlementEngine
     ) public Ownable() {
         setChainlinkOracle(_oracle);
         jobId = _jobId;
+        ccy = _ccy;
 
         requestFee = _requestFee;
+
+        settlementEngine = ISettlementEngine(_settlementEngine);
 
         if (_link == address(0)) {
             setPublicChainlinkToken();
@@ -95,12 +105,13 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
      * This function specify a callback function name
      * @param _txHash The hash that is specify the data to get
      */
-    // TODO: replace modifier for other contracts to call
     function createRequest(string memory _txHash)
         public
-        onlyOwner
         returns (bytes32 requestId)
     {
+        _onlySettlementEngine();
+        require(!isRequested[_txHash], "REQUEST_EXIST_ALREADY");
+        isRequested[_txHash] = true;
         Chainlink.Request memory req = buildChainlinkRequest(
             jobId,
             address(this),
@@ -112,15 +123,19 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
 
     /**
      * @dev Triggers to cancell a request if it has not been fulfilled
+     * @param _txHash Trasaction hash that has been requested to fulfill
      * @param _requestId The id to specify a request
      * @param _callbackFunctionId The callback function specified for the request
      * @param _expiration The time of the expiration for the request
      */
     function cancelRequest(
+        string memory _txHash,
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration
-    ) public onlyOwner {
+    ) public {
+        _onlySettlementEngine();
+        isRequested[_txHash] = false;
         cancelChainlinkRequest(
             _requestId,
             requestFee,
@@ -147,14 +162,15 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
         uint256 _timestamp,
         string calldata _txHash
     ) public recordChainlinkFulfillment(_requestId) {
-        results[_requestId] = FulfillData({
+        FulfillData memory txData = FulfillData({
             from: _from,
             to: _to,
             value: _value,
             timestamp: _timestamp,
             txHash: _txHash
         });
-        // TODO: verify payment here
+
+        settlementEngine.fullfillSettlementRequest(_requestId, txData, ccy);
     }
 
     /**
@@ -166,6 +182,13 @@ contract ChainlinkSettlementAdaptor is ChainlinkClient, Ownable {
         require(
             link.transfer(msg.sender, link.balanceOf(address(this))),
             "Unable to transfer"
+        );
+    }
+
+    function _onlySettlementEngine() internal {
+        require(
+            msg.sender == address(settlementEngine),
+            "NOT_SETTLEMENT_ENGINE"
         );
     }
 }
