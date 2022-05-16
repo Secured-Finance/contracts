@@ -4,6 +4,4 @@
 npm run prettier:check
 npm run lint:check
 npm run solhint:check
-# Test are not running as they are not all green on this branch.
-# TODO: Fix the test on this branch
-# npm run test
+npm run test
