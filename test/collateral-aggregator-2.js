@@ -12,7 +12,6 @@ const CloseOutNetting = artifacts.require('CloseOutNetting');
 const Liquidations = artifacts.require('Liquidations');
 const LoanCallerMock = artifacts.require('LoanCallerMock');
 
-const { emitted, reverted, equal } = require('../test-utils').assert;
 const { checkTokenBalances } = require('../test-utils').balances;
 const {
   toBytes32,
@@ -22,31 +21,14 @@ const {
   loanPrefix,
   zeroAddress,
 } = require('../test-utils').strings;
+const { sortedTermDays } = require('../test-utils').terms;
+const { ZERO_BN, decimalBase, toBN, filToETHRate, ethToUSDRate, btcToETHRate } =
+  require('../test-utils').numbers;
 
-const {
-  sortedTermDays,
-  sortedTermsDfFracs,
-  sortedTermsNumPayments,
-  sortedTermsSchedules,
-} = require('../test-utils').terms;
-
-const {
-  ZERO_BN,
-  decimalBase,
-  toBN,
-  IR_BASE,
-  filToETHRate,
-  ethToUSDRate,
-  btcToETHRate,
-} = require('../test-utils').numbers;
-const { generateId } = require('../test-utils').dealId;
-
-const utils = require('web3-utils');
 const { should } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 should();
-
-const expectRevert = reverted;
 
 contract('CollateralAggregatorV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -61,12 +43,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
   let alice_tFIL_locked;
   let alice_tFIL_balance;
   let alice_ETH_locked;
-  let alice_ETH_balance;
 
   let bob_tFIL_locked;
   let bob_tFIL_balance;
-  let bob_ETH_locked;
-  let bob_ETH_balance;
 
   const netBilateralPVs = async (
     unsettled0PV,

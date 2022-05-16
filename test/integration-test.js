@@ -19,7 +19,6 @@ const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
 
-const { emitted, reverted, equal } = require('../test-utils').assert;
 const {
   hexFILString,
   hexBTCString,
@@ -45,25 +44,16 @@ const {
 } = require('../test-utils').terms;
 const { checkTokenBalances } = require('../test-utils').balances;
 
-const { toBN, IR_BASE, decimalBase, oracleRequestFee } =
-  require('../test-utils').numbers;
+const { toBN, IR_BASE, oracleRequestFee } = require('../test-utils').numbers;
 const { should } = require('chai');
+const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const utils = require('web3-utils');
 const { hashPosition } = require('../test-utils/src/timeSlot');
 
-const {
-  ONE_MINUTE,
-  ONE_DAY,
-  ONE_YEAR,
-  NOTICE_GAP,
-  SETTLE_GAP,
-  advanceTimeAndBlock,
-  getLatestTimestamp,
-} = require('../test-utils').time;
+const { ONE_DAY, advanceTimeAndBlock, getLatestTimestamp } =
+  require('../test-utils').time;
 
 should();
-
-const expectRevert = reverted;
 
 const ethValue = (wei) => {
   return web3.utils.toWei(web3.utils.toBN(wei), 'ether');
@@ -133,9 +123,6 @@ contract('Integration test', async (accounts) => {
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
 
     currencyController = await CurrencyController.new();
-    console.log(
-      'CurrencyController contract address is ' + currencyController.address,
-    );
 
     const productResolverFactory = await ethers.getContractFactory(
       'ProductAddressResolver',
@@ -146,9 +133,6 @@ contract('Integration test', async (accounts) => {
       },
     );
     productResolver = await productResolverFactory.deploy();
-    console.log(
-      'ProductAddressResolver contract address is ' + productResolver.address,
-    );
 
     const termStructureFactory = await ethers.getContractFactory(
       'TermStructure',
@@ -162,7 +146,6 @@ contract('Integration test', async (accounts) => {
       currencyController.address,
       productResolver.address,
     );
-    console.log('TermStructure contract address is ' + termStructure.address);
 
     const loanFactory = await ethers.getContractFactory('LoanV2', {
       libraries: {
@@ -171,8 +154,6 @@ contract('Integration test', async (accounts) => {
       },
     });
     loan = await loanFactory.deploy();
-    console.log('Loan contract address is ' + loan.address);
-    console.log();
 
     markToMarket = await MarkToMarket.new(productResolver.address);
 
@@ -180,20 +161,10 @@ contract('Integration test', async (accounts) => {
 
     collateral = await CollateralAggregatorV2.new();
     await collateral.setCurrencyController(currencyController.address);
-    console.log(
-      'Collateral Aggregator contract address is ' + collateral.address,
-    );
-    console.log();
 
     paymentAggregator = await PaymentAggregator.new();
-    console.log(
-      'PaymentAggregator contract address is ' + paymentAggregator.address,
-    );
 
     closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
-    console.log(
-      'CloseOutNetting contract address is ' + closeOutNetting.address,
-    );
 
     liquidations = await Liquidations.new(owner, 10);
     await liquidations.setCollateralAggregator(collateral.address, {
@@ -229,7 +200,7 @@ contract('Integration test', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.supportCurrency(
       hexFILString,
@@ -239,7 +210,7 @@ contract('Integration test', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.supportCurrency(
       hexBTCString,
@@ -249,13 +220,13 @@ contract('Integration test', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.updateCollateralSupport(hexETHString, true);
-    await emitted(tx, 'CcyCollateralUpdate');
+    expectEvent(tx, 'CcyCollateralUpdate');
 
     tx = await currencyController.updateMinMargin(hexETHString, 2500);
-    await emitted(tx, 'MinMarginUpdated');
+    expectEvent(tx, 'MinMarginUpdated');
 
     await collateral.setCurrencyController(currencyController.address, {
       from: owner,
@@ -268,10 +239,6 @@ contract('Integration test', async (accounts) => {
     crosschainResolver = await CrosschainAddressResolver.new(
       collateral.address,
     );
-    console.log(
-      'CrosschainAddressResolver contract address is ' +
-        crosschainResolver.address,
-    );
     await collateral.setCrosschainAddressResolver(crosschainResolver.address);
 
     const SettlementEngineFactory = await ethers.getContractFactory(
@@ -282,9 +249,6 @@ contract('Integration test', async (accounts) => {
       currencyController.address,
       crosschainResolver.address,
       wETHToken.address,
-    );
-    console.log(
-      'SettlementEngine contract address is ' + settlementEngine.address,
     );
 
     await paymentAggregator.setSettlementEngine(settlementEngine.address);
@@ -361,11 +325,6 @@ contract('Integration test', async (accounts) => {
       },
     );
     lendingController = await lendingControllerFactory.deploy();
-    console.log(
-      'LendingMarketController contract address is ' +
-        lendingController.address,
-    );
-    console.log();
 
     await productResolver.registerProduct(
       loanPrefix,
@@ -534,84 +493,84 @@ contract('Integration test', async (accounts) => {
       marketOrder = await _3mMarket.order(0, ethValue(300), 920, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(300);
 
       _3mMarket = await LendingMarket.at(btcLendingMarkets[0]);
       marketOrder = await _3mMarket.order(0, '1000000000', 300, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _6mMarket = await LendingMarket.at(lendingMarkets[1]);
       marketOrder = await _6mMarket.order(0, ethValue(310), 1020, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(310);
 
       _6mMarket = await LendingMarket.at(btcLendingMarkets[1]);
       marketOrder = await _6mMarket.order(0, '1000000000', 310, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _1yMarket = await LendingMarket.at(lendingMarkets[2]);
       marketOrder = await _1yMarket.order(0, ethValue(320), 1120, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(320);
 
       _1yMarket = await LendingMarket.at(btcLendingMarkets[2]);
       marketOrder = await _1yMarket.order(0, '1000000000', 320, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _2yMarket = await LendingMarket.at(lendingMarkets[3]);
       marketOrder = await _2yMarket.order(0, ethValue(330), 1220, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(330);
 
       _2yMarket = await LendingMarket.at(btcLendingMarkets[3]);
       marketOrder = await _2yMarket.order(0, '1000000000', 330, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _3yMarket = await LendingMarket.at(lendingMarkets[4]);
       marketOrder = await _3yMarket.order(0, ethValue(340), 1320, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(340);
 
       _3yMarket = await LendingMarket.at(btcLendingMarkets[4]);
       marketOrder = await _3yMarket.order(0, '1000000000', 340, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _5yMarket = await LendingMarket.at(lendingMarkets[5]);
       marketOrder = await _5yMarket.order(0, ethValue(350), 1520, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(350);
 
       _5yMarket = await LendingMarket.at(btcLendingMarkets[5]);
       marketOrder = await _5yMarket.order(0, '1000000000', 350, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
     });
 
@@ -620,84 +579,84 @@ contract('Integration test', async (accounts) => {
       marketOrder = await _3mMarket.order(1, ethValue(300), 680, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(300);
 
       _3mMarket = await LendingMarket.at(btcLendingMarkets[0]);
       marketOrder = await _3mMarket.order(1, '1000000000', 270, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _6mMarket = await LendingMarket.at(lendingMarkets[1]);
       marketOrder = await _6mMarket.order(1, ethValue(310), 780, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(310);
 
       _6mMarket = await LendingMarket.at(btcLendingMarkets[1]);
       marketOrder = await _6mMarket.order(1, '1000000000', 280, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _1yMarket = await LendingMarket.at(lendingMarkets[2]);
       marketOrder = await _1yMarket.order(1, ethValue(320), 880, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(320);
 
       _1yMarket = await LendingMarket.at(btcLendingMarkets[2]);
       marketOrder = await _1yMarket.order(1, '1000000000', 290, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _2yMarket = await LendingMarket.at(lendingMarkets[3]);
       marketOrder = await _2yMarket.order(1, ethValue(330), 980, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(330);
 
       _2yMarket = await LendingMarket.at(btcLendingMarkets[3]);
       marketOrder = await _2yMarket.order(1, '1000000000', 300, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _3yMarket = await LendingMarket.at(lendingMarkets[4]);
       marketOrder = await _3yMarket.order(1, ethValue(340), 1080, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(340);
 
       _3yMarket = await LendingMarket.at(btcLendingMarkets[4]);
       marketOrder = await _3yMarket.order(1, '1000000000', 310, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
 
       let _5yMarket = await LendingMarket.at(lendingMarkets[5]);
       marketOrder = await _5yMarket.order(1, ethValue(350), 1280, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(350);
 
       _5yMarket = await LendingMarket.at(btcLendingMarkets[5]);
       marketOrder = await _5yMarket.order(1, '1000000000', 320, {
         from: carol,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
       carolOrdersSum = carolOrdersSum + ethValue(0, 000000001);
     });
   });
@@ -710,7 +669,7 @@ contract('Integration test', async (accounts) => {
         { from: alice },
       );
 
-      await emitted(result, 'Register');
+      expectEvent(result, 'Register');
     });
 
     it('Deposit 10 ETH by Alice in Collateral contract', async () => {
@@ -840,7 +799,7 @@ contract('Integration test', async (accounts) => {
         { from: bob },
       );
 
-      await emitted(result, 'Register');
+      expectEvent(result, 'Register');
 
       const [, , bobSigner] = await ethers.getSigners();
       let depositAmt = web3.utils.toBN('1000000000000000000');
@@ -957,14 +916,10 @@ contract('Integration test', async (accounts) => {
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
-
-      // web3.eth.getBalance(alice).then((res) => {
-      //     res.should.be.equal(balance.sub(web3.utils.toBN("1000000000000000000")).toString());
-      // });
     });
 
     it('Expect revert on making order for 100 FIL', async () => {
-      await expectRevert(
+      expectRevert(
         lendingMarket.order(0, web3.utils.toBN('100000000000000000000'), 700, {
           from: alice,
         }),
@@ -979,7 +934,7 @@ contract('Integration test', async (accounts) => {
         725,
         { from: alice },
       );
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
     });
 
     it('Check Alice collateral book usage, and total unsettled exposure calculations', async () => {
@@ -1079,18 +1034,13 @@ contract('Integration test', async (accounts) => {
         .getBalance(alice)
         .then((res) => (balance = web3.utils.toBN(res)));
 
-      // await expectRevert(
-      //     lendingMarket.cancelOrder(1, {from: alice}),
-      //     "No access to cancel order"
-      // );
-
       let tx = await lendingMarket.cancelOrder(3, { from: alice });
       if (tx.receipt.gasUsed != null) {
         balance = await balance.sub(
           web3.utils.toBN(tx.receipt.gasUsed).mul(gasPrice),
         );
       }
-      await emitted(tx, 'CancelOrder');
+      expectEvent(tx, 'CancelOrder');
 
       const totalUnsettledExp = await collateral.getTotalUnsettledExp(alice);
       totalUnsettledExp.toString().should.be.equal('0');
@@ -1185,13 +1135,14 @@ contract('Integration test', async (accounts) => {
       let marketOrder = await lendingMarket.order(0, filAmount, rate, {
         from: alice,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
 
-      console.log('');
-      console.log('Alice ETH address ' + alice);
-      console.log('Bob ETH address ' + bob);
+      console.group('ETH address');
+      console.log(`Alice: ${alice}`);
+      console.log(`Bob: ${bob}`);
+      console.groupEnd();
 
-      let receipt = await (
+      await (
         await ethVault
           .connect(bobSigner)
           ['deposit(uint256)'](depositAmt.toString(), {
@@ -1199,25 +1150,18 @@ contract('Integration test', async (accounts) => {
           })
       ).wait();
 
-      let filUsed = filAmount
-        .mul(web3.utils.toBN(15000))
-        .div(web3.utils.toBN(10000));
       let filInETH = await currencyController.convertToETH(
         hexFILString,
         filAmount,
         { from: alice },
       );
-      console.log('');
       console.log('FIL in ETH is: ' + filInETH);
-
-      console.log('');
       console.log('Taking order for 30 FIL, and using collateral');
-      console.log('');
 
       marketOrder = await lendingMarket.order(1, filAmount, rate, {
         from: bob,
       });
-      await emitted(marketOrder, 'TakeOrder');
+      expectEvent(marketOrder, 'TakeOrder');
 
       let lockedCollaterals = await ethVault[
         'getLockedCollateral(address,address)'
@@ -1243,23 +1187,16 @@ contract('Integration test', async (accounts) => {
       rebalance[1].toString().should.be.equal('0');
       rebalance[0].toString().should.be.equal('0');
 
-      console.log('');
       console.log(
         'Calculating collateral coverage after registering loan deal for 30 FIL',
       );
-      console.log('');
 
       tx = await collateral.getCoverage(alice, bob);
 
-      console.log(
-        'Collateral coverage for Bob (borrower) of 30 FIL is ' +
-          tx[0].toString(),
-      );
-      console.log(
-        'Collateral coverage for Alice (lender) of 30 FIL is ' +
-          tx[1].toString(),
-      );
-      console.log('');
+      console.group('Collateral coverage for:');
+      console.log('Bob (borrower) of 30 FIL is ' + tx[0].toString());
+      console.log('Alice (lender) of 30 FIL is ' + tx[1].toString());
+      console.groupEnd();
     });
 
     it('Check cashflow structure of the loan deal between Alice and Bob', async () => {
@@ -1305,7 +1242,6 @@ contract('Integration test', async (accounts) => {
         'Present value of the loan for 30 FIL between Alice and Bob before notional payment settlement: ' +
           pv,
       );
-      console.log('');
 
       now = await getLatestTimestamp();
       slotTime = await timeLibrary.addDays(now, 2);
@@ -1387,7 +1323,6 @@ contract('Integration test', async (accounts) => {
         'Present value of the loan for 30 FIL between Alice and Bob after notional exchange: ' +
           pv.toString(),
       );
-      console.log('');
     });
 
     it('Shift time by 3 month, perform mark-to-market and present value updates', async () => {
@@ -1401,7 +1336,6 @@ contract('Integration test', async (accounts) => {
         'Present value of the loan for 30 FIL between Alice and Bob after first payment settlement: ' +
           pv,
       );
-      console.log('');
 
       const ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
       ccyExp[0].toString().should.be.equal('0');
@@ -1476,22 +1410,20 @@ contract('Integration test', async (accounts) => {
       ).wait();
 
       console.log('Making a new order to lend 1 BTC for 5 years by Bob');
-      console.log('');
 
       let marketOrder = await btcLendingMarket.order(0, btcAmount, rate, {
         from: bob,
       });
-      await emitted(marketOrder, 'MakeOrder');
+      expectEvent(marketOrder, 'MakeOrder');
 
       console.log(
         'Taking order for 1 BTC, and using collateral by Alice as a borrower',
       );
-      console.log('');
 
       marketOrder = await btcLendingMarket.order(1, btcAmount, rate, {
         from: alice,
       });
-      await emitted(marketOrder, 'TakeOrder');
+      expectEvent(marketOrder, 'TakeOrder');
 
       let btcUsed = btcAmount
         .mul(web3.utils.toBN(15000))
@@ -1512,7 +1444,6 @@ contract('Integration test', async (accounts) => {
       );
 
       console.log('BTC in ETH is: ' + btcInETH);
-      console.log('');
 
       let rebalance = await collateral.getRebalanceCollateralAmounts(
         alice,
@@ -1524,17 +1455,12 @@ contract('Integration test', async (accounts) => {
       console.log(
         'Calculating collateral coverage after registering loan deal for 30 FIL',
       );
-      console.log('');
 
       tx = await collateral.getCoverage(alice, bob);
-      console.log('');
-      console.log(
-        'Collateral coverage for Bob (lender) of 1 BTC is ' + tx[1].toString(),
-      );
-      console.log(
-        'Collateral coverage for Alice (borrower) of 1 BTC is ' +
-          tx[0].toString(),
-      );
+      console.group('Collateral coverage for:');
+      console.log('Bob (lender) of 1 BTC is ' + tx[1].toString());
+      console.log('Alice (borrower) of 1 BTC is ' + tx[0].toString());
+      console.groupEnd();
     });
 
     it('Check cashflow structure of the second loan deal between Alice and Bob', async () => {
@@ -1601,7 +1527,6 @@ contract('Integration test', async (accounts) => {
         'Present value of the loan for 1 BTC deal between Bob and Alice before notional payment settlement: ' +
           pv,
       );
-      console.log('');
 
       now = await getLatestTimestamp();
       slotTime = await timeLibrary.addDays(now, 2);
@@ -1671,7 +1596,6 @@ contract('Integration test', async (accounts) => {
         'Present value of the loan for 30 FIL between Alice and Bob after notional exchange: ' +
           pv.toString(),
       );
-      console.log('');
     });
 
     it('Shift time by 6 month, perform mark-to-market and present value updates', async () => {
@@ -1687,8 +1611,6 @@ contract('Integration test', async (accounts) => {
         hexBTCString,
       );
       console.log(borrowBTCRates[5].toString());
-
-      console.log('');
       console.log(
         'Shift time by 6 month, perform mark-to-market for BTC lending deal',
       );
@@ -1702,22 +1624,16 @@ contract('Integration test', async (accounts) => {
         .mul(SETTLEMENT_LOCK)
         .div(BP_BASE);
       console.log(settlementLock.toString());
-
-      console.log('');
       console.log(
         'Present value of the loan for 1 BTC between Bob after 6 month: ' + pv,
       );
 
       tx = await collateral.getCoverage(alice, bob);
 
-      console.log('');
-      console.log(
-        'Collateral coverage for Bob (lender) of 1 BTC is ' + tx[1].toString(),
-      );
-      console.log(
-        'Collateral coverage for Alice (borrower) of 1 BTC is ' +
-          tx[0].toString(),
-      );
+      console.group('Collateral coverage for:');
+      console.log('Bob (lender) of 1 BTC is ' + tx[1].toString());
+      console.log('Alice (borrower) of 1 BTC is ' + tx[0].toString());
+      console.groupEnd();
 
       const ccyExp = await collateral.getCcyExposures(alice, bob, hexBTCString);
       ccyExp[0].toString().should.be.equal('0');
@@ -1738,15 +1654,16 @@ contract('Integration test', async (accounts) => {
         await filToETHPriceFeed.updateAnswer(newPrice);
 
         let coverage = await collateral.getCoverage(alice, bob);
-        console.log('');
+        console.group('Collateral coverage for:');
         console.log(
-          'Collateral coverage for Alice (borrower) of 1 BTC and lender of 30 FIL is ' +
+          'Alice (borrower) of 1 BTC and lender of 30 FIL is ' +
             coverage[0].toString(),
         );
         console.log(
-          'Collateral coverage for Bob (lender) of 1 BTC and borrower of 30 FIL is ' +
+          'Bob (lender) of 1 BTC and borrower of 30 FIL is ' +
             coverage[1].toString(),
         );
+        console.groupEnd();
       });
 
       it('Try to liquidate deals', async () => {
@@ -1769,18 +1686,23 @@ contract('Integration test', async (accounts) => {
         let lockedCollaterals = await ethVault[
           'getLockedCollateral(address,address)'
         ](alice, bob);
-        console.log(lockedCollaterals);
+        console.log(
+          `LockedCollaterals: ${lockedCollaterals
+            .map((value) => value.toString())
+            .join(',')}`,
+        );
 
         let coverage = await collateral.getCoverage(alice, bob);
-        console.log('');
+        console.group('Collateral coverage for:');
         console.log(
-          'Collateral coverage for Alice (borrower) after liquidating all deals is ' +
+          'Alice (borrower) after liquidating all deals is ' +
             coverage[0].toString(),
         );
         console.log(
-          'Collateral coverage for Bob (lender) after liquidating all deals is ' +
+          'Bob (lender) after liquidating all deals is ' +
             coverage[1].toString(),
         );
+        console.groupEnd();
       });
     });
   });

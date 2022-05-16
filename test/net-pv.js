@@ -2,8 +2,8 @@ const NetPVTest = artifacts.require('NetPVTest');
 
 const utils = require('web3-utils');
 const { should } = require('chai');
-const { reverted } = require('../test-utils').assert;
-const expectRevert = reverted;
+const { expectRevert } = require('@openzeppelin/test-helpers');
+const { PrintTable } = require('../test-utils').helper;
 
 should();
 
@@ -237,19 +237,19 @@ contract('NetPVTest', async (accounts) => {
 
   describe('Calculate gas costs', () => {
     it('Gas costs for getting netting structure', async () => {
-      let gasCost = await netPVTest.getGasCostOfGet(alice, bob);
-      console.log(
-        'Gas cost for getting netting between Alice and Bob is ' +
-          gasCost.toString() +
-          ' gas',
+      const gasCostTable = new PrintTable('GasCost');
+
+      await gasCostTable.add(
+        'Get netting between Alice and Bob',
+        netPVTest.getGasCostOfGet(alice, bob),
       );
 
-      gasCost = await netPVTest.getGasCostOfGet(bob, alice);
-      console.log(
-        'Gas cost for getting netting between Alice and Bob in reverse counterparties order is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get netting between Alice and Bob in reverse counterparties order',
+        netPVTest.getGasCostOfGet(bob, alice),
       );
+
+      gasCostTable.log();
     });
   });
 });

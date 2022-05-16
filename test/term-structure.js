@@ -1,18 +1,15 @@
 const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const LendingMarketControllerMock = artifacts.require(
-  'LendingMarketControllerMock',
-);
 
-const { emitted, reverted, equal } = require('../test-utils').assert;
 const { ethers } = require('hardhat');
 const { toBytes32 } = require('../test-utils').strings;
+const { PrintTable } = require('../test-utils').helper;
 const { should } = require('chai');
-
+const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const utils = require('web3-utils');
+
 const { zeroAddress } = require('../test-utils/src/strings');
 
-const expectRevert = reverted;
 should();
 
 contract('TermStructure', async (accounts) => {
@@ -23,9 +20,9 @@ contract('TermStructure', async (accounts) => {
   let productResolver;
   let loanPrefix = '0x21aaa47b';
 
-  let filToETHRate = web3.utils.toBN('67175250000000000');
-  let ethToUSDRate = web3.utils.toBN('232612637168');
-  let btcToETHRate = web3.utils.toBN('23889912590000000000');
+  let filToETHRate = utils.toBN('67175250000000000');
+  let ethToUSDRate = utils.toBN('232612637168');
+  let btcToETHRate = utils.toBN('23889912590000000000');
 
   let filToETHPriceFeed;
   let btcToETHPriceFeed;
@@ -70,7 +67,7 @@ contract('TermStructure', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.supportCurrency(
       hexFILString,
@@ -80,7 +77,7 @@ contract('TermStructure', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.supportCurrency(
       hexBTCString,
@@ -90,13 +87,13 @@ contract('TermStructure', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.updateCollateralSupport(hexETHString, true);
-    await emitted(tx, 'CcyCollateralUpdate');
+    expectEvent(tx, 'CcyCollateralUpdate');
 
     tx = await currencyController.updateMinMargin(hexETHString, 2500);
-    await emitted(tx, 'MinMarginUpdated');
+    expectEvent(tx, 'MinMarginUpdated');
 
     signers = await ethers.getSigners();
 
@@ -169,7 +166,7 @@ contract('TermStructure', async (accounts) => {
   });
 
   describe('Test register product function', async () => {
-    it('Succesfully add new term via supportTerm function and check term creation', async () => {
+    it('Successfully add new term via supportTerm function and check term creation', async () => {
       let schedule = ['180'];
       await termStructure.supportTerm(
         180,
@@ -183,33 +180,16 @@ contract('TermStructure', async (accounts) => {
       term[1].toString().should.be.equal('5000');
       term[2].toString().should.be.equal('1');
 
-      let paymentSchedule = await termStructure.getTermSchedule(180, 0);
-      console.log(paymentSchedule.toString());
-      console.log();
-
-      paymentSchedule = await termStructure.getTermSchedule(180, 1);
-      console.log(paymentSchedule.toString());
-      console.log();
-
-      paymentSchedule = await termStructure.getTermSchedule(180, 2);
-      console.log(paymentSchedule.toString());
-      console.log();
-
-      paymentSchedule = await termStructure.getTermSchedule(180, 3);
-      console.log(paymentSchedule.toString());
-      console.log();
-
-      paymentSchedule = await termStructure.getTermSchedule(180, 4);
-      console.log(paymentSchedule.toString());
-      console.log();
-
-      // paymentSchedule.map((days, i) => {
-      //     days.toString().should.be.equal(schedule[i])
-      // });
+      console.group('PaymentSchedule: 180 days');
+      for (let i = 0; i <= 4; i++) {
+        let paymentSchedule = await termStructure.getTermSchedule(180, i);
+        console.log(`${i} -> ${paymentSchedule.toString()}`);
+      }
+      console.groupEnd();
     });
 
     it('Try to add term by Alice, expect revert', async () => {
-      await expectRevert(
+      expectRevert(
         termStructure
           .connect(signers[1])
           .supportTerm(90, [loanPrefix], [hexFILString], { from: alice }),
@@ -219,7 +199,7 @@ contract('TermStructure', async (accounts) => {
       term[0].toString().should.be.equal('0');
     });
 
-    it('Succesfully add the rest of terms using supportTerm', async () => {
+    it('Successfully add the rest of terms using supportTerm', async () => {
       let days = [90, 1825, 365, 1095, 730];
       let annualPayments = [1, 5, 1, 3, 2];
       let monthlyPayments = [3, 60, 12, 36, 24];
@@ -255,29 +235,12 @@ contract('TermStructure', async (accounts) => {
         term = await termStructure.getTerm(days[i], 3);
         term[2].toString().should.be.equal(monthlyPayments[i].toString());
 
-        let paymentSchedule = await termStructure.getTermSchedule(days[i], 0);
-        console.log(paymentSchedule.toString());
-        console.log();
-
-        paymentSchedule = await termStructure.getTermSchedule(days[i], 1);
-        console.log(paymentSchedule.toString());
-        console.log();
-
-        paymentSchedule = await termStructure.getTermSchedule(days[i], 2);
-        console.log(paymentSchedule.toString());
-        console.log();
-
-        paymentSchedule = await termStructure.getTermSchedule(days[i], 3);
-        console.log(paymentSchedule.toString());
-        console.log();
-
-        paymentSchedule = await termStructure.getTermSchedule(days[i], 4);
-        console.log(paymentSchedule.toString());
-        console.log();
-
-        // paymentSchedule.map((days, j) => {
-        //     days.toString().should.be.equal(schedules[i][j])
-        // });
+        console.group(`PaymentSchedule: ${days[i]} days`);
+        for (let j = 0; j <= 4; j++) {
+          let paymentSchedule = await termStructure.getTermSchedule(days[i], j);
+          console.log(`${j} -> ${paymentSchedule.toString()}`);
+        }
+        console.groupEnd();
       }
     });
   });
@@ -290,137 +253,107 @@ contract('TermStructure', async (accounts) => {
         true,
       );
 
-      terms.map((term) => {
-        console.log(term.toString());
-      });
+      terms.forEach((term) => console.log(term.toString()));
     });
   });
 
   describe('Report gas consumption of view functions', async () => {
     it('Gas costs for getting contract addresses', async () => {
-      let gasCost = await termStructure.getGasCostOfGetTerm(90, 3);
-      console.log(
-        'Gas cost for getting term information with monthly payment schedule is ' +
-          gasCost.toString() +
-          ' gas',
+      const gasCostTable = new PrintTable('GasCost');
+
+      await gasCostTable.add(
+        'Get term information with monthly payment schedule',
+        termStructure.getGasCostOfGetTerm(90, 3),
       );
 
-      gasCost = await termStructure.getGasCostOfGetTermSchedule(1825, 3);
-      console.log(
-        'Gas cost for getting term monthly schedule is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term monthly schedule',
+        termStructure.getGasCostOfGetTermSchedule(1825, 3),
       );
 
-      gasCost = await termStructure.getGasCostOfGetTermSchedule(1825, 0);
-      console.log(
-        'Gas cost for getting term annual schedule is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term annual schedule',
+        termStructure.getGasCostOfGetTermSchedule(1825, 0),
       );
 
-      gasCost = await termStructure.getGasCostOfGetTermSchedule(1825, 1);
-      console.log(
-        'Gas cost for getting term semi-annual schedule is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term semi-annual schedule',
+        termStructure.getGasCostOfGetTermSchedule(1825, 1),
       );
 
-      gasCost = await termStructure.getGasCostOfGetTermSchedule(1095, 2);
-      console.log(
-        'Gas cost for getting term quartely schedule is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term quarterly schedule',
+        termStructure.getGasCostOfGetTermSchedule(1095, 2),
       );
 
-      gasCost = await termStructure.getGasCostOfGetTermSchedule(730, 4);
-      console.log(
-        'Gas cost for getting term forward schedule is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term forward schedule',
+        termStructure.getGasCostOfGetTermSchedule(730, 4),
       );
 
-      gasCost = await termStructure.getGasCostOfGetNumDays(180);
-      console.log(
-        'Gas cost for getting term number of days is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term number of days',
+        termStructure.getGasCostOfGetNumDays(180),
       );
 
-      gasCost = await termStructure.getGasCostOfGetDfFrac(365);
-      console.log(
-        'Gas cost for getting term discount factor fractions is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term discount factor fractions',
+        termStructure.getGasCostOfGetDfFrac(365),
       );
 
-      gasCost = await termStructure.getGasCostOfGetNumPayments(365, 0);
-      console.log(
-        'Gas cost for getting term number of annual payments is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term number of annual payments',
+        termStructure.getGasCostOfGetNumPayments(365, 0),
       );
 
-      gasCost = await termStructure.getGasCostOfGetNumPayments(1825, 1);
-      console.log(
-        'Gas cost for getting term number of semi-anual payments is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term number of semi-annual payments',
+        termStructure.getGasCostOfGetNumPayments(1825, 1),
       );
 
-      gasCost = await termStructure.getGasCostOfGetNumPayments(730, 2);
-      console.log(
-        'Gas cost for getting term number of quarterly payments is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term number of quarterly payments',
+        termStructure.getGasCostOfGetNumPayments(730, 2),
       );
 
-      gasCost = await termStructure.getGasCostOfGetNumPayments(1825, 3);
-      console.log(
-        'Gas cost for getting term number of monthly payments is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term number of monthly payments',
+        termStructure.getGasCostOfGetNumPayments(1825, 3),
       );
 
-      gasCost = await termStructure.getGasCostOfGetNumPayments(1095, 4);
-      console.log(
-        'Gas cost for getting term number of forward payments is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get term number of forward payments',
+        termStructure.getGasCostOfGetNumPayments(1095, 4),
       );
 
-      gasCost = await termStructure.getGasCostOfIsSupportedTerm(
-        730,
-        loanPrefix,
-        hexBTCString,
-      );
-      console.log(
-        'Gas cost for verifying if term is supported is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'verifying if term is supported',
+        termStructure.getGasCostOfIsSupportedTerm(
+          730,
+          loanPrefix,
+          hexBTCString,
+        ),
       );
 
-      gasCost = await termStructure.getGasCostOfGetTermsForProductAndCcy(
-        loanPrefix,
-        hexETHString,
-        false,
-      );
-      console.log(
-        'Gas cost for getting all supported terms for product and currency without sorting ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get all supported terms for product and currency without sorting',
+        termStructure.getGasCostOfGetTermsForProductAndCcy(
+          loanPrefix,
+          hexETHString,
+          false,
+        ),
       );
 
-      gasCost = await termStructure.getGasCostOfGetTermsForProductAndCcy(
-        loanPrefix,
-        hexETHString,
-        true,
+      await gasCostTable.add(
+        'Get all supported terms for product and currency with sorting',
+        termStructure.getGasCostOfGetTermsForProductAndCcy(
+          loanPrefix,
+          hexETHString,
+          true,
+        ),
       );
-      console.log(
-        'Gas cost for getting all supported terms for product and currency with sorting ' +
-          gasCost.toString() +
-          ' gas',
-      );
+
+      gasCostTable.log();
     });
   });
 });

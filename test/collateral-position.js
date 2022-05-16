@@ -2,6 +2,7 @@ const CollateralPositionTest = artifacts.require('CollateralPositionTest');
 
 const utils = require('web3-utils');
 const { should } = require('chai');
+const { PrintTable } = require('../test-utils').helper;
 should();
 
 contract('CollateralPositionTest', async (accounts) => {
@@ -173,19 +174,19 @@ contract('CollateralPositionTest', async (accounts) => {
 
   describe('Calculate gas costs', () => {
     it('Gas costs for getting collateral position', async () => {
-      let gasCost = await collateralPositionTest.getGasCostOfGet(alice, bob);
-      console.log(
-        'Gas cost for getting collateral position between Alice and Bob is ' +
-          gasCost.toString() +
-          ' gas',
+      const gasCostTable = new PrintTable('GasCost');
+
+      await gasCostTable.add(
+        'Get collateral position between Alice and Bob',
+        collateralPositionTest.getGasCostOfGet(alice, bob),
       );
 
-      gasCost = await collateralPositionTest.getGasCostOfGet(bob, alice);
-      console.log(
-        'Gas cost for getting collateral position between Alice and Bob in reverse counterparties order is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get collateral position between Alice and Bob in reverse counterparties order',
+        collateralPositionTest.getGasCostOfGet(bob, alice),
       );
+
+      gasCostTable.log();
     });
   });
 });

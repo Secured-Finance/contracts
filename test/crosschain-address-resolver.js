@@ -1,8 +1,5 @@
 const { should } = require('chai');
 const { ethers } = require('hardhat');
-const { reverted } = require('../test-utils').assert;
-const utils = require('web3-utils');
-const expectRevert = reverted;
 
 should();
 

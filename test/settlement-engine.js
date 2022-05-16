@@ -22,8 +22,8 @@ const CloseOutNetting = artifacts.require('CloseOutNetting');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 const MarkToMarketMock = artifacts.require('MarkToMarketMock');
 
-const { reverted } = require('../test-utils').assert;
 const { should } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { zeroAddress } = require('ethereumjs-util');
 const {
   hexFILString,
@@ -52,8 +52,6 @@ const {
 const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } =
   require('../test-utils').time;
 should();
-
-const expectRevert = reverted;
 
 contract('SettlementEngine', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -282,18 +280,6 @@ contract('SettlementEngine', async (accounts) => {
       timeSlot[5].should.be.equal(false);
     });
 
-    it('Should revert on transfer verification with no LINK tokens on ChainlinkSettlementAdapter', async () => {
-      await expectRevert(
-        settlementEngine.verifyPayment(
-          bob,
-          hexFILString,
-          _3monthCoupon0.toString(),
-          _3monthTime.toString(),
-          testTxHash,
-        ),
-      );
-    });
-
     it('Should revert on trying to verify payment too early', async () => {
       await expectRevert(
         settlementEngine
@@ -309,8 +295,20 @@ contract('SettlementEngine', async (accounts) => {
       );
     });
 
-    it('Should try to verify p2p transfer in FIL chain, validate state changes', async () => {
+    it('Should revert on transfer verification with no LINK tokens on ChainlinkSettlementAdapter', async () => {
       await advanceTimeAndBlock(89 * ONE_DAY);
+      await expectRevert.unspecified(
+        settlementEngine.verifyPayment(
+          bob,
+          hexFILString,
+          _3monthCoupon0.toString(),
+          _3monthTime.toString(),
+          testTxHash,
+        ),
+      );
+    });
+
+    it('Should try to verify p2p transfer in FIL chain, validate state changes', async () => {
       await linkToken.transfer(
         settlementAdapter.address,
         toBN('100000000000000000000'),

@@ -1,11 +1,12 @@
 const FXRatesAggregator = artifacts.require('FXRatesAggregator');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
-const { emitted, reverted, equal } = require('../test-utils').assert;
+const { should } = require('chai');
+const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const { hexFILString, hexBTCString, hexETHString } =
   require('../test-utils').strings;
 
-const expectRevert = reverted;
+should();
 
 contract('FXRatesAggregator', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -32,7 +33,7 @@ contract('FXRatesAggregator', async (accounts) => {
         btcToUSDPriceFeed.address,
         false,
       );
-      await emitted(setPriceFeedTx, 'PriceFeedAdded');
+      expectEvent(setPriceFeedTx, 'PriceFeedAdded');
 
       filToUSDPriceFeed = await MockV3Aggregator.new(
         8,
@@ -44,7 +45,7 @@ contract('FXRatesAggregator', async (accounts) => {
         filToUSDPriceFeed.address,
         false,
       );
-      await emitted(setPriceFeedTx, 'PriceFeedAdded');
+      expectEvent(setPriceFeedTx, 'PriceFeedAdded');
 
       ethToUSDPriceFeed = await MockV3Aggregator.new(
         8,
@@ -56,7 +57,7 @@ contract('FXRatesAggregator', async (accounts) => {
         ethToUSDPriceFeed.address,
         false,
       );
-      await emitted(setPriceFeedTx, 'PriceFeedAdded');
+      expectEvent(setPriceFeedTx, 'PriceFeedAdded');
 
       await expectRevert(
         fxRatesAggregator.linkPriceFeed(0, ethToUSDPriceFeed.address, true),
@@ -73,7 +74,7 @@ contract('FXRatesAggregator', async (accounts) => {
         btcToETHPriceFeed.address,
         true,
       );
-      await emitted(setPriceFeedTx, 'PriceFeedAdded');
+      expectEvent(setPriceFeedTx, 'PriceFeedAdded');
 
       filToETHPriceFeed = await MockV3Aggregator.new(
         18,
@@ -85,14 +86,14 @@ contract('FXRatesAggregator', async (accounts) => {
         filToETHPriceFeed.address,
         true,
       );
-      await emitted(setPriceFeedTx, 'PriceFeedAdded');
+      expectEvent(setPriceFeedTx, 'PriceFeedAdded');
     },
   );
 
   describe('Test getLastUSDPrice and getHistoricalPrice for ETH', async () => {
     it('Succesfully get last price for ETH in USD', async () => {
       let price = await fxRatesAggregator.getLastUSDPrice(0, { from: bob });
-      await equal(price.toString(), '232612637168');
+      price.toString().should.be.equal('232612637168');
     });
 
     it('Try to get later round price, expect revert', async () => {
@@ -106,7 +107,7 @@ contract('FXRatesAggregator', async (accounts) => {
   describe('Test getLastUSDPrice and getHistoricalPrice for FIL', async () => {
     it('Succesfully get last price for FIL in USD', async () => {
       let price = await fxRatesAggregator.getLastUSDPrice(1, { from: bob });
-      await equal(price.toString(), '15804000000');
+      price.toString().should.be.equal('15804000000');
     });
 
     it('Try to get later round price, expect revert', async () => {
@@ -120,7 +121,7 @@ contract('FXRatesAggregator', async (accounts) => {
   describe('Test getLastUSDPrice and getHistoricalPrice for BTC', async () => {
     it('Succesfully get last price for BTC in USD', async () => {
       let price = await fxRatesAggregator.getLastUSDPrice(3, { from: bob });
-      await equal(price.toString(), '5612587723563');
+      price.toString().should.be.equal('5612587723563');
     });
 
     it('Try to get later round price, expect revert', async () => {
@@ -139,7 +140,7 @@ contract('FXRatesAggregator', async (accounts) => {
       );
 
       let price = await fxRatesAggregator.getLastETHPrice(3, { from: bob });
-      await equal(price.toString(), '23889912590000000000');
+      price.toString().should.be.equal('23889912590000000000');
     });
 
     it('Try to get later round price, expect revert', async () => {
@@ -157,7 +158,7 @@ contract('FXRatesAggregator', async (accounts) => {
       });
 
       let price = await fxRatesAggregator.getLastETHPrice(1, { from: bob });
-      await equal(price.toString(), '67175250000000000');
+      price.toString().should.be.equal('67175250000000000');
     });
 
     it('Try to get later round price, expect revert', async () => {
@@ -175,7 +176,7 @@ contract('FXRatesAggregator', async (accounts) => {
         web3.utils.toBN('10000000000000000000000'),
         { from: bob },
       );
-      await equal(filInETH.toString(), '671752500000000000000');
+      filInETH.toString().should.be.equal('671752500000000000000');
     });
 
     it('Successfully convert 10 for FIL in ETH', async () => {
@@ -184,7 +185,7 @@ contract('FXRatesAggregator', async (accounts) => {
         web3.utils.toBN('10000000000000000000'),
         { from: bob },
       );
-      await equal(filInETH.toString(), '671752500000000000');
+      filInETH.toString().should.be.equal('671752500000000000');
     });
 
     it('Successfully convert 250 for FIL in ETH', async () => {
@@ -193,7 +194,7 @@ contract('FXRatesAggregator', async (accounts) => {
         web3.utils.toBN('250000000000000000000'),
         { from: bob },
       );
-      await equal(filInETH.toString(), '16793812500000000000');
+      filInETH.toString().should.be.equal('16793812500000000000');
     });
   });
 
@@ -204,7 +205,7 @@ contract('FXRatesAggregator', async (accounts) => {
         web3.utils.toBN('1000000000000000000'),
         { from: bob },
       );
-      await equal(filInETH.toString(), '23889912590000000000');
+      filInETH.toString().should.be.equal('23889912590000000000');
     });
 
     it('Successfully convert 10 BTC in ETH', async () => {
@@ -213,7 +214,7 @@ contract('FXRatesAggregator', async (accounts) => {
         web3.utils.toBN('10000000000000000000'),
         { from: bob },
       );
-      await equal(filInETH.toString(), '238899125900000000000');
+      filInETH.toString().should.be.equal('238899125900000000000');
     });
 
     it('Successfully convert 424.13421341 BTC in ETH', async () => {
@@ -222,7 +223,7 @@ contract('FXRatesAggregator', async (accounts) => {
         web3.utils.toBN('424134213410000000000'),
         { from: bob },
       );
-      await equal(filInETH.toString(), '10132529284793305831900');
+      filInETH.toString().should.be.equal('10132529284793305831900');
     });
 
     it('Successfully convert 0.00000341 BTC in ETH', async () => {
@@ -231,7 +232,7 @@ contract('FXRatesAggregator', async (accounts) => {
         web3.utils.toBN('3410000000000'),
         { from: bob },
       );
-      await equal(filInETH.toString(), '81464601931900');
+      filInETH.toString().should.be.equal('81464601931900');
     });
   });
 });

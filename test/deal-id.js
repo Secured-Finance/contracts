@@ -1,8 +1,9 @@
 const { should } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { ethers } = require('hardhat');
-const { reverted } = require('../test-utils').assert;
 const utils = require('web3-utils');
-const expectRevert = reverted;
+
+const { PrintTable } = require('../test-utils').helper;
 
 should();
 
@@ -87,7 +88,7 @@ contract('DealIdTest', async () => {
       await expectRevert(dealIdTest.generate(numId), 'NUMBER_OVERFLOW');
     });
 
-    it('Test generating deal with number 2^224 - 1, expect successfull ID generation', async () => {
+    it('Test generating deal with number 2^224 - 1, expect successful ID generation', async () => {
       const numId = utils
         .toBN(
           '26959946667150639794667015087019630673637144422540572481103610249215',
@@ -126,7 +127,7 @@ contract('DealIdTest', async () => {
       dealPrefix.should.be.equal(prefix);
     });
 
-    it('Test generating deal with number 2^224 - 1, expect successfull ID generation', async () => {
+    it('Test generating deal with number 2^224 - 1, expect successful ID generation', async () => {
       const numId = utils
         .toBN(
           '26959946667150639794667015087019630673637144422540572481103610249215',
@@ -141,80 +142,39 @@ contract('DealIdTest', async () => {
 
   describe('Calculate gas costs', () => {
     it('Gas costs for ID generation', async () => {
-      let numId = 1;
+      const gasCostTable = new PrintTable('GasCost');
+      let numIds = [
+        1,
+        124678,
+        2356789352,
+        '340282366920938463463374607431768211456',
+        '26959946667150639794667015087019630673637144422540572481103610249215',
+      ];
 
-      let gasCost = await dealIdTest.getGasCostOfGenerate(numId);
-      console.log(
-        'Gas cost for generating id with number 1 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
-
-      numId = 124678;
-      gasCost = await dealIdTest.getGasCostOfGenerate(numId);
-      console.log(
-        'Gas cost for generating id with number 124678 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
-
-      numId = 2356789352;
-      gasCost = await dealIdTest.getGasCostOfGenerate(numId);
-      console.log(
-        'Gas cost for generating id with number 2356789352 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
-
-      numId = '340282366920938463463374607431768211456';
-      gasCost = await dealIdTest.getGasCostOfGenerate(numId);
-      console.log(
-        'Gas cost for generating id with number 2^128 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
-
-      numId =
-        '26959946667150639794667015087019630673637144422540572481103610249215';
-      gasCost = await dealIdTest.getGasCostOfGenerate(numId);
-      console.log(
-        'Gas cost for generating id with number 2^224 - 1 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
+      for (const numId of numIds) {
+        await gasCostTable.add(
+          `Generate id with number ${Number(numId)}`,
+          dealIdTest.getGasCostOfGenerate(numId),
+        );
+      }
+      gasCostTable.log();
     });
 
     it('Gas costs for prefix extraction', async () => {
-      let numId = 1;
-      let id = generateId(numId);
+      const gasCostTable = new PrintTable('GasCost');
+      const numIds = [
+        1,
+        345678562395236902356,
+        '26959946667150639794667015087019630673637144422540572481103610249215',
+      ];
 
-      let gasCost = await dealIdTest.getGasCostOfGetPrefix(id);
-      console.log(
-        'Gas cost for extracting prefix for id with number 1 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
-
-      numId = 345678562395236902356;
-      id = generateId(numId);
-
-      gasCost = await dealIdTest.getGasCostOfGetPrefix(id);
-      console.log(
-        'Gas cost for extracting prefix for id with number 345678562395236902356 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
-
-      numId =
-        '26959946667150639794667015087019630673637144422540572481103610249215';
-      id = generateId(numId);
-
-      gasCost = await dealIdTest.getGasCostOfGetPrefix(id);
-      console.log(
-        'Gas cost for extracting prefix for id with number 2^224 - 1 is ' +
-          gasCost.toString() +
-          ' gas',
-      );
+      for (const numId of numIds) {
+        await gasCostTable.add(
+          `Extract prefix for id with number ${Number(numId)}`,
+          dealIdTest.getGasCostOfGetPrefix(generateId(numId)),
+        );
+      }
+      gasCostTable.log();
     });
   });
 });

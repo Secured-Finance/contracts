@@ -12,9 +12,6 @@ should();
 const ChainlinkSettlementAdapter = artifacts.require(
   'ChainlinkSettlementAdapter',
 );
-const ExternalAdapterCallerMock = artifacts.require(
-  'ExternalAdapterCallerMock',
-);
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 
@@ -171,7 +168,7 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
           { from: bob },
         );
 
-      await expectRevert(fulfill(), 'Source must be the oracle of the request');
+      expectRevert(fulfill(), 'Source must be the oracle of the request');
     });
   });
 
