@@ -22,8 +22,8 @@ const CrosschainAddressResolver = artifacts.require(
   'CrosschainAddressResolver',
 );
 
-const { reverted } = require('../test-utils').assert;
 const { should } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { secondTxHash } = require('../test-utils/src/strings');
 const {
   toBytes32,
@@ -31,7 +31,6 @@ const {
   hexETHString,
   hexUSDCString,
   zeroAddress,
-  testCcy,
   testJobId,
   testTxHash,
   aliceFILAddress,
@@ -52,9 +51,8 @@ const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } =
   require('../test-utils').time;
 const { computeNativeSettlementId, computeCrosschainSettlementId } =
   require('../test-utils').settlementId;
+const { PrintTable } = require('../test-utils').helper;
 should();
-
-const expectRevert = reverted;
 
 contract('PaymentAggregator', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -1117,32 +1115,35 @@ contract('PaymentAggregator', async (accounts) => {
 
   describe('Calculate gas costs', () => {
     it('Gas costs for time shift', async () => {
+      const gasCostTable = new PrintTable('GasCost');
       now = await getLatestTimestamp();
 
-      let gasCost = await timeLibrary.getGasCostofAddYears(now, 1);
-      console.log(
-        'Gas cost for adding 1 year is ' + gasCost.toString() + ' gas',
+      await gasCostTable.add(
+        'Add 1 year',
+        timeLibrary.getGasCostofAddYears(now, 1),
       );
 
-      gasCost = await timeLibrary.getGasCostofAddYears(now, 5);
-      console.log(
-        'Gas cost for adding 5 years is ' + gasCost.toString() + ' gas',
+      await gasCostTable.add(
+        'Add 5 years',
+        timeLibrary.getGasCostofAddYears(now, 5),
       );
 
-      gasCost = await timeLibrary.getGasCostofAddMonths(now, 3);
-      console.log(
-        'Gas cost for adding 3 months is ' + gasCost.toString() + ' gas',
+      await gasCostTable.add(
+        'Add 3 months',
+        timeLibrary.getGasCostofAddMonths(now, 3),
       );
 
-      gasCost = await timeLibrary.getGasCostofAddMonths(now, 60);
-      console.log(
-        'Gas cost for adding 5 years in months is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Add 5 years in months',
+        timeLibrary.getGasCostofAddMonths(now, 60),
       );
 
-      gasCost = await timeLibrary.getGasCostofAddDays(now, 91);
-      console.log('Gas cost for adding days is ' + gasCost.toString() + ' gas');
+      await gasCostTable.add(
+        'Add days',
+        timeLibrary.getGasCostofAddDays(now, 91),
+      );
+
+      gasCostTable.log();
     });
   });
 });

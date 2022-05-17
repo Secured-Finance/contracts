@@ -1,12 +1,10 @@
 const TimeSlotTest = artifacts.require('TimeSlotTest');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 
-const { reverted } = require('../test-utils').assert;
 const { should } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { toBytes32, zeroAddress } = require('../test-utils').strings;
 should();
-
-const expectRevert = reverted;
 
 const { hashPosition } = require('../test-utils').timeSlot;
 
@@ -14,9 +12,6 @@ contract('TimeSlotTest', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
   let timeSlotTest;
   let addressPacking;
-  let zeroAddr = '0x0000000000000000000000000000000000000000';
-  let zeroString =
-    '0x0000000000000000000000000000000000000000000000000000000000000000';
 
   let firstTxHash = toBytes32('0xFirstTestTx');
   let secondTxHash = toBytes32('0xSecondTestTx');

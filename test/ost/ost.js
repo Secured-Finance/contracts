@@ -25,7 +25,7 @@ contract('OrderStatisticsTree - sort and rank', (accounts) => {
 async function printExists(s) {
   console.log();
   console.log('See if values exists');
-  console.log('value, exists');
+  console.group('value, exists');
   for (i = 0; i < s.length; i++) {
     element = s[i]['rate'];
     if (element > 0) {
@@ -33,6 +33,7 @@ async function printExists(s) {
       console.log(element, exists);
     }
   }
+  console.groupEnd();
 }
 
 async function printScenario(s) {
@@ -45,16 +46,16 @@ async function printScenario(s) {
   let orderCount;
 
   // enumerate the sorted list and stats
-  console.log('element, orderCount');
+  console.group('element, orderCount');
   for (i = 0; i < s.length; i++) {
     element = s[i]['rate'];
     orderCount = await ost.getValueCount(element);
     console.log(element, orderCount.toString(10));
   }
+  console.groupEnd();
 
   // tree structure summary
-  console.log();
-  console.log('Tree Properties');
+  console.group('Tree Properties');
   rootCount = await ost.getRootCount();
   first = await ost.firstValue();
   last = await ost.lastValue();
@@ -69,9 +70,9 @@ async function printScenario(s) {
   console.log('First', first);
   console.log('Last', last);
   console.log('Root Value', rootVal);
+  console.groupEnd();
 
   // enumerate the node contents
-  console.log();
   console.log(
     'Node Details, (crawled in order), value, parent, left, right, red, head, tail, orderCounter',
   );

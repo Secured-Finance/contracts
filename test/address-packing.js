@@ -1,11 +1,9 @@
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 
 const { ethers } = require('hardhat');
-const { emitted, reverted, equal } = require('../test-utils').assert;
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { should } = require('chai');
 should();
-
-const expectRevert = reverted;
 
 const packAddresses = (addr0, addr1) => {
   let encodedAddrs;
@@ -68,7 +66,6 @@ contract('AddressPacking', async (accounts) => {
 
     it('pack alice and bob addresses back and forth', async () => {
       let packedAddresses = await addressPacking.pack(alice, bob);
-      console.log(packedAddresses[0].toString());
       let selfPack = await packAddresses(alice, bob);
 
       packedAddresses[0].should.be.equal(selfPack[0]);

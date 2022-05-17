@@ -4,25 +4,17 @@ const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
+const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+
 const { zeroAddress } = require('../test-utils/src/strings');
 should();
 
 const { hexFILString, loanPrefix } = require('../test-utils').strings;
-const {
-  termDays,
-  termsDfFracs,
-  termsNumPayments,
-  termsSchedules,
-  sortedTermDays,
-} = require('../test-utils').terms;
-const { emitted, reverted } = require('../test-utils').assert;
+const { termDays, sortedTermDays } = require('../test-utils').terms;
 const { orders } = require('./orders');
-
-const expectRevert = reverted;
 
 contract('LendingMarketController', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
-  const users = [alice, bob, carol]; // without owner
   const filRate = web3.utils.toBN('67175250000000000');
   let filToETHPriceFeed;
 
@@ -70,7 +62,7 @@ contract('LendingMarketController', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     const termStructureFactory = await ethers.getContractFactory(
       'TermStructure',
@@ -128,16 +120,12 @@ contract('LendingMarketController', async (accounts) => {
         [hexFILString],
       );
     }
-
-    console.log();
-    console.log('lending market controller addr is', lendingController.address);
-    console.log();
   });
 
   describe('Init Collateral with 100,000 Wei for Bob', async () => {
     it('Register collateral book with 100,000 Wei payment', async () => {
       let result = await collateral.register({ from: bob, value: 100000 });
-      await emitted(result, 'Register');
+      expectEvent(result, 'Register');
     });
   });
 
@@ -153,11 +141,6 @@ contract('LendingMarketController', async (accounts) => {
 
         let lendingMarket = await LendingMarket.at(
           receipt.events[0].args.marketAddr,
-        );
-        console.log(
-          'deployed market with ' +
-            receipt.events[0].args.marketAddr +
-            ' address',
         );
         await lendingMarket.setCollateral(collateral.address, { from: owner });
         await lendingMarket.setLoan(loan.address, { from: owner });
@@ -194,7 +177,7 @@ contract('LendingMarketController', async (accounts) => {
         let marketOrder = await lendingMarket.order(0, amount, rate, {
           from: bob,
         });
-        await emitted(marketOrder, 'MakeOrder');
+        expectEvent(marketOrder, 'MakeOrder');
       }
     });
 
@@ -208,7 +191,7 @@ contract('LendingMarketController', async (accounts) => {
         let marketOrder = await lendingMarket.order(1, amount, rate + 25, {
           from: bob,
         });
-        await emitted(marketOrder, 'MakeOrder');
+        expectEvent(marketOrder, 'MakeOrder');
       }
     });
 

@@ -23,8 +23,8 @@ const ChainlinkSettlementAdapterMock = artifacts.require(
   'ChainlinkSettlementAdapterMock',
 );
 
-const { emitted, reverted } = require('../test-utils').assert;
 const { should } = require('chai');
+const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 const {
   toBytes32,
@@ -41,8 +41,7 @@ const {
 
 const { sortedTermDays } = require('../test-utils').terms;
 
-const { toEther, toBN, IR_BASE, oracleRequestFee } =
-  require('../test-utils').numbers;
+const { toBN, IR_BASE, oracleRequestFee } = require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTime } =
   require('../test-utils').time;
 
@@ -54,18 +53,14 @@ const { zeroAddress } = require('../test-utils/src/strings');
 
 should();
 
-const expectRevert = reverted;
-
 contract('LoanV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
-  const DFRAC_3M = toBN('90').div(toBN('360'));
-
   let signers;
 
-  let filToETHRate = web3.utils.toBN('67175250000000000');
-  let ethToUSDRate = web3.utils.toBN('232612637168');
-  let btcToETHRate = web3.utils.toBN('23889912590000000000');
+  let filToETHRate = utils.toBN('67175250000000000');
+  let ethToUSDRate = utils.toBN('232612637168');
+  let btcToETHRate = utils.toBN('23889912590000000000');
 
   let _1yearTimeSlot;
   let _2yearTimeSlot;
@@ -129,7 +124,6 @@ contract('LoanV2', async (accounts) => {
       },
     );
     productResolver = await productResolverFactory.deploy();
-    console.log('productResolver is ' + productResolver.address);
 
     const loanFactory = await ethers.getContractFactory('LoanV2', {
       libraries: {
@@ -138,19 +132,15 @@ contract('LoanV2', async (accounts) => {
       },
     });
     loan = await loanFactory.deploy();
-    console.log('loan is ' + loan.address);
 
     markToMarket = await MarkToMarket.new(productResolver.address);
 
     loanCaller = await LoanCallerMock.new(loan.address);
     paymentAggregator = await PaymentAggregator.new();
-    console.log('paymentAggregator is ' + paymentAggregator.address);
 
     closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
-    console.log('closeOutNetting is ' + closeOutNetting.address);
 
     collateral = await CollateralAggregatorV2.new();
-    console.log('collateral aggregator is ' + collateral.address);
 
     collateralCaller = await CollateralAggregatorCallerMock.new(
       collateral.address,
@@ -176,7 +166,6 @@ contract('LoanV2', async (accounts) => {
     await collateral.addCollateralUser(collateralCaller.address);
 
     currencyController = await CurrencyController.new();
-    console.log('currencyController is ' + currencyController.address);
 
     filToETHPriceFeed = await MockV3Aggregator.new(
       18,
@@ -202,7 +191,7 @@ contract('LoanV2', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.supportCurrency(
       hexFILString,
@@ -212,7 +201,7 @@ contract('LoanV2', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.supportCurrency(
       hexBTCString,
@@ -222,13 +211,13 @@ contract('LoanV2', async (accounts) => {
       7500,
       zeroAddress,
     );
-    await emitted(tx, 'CcyAdded');
+    expectEvent(tx, 'CcyAdded');
 
     tx = await currencyController.updateCollateralSupport(hexETHString, true);
-    await emitted(tx, 'CcyCollateralUpdate');
+    expectEvent(tx, 'CcyCollateralUpdate');
 
     tx = await currencyController.updateMinMargin(hexETHString, 2500);
-    await emitted(tx, 'MinMarginUpdated');
+    expectEvent(tx, 'MinMarginUpdated');
 
     await collateral.setCurrencyController(currencyController.address, {
       from: owner,
@@ -250,7 +239,6 @@ contract('LoanV2', async (accounts) => {
       currencyController.address,
       wETHToken.address,
     );
-    console.log('collateral eth vault is ' + ethVault.address);
 
     await collateral.linkCollateralVault(ethVault.address);
 
@@ -275,7 +263,6 @@ contract('LoanV2', async (accounts) => {
       productResolver.address,
     );
     await loan.setTermStructure(termStructure.address);
-    console.log('termStructure is ' + termStructure.address);
 
     for (i = 0; i < sortedTermDays.length; i++) {
       await termStructure.supportTerm(
@@ -341,16 +328,10 @@ contract('LoanV2', async (accounts) => {
   });
 
   describe('Test the execution of loan deal between Alice and Bob', async () => {
-    let filAmount = web3.utils.toBN('30000000000000000000');
-    let filUsed = filAmount
-      .mul(web3.utils.toBN(2000))
-      .div(web3.utils.toBN(10000));
-    let aliceFIlUsed = filUsed
-      .mul(web3.utils.toBN(15000))
-      .div(web3.utils.toBN(10000));
-    let bobFILUsed = filAmount
-      .mul(web3.utils.toBN(15000))
-      .div(web3.utils.toBN(10000));
+    let filAmount = utils.toBN('30000000000000000000');
+    let filUsed = filAmount.mul(utils.toBN(2000)).div(utils.toBN(10000));
+    let aliceFIlUsed = filUsed.mul(utils.toBN(15000)).div(utils.toBN(10000));
+    let bobFILUsed = filAmount.mul(utils.toBN(15000)).div(utils.toBN(10000));
 
     const dealId = generateId(1, loanPrefix);
     const rate = '1450';
@@ -385,7 +366,7 @@ contract('LoanV2', async (accounts) => {
       const bobDepositAmt = toBN('10000000000000000000');
 
       let result = await collateral.register({ from: alice });
-      await emitted(result, 'Register');
+      expectEvent(result, 'Register');
 
       await (
         await ethVault
@@ -403,7 +384,7 @@ contract('LoanV2', async (accounts) => {
         .should.be.equal(aliceDepositAmt.toString());
 
       result = await collateral.register({ from: bob });
-      await emitted(result, 'Register');
+      expectEvent(result, 'Register');
 
       await (
         await ethVault

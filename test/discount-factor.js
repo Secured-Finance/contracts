@@ -3,14 +3,13 @@ const BokkyPooBahsDateTimeContract = artifacts.require(
 );
 const { should } = require('chai');
 const { ethers } = require('hardhat');
-const utils = require('web3-utils');
 const { ZERO_BN, toBN } = require('../test-utils').numbers;
+const { PrintTable } = require('../test-utils').helper;
 
 should();
 
 contract('Discount Factor Test', async () => {
   let discountFactorTest;
-  let discountFactor;
   let timeLibrary;
 
   const BP = toBN('10000');
@@ -190,82 +189,66 @@ contract('Discount Factor Test', async () => {
   });
 
   describe('Calculate gas costs', () => {
-    it('Gas costs for bootstraping operations', async () => {
-      let gasCost = await discountFactorTest.getGasCostOfBootstrapTerms(
-        rates5y,
-        terms5y,
-      );
-      console.log(
-        'Gas cost for bootstrapping 5 year rates is ' +
-          gasCost.toString() +
-          ' gas',
+    it('Gas costs for bootstrapping operations', async () => {
+      const gasCostTable = new PrintTable('GasCost');
+
+      await gasCostTable.add(
+        'Bootstrap 5 year rates',
+        discountFactorTest.getGasCostOfBootstrapTerms(rates5y, terms5y),
       );
 
-      gasCost = await discountFactorTest.getGasCostOfBootstrapTerms(
-        rates15y,
-        terms15y,
+      await gasCostTable.add(
+        'Bootstrap 15 year rates',
+        discountFactorTest.getGasCostOfBootstrapTerms(rates15y, terms15y),
       );
-      console.log(
-        'Gas cost for bootstrapping 15 year rates is ' +
-          gasCost.toString() +
-          ' gas',
-      );
+
+      gasCostTable.log();
     });
 
     it('Gas costs for discount factor calculations', async () => {
-      let gasCost = await discountFactorTest.getGasCostOfCalculateDFs(
-        rates5y,
-        terms5y,
-      );
-      console.log(
-        'Gas cost for calculating discount factors for 5 year rates is ' +
-          gasCost.toString() +
-          ' gas',
+      const gasCostTable = new PrintTable('GasCost');
+
+      await gasCostTable.add(
+        'Calculate discount factors for 5 year rates',
+        discountFactorTest.getGasCostOfCalculateDFs(rates5y, terms5y),
       );
 
-      gasCost = await discountFactorTest.getGasCostOfCalculateDFs(
-        rates15y,
-        terms15y,
+      await gasCostTable.add(
+        'Calculate discount factors for 15 year rates',
+        discountFactorTest.getGasCostOfCalculateDFs(rates15y, terms15y),
       );
-      console.log(
-        'Gas cost for calculating discount factors for 15 year rates is ' +
-          gasCost.toString() +
-          ' gas',
-      );
+
+      gasCostTable.log();
     });
 
     it('Gas costs for discount factor interpolation', async () => {
       let time = await timeLibrary._now();
       let shiftedTime = await timeLibrary.addYears(time, 3);
       shiftedTime = await timeLibrary.addDays(shiftedTime, 364);
+      const gasCostTable = new PrintTable('GasCost');
+
       let discountFactors = await discountFactorTest.calculateDFs(
         rates5y,
         terms5y,
       );
-
-      let gasCost = await discountFactorTest.getGasCostOfInterpolateDF(
-        discountFactors[0],
-        discountFactors[1],
-        shiftedTime.toString(),
-      );
-      console.log(
-        'Gas cost for interpolating discount factor for 4 year rate is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Interpolate discount factor for 4 year rate',
+        discountFactorTest.getGasCostOfInterpolateDF(
+          discountFactors[0],
+          discountFactors[1],
+          shiftedTime.toString(),
+        ),
       );
 
       discountFactors = await discountFactorTest.calculateDFs(rates5y, terms5y);
       shiftedTime = await timeLibrary.addDays(shiftedTime, 180);
-      gasCost = await discountFactorTest.getGasCostOfInterpolateDF(
-        discountFactors[0],
-        discountFactors[1],
-        shiftedTime.toString(),
-      );
-
-      console.log(
-        'Gas cost for interpolating discount factor for 4.5 year rate is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Interpolate discount factor for 4.5 year rate',
+        discountFactorTest.getGasCostOfInterpolateDF(
+          discountFactors[0],
+          discountFactors[1],
+          shiftedTime.toString(),
+        ),
       );
 
       discountFactors = await discountFactorTest.calculateDFs(
@@ -273,17 +256,16 @@ contract('Discount Factor Test', async () => {
         terms15y,
       );
       shiftedTime = await timeLibrary.addYears(shiftedTime, 8);
-      gasCost = await discountFactorTest.getGasCostOfInterpolateDF(
-        discountFactors[0],
-        discountFactors[1],
-        shiftedTime.toString(),
+      await gasCostTable.add(
+        'Interpolate discount factor for 12.5 year rate',
+        discountFactorTest.getGasCostOfInterpolateDF(
+          discountFactors[0],
+          discountFactors[1],
+          shiftedTime.toString(),
+        ),
       );
 
-      console.log(
-        'Gas cost for interpolating discount factor for 12.5 year rate is ' +
-          gasCost.toString() +
-          ' gas',
-      );
+      gasCostTable.log();
     });
   });
 });

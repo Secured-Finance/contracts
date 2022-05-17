@@ -4,17 +4,15 @@ const WETH9Mock = artifacts.require('WETH9Mock');
 const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
-const { emitted, reverted, equal } = require('../test-utils').assert;
 const { toBytes32, hexFILString } = require('../test-utils').strings;
 const { ZERO_BN, decimalBase, toBN } = require('../test-utils').numbers;
 const { checkTokenBalances } = require('../test-utils').balances;
 const utils = require('web3-utils');
 const { should } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { zeroAddress } = require('../test-utils/src/strings');
 
 should();
-
-const expectRevert = reverted;
 
 contract('ERC20 based CollateralVault', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;

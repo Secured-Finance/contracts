@@ -2,15 +2,13 @@ const ProductAddressResolverTest = artifacts.require(
   'ProductAddressResolverTest',
 );
 const BytesConversion = artifacts.require('BytesConversion');
-const LendingMarketControllerMock = artifacts.require(
-  'LendingMarketControllerMock',
-);
 
 const { should } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const { zeroAddress, loanPrefix, loanName } = require('../test-utils').strings;
+const { PrintTable } = require('../test-utils').helper;
 const { ethers } = require('hardhat');
 const utils = require('web3-utils');
-const { emitted, reverted, equal } = require('../test-utils').assert;
 
 should();
 
@@ -116,7 +114,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       let productPrefix = await bytesConversion.getBytes4(productName);
       prefix.should.be.equal(productPrefix);
 
-      await reverted(
+      expectRevert(
         productResolver
           .connect(signers[1])
           .registerProduct(
@@ -142,14 +140,14 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       const productName = '0xSwapWithNotionalExchange';
       let prefix = generatePrefix(productName);
 
-      await reverted(
+      expectRevert(
         productResolver
           .connect(signers[0])
           .registerProduct(prefix, alice, lendingController.address),
         "Can't add non-contract address",
       );
 
-      await reverted(
+      expectRevert(
         productResolver.registerProduct(prefix, loan.address, bob),
         "Can't add non-contract address",
       );
@@ -204,7 +202,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       let productAddreesses = [loan.address];
       let controllers = [lendingController.address];
 
-      await reverted(
+      expectRevert(
         productResolver.registerProducts(
           prefixes,
           productAddreesses,
@@ -214,7 +212,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
         'Invalid input lengths',
       );
 
-      await reverted(
+      expectRevert(
         productResolver
           .connect(signers[2])
           .registerProducts(
@@ -229,50 +227,37 @@ contract('ProductAddressResolver contract test', async (accounts) => {
 
   describe('Calculate gas costs', async () => {
     it('Gas costs for getting contract addresses', async () => {
+      const gasCostTable = new PrintTable('GasCost');
       let id = generateId(6753, loanPrefix);
       let parsedId = id.slice(0, 10);
 
-      let gasCost = await productResolver.getGasCostOfGetProductContract(
-        parsedId,
-      );
-      console.log(
-        'Gas cost for getting product contract is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get product contract',
+        productResolver.getGasCostOfGetProductContract(parsedId),
       );
 
-      gasCost = await productResolver.getGasCostOfGetControllerContract(
-        parsedId,
+      await gasCostTable.add(
+        'Get controller contract',
+        productResolver.getGasCostOfGetControllerContract(parsedId),
       );
-      console.log(
-        'Gas cost for getting controller contract is ' +
-          gasCost.toString() +
-          ' gas',
-      );
+
+      gasCostTable.log();
     });
 
     it('Gas costs for getting contract addresses with dealID conversion', async () => {
+      const gasCostTable = new PrintTable('GasCost');
       let id = generateId(1337, loanPrefix);
 
-      let gasCost =
-        await productResolver.getGasCostOfGetProductContractWithTypeConversion(
-          id,
-        );
-      console.log(
-        'Gas cost for getting product contract is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get product contract',
+        productResolver.getGasCostOfGetProductContractWithTypeConversion(id),
       );
 
-      gasCost =
-        await productResolver.getGasCostOfGetControllerContractWithTypeConversion(
-          id,
-        );
-      console.log(
-        'Gas cost for getting controller contract is ' +
-          gasCost.toString() +
-          ' gas',
+      await gasCostTable.add(
+        'Get controller contract',
+        productResolver.getGasCostOfGetControllerContractWithTypeConversion(id),
       );
+      gasCostTable.log();
     });
   });
 });
