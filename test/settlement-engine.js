@@ -1,3 +1,4 @@
+const AddressResolver = artifacts.require('AddressResolver');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ERC20Mock = artifacts.require('ERC20Mock');
@@ -10,7 +11,6 @@ const PaymentAggregatorCallerMock = artifacts.require(
   'PaymentAggregatorCallerMock',
 );
 const PaymentAggregator = artifacts.require('PaymentAggregator');
-const CurrencyController = artifacts.require('CurrencyController');
 const CrosschainAddressResolver = artifacts.require(
   'CrosschainAddressResolver',
 );
@@ -18,7 +18,6 @@ const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
 const TimeSlotTest = artifacts.require('TimeSlotTest');
-const CloseOutNetting = artifacts.require('CloseOutNetting');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
 const MarkToMarketMock = artifacts.require('MarkToMarketMock');
 
@@ -51,6 +50,8 @@ const {
 } = require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } =
   require('../test-utils').time;
+const { Deployment } = require('../test-utils').deployment;
+
 should();
 
 contract('SettlementEngine', async (accounts) => {
@@ -69,16 +70,14 @@ contract('SettlementEngine', async (accounts) => {
   let oracleOperator;
   let timeLibrary;
   let paymentAggregator;
-  let aggregatorCaller;
+  let paymentAggregatorMock;
   let timeSlotTest;
   let currencyController;
-  let closeOutNetting;
   let crosschainAddressResolver;
 
   let now;
   let _3monthTimeSlot;
   let _3monthTime;
-  let _3monthPaymentStart;
   let _6monthTimeSlot;
 
   let _3monthCoupon0 = ZERO_BN;
@@ -99,12 +98,23 @@ contract('SettlementEngine', async (accounts) => {
     bobSigner = signers[2];
     carolSigner = signers[3];
 
+    const addressResolver = await AddressResolver.new();
+    paymentAggregator = await PaymentAggregator.new(addressResolver.address);
+    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
+      paymentAggregator.address,
+    );
+    const markToMarketMock = await MarkToMarketMock.new();
+
+    const deployment = new Deployment();
+    deployment.mock('AddressResolver', () => addressResolver);
+    deployment.mock('PaymentAggregator', () => paymentAggregator);
+    deployment.mock('MarkToMarket', () => markToMarketMock);
+    deployment.mock('Loan', () => paymentAggregatorMock);
+    ({ currencyController } = await deployment.execute());
+
     addressPacking = await AddressPackingTest.new();
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
-    paymentAggregator = await PaymentAggregator.new();
-    currencyController = await CurrencyController.new();
     timeSlotTest = await TimeSlotTest.new();
-    markToMarketMock = await MarkToMarketMock.new();
     crosschainAddressResolver = await CrosschainAddressResolver.new(
       zeroAddress(),
     );
@@ -170,17 +180,6 @@ contract('SettlementEngine', async (accounts) => {
       crosschainAddressResolver.address,
       wETHToken.address,
     );
-
-    closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
-
-    aggregatorCaller = await PaymentAggregatorCallerMock.new(
-      paymentAggregator.address,
-    );
-
-    await paymentAggregator.addPaymentAggregatorUser(aggregatorCaller.address);
-    await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
-    await paymentAggregator.setMarkToMarket(markToMarketMock.address);
-    await paymentAggregator.setSettlementEngine(settlementEngine.address);
 
     linkToken = await LinkToken.new();
     oracleOperator = await Operator.new(linkToken.address, owner);
@@ -256,7 +255,7 @@ contract('SettlementEngine', async (accounts) => {
       _3monthCoupon0 = notional.mul(toBN(actualRate)).div(IR_BASE);
       _3monthTotal0 = notional.add(_3monthCoupon0);
 
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         alice,
         bob,
         hexFILString,
@@ -544,7 +543,7 @@ contract('SettlementEngine', async (accounts) => {
       _6monthCoupon1 = notional.mul(toBN(actualRate)).div(IR_BASE);
       _6monthTotal1 = notional.add(_6monthCoupon1);
 
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         bob,
         alice,
         hexUSDCString,
@@ -729,7 +728,7 @@ contract('SettlementEngine', async (accounts) => {
       _3monthCoupon1 = notional.mul(toBN(actualRate)).div(IR_BASE);
       _3monthTotal1 = notional.add(_3monthCoupon1);
 
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         bob,
         alice,
         hexETHString,

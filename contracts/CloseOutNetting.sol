@@ -4,11 +4,11 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "./ProtocolTypes.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/CloseOut.sol";
 import "./libraries/AddressPacking.sol";
-import "./interfaces/ICollateralAggregator.sol";
+import "./interfaces/ICloseOutNetting.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @title Close Out Netting contract is used in close out operations
@@ -17,85 +17,16 @@ import "./interfaces/ICollateralAggregator.sol";
  *
  * Contract linked to all product based contracts (ex. Loan, Swap, etc), and Collateral Aggregator contract.
  */
-contract CloseOutNetting {
+contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
     using SafeMath for uint256;
     using Address for address;
     using CloseOut for CloseOut.Payment;
-
-    event UpdatePaymentAggregator(
-        address indexed prevAddr,
-        address indexed addr
-    );
-    event UpdateCollateralAggregator(
-        address indexed prevAddr,
-        address indexed addr
-    );
-
-    event AddCloseOutPayments(
-        address indexed party0,
-        address indexed party1,
-        bytes32 ccy,
-        uint256 payment0,
-        uint256 payment1
-    );
-    event RemoveCloseOutPayments(
-        address indexed party0,
-        address indexed party1,
-        bytes32 ccy,
-        uint256 payment0,
-        uint256 payment1
-    );
-    event VerifyCloseOut(
-        address indexed party0,
-        address indexed party1,
-        bytes32 ccy,
-        uint256 netPayment,
-        bytes32 txHash
-    );
-    event SettleCloseOut(
-        address indexed party0,
-        address indexed party1,
-        bytes32 ccy,
-        uint256 netPayment,
-        bytes32 txHash
-    );
-
-    address public owner;
-
-    // Linked contract addresses
-    ICollateralAggregator private collateralAggregator;
-    address private paymentAggregator;
 
     // Mapping structure for storing Close Out payments
     mapping(bytes32 => mapping(bytes32 => CloseOut.Payment)) _closeOuts;
 
     // Mapping structure for storing default boolean per address
     mapping(address => bool) _isDefaulted;
-
-    /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only by payment aggregator contract.
-     */
-    modifier onlyPaymentAggregator() {
-        require(msg.sender == paymentAggregator);
-        _;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only by passing contract address checks.
-     */
-    modifier onlyContractAddr(address addr) {
-        require(addr != address(0), "INVALID_ADDRESS");
-        require(addr.isContract(), "NOT_CONTRACT");
-        _;
-    }
 
     /**
      * @dev Modifier to make a function callable only by defaulted counterparty.
@@ -116,46 +47,32 @@ contract CloseOutNetting {
     /**
      * @dev Contract constructor function.
      * @notice sets contract deployer as owner of this contract
-     * @param _paymentAggregator PaymentAggregator contract address
+     * @param _resolver xxxx
      */
-    constructor(address _paymentAggregator) public {
-        owner = msg.sender;
-        paymentAggregator = _paymentAggregator;
-        // collateralAggregator = ICollateralAggregator(_collateralAggregator);
+    constructor(address _resolver)
+        public
+        MixinAddressResolver(_resolver)
+        Ownable()
+    {}
+
+    function requiredContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
     }
 
-    /**
-     * @dev Trigers to update Payment Aggregator contract address
-     * @param addr New PaymentAggregator contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address or non contract address
-     */
-    function updatePaymentAggregator(address addr)
+    function acceptedContracts()
         public
-        onlyOwner
-        onlyContractAddr(addr)
+        view
+        override
+        returns (bytes32[] memory contracts)
     {
-        emit UpdatePaymentAggregator(paymentAggregator, addr);
-        paymentAggregator = addr;
-    }
-
-    /**
-     * @dev Trigers to update Collateral Aggregator contract address
-     * @param addr New CollateralAggregator contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address or non contract address
-     */
-    function updateCollateralAggregator(address addr)
-        public
-        onlyOwner
-        onlyContractAddr(addr)
-    {
-        address prevAddr = address(collateralAggregator);
-
-        emit UpdateCollateralAggregator(prevAddr, addr);
-        collateralAggregator = ICollateralAggregator(addr);
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
     }
 
     /**
@@ -188,7 +105,7 @@ contract CloseOutNetting {
         bytes32 ccy,
         uint256 payment0,
         uint256 payment1
-    ) external onlyPaymentAggregator {
+    ) external override onlyAcceptedContracts {
         CloseOut.addPayments(
             _closeOuts,
             party0,
@@ -217,7 +134,7 @@ contract CloseOutNetting {
         bytes32 ccy,
         uint256 payment0,
         uint256 payment1
-    ) external onlyPaymentAggregator {
+    ) external override onlyAcceptedContracts {
         CloseOut.removePayments(
             _closeOuts,
             party0,
@@ -233,7 +150,12 @@ contract CloseOutNetting {
     /**
      * @dev External function to check if `_party` is in default
      */
-    function checkDefault(address _party) external view returns (bool) {
+    function checkDefault(address _party)
+        external
+        view
+        override
+        returns (bool)
+    {
         return _isDefaulted[_party];
     }
 
@@ -254,10 +176,8 @@ contract CloseOutNetting {
             _isDefaulted[party0] || _isDefaulted[party1],
             "NON_DEFAULTED_PARTIES"
         );
-        bytes32[] memory currencies = collateralAggregator.getExposedCurrencies(
-            party0,
-            party1
-        );
+        bytes32[] memory currencies = collateralAggregator()
+            .getExposedCurrencies(party0, party1);
 
         for (uint256 i = 0; i < currencies.length; i++) {
             bytes32 ccy = currencies[i];
@@ -270,14 +190,14 @@ contract CloseOutNetting {
             );
 
             if (payment.flipped) {
-                collateralAggregator.liquidate(
+                collateralAggregator().liquidate(
                     party1,
                     party0,
                     ccy,
                     payment.netPayment
                 );
             } else {
-                collateralAggregator.liquidate(
+                collateralAggregator().liquidate(
                     party0,
                     party1,
                     ccy,

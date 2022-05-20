@@ -1,14 +1,9 @@
-const CollateralAggregatorV2 = artifacts.require('CollateralAggregatorV2');
 const CollateralAggregatorCallerMock = artifacts.require(
   'CollateralAggregatorCallerMock',
 );
-const MarkToMarket = artifacts.require('MarkToMarket');
 const ERC20Mock = artifacts.require('ERC20Mock');
 const WETH9Mock = artifacts.require('WETH9Mock');
-const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const PaymentAggregator = artifacts.require('PaymentAggregator');
-const CloseOutNetting = artifacts.require('CloseOutNetting');
 const Liquidations = artifacts.require('Liquidations');
 const LoanCallerMock = artifacts.require('LoanCallerMock');
 
@@ -24,6 +19,7 @@ const {
 const { sortedTermDays } = require('../test-utils').terms;
 const { ZERO_BN, decimalBase, toBN, filToETHRate, ethToUSDRate, btcToETHRate } =
   require('../test-utils').numbers;
+const { Deployment } = require('../test-utils').deployment;
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
@@ -84,34 +80,15 @@ contract('CollateralAggregatorV2', async (accounts) => {
   before(
     'deploy CollateralVault, CollateralAggregator, CurrencyController, price feeds and ERC20 mock contracts',
     async () => {
-      const DealId = await ethers.getContractFactory('DealId');
-      const dealIdLibrary = await DealId.deploy();
-      await dealIdLibrary.deployed();
-
-      const QuickSort = await ethers.getContractFactory('QuickSort');
-      const quickSortLibrary = await QuickSort.deploy();
-      await quickSortLibrary.deployed();
-
-      const DiscountFactor = await ethers.getContractFactory('DiscountFactor');
-      const discountFactor = await DiscountFactor.deploy();
-      await discountFactor.deployed();
-
-      const productResolverFactory = await ethers.getContractFactory(
-        'ProductAddressResolver',
-        {
-          libraries: {
-            DealId: dealIdLibrary.address,
-          },
-        },
-      );
-      productResolver = await productResolverFactory.deploy();
-
-      markToMarket = await MarkToMarket.new(productResolver.address);
-      paymentAggregator = await PaymentAggregator.new();
-      await paymentAggregator.setMarkToMarket(markToMarket.address);
-
-      closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
-      await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
+      ({
+        discountFactorLibrary,
+        productResolver,
+        paymentAggregator,
+        collateral,
+        termStructure,
+        currencyController,
+        loan,
+      } = await new Deployment().execute());
 
       filToETHPriceFeed = await MockV3Aggregator.new(
         18,
@@ -129,7 +106,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
         btcToETHRate,
       );
 
-      currencyController = await CurrencyController.new();
       await currencyController.supportCurrency(
         hexETHString,
         'Ethereum',
@@ -158,19 +134,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
       await currencyController.updateCollateralSupport(hexETHString, true);
       await currencyController.updateCollateralSupport(hexFILString, true);
 
-      const termStructureFactory = await ethers.getContractFactory(
-        'TermStructure',
-        {
-          libraries: {
-            QuickSort: quickSortLibrary.address,
-          },
-        },
-      );
-      termStructure = await termStructureFactory.deploy(
-        currencyController.address,
-        productResolver.address,
-      );
-
       for (i = 0; i < sortedTermDays.length; i++) {
         await termStructure.supportTerm(sortedTermDays[i], [], []);
       }
@@ -185,8 +148,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       wETHToken = await WETH9Mock.new();
 
-      collateral = await CollateralAggregatorV2.new();
-      console.log('collateral is ' + collateral.address);
       collateralCaller = await CollateralAggregatorCallerMock.new(
         collateral.address,
       );
@@ -236,19 +197,12 @@ contract('CollateralAggregatorV2', async (accounts) => {
         'LendingMarketControllerMock',
         {
           libraries: {
-            DiscountFactor: discountFactor.address,
+            DiscountFactor: discountFactorLibrary.address,
           },
         },
       );
       lendingController = await lendingControllerFactory.deploy();
 
-      const loanFactory = await ethers.getContractFactory('LoanV2', {
-        libraries: {
-          DealId: dealIdLibrary.address,
-          DiscountFactor: discountFactor.address,
-        },
-      });
-      loan = await loanFactory.deploy();
       loanCaller = await LoanCallerMock.new(loan.address);
 
       await lendingController.setSupportedTerms(hexETHString, sortedTermDays);
@@ -262,7 +216,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
       await loan.setCollateralAddr(collateral.address);
       await loan.setTermStructure(termStructure.address);
       await collateral.addCollateralUser(loan.address);
-      await paymentAggregator.addPaymentAggregatorUser(loan.address);
       await liquidations.linkContract(loan.address);
 
       await productResolver.registerProduct(
