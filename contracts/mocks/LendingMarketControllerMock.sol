@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "../interfaces/ILendingMarketController.sol";
@@ -12,8 +12,6 @@ contract LendingMarketControllerMock is
     ProtocolTypes
 {
     using SafeMath for uint256;
-
-    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
 
     address public override owner;
     uint256 public override numberOfMarkets = 0;

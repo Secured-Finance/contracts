@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/ICollateralAggregatorV2.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ProtocolTypes.sol";
 import "./interfaces/ILendingMarketController.sol";
-import "./interfaces/IPaymentAggregator.sol";
 import "./interfaces/IProductWithOneLeg.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/DealId.sol";
 import "./libraries/DiscountFactor.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
-import "./interfaces/ITermStructureGetter.sol";
-import "./interfaces/ILiquidations.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @title LoanV2 contract is used to store Lending deals in Secured Finance
@@ -21,7 +19,12 @@ import "./interfaces/ILiquidations.sol";
  *
  * Contract linked to Lending Market contracts, LendingMarketController and Collateral contract.
  */
-contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
+contract LoanV2 is
+    ProtocolTypes,
+    IProductWithOneLeg,
+    MixinAddressResolver,
+    Ownable
+{
     using SafeMath for uint256;
 
     uint256 constant NOTICE = 2 weeks;
@@ -57,26 +60,11 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     mapping(bytes32 => Termination) private terminations;
     mapping(bytes32 => bool) private isSettled;
 
-    address public owner;
     bool public isTransferable;
     uint256 public last_loan_id = 0;
 
-    // Contracts
-    ICollateralAggregator collateralAggregator;
-    ILendingMarketController lendingController;
-    IPaymentAggregator paymentAggregator;
-    ITermStructureGetter termStructure;
-    ILiquidations liquidations;
-
+    ILendingMarketController lendingMarketController;
     mapping(bytes32 => mapping(uint256 => address)) public lendingMarkets;
-
-    /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
 
     /**
      * @dev Modifier to check if LendingMarket contract linked with this contract
@@ -97,18 +85,27 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         _;
     }
 
-    modifier onlyLiquidationContract() {
-        require(msg.sender == address(liquidations), "INVALID_ACCESS");
-        _;
-    }
-
     /**
      * @dev Contract constructor function.
-     *
      * @notice sets contract deployer as owner of this contract
+     * @param _resolver The address of the Address Resolver contract
      */
-    constructor() public {
-        owner = msg.sender;
+    constructor(address _resolver)
+        public
+        MixinAddressResolver(_resolver)
+        Ownable()
+    {}
+
+    function requiredContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](3);
+        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[1] = CONTRACT_PAYMENT_AGGREGATOR;
+        contracts[2] = CONTRACT_TERM_STRUCTURE;
     }
 
     /**
@@ -117,48 +114,8 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
      *
      * @notice Executed only by contract owner
      */
-    function setLendingControllerAddr(address addr) public onlyOwner {
-        lendingController = ILendingMarketController(addr);
-    }
-
-    /**
-     * @dev Triggers to link with Collateral contract.
-     * @param addr Collateral contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setCollateralAddr(address addr) public onlyOwner {
-        collateralAggregator = ICollateralAggregator(addr);
-    }
-
-    /**
-     * @dev Triggers to link with PaymentAggregator contract.
-     * @param addr Payment Aggregator contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setPaymentAggregator(address addr) public onlyOwner {
-        paymentAggregator = IPaymentAggregator(addr);
-    }
-
-    /**
-     * @dev Triggers to link with TermStructure contract.
-     * @param addr TermStructure contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setTermStructure(address addr) public onlyOwner {
-        termStructure = ITermStructureGetter(addr);
-    }
-
-    /**
-     * @dev Triggers to link with Liquidations contract.
-     * @param addr Liquidations contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setLiquidations(address addr) public onlyOwner {
-        liquidations = ILiquidations(addr);
+    function setLendingMarketControllerAddr(address addr) public onlyOwner {
+        lendingMarketController = ILendingMarketController(addr);
     }
 
     /**
@@ -232,12 +189,12 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             borrower = maker;
         }
 
-        collateralAggregator.releaseUnsettledCollateral(
+        collateralAggregator().releaseUnsettledCollateral(
             lender,
             ccy,
             notional.mul(MKTMAKELEVEL).div(PCT)
         );
-        collateralAggregator.useCollateral(
+        collateralAggregator().useCollateral(
             lender,
             borrower,
             ccy,
@@ -277,14 +234,6 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     {
         return isSettled[loanId];
     }
-
-    // /**
-    // * @dev Triggers to get the state of the deal by `dealId`.
-    // * @param loanId Loan deal ID
-    // */
-    // function getDealState(bytes32 loanId) public view override returns (uint8) {
-    //     return 0;
-    // }
 
     /**
      * @dev Triggers to get main currency the deal by `dealId`.
@@ -349,18 +298,18 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     {
         LoanDeal memory deal = loans[loanId];
 
-        uint256 payNums = termStructure.getNumPayments(
+        uint256 payNums = termStructure().getNumPayments(
             deal.term,
             paymentFrequency
         );
-        uint256[] memory daysArr = termStructure.getTermSchedule(
+        uint256[] memory daysArr = termStructure().getTermSchedule(
             deal.term,
             paymentFrequency
         );
 
         for (uint256 i = payNums; i > 0; i--) {
             uint256 time = _timeShift(deal.start, daysArr[i - 1]);
-            bool status = paymentAggregator.isSettled(
+            bool status = paymentAggregator().isSettled(
                 deal.lender,
                 deal.borrower,
                 deal.ccy,
@@ -475,7 +424,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
                 .mul(accuredInterestRate)
                 .div(1e20);
             uint256 totalPayment = accuredInterest.add(deal.pv);
-            collateralAggregator.liquidate(
+            collateralAggregator().liquidate(
                 deal.borrower,
                 deal.lender,
                 deal.ccy,
@@ -483,11 +432,9 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
                 deal.pv,
                 true
             );
-            // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
 
             emit EarlyTermination(loanId, msg.sender, totalPayment);
         } else {
-            // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, deal.notional.mul(MKTMAKELEVEL).div(PCT), deal.notional, false);
             emit EarlyTermination(loanId, msg.sender, 0);
         }
 
@@ -538,7 +485,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         require(msg.sender == prevLender, "lender must trasfer");
 
         _removePaymentSchedule(loanId, deal);
-        collateralAggregator.releaseCollateral(
+        collateralAggregator().releaseCollateral(
             prevLender,
             deal.borrower,
             deal.ccy,
@@ -550,7 +497,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         deal.lender = newOwner;
 
         _registerPaymentSchedule(loanId, deal);
-        collateralAggregator.useCollateral(
+        collateralAggregator().useCollateral(
             newOwner,
             deal.borrower,
             deal.ccy,
@@ -577,7 +524,6 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     function markToMarket(bytes32 loanId) external override returns (bool) {
         _verifyNotionalExchange(loanId);
         require(updateLoanPV(loanId), "failed update PV");
-        // updateState(loanId);
 
         return true;
     }
@@ -600,7 +546,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             uint256 oldPV = deal.pv == 0 ? deal.notional : deal.pv;
             deal.pv = pv;
 
-            collateralAggregator.updatePV(
+            collateralAggregator().updatePV(
                 deal.lender,
                 deal.borrower,
                 deal.ccy,
@@ -629,7 +575,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         LoanDeal memory deal = loans[loanId];
         if (!isSettled[loanId]) return deal.notional;
 
-        (uint256[] memory dfs, uint256[] memory terms) = lendingController
+        (uint256[] memory dfs, uint256[] memory terms) = lendingMarketController
             .getDiscountFactorsForCcy(deal.ccy);
 
         (
@@ -655,7 +601,6 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     function _liquidateLoan(bytes32 loanId) internal {
         LoanDeal memory deal = loans[loanId];
         _removePaymentSchedule(loanId, deal);
-        // collateralAggregator.releaseCollateral(deal.lender, deal.borrower, deal.ccy, 0, deal.pv, true);
 
         emit Liquidate(loanId);
         delete loans[loanId];
@@ -694,7 +639,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         uint256[] memory lenderLeg = new uint256[](payments.length);
         lenderLeg[0] = deal.notional;
 
-        paymentAggregator.registerPayments(
+        paymentAggregator().registerPayments(
             deal.lender,
             deal.borrower,
             deal.ccy,
@@ -724,7 +669,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             lenderLeg[0] = deal.notional;
         }
 
-        paymentAggregator.removePayments(
+        paymentAggregator().removePayments(
             deal.lender,
             deal.borrower,
             deal.ccy,
@@ -761,15 +706,15 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
     {
         ScheduleConstructionLocalVars memory vars;
 
-        vars.payNums = termStructure.getNumPayments(
+        vars.payNums = termStructure().getNumPayments(
             deal.term,
             paymentFrequency
         );
-        vars.daysArr = termStructure.getTermSchedule(
+        vars.daysArr = termStructure().getTermSchedule(
             deal.term,
             paymentFrequency
         );
-        vars.dfFrac = termStructure.getDfFrac(deal.term);
+        vars.dfFrac = termStructure().getDfFrac(deal.term);
 
         vars.coupon = (deal.notional.mul(deal.rate).mul(vars.dfFrac))
             .div(BP)
@@ -791,7 +736,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
             }
 
             if (settlementStatus) {
-                vars.status = paymentAggregator.isSettled(
+                vars.status = paymentAggregator().isSettled(
                     deal.lender,
                     deal.borrower,
                     deal.ccy,
@@ -815,7 +760,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
         if (!isSettled[loanId]) {
             LoanDeal memory deal = loans[loanId];
             uint256 time = _timeShift(deal.start, 2);
-            bool status = paymentAggregator.isSettled(
+            bool status = paymentAggregator().isSettled(
                 deal.lender,
                 deal.borrower,
                 deal.ccy,
@@ -824,7 +769,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
 
             if (status) {
                 isSettled[loanId] = true;
-                collateralAggregator.releaseCollateral(
+                collateralAggregator().releaseCollateral(
                     deal.lender,
                     deal.borrower,
                     deal.ccy,
@@ -832,7 +777,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg {
                     0,
                     false
                 );
-                collateralAggregator.settleCollateral(
+                collateralAggregator().settleCollateral(
                     deal.lender,
                     deal.borrower,
                     deal.ccy,

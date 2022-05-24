@@ -1,4 +1,4 @@
-pragma solidity >=0.6.12 <=0.7.0;
+pragma solidity ^0.7.0;
 
 interface IAddressResolver {
     event AddressImported(bytes32 name, address destination);

@@ -1,11 +1,11 @@
-pragma solidity 0.6.12;
+pragma solidity ^0.7.0;
 
 import "../interfaces/IWETH9.sol";
 
 abstract contract SafeTransfer {
     address public immutable WETH9;
 
-    constructor(address _WETH9) public {
+    constructor(address _WETH9) {
         WETH9 = _WETH9;
     }
 

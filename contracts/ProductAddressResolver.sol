@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IProductAddressResolver.sol";
@@ -12,12 +12,6 @@ import "./libraries/DealId.sol";
  */
 contract ProductAddressResolver is IProductAddressResolver {
     using Address for address;
-
-    event RegisterProduct(
-        bytes4 prefix,
-        address indexed product,
-        address indexed controller
-    );
 
     address public owner;
 

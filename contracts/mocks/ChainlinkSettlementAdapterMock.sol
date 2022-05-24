@@ -143,7 +143,7 @@ contract ChainlinkSettlementAdapterMock is
 
         results[_requestId] = txData;
 
-        settlementEngine.fullfillSettlementRequest(_requestId, txData, ccy);
+        settlementEngine.fulfillSettlementRequest(_requestId, txData, ccy);
     }
 
     /**

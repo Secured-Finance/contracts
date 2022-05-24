@@ -29,7 +29,7 @@ should();
 contract('CollateralAggregatorV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
-  let collateral;
+  let collateralAggregator;
   let collateralCaller;
   let filVault;
   let ethVault;
@@ -82,9 +82,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
     async () => {
       ({
         discountFactorLibrary,
-        productResolver,
+        productAddressResolver,
         paymentAggregator,
-        collateral,
+        collateralAggregator,
         termStructure,
         currencyController,
         loan,
@@ -149,24 +149,30 @@ contract('CollateralAggregatorV2', async (accounts) => {
       wETHToken = await WETH9Mock.new();
 
       collateralCaller = await CollateralAggregatorCallerMock.new(
-        collateral.address,
+        collateralAggregator.address,
       );
-      await collateral.setCurrencyController(currencyController.address);
-      await collateral.addCollateralUser(collateralCaller.address);
+      await collateralAggregator.setCurrencyController(
+        currencyController.address,
+      );
+      await collateralAggregator.addCollateralUser(collateralCaller.address);
 
       liquidations = await Liquidations.new(owner, 10);
-      await liquidations.setCollateralAggregator(collateral.address);
-      await liquidations.setProductAddressResolver(productResolver.address);
-      await collateral.setLiquidationEngine(collateralCaller.address);
+      await liquidations.setCollateralAggregator(collateralAggregator.address);
+      await liquidations.setProductAddressResolver(
+        productAddressResolver.address,
+      );
+      await collateralAggregator.setLiquidationEngine(collateralCaller.address);
 
       const crosschainResolverFactory = await ethers.getContractFactory(
         'CrosschainAddressResolver',
       );
       crosschainResolver = await crosschainResolverFactory.deploy(
-        collateral.address,
+        collateralAggregator.address,
       );
       await crosschainResolver.deployed();
-      await collateral.setCrosschainAddressResolver(crosschainResolver.address);
+      await collateralAggregator.setCrosschainAddressResolver(
+        crosschainResolver.address,
+      );
 
       const CollateralVault = await ethers.getContractFactory(
         'CollateralVault',
@@ -175,22 +181,22 @@ contract('CollateralAggregatorV2', async (accounts) => {
       filVault = await CollateralVault.deploy(
         hexFILString,
         tFILToken.address,
-        collateral.address,
+        collateralAggregator.address,
         currencyController.address,
         wETHToken.address,
       );
-      await collateral.linkCollateralVault(filVault.address);
+      await collateralAggregator.linkCollateralVault(filVault.address);
 
       console.log('filVault is ' + filVault.address);
 
       ethVault = await CollateralVault.deploy(
         hexETHString,
         wETHToken.address,
-        collateral.address,
+        collateralAggregator.address,
         currencyController.address,
         wETHToken.address,
       );
-      await collateral.linkCollateralVault(ethVault.address);
+      await collateralAggregator.linkCollateralVault(ethVault.address);
       console.log('ethVault is ' + ethVault.address);
 
       const lendingControllerFactory = await ethers.getContractFactory(
@@ -209,16 +215,12 @@ contract('CollateralAggregatorV2', async (accounts) => {
       await lendingController.setSupportedTerms(hexFILString, sortedTermDays);
       await lendingController.setSupportedTerms(hexBTCString, sortedTermDays);
 
-      await loan.setLendingControllerAddr(lendingController.address);
       await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
       await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
-      await loan.setPaymentAggregator(paymentAggregator.address);
-      await loan.setCollateralAddr(collateral.address);
-      await loan.setTermStructure(termStructure.address);
-      await collateral.addCollateralUser(loan.address);
+      await collateralAggregator.addCollateralUser(loan.address);
       await liquidations.linkContract(loan.address);
 
-      await productResolver.registerProduct(
+      await productAddressResolver.registerProduct(
         loanPrefix,
         loan.address,
         lendingController.address,
@@ -240,58 +242,68 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
   describe('Test the execution of management functions', async () => {
     it('Check that contracts linked correctly to CollateralAggregator', async () => {
-      let status = await collateral.isCollateralUser(collateralCaller.address);
+      let status = await collateralAggregator.isCollateralUser(
+        collateralCaller.address,
+      );
       status.should.be.equal(true);
 
-      status = await collateral.isCollateralUser(loan.address);
+      status = await collateralAggregator.isCollateralUser(loan.address);
       status.should.be.equal(true);
 
-      status = await collateral.isCollateralUser(zeroAddress);
+      status = await collateralAggregator.isCollateralUser(zeroAddress);
       status.should.be.equal(false);
 
-      status = await collateral.isCollateralVault(zeroAddress);
+      status = await collateralAggregator.isCollateralVault(zeroAddress);
       status.should.be.equal(false);
 
-      status = await collateral.isCollateralVault(filVault.address);
+      status = await collateralAggregator.isCollateralVault(filVault.address);
       status.should.be.equal(true);
 
-      status = await collateral.isCollateralVault(ethVault.address);
+      status = await collateralAggregator.isCollateralVault(ethVault.address);
       status.should.be.equal(true);
     });
 
     it('Try to trigger any changes, expect revert by different modifiers', async () => {
       await expectRevert(
-        collateral.linkCollateralVault(zeroAddress, { from: alice }),
+        collateralAggregator.linkCollateralVault(zeroAddress, { from: alice }),
         'INVALID_ACCESS',
       );
 
       await expectRevert(
-        collateral.linkCollateralVault(zeroAddress, { from: owner }),
+        collateralAggregator.linkCollateralVault(zeroAddress, { from: owner }),
         'Zero address',
       );
 
       await expectRevert(
-        collateral.removeCollateralUser(loan.address, { from: bob }),
+        collateralAggregator.removeCollateralUser(loan.address, { from: bob }),
         'INVALID_ACCESS',
       );
 
       await expectRevert(
-        collateral.removeCollateralVault(ethVault.address, { from: bob }),
+        collateralAggregator.removeCollateralVault(ethVault.address, {
+          from: bob,
+        }),
         'INVALID_ACCESS',
       );
 
       await expectRevert(
-        collateral.removeCollateralVault(zeroAddress, { from: owner }),
+        collateralAggregator.removeCollateralVault(zeroAddress, {
+          from: owner,
+        }),
         "Can't remove non-existing user",
       );
 
       await expectRevert(
-        collateral.updateMainParameters(12500, 10500, 10000, { from: alice }),
+        collateralAggregator.updateMainParameters(12500, 10500, 10000, {
+          from: alice,
+        }),
         'INVALID_ACCESS',
       );
 
       await expectRevert(
-        collateral.updateMainParameters(12500, 12700, 10500, { from: owner }),
+        collateralAggregator.updateMainParameters(12500, 12700, 10500, {
+          from: owner,
+        }),
         'AUTO_LIQUIDATION_RATIO_OVERFLOW',
       );
     });
@@ -317,7 +329,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
       let btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
       let filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
 
-      collateral.methods['register(string[],uint256[])'](
+      collateralAggregator.methods['register(string[],uint256[])'](
         [btcAddress, filAddress],
         [0, 461],
         { from: alice },
@@ -341,7 +353,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         tFILToken,
       );
 
-      let vaults = await collateral.getUsedVaults(alice);
+      let vaults = await collateralAggregator.getUsedVaults(alice);
       vaults.includes(filVault.address).should.be.equal(true);
     });
 
@@ -349,7 +361,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
       const [, , bobSigner] = await ethers.getSigners();
       const bobDeposit = decimalBase.mul(toBN('100'));
 
-      await collateral.register({ from: bob });
+      await collateralAggregator.register({ from: bob });
       await tFILToken.mint(bob, bobDeposit);
       await tFILToken.approveInternal(bob, filVault.address, bobDeposit);
       await filVault
@@ -365,7 +377,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         tFILToken,
       );
 
-      let vaults = await collateral.getUsedVaults(bob);
+      let vaults = await collateralAggregator.getUsedVaults(bob);
       vaults.includes(filVault.address).should.be.equal(true);
     });
 
@@ -408,7 +420,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         wETHToken,
       );
 
-      let vaults = await collateral.getUsedVaults(alice);
+      let vaults = await collateralAggregator.getUsedVaults(alice);
       vaults.includes(ethVault.address).should.be.equal(true);
     });
 
@@ -438,10 +450,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
         tFILToken,
       );
 
-      let vaults = await collateral.getUsedVaults(alice);
+      let vaults = await collateralAggregator.getUsedVaults(alice);
       vaults.includes(filVault.address).should.be.equal(false);
 
-      let maxWithdraw = await collateral.getMaxCollateralBookWidthdraw(alice);
+      let maxWithdraw =
+        await collateralAggregator.getMaxCollateralBookWidthdraw(alice);
       maxWithdraw
         .toString()
         .should.be.equal(decimalBase.mul(toBN('1')).toString());
@@ -452,7 +465,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
       let aliceBalanceBefore;
       let aliceBalanceAfter;
 
-      let maxWithdraw = await collateral.getMaxCollateralBookWidthdraw(alice);
+      let maxWithdraw =
+        await collateralAggregator.getMaxCollateralBookWidthdraw(alice);
       let withdrawAmt = maxWithdraw.mul(toBN(2));
 
       let gasPrice;
@@ -492,7 +506,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         wETHToken,
       );
 
-      let vaults = await collateral.getUsedVaults(alice);
+      let vaults = await collateralAggregator.getUsedVaults(alice);
       vaults.includes(ethVault.address).should.be.equal(false);
     });
   });
@@ -513,7 +527,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         usedAmount,
       );
 
-      let unsettledExp = await collateral.getTotalUnsettledExp(bob);
+      let unsettledExp = await collateralAggregator.getTotalUnsettledExp(bob);
       unsettledExp.toString().should.be.equal(ethAmount.toString());
     });
 
@@ -560,12 +574,14 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
       console.log('testUnsettledExp is ' + testUnsettledExp.toString());
 
-      let unsettledExp = await collateral.getTotalUnsettledExp(bob);
+      let unsettledExp = await collateralAggregator.getTotalUnsettledExp(bob);
       console.log('unsettledExp is ' + unsettledExp.toString());
       // console.log(initialDeposit.mul(toBN(100)).div(toBN(150)).toString());
       // unsettledExp.mul(toBN(150)).div(toBN(100)).toString().should.be.equal(initialDeposit.toString());
 
-      withdrawable = await collateral.getMaxCollateralBookWidthdraw(bob);
+      withdrawable = await collateralAggregator.getMaxCollateralBookWidthdraw(
+        bob,
+      );
       withdrawable.toString().should.be.equal('0');
     });
 
@@ -573,7 +589,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
       const [, , bobSigner] = await ethers.getSigners();
       let withdrawAmt = bob_tFIL_locked;
 
-      let coverage = await collateral.getUnsettledCoverage(bob);
+      let coverage = await collateralAggregator.getUnsettledCoverage(bob);
       coverage.toString().should.be.equal('15000'); // should cover margin call
 
       await filVault
@@ -602,7 +618,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
     });
 
     it('Succesfully release all unsettled exposure for Bob, validate state changes', async () => {
-      let filUnsettledExp = await collateral.unsettledCollateral(
+      let filUnsettledExp = await collateralAggregator.unsettledCollateral(
         bob,
         hexFILString,
       );
@@ -613,7 +629,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
         filUnsettledExp,
       );
 
-      let maxWithdraw = await collateral.getMaxCollateralBookWidthdraw(bob);
+      let maxWithdraw =
+        await collateralAggregator.getMaxCollateralBookWidthdraw(bob);
       let filAmount = await currencyController.convertFromETH(
         hexFILString,
         maxWithdraw,
@@ -660,17 +677,20 @@ contract('CollateralAggregatorV2', async (accounts) => {
         .toString()
         .should.be.equal(ethRebalanceAmount.toString());
 
-      let vaults = await collateral.methods['getUsedVaults(address,address)'](
-        alice,
-        bob,
-      );
+      let vaults = await collateralAggregator.methods[
+        'getUsedVaults(address,address)'
+      ](alice, bob);
       vaults.includes(filVault.address).should.be.equal(true);
 
-      let coverage = await collateral.getCoverage(alice, bob);
+      let coverage = await collateralAggregator.getCoverage(alice, bob);
       coverage[0].toString().should.be.equal('0');
       coverage[1].toString().should.be.equal('15000');
 
-      let ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        alice,
+        bob,
+        hexFILString,
+      );
       ccyExp[0].toString().should.be.equal('0');
       ccyExp[1].toString().should.be.equal(filAmount.toString());
     });
@@ -684,7 +704,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
         ZERO_BN,
       );
 
-      let ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        alice,
+        bob,
+        hexFILString,
+      );
       ccyExp[0].toString().should.be.equal('0');
       ccyExp[1].toString().should.be.equal('0');
       ccyExp[2].toString().should.be.equal('0');
@@ -761,7 +785,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         lockedTarget,
       );
 
-      let coverage = await collateral.getCoverage(alice, bob);
+      let coverage = await collateralAggregator.getCoverage(alice, bob);
       coverage[0].toString().should.be.equal('0');
       coverage[1].toString().should.be.equal('15000');
 
@@ -775,7 +799,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
       lockedCollateral.toString().should.be.equal(lockedInETHTarget.toString());
 
-      let ccyExp = await collateral.getCcyExposures(bob, alice, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        bob,
+        alice,
+        hexFILString,
+      );
       ccyExp[0].toString().should.be.equal('0');
       ccyExp[1].toString().should.be.equal('0');
       ccyExp[2].toString().should.be.equal(pvTarget.toString());
@@ -802,11 +830,15 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
-      let coverage = await collateral.getCoverage(alice, bob);
+      let coverage = await collateralAggregator.getCoverage(alice, bob);
       coverage[0].toString().should.be.equal('0');
       coverage[1].toString().should.be.equal('15000');
 
-      let ccyExp = await collateral.getCcyExposures(bob, alice, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        bob,
+        alice,
+        hexFILString,
+      );
       ccyExp[0].toString().should.be.equal('0');
       ccyExp[1].toString().should.be.equal('0');
       ccyExp[2].toString().should.be.equal(newPV.toString());
@@ -862,7 +894,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
         true,
       );
 
-      let ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        alice,
+        bob,
+        hexFILString,
+      );
       let netResult = await netBilateralPVs(
         ccyExp[0],
         ccyExp[1],
@@ -874,7 +910,10 @@ contract('CollateralAggregatorV2', async (accounts) => {
         hexFILString,
         netResult,
       );
-      let actualNetPVs = await collateral.getNetAndTotalPV(alice, bob);
+      let actualNetPVs = await collateralAggregator.getNetAndTotalPV(
+        alice,
+        bob,
+      );
       actualNetPVs[0].toString().should.be.equal(targetNetPVs[0].toString());
       actualNetPVs[1].toString().should.be.equal(targetNetPVs[1].toString());
       actualNetPVs[2].toString().should.be.equal(targetNetPVs[2].toString());
@@ -886,7 +925,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
-      let coverage = await collateral.getCoverage(alice, bob);
+      let coverage = await collateralAggregator.getCoverage(alice, bob);
       console.log(coverage[0].toString());
       console.log(coverage[1].toString());
       coverage[0].toString().should.be.equal('15000');
@@ -913,7 +952,11 @@ contract('CollateralAggregatorV2', async (accounts) => {
         true,
       );
 
-      let ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        alice,
+        bob,
+        hexFILString,
+      );
       let netResult = await netBilateralPVs(
         ccyExp[0],
         ccyExp[1],
@@ -925,7 +968,10 @@ contract('CollateralAggregatorV2', async (accounts) => {
         hexFILString,
         netResult,
       );
-      let actualNetPVs = await collateral.getNetAndTotalPV(alice, bob);
+      let actualNetPVs = await collateralAggregator.getNetAndTotalPV(
+        alice,
+        bob,
+      );
       actualNetPVs[0].toString().should.be.equal(targetNetPVs[0].toString());
       actualNetPVs[1].toString().should.be.equal(targetNetPVs[1].toString());
       actualNetPVs[2].toString().should.be.equal(targetNetPVs[2].toString());
@@ -949,7 +995,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
       lockedCollateral = await filVault['getLockedCollateral(address)'](alice);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
-      let coverage = await collateral.getCoverage(alice, bob);
+      let coverage = await collateralAggregator.getCoverage(alice, bob);
       console.log(coverage[0].toString());
       console.log(coverage[1].toString());
     });
@@ -980,13 +1026,17 @@ contract('CollateralAggregatorV2', async (accounts) => {
         true,
       );
 
-      let ccyExp = await collateral.getCcyExposures(alice, bob, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        alice,
+        bob,
+        hexFILString,
+      );
       ccyExp[0].toString().should.be.equal('0');
       ccyExp[1].toString().should.be.equal('0');
       ccyExp[2].toString().should.be.equal(alicePV.toString());
       ccyExp[3].toString().should.be.equal(bobPV.toString());
 
-      let coverage = await collateral.getCoverage(alice, bob);
+      let coverage = await collateralAggregator.getCoverage(alice, bob);
       coverage[0].toString().should.be.equal('15000');
       coverage[1].toString().should.be.equal('15000');
     });
@@ -1024,10 +1074,14 @@ contract('CollateralAggregatorV2', async (accounts) => {
         true,
       );
 
-      let ccyExp = await collateral.getCcyExposures(bob, alice, hexFILString);
+      let ccyExp = await collateralAggregator.getCcyExposures(
+        bob,
+        alice,
+        hexFILString,
+      );
       ccyExp[2].toString().should.be.equal('0');
 
-      let coverage = await collateral.getCoverage(alice, bob);
+      let coverage = await collateralAggregator.getCoverage(alice, bob);
       coverage[0].toString().should.be.equal('15000');
       coverage[1].toString().should.be.equal('0');
     });

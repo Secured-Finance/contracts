@@ -1,30 +1,26 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ITermStructure.sol";
-import "./interfaces/ICurrencyController.sol";
-import "./interfaces/IProductAddressResolver.sol";
 import "./libraries/QuickSort.sol";
 import "./libraries/TermSchedule.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @dev Term Structure contract is responsible for managing supported
  * terms in Secured Finance Protocol per product and currency
  *
  */
-contract TermStructure is ITermStructure {
+contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
     using QuickSort for uint256[];
 
-    address public override owner;
     uint8 public override last_term_index;
-
-    ICurrencyController private currencyController;
-    IProductAddressResolver private productResolver;
 
     struct Term {
         uint256 numDays;
@@ -36,49 +32,30 @@ contract TermStructure is ITermStructure {
     mapping(bytes4 => mapping(bytes32 => EnumerableSet.UintSet))
         private termsForProductAndCcy;
 
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
     modifier existingTermOnly(uint256 _numDays) {
         require(terms[_numDays] == _numDays, "NON EXISTING TERM");
         _;
     }
 
     /**
-     * @dev Term Structure Constructor.
+     * @dev Contract constructor function.
+     * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _currencyController, address _productAddressResolver)
+    constructor(address _resolver)
         public
-    {
-        owner = msg.sender;
-        currencyController = ICurrencyController(_currencyController);
-        productResolver = IProductAddressResolver(_productAddressResolver);
-    }
+        MixinAddressResolver(_resolver)
+        Ownable()
+    {}
 
-    /**
-     * @dev Sets owner of the controller market.
-     * @param _owner Address of new owner
-     */
-    function setOwner(address _owner) public override onlyOwner {
-        require(_owner != address(0), "new owner is the zero address");
-        emit OwnerChanged(owner, _owner);
-        owner = _owner;
-    }
-
-    /**
-     * @dev Triggers to link with Currency Controller contract.
-     * @param _currencyController CurrencyController smart contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setCurrencyController(address _currencyController)
+    function requiredContracts()
         public
+        view
         override
-        onlyOwner
+        returns (bytes32[] memory contracts)
     {
-        currencyController = ICurrencyController(_currencyController);
+        contracts = new bytes32[](2);
+        contracts[0] = CONTRACT_CURRENCY_CONTROLLER;
+        contracts[1] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
     /**
@@ -124,10 +101,10 @@ contract TermStructure is ITermStructure {
         bool _isSupported
     ) public override onlyOwner existingTermOnly(_numDays) returns (bool) {
         require(
-            productResolver.isSupportedProduct(_product),
+            productAddressResolver().isSupportedProduct(_product),
             "NON SUPPORTED PRODUCT"
         );
-        require(currencyController.isSupportedCcy(_ccy), "NON SUPPORTED CCY");
+        require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 
         if (_isSupported) {
             termsForProductAndCcy[_product][_ccy].add(_numDays);

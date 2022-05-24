@@ -1,23 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.12 <=0.7.0;
+pragma solidity ^0.7.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAddressResolver.sol";
 
-contract AddressResolver is IAddressResolver {
-    address public owner;
+contract AddressResolver is IAddressResolver, Ownable {
     mapping(bytes32 => address) public addresses;
 
-    /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner, "INVALID_ACCESS");
-        _;
-    }
-
-    constructor() public {
-        owner = msg.sender;
-    }
+    constructor() public Ownable() {}
 
     function importAddresses(
         bytes32[] calldata _names,

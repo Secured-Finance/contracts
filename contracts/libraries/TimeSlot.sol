@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 import "./BokkyPooBahsDateTimeLibrary.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -168,32 +168,32 @@ library TimeSlot {
         )
     {
         (bytes32 addr, bool flipped) = AddressPacking.pack(party0, party1);
-        TimeSlot.Slot memory timeSlot = self[addr][ccy][slotId];
+        TimeSlot.Slot storage timeSlot = self[addr][ccy][slotId];
+        uint256 totalPayment0 = timeSlot.totalPayment0;
+        uint256 totalPayment1 = timeSlot.totalPayment1;
+        uint256 netPayment = timeSlot.netPayment;
+
         if (flipped) {
-            uint256 oldPayment0 = timeSlot.totalPayment0;
-            uint256 oldPayment1 = timeSlot.totalPayment1;
-            timeSlot.totalPayment0 = oldPayment1;
-            timeSlot.totalPayment1 = oldPayment0;
+            uint256 oldPayment0 = totalPayment0;
+            uint256 oldPayment1 = totalPayment1;
+            totalPayment0 = oldPayment1;
+            totalPayment1 = oldPayment0;
         }
 
-        if (timeSlot.totalPayment1 > timeSlot.totalPayment0) {
-            timeSlot.netPayment = timeSlot.totalPayment1.sub(
-                timeSlot.totalPayment0
-            );
-            timeSlot.flipped = true;
+        if (totalPayment1 > totalPayment0) {
+            netPayment = totalPayment1.sub(totalPayment0);
+            flipped = true;
         } else {
-            timeSlot.netPayment = timeSlot.totalPayment0.sub(
-                timeSlot.totalPayment1
-            );
-            timeSlot.flipped = false;
+            netPayment = totalPayment0.sub(totalPayment1);
+            flipped = false;
         }
 
         return (
-            timeSlot.totalPayment0,
-            timeSlot.totalPayment1,
-            timeSlot.netPayment,
+            totalPayment0,
+            totalPayment1,
+            netPayment,
             timeSlot.paidAmount,
-            timeSlot.flipped,
+            flipped,
             timeSlot.isSettled
         );
     }

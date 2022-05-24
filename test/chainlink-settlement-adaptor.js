@@ -9,6 +9,7 @@ const {
 const { testTxHash, secondTxHash } = require('../test-utils/src/strings');
 should();
 
+const AddressResolver = artifacts.require('AddressResolver');
 const ChainlinkSettlementAdapter = artifacts.require(
   'ChainlinkSettlementAdapter',
 );
@@ -22,29 +23,36 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
 
   let linkToken;
   let chainlinkSettlementAdapter;
+  let externalAdapterCaller;
   let operator;
 
-  before('deploy ChainlinkSettlementAdaptor', async () => {
+  before('deploy ChainlinkSettlementAdapter', async () => {
     linkToken = await LinkToken.new();
     operator = await Operator.new(linkToken.address, owner);
 
-    const ExternalAdapterCallerMockFactory = await ethers.getContractFactory(
-      'ExternalAdapterCallerMock',
-    );
-    externalAdapterCaller = await ExternalAdapterCallerMockFactory.deploy();
-
+    externalAdapterCaller = await ethers
+      .getContractFactory('ExternalAdapterCallerMock')
+      .then((factory) => factory.deploy());
+    const addressResolver = await AddressResolver.new();
     chainlinkSettlementAdapter = await ChainlinkSettlementAdapter.new(
+      addressResolver.address,
       operator.address,
       jobId,
       requestFee,
       linkToken.address,
       hexFILString,
-      externalAdapterCaller.address,
     );
 
     externalAdapterCaller.setExternalAdapter(
       chainlinkSettlementAdapter.address,
     );
+
+    // Settings for AddressResolver
+    await addressResolver.importAddresses(
+      [toBytes32('SettlementEngine')],
+      [externalAdapterCaller.address],
+    );
+    await chainlinkSettlementAdapter.buildCache();
   });
 
   describe('getChainlinkToken function', async () => {

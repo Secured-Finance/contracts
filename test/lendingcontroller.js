@@ -1,6 +1,5 @@
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const LendingMarket = artifacts.require('LendingMarket');
-const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
@@ -11,6 +10,7 @@ should();
 
 const { hexFILString, loanPrefix } = require('../test-utils').strings;
 const { termDays, sortedTermDays } = require('../test-utils').terms;
+const { Deployment } = require('../test-utils').deployment;
 const { orders } = require('./orders');
 
 contract('LendingMarketController', async (accounts) => {
@@ -19,40 +19,32 @@ contract('LendingMarketController', async (accounts) => {
   let filToETHPriceFeed;
 
   let currencyController;
-  let collateral;
-  let signers;
+  let collateralAggregator;
   let loan;
-  let lendingController;
+  let lendingMarketController;
   let lendingMarkets = [];
   let orderList;
-  let productResolver;
+  let productAddressResolver;
   let termStructure;
 
   before('deploy LendingMarketController', async () => {
-    signers = await ethers.getSigners();
-    const DealId = await ethers.getContractFactory('DealId');
-    const dealIdLibrary = await DealId.deploy();
-    await dealIdLibrary.deployed();
+    collateralAggregator = await CollateralAggregator.new();
 
-    const QuickSort = await ethers.getContractFactory('QuickSort');
-    const quickSortLibrary = await QuickSort.deploy();
-    await quickSortLibrary.deployed();
+    const deployment = new Deployment();
+    // TODO: Need to update to V2
+    deployment.mock('CollateralAggregator').useValue(collateralAggregator);
+    ({
+      dealIdLibrary,
+      closeOutNetting,
+      currencyController,
+      crosschainAddressResolver,
+      termStructure,
+      productAddressResolver,
+      settlementEngine,
+      lendingMarketController,
+      loan,
+    } = await new Deployment().execute());
 
-    const DiscountFactor = await ethers.getContractFactory('DiscountFactor');
-    const discountFactor = await DiscountFactor.deploy();
-    await discountFactor.deployed();
-
-    const productResolverFactory = await ethers.getContractFactory(
-      'ProductAddressResolver',
-      {
-        libraries: {
-          DealId: dealIdLibrary.address,
-        },
-      },
-    );
-    productResolver = await productResolverFactory.deploy();
-
-    currencyController = await CurrencyController.new();
     filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, filRate);
     let tx = await currencyController.supportCurrency(
       hexFILString,
@@ -64,53 +56,24 @@ contract('LendingMarketController', async (accounts) => {
     );
     expectEvent(tx, 'CcyAdded');
 
-    const termStructureFactory = await ethers.getContractFactory(
-      'TermStructure',
-      {
-        libraries: {
-          QuickSort: quickSortLibrary.address,
-        },
-      },
-    );
-    termStructure = await termStructureFactory.deploy(
+    await collateralAggregator.setCurrencyController(
       currencyController.address,
-      productResolver.address,
-    );
-
-    const loanFactory = await ethers.getContractFactory('LoanV2', {
-      libraries: {
-        DealId: dealIdLibrary.address,
-        DiscountFactor: discountFactor.address,
+      {
+        from: owner,
       },
-    });
-    loan = await loanFactory.deploy();
-    collateral = await CollateralAggregator.new();
-
-    await loan.setCollateralAddr(collateral.address, { from: owner });
-    await collateral.setCurrencyController(currencyController.address, {
-      from: owner,
-    });
+    );
 
     orderList = orders;
 
-    const lendingControllerFactory = await ethers.getContractFactory(
-      'LendingMarketController',
-      {
-        libraries: {
-          QuickSort: quickSortLibrary.address,
-          DiscountFactor: discountFactor.address,
-        },
-      },
+    await lendingMarketController.setCurrencyController(
+      currencyController.address,
     );
-    lendingController = await lendingControllerFactory.deploy();
-    await lendingController.setCurrencyController(currencyController.address);
-    await lendingController.setTermStructure(termStructure.address);
-    await loan.setLendingControllerAddr(lendingController.address);
+    await lendingMarketController.setTermStructure(termStructure.address);
 
-    await productResolver.registerProduct(
+    await productAddressResolver.registerProduct(
       loanPrefix,
       loan.address,
-      lendingController.address,
+      lendingMarketController.address,
     );
 
     for (i = 0; i < termDays.length; i++) {
@@ -124,7 +87,10 @@ contract('LendingMarketController', async (accounts) => {
 
   describe('Init Collateral with 100,000 Wei for Bob', async () => {
     it('Register collateral book with 100,000 Wei payment', async () => {
-      let result = await collateral.register({ from: bob, value: 100000 });
+      let result = await collateralAggregator.register({
+        from: bob,
+        value: 100000,
+      });
       expectEvent(result, 'Register');
     });
   });
@@ -132,7 +98,7 @@ contract('LendingMarketController', async (accounts) => {
   describe('deploy Lending Markets for each term of FIL market', async () => {
     it('deploy Lending Markets for each term for FIL market', async () => {
       for (let i = 0; i < termDays.length; i++) {
-        const tx = await lendingController.deployLendingMarket(
+        const tx = await lendingMarketController.deployLendingMarket(
           hexFILString,
           termDays[i],
         );
@@ -142,9 +108,11 @@ contract('LendingMarketController', async (accounts) => {
         let lendingMarket = await LendingMarket.at(
           receipt.events[0].args.marketAddr,
         );
-        await lendingMarket.setCollateral(collateral.address, { from: owner });
+        await lendingMarket.setCollateral(collateralAggregator.address, {
+          from: owner,
+        });
         await lendingMarket.setLoan(loan.address, { from: owner });
-        await collateral.addCollateralUser(lendingMarket.address, {
+        await collateralAggregator.addCollateralUser(lendingMarket.address, {
           from: owner,
         });
         await loan.addLendingMarket(
@@ -154,7 +122,7 @@ contract('LendingMarketController', async (accounts) => {
         );
       }
 
-      let terms = await lendingController.getSupportedTerms(hexFILString);
+      let terms = await lendingMarketController.getSupportedTerms(hexFILString);
       terms.map((term, i) => {
         term.toString().should.be.equal(sortedTermDays[i].toString());
       });
@@ -162,7 +130,7 @@ contract('LendingMarketController', async (accounts) => {
 
     it('Expect revert on adding new 3m FIL market', async () => {
       await expectRevert(
-        lendingController.deployLendingMarket(hexFILString, termDays[0]),
+        lendingMarketController.deployLendingMarket(hexFILString, termDays[0]),
         "Couldn't rewrite existing market",
       );
     });
@@ -220,7 +188,7 @@ contract('LendingMarketController', async (accounts) => {
     });
 
     it('get lend rates from lending controller for FIL', async () => {
-      let rate = await lendingController.getLendRatesForCcy(hexFILString);
+      let rate = await lendingMarketController.getLendRatesForCcy(hexFILString);
       rate[0].toNumber().should.be.equal(800);
       rate[1].toNumber().should.be.equal(800);
       rate[2].toNumber().should.be.equal(800);
@@ -230,7 +198,9 @@ contract('LendingMarketController', async (accounts) => {
     });
 
     it('get borrow rates from lending controller for FIL', async () => {
-      let rate = await lendingController.getBorrowRatesForCcy(hexFILString);
+      let rate = await lendingMarketController.getBorrowRatesForCcy(
+        hexFILString,
+      );
       rate[0].toNumber().should.be.equal(825);
       rate[1].toNumber().should.be.equal(825);
       rate[2].toNumber().should.be.equal(825);
@@ -240,7 +210,7 @@ contract('LendingMarketController', async (accounts) => {
     });
 
     it('get mid rates from lending controller for FIL', async () => {
-      let rate = await lendingController.getMidRatesForCcy(hexFILString);
+      let rate = await lendingMarketController.getMidRatesForCcy(hexFILString);
       rate[0].toNumber().should.be.equal(812);
       rate[1].toNumber().should.be.equal(812);
       rate[2].toNumber().should.be.equal(812);
@@ -250,7 +220,9 @@ contract('LendingMarketController', async (accounts) => {
     });
 
     it('get discount factors from lending controller for FIL', async () => {
-      let rate = await lendingController.getDiscountFactorsForCcy(hexFILString);
+      let rate = await lendingMarketController.getDiscountFactorsForCcy(
+        hexFILString,
+      );
       console.log('df3m: ' + rate[0][0]);
       console.log('df6m: ' + rate[0][1]);
       console.log('df1y: ' + rate[0][2]);

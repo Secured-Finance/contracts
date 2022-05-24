@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 import "../TermStructure.sol";
 
 contract TermStructureTest is TermStructure {
-    constructor(address _currencyController, address _productAddressResolver)
-        public
-        TermStructure(_currencyController, _productAddressResolver)
-    {}
+    constructor(address _resolver) public TermStructure(_resolver) {}
 
     function getGasCostOfGetTerm(uint256 _numDays, uint8 frequency)
         external

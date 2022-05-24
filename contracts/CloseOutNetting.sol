@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -47,7 +47,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
     /**
      * @dev Contract constructor function.
      * @notice sets contract deployer as owner of this contract
-     * @param _resolver xxxx
+     * @param _resolver The address of the Address Resolver contract
      */
     constructor(address _resolver)
         public
@@ -164,48 +164,5 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
      */
     function _handleDefault(address _defaultedParty) internal {
         _isDefaulted[_defaultedParty] = true;
-    }
-
-    /**
-     * @dev Internal function to execute close out netting payment
-     * liquidates ETH from party's collateral with bigger net payment to their counterparty
-     * @notice Only triggers if one of the counterparties in default
-     */
-    function _handleCloseOut(address party0, address party1) internal {
-        require(
-            _isDefaulted[party0] || _isDefaulted[party1],
-            "NON_DEFAULTED_PARTIES"
-        );
-        bytes32[] memory currencies = collateralAggregator()
-            .getExposedCurrencies(party0, party1);
-
-        for (uint256 i = 0; i < currencies.length; i++) {
-            bytes32 ccy = currencies[i];
-
-            CloseOut.Payment memory payment = CloseOut.get(
-                _closeOuts,
-                party0,
-                party1,
-                ccy
-            );
-
-            if (payment.flipped) {
-                collateralAggregator().liquidate(
-                    party1,
-                    party0,
-                    ccy,
-                    payment.netPayment
-                );
-            } else {
-                collateralAggregator().liquidate(
-                    party0,
-                    party1,
-                    ccy,
-                    payment.netPayment
-                );
-            }
-
-            CloseOut.close(_closeOuts, party0, party1, ccy);
-        }
     }
 }

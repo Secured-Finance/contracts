@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GNU Lesser General Public License 3.0
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 // ----------------------------------------------------------------------------
 // BokkyPooBah's DateTime Library v1.00 - Contract Instance
@@ -62,7 +62,7 @@ contract BokkyPooBahsDateTimeContract {
         )
     {
         (year, month, day, hour, minute, second) = BokkyPooBahsDateTimeLibrary
-            .timestampToDateTime(now);
+            .timestampToDateTime(block.timestamp);
     }
 
     function _daysFromDate(

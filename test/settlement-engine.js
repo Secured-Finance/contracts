@@ -2,7 +2,6 @@ const AddressResolver = artifacts.require('AddressResolver');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ERC20Mock = artifacts.require('ERC20Mock');
-const WETH9Mock = artifacts.require('WETH9Mock');
 const ChainlinkSettlementAdapterMock = artifacts.require(
   'ChainlinkSettlementAdapterMock',
 );
@@ -11,14 +10,10 @@ const PaymentAggregatorCallerMock = artifacts.require(
   'PaymentAggregatorCallerMock',
 );
 const PaymentAggregator = artifacts.require('PaymentAggregator');
-const CrosschainAddressResolver = artifacts.require(
-  'CrosschainAddressResolver',
-);
 const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
 const TimeSlotTest = artifacts.require('TimeSlotTest');
-const AddressPackingTest = artifacts.require('AddressPackingTest');
 const MarkToMarketMock = artifacts.require('MarkToMarketMock');
 
 const { should } = require('chai');
@@ -106,18 +101,15 @@ contract('SettlementEngine', async (accounts) => {
     const markToMarketMock = await MarkToMarketMock.new();
 
     const deployment = new Deployment();
-    deployment.mock('AddressResolver', () => addressResolver);
-    deployment.mock('PaymentAggregator', () => paymentAggregator);
-    deployment.mock('MarkToMarket', () => markToMarketMock);
-    deployment.mock('Loan', () => paymentAggregatorMock);
-    ({ currencyController } = await deployment.execute());
+    deployment.mock('AddressResolver').useValue(addressResolver);
+    deployment.mock('PaymentAggregator').useValue(paymentAggregator);
+    deployment.mock('MarkToMarket').useValue(markToMarketMock);
+    deployment.mock('Loan').useValue(paymentAggregatorMock);
+    ({ currencyController, settlementEngine, crosschainAddressResolver } =
+      await deployment.execute());
 
-    addressPacking = await AddressPackingTest.new();
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     timeSlotTest = await TimeSlotTest.new();
-    crosschainAddressResolver = await CrosschainAddressResolver.new(
-      zeroAddress(),
-    );
 
     filToETHPriceFeed = await MockV3Aggregator.new(
       18,
@@ -142,7 +134,6 @@ contract('SettlementEngine', async (accounts) => {
       bob,
       bobTokenBalance,
     );
-    wETHToken = await WETH9Mock.new();
 
     await currencyController.supportCurrency(
       hexETHString,
@@ -169,16 +160,6 @@ contract('SettlementEngine', async (accounts) => {
       filToETHPriceFeed.address,
       7500,
       zeroAddress(),
-    );
-
-    const SettlementEngineFactory = await ethers.getContractFactory(
-      'SettlementEngine',
-    );
-    settlementEngine = await SettlementEngineFactory.deploy(
-      paymentAggregator.address,
-      currencyController.address,
-      crosschainAddressResolver.address,
-      wETHToken.address,
     );
 
     linkToken = await LinkToken.new();
@@ -339,7 +320,7 @@ contract('SettlementEngine', async (accounts) => {
       };
 
       await expectRevert(
-        settlementEngine.fullfillSettlementRequest(
+        settlementEngine.fulfillSettlementRequest(
           aliceRequestId,
           oracleResponse,
           hexFILString,

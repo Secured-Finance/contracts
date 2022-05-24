@@ -87,5 +87,5 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   );
 };
 
-module.exports.tags = ['ChainlinkSettlementAdaptor'];
+module.exports.tags = ['ChainlinkSettlementAdapter'];
 module.exports.dependencies = ['SettlementEngine'];

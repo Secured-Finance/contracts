@@ -12,14 +12,10 @@ const MarkToMarketMock = artifacts.require('MarkToMarketMock');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ERC20Mock = artifacts.require('ERC20Mock');
-const WETH9Mock = artifacts.require('WETH9Mock');
 const ChainlinkSettlementAdapterMock = artifacts.require(
   'ChainlinkSettlementAdapterMock',
 );
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const CrosschainAddressResolver = artifacts.require(
-  'CrosschainAddressResolver',
-);
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
@@ -51,7 +47,7 @@ const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } =
 const { computeNativeSettlementId, computeCrosschainSettlementId } =
   require('../test-utils').settlementId;
 const { PrintTable } = require('../test-utils').helper;
-const { deploy, Deployment } = require('../test-utils').deployment;
+const { Deployment } = require('../test-utils').deployment;
 
 should();
 
@@ -143,6 +139,7 @@ contract('PaymentAggregator', async (accounts) => {
   let closeOutNetting;
   let paymentAggregator;
   let currencyController;
+  let crosschainAddressResolver;
 
   let totalPayment0 = ZERO_BN;
   let couponPayment0 = ZERO_BN;
@@ -178,21 +175,22 @@ contract('PaymentAggregator', async (accounts) => {
     const markToMarketMock = await MarkToMarketMock.new();
 
     const deployment = new Deployment();
-    deployment.mock('AddressResolver', () => addressResolver);
-    deployment.mock('PaymentAggregator', () => paymentAggregator);
-    deployment.mock('MarkToMarket', () => markToMarketMock);
-    deployment.mock('Loan', () => paymentAggregatorMock);
-    ({ closeOutNetting, currencyController } = await deployment.execute());
+    deployment.mock('AddressResolver').useValue(addressResolver);
+    deployment.mock('PaymentAggregator').useValue(paymentAggregator);
+    deployment.mock('MarkToMarket').useValue(markToMarketMock);
+    deployment.mock('Loan').useValue(paymentAggregatorMock);
+    ({
+      closeOutNetting,
+      currencyController,
+      crosschainAddressResolver,
+      settlementEngine,
+    } = await deployment.execute());
 
     paymentAggregator.buildCache();
 
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     addressPacking = await AddressPackingTest.new();
     timeSlotTest = await TimeSlotTest.new();
-
-    crosschainAddressResolver = await CrosschainAddressResolver.new(
-      zeroAddress,
-    );
 
     filToETHPriceFeed = await MockV3Aggregator.new(
       18,
@@ -217,7 +215,6 @@ contract('PaymentAggregator', async (accounts) => {
       bob,
       bobTokenBalance,
     );
-    wETHToken = await WETH9Mock.new();
 
     await currencyController.supportCurrency(
       hexETHString,
@@ -244,16 +241,6 @@ contract('PaymentAggregator', async (accounts) => {
       filToETHPriceFeed.address,
       7500,
       zeroAddress,
-    );
-
-    const SettlementEngineFactory = await ethers.getContractFactory(
-      'SettlementEngine',
-    );
-    settlementEngine = await SettlementEngineFactory.deploy(
-      paymentAggregator.address,
-      currencyController.address,
-      crosschainAddressResolver.address,
-      wETHToken.address,
     );
 
     linkToken = await LinkToken.new();

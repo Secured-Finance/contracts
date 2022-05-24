@@ -1,14 +1,13 @@
-const CurrencyController = artifacts.require('CurrencyController');
+const AddressResolver = artifacts.require('AddressResolver');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { ethers } = require('hardhat');
-const { toBytes32 } = require('../test-utils').strings;
+const { toBytes32, zeroAddress } = require('../test-utils').strings;
 const { PrintTable } = require('../test-utils').helper;
+const { Deployment } = require('../test-utils').deployment;
 const { should } = require('chai');
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const utils = require('web3-utils');
-
-const { zeroAddress } = require('../test-utils/src/strings');
 
 should();
 
@@ -17,7 +16,9 @@ contract('TermStructure', async (accounts) => {
 
   let termStructure;
   let currencyController;
-  let productResolver;
+  let productAddressResolver;
+  let lendingMarketController;
+
   let loanPrefix = '0x21aaa47b';
 
   let filToETHRate = utils.toBN('67175250000000000');
@@ -42,7 +43,33 @@ contract('TermStructure', async (accounts) => {
   };
 
   before('deploy TermStructure contract', async () => {
-    currencyController = await CurrencyController.new();
+    const addressResolver = await AddressResolver.new();
+
+    const deployment = new Deployment();
+    deployment.mock('AddressResolver').useValue(addressResolver);
+    deployment
+      .mock('ProductAddressResolver')
+      .useFactory('ProductAddressResolverTest', (instances) => ({
+        DealId: instances.dealIdLibrary.address,
+      }))
+      .deploy();
+
+    deployment
+      .mock('TermStructure')
+      .useFactory('TermStructureTest', (instances) => ({
+        QuickSort: instances.quickSortLibrary.address,
+      }))
+      .deploy(addressResolver.address);
+
+    ({
+      currencyController,
+      discountFactorLibrary,
+      lendingMarketController,
+      loan,
+      productAddressResolver,
+      termStructure,
+    } = await deployment.execute());
+
     filToETHPriceFeed = await MockV3Aggregator.new(
       18,
       hexFILString,
@@ -97,77 +124,23 @@ contract('TermStructure', async (accounts) => {
 
     signers = await ethers.getSigners();
 
-    const DealId = await ethers.getContractFactory('DealId');
-    const dealIdLibrary = await DealId.deploy();
-    await dealIdLibrary.deployed();
-
-    const QuickSort = await ethers.getContractFactory('QuickSort');
-    const quickSortLibrary = await QuickSort.deploy();
-    await quickSortLibrary.deployed();
-
-    const DiscountFactor = await ethers.getContractFactory('DiscountFactor');
-    const discountFactor = await DiscountFactor.deploy();
-    await discountFactor.deployed();
-
-    const productResolverFactory = await ethers.getContractFactory(
-      'ProductAddressResolverTest',
-      {
-        libraries: {
-          DealId: dealIdLibrary.address,
-        },
-      },
-    );
-    productResolver = await productResolverFactory.deploy();
-
-    const termStructureFactory = await ethers.getContractFactory(
-      'TermStructureTest',
-      {
-        libraries: {
-          QuickSort: quickSortLibrary.address,
-        },
-      },
-    );
-    termStructure = await termStructureFactory.deploy(
-      currencyController.address,
-      productResolver.address,
-    );
-
-    const loanFactory = await ethers.getContractFactory('LoanV2', {
-      libraries: {
-        DealId: dealIdLibrary.address,
-        DiscountFactor: discountFactor.address,
-      },
-    });
-    loan = await loanFactory.deploy();
-
-    const lendingControllerFactory = await ethers.getContractFactory(
-      'LendingMarketControllerMock',
-      {
-        libraries: {
-          DiscountFactor: discountFactor.address,
-        },
-      },
-    );
-    lendingController = await lendingControllerFactory.deploy();
-
-    await productResolver.registerProduct(
+    await productAddressResolver.registerProduct(
       loanPrefix,
       loan.address,
-      lendingController.address,
+      lendingMarketController.address,
       { from: owner },
     );
 
     let id = generateId(12, loanPrefix);
-    let contract = await productResolver.getProductContractByDealId(id);
+    let contract = await productAddressResolver.getProductContractByDealId(id);
     contract.should.be.equal(loan.address);
 
-    contract = await productResolver.getControllerContractByDealId(id);
-    contract.should.be.equal(lendingController.address);
+    contract = await productAddressResolver.getControllerContractByDealId(id);
+    contract.should.be.equal(lendingMarketController.address);
   });
 
   describe('Test register product function', async () => {
     it('Successfully add new term via supportTerm function and check term creation', async () => {
-      let schedule = ['180'];
       await termStructure.supportTerm(
         180,
         [loanPrefix],

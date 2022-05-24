@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.0;
+pragma solidity ^0.7.0;
 
-import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV2V3Interface.sol";
+import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV2V3Interface.sol";
 import "../ProtocolTypes.sol";
 
 /**
@@ -120,6 +120,6 @@ contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes {
     }
 
     function description() external view override returns (string memory) {
-        return "v0.6/tests/MockV3Aggregator.sol";
+        return "v0.7/tests/MockV3Aggregator.sol";
     }
 }

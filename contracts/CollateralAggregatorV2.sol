@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -32,6 +32,7 @@ contract CollateralAggregatorV2 is
 {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using EnumerableSet for EnumerableSet.AddressSet;
     using NetPV for NetPV.CcyNetting;
 
     // Mapping for total amount of collateral locked against independent collateral from all books.
