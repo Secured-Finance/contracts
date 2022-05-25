@@ -40,7 +40,7 @@ contract ChainlinkSettlementAdapterMock is
         address _link,
         bytes32 _ccy,
         address _settlementEngine
-    ) public Ownable() {
+    ) Ownable() {
         setChainlinkOracle(_oracle);
         jobId = _jobId;
         ccy = _ccy;
@@ -95,13 +95,12 @@ contract ChainlinkSettlementAdapterMock is
     }
 
     /**
-     * @dev Triggers to cancell a request if it has not been fulfilled
+     * @dev Triggers to cancel a request if it has not been fulfilled
      * @param _requestId The id to specify a request
      * @param _callbackFunctionId The callback function specified for the request
      * @param _expiration The time of the expiration for the request
      */
     function cancelRequest(
-        string memory _txHash,
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration
@@ -158,7 +157,7 @@ contract ChainlinkSettlementAdapterMock is
         );
     }
 
-    function _onlySettlementEngine() internal {
+    function _onlySettlementEngine() internal view {
         require(
             msg.sender == address(settlementEngine),
             "NOT_SETTLEMENT_ENGINE"

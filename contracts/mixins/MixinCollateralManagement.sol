@@ -51,7 +51,7 @@ contract MixinCollateralManagement is
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -64,7 +64,7 @@ contract MixinCollateralManagement is
 
     function acceptedContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -87,11 +87,7 @@ contract MixinCollateralManagement is
      * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver)
-        public
-        MixinAddressResolver(_resolver)
-        Ownable()
-    {
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {
         LQLEVEL = 12000; // 120% for liquidation price
         MARGINLEVEL = 15000; // 150% margin call threshold
         AUTOLQLEVEL = 12500; // 125% auto liquidatio

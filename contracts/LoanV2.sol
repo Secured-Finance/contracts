@@ -88,15 +88,11 @@ contract LoanV2 is
      * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver)
-        public
-        MixinAddressResolver(_resolver)
-        Ownable()
-    {}
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -783,7 +779,7 @@ contract LoanV2 is
      * @dev Triggers to return loan product implementation version
      * @return implementation version
      */
-    function getVersion() public view override returns (uint16) {
+    function getVersion() public pure override returns (uint16) {
         return VERSION;
     }
 }

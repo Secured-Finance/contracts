@@ -68,7 +68,7 @@ contract CollateralVault is
         bytes32 _ccy,
         address _tokenAddress,
         address _WETH9
-    ) public MixinAddressResolver(_resolver) SafeTransfer(_WETH9) {
+    ) MixinAddressResolver(_resolver) SafeTransfer(_WETH9) {
         tokenAddress = _tokenAddress;
         ccy = _ccy;
 
@@ -82,7 +82,7 @@ contract CollateralVault is
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -93,7 +93,7 @@ contract CollateralVault is
 
     function acceptedContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {

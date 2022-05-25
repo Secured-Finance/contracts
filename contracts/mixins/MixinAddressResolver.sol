@@ -48,7 +48,7 @@ contract MixinAddressResolver {
      * @dev Constructor.
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) public {
+    constructor(address _resolver) {
         resolver = AddressResolver(_resolver);
     }
 
@@ -57,7 +57,7 @@ contract MixinAddressResolver {
      */
     function requiredContracts()
         public
-        view
+        pure
         virtual
         returns (bytes32[] memory contracts)
     {}
@@ -67,7 +67,7 @@ contract MixinAddressResolver {
      */
     function acceptedContracts()
         public
-        view
+        pure
         virtual
         returns (bytes32[] memory contracts)
     {}

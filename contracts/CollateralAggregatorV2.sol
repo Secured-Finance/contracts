@@ -78,10 +78,7 @@ contract CollateralAggregatorV2 is
      * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver)
-        public
-        MixinCollateralManagement(_resolver)
-    {}
+    constructor(address _resolver) MixinCollateralManagement(_resolver) {}
 
     // =========== COLLATERAL BOOK SECTION ===========
 

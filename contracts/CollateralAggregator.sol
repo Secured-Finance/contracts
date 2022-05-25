@@ -212,7 +212,7 @@ contract CollateralAggregator is ProtocolTypes {
      *
      * @notice sets contract deployer as owner of this contract
      */
-    constructor() public {
+    constructor() {
         owner = msg.sender;
 
         LQLEVEL = 12000; // 120% for liquidation price

@@ -37,17 +37,13 @@ contract LendingMarketController is
     /**
      * @dev Lending Market Controller Constructor.
      */
-    constructor(address _resolver)
-        public
-        MixinAddressResolver(_resolver)
-        Ownable()
-    {
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {
         // owner = msg.sender;
     }
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {

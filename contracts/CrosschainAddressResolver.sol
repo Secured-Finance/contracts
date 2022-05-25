@@ -22,11 +22,11 @@ contract CrosschainAddressResolver is
      * @notice sets contract deployer as owner of this contract and connects to the collateral aggregator contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) public MixinAddressResolver(_resolver) {}
+    constructor(address _resolver) MixinAddressResolver(_resolver) {}
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -36,7 +36,7 @@ contract CrosschainAddressResolver is
 
     function acceptedContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {

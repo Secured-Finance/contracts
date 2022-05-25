@@ -36,7 +36,6 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * liquidation agent and liquidation offset
      */
     constructor(address _resolver, uint256 _offset)
-        public
         MixinAddressResolver(_resolver)
         Ownable()
     {
@@ -46,7 +45,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -59,7 +58,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
 
     function acceptedContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {

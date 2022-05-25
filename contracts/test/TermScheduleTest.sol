@@ -6,7 +6,7 @@ import "../libraries/TermSchedule.sol";
 contract TermScheduleTest {
     function getTermSchedule(uint256 numDays, uint8 frequency)
         external
-        view
+        pure
         returns (uint256[] memory)
     {
         return TermSchedule.getTermSchedule(numDays, frequency);
@@ -14,13 +14,13 @@ contract TermScheduleTest {
 
     function getNumPayments(uint256 numDays, uint8 frequency)
         external
-        view
+        pure
         returns (uint256)
     {
         return TermSchedule.getNumPayments(numDays, frequency);
     }
 
-    function getDfFrac(uint256 numDays) external view returns (uint256) {
+    function getDfFrac(uint256 numDays) external pure returns (uint256) {
         return TermSchedule.getDfFrac(numDays);
     }
 

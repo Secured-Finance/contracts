@@ -46,7 +46,7 @@ contract LendingMarket is
         address _resolver,
         bytes32 _ccy,
         uint256 _term
-    ) public MixinAddressResolver(_resolver) {
+    ) MixinAddressResolver(_resolver) {
         MarketCcy = _ccy;
         MarketTerm = _term;
         buildCache();
@@ -54,7 +54,7 @@ contract LendingMarket is
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -66,7 +66,7 @@ contract LendingMarket is
 
     function acceptedContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {

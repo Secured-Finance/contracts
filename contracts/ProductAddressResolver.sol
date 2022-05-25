@@ -40,7 +40,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      *
      * @notice sets contract deployer as owner of this contract
      */
-    constructor() public {
+    constructor() {
         owner = msg.sender;
     }
 

@@ -32,7 +32,7 @@ contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes {
         uint8 _decimals,
         bytes32 _ccy,
         int256 _initialAnswer
-    ) public {
+    ) {
         owner = msg.sender;
         priceFeedCcy = _ccy;
         decimals = _decimals;
@@ -119,7 +119,7 @@ contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes {
         );
     }
 
-    function description() external view override returns (string memory) {
+    function description() external pure override returns (string memory) {
         return "v0.7/tests/MockV3Aggregator.sol";
     }
 }

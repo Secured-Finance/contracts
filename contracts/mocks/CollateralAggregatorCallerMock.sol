@@ -8,7 +8,7 @@ import "../interfaces/ICollateralAggregatorV2.sol";
 contract CollateralAggregatorCallerMock is ProtocolTypes {
     ICollateralAggregator public collateralAggregator;
 
-    constructor(address _collateralAggregator) public {
+    constructor(address _collateralAggregator) {
         collateralAggregator = ICollateralAggregator(_collateralAggregator);
     }
 

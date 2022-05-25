@@ -8,7 +8,7 @@ import "../interfaces/ILoanV2.sol";
 contract LoanCallerMock is ProtocolTypes {
     ILoanV2 public loan;
 
-    constructor(address _loan) public {
+    constructor(address _loan) {
         loan = ILoanV2(_loan);
     }
 

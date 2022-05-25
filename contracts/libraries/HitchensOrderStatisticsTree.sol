@@ -21,7 +21,7 @@ contract HitchensOrderStatisticsTree {
         uint256 _id
     );
 
-    constructor() public {}
+    constructor() {}
 
     function treeRootNode() public view returns (uint256 _value) {
         _value = tree.root;

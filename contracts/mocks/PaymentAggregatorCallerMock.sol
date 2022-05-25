@@ -8,7 +8,7 @@ import "../interfaces/IPaymentAggregator.sol";
 contract PaymentAggregatorCallerMock is ProtocolTypes {
     IPaymentAggregator public paymentAggregator;
 
-    constructor(address _paymentAggregator) public {
+    constructor(address _paymentAggregator) {
         paymentAggregator = IPaymentAggregator(_paymentAggregator);
     }
 

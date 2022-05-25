@@ -29,7 +29,7 @@ contract DoubleLinkedList {
     /**
      * @dev Creates an empty list.
      */
-    constructor() public {
+    constructor() {
         head = 0;
         tail = 0;
         idCounter = 1;

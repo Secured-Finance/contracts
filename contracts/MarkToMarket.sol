@@ -21,11 +21,11 @@ contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Ownable {
      * @notice sets contract deployer as owner of this contract and connects to product address resolver contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) public MixinAddressResolver(_resolver) {}
+    constructor(address _resolver) MixinAddressResolver(_resolver) {}
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {

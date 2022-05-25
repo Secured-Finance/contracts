@@ -41,15 +41,11 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      * @dev Contract constructor function.
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver)
-        public
-        MixinAddressResolver(_resolver)
-        Ownable()
-    {}
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -146,7 +142,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      */
     function getTermSchedule(uint256 _numDays, uint8 _frequency)
         public
-        view
+        pure
         override
         returns (uint256[] memory)
     {
@@ -173,7 +169,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      */
     function getDfFrac(uint256 _numDays)
         public
-        view
+        pure
         override
         returns (uint256)
     {
@@ -187,7 +183,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      */
     function getNumPayments(uint256 _numDays, uint8 _frequency)
         public
-        view
+        pure
         override
         returns (uint256)
     {

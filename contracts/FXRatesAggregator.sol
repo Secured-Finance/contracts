@@ -38,7 +38,7 @@ contract FXRatesAggregator is ProtocolTypes {
         _;
     }
 
-    constructor() public {
+    constructor() {
         owner = msg.sender;
     }
 

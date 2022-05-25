@@ -54,7 +54,6 @@ contract SettlementEngine is
      * @notice sets contract deployer as owner of this contract
      */
     constructor(address _resolver, address _WETH9)
-        public
         MixinAddressResolver(_resolver)
         SafeTransfer(_WETH9)
         Ownable()
@@ -62,7 +61,7 @@ contract SettlementEngine is
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -343,7 +342,7 @@ contract SettlementEngine is
      * @dev Get the version of the underlying contract
      * @return implementation version
      */
-    function getVersion() public view override returns (uint16) {
+    function getVersion() public pure override returns (uint16) {
         return VERSION;
     }
 }

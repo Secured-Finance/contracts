@@ -24,7 +24,7 @@ contract LendingMarketControllerMock is
     /**
      * @dev Lending Market Controller Constructor.
      */
-    constructor() public Ownable() {}
+    constructor() Ownable() {}
 
     /**
      * @dev Triggers to get borrow rates for selected currency.
@@ -135,6 +135,7 @@ contract LendingMarketControllerMock is
 
     function deployLendingMarket(bytes32 _ccy, uint256 _term)
         public
+        pure
         override
         returns (address)
     {
@@ -145,7 +146,7 @@ contract LendingMarketControllerMock is
 
     function lendingMarkets(bytes32 _ccy, uint256 _term)
         public
-        view
+        pure
         override
         returns (address)
     {
@@ -154,13 +155,19 @@ contract LendingMarketControllerMock is
         return address(0);
     }
 
-    function pauseLendingMarkets(bytes32 _ccy) public override returns (bool) {
+    function pauseLendingMarkets(bytes32 _ccy)
+        public
+        pure
+        override
+        returns (bool)
+    {
         _ccy;
         return true;
     }
 
     function unpauseLendingMarkets(bytes32 _ccy)
         public
+        pure
         override
         returns (bool)
     {
@@ -170,6 +177,7 @@ contract LendingMarketControllerMock is
 
     function placeBulkOrders(Order[] memory orders)
         public
+        pure
         override
         returns (bool)
     {

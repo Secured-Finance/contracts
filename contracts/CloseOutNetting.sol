@@ -49,15 +49,11 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
      * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver)
-        public
-        MixinAddressResolver(_resolver)
-        Ownable()
-    {}
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
     function requiredContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {
@@ -67,7 +63,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
 
     function acceptedContracts()
         public
-        view
+        pure
         override
         returns (bytes32[] memory contracts)
     {

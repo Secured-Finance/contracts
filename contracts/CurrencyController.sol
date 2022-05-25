@@ -54,7 +54,7 @@ contract CurrencyController is ICurrencyController {
     /**
      * @dev Lending Market Controller Constructor.
      */
-    constructor() public {
+    constructor() {
         owner = msg.sender;
     }
 

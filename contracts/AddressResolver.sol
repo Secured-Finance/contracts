@@ -7,7 +7,7 @@ import "./interfaces/IAddressResolver.sol";
 contract AddressResolver is IAddressResolver, Ownable {
     mapping(bytes32 => address) public addresses;
 
-    constructor() public Ownable() {}
+    constructor() Ownable() {}
 
     function importAddresses(
         bytes32[] calldata _names,
