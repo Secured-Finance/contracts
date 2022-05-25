@@ -44,7 +44,9 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
         days = await timeLibrary._getDaysInMonth('2016', '12');
         days
           .toString()
-          .should.be.equal(date.daysInMonth('2016-12', 'YYYY-MM').toString());
+          .should.be.equal(
+            moment('2016-12', 'YYYY-MM').daysInMonth().toString(),
+          );
       });
 
       it('getDayOfWeek', async () => {
