@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ProtocolTypes.sol";
-import "./interfaces/ILendingMarketController.sol";
 import "./interfaces/IProductWithOneLeg.sol";
 import "./libraries/DealId.sol";
 import "./libraries/DiscountFactor.sol";
@@ -63,7 +62,6 @@ contract LoanV2 is
     bool public isTransferable;
     uint256 public last_loan_id = 0;
 
-    ILendingMarketController lendingMarketController;
     mapping(bytes32 => mapping(uint256 => address)) public lendingMarkets;
 
     /**
@@ -102,20 +100,11 @@ contract LoanV2 is
         override
         returns (bytes32[] memory contracts)
     {
-        contracts = new bytes32[](3);
+        contracts = new bytes32[](4);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
-        contracts[1] = CONTRACT_PAYMENT_AGGREGATOR;
-        contracts[2] = CONTRACT_TERM_STRUCTURE;
-    }
-
-    /**
-     * @dev Triggers to link with LendingMarketController contract.
-     * @param addr LendingMarketController contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setLendingMarketControllerAddr(address addr) public onlyOwner {
-        lendingMarketController = ILendingMarketController(addr);
+        contracts[1] = CONTRACT_LENDING_MARKET_CONTROLLER;
+        contracts[2] = CONTRACT_PAYMENT_AGGREGATOR;
+        contracts[3] = CONTRACT_TERM_STRUCTURE;
     }
 
     /**
@@ -575,8 +564,10 @@ contract LoanV2 is
         LoanDeal memory deal = loans[loanId];
         if (!isSettled[loanId]) return deal.notional;
 
-        (uint256[] memory dfs, uint256[] memory terms) = lendingMarketController
-            .getDiscountFactorsForCcy(deal.ccy);
+        (
+            uint256[] memory dfs,
+            uint256[] memory terms
+        ) = lendingMarketController().getDiscountFactorsForCcy(deal.ccy);
 
         (
             uint256[] memory payments,

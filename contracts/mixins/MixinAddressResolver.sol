@@ -7,6 +7,7 @@ import "../interfaces/ICollateralAggregatorV2.sol";
 import "../interfaces/ICrosschainAddressResolver.sol";
 import "../interfaces/ICurrencyController.sol";
 import "../interfaces/IMarkToMarket.sol";
+import "../interfaces/ILendingMarketController.sol";
 import "../interfaces/ILiquidations.sol";
 import "../interfaces/ILoanV2.sol";
 import "../interfaces/IPaymentAggregator.sol";
@@ -28,6 +29,8 @@ contract MixinAddressResolver {
         "CrosschainAddressResolver";
     bytes32 public constant CONTRACT_CURRENCY_CONTROLLER = "CurrencyController";
     bytes32 public constant CONTRACT_MARK_TO_MARKET = "MarkToMarket";
+    bytes32 public constant CONTRACT_LENDING_MARKET_CONTROLLER =
+        "LendingMarketController";
     bytes32 public constant CONTRACT_LIQUIDATIONS = "Liquidations";
     bytes32 public constant CONTRACT_LOAN = "Loan";
     bytes32 public constant CONTRACT_PAYMENT_AGGREGATOR = "PaymentAggregator";
@@ -109,7 +112,12 @@ contract MixinAddressResolver {
         return _foundAddress;
     }
 
-    function isAcceptedContract(address account) internal view returns (bool) {
+    function isAcceptedContract(address account)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
         bytes32[] memory contractNames = acceptedContracts();
         for (uint256 i = 0; i < contractNames.length; i++) {
             if (account == getAddress(contractNames[i])) {
@@ -150,6 +158,17 @@ contract MixinAddressResolver {
 
     function markToMarket() internal view returns (IMarkToMarket) {
         return IMarkToMarket(getAddress(CONTRACT_MARK_TO_MARKET));
+    }
+
+    function lendingMarketController()
+        internal
+        view
+        returns (ILendingMarketController)
+    {
+        return
+            ILendingMarketController(
+                getAddress(CONTRACT_LENDING_MARKET_CONTROLLER)
+            );
     }
 
     function liquidations() internal view returns (ILiquidations) {

@@ -2,10 +2,12 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
+import "../ProtocolTypes.sol";
+
 struct Order {
     bytes32 ccy;
     uint256 term;
-    uint8 side;
+    ProtocolTypes.Side side;
     uint256 amount;
     uint256 rate;
 }
@@ -18,7 +20,6 @@ interface ILendingMarketController {
     );
     event LendingMarketsPaused(bytes32 ccy);
     event LendingMarketsUnpaused(bytes32 ccy);
-    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
 
     function deployLendingMarket(bytes32 _ccy, uint256 _term)
         external
@@ -45,8 +46,6 @@ interface ILendingMarketController {
         returns (uint256[] memory rates);
 
     function lendingMarkets(bytes32, uint256) external view returns (address);
-
-    function owner() external view returns (address);
 
     function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
 

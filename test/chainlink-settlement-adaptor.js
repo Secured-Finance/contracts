@@ -47,7 +47,7 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
       chainlinkSettlementAdapter.address,
     );
 
-    // Settings for AddressResolver
+    // Set up for AddressResolver
     await addressResolver.importAddresses(
       [toBytes32('SettlementEngine')],
       [externalAdapterCaller.address],

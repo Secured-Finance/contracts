@@ -43,7 +43,7 @@ contract('LendingMarketController', async (accounts) => {
       settlementEngine,
       lendingMarketController,
       loan,
-    } = await new Deployment().execute());
+    } = await deployment.execute());
 
     filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, filRate);
     let tx = await currencyController.supportCurrency(
@@ -64,11 +64,6 @@ contract('LendingMarketController', async (accounts) => {
     );
 
     orderList = orders;
-
-    await lendingMarketController.setCurrencyController(
-      currencyController.address,
-    );
-    await lendingMarketController.setTermStructure(termStructure.address);
 
     await productAddressResolver.registerProduct(
       loanPrefix,
@@ -103,15 +98,13 @@ contract('LendingMarketController', async (accounts) => {
           termDays[i],
         );
         const receipt = await tx.wait();
-        lendingMarkets.push(receipt.events[0].args.marketAddr);
+        const { marketAddr } = receipt.events.find(
+          ({ event }) => event === 'LendingMarketCreated',
+        ).args;
 
-        let lendingMarket = await LendingMarket.at(
-          receipt.events[0].args.marketAddr,
-        );
-        await lendingMarket.setCollateral(collateralAggregator.address, {
-          from: owner,
-        });
-        await lendingMarket.setLoan(loan.address, { from: owner });
+        lendingMarkets.push(marketAddr);
+        let lendingMarket = await LendingMarket.at(marketAddr);
+
         await collateralAggregator.addCollateralUser(lendingMarket.address, {
           from: owner,
         });

@@ -3,38 +3,23 @@ pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/AddressPacking.sol";
-import "./interfaces/IProductAddressResolver.sol";
-import "./interfaces/ICollateralAggregatorV2.sol";
-import "./interfaces/ICurrencyController.sol";
 import "./interfaces/IProduct.sol";
 import "./interfaces/ILiquidations.sol";
+import "./mixins/MixinAddressResolver.sol";
 
-contract Liquidations is ILiquidations {
+contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     uint256 public override offset;
-    address public owner;
     EnumerableSet.AddressSet private liquidationAgents;
     EnumerableSet.AddressSet private linkedContracts;
 
     // Mapping structure for storing liquidation queue to bilateral position
     mapping(bytes32 => EnumerableSet.Bytes32Set) private liquidationQueue;
-
-    // Contracts
-    IProductAddressResolver productResolver;
-    ICollateralAggregator collateralAggregator;
-    ICurrencyController currencyController;
-
-    /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
 
     /**
      * @dev Modifier to make a function callable only by liquidation agent.
@@ -45,53 +30,41 @@ contract Liquidations is ILiquidations {
     }
 
     /**
-     * @dev Modifier to make a function callable only by liquidation agent.
-     */
-    modifier onlyLinkedContract() {
-        require(linkedContracts.contains(msg.sender), "INVALID ACCESS");
-        _;
-    }
-
-    /**
      * @dev Contract constructor function.
      *
      * @notice sets contract deployer as owner of this contract,
      * liquidation agent and liquidation offset
      */
-    constructor(address _liquidationAgent, uint256 _offset) public {
-        owner = msg.sender;
-        liquidationAgents.add(_liquidationAgent);
+    constructor(address _resolver, uint256 _offset)
+        public
+        MixinAddressResolver(_resolver)
+        Ownable()
+    {
+        liquidationAgents.add(msg.sender);
         offset = _offset;
     }
 
-    /**
-     * @dev Triggers to link with ProductAddressResolver contract.
-     * @param addr ProductAddressResolver contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setProductAddressResolver(address addr) public onlyOwner {
-        productResolver = IProductAddressResolver(addr);
+    function requiredContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](4);
+        contracts[0] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[1] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[2] = CONTRACT_CURRENCY_CONTROLLER;
+        contracts[3] = CONTRACT_LOAN;
     }
 
-    /**
-     * @dev Triggers to link with CollateralAggregator contract.
-     * @param addr CollateralAggregator contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setCollateralAggregator(address addr) public onlyOwner {
-        collateralAggregator = ICollateralAggregator(addr);
-    }
-
-    /**
-     * @dev Triggers to link with CurrencyController contract.
-     * @param addr CurrencyController contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setCurrencyController(address addr) public onlyOwner {
-        currencyController = ICurrencyController(addr);
+    function acceptedContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_LOAN;
     }
 
     /**
@@ -106,15 +79,6 @@ contract Liquidations is ILiquidations {
         require(_offset > 0, "INCORRECT_OFFSET");
         emit OffsetUpdated(offset, _offset);
         offset = _offset;
-    }
-
-    /**
-     * @dev Triggers to link liquidation contract with smart contract with specified `_addr`.
-     * @param _addr Liquidation agent address
-     */
-    function linkContract(address _addr) public override onlyOwner {
-        linkedContracts.add(_addr);
-        emit LinkedContract(_addr);
     }
 
     /**
@@ -143,21 +107,11 @@ contract Liquidations is ILiquidations {
         emit LiquidationAgentRemoved(_liquidationAgent);
     }
 
-    /**
-     * @dev Updates owner of the liquidation contract.
-     * @param _owner Address of new owner
-     */
-    function updateOwner(address _owner) public onlyOwner {
-        require(_owner != address(0), "new owner is the zero address");
-        emit OwnerUpdated(owner, _owner);
-        owner = _owner;
-    }
-
     function addDealToLiquidationQueue(
         address party0,
         address party1,
         bytes32 dealId
-    ) public override onlyLinkedContract {
+    ) public override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
         EnumerableSet.Bytes32Set storage set = liquidationQueue[packedAddrs];
 
@@ -171,7 +125,7 @@ contract Liquidations is ILiquidations {
         address party0,
         address party1,
         bytes32 dealId
-    ) public override onlyLinkedContract {
+    ) public override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
         EnumerableSet.Bytes32Set storage set = liquidationQueue[packedAddrs];
 
@@ -191,7 +145,7 @@ contract Liquidations is ILiquidations {
         override
         onlyLiquidationAgent
     {
-        (bool coverage0, bool coverage1) = collateralAggregator.isCovered(
+        (bool coverage0, bool coverage1) = collateralAggregator().isCovered(
             party0,
             party1,
             "",
@@ -231,7 +185,7 @@ contract Liquidations is ILiquidations {
         bytes32[] memory dealIds
     ) public override onlyLiquidationAgent {
         require(dealIds.length < offset, "TOO MUCH DEALS");
-        (bool coverage0, bool coverage1) = collateralAggregator.isCovered(
+        (bool coverage0, bool coverage1) = collateralAggregator().isCovered(
             party0,
             party1,
             "",
@@ -264,7 +218,7 @@ contract Liquidations is ILiquidations {
 
         for (uint256 i = 0; i < dealIds.length; i++) {
             vars.dealId = dealIds[i];
-            vars.product = productResolver.getProductContractByDealId(
+            vars.product = productAddressResolver().getProductContractByDealId(
                 vars.dealId
             );
 
@@ -276,7 +230,7 @@ contract Liquidations is ILiquidations {
                 vars.dealId
             );
             vars.exchangeRate = uint256(
-                currencyController.getLastETHPrice(vars.currency)
+                currencyController().getLastETHPrice(vars.currency)
             );
 
             vars.dealPV0 = vars.dealPV0.mul(vars.exchangeRate).div(1e18);
@@ -293,7 +247,7 @@ contract Liquidations is ILiquidations {
         }
 
         if (vars.totalLiquidationPVInETH0 > 0) {
-            collateralAggregator.liquidate(
+            collateralAggregator().liquidate(
                 party0,
                 party1,
                 vars.totalLiquidationPVInETH0
@@ -301,7 +255,7 @@ contract Liquidations is ILiquidations {
         }
 
         if (vars.totalLiquidationPVInETH1 > 0) {
-            collateralAggregator.liquidate(
+            collateralAggregator().liquidate(
                 party1,
                 party0,
                 vars.totalLiquidationPVInETH1

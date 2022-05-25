@@ -1,6 +1,5 @@
 const LendingMarket = artifacts.require('LendingMarket');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const Liquidations = artifacts.require('Liquidations');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ChainlinkSettlementAdapterMock = artifacts.require(
@@ -58,6 +57,7 @@ const SETTLEMENT_LOCK = toBN('2000');
 contract('Integration test', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
+  let addressResolver;
   let collateralAggregator;
   let loan;
   let lendingMarketController;
@@ -102,32 +102,20 @@ contract('Integration test', async (accounts) => {
     ({
       quickSortLibrary,
       discountFactorLibrary,
+      addressResolver,
       productAddressResolver,
       paymentAggregator,
       collateralAggregator,
       currencyController,
-      crosschainAddressResolver,
       termStructure,
       lendingMarketController,
       loan,
       wETHToken,
       settlementEngine,
+      liquidations,
     } = await new Deployment().execute());
 
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
-    liquidations = await Liquidations.new(owner, 10);
-
-    await liquidations.setCollateralAggregator(collateralAggregator.address, {
-      from: owner,
-    });
-    await liquidations.setProductAddressResolver(
-      productAddressResolver.address,
-      {
-        from: owner,
-      },
-    );
-    await liquidations.linkContract(loan.address, { from: owner });
-    await collateralAggregator.setLiquidationEngine(liquidations.address);
 
     filToETHPriceFeed = await MockV3Aggregator.new(
       18,
@@ -181,20 +169,6 @@ contract('Integration test', async (accounts) => {
     tx = await currencyController.updateMinMargin(hexETHString, 2500);
     expectEvent(tx, 'MinMarginUpdated');
 
-    await collateralAggregator.setCurrencyController(
-      currencyController.address,
-      {
-        from: owner,
-      },
-    );
-    await liquidations.setCurrencyController(currencyController.address, {
-      from: owner,
-    });
-
-    await collateralAggregator.setCrosschainAddressResolver(
-      crosschainAddressResolver.address,
-    );
-
     linkToken = await LinkToken.new();
     oracleOperator = await Operator.new(linkToken.address, owner);
     settlementAdapter = await ChainlinkSettlementAdapterMock.new(
@@ -235,13 +209,13 @@ contract('Integration test', async (accounts) => {
       toBN('100000000000000000000'),
     );
 
-    const CollateralVault = await ethers.getContractFactory('CollateralVault');
-
-    ethVault = await CollateralVault.deploy(
+    const collateralVaultFactory = await ethers.getContractFactory(
+      'CollateralVault',
+    );
+    ethVault = await collateralVaultFactory.deploy(
+      addressResolver.address,
       hexETHString,
       wETHToken.address,
-      collateralAggregator.address,
-      currencyController.address,
       wETHToken.address,
     );
     await collateralAggregator.linkCollateralVault(ethVault.address);
@@ -280,15 +254,6 @@ contract('Integration test', async (accounts) => {
         days.toString().should.be.equal(sortedTermsSchedules[i][j]);
       });
     }
-
-    await lendingMarketController.setCurrencyController(
-      currencyController.address,
-      {
-        from: owner,
-      },
-    );
-    await lendingMarketController.setTermStructure(termStructure.address);
-    await collateralAggregator.addCollateralUser(loan.address, { from: owner });
   });
 
   describe('Prepare markets and users for lending deals', async () => {
@@ -299,16 +264,14 @@ contract('Integration test', async (accounts) => {
           sortedTermDays[i],
         );
         const receipt = await tx.wait();
-        lendingMarkets.push(receipt.events[0].args.marketAddr);
+        const { marketAddr } = receipt.events.find(
+          ({ event }) => event === 'LendingMarketCreated',
+        ).args;
 
-        let lendingMarket = await LendingMarket.at(
-          receipt.events[0].args.marketAddr,
-        );
-        await lendingMarket.setCollateral(collateralAggregator.address, {
-          from: owner,
-        });
-        await lendingMarket.setLoan(loan.address, { from: owner });
-        await collateralAggregator.addCollateralUser(lendingMarket.address, {
+        lendingMarkets.push(marketAddr);
+        let lendingMarket = await LendingMarket.at(marketAddr);
+
+        await collateralAggregator.linkLendingMarket(lendingMarket.address, {
           from: owner,
         });
         await loan.addLendingMarket(
@@ -328,17 +291,14 @@ contract('Integration test', async (accounts) => {
           sortedTermDays[i],
         );
         const receipt = await tx.wait();
-        btcLendingMarkets.push(receipt.events[0].args.marketAddr);
+        const { marketAddr } = receipt.events.find(
+          ({ event }) => event === 'LendingMarketCreated',
+        ).args;
 
-        let btcLendingMarket = await LendingMarket.at(
-          receipt.events[0].args.marketAddr,
-        );
-        await btcLendingMarket.setCollateral(collateralAggregator.address, {
-          from: owner,
-        });
-        await btcLendingMarket.setLoan(loan.address, { from: owner });
+        btcLendingMarkets.push(marketAddr);
+        let btcLendingMarket = await LendingMarket.at(marketAddr);
 
-        await collateralAggregator.addCollateralUser(btcLendingMarket.address, {
+        await collateralAggregator.linkLendingMarket(btcLendingMarket.address, {
           from: owner,
         });
         await loan.addLendingMarket(
@@ -350,32 +310,6 @@ contract('Integration test', async (accounts) => {
       }
 
       btcLendingMarket = await LendingMarket.at(btcLendingMarkets[5]);
-    });
-
-    it('Check if collateral users linked correctly', async () => {
-      let result;
-
-      for (i = 0; i < sortedTermDays.length; i++) {
-        let result = await collateralAggregator.isCollateralUser(
-          lendingMarkets[i],
-        );
-        result.should.be.equal(true);
-      }
-
-      for (i = 0; i < sortedTermDays.length; i++) {
-        let result = await collateralAggregator.isCollateralUser(
-          btcLendingMarkets[i],
-        );
-        result.should.be.equal(true);
-      }
-
-      result = await collateralAggregator.isCollateralUser(loan.address);
-      result.should.be.equal(true);
-
-      result = await collateralAggregator.isCollateralUser(
-        '0x0000000000000000000000000000000000000001',
-      );
-      result.should.be.equal(false);
     });
 
     it('Register collateral book for Carol with 90 ETH and check Carol collateral book', async () => {

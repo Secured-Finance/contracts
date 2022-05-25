@@ -2,45 +2,29 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ILendingMarketController.sol";
 import "../ProtocolTypes.sol";
 import "../libraries/DiscountFactor.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract LendingMarketControllerMock is
     ILendingMarketController,
-    ProtocolTypes
+    ProtocolTypes,
+    Ownable
 {
     using SafeMath for uint256;
 
-    address public override owner;
     uint256 public override numberOfMarkets = 0;
 
     mapping(bytes32 => mapping(uint256 => uint256)) public lendRates;
     mapping(bytes32 => mapping(uint256 => uint256)) public borrowRates;
     mapping(bytes32 => uint256[]) public supportedTerms;
 
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
     /**
      * @dev Lending Market Controller Constructor.
      */
-    constructor() public {
-        owner = msg.sender;
-    }
-
-    /**
-     * @dev Sets owner of the controller market.
-     * @param _owner Address of new owner
-     */
-    function setOwner(address _owner) public onlyOwner {
-        require(_owner != address(0), "new owner is the zero address");
-        emit OwnerChanged(owner, _owner);
-        owner = _owner;
-    }
+    constructor() public Ownable() {}
 
     /**
      * @dev Triggers to get borrow rates for selected currency.

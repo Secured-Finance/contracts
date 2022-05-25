@@ -3,13 +3,13 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/QuickSort.sol";
 import "./libraries/DiscountFactor.sol";
 import "./LendingMarket.sol";
 import "./interfaces/ILendingMarketController.sol";
 import "./interfaces/ILendingMarket.sol";
-import "./interfaces/ICurrencyController.sol";
-import "./interfaces/ITermStructure.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @dev Lending Market Controller contract is managing separated lending
@@ -18,14 +18,15 @@ import "./interfaces/ITermStructure.sol";
  *
  * It will store lending market addresses by ccy and term in lendingMarkets mapping.
  */
-contract LendingMarketController is ILendingMarketController {
+contract LendingMarketController is
+    ILendingMarketController,
+    MixinAddressResolver,
+    Ownable
+{
     using SafeMath for uint256;
     using QuickSort for uint256[];
 
     bytes4 constant prefix = 0x21aaa47b;
-    address public override owner;
-    ICurrencyController public currencyController;
-    ITermStructure public termStructure;
     uint256 public override numberOfMarkets = 0;
 
     mapping(bytes32 => mapping(uint256 => address))
@@ -33,46 +34,26 @@ contract LendingMarketController is ILendingMarketController {
         override lendingMarkets;
     mapping(bytes32 => uint256[]) public supportedTerms;
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "INVALID_ACCESS");
-        _;
-    }
-
     /**
      * @dev Lending Market Controller Constructor.
      */
-    constructor() public {
-        owner = msg.sender;
+    constructor(address _resolver)
+        public
+        MixinAddressResolver(_resolver)
+        Ownable()
+    {
+        // owner = msg.sender;
     }
 
-    /**
-     * @dev Sets owner of the controller market.
-     * @param _owner Address of new owner
-     */
-    function setOwner(address _owner) public onlyOwner {
-        require(_owner != address(0), "new owner is the zero address");
-        emit OwnerChanged(owner, _owner);
-        owner = _owner;
-    }
-
-    /**
-     * @dev Triggers to link with Currency Controller contract.
-     * @param addr CurrencyController smart contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setCurrencyController(address addr) public onlyOwner {
-        currencyController = ICurrencyController(addr);
-    }
-
-    /**
-     * @dev Triggers to link with TermStructure contract.
-     * @param addr TermStructure smart contract address
-     *
-     * @notice Executed only by contract owner
-     */
-    function setTermStructure(address addr) public onlyOwner {
-        termStructure = ITermStructure(addr);
+    function requiredContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](2);
+        contracts[0] = CONTRACT_CURRENCY_CONTROLLER;
+        contracts[1] = CONTRACT_TERM_STRUCTURE;
     }
 
     // =========== YIELD CURVE FUNCTIONS ===========
@@ -179,16 +160,16 @@ contract LendingMarketController is ILendingMarketController {
         onlyOwner
         returns (address market)
     {
-        require(currencyController.isSupportedCcy(_ccy), "NON SUPPORTED CCY");
+        require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
         require(
-            termStructure.isSupportedTerm(_term, prefix, _ccy),
+            termStructure().isSupportedTerm(_term, prefix, _ccy),
             "NON SUPPORTED TERM"
         );
         require(
             lendingMarkets[_ccy][_term] == address(0),
             "Couldn't rewrite existing market"
         );
-        market = address(new LendingMarket(_ccy, _term, address(this)));
+        market = address(new LendingMarket(address(resolver), _ccy, _term));
         lendingMarkets[_ccy][_term] = market;
 
         supportedTerms[_ccy].push(_term);
@@ -261,7 +242,7 @@ contract LendingMarketController is ILendingMarketController {
             ILendingMarket market = ILendingMarket(
                 lendingMarkets[order.ccy][order.term]
             );
-            market.order(uint8(order.side), order.amount, order.rate);
+            market.order(order.side, order.amount, order.rate);
         }
     }
 }

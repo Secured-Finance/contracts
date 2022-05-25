@@ -1,10 +1,11 @@
 const AddressResolver = artifacts.require('AddressResolver');
 const CloseOutNetting = artifacts.require('CloseOutNetting');
 const CollateralAggregatorV2 = artifacts.require('CollateralAggregatorV2');
-const CurrencyController = artifacts.require('CurrencyController');
 const CrosschainAddressResolver = artifacts.require(
   'CrosschainAddressResolver',
 );
+const CurrencyController = artifacts.require('CurrencyController');
+const Liquidations = artifacts.require('Liquidations');
 const MarkToMarket = artifacts.require('MarkToMarket');
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const WETH9Mock = artifacts.require('WETH9Mock');
@@ -39,6 +40,28 @@ const deployContracts = async (mockCallbacks) => {
   // Deploy contracts
   const addressResolver =
     instances['AddressResolver'] || (await AddressResolver.new());
+  const closeOutNetting = await CloseOutNetting.new(addressResolver.address);
+  const collateralAggregator =
+    instances['CollateralAggregator'] ||
+    (await CollateralAggregatorV2.new(addressResolver.address));
+
+  const crosschainAddressResolver = await CrosschainAddressResolver.new(
+    addressResolver.address,
+  );
+  const currencyController =
+    instances['CurrencyController'] || (await CurrencyController.new());
+  const liquidations =
+    instances['Liquidations'] ||
+    (await Liquidations.new(addressResolver.address, 10));
+  const markToMarket =
+    instances['MarkToMarket'] ||
+    (await MarkToMarket.new(addressResolver.address));
+  const paymentAggregator =
+    instances['PaymentAggregator'] ||
+    (await PaymentAggregator.new(addressResolver.address));
+
+  const wETHToken = await WETH9Mock.new();
+
   const productAddressResolver =
     instances['ProductAddressResolver'] ||
     (await ethers
@@ -48,20 +71,7 @@ const deployContracts = async (mockCallbacks) => {
         },
       })
       .then((factory) => factory.deploy()));
-  const markToMarket =
-    instances['MarkToMarket'] ||
-    (await MarkToMarket.new(productAddressResolver.address));
-  const paymentAggregator =
-    instances['PaymentAggregator'] ||
-    (await PaymentAggregator.new(addressResolver.address));
-  const closeOutNetting = await CloseOutNetting.new(addressResolver.address);
-  const collateralAggregator =
-    instances['CollateralAggregator'] || (await CollateralAggregatorV2.new());
-  const currencyController =
-    instances['CurrencyController'] || (await CurrencyController.new());
-  const crosschainAddressResolver = await CrosschainAddressResolver.new(
-    collateralAggregator.address,
-  );
+
   const termStructure =
     instances['TermStructure'] ||
     (await ethers
@@ -82,14 +92,14 @@ const deployContracts = async (mockCallbacks) => {
       })
       .then((factory) => factory.deploy(addressResolver.address)));
 
-  const wETHToken = await WETH9Mock.new();
-  const settlementEngine = await ethers
-    .getContractFactory('SettlementEngine')
-    .then((factory) =>
-      factory.deploy(addressResolver.address, wETHToken.address),
-    );
+  const settlementEngine =
+    instances['SettlementEngine'] ||
+    (await ethers
+      .getContractFactory('SettlementEngine')
+      .then((factory) =>
+        factory.deploy(addressResolver.address, wETHToken.address),
+      ));
 
-  // Settings for Loan
   const lendingMarketController =
     instances['LendingMarketController'] ||
     (await ethers
@@ -99,14 +109,9 @@ const deployContracts = async (mockCallbacks) => {
           DiscountFactor: discountFactorLibrary.address,
         },
       })
-      .then((factory) => factory.deploy()));
+      .then((factory) => factory.deploy(addressResolver.address)));
 
-  loan.setLendingMarketControllerAddr &&
-    (await loan.setLendingMarketControllerAddr(
-      lendingMarketController.address,
-    ));
-
-  // Settings for AddressResolver
+  // Set up for AddressResolver
   await addressResolver.importAddresses(
     [
       'CloseOutNetting',
@@ -114,6 +119,8 @@ const deployContracts = async (mockCallbacks) => {
       'CrosschainAddressResolver',
       'CurrencyController',
       'MarkToMarket',
+      'LendingMarketController',
+      'Liquidations',
       'Loan',
       'PaymentAggregator',
       'ProductAddressResolver',
@@ -126,6 +133,8 @@ const deployContracts = async (mockCallbacks) => {
       crosschainAddressResolver.address,
       currencyController.address,
       markToMarket.address,
+      lendingMarketController.address,
+      liquidations.address,
       loan.address,
       paymentAggregator.address,
       productAddressResolver.address,
@@ -134,29 +143,39 @@ const deployContracts = async (mockCallbacks) => {
     ],
   );
 
-  paymentAggregator.buildCache && (await paymentAggregator.buildCache());
   closeOutNetting.buildCache && (await closeOutNetting.buildCache());
+  collateralAggregator.buildCache && (await collateralAggregator.buildCache());
+  crosschainAddressResolver.buildCache &&
+    (await crosschainAddressResolver.buildCache());
+  lendingMarketController.buildCache &&
+    (await lendingMarketController.buildCache());
+  liquidations.buildCache && (await liquidations.buildCache());
+  loan.buildCache && (await loan.buildCache());
+  markToMarket.buildCache && (await markToMarket.buildCache());
+  paymentAggregator.buildCache && (await paymentAggregator.buildCache());
   settlementEngine.buildCache && (await settlementEngine.buildCache());
   termStructure.buildCache && (await termStructure.buildCache());
-  loan.buildCache && (await loan.buildCache());
 
   return {
+    // libraries
     dealIdLibrary,
     quickSortLibrary,
     discountFactorLibrary,
-    productAddressResolver,
+    // contracts
     addressResolver,
-    markToMarket,
-    paymentAggregator,
     closeOutNetting,
     collateralAggregator,
-    currencyController,
     crosschainAddressResolver,
-    termStructure,
+    currencyController,
     lendingMarketController,
+    liquidations,
     loan,
-    wETHToken,
+    markToMarket,
+    productAddressResolver,
+    paymentAggregator,
     settlementEngine,
+    termStructure,
+    wETHToken,
   };
 };
 

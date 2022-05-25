@@ -2,44 +2,39 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-struct MarketOrder {
-    uint8 side;
-    uint256 amount;
-    uint256 rate;
-    uint256 deadline;
-    address maker;
-}
+import "../ProtocolTypes.sol";
 
 interface ILendingMarket {
+    struct MarketOrder {
+        ProtocolTypes.Side side;
+        uint256 amount;
+        uint256 rate; // in basis points
+        address maker;
+    }
+
     event CancelOrder(
         uint256 orderId,
         address indexed maker,
-        uint8 side,
+        ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     );
     event MakeOrder(
         uint256 orderId,
         address indexed maker,
-        uint8 side,
+        ProtocolTypes.Side side,
         bytes32 ccy,
-        uint8 term,
+        uint256 term,
         uint256 amount,
         uint256 rate
     );
-    event Paused(address account);
     event TakeOrder(
         uint256 orderId,
         address indexed taker,
-        uint8 side,
+        ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     );
-    event Unpaused(address account);
-
-    function MarketCcy() external view returns (bytes32);
-
-    function MarketTerm() external view returns (uint8);
 
     function cancelOrder(uint256 orderId) external returns (bool success);
 
@@ -67,39 +62,19 @@ interface ILendingMarket {
             uint256
         );
 
-    function last_order_id() external view returns (uint256);
-
-    function lendingController() external view returns (address);
-
     function matchOrders(
-        uint8 side,
+        ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     ) external view returns (uint256);
 
     function order(
-        uint8 side,
+        ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     ) external returns (bool);
 
-    function orders(uint256)
-        external
-        view
-        returns (
-            uint8 side,
-            uint256 amount,
-            uint256 rate,
-            address maker
-        );
-
     function pauseMarket() external;
-
-    function paused() external view returns (bool);
-
-    function setCollateral(address colAddr) external;
-
-    function setLoan(address addr) external;
 
     function unpauseMarket() external;
 }

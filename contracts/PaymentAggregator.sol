@@ -53,6 +53,7 @@ contract PaymentAggregator is
      * @dev Contract constructor function.
      *
      * @notice sets contract deployer as owner of this contract
+     * @param _resolver The address of the Address Resolver contract
      */
     constructor(address _resolver)
         public

@@ -2,9 +2,7 @@ const CollateralAggregatorCallerMock = artifacts.require(
   'CollateralAggregatorCallerMock',
 );
 const ERC20Mock = artifacts.require('ERC20Mock');
-const WETH9Mock = artifacts.require('WETH9Mock');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const Liquidations = artifacts.require('Liquidations');
 const LoanCallerMock = artifacts.require('LoanCallerMock');
 
 const { checkTokenBalances } = require('../test-utils').balances;
@@ -29,6 +27,7 @@ should();
 contract('CollateralAggregatorV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
+  let addressResolver;
   let collateralAggregator;
   let collateralCaller;
   let filVault;
@@ -81,6 +80,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
     'deploy CollateralVault, CollateralAggregator, CurrencyController, price feeds and ERC20 mock contracts',
     async () => {
       ({
+        addressResolver,
         discountFactorLibrary,
         productAddressResolver,
         paymentAggregator,
@@ -88,6 +88,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
         termStructure,
         currencyController,
         loan,
+        liquidations,
+        wETHToken,
       } = await new Deployment().execute());
 
       filToETHPriceFeed = await MockV3Aggregator.new(
@@ -146,54 +148,29 @@ contract('CollateralAggregatorV2', async (accounts) => {
         alice_tFIL_balance,
       );
 
-      wETHToken = await WETH9Mock.new();
-
       collateralCaller = await CollateralAggregatorCallerMock.new(
         collateralAggregator.address,
       );
-      await collateralAggregator.setCurrencyController(
-        currencyController.address,
-      );
-      await collateralAggregator.addCollateralUser(collateralCaller.address);
+      await collateralAggregator.linkLendingMarket(collateralCaller.address);
 
-      liquidations = await Liquidations.new(owner, 10);
-      await liquidations.setCollateralAggregator(collateralAggregator.address);
-      await liquidations.setProductAddressResolver(
-        productAddressResolver.address,
-      );
-      await collateralAggregator.setLiquidationEngine(collateralCaller.address);
-
-      const crosschainResolverFactory = await ethers.getContractFactory(
-        'CrosschainAddressResolver',
-      );
-      crosschainResolver = await crosschainResolverFactory.deploy(
-        collateralAggregator.address,
-      );
-      await crosschainResolver.deployed();
-      await collateralAggregator.setCrosschainAddressResolver(
-        crosschainResolver.address,
-      );
-
-      const CollateralVault = await ethers.getContractFactory(
+      const collateralVaultFactory = await ethers.getContractFactory(
         'CollateralVault',
       );
 
-      filVault = await CollateralVault.deploy(
+      filVault = await collateralVaultFactory.deploy(
+        addressResolver.address,
         hexFILString,
         tFILToken.address,
-        collateralAggregator.address,
-        currencyController.address,
         wETHToken.address,
       );
       await collateralAggregator.linkCollateralVault(filVault.address);
 
       console.log('filVault is ' + filVault.address);
 
-      ethVault = await CollateralVault.deploy(
+      ethVault = await collateralVaultFactory.deploy(
+        addressResolver.address,
         hexETHString,
         wETHToken.address,
-        collateralAggregator.address,
-        currencyController.address,
         wETHToken.address,
       );
       await collateralAggregator.linkCollateralVault(ethVault.address);
@@ -217,8 +194,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
       await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
-      await collateralAggregator.addCollateralUser(loan.address);
-      await liquidations.linkContract(loan.address);
 
       await productAddressResolver.registerProduct(
         loanPrefix,
@@ -242,18 +217,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
   describe('Test the execution of management functions', async () => {
     it('Check that contracts linked correctly to CollateralAggregator', async () => {
-      let status = await collateralAggregator.isCollateralUser(
-        collateralCaller.address,
-      );
-      status.should.be.equal(true);
-
-      status = await collateralAggregator.isCollateralUser(loan.address);
-      status.should.be.equal(true);
-
-      status = await collateralAggregator.isCollateralUser(zeroAddress);
-      status.should.be.equal(false);
-
-      status = await collateralAggregator.isCollateralVault(zeroAddress);
+      let status = await collateralAggregator.isCollateralVault(zeroAddress);
       status.should.be.equal(false);
 
       status = await collateralAggregator.isCollateralVault(filVault.address);
@@ -266,7 +230,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
     it('Try to trigger any changes, expect revert by different modifiers', async () => {
       await expectRevert(
         collateralAggregator.linkCollateralVault(zeroAddress, { from: alice }),
-        'INVALID_ACCESS',
+        'Ownable: caller is not the owner',
       );
 
       await expectRevert(
@@ -275,15 +239,10 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
 
       await expectRevert(
-        collateralAggregator.removeCollateralUser(loan.address, { from: bob }),
-        'INVALID_ACCESS',
-      );
-
-      await expectRevert(
         collateralAggregator.removeCollateralVault(ethVault.address, {
           from: bob,
         }),
-        'INVALID_ACCESS',
+        'Ownable: caller is not the owner',
       );
 
       await expectRevert(
@@ -297,7 +256,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         collateralAggregator.updateMainParameters(12500, 10500, 10000, {
           from: alice,
         }),
-        'INVALID_ACCESS',
+        'Ownable: caller is not the owner',
       );
 
       await expectRevert(

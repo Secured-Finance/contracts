@@ -18,6 +18,8 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         uint256 withdraw1;
     }
 
+    constructor(address _resolver) public CollateralAggregatorV2(_resolver) {}
+
     function getMaxCollateralBookWidthdraw(address user)
         public
         view

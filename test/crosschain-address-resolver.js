@@ -1,18 +1,30 @@
+const AddressResolver = artifacts.require('AddressResolver');
+
 const { should } = require('chai');
 const { ethers } = require('hardhat');
+const bytes32 = require('bytes32');
 
 should();
 
 contract('CrossChainAddressResolver test', async (accounts) => {
   let crosschainResolver;
-  const [owner, alice, bob, carol] = accounts;
+  const [owner] = accounts;
 
   before('deploy CrossChainAddressResolver', async () => {
+    const addressResolver = await AddressResolver.new();
     const crosschainResolverFactory = await ethers.getContractFactory(
       'CrosschainAddressResolver',
     );
-    crosschainResolver = await crosschainResolverFactory.deploy(owner);
-    await crosschainResolver.deployed();
+    crosschainResolver = await crosschainResolverFactory.deploy(
+      addressResolver.address,
+    );
+
+    // Set up for AddressResolver
+    await addressResolver.importAddresses(
+      ['CollateralAggregator'].map((input) => bytes32({ input })),
+      [owner],
+    );
+    await crosschainResolver.buildCache();
   });
 
   describe('Test cross chain address registration', () => {

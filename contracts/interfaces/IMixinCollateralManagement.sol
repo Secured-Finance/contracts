@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-interface ICollateralManagement {
-    event CollateralUserAdded(address indexed user);
-    event CollateralUserRemoved(address indexed user);
+interface IMixinCollateralManagement {
+    event LendingMarketAdded(address indexed lendingMarket);
+    event LendingMarketRemoved(address indexed lendingMarket);
 
     event CollateralVaultLinked(
         address indexed vault,
@@ -27,8 +27,6 @@ interface ICollateralManagement {
     event MarginCallThresholdUpdated(uint256 previousRatio, uint256 ratio);
     event MinCollateralRatioUpdated(uint256 previousRatio, uint256 price);
 
-    function owner() external view returns (address);
-
     function AUTOLQLEVEL() external view returns (uint256);
 
     function LQLEVEL() external view returns (uint256);
@@ -37,17 +35,16 @@ interface ICollateralManagement {
 
     function MIN_COLLATERAL_RATIO() external view returns (uint256);
 
-    function setCurrencyController(address _addr) external;
+    function linkLendingMarket(address _lendingMarket) external returns (bool);
 
-    function setLiquidationEngine(address _addr) external;
+    function removeLendingMarket(address _lendingMarket)
+        external
+        returns (bool);
 
-    function setCrosschainAddressResolver(address _addr) external;
-
-    function addCollateralUser(address _user) external returns (bool);
-
-    function removeCollateralUser(address _user) external returns (bool);
-
-    function isCollateralUser(address _user) external view returns (bool);
+    function isLendingMarket(address _lendingMarket)
+        external
+        view
+        returns (bool);
 
     function linkCollateralVault(address _vault) external returns (bool);
 

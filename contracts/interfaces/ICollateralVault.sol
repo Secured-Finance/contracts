@@ -58,8 +58,6 @@ interface ICollateralVault {
         uint256 _amountETH
     ) external returns (uint256 liquidationLeftETH);
 
-    function owner() external view returns (address);
-
     function rebalanceBetween(
         address _user,
         address _fromParty,

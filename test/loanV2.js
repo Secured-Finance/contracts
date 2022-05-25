@@ -58,6 +58,7 @@ contract('LoanV2', async (accounts) => {
 
   let aliceRequestId;
 
+  let addressResolver;
   let closeOutNetting;
   let collateralAggregator;
   let crosschainAddressResolver;
@@ -111,6 +112,7 @@ contract('LoanV2', async (accounts) => {
       .deploy();
 
     ({
+      addressResolver,
       productAddressResolver,
       paymentAggregator,
       closeOutNetting,
@@ -132,9 +134,7 @@ contract('LoanV2', async (accounts) => {
 
     await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
     await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
-
-    await collateralAggregator.addCollateralUser(loan.address);
-    await collateralAggregator.addCollateralUser(collateralCaller.address);
+    await collateralAggregator.linkLendingMarket(collateralCaller.address);
 
     filToETHPriceFeed = await MockV3Aggregator.new(
       18,
@@ -188,24 +188,14 @@ contract('LoanV2', async (accounts) => {
     tx = await currencyController.updateMinMargin(hexETHString, 2500);
     expectEvent(tx, 'MinMarginUpdated');
 
-    await collateralAggregator.setCurrencyController(
-      currencyController.address,
-      {
-        from: owner,
-      },
+    const collateralVaultFactory = await ethers.getContractFactory(
+      'CollateralVault',
     );
 
-    await collateralAggregator.setCrosschainAddressResolver(
-      crosschainAddressResolver.address,
-    );
-
-    const CollateralVault = await ethers.getContractFactory('CollateralVault');
-
-    ethVault = await CollateralVault.deploy(
+    ethVault = await collateralVaultFactory.deploy(
+      addressResolver.address,
       hexETHString,
       wETHToken.address,
-      collateralAggregator.address,
-      currencyController.address,
       wETHToken.address,
     );
 

@@ -3,11 +3,11 @@ pragma solidity ^0.7.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "./interfaces/ICollateralAggregatorV2.sol";
-import "./interfaces/ICurrencyController.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICollateralVault.sol";
 import "./libraries/SafeTransfer.sol";
 import "./libraries/CollateralPosition.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @title CollateralVault is the main implementation contract for storing and keeping user's collateral
@@ -22,7 +22,12 @@ import "./libraries/CollateralPosition.sol";
  * single or multi-deal liquidation.
  *
  */
-contract CollateralVault is ICollateralVault, SafeTransfer {
+contract CollateralVault is
+    ICollateralVault,
+    MixinAddressResolver,
+    Ownable,
+    SafeTransfer
+{
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using CollateralPosition for CollateralPosition.Position;
@@ -32,11 +37,6 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         uint256 lockedCollateral;
     }
 
-    // Linked contract addresses
-    ICollateralAggregator public collateralAggregator;
-    ICurrencyController public currencyController;
-
-    address public override owner;
     address public override tokenAddress;
     bytes32 public override ccy;
 
@@ -49,19 +49,11 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     /**
      * @dev Modifier to check if user registered on collateral aggregator
      */
-    modifier registeredUserOnly() {
+    modifier onlyRegisteredUser() {
         require(
-            collateralAggregator.checkRegisteredUser(msg.sender),
+            collateralAggregator().checkRegisteredUser(msg.sender),
             "NON_REGISTERED_USER"
         );
-        _;
-    }
-
-    /**
-     * @dev Modifier to check if msg.sender is a collateral aggregator contract
-     */
-    modifier aggregatorOnly() {
-        require(msg.sender == address(collateralAggregator), "INVALID_ACCEESS");
         _;
     }
 
@@ -72,23 +64,41 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
      * with collateral aggregator and currency controller contracts
      */
     constructor(
+        address _resolver,
         bytes32 _ccy,
         address _tokenAddress,
-        address _collateralAggregator,
-        address _currencyController,
         address _WETH9
-    ) public SafeTransfer(_WETH9) {
-        owner = msg.sender;
+    ) public MixinAddressResolver(_resolver) SafeTransfer(_WETH9) {
         tokenAddress = _tokenAddress;
         ccy = _ccy;
 
-        collateralAggregator = ICollateralAggregator(_collateralAggregator);
-        currencyController = ICurrencyController(_currencyController);
+        buildCache();
 
         require(
-            currencyController.isCollateral(_ccy),
+            currencyController().isCollateral(_ccy),
             "COLLATERAL_ASSET_NOT_SUPPORTED"
         );
+    }
+
+    function requiredContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](2);
+        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
+    }
+
+    function acceptedContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
     }
 
     /**
@@ -99,7 +109,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         public
         payable
         override
-        registeredUserOnly
+        onlyRegisteredUser
     {
         require(_amount > 0, "INVALID_AMOUNT");
         _depositAssets(tokenAddress, msg.sender, address(this), _amount);
@@ -120,7 +130,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     function deposit(address _counterparty, uint256 _amount)
         public
         override
-        registeredUserOnly
+        onlyRegisteredUser
     {
         require(_amount > 0, "INVALID_AMOUNT");
         _depositAssets(tokenAddress, msg.sender, address(this), _amount);
@@ -162,9 +172,9 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         address _user,
         address _counterparty,
         uint256 _amountETH
-    ) external override aggregatorOnly returns (uint256) {
+    ) external override onlyAcceptedContracts returns (uint256) {
         RebalanceLocalVars memory vars;
-        vars.exchangeRate = currencyController.getLastETHPrice(ccy);
+        vars.exchangeRate = currencyController().getLastETHPrice(ccy);
         vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
 
         Book storage book = books[_user];
@@ -211,10 +221,10 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         address _user,
         address _counterparty,
         uint256 _amountETH
-    ) external override aggregatorOnly returns (uint256) {
+    ) external override onlyAcceptedContracts returns (uint256) {
         RebalanceLocalVars memory vars;
 
-        vars.exchangeRate = currencyController.getLastETHPrice(ccy);
+        vars.exchangeRate = currencyController().getLastETHPrice(ccy);
         vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
         vars.rebalanceAmount = CollateralPosition.withdraw(
             _positions,
@@ -259,10 +269,10 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         address _fromParty,
         address _toParty,
         uint256 _amountETH
-    ) external override aggregatorOnly returns (uint256) {
+    ) external override onlyAcceptedContracts returns (uint256) {
         RebalanceLocalVars memory vars;
 
-        vars.exchangeRate = currencyController.getLastETHPrice(ccy);
+        vars.exchangeRate = currencyController().getLastETHPrice(ccy);
         vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
         vars.rebalanceAmount = CollateralPosition.rebalance(
             _positions,
@@ -301,8 +311,13 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         address _from,
         address _to,
         uint256 _amountETH
-    ) external override aggregatorOnly returns (uint256 liquidationLeftETH) {
-        int256 exchangeRate = currencyController.getLastETHPrice(ccy);
+    )
+        external
+        override
+        onlyAcceptedContracts
+        returns (uint256 liquidationLeftETH)
+    {
+        int256 exchangeRate = currencyController().getLastETHPrice(ccy);
         uint256 liquidationTarget = _amountETH.mul(1e18).div(
             uint256(exchangeRate)
         );
@@ -345,9 +360,9 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         address _to,
         uint256 _amount
     ) internal returns (uint256 liquidated) {
-        uint256 maxWidthdrawETH = collateralAggregator
+        uint256 maxWidthdrawETH = collateralAggregator()
             .getMaxCollateralBookWidthdraw(_from);
-        uint256 maxLiquidation = currencyController.convertFromETH(
+        uint256 maxLiquidation = currencyController().convertFromETH(
             ccy,
             maxWidthdrawETH
         );
@@ -369,14 +384,14 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
      * @notice Trigers to withdraw funds by the msg.sender from non-locked funds
      * @param _amount Number of funds to withdraw.
      */
-    function withdraw(uint256 _amount) public override registeredUserOnly {
+    function withdraw(uint256 _amount) public override onlyRegisteredUser {
         // fix according to collateral aggregator
         require(_amount > 0, "INVALID_AMOUNT");
 
         address user = msg.sender;
-        uint256 maxWidthdrawETH = collateralAggregator
+        uint256 maxWidthdrawETH = collateralAggregator()
             .getMaxCollateralBookWidthdraw(user);
-        uint256 maxWidthdraw = currencyController.convertFromETH(
+        uint256 maxWidthdraw = currencyController().convertFromETH(
             ccy,
             maxWidthdrawETH
         );
@@ -401,14 +416,14 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     function withdrawFrom(address _counterparty, uint256 _amount)
         public
         override
-        registeredUserOnly
+        onlyRegisteredUser
     {
         require(_amount > 0, "INVALID_AMOUNT");
         address user = msg.sender;
 
-        (uint256 maxWidthdrawETH, ) = collateralAggregator
+        (uint256 maxWidthdrawETH, ) = collateralAggregator()
             .getMaxCollateralWidthdraw(user, _counterparty);
-        uint256 maxWidthdraw = currencyController.convertFromETH(
+        uint256 maxWidthdraw = currencyController().convertFromETH(
             ccy,
             maxWidthdrawETH
         );
@@ -459,7 +474,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     {
         uint256 amount = books[_user].independentAmount;
 
-        return currencyController.convertToETH(ccy, amount);
+        return currencyController().convertToETH(ccy, amount);
     }
 
     /**
@@ -489,7 +504,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
     {
         uint256 amount = books[_user].lockedCollateral;
 
-        return currencyController.convertToETH(ccy, amount);
+        return currencyController().convertToETH(ccy, amount);
     }
 
     /**
@@ -531,7 +546,7 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         ethAmounts[0] = lockedA;
         ethAmounts[1] = lockedB;
 
-        ethAmounts = currencyController.convertBulkToETH(ccy, ethAmounts);
+        ethAmounts = currencyController().convertBulkToETH(ccy, ethAmounts);
 
         return (ethAmounts[0], ethAmounts[1]);
     }
@@ -541,9 +556,9 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
             books[msg.sender].independentAmount > 0 ||
             books[msg.sender].lockedCollateral > 0
         ) {
-            collateralAggregator.enterVault(msg.sender);
+            collateralAggregator().enterVault(msg.sender);
         } else {
-            collateralAggregator.exitVault(msg.sender);
+            collateralAggregator().exitVault(msg.sender);
         }
     }
 
@@ -559,17 +574,17 @@ contract CollateralVault is ICollateralVault, SafeTransfer {
         );
 
         if (locked0 > 0) {
-            collateralAggregator.enterVault(_user);
+            collateralAggregator().enterVault(_user);
         }
 
         if (locked1 > 0) {
-            collateralAggregator.enterVault(_counterparty);
+            collateralAggregator().enterVault(_counterparty);
         }
 
         if (locked0 > 0 || locked1 > 0) {
-            collateralAggregator.enterVault(_user, _counterparty);
+            collateralAggregator().enterVault(_user, _counterparty);
         } else {
-            collateralAggregator.exitVault(_user, _counterparty);
+            collateralAggregator().exitVault(_user, _counterparty);
         }
     }
 }

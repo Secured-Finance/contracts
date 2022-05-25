@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import "./interfaces/ICollateralManagement.sol";
-import "./interfaces/ICurrencyController.sol";
-import "./interfaces/ICollateralVault.sol";
-import "./interfaces/ILiquidations.sol";
-import "./interfaces/ICrosschainAddressResolver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/ICollateralVault.sol";
+import "../interfaces/IMixinCollateralManagement.sol";
+import "./MixinAddressResolver.sol";
 
 /**
- * @title CollateralManagement is an internal component of CollateralAggregator contract
+ * @title MixinCollateralManagement is an internal component of CollateralAggregator contract
  *
  * This contract allows Secured Finance manage the collateral system such as:
  *
@@ -21,7 +20,11 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
  *    Auto-Liquidation level, Liquidation price, and Minimal collateral ratio
  *
  */
-contract CollateralManagement is ICollateralManagement {
+contract MixinCollateralManagement is
+    IMixinCollateralManagement,
+    MixinAddressResolver,
+    Ownable
+{
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -30,64 +33,65 @@ contract CollateralManagement is ICollateralManagement {
     uint256 public override AUTOLQLEVEL; // 125% auto liquidation
     uint256 public override MIN_COLLATERAL_RATIO; // 25% minimal collateral ratio
 
-    address public override owner;
-
-    // Linked contract addresses
-    ICurrencyController public currencyController;
-    ILiquidations public liquidationEngine;
-    ICrosschainAddressResolver public crosschainAddressResolver;
-    EnumerableSet.AddressSet private collateralUsers;
+    EnumerableSet.AddressSet private lendingMarkets;
     EnumerableSet.AddressSet private collateralVaults;
-
-    /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner, "INVALID_ACCESS");
-        _;
-    }
-
-    /**
-     * @dev Modifier to check if msg.sender is collateral user
-     */
-    modifier acceptedContract() {
-        require(collateralUsers.contains(msg.sender), "NON_COLLATERAL_USER");
-        _;
-    }
 
     /**
      * @dev Modifier to check if msg.sender is a CollateralVault
      */
     modifier onlyCollateralVault() {
-        require(collateralVaults.contains(msg.sender), "NON_COLLATERAL_VAULT");
+        require(isCollateralVault(msg.sender), "NON_COLLATERAL_VAULT");
         _;
     }
 
-    modifier onlyLiquidationEngine() {
-        require(
-            msg.sender == address(liquidationEngine),
-            "NON_LIQUIDATION_ENGINE"
-        );
+    modifier onlyLiquidations() {
+        require(msg.sender == address(liquidations()), "NON_LIQUIDATIONS");
         _;
     }
 
-    modifier onlyLiquidationEngineOrCollateralUser() {
-        require(
-            msg.sender == address(liquidationEngine) ||
-                collateralUsers.contains(msg.sender),
-            "NOR_LIQUIDATION_ENGINE_COLLATERAL_USER"
-        );
-        _;
+    function requiredContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](4);
+        contracts[0] = CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER;
+        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
+        contracts[2] = CONTRACT_LIQUIDATIONS;
+        contracts[3] = CONTRACT_LOAN;
+    }
+
+    function acceptedContracts()
+        public
+        view
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_LOAN;
+    }
+
+    function isAcceptedContract(address account)
+        internal
+        view
+        override
+        returns (bool)
+    {
+        return super.isAcceptedContract(account) || isLendingMarket(account);
     }
 
     /**
      * @dev Contract constructor function.
      *
      * @notice sets contract deployer as owner of this contract
+     * @param _resolver The address of the Address Resolver contract
      */
-    constructor() public {
-        owner = msg.sender;
-
+    constructor(address _resolver)
+        public
+        MixinAddressResolver(_resolver)
+        Ownable()
+    {
         LQLEVEL = 12000; // 120% for liquidation price
         MARGINLEVEL = 15000; // 150% margin call threshold
         AUTOLQLEVEL = 12500; // 125% auto liquidatio
@@ -97,30 +101,30 @@ contract CollateralManagement is ICollateralManagement {
     // =========== LINKED CONTRACT MANAGEMENT SECTION ===========
 
     /**
-     * @dev Trigers to add contract address to collateral users address set
-     * @param _user Collateral user smart contract address
+     * @dev Trigers to link LendingMarket with aggregator
+     * @param _lendingMarket LendingMarket address
      *
-     * @notice Trigers only be contract owner
+     * @notice Triggers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
-    function addCollateralUser(address _user)
+    function linkLendingMarket(address _lendingMarket)
         public
         override
         onlyOwner
         returns (bool)
     {
-        require(_user != address(0), "Zero address");
-        require(_user.isContract(), "Can't add non-contract address");
-        require(!collateralUsers.contains(_user), "Can't add existing address");
+        require(_lendingMarket != address(0), "Zero address");
+        require(_lendingMarket.isContract(), "Can't add non-contract address");
+        require(!isLendingMarket(_lendingMarket), "Can't add existing address");
 
-        emit CollateralUserAdded(_user);
+        emit LendingMarketAdded(_lendingMarket);
 
-        return collateralUsers.add(_user);
+        return lendingMarkets.add(_lendingMarket);
     }
 
     /**
      * @dev Trigers to link CollateralVault with aggregator
-     * @param _vault CollateralVault smart contract address
+     * @param _vault CollateralVault address
      *
      * @notice Trigers only be contract owner
      * @notice Reverts on saving 0x0 address
@@ -133,10 +137,7 @@ contract CollateralManagement is ICollateralManagement {
     {
         require(_vault != address(0), "Zero address");
         require(_vault.isContract(), "Can't add non-contract address");
-        require(
-            !collateralVaults.contains(_vault),
-            "Can't add existing address"
-        );
+        require(!isCollateralVault(_vault), "Can't add existing address");
 
         ICollateralVault vaultContract = ICollateralVault(_vault);
 
@@ -148,32 +149,32 @@ contract CollateralManagement is ICollateralManagement {
     }
 
     /**
-     * @dev Trigers to remove collateral user from address set
-     * @param _user Collateral user smart contract address
+     * @dev Triggers to remove LendingMarket from address set
+     * @param _lendingMarket LendingMarket smart contract address
      *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on removing non-existing collateral user
+     * @notice Triggers only be contract owner
+     * @notice Reverts on removing non-existing LendingMarket
      */
-    function removeCollateralUser(address _user)
+    function removeLendingMarket(address _lendingMarket)
         public
         override
         onlyOwner
         returns (bool)
     {
         require(
-            collateralUsers.contains(_user),
+            isLendingMarket(_lendingMarket),
             "Can't remove non-existing user"
         );
 
-        emit CollateralUserRemoved(_user);
-        return collateralUsers.remove(_user);
+        emit LendingMarketRemoved(_lendingMarket);
+        return lendingMarkets.remove(_lendingMarket);
     }
 
     /**
-     * @dev Trigers to remove CollateralVault from address set
+     * @dev Triggers to remove CollateralVault from address set
      * @param _vault CollateralVault smart contract address
      *
-     * @notice Trigers only be contract owner
+     * @notice Triggers only be contract owner
      * @notice Reverts on removing non-existing collateral vault
      */
     function removeCollateralVault(address _vault)
@@ -182,10 +183,7 @@ contract CollateralManagement is ICollateralManagement {
         onlyOwner
         returns (bool)
     {
-        require(
-            collateralVaults.contains(_vault),
-            "Can't remove non-existing user"
-        );
+        require(isCollateralVault(_vault), "Can't remove non-existing user");
 
         ICollateralVault vaultContract = ICollateralVault(_vault);
 
@@ -198,16 +196,16 @@ contract CollateralManagement is ICollateralManagement {
     }
 
     /**
-     * @dev Trigers to check if provided `addr` is a collateral user from address set
-     * @param _user Contract address to check if it's a collateral user
+     * @dev Trigers to check if provided `addr` is a LendingMarket from address set
+     * @param _lendingMarket Contract address to check if it's a LendingMarket
      */
-    function isCollateralUser(address _user)
+    function isLendingMarket(address _lendingMarket)
         public
         view
         override
         returns (bool)
     {
-        return collateralUsers.contains(_user);
+        return lendingMarkets.contains(_lendingMarket);
     }
 
     /**
@@ -221,58 +219,6 @@ contract CollateralManagement is ICollateralManagement {
         returns (bool)
     {
         return collateralVaults.contains(_vault);
-    }
-
-    /**
-     * @dev Trigers to add currency controller contract address
-     * @param _addr Currency Controller smart contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function setCurrencyController(address _addr) public override onlyOwner {
-        require(_addr != address(0), "Zero address");
-        require(_addr.isContract(), "Can't add non-contract address");
-
-        currencyController = ICurrencyController(_addr);
-
-        emit CurrencyControllerUpdated(_addr);
-    }
-
-    /**
-     * @dev Trigers to set liquidation engine contract address
-     * @param _addr LiquidationEngine smart contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function setLiquidationEngine(address _addr) public override onlyOwner {
-        require(_addr != address(0), "Zero address");
-        require(_addr.isContract(), "Can't add non-contract address");
-
-        liquidationEngine = ILiquidations(_addr);
-
-        emit LiquidationEngineUpdated(_addr);
-    }
-
-    /**
-     * @dev Trigers to set cros-chain address resolver contract address
-     * @param _addr CrosschainAddressResolver smart contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function setCrosschainAddressResolver(address _addr)
-        public
-        override
-        onlyOwner
-    {
-        require(_addr != address(0), "Zero address");
-        require(_addr.isContract(), "Can't add non-contract address");
-
-        crosschainAddressResolver = ICrosschainAddressResolver(_addr);
-
-        emit CrosschainAddressResolverUpdated(_addr);
     }
 
     /**
