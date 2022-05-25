@@ -7,7 +7,8 @@ require('hardhat-deploy');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-ganache');
 
-const DUMMY_PRIVATE_KEY = "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd";
+const DUMMY_PRIVATE_KEY =
+  'abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd';
 
 module.exports = {
   defaultNetwork: 'hardhat',
