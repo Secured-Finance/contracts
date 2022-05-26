@@ -7,11 +7,20 @@ const CrosschainAddressResolver = artifacts.require(
 const CurrencyController = artifacts.require('CurrencyController');
 const Liquidations = artifacts.require('Liquidations');
 const MarkToMarket = artifacts.require('MarkToMarket');
+const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const WETH9Mock = artifacts.require('WETH9Mock');
 
 const { ethers } = require('hardhat');
-const bytes32 = require('bytes32');
+
+const {
+  hexBTCString,
+  hexETHString,
+  hexFILString,
+  zeroAddress,
+  toBytes32,
+} = require('./strings');
+const { btcToETHRate, ethToUSDRate, filToETHRate } = require('./numbers');
 
 const deployContracts = async (mockCallbacks) => {
   // Deploy libraries
@@ -111,6 +120,52 @@ const deployContracts = async (mockCallbacks) => {
       })
       .then((factory) => factory.deploy(addressResolver.address)));
 
+  // Set up for CurrencyController
+  const btcToETHPriceFeed = await MockV3Aggregator.new(
+    18,
+    hexBTCString,
+    btcToETHRate,
+  );
+  const ethToUSDPriceFeed = await MockV3Aggregator.new(
+    8,
+    hexETHString,
+    ethToUSDRate,
+  );
+  const filToETHPriceFeed = await MockV3Aggregator.new(
+    18,
+    hexFILString,
+    filToETHRate,
+  );
+
+  await currencyController.supportCurrency(
+    hexBTCString,
+    'Bitcoin',
+    0,
+    btcToETHPriceFeed.address,
+    7500,
+    zeroAddress,
+  );
+  await currencyController.supportCurrency(
+    hexETHString,
+    'Ethereum',
+    60,
+    ethToUSDPriceFeed.address,
+    7500,
+    zeroAddress,
+  );
+  await currencyController.supportCurrency(
+    hexFILString,
+    'Filecoin',
+    461,
+    filToETHPriceFeed.address,
+    7500,
+    zeroAddress,
+  );
+
+  await currencyController.updateCollateralSupport(hexETHString, true);
+  await currencyController.updateCollateralSupport(hexFILString, true);
+  await currencyController.updateMinMargin(hexETHString, 2500);
+
   // Set up for AddressResolver
   await addressResolver.importAddresses(
     [
@@ -126,7 +181,7 @@ const deployContracts = async (mockCallbacks) => {
       'ProductAddressResolver',
       'SettlementEngine',
       'TermStructure',
-    ].map((input) => bytes32({ input })),
+    ].map((input) => toBytes32(input)),
     [
       closeOutNetting.address,
       collateralAggregator.address,
@@ -176,6 +231,10 @@ const deployContracts = async (mockCallbacks) => {
     settlementEngine,
     termStructure,
     wETHToken,
+    // mocks
+    btcToETHPriceFeed,
+    ethToUSDPriceFeed,
+    filToETHPriceFeed,
   };
 };
 

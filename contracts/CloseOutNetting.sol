@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/CloseOut.sol";
-import "./libraries/AddressPacking.sol";
 import "./interfaces/ICloseOutNetting.sol";
 import "./mixins/MixinAddressResolver.sol";
 

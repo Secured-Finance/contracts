@@ -40,7 +40,6 @@
     "@openzeppelin/test-environment": "^0.1.5",
     "@openzeppelin/test-helpers": "^0.5.15",
     "babel-eslint": "^10.1.0",
-    "bytes32": "^0.0.3",
     "chai": "^4.3.4",
     "dotenv": "^8.6.0",
     "eslint": "^7.32.0",

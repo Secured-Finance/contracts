@@ -7,7 +7,6 @@ const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
 const TimeSlotTest = artifacts.require('TimeSlotTest');
-const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ChainlinkSettlementAdapterMock = artifacts.require(
@@ -29,7 +28,6 @@ const {
   secondTxHash,
   aliceFILAddress,
   bobFILAddress,
-  zeroAddress,
 } = require('../test-utils').strings;
 const { sortedTermDays } = require('../test-utils').terms;
 const { toBN, IR_BASE, oracleRequestFee } = require('../test-utils').numbers;
@@ -45,10 +43,6 @@ contract('LoanV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
   let signers;
-
-  let filToETHRate = utils.toBN('67175250000000000');
-  let ethToUSDRate = utils.toBN('232612637168');
-  let btcToETHRate = utils.toBN('23889912590000000000');
 
   let _1yearTimeSlot;
   let _2yearTimeSlot;
@@ -134,71 +128,19 @@ contract('LoanV2', async (accounts) => {
 
     await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
     await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
+
+    ethVault = await ethers
+      .getContractFactory('CollateralVault')
+      .then((factory) =>
+        factory.deploy(
+          addressResolver.address,
+          hexETHString,
+          wETHToken.address,
+          wETHToken.address,
+        ),
+      );
+
     await collateralAggregator.linkLendingMarket(collateralCaller.address);
-
-    filToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexFILString,
-      filToETHRate,
-    );
-    ethToUSDPriceFeed = await MockV3Aggregator.new(
-      8,
-      hexETHString,
-      ethToUSDRate,
-    );
-    btcToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexBTCString,
-      btcToETHRate,
-    );
-
-    let tx = await currencyController.supportCurrency(
-      hexETHString,
-      'Ethereum',
-      60,
-      ethToUSDPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexBTCString,
-      'Bitcoin',
-      0,
-      btcToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.updateCollateralSupport(hexETHString, true);
-    expectEvent(tx, 'CcyCollateralUpdate');
-
-    tx = await currencyController.updateMinMargin(hexETHString, 2500);
-    expectEvent(tx, 'MinMarginUpdated');
-
-    const collateralVaultFactory = await ethers.getContractFactory(
-      'CollateralVault',
-    );
-
-    ethVault = await collateralVaultFactory.deploy(
-      addressResolver.address,
-      hexETHString,
-      wETHToken.address,
-      wETHToken.address,
-    );
-
     await collateralAggregator.linkCollateralVault(ethVault.address);
 
     await productAddressResolver

@@ -2,7 +2,7 @@ const AddressResolver = artifacts.require('AddressResolver');
 
 const { should } = require('chai');
 const { ethers } = require('hardhat');
-const bytes32 = require('bytes32');
+const { toBytes32 } = require('../test-utils').strings;
 
 should();
 
@@ -21,7 +21,7 @@ contract('CrossChainAddressResolver test', async (accounts) => {
 
     // Set up for AddressResolver
     await addressResolver.importAddresses(
-      ['CollateralAggregator'].map((input) => bytes32({ input })),
+      ['CollateralAggregator'].map((input) => toBytes32(input)),
       [owner],
     );
     await crosschainResolver.buildCache();

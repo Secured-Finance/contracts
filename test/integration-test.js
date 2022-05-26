@@ -1,5 +1,4 @@
 const LendingMarket = artifacts.require('LendingMarket');
-const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ChainlinkSettlementAdapterMock = artifacts.require(
@@ -34,7 +33,8 @@ const {
 } = require('../test-utils').terms;
 const { checkTokenBalances } = require('../test-utils').balances;
 
-const { toBN, IR_BASE, oracleRequestFee } = require('../test-utils').numbers;
+const { toBN, IR_BASE, oracleRequestFee, filToETHRate } =
+  require('../test-utils').numbers;
 const { should } = require('chai');
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const utils = require('web3-utils');
@@ -69,12 +69,7 @@ contract('Integration test', async (accounts) => {
   let settlementEngine;
   let wETHToken;
 
-  let filToETHRate = web3.utils.toBN('67175250000000000');
-  let ethToUSDRate = web3.utils.toBN('232612637168');
-  let btcToETHRate = web3.utils.toBN('23889912590000000000');
-
   let filToETHPriceFeed;
-  let btcToETHPriceFeed;
 
   let lendingMarkets = [];
   let btcLendingMarkets = [];
@@ -113,62 +108,10 @@ contract('Integration test', async (accounts) => {
       wETHToken,
       settlementEngine,
       liquidations,
+      filToETHPriceFeed,
     } = await new Deployment().execute());
 
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
-
-    filToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexFILString,
-      filToETHRate,
-    );
-    ethToUSDPriceFeed = await MockV3Aggregator.new(
-      8,
-      hexETHString,
-      ethToUSDRate,
-    );
-    btcToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexBTCString,
-      btcToETHRate,
-    );
-
-    let tx = await currencyController.supportCurrency(
-      hexETHString,
-      'Ethereum',
-      60,
-      ethToUSDPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexBTCString,
-      'Bitcoin',
-      0,
-      btcToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.updateCollateralSupport(hexETHString, true);
-    expectEvent(tx, 'CcyCollateralUpdate');
-
-    tx = await currencyController.updateMinMargin(hexETHString, 2500);
-    expectEvent(tx, 'MinMarginUpdated');
-
     linkToken = await LinkToken.new();
     oracleOperator = await Operator.new(linkToken.address, owner);
     settlementAdapter = await ChainlinkSettlementAdapterMock.new(

@@ -23,9 +23,7 @@ const { secondTxHash } = require('../test-utils/src/strings');
 const {
   toBytes32,
   hexFILString,
-  hexETHString,
   hexUSDCString,
-  zeroAddress,
   testJobId,
   testTxHash,
   aliceFILAddress,
@@ -36,8 +34,6 @@ const {
   toBN,
   IR_BASE,
   ZERO_BN,
-  filToETHRate,
-  ethToUSDRate,
   usdcToUSDRate,
   decimalBase,
   oracleRequestFee,
@@ -192,17 +188,7 @@ contract('PaymentAggregator', async (accounts) => {
     addressPacking = await AddressPackingTest.new();
     timeSlotTest = await TimeSlotTest.new();
 
-    filToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexFILString,
-      filToETHRate,
-    );
-    ethToUSDPriceFeed = await MockV3Aggregator.new(
-      8,
-      hexETHString,
-      ethToUSDRate,
-    );
-    usdcToUSDPriceFeed = await MockV3Aggregator.new(
+    const usdcToUSDPriceFeed = await MockV3Aggregator.new(
       8,
       hexUSDCString,
       usdcToUSDRate,
@@ -217,30 +203,12 @@ contract('PaymentAggregator', async (accounts) => {
     );
 
     await currencyController.supportCurrency(
-      hexETHString,
-      'Ethereum',
-      60,
-      ethToUSDPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-
-    await currencyController.supportCurrency(
       hexUSDCString,
       'USDC',
       60,
       usdcToUSDPriceFeed.address,
       7500,
       usdcToken.address,
-    );
-
-    await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress,
     );
 
     linkToken = await LinkToken.new();

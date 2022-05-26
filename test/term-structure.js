@@ -1,8 +1,8 @@
 const AddressResolver = artifacts.require('AddressResolver');
-const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { ethers } = require('hardhat');
-const { toBytes32, zeroAddress } = require('../test-utils').strings;
+const { hexFILString, hexETHString, hexBTCString, loanPrefix } =
+  require('../test-utils').strings;
 const { PrintTable } = require('../test-utils').helper;
 const { Deployment } = require('../test-utils').deployment;
 const { should } = require('chai');
@@ -12,26 +12,12 @@ const utils = require('web3-utils');
 should();
 
 contract('TermStructure', async (accounts) => {
-  const [owner, alice, bob, carol] = accounts;
+  const [owner, alice] = accounts;
 
   let termStructure;
   let currencyController;
   let productAddressResolver;
   let lendingMarketController;
-
-  let loanPrefix = '0x21aaa47b';
-
-  let filToETHRate = utils.toBN('67175250000000000');
-  let ethToUSDRate = utils.toBN('232612637168');
-  let btcToETHRate = utils.toBN('23889912590000000000');
-
-  let filToETHPriceFeed;
-  let btcToETHPriceFeed;
-  let ethToUSDPriceFeed;
-
-  let hexFILString = toBytes32('FIL');
-  let hexETHString = toBytes32('ETH');
-  let hexBTCString = toBytes32('BTC');
 
   const generateId = (value, prefix) => {
     let right = utils.toBN(utils.rightPad(prefix, 64));
@@ -69,58 +55,6 @@ contract('TermStructure', async (accounts) => {
       productAddressResolver,
       termStructure,
     } = await deployment.execute());
-
-    filToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexFILString,
-      filToETHRate,
-    );
-    ethToUSDPriceFeed = await MockV3Aggregator.new(
-      8,
-      hexETHString,
-      ethToUSDRate,
-    );
-    btcToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexBTCString,
-      btcToETHRate,
-    );
-
-    let tx = await currencyController.supportCurrency(
-      hexETHString,
-      'Ethereum',
-      60,
-      ethToUSDPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexBTCString,
-      'Bitcoin',
-      0,
-      btcToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.updateCollateralSupport(hexETHString, true);
-    expectEvent(tx, 'CcyCollateralUpdate');
-
-    tx = await currencyController.updateMinMargin(hexETHString, 2500);
-    expectEvent(tx, 'MinMarginUpdated');
 
     signers = await ethers.getSigners();
 

@@ -37,8 +37,6 @@ const {
   toBN,
   IR_BASE,
   ZERO_BN,
-  filToETHRate,
-  ethToUSDRate,
   usdcToUSDRate,
   decimalBase,
   oracleRequestFee,
@@ -67,7 +65,6 @@ contract('SettlementEngine', async (accounts) => {
   let paymentAggregator;
   let paymentAggregatorMock;
   let timeSlotTest;
-  let currencyController;
   let crosschainAddressResolver;
 
   let now;
@@ -111,16 +108,6 @@ contract('SettlementEngine', async (accounts) => {
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     timeSlotTest = await TimeSlotTest.new();
 
-    filToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexFILString,
-      filToETHRate,
-    );
-    ethToUSDPriceFeed = await MockV3Aggregator.new(
-      8,
-      hexETHString,
-      ethToUSDRate,
-    );
     usdcToUSDPriceFeed = await MockV3Aggregator.new(
       8,
       hexUSDCString,
@@ -136,30 +123,12 @@ contract('SettlementEngine', async (accounts) => {
     );
 
     await currencyController.supportCurrency(
-      hexETHString,
-      'Ethereum',
-      60,
-      ethToUSDPriceFeed.address,
-      7500,
-      zeroAddress(),
-    );
-
-    await currencyController.supportCurrency(
       hexUSDCString,
       'USDC',
       60,
       usdcToUSDPriceFeed.address,
       7500,
       usdcToken.address,
-    );
-
-    await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress(),
     );
 
     linkToken = await LinkToken.new();

@@ -2,7 +2,6 @@ const CollateralAggregatorCallerMock = artifacts.require(
   'CollateralAggregatorCallerMock',
 );
 const ERC20Mock = artifacts.require('ERC20Mock');
-const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const LoanCallerMock = artifacts.require('LoanCallerMock');
 
 const { checkTokenBalances } = require('../test-utils').balances;
@@ -32,8 +31,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
   let collateralCaller;
   let filVault;
   let ethVault;
-
-  let filToETHPriceFeed;
 
   let alice_tFIL_locked;
   let alice_tFIL_balance;
@@ -92,50 +89,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
         wETHToken,
       } = await new Deployment().execute());
 
-      filToETHPriceFeed = await MockV3Aggregator.new(
-        18,
-        hexFILString,
-        filToETHRate,
-      );
-      ethToUSDPriceFeed = await MockV3Aggregator.new(
-        8,
-        hexETHString,
-        ethToUSDRate,
-      );
-      btcToETHPriceFeed = await MockV3Aggregator.new(
-        18,
-        hexBTCString,
-        btcToETHRate,
-      );
-
-      await currencyController.supportCurrency(
-        hexETHString,
-        'Ethereum',
-        60,
-        ethToUSDPriceFeed.address,
-        7500,
-        zeroAddress,
-      );
-      await currencyController.supportCurrency(
-        hexFILString,
-        'Filecoin',
-        461,
-        filToETHPriceFeed.address,
-        7500,
-        zeroAddress,
-      );
-      await currencyController.supportCurrency(
-        hexBTCString,
-        'Bitcoin',
-        0,
-        btcToETHPriceFeed.address,
-        7500,
-        zeroAddress,
-      );
-
-      await currencyController.updateCollateralSupport(hexETHString, true);
-      await currencyController.updateCollateralSupport(hexFILString, true);
-
       for (i = 0; i < sortedTermDays.length; i++) {
         await termStructure.supportTerm(sortedTermDays[i], [], []);
       }
@@ -156,24 +109,23 @@ contract('CollateralAggregatorV2', async (accounts) => {
       const collateralVaultFactory = await ethers.getContractFactory(
         'CollateralVault',
       );
-
       filVault = await collateralVaultFactory.deploy(
         addressResolver.address,
         hexFILString,
         tFILToken.address,
         wETHToken.address,
       );
-      await collateralAggregator.linkCollateralVault(filVault.address);
-
-      console.log('filVault is ' + filVault.address);
-
       ethVault = await collateralVaultFactory.deploy(
         addressResolver.address,
         hexETHString,
         wETHToken.address,
         wETHToken.address,
       );
+
+      await collateralAggregator.linkCollateralVault(filVault.address);
       await collateralAggregator.linkCollateralVault(ethVault.address);
+
+      console.log('filVault is ' + filVault.address);
       console.log('ethVault is ' + ethVault.address);
 
       const lendingControllerFactory = await ethers.getContractFactory(

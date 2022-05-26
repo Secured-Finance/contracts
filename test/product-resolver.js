@@ -51,12 +51,8 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       }))
       .deploy();
 
-    ({
-      discountFactorLibrary,
-      lendingMarketController,
-      loan,
-      productAddressResolver,
-    } = await deployment.execute());
+    ({ lendingMarketController, loan, productAddressResolver } =
+      await deployment.execute());
   });
 
   describe('Test register product function', async () => {

@@ -1,11 +1,9 @@
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const LendingMarket = artifacts.require('LendingMarket');
-const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
-const { zeroAddress } = require('../test-utils/src/strings');
 should();
 
 const { hexFILString, loanPrefix } = require('../test-utils').strings;
@@ -15,8 +13,6 @@ const { orders } = require('./orders');
 
 contract('LendingMarketController', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
-  const filRate = web3.utils.toBN('67175250000000000');
-  let filToETHPriceFeed;
 
   let currencyController;
   let collateralAggregator;
@@ -44,17 +40,6 @@ contract('LendingMarketController', async (accounts) => {
       lendingMarketController,
       loan,
     } = await deployment.execute());
-
-    filToETHPriceFeed = await MockV3Aggregator.new(18, hexFILString, filRate);
-    let tx = await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
 
     await collateralAggregator.setCurrencyController(
       currencyController.address,
