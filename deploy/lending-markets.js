@@ -1,7 +1,7 @@
 const { hexFILString } = require('../test-utils').strings;
 const { sortedTermDays } = require('../test-utils').terms;
 
-module.exports = async function ({ getNamedAccounts, deployments }) {
+module.exports = async function ({ deployments }) {
   let lendingMarkets = [];
   const baseRate = 500;
   const baseAmount = 100000;

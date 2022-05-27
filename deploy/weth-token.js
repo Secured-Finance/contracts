@@ -1,5 +1,3 @@
-const { hexETHString } = require('../test-utils').strings;
-
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
