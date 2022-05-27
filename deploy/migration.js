@@ -72,7 +72,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'ProductAddressResolver',
     'SettlementEngine',
     'TermStructure',
-  ].map((input) => toBytes32(input));
+  ].map(toBytes32);
   const contracAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,

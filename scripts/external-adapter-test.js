@@ -1,4 +1,5 @@
-const { zeroAddress, hexFILString } = require('../test-utils/').strings;
+const { toBytes32, zeroAddress, hexFILString } =
+  require('../test-utils/').strings;
 const { oracleRequestFee, filToETHRate } = require('../test-utils').numbers;
 const { getLatestTimestamp } = require('../test-utils').time;
 
@@ -34,8 +35,19 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     timeLibrary.address,
   );
 
+  const addressResolver = await deploy('AddressResolver', {
+    from: deployer,
+  });
+  console.log('Deployed AddressResolver at ' + addressResolver.address);
+
+  const addressResolverContract = await ethers.getContractAt(
+    'AddressResolver',
+    addressResolver.address,
+  );
+
   const paymentAggregator = await deploy('PaymentAggregator', {
     from: deployer,
+    args: [addressResolver.address],
   });
   console.log('Deployed PaymentAggregator at ' + paymentAggregator.address);
 
@@ -61,7 +73,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const crosschainAddressResolver = await deploy('CrosschainAddressResolver', {
     from: deployer,
-    args: [zeroAddress],
+    args: [addressResolver.address],
   });
 
   const crosschainAddressResolverContract = await ethers.getContractAt(
@@ -99,38 +111,24 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const SettlementEngineFactory = await ethers.getContractFactory(
     'SettlementEngine',
   );
-  settlementEngine = await (
-    await SettlementEngineFactory.deploy(
-      paymentAggregator.address,
-      currencyController.address,
-      crosschainAddressResolver.address,
-      zeroAddress,
-    )
-  ).wait();
 
   const settlementEngine = await deploy('SettlementEngine', {
     from: deployer,
-    args: [
-      paymentAggregator.address,
-      currencyController.address,
-      crosschainAddressResolver.address,
-      zeroAddress,
-    ],
+    args: [addressResolver.address, zeroAddress],
   });
 
   const settlementEngineContract = await ethers.getContractAt(
     'SettlementEngine',
-    '0x799b1032df60f89931749b073db92b7fac268169',
+    settlementEngine.address,
   );
 
   console.log(
-    'Deployed SettlementEngine at ' +
-      '0x799b1032df60f89931749b073db92b7fac268169',
+    'Deployed SettlementEngine at ' + settlementEngineContract.address,
   );
 
   const closeOutNetting = await deploy('CloseOutNetting', {
     from: deployer,
-    args: [paymentAggregator.address],
+    args: [addressResolver.address],
   });
   console.log('Deployed CloseOutNetting at ' + closeOutNetting.address);
 
@@ -148,15 +146,46 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   );
 
   await (
-    await paymentAggregatorContract.addPaymentAggregatorUser(
-      aggregatorCaller.address,
+    await addressResolverContract.importAddresses(
+      [
+        'CloseOutNetting',
+        'CrosschainAddressResolver',
+        'CurrencyController',
+        'Loan',
+        'MarkToMarket',
+        'PaymentAggregator',
+        'SettlementEngine',
+      ].map(toBytes32),
+      [
+        closeOutNetting.address,
+        crosschainAddressResolver.address,
+        currencyController.address,
+        aggregatorCaller.address,
+        markToMarketMock.address,
+        paymentAggregator.address,
+        settlementEngine.address,
+      ],
     )
   ).wait();
+
+  const migrationAddressResolver = await deploy('MigrationAddressResolver', {
+    from: deployer,
+  });
+  console.log(
+    'Deployed MigrationAddressResolver at ' + migrationAddressResolver.address,
+  );
+  const migrationAddressResolverContract = await ethers.getContractAt(
+    'MigrationAddressResolver',
+    migrationAddressResolver.address,
+  );
+
+  const buildCachesAddresses = [
+    closeOutNetting.address,
+    paymentAggregator.address,
+    settlementEngine.address,
+  ];
   await (
-    await paymentAggregatorContract.setCloseOutNetting(closeOutNetting.address)
-  ).wait();
-  await (
-    await paymentAggregatorContract.setMarkToMarket(markToMarketMock.address)
+    await migrationAddressResolverContract.buildCaches(buildCachesAddresses)
   ).wait();
 
   switch (network) {
@@ -165,9 +194,15 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       break;
     }
     default: {
+      const linkToken = await deploy('LinkToken', {
+        from: deployer,
+      });
+      linkTokenAddress = linkToken.address;
       break;
     }
   }
+
+  console.log('LinkToken Address is ' + linkTokenAddress);
 
   const linkTokenContract = await ethers.getContractAt(
     'LinkToken',
@@ -184,21 +219,15 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     oracleOperator.address,
   );
 
-  await (
-    await paymentAggregatorContract.setSettlementEngine(
-      '0x799b1032df60f89931749b073db92b7fac268169',
-    )
-  ).wait();
-
   const settlementAdapter = await deploy('ChainlinkSettlementAdapter', {
     from: deployer,
     args: [
+      addressResolver.address,
       oracleOperator.address,
       jobId,
       oracleRequestFee.toString(),
       linkTokenAddress,
       hexFILString,
-      '0x799b1032df60f89931749b073db92b7fac268169',
     ],
     nonce: 'pending',
   });
