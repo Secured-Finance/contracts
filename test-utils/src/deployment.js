@@ -10,6 +10,7 @@ const MarkToMarket = artifacts.require('MarkToMarket');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const WETH9Mock = artifacts.require('WETH9Mock');
+const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 
 const { ethers } = require('hardhat');
 
@@ -166,50 +167,37 @@ const deployContracts = async (mockCallbacks) => {
   await currencyController.updateCollateralSupport(hexFILString, true);
   await currencyController.updateMinMargin(hexETHString, 2500);
 
-  // Set up for AddressResolver
-  await addressResolver.importAddresses(
-    [
-      'CloseOutNetting',
-      'CollateralAggregator',
-      'CrosschainAddressResolver',
-      'CurrencyController',
-      'MarkToMarket',
-      'LendingMarketController',
-      'Liquidations',
-      'Loan',
-      'PaymentAggregator',
-      'ProductAddressResolver',
-      'SettlementEngine',
-      'TermStructure',
-    ].map((input) => toBytes32(input)),
-    [
-      closeOutNetting.address,
-      collateralAggregator.address,
-      crosschainAddressResolver.address,
-      currencyController.address,
-      markToMarket.address,
-      lendingMarketController.address,
-      liquidations.address,
-      loan.address,
-      paymentAggregator.address,
-      productAddressResolver.address,
-      settlementEngine.address,
-      termStructure.address,
-    ],
-  );
+  // Set up for AddressResolver and build caches using MigrationAddressResolver
+  const migrationAddressResolver = await MigrationAddressResolver.new();
+  const migrationTargets = [
+    ['CloseOutNetting', closeOutNetting],
+    ['CollateralAggregator', collateralAggregator],
+    ['CrosschainAddressResolver', crosschainAddressResolver],
+    ['CurrencyController', currencyController],
+    ['MarkToMarket', markToMarket],
+    ['LendingMarketController', lendingMarketController],
+    ['Liquidations', liquidations],
+    ['Loan', loan],
+    ['PaymentAggregator', paymentAggregator],
+    ['ProductAddressResolver', productAddressResolver],
+    ['SettlementEngine', settlementEngine],
+    ['TermStructure', termStructure],
+  ];
 
-  closeOutNetting.buildCache && (await closeOutNetting.buildCache());
-  collateralAggregator.buildCache && (await collateralAggregator.buildCache());
-  crosschainAddressResolver.buildCache &&
-    (await crosschainAddressResolver.buildCache());
-  lendingMarketController.buildCache &&
-    (await lendingMarketController.buildCache());
-  liquidations.buildCache && (await liquidations.buildCache());
-  loan.buildCache && (await loan.buildCache());
-  markToMarket.buildCache && (await markToMarket.buildCache());
-  paymentAggregator.buildCache && (await paymentAggregator.buildCache());
-  settlementEngine.buildCache && (await settlementEngine.buildCache());
-  termStructure.buildCache && (await termStructure.buildCache());
+  const importAddressesArgs = {
+    names: migrationTargets.map(([name]) => toBytes32(name)),
+    addresses: migrationTargets.map(([, contract]) => contract.address),
+  };
+
+  const buildCachesAddresses = migrationTargets
+    .filter(([, contract]) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
+    .map(([, contract]) => contract.address);
+
+  await addressResolver.importAddresses(
+    importAddressesArgs.names,
+    importAddressesArgs.addresses,
+  );
+  await migrationAddressResolver.buildCaches(buildCachesAddresses);
 
   return {
     // libraries

@@ -182,8 +182,6 @@ contract('PaymentAggregator', async (accounts) => {
       settlementEngine,
     } = await deployment.execute());
 
-    paymentAggregator.buildCache();
-
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     addressPacking = await AddressPackingTest.new();
     timeSlotTest = await TimeSlotTest.new();

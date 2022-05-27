@@ -53,6 +53,8 @@ contract ChainlinkSettlementAdapter is
         } else {
             setChainlinkToken(_link);
         }
+
+        buildCache();
     }
 
     /**

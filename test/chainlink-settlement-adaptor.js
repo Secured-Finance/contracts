@@ -34,6 +34,12 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
       .getContractFactory('ExternalAdapterCallerMock')
       .then((factory) => factory.deploy());
     const addressResolver = await AddressResolver.new();
+
+    await addressResolver.importAddresses(
+      [toBytes32('SettlementEngine')],
+      [externalAdapterCaller.address],
+    );
+
     chainlinkSettlementAdapter = await ChainlinkSettlementAdapter.new(
       addressResolver.address,
       operator.address,
@@ -42,17 +48,9 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
       linkToken.address,
       hexFILString,
     );
-
     externalAdapterCaller.setExternalAdapter(
       chainlinkSettlementAdapter.address,
     );
-
-    // Set up for AddressResolver
-    await addressResolver.importAddresses(
-      [toBytes32('SettlementEngine')],
-      [externalAdapterCaller.address],
-    );
-    await chainlinkSettlementAdapter.buildCache();
   });
 
   describe('getChainlinkToken function', async () => {

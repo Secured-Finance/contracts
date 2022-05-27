@@ -2,20 +2,22 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const dealIdLibrary = await deployments.get('DealId');
   const discountFactorLibrary = await deployments.get('DiscountFactor');
+  const quickSortLibrary = await deployments.get('QuickSort');
   const addressResolver = await deployments.get('AddressResolver');
 
-  const loanV2 = await deploy('LoanV2', {
+  const lendingController = await deploy('LendingMarketController', {
     from: deployer,
-    args: [addressResolver.address],
     libraries: {
+      QuickSort: quickSortLibrary.address,
       DiscountFactor: discountFactorLibrary.address,
-      DealId: dealIdLibrary.address,
     },
+    args: [addressResolver.address],
   });
-  console.log('Deployed LoanV2 at ' + loanV2.address);
+  console.log(
+    'Deployed LendingMarketController at ' + lendingController.address,
+  );
 };
 
-module.exports.tags = ['Loan'];
+module.exports.tags = ['LendingMarketController'];
 module.exports.dependencies = ['AddressResolver', 'Libraries'];
