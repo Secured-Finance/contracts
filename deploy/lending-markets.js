@@ -52,7 +52,7 @@ module.exports = async function ({ deployments }) {
       )
     ).wait();
     await (
-      await collateralAggregatorContract.linkLendingMarket(
+      await collateralAggregatorContract.addCollateralUser(
         lendingMarketContract.address,
       )
     ).wait();

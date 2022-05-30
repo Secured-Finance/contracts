@@ -207,7 +207,7 @@ contract('Integration test', async (accounts) => {
         lendingMarkets.push(marketAddr);
         let lendingMarket = await LendingMarket.at(marketAddr);
 
-        await collateralAggregator.linkLendingMarket(lendingMarket.address, {
+        await collateralAggregator.addCollateralUser(lendingMarket.address, {
           from: owner,
         });
         await loan.addLendingMarket(
@@ -234,7 +234,7 @@ contract('Integration test', async (accounts) => {
         btcLendingMarkets.push(marketAddr);
         let btcLendingMarket = await LendingMarket.at(marketAddr);
 
-        await collateralAggregator.linkLendingMarket(btcLendingMarket.address, {
+        await collateralAggregator.addCollateralUser(btcLendingMarket.address, {
           from: owner,
         });
         await loan.addLendingMarket(

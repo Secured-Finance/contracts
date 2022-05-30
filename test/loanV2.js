@@ -138,7 +138,7 @@ contract('LoanV2', async (accounts) => {
         ),
       );
 
-    await collateralAggregator.linkLendingMarket(collateralCaller.address);
+    await collateralAggregator.addCollateralUser(collateralCaller.address);
     await collateralAggregator.linkCollateralVault(ethVault.address);
 
     for (i = 0; i < sortedTermDays.length; i++) {

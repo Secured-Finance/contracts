@@ -33,7 +33,7 @@ contract MixinCollateralManagement is
     uint256 public override AUTOLQLEVEL; // 125% auto liquidation
     uint256 public override MIN_COLLATERAL_RATIO; // 25% minimal collateral ratio
 
-    EnumerableSet.AddressSet private lendingMarkets;
+    EnumerableSet.AddressSet private collateralUsers;
     EnumerableSet.AddressSet private collateralVaults;
 
     /**
@@ -69,7 +69,7 @@ contract MixinCollateralManagement is
         returns (bool)
     {
         return
-            isLendingMarket(account) ||
+            isCollateralUser(account) ||
             productAddressResolver().isRegisteredProductContract(account) ||
             super.isAcceptedContract(account);
     }
@@ -83,32 +83,32 @@ contract MixinCollateralManagement is
     constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {
         LQLEVEL = 12000; // 120% for liquidation price
         MARGINLEVEL = 15000; // 150% margin call threshold
-        AUTOLQLEVEL = 12500; // 125% auto liquidatio
+        AUTOLQLEVEL = 12500; // 125% auto liquidation
         MIN_COLLATERAL_RATIO = 2500; // 25% min collateral ratio
     }
 
     // =========== LINKED CONTRACT MANAGEMENT SECTION ===========
 
     /**
-     * @dev Trigers to link LendingMarket with aggregator
-     * @param _lendingMarket LendingMarket address
+     * @dev Triggers to add contract address to collateral users address set
+     * @param _user Collateral user smart contract address
      *
-     * @notice Triggers only be contract owner
+     * @notice Trifgers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
-    function linkLendingMarket(address _lendingMarket)
+    function addCollateralUser(address _user)
         public
         override
         onlyOwner
         returns (bool)
     {
-        require(_lendingMarket != address(0), "Zero address");
-        require(_lendingMarket.isContract(), "Can't add non-contract address");
-        require(!isLendingMarket(_lendingMarket), "Can't add existing address");
+        require(_user != address(0), "Zero address");
+        require(_user.isContract(), "Can't add non-contract address");
+        require(!collateralUsers.contains(_user), "Can't add existing address");
 
-        emit LendingMarketAdded(_lendingMarket);
+        emit CollateralUserAdded(_user);
 
-        return lendingMarkets.add(_lendingMarket);
+        return collateralUsers.add(_user);
     }
 
     /**
@@ -138,25 +138,25 @@ contract MixinCollateralManagement is
     }
 
     /**
-     * @dev Triggers to remove LendingMarket from address set
-     * @param _lendingMarket LendingMarket smart contract address
+     * @dev Triggers to remove collateral user from address set
+     * @param _user Collateral user smart contract address
      *
      * @notice Triggers only be contract owner
-     * @notice Reverts on removing non-existing LendingMarket
+     * @notice Reverts on removing non-existing collateral user
      */
-    function removeLendingMarket(address _lendingMarket)
+    function removeCollateralUser(address _user)
         public
         override
         onlyOwner
         returns (bool)
     {
         require(
-            isLendingMarket(_lendingMarket),
+            collateralUsers.contains(_user),
             "Can't remove non-existing user"
         );
 
-        emit LendingMarketRemoved(_lendingMarket);
-        return lendingMarkets.remove(_lendingMarket);
+        emit CollateralUserRemoved(_user);
+        return collateralUsers.remove(_user);
     }
 
     /**
@@ -185,16 +185,16 @@ contract MixinCollateralManagement is
     }
 
     /**
-     * @dev Trigers to check if provided `addr` is a LendingMarket from address set
-     * @param _lendingMarket Contract address to check if it's a LendingMarket
+     * @dev Trigers to check if provided `addr` is a CollateralUser from address set
+     * @param _user Contract address to check if it's a CollateralUser
      */
-    function isLendingMarket(address _lendingMarket)
+    function isCollateralUser(address _user)
         public
         view
         override
         returns (bool)
     {
-        return lendingMarkets.contains(_lendingMarket);
+        return collateralUsers.contains(_user);
     }
 
     /**

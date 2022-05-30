@@ -2,8 +2,8 @@
 pragma solidity ^0.7.0;
 
 interface IMixinCollateralManagement {
-    event LendingMarketAdded(address indexed lendingMarket);
-    event LendingMarketRemoved(address indexed lendingMarket);
+    event CollateralUserAdded(address indexed user);
+    event CollateralUserRemoved(address indexed user);
 
     event CollateralVaultLinked(
         address indexed vault,
@@ -35,16 +35,11 @@ interface IMixinCollateralManagement {
 
     function MIN_COLLATERAL_RATIO() external view returns (uint256);
 
-    function linkLendingMarket(address _lendingMarket) external returns (bool);
+    function addCollateralUser(address _user) external returns (bool);
 
-    function removeLendingMarket(address _lendingMarket)
-        external
-        returns (bool);
+    function removeCollateralUser(address _user) external returns (bool);
 
-    function isLendingMarket(address _lendingMarket)
-        external
-        view
-        returns (bool);
+    function isCollateralUser(address _user) external view returns (bool);
 
     function linkCollateralVault(address _vault) external returns (bool);
 

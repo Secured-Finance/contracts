@@ -102,7 +102,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
       collateralCaller = await CollateralAggregatorCallerMock.new(
         collateralAggregator.address,
       );
-      await collateralAggregator.linkLendingMarket(collateralCaller.address);
+      await collateralAggregator.addCollateralUser(collateralCaller.address);
 
       const collateralVaultFactory = await ethers.getContractFactory(
         'CollateralVault',
