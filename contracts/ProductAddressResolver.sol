@@ -18,6 +18,8 @@ contract ProductAddressResolver is IProductAddressResolver {
     // Mapping for storing product contract addresses
     mapping(bytes4 => address) _productContracts;
     mapping(bytes4 => address) _controllerContracts;
+    // Mapping from product contract address to prefix for product type
+    mapping(address => bytes4) _productPrefix;
 
     /**
      * @dev Modifier to check if passed prefix is valid
@@ -45,31 +47,38 @@ contract ProductAddressResolver is IProductAddressResolver {
     }
 
     /**
-     * @dev Trigers to register new product type in a address resolver
+     * @dev Triggers to register new product type in a address resolver
      * @param _prefix Bytes4 prefix for product type
-     * @param _contract Product contract address
+     * @param _product Product contract address
+     * @param _controller Controller contract address
      *
-     * @notice Trigers only be contract owner
+     * @notice Triggers only be contract owner
      * @notice Reverts on saving contract which is not supporting a common interface
      */
     function registerProduct(
         bytes4 _prefix,
-        address _contract,
+        address _product,
         address _controller
     ) public override onlyOwner {
-        require(_contract.isContract(), "Can't add non-contract address");
+        require(_product.isContract(), "Can't add non-contract address");
         require(_controller.isContract(), "Can't add non-contract address");
-        _productContracts[_prefix] = _contract;
+
+        address prevProduct = _productContracts[_prefix];
+        _productContracts[_prefix] = _product;
         _controllerContracts[_prefix] = _controller;
-        emit RegisterProduct(_prefix, _contract, _controller);
+
+        _productPrefix[prevProduct] = "";
+        _productPrefix[_product] = _prefix;
+
+        emit RegisterProduct(_prefix, _product, _controller);
     }
 
     /**
-     * @dev Trigers to register several product types in a address resolver
+     * @dev Triggers to register several product types in a address resolver
      * @param _prefixes Array of Bytes4 prefixes for each product type
      * @param _contracts Array of smart contract addresses for each product
      *
-     * @notice Trigers only be contract owner
+     * @notice Triggers only be contract owner
      * @notice Reverts on saving contract which is not supporting common interface
      */
     function registerProducts(
@@ -81,21 +90,14 @@ contract ProductAddressResolver is IProductAddressResolver {
 
         for (uint256 i = 0; i < _prefixes.length; i++) {
             bytes4 prefix = _prefixes[i];
-            address addr = _contracts[i];
-            require(addr.isContract(), "Can't add non-contract address");
-
+            address product = _contracts[i];
             address controller = _controllers[i];
-            require(controller.isContract(), "Can't add non-contract address");
-
-            _productContracts[prefix] = addr;
-            _controllerContracts[prefix] = controller;
-
-            emit RegisterProduct(prefix, addr, controller);
+            registerProduct(prefix, product, controller);
         }
     }
 
     /**
-     * @dev Trigers to get product address by short prefix.
+     * @dev Triggers to get product address by short prefix.
      * @param _prefix Bytes4 prefix for product type
      * @notice To work with the contract this address should be wrapped around IProduct interface
      */
@@ -109,7 +111,7 @@ contract ProductAddressResolver is IProductAddressResolver {
     }
 
     /**
-     * @dev Trigers to get product address by deal id
+     * @dev Triggers to get product address by deal id
      * @param _dealId Product deal idenfitier
      * @notice To work with the contract this address should be wrapped around IProduct interface
      */
@@ -124,7 +126,7 @@ contract ProductAddressResolver is IProductAddressResolver {
     }
 
     /**
-     * @dev Trigers to get market controller address by short prefix.
+     * @dev Triggers to get market controller address by short prefix.
      * @param _prefix Bytes4 prefix for product type
      * @notice To work with the contract this address should be wrapped around IYieldCurve interface
      */
@@ -138,7 +140,7 @@ contract ProductAddressResolver is IProductAddressResolver {
     }
 
     /**
-     * @dev Trigers to get market controller address by deal id
+     * @dev Triggers to get market controller address by deal id
      * @param _dealId Product deal idenfitier
      * @notice To work with the contract this address should be wrapped around IYieldCurve interface
      */
@@ -177,5 +179,18 @@ contract ProductAddressResolver is IProductAddressResolver {
     {
         bytes4 prefix = DealId.getPrefix(_dealId);
         return _productContracts[prefix] != address(0);
+    }
+
+    /**
+     * @dev Triggers to verify if a specific product contract is registered.
+     * @param _product Product contract address
+     */
+    function isRegisteredProductContract(address _product)
+        public
+        view
+        override
+        returns (bool)
+    {
+        return _productPrefix[_product] != "";
     }
 }

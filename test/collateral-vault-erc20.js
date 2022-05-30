@@ -43,6 +43,9 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       aliceTokenBalance = decimalBase.mul(toBN('1000'));
 
       // Deploy contracts
+      const DealId = await ethers.getContractFactory('DealId');
+      const dealIdLibrary = await DealId.deploy();
+      await dealIdLibrary.deployed();
       const addressResolver = await AddressResolver.new();
       currencyController = await CurrencyController.new();
       const crosschainAddressResolver = await CrosschainAddressResolver.new(
@@ -61,6 +64,13 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         hexFILString,
         filToETHRate,
       );
+      const productAddressResolver = await ethers
+        .getContractFactory('ProductAddressResolver', {
+          libraries: {
+            DealId: dealIdLibrary.address,
+          },
+        })
+        .then((factory) => factory.deploy());
 
       // Set up for testing
       await addressResolver.importAddresses(
@@ -70,6 +80,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
           'CurrencyController',
           'Liquidations',
           'Loan',
+          'ProductAddressResolver',
         ].map((input) => toBytes32(input)),
         [
           collateral.address,
@@ -77,6 +88,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
           currencyController.address,
           utils.randomHex(20),
           utils.randomHex(20),
+          productAddressResolver.address,
         ],
       );
       await collateral.buildCache();

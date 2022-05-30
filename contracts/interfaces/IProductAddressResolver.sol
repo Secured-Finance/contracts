@@ -89,4 +89,13 @@ interface IProductAddressResolver {
         external
         view
         returns (bool);
+
+    /**
+     * @dev Triggers to verify if a specific product contract is registered.
+     * @param _product Product contract address
+     */
+    function isRegisteredProductContract(address _product)
+        external
+        view
+        returns (bool);
 }

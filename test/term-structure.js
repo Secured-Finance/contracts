@@ -6,7 +6,7 @@ const { hexFILString, hexETHString, hexBTCString, loanPrefix } =
 const { PrintTable } = require('../test-utils').helper;
 const { Deployment } = require('../test-utils').deployment;
 const { should } = require('chai');
-const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 const utils = require('web3-utils');
 
 should();
@@ -15,7 +15,6 @@ contract('TermStructure', async (accounts) => {
   const [owner, alice] = accounts;
 
   let termStructure;
-  let currencyController;
   let productAddressResolver;
   let lendingMarketController;
 
@@ -57,13 +56,6 @@ contract('TermStructure', async (accounts) => {
     } = await deployment.execute());
 
     signers = await ethers.getSigners();
-
-    await productAddressResolver.registerProduct(
-      loanPrefix,
-      loan.address,
-      lendingMarketController.address,
-      { from: owner },
-    );
 
     let id = generateId(12, loanPrefix);
     let contract = await productAddressResolver.getProductContractByDealId(id);

@@ -76,8 +76,8 @@ module.exports = async function ({ deployments }) {
 module.exports.tags = ['LendingMarkets'];
 module.exports.dependencies = [
   'AddressResolver',
-  'LendingMarketController',
   'CollateralAggregator',
+  'LendingMarketController',
   'Loan',
   'Migration',
 ];

@@ -20,7 +20,6 @@ contract('LendingMarketController', async (accounts) => {
   let lendingMarketController;
   let lendingMarkets = [];
   let orderList;
-  let productAddressResolver;
   let termStructure;
 
   before('deploy LendingMarketController', async () => {
@@ -35,7 +34,6 @@ contract('LendingMarketController', async (accounts) => {
       currencyController,
       crosschainAddressResolver,
       termStructure,
-      productAddressResolver,
       settlementEngine,
       lendingMarketController,
       loan,
@@ -49,12 +47,6 @@ contract('LendingMarketController', async (accounts) => {
     );
 
     orderList = orders;
-
-    await productAddressResolver.registerProduct(
-      loanPrefix,
-      loan.address,
-      lendingMarketController.address,
-    );
 
     for (i = 0; i < termDays.length; i++) {
       await termStructure.supportTerm(

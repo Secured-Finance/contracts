@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/ILendingMarket.sol";
+import "./interfaces/ILoanV2.sol";
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
 import "./ProtocolTypes.sol";
 import "./mixins/MixinAddressResolver.sol";
@@ -26,6 +27,7 @@ contract LendingMarket is
     using SafeMath for uint256;
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
+    bytes4 constant prefix = 0x21aaa47b;
     uint256 public last_order_id;
     bytes32 public MarketCcy;
     uint256 public MarketTerm;
@@ -61,7 +63,7 @@ contract LendingMarket is
         contracts = new bytes32[](3);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
         contracts[1] = CONTRACT_LENDING_MARKET_CONTROLLER;
-        contracts[2] = CONTRACT_LOAN;
+        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
     function acceptedContracts()
@@ -279,7 +281,11 @@ contract LendingMarket is
             );
         }
 
-        loan().register(
+        address productAddress = productAddressResolver().getProductContract(
+            prefix
+        );
+
+        ILoanV2(productAddress).register(
             order.maker,
             msg.sender,
             uint8(order.side),

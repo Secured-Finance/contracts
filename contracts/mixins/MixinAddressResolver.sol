@@ -9,7 +9,6 @@ import "../interfaces/ICurrencyController.sol";
 import "../interfaces/IMarkToMarket.sol";
 import "../interfaces/ILendingMarketController.sol";
 import "../interfaces/ILiquidations.sol";
-import "../interfaces/ILoanV2.sol";
 import "../interfaces/IPaymentAggregator.sol";
 import "../interfaces/IProductAddressResolver.sol";
 import "../interfaces/ISettlementEngine.sol";
@@ -32,7 +31,6 @@ contract MixinAddressResolver {
     bytes32 public constant CONTRACT_LENDING_MARKET_CONTROLLER =
         "LendingMarketController";
     bytes32 public constant CONTRACT_LIQUIDATIONS = "Liquidations";
-    bytes32 public constant CONTRACT_LOAN = "Loan";
     bytes32 public constant CONTRACT_PAYMENT_AGGREGATOR = "PaymentAggregator";
     bytes32 public constant CONTRACT_PRODUCT_ADDRESS_RESOLVER =
         "ProductAddressResolver";
@@ -173,10 +171,6 @@ contract MixinAddressResolver {
 
     function liquidations() internal view returns (ILiquidations) {
         return ILiquidations(getAddress(CONTRACT_LIQUIDATIONS));
-    }
-
-    function loan() internal view returns (ILoanV2) {
-        return ILoanV2(getAddress(CONTRACT_LOAN));
     }
 
     function paymentAggregator() internal view returns (IPaymentAggregator) {

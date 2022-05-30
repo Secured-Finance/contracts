@@ -56,7 +56,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
   });
 
   describe('Test register product function', async () => {
-    it('Succesfully add loan product type and check contract addresses', async () => {
+    it('Successfully add loan product type and check contract addresses', async () => {
       let prefix = generatePrefix(loanName);
       prefix.should.be.equal(loanPrefix);
 
@@ -128,7 +128,7 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       );
     });
 
-    it('Succesfully add swap product type', async () => {
+    it('Successfully add swap product type', async () => {
       const productName = '0xSwapWithoutNotionalExchange';
       let prefix = generatePrefix(productName);
 
@@ -150,10 +150,41 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       contract = await productAddressResolver.getControllerContract(parsedId);
       contract.should.be.equal(lendingMarketController.address);
     });
+
+    it('Successfully replace old loan product contract', async () => {
+      const newLoanDummy = lendingMarketController.address;
+      let prefix = generatePrefix(loanName);
+
+      let productPrefix = await bytesConversion.getBytes4(loanName);
+      prefix.should.be.equal(productPrefix);
+
+      await productAddressResolver.registerProduct(
+        productPrefix,
+        loan.address,
+        lendingMarketController.address,
+      );
+
+      const isRegistered =
+        await productAddressResolver.isRegisteredProductContract(loan.address);
+      isRegistered.should.be.equal(true);
+
+      await productAddressResolver.registerProduct(
+        productPrefix,
+        newLoanDummy,
+        lendingMarketController.address,
+      );
+
+      const isRegisteredOld =
+        await productAddressResolver.isRegisteredProductContract(loan.address);
+      const isRegisteredNew =
+        await productAddressResolver.isRegisteredProductContract(newLoanDummy);
+      isRegisteredOld.should.be.equal(false);
+      isRegisteredNew.should.be.equal(true);
+    });
   });
 
   describe('Test register multiple products function', async () => {
-    it('Succesfully try to add multiple products', async () => {
+    it('Successfully try to add multiple products', async () => {
       const swapName = '0xSwapWithoutNotionalExchange';
       let swapPrefix = generatePrefix(swapName);
 

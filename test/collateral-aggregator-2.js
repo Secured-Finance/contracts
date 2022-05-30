@@ -14,8 +14,7 @@ const {
   zeroAddress,
 } = require('../test-utils').strings;
 const { sortedTermDays } = require('../test-utils').terms;
-const { ZERO_BN, decimalBase, toBN, filToETHRate, ethToUSDRate, btcToETHRate } =
-  require('../test-utils').numbers;
+const { ZERO_BN, decimalBase, toBN } = require('../test-utils').numbers;
 const { Deployment } = require('../test-utils').deployment;
 
 const { should } = require('chai');
@@ -79,7 +78,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
       ({
         addressResolver,
         discountFactorLibrary,
-        productAddressResolver,
         paymentAggregator,
         collateralAggregator,
         termStructure,
@@ -146,12 +144,6 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
       await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
-
-      await productAddressResolver.registerProduct(
-        loanPrefix,
-        loan.address,
-        lendingController.address,
-      );
 
       const loanCurrencies = [hexETHString, hexFILString, hexBTCString];
       for (i = 0; i < sortedTermDays.length; i++) {

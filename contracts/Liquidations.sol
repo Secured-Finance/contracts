@@ -49,21 +49,21 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         override
         returns (bytes32[] memory contracts)
     {
-        contracts = new bytes32[](4);
-        contracts[0] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
-        contracts[1] = CONTRACT_COLLATERAL_AGGREGATOR;
-        contracts[2] = CONTRACT_CURRENCY_CONTROLLER;
-        contracts[3] = CONTRACT_LOAN;
+        contracts = new bytes32[](3);
+        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
+        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
-    function acceptedContracts()
-        public
-        pure
+    function isAcceptedContract(address account)
+        internal
+        view
         override
-        returns (bytes32[] memory contracts)
+        returns (bool)
     {
-        contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_LOAN;
+        return
+            productAddressResolver().isRegisteredProductContract(account) ||
+            super.isAcceptedContract(account);
     }
 
     /**

@@ -66,17 +66,18 @@ contract PaymentAggregator is
         contracts = new bytes32[](3);
         contracts[0] = CONTRACT_CLOSE_OUT_NETTING;
         contracts[1] = CONTRACT_MARK_TO_MARKET;
-        contracts[2] = CONTRACT_LOAN;
+        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
-    function acceptedContracts()
-        public
-        pure
+    function isAcceptedContract(address account)
+        internal
+        view
         override
-        returns (bytes32[] memory contracts)
+        returns (bool)
     {
-        contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_LOAN;
+        return
+            productAddressResolver().isRegisteredProductContract(account) ||
+            super.isAcceptedContract(account);
     }
 
     struct TimeSlotPaymentsLocalVars {

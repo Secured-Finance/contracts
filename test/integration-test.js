@@ -164,13 +164,6 @@ contract('Integration test', async (accounts) => {
     await collateralAggregator.linkCollateralVault(ethVault.address);
     console.log('ethVault is ' + ethVault.address);
 
-    await productAddressResolver.registerProduct(
-      loanPrefix,
-      loan.address,
-      lendingMarketController.address,
-      { from: owner },
-    );
-
     let contract = await productAddressResolver.getProductContract(loanPrefix);
     contract.should.be.equal(loan.address);
 

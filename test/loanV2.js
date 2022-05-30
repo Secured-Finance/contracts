@@ -60,7 +60,6 @@ contract('LoanV2', async (accounts) => {
   let lendingMarketController;
   let loan;
   let paymentAggregator;
-  let productAddressResolver;
   let settlementEngine;
   let termStructure;
 
@@ -107,7 +106,6 @@ contract('LoanV2', async (accounts) => {
 
     ({
       addressResolver,
-      productAddressResolver,
       paymentAggregator,
       closeOutNetting,
       collateralAggregator,
@@ -142,14 +140,6 @@ contract('LoanV2', async (accounts) => {
 
     await collateralAggregator.linkLendingMarket(collateralCaller.address);
     await collateralAggregator.linkCollateralVault(ethVault.address);
-
-    await productAddressResolver
-      .connect(signers[0])
-      .registerProduct(
-        loanPrefix,
-        loan.address,
-        lendingMarketController.address,
-      );
 
     for (i = 0; i < sortedTermDays.length; i++) {
       await termStructure.supportTerm(
