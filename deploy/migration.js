@@ -39,6 +39,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'CollateralAggregatorV2',
     collateralAggregator.address,
   );
+  const productAddressResolverContract = await ethers.getContractAt(
+    'ProductAddressResolver',
+    productAddressResolver.address,
+  );
   const termStructureContract = await ethers.getContractAt(
     'TermStructure',
     termStructure.address,
@@ -114,6 +118,15 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     await collateralAggregatorContract.functions[
       'register(string[],uint256[])'
     ]([btcAddress, filAddress], [0, 461])
+  ).wait();
+
+  // Set up for ProductAddressResolver
+  await (
+    await productAddressResolverContract.registerProduct(
+      loanPrefix,
+      loan.address,
+      lendingMarketController.address,
+    )
   ).wait();
 
   // Set up for TermStructure
