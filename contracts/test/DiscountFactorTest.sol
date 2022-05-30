@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 import "../libraries/DiscountFactor.sol";
 
 contract DiscountFactorTest {
     function bootstrapTerms(uint256[] memory rates, uint256[] memory terms)
         external
-        view
+        pure
         returns (uint256[] memory, uint256[] memory)
     {
         return DiscountFactor.bootstrapTerms(rates, terms);
@@ -24,7 +24,7 @@ contract DiscountFactorTest {
 
     function calculateDFs(uint256[] memory rates, uint256[] memory terms)
         external
-        view
+        pure
         returns (uint256[] memory, uint256[] memory)
     {
         return DiscountFactor.calculateDFs(rates, terms);

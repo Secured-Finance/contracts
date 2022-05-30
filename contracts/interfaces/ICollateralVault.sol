@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 interface ICollateralVault {
     event Deposit(address user, uint256 amount);
@@ -57,8 +57,6 @@ interface ICollateralVault {
         address _to,
         uint256 _amountETH
     ) external returns (uint256 liquidationLeftETH);
-
-    function owner() external view returns (address);
 
     function rebalanceBetween(
         address _user,

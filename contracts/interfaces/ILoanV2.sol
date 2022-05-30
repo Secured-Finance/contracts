@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 struct LoanDeal {
@@ -112,11 +112,5 @@ interface ILoanV2 {
 
     function requestTermination(bytes32 loanId) external;
 
-    function setCollateralAddr(address addr) external;
-
     function setIsTransferable(bool isAccepted) external;
-
-    function setLendingControllerAddr(address addr) external;
-
-    function setPaymentAggregator(address addr) external;
 }

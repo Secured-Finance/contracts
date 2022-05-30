@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 interface IProductAddressResolver {
     event RegisterProduct(
@@ -86,6 +86,15 @@ interface IProductAddressResolver {
      * @param _dealId Product deal idenfitier
      */
     function isSupportedProductByDealId(bytes32 _dealId)
+        external
+        view
+        returns (bool);
+
+    /**
+     * @dev Triggers to verify if a specific product contract is registered.
+     * @param _product Product contract address
+     */
+    function isRegisteredProductContract(address _product)
         external
         view
         returns (bool);

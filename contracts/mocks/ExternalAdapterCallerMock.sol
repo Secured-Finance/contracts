@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "../ProtocolTypes.sol";
@@ -36,7 +36,7 @@ contract ExternalAdapterCallerMock is IExternalAdapterTxResponse {
             );
     }
 
-    function fullfillSettlementRequest(
+    function fulfillSettlementRequest(
         bytes32 _requestId,
         FulfillData memory _txData,
         bytes32 _ccy

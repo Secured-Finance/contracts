@@ -1,22 +1,26 @@
+const AddressResolver = artifacts.require('AddressResolver');
 const CollateralAggregatorMock = artifacts.require('CollateralAggregatorMock');
-const ERC20Mock = artifacts.require('ERC20Mock');
-const WETH9Mock = artifacts.require('WETH9Mock');
+const CrosschainAddressResolver = artifacts.require(
+  'CrosschainAddressResolver',
+);
 const CurrencyController = artifacts.require('CurrencyController');
+const ERC20Mock = artifacts.require('ERC20Mock');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
+const WETH9Mock = artifacts.require('WETH9Mock');
 
-const { toBytes32, hexFILString } = require('../test-utils').strings;
+const { toBytes32, hexFILString, zeroAddress, nonZeroAddress } =
+  require('../test-utils').strings;
 const { ZERO_BN, decimalBase, toBN } = require('../test-utils').numbers;
 const { checkTokenBalances } = require('../test-utils').balances;
-const utils = require('web3-utils');
+
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { zeroAddress } = require('../test-utils/src/strings');
+const utils = require('web3-utils');
 
 should();
 
 contract('ERC20 based CollateralVault', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
-  let signers;
 
   let collateral;
   let vault;
@@ -36,14 +40,60 @@ contract('ERC20 based CollateralVault', async (accounts) => {
   before(
     'deploy CollateralVault, CollateralAggregator, CurrencyController, price feeds and ERC20 mock contracts',
     async () => {
-      signers = await ethers.getSigners();
+      aliceTokenBalance = decimalBase.mul(toBN('1000'));
 
+      // Deploy contracts
+      const DealId = await ethers.getContractFactory('DealId');
+      const dealIdLibrary = await DealId.deploy();
+      await dealIdLibrary.deployed();
+      const addressResolver = await AddressResolver.new();
+      currencyController = await CurrencyController.new();
+      const crosschainAddressResolver = await CrosschainAddressResolver.new(
+        addressResolver.address,
+      );
+      tokenContract = await ERC20Mock.new(
+        toBytes32('Test FIL'),
+        toBytes32('tFIL'),
+        alice,
+        aliceTokenBalance,
+      );
+      collateral = await CollateralAggregatorMock.new(addressResolver.address);
+      wETHToken = await WETH9Mock.new();
       filToETHPriceFeed = await MockV3Aggregator.new(
         18,
         hexFILString,
         filToETHRate,
       );
-      currencyController = await CurrencyController.new();
+      const productAddressResolver = await ethers
+        .getContractFactory('ProductAddressResolver', {
+          libraries: {
+            DealId: dealIdLibrary.address,
+          },
+        })
+        .then((factory) => factory.deploy());
+
+      // Set up for testing
+      await addressResolver.importAddresses(
+        [
+          'CollateralAggregator',
+          'CrosschainAddressResolver',
+          'CurrencyController',
+          'Liquidations',
+          'Loan',
+          'ProductAddressResolver',
+        ].map((input) => toBytes32(input)),
+        [
+          collateral.address,
+          crosschainAddressResolver.address,
+          currencyController.address,
+          utils.randomHex(20),
+          utils.randomHex(20),
+          productAddressResolver.address,
+        ],
+      );
+      await collateral.buildCache();
+      await crosschainAddressResolver.buildCache();
+
       await currencyController.supportCurrency(
         hexFILString,
         'Filecoin',
@@ -54,42 +104,16 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
       await currencyController.updateCollateralSupport(hexFILString, true);
 
-      aliceTokenBalance = decimalBase.mul(toBN('1000'));
-      tokenContract = await ERC20Mock.new(
-        toBytes32('Test FIL'),
-        toBytes32('tFIL'),
-        alice,
-        aliceTokenBalance,
-      );
-
-      wETHToken = await WETH9Mock.new();
-
-      collateral = await CollateralAggregatorMock.new();
-      await collateral.setCurrencyController(currencyController.address, {
-        from: owner,
-      });
-
-      const crosschainResolverFactory = await ethers.getContractFactory(
-        'CrosschainAddressResolver',
-      );
-      crosschainResolver = await crosschainResolverFactory.deploy(
-        collateral.address,
-      );
-      await crosschainResolver.deployed();
-      await collateral.setCrosschainAddressResolver(crosschainResolver.address);
-
-      const CollateralVault = await ethers.getContractFactory(
-        'CollateralVault',
-      );
-
-      vault = await CollateralVault.deploy(
-        hexFILString,
-        tokenContract.address,
-        collateral.address,
-        currencyController.address,
-        wETHToken.address,
-      );
-
+      vault = await ethers
+        .getContractFactory('CollateralVault')
+        .then((factory) =>
+          factory.deploy(
+            addressResolver.address,
+            hexFILString,
+            tokenContract.address,
+            wETHToken.address,
+          ),
+        );
       await collateral.linkCollateralVault(vault.address, { from: owner });
     },
   );

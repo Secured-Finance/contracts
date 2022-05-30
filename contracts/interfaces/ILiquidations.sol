@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 interface ILiquidations {
     event DealAddedToLiquidationQueue(
@@ -12,11 +12,9 @@ interface ILiquidations {
         address party1,
         bytes32 dealId
     );
-    event LinkedContract(address addr);
     event LiquidationAgentAdded(address indexed liquidationAgent);
     event LiquidationAgentRemoved(address indexed liquidationAgent);
     event OffsetUpdated(uint256 oldOffset, uint256 newOffset);
-    event OwnerUpdated(address indexed oldOwner, address indexed newOwner);
 
     function addDealToLiquidationQueue(
         address party0,
@@ -25,8 +23,6 @@ interface ILiquidations {
     ) external;
 
     function addLiquidationAgent(address _liquidationAgent) external;
-
-    function linkContract(address _addr) external;
 
     function liquidateDeals(
         address party0,

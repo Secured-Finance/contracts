@@ -1,15 +1,13 @@
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
-
   const { deployer } = await getNamedAccounts();
 
-  const currencyController = await deployments.get('CurrencyController');
-  const productResolver = await deployments.get('ProductAddressResolver');
   const quickSortLibrary = await deployments.get('QuickSort');
+  const addressResolver = await deployments.get('AddressResolver');
 
   const termStructure = await deploy('TermStructure', {
     from: deployer,
-    args: [currencyController.address, productResolver.address],
+    args: [addressResolver.address],
     libraries: {
       QuickSort: quickSortLibrary.address,
     },
@@ -18,8 +16,4 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 };
 
 module.exports.tags = ['TermStructure'];
-module.exports.dependencies = [
-  'Libraries',
-  'CurrencyController',
-  'ProductAddressResolver',
-];
+module.exports.dependencies = ['AddressResolver', 'Libraries'];

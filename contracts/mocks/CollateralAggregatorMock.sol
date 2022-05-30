@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -17,6 +17,8 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         uint256 withdraw0;
         uint256 withdraw1;
     }
+
+    constructor(address _resolver) CollateralAggregatorV2(_resolver) {}
 
     function getMaxCollateralBookWidthdraw(address user)
         public

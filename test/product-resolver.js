@@ -1,12 +1,10 @@
-const ProductAddressResolverTest = artifacts.require(
-  'ProductAddressResolverTest',
-);
 const BytesConversion = artifacts.require('BytesConversion');
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { zeroAddress, loanPrefix, loanName } = require('../test-utils').strings;
 const { PrintTable } = require('../test-utils').helper;
+const { Deployment } = require('../test-utils').deployment;
 const { ethers } = require('hardhat');
 const utils = require('web3-utils');
 
@@ -16,10 +14,10 @@ contract('ProductAddressResolver contract test', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
   let bytesConversion;
-  let productResolver;
+  let productAddressResolver;
 
   let loan;
-  let lendingController;
+  let lendingMarketController;
 
   const generatePrefix = (val) => {
     let encodedPosition = ethers.utils.defaultAbiCoder.encode(
@@ -45,66 +43,41 @@ contract('ProductAddressResolver contract test', async (accounts) => {
 
     signers = await ethers.getSigners();
 
-    const DealId = await ethers.getContractFactory('DealId');
-    const dealIdLibrary = await DealId.deploy();
-    await dealIdLibrary.deployed();
+    const deployment = new Deployment();
+    deployment
+      .mock('ProductAddressResolver')
+      .useFactory('ProductAddressResolverTest', (instances) => ({
+        DealId: instances.dealIdLibrary.address,
+      }))
+      .deploy();
 
-    const DiscountFactor = await ethers.getContractFactory('DiscountFactor');
-    const discountFactorLibrary = await DiscountFactor.deploy();
-    await discountFactorLibrary.deployed();
-
-    const productResolverFactory = await ethers.getContractFactory(
-      'ProductAddressResolverTest',
-      {
-        libraries: {
-          DealId: dealIdLibrary.address,
-        },
-      },
-    );
-    productResolver = await productResolverFactory.deploy();
-
-    const loanFactory = await ethers.getContractFactory('LoanV2', {
-      libraries: {
-        DealId: dealIdLibrary.address,
-        DiscountFactor: discountFactorLibrary.address,
-      },
-    });
-    loan = await loanFactory.deploy();
-
-    const lendingControllerFactory = await ethers.getContractFactory(
-      'LendingMarketControllerMock',
-      {
-        libraries: {
-          DiscountFactor: discountFactorLibrary.address,
-        },
-      },
-    );
-    lendingController = await lendingControllerFactory.deploy();
+    ({ lendingMarketController, loan, productAddressResolver } =
+      await deployment.execute());
   });
 
   describe('Test register product function', async () => {
-    it('Succesfully add loan product type and check contract addresses', async () => {
+    it('Successfully add loan product type and check contract addresses', async () => {
       let prefix = generatePrefix(loanName);
       prefix.should.be.equal(loanPrefix);
 
       let productPrefix = await bytesConversion.getBytes4(loanName);
       prefix.should.be.equal(productPrefix);
 
-      await productResolver.registerProduct(
+      await productAddressResolver.registerProduct(
         productPrefix,
         loan.address,
-        lendingController.address,
+        lendingMarketController.address,
         { from: owner },
       );
 
       let id = generateId(12, productPrefix);
       let parsedId = id.slice(0, 10);
 
-      let contract = await productResolver.getProductContract(parsedId);
+      let contract = await productAddressResolver.getProductContract(parsedId);
       contract.should.be.equal(loan.address);
 
-      contract = await productResolver.getControllerContract(parsedId);
-      contract.should.be.equal(lendingController.address);
+      contract = await productAddressResolver.getControllerContract(parsedId);
+      contract.should.be.equal(lendingMarketController.address);
     });
 
     it('Try to add swap product type by Alice, expect revert', async () => {
@@ -115,12 +88,12 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       prefix.should.be.equal(productPrefix);
 
       expectRevert(
-        productResolver
+        productAddressResolver
           .connect(signers[1])
           .registerProduct(
             productPrefix,
             loan.address,
-            lendingController.address,
+            lendingMarketController.address,
             { from: alice },
           ),
         'INVALID_ACCESS',
@@ -129,10 +102,12 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       let id = generateId(12412, productPrefix);
       let parsedId = id.slice(0, 10);
 
-      let product = await productResolver.getProductContract(parsedId);
+      let product = await productAddressResolver.getProductContract(parsedId);
       product.should.be.equal(zeroAddress);
 
-      let controller = await productResolver.getControllerContract(parsedId);
+      let controller = await productAddressResolver.getControllerContract(
+        parsedId,
+      );
       controller.should.be.equal(zeroAddress);
     });
 
@@ -141,52 +116,86 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       let prefix = generatePrefix(productName);
 
       expectRevert(
-        productResolver
+        productAddressResolver
           .connect(signers[0])
-          .registerProduct(prefix, alice, lendingController.address),
+          .registerProduct(prefix, alice, lendingMarketController.address),
         "Can't add non-contract address",
       );
 
       expectRevert(
-        productResolver.registerProduct(prefix, loan.address, bob),
+        productAddressResolver.registerProduct(prefix, loan.address, bob),
         "Can't add non-contract address",
       );
     });
 
-    it('Succesfully add swap product type', async () => {
+    it('Successfully add swap product type', async () => {
       const productName = '0xSwapWithoutNotionalExchange';
       let prefix = generatePrefix(productName);
 
       let productPrefix = await bytesConversion.getBytes4(productName);
       prefix.should.be.equal(productPrefix);
 
-      await productResolver.registerProduct(
+      await productAddressResolver.registerProduct(
         productPrefix,
         loan.address,
-        lendingController.address,
+        lendingMarketController.address,
       );
 
       let id = generateId(6753, productPrefix);
       let parsedId = id.slice(0, 10);
 
-      let contract = await productResolver.getProductContract(parsedId);
+      let contract = await productAddressResolver.getProductContract(parsedId);
       contract.should.be.equal(loan.address);
 
-      contract = await productResolver.getControllerContract(parsedId);
-      contract.should.be.equal(lendingController.address);
+      contract = await productAddressResolver.getControllerContract(parsedId);
+      contract.should.be.equal(lendingMarketController.address);
+    });
+
+    it('Successfully replace old loan product contract', async () => {
+      const newLoanDummy = lendingMarketController.address;
+      let prefix = generatePrefix(loanName);
+
+      let productPrefix = await bytesConversion.getBytes4(loanName);
+      prefix.should.be.equal(productPrefix);
+
+      await productAddressResolver.registerProduct(
+        productPrefix,
+        loan.address,
+        lendingMarketController.address,
+      );
+
+      const isRegistered =
+        await productAddressResolver.isRegisteredProductContract(loan.address);
+      isRegistered.should.be.equal(true);
+
+      await productAddressResolver.registerProduct(
+        productPrefix,
+        newLoanDummy,
+        lendingMarketController.address,
+      );
+
+      const isRegisteredOld =
+        await productAddressResolver.isRegisteredProductContract(loan.address);
+      const isRegisteredNew =
+        await productAddressResolver.isRegisteredProductContract(newLoanDummy);
+      isRegisteredOld.should.be.equal(false);
+      isRegisteredNew.should.be.equal(true);
     });
   });
 
   describe('Test register multiple products function', async () => {
-    it('Succesfully try to add multiple products', async () => {
+    it('Successfully try to add multiple products', async () => {
       const swapName = '0xSwapWithoutNotionalExchange';
       let swapPrefix = generatePrefix(swapName);
 
       let prefixes = [loanPrefix, swapPrefix];
       let productAddreesses = [loan.address, loan.address];
-      let controllers = [lendingController.address, lendingController.address];
+      let controllers = [
+        lendingMarketController.address,
+        lendingMarketController.address,
+      ];
 
-      await productResolver.registerProducts(
+      await productAddressResolver.registerProducts(
         prefixes,
         productAddreesses,
         controllers,
@@ -200,10 +209,10 @@ contract('ProductAddressResolver contract test', async (accounts) => {
 
       let prefixes = [loanPrefix, swapPrefix];
       let productAddreesses = [loan.address];
-      let controllers = [lendingController.address];
+      let controllers = [lendingMarketController.address];
 
       expectRevert(
-        productResolver.registerProducts(
+        productAddressResolver.registerProducts(
           prefixes,
           productAddreesses,
           controllers,
@@ -213,12 +222,12 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       );
 
       expectRevert(
-        productResolver
+        productAddressResolver
           .connect(signers[2])
           .registerProducts(
             prefixes,
             [loan.address, loan.address],
-            [lendingController.address, lendingController.address],
+            [lendingMarketController.address, lendingMarketController.address],
           ),
         'INVALID_ACCESS',
       );
@@ -233,12 +242,12 @@ contract('ProductAddressResolver contract test', async (accounts) => {
 
       await gasCostTable.add(
         'Get product contract',
-        productResolver.getGasCostOfGetProductContract(parsedId),
+        productAddressResolver.getGasCostOfGetProductContract(parsedId),
       );
 
       await gasCostTable.add(
         'Get controller contract',
-        productResolver.getGasCostOfGetControllerContract(parsedId),
+        productAddressResolver.getGasCostOfGetControllerContract(parsedId),
       );
 
       gasCostTable.log();
@@ -250,12 +259,16 @@ contract('ProductAddressResolver contract test', async (accounts) => {
 
       await gasCostTable.add(
         'Get product contract',
-        productResolver.getGasCostOfGetProductContractWithTypeConversion(id),
+        productAddressResolver.getGasCostOfGetProductContractWithTypeConversion(
+          id,
+        ),
       );
 
       await gasCostTable.add(
         'Get controller contract',
-        productResolver.getGasCostOfGetControllerContractWithTypeConversion(id),
+        productAddressResolver.getGasCostOfGetControllerContractWithTypeConversion(
+          id,
+        ),
       );
       gasCostTable.log();
     });

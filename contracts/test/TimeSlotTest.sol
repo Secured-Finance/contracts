@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -82,7 +82,7 @@ contract TimeSlotTest {
         uint256 payment1
     ) external {
         (bytes32 addrPack, bool flipped) = AddressPacking.pack(party0, party1);
-        TimeSlot.Slot memory timeSlot = _timeSlots[addrPack][ccy][slot];
+        TimeSlot.Slot storage timeSlot = _timeSlots[addrPack][ccy][slot];
 
         uint256 totalPaymentBefore0 = timeSlot.totalPayment0;
         uint256 totalPaymentBefore1 = timeSlot.totalPayment1;
@@ -128,7 +128,7 @@ contract TimeSlotTest {
         uint256 payment1
     ) external {
         (bytes32 addrPack, bool flipped) = AddressPacking.pack(party0, party1);
-        TimeSlot.Slot memory timeSlot = _timeSlots[addrPack][ccy][slot];
+        TimeSlot.Slot storage timeSlot = _timeSlots[addrPack][ccy][slot];
         require(!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
 
         uint256 totalPaymentBefore0 = timeSlot.totalPayment0;

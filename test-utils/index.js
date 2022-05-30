@@ -10,4 +10,5 @@ module.exports = {
   dealId: require('./src/deal-id'),
   settlementId: require('./src/settlement-id'),
   timeSlot: require('./src/timeSlot'),
+  deployment: require('./src/deployment'),
 };

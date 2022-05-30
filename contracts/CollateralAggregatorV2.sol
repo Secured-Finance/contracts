@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "./interfaces/ICollateralAggregatorV2.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
 import "./ProtocolTypes.sol";
-import "./CollateralManagement.sol";
-import "hardhat/console.sol";
+import "./mixins/MixinCollateralManagement.sol";
 
 /**
  * @title Collateral Aggregator contract is used to manage Secured Finance
@@ -28,10 +26,11 @@ import "hardhat/console.sol";
 contract CollateralAggregatorV2 is
     ICollateralAggregator,
     ProtocolTypes,
-    CollateralManagement
+    MixinCollateralManagement
 {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using EnumerableSet for EnumerableSet.AddressSet;
     using NetPV for NetPV.CcyNetting;
 
     // Mapping for total amount of collateral locked against independent collateral from all books.
@@ -73,6 +72,14 @@ contract CollateralAggregatorV2 is
         _;
     }
 
+    /**
+     * @dev Contract constructor function.
+     *
+     * @notice sets contract deployer as owner of this contract
+     * @param _resolver The address of the Address Resolver contract
+     */
+    constructor(address _resolver) MixinCollateralManagement(_resolver) {}
+
     // =========== COLLATERAL BOOK SECTION ===========
 
     /**
@@ -105,14 +112,12 @@ contract CollateralAggregatorV2 is
      * @param user User's address
      * @param ccy Specified currency of the deal
      * @param amount Amount of funds to be locked in Ccy for user
-     *
-     * @notice Callable only by Loan and linked LendingMarket
      */
     function useUnsettledCollateral(
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         exposedUnsettledCurrencies[user].add(ccy);
         require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
 
@@ -130,8 +135,6 @@ contract CollateralAggregatorV2 is
      * @param ccy Specified currency of the deal
      * @param amount0 Amount of funds to be locked in Ccy for counterparty A
      * @param amount1 Amount of funds to be locked in Ccy for counterparty B
-     *
-     * @notice Callable only by Loan and linked LendingMarket
      */
     function useCollateral(
         address partyA,
@@ -140,7 +143,7 @@ contract CollateralAggregatorV2 is
         uint256 amount0,
         uint256 amount1,
         bool isSettled
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
         exposedCurrencies[packedAddrs].add(ccy);
 
@@ -165,8 +168,6 @@ contract CollateralAggregatorV2 is
      * @param ccy Specified currency of the deal
      * @param amount0 Amount of funds to be locked in Ccy for counterparty A
      * @param amount1 Amount of funds to be locked in Ccy for counterparty B
-     *
-     * @notice Callable only by Loan and linked LendingMarket
      */
     function settleCollateral(
         address partyA,
@@ -174,7 +175,7 @@ contract CollateralAggregatorV2 is
         bytes32 ccy,
         uint256 amount0,
         uint256 amount1
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         NetPV.settle(ccyNettings, partyA, partyB, ccy, amount0, amount1);
         _rebalanceIfRequired(partyA, partyB, true);
 
@@ -370,14 +371,12 @@ contract CollateralAggregatorV2 is
      * @param user User's ETH address
      * @param ccy Specified currency of the deal
      * @param amount Amount of funds to be unlocked from unsettled exposure in specified ccy
-     *
-     * @notice Callable only by smart contracts allowed to use collateral
      */
     function releaseUnsettledCollateral(
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].sub(
             amount
         );
@@ -396,8 +395,6 @@ contract CollateralAggregatorV2 is
      * @param ccy Specified currency of the deal
      * @param amount0 Amount of funds to be removed in CcyNetting for counterparty A
      * @param amount1 Amount of funds to be removed in CcyNetting for counterparty B
-     *
-     * @notice Callable only by smart contracts allowed to use collateral
      */
     function releaseCollateral(
         address partyA,
@@ -406,7 +403,7 @@ contract CollateralAggregatorV2 is
         uint256 amount0,
         uint256 amount1,
         bool isSettled
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
         require(exposedCurrencies[packedAddrs].contains(ccy), "non-used ccy");
 
@@ -434,8 +431,6 @@ contract CollateralAggregatorV2 is
      * @param prevPV1 Previous present value to be substracted from total exposure for counterparty B
      * @param currentPV0 Current present value to be added to total exposure for counterparty A
      * @param currentPV1 Current present value to be added to total exposure for counterparty B
-     *
-     * @notice Trigers only be Loan contract
      */
     function updatePV(
         address party0,
@@ -445,7 +440,7 @@ contract CollateralAggregatorV2 is
         uint256 prevPV1,
         uint256 currentPV0,
         uint256 currentPV1
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         NetPV.update(
             ccyNettings,
             party0,
@@ -477,14 +472,12 @@ contract CollateralAggregatorV2 is
      * @param from Address for liquidating collateral from
      * @param to Address for sending collateral to
      * @param liquidationInETH Liquidation amount in Ccy
-     *
-     * @notice Trigers only be LiquidationEngine
      */
     function liquidate(
         address from,
         address to,
         uint256 liquidationInETH
-    ) external override onlyLiquidationEngine {
+    ) external override onlyLiquidations {
         require(
             _liquidateCollateralAcrossVaults(from, to, liquidationInETH),
             "INCORRECT_LIQUIDATION_ACROSS_VAULTS"
@@ -500,8 +493,6 @@ contract CollateralAggregatorV2 is
      * @param ccy Short identifier of currency used to liquidate
      * @param liquidationAmount Liquidation amount in Ccy
      * @param isSettled Identifier wether collateral obligations for release is settled
-     *
-     * @notice Trigers only be LiquidationEngine
      */
     function liquidate(
         address from,
@@ -510,9 +501,9 @@ contract CollateralAggregatorV2 is
         uint256 liquidationAmount,
         uint256 pv,
         bool isSettled
-    ) external override onlyLiquidationEngineOrCollateralUser {
+    ) external override onlyAcceptedContracts {
         uint256 liquidationTarget = liquidationAmount.mul(LQLEVEL).div(BP);
-        uint256 liqudationInETH = currencyController.convertToETH(
+        uint256 liqudationInETH = currencyController().convertToETH(
             ccy,
             liquidationTarget
         );
@@ -646,7 +637,7 @@ contract CollateralAggregatorV2 is
         isRegistered[msg.sender] = true;
         // perform onboarding steps here
 
-        crosschainAddressResolver.updateAddresses(
+        crosschainAddressResolver().updateAddresses(
             msg.sender,
             _chainIds,
             _addresses
@@ -733,7 +724,7 @@ contract CollateralAggregatorV2 is
             }
 
             vars.exchangeRate = uint256(
-                currencyController.getLastETHPrice(vars.ccy)
+                currencyController().getLastETHPrice(vars.ccy)
             );
             vars.netting = _convertPositionToETH(
                 vars.netting,
@@ -747,7 +738,7 @@ contract CollateralAggregatorV2 is
                 vars.netting.unsettled1PV
             );
 
-            vars.haircutRatio = currencyController.getHaircut(vars.ccy);
+            vars.haircutRatio = currencyController().getHaircut(vars.ccy);
 
             vars.totalPV0inETH = vars.totalPV0inETH.add(vars.netting.party0PV);
             vars.totalPV1inETH = vars.totalPV1inETH.add(vars.netting.party1PV);
@@ -1068,7 +1059,7 @@ contract CollateralAggregatorV2 is
                 vars.ccyExp = vars.ccyExp.add(_unsettledExp);
             }
 
-            vars.ccyExpInETH = currencyController.convertToETH(
+            vars.ccyExpInETH = currencyController().convertToETH(
                 ccy,
                 vars.ccyExp
             );

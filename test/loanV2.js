@@ -1,22 +1,12 @@
 const LoanCallerMock = artifacts.require('LoanCallerMock');
-const PaymentAggregator = artifacts.require('PaymentAggregator');
-const CloseOutNetting = artifacts.require('CloseOutNetting');
 const CollateralAggregatorCallerMock = artifacts.require(
   'CollateralAggregatorCallerMock',
 );
-const CollateralAggregatorV2 = artifacts.require('CollateralAggregatorV2');
 const AddressPackingTest = artifacts.require('AddressPackingTest');
-const CurrencyController = artifacts.require('CurrencyController');
-const MarkToMarket = artifacts.require('MarkToMarket');
 const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
 const TimeSlotTest = artifacts.require('TimeSlotTest');
-const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const WETH9Mock = artifacts.require('WETH9Mock');
-const CrosschainAddressResolver = artifacts.require(
-  'CrosschainAddressResolver',
-);
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ChainlinkSettlementAdapterMock = artifacts.require(
@@ -25,6 +15,7 @@ const ChainlinkSettlementAdapterMock = artifacts.require(
 
 const { should } = require('chai');
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+const utils = require('web3-utils');
 
 const {
   toBytes32,
@@ -38,18 +29,13 @@ const {
   aliceFILAddress,
   bobFILAddress,
 } = require('../test-utils').strings;
-
 const { sortedTermDays } = require('../test-utils').terms;
-
 const { toBN, IR_BASE, oracleRequestFee } = require('../test-utils').numbers;
 const { getLatestTimestamp, ONE_DAY, advanceTime } =
   require('../test-utils').time;
-
 const { computeCrosschainSettlementId } = require('../test-utils').settlementId;
 const { hashPosition } = require('../test-utils').timeSlot;
-
-const utils = require('web3-utils');
-const { zeroAddress } = require('../test-utils/src/strings');
+const { Deployment } = require('../test-utils').deployment;
 
 should();
 
@@ -58,10 +44,6 @@ contract('LoanV2', async (accounts) => {
 
   let signers;
 
-  let filToETHRate = utils.toBN('67175250000000000');
-  let ethToUSDRate = utils.toBN('232612637168');
-  let btcToETHRate = utils.toBN('23889912590000000000');
-
   let _1yearTimeSlot;
   let _2yearTimeSlot;
   let _3yearTimeSlot;
@@ -69,6 +51,17 @@ contract('LoanV2', async (accounts) => {
   let _5yearTimeSlot;
 
   let aliceRequestId;
+
+  let addressResolver;
+  let closeOutNetting;
+  let collateralAggregator;
+  let crosschainAddressResolver;
+  let currencyController;
+  let lendingMarketController;
+  let loan;
+  let paymentAggregator;
+  let settlementEngine;
+  let termStructure;
 
   const generateId = (value, prefix) => {
     let right = utils.toBN(utils.rightPad(prefix, 64));
@@ -103,166 +96,50 @@ contract('LoanV2', async (accounts) => {
     aliceSigner = signers[1];
     bobSigner = signers[2];
 
-    const DealId = await ethers.getContractFactory('DealId');
-    const dealIdLibrary = await DealId.deploy();
-    await dealIdLibrary.deployed();
+    const deployment = new Deployment();
+    deployment
+      .mock('LendingMarketController')
+      .useFactory('LendingMarketControllerMock', (instances) => ({
+        DiscountFactor: instances.discountFactorLibrary.address,
+      }))
+      .deploy();
 
-    const QuickSort = await ethers.getContractFactory('QuickSort');
-    const quickSortLibrary = await QuickSort.deploy();
-    await quickSortLibrary.deployed();
-
-    const DiscountFactor = await ethers.getContractFactory('DiscountFactor');
-    const discountFactor = await DiscountFactor.deploy();
-    await discountFactor.deployed();
-
-    const productResolverFactory = await ethers.getContractFactory(
-      'ProductAddressResolver',
-      {
-        libraries: {
-          DealId: dealIdLibrary.address,
-        },
-      },
-    );
-    productResolver = await productResolverFactory.deploy();
-
-    const loanFactory = await ethers.getContractFactory('LoanV2', {
-      libraries: {
-        DealId: dealIdLibrary.address,
-        DiscountFactor: discountFactor.address,
-      },
-    });
-    loan = await loanFactory.deploy();
-
-    markToMarket = await MarkToMarket.new(productResolver.address);
+    ({
+      addressResolver,
+      paymentAggregator,
+      closeOutNetting,
+      collateralAggregator,
+      currencyController,
+      crosschainAddressResolver,
+      termStructure,
+      loan,
+      settlementEngine,
+      wETHToken,
+      lendingMarketController,
+    } = await deployment.execute());
 
     loanCaller = await LoanCallerMock.new(loan.address);
-    paymentAggregator = await PaymentAggregator.new();
-
-    closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
-
-    collateral = await CollateralAggregatorV2.new();
 
     collateralCaller = await CollateralAggregatorCallerMock.new(
-      collateral.address,
+      collateralAggregator.address,
     );
-
-    const lendingControllerFactory = await ethers.getContractFactory(
-      'LendingMarketControllerMock',
-      {
-        libraries: {
-          DiscountFactor: discountFactor.address,
-        },
-      },
-    );
-    lendingController = await lendingControllerFactory.deploy();
 
     await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
     await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
-    await loan.setPaymentAggregator(paymentAggregator.address);
-    await loan.setCollateralAddr(collateral.address);
-    await loan.setLendingControllerAddr(lendingController.address);
 
-    await collateral.addCollateralUser(loan.address);
-    await collateral.addCollateralUser(collateralCaller.address);
+    ethVault = await ethers
+      .getContractFactory('CollateralVault')
+      .then((factory) =>
+        factory.deploy(
+          addressResolver.address,
+          hexETHString,
+          wETHToken.address,
+          wETHToken.address,
+        ),
+      );
 
-    currencyController = await CurrencyController.new();
-
-    filToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexFILString,
-      filToETHRate,
-    );
-    ethToUSDPriceFeed = await MockV3Aggregator.new(
-      8,
-      hexETHString,
-      ethToUSDRate,
-    );
-    btcToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexBTCString,
-      btcToETHRate,
-    );
-
-    let tx = await currencyController.supportCurrency(
-      hexETHString,
-      'Ethereum',
-      60,
-      ethToUSDPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.supportCurrency(
-      hexBTCString,
-      'Bitcoin',
-      0,
-      btcToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-    expectEvent(tx, 'CcyAdded');
-
-    tx = await currencyController.updateCollateralSupport(hexETHString, true);
-    expectEvent(tx, 'CcyCollateralUpdate');
-
-    tx = await currencyController.updateMinMargin(hexETHString, 2500);
-    expectEvent(tx, 'MinMarginUpdated');
-
-    await collateral.setCurrencyController(currencyController.address, {
-      from: owner,
-    });
-
-    crosschainResolver = await CrosschainAddressResolver.new(
-      collateral.address,
-    );
-
-    await collateral.setCrosschainAddressResolver(crosschainResolver.address);
-
-    const CollateralVault = await ethers.getContractFactory('CollateralVault');
-    wETHToken = await WETH9Mock.new();
-
-    ethVault = await CollateralVault.deploy(
-      hexETHString,
-      wETHToken.address,
-      collateral.address,
-      currencyController.address,
-      wETHToken.address,
-    );
-
-    await collateral.linkCollateralVault(ethVault.address);
-
-    await paymentAggregator.addPaymentAggregatorUser(loan.address);
-    await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
-    await paymentAggregator.setMarkToMarket(markToMarket.address);
-
-    await productResolver
-      .connect(signers[0])
-      .registerProduct(loanPrefix, loan.address, lendingController.address);
-
-    const termStructureFactory = await ethers.getContractFactory(
-      'TermStructure',
-      {
-        libraries: {
-          QuickSort: quickSortLibrary.address,
-        },
-      },
-    );
-    termStructure = await termStructureFactory.deploy(
-      currencyController.address,
-      productResolver.address,
-    );
-    await loan.setTermStructure(termStructure.address);
+    await collateralAggregator.addCollateralUser(collateralCaller.address);
+    await collateralAggregator.linkCollateralVault(ethVault.address);
 
     for (i = 0; i < sortedTermDays.length; i++) {
       await termStructure.supportTerm(
@@ -272,26 +149,23 @@ contract('LoanV2', async (accounts) => {
       );
     }
 
-    await lendingController.setSupportedTerms(hexETHString, sortedTermDays);
-    await lendingController.setSupportedTerms(hexFILString, sortedTermDays);
-    await lendingController.setSupportedTerms(hexBTCString, sortedTermDays);
+    await lendingMarketController.setSupportedTerms(
+      hexETHString,
+      sortedTermDays,
+    );
+    await lendingMarketController.setSupportedTerms(
+      hexFILString,
+      sortedTermDays,
+    );
+    await lendingMarketController.setSupportedTerms(
+      hexBTCString,
+      sortedTermDays,
+    );
 
     addressPacking = await AddressPackingTest.new();
 
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     timeSlotTest = await TimeSlotTest.new();
-
-    const SettlementEngineFactory = await ethers.getContractFactory(
-      'SettlementEngine',
-    );
-    settlementEngine = await SettlementEngineFactory.deploy(
-      paymentAggregator.address,
-      currencyController.address,
-      crosschainResolver.address,
-      wETHToken.address,
-    );
-
-    await paymentAggregator.setSettlementEngine(settlementEngine.address);
 
     linkToken = await LinkToken.new();
     oracleOperator = await Operator.new(linkToken.address, owner);
@@ -314,13 +188,13 @@ contract('LoanV2', async (accounts) => {
       toBN('100000000000000000000'),
     );
 
-    await crosschainResolver.methods['updateAddress(uint256,string)'](
+    await crosschainAddressResolver.methods['updateAddress(uint256,string)'](
       461,
       aliceFILAddress,
       { from: alice },
     );
 
-    await crosschainResolver.methods['updateAddress(uint256,string)'](
+    await crosschainAddressResolver.methods['updateAddress(uint256,string)'](
       461,
       bobFILAddress,
       { from: bob },
@@ -348,13 +222,16 @@ contract('LoanV2', async (accounts) => {
       const borrowRates = [780, 880, 980, 1080, 1180, 1380];
       const midRates = [850, 950, 1050, 1150, 1250, 1450];
 
-      let tx = await lendingController.setBorrowRatesForCcy(
+      let tx = await lendingMarketController.setBorrowRatesForCcy(
         hexFILString,
         borrowRates,
       );
-      tx = await lendingController.setLendRatesForCcy(hexFILString, lendRates);
+      tx = await lendingMarketController.setLendRatesForCcy(
+        hexFILString,
+        lendRates,
+      );
 
-      let rates = await lendingController.getMidRatesForCcy(hexFILString);
+      let rates = await lendingMarketController.getMidRatesForCcy(hexFILString);
       rates.map((rate, i) => {
         rate.toNumber().should.be.equal(midRates[i]);
       });
@@ -365,7 +242,7 @@ contract('LoanV2', async (accounts) => {
       const aliceDepositAmt = toBN('1000000000000000000');
       const bobDepositAmt = toBN('10000000000000000000');
 
-      let result = await collateral.register({ from: alice });
+      let result = await collateralAggregator.register({ from: alice });
       expectEvent(result, 'Register');
 
       await (
@@ -383,7 +260,7 @@ contract('LoanV2', async (accounts) => {
         .toString()
         .should.be.equal(aliceDepositAmt.toString());
 
-      result = await collateral.register({ from: bob });
+      result = await collateralAggregator.register({ from: bob });
       expectEvent(result, 'Register');
 
       await (
@@ -661,12 +538,15 @@ contract('LoanV2', async (accounts) => {
       const borrowRates = [880, 980, 1080, 1180, 1280, 1480];
       const midRates = [950, 1050, 1150, 1250, 1350, 1550];
 
-      let tx = await lendingController.setBorrowRatesForCcy(
+      let tx = await lendingMarketController.setBorrowRatesForCcy(
         hexFILString,
         borrowRates,
       );
-      tx = await lendingController.setLendRatesForCcy(hexFILString, lendRates);
-      let rates = await lendingController.getMidRatesForCcy(hexFILString);
+      tx = await lendingMarketController.setLendRatesForCcy(
+        hexFILString,
+        lendRates,
+      );
+      let rates = await lendingMarketController.getMidRatesForCcy(hexFILString);
       rates.map((rate, i) => {
         rate.toNumber().should.be.equal(midRates[i]);
       });
@@ -684,12 +564,15 @@ contract('LoanV2', async (accounts) => {
       const borrowRates = [680, 780, 880, 980, 1080, 1280];
       const midRates = [750, 850, 950, 1050, 1150, 1350];
 
-      let tx = await lendingController.setBorrowRatesForCcy(
+      let tx = await lendingMarketController.setBorrowRatesForCcy(
         hexFILString,
         borrowRates,
       );
-      tx = await lendingController.setLendRatesForCcy(hexFILString, lendRates);
-      let rates = await lendingController.getMidRatesForCcy(hexFILString);
+      tx = await lendingMarketController.setLendRatesForCcy(
+        hexFILString,
+        lendRates,
+      );
+      let rates = await lendingMarketController.getMidRatesForCcy(hexFILString);
       rates.map((rate, i) => {
         rate.toNumber().should.be.equal(midRates[i]);
       });
@@ -771,7 +654,7 @@ contract('LoanV2', async (accounts) => {
       );
       closeOut.netPayment.toString().should.be.equal('0');
 
-      // let position = await collateral.getBilateralPosition(alice, bob);
+      // let position = await collateralAggregator.getBilateralPosition(alice, bob);
       // TODO: Add automatic collateral rebalance on terminating the deal and releasing collateral
       // position.lockedCollateralA.should.be.equal(bobFILInETH.toString());
       // position.lockedCollateralB.should.be.equal(aliceFILInETH.toString());

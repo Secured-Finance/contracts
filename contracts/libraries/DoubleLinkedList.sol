@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache 2.0
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 /**
  * @title LinkedList
@@ -29,7 +29,7 @@ contract DoubleLinkedList {
     /**
      * @dev Creates an empty list.
      */
-    constructor() public {
+    constructor() {
         head = 0;
         tail = 0;
         idCounter = 1;

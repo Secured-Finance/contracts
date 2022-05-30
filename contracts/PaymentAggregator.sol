@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ProtocolTypes.sol";
 import "./libraries/TimeSlot.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
-import "./interfaces/ICloseOutNetting.sol";
-import "./interfaces/IMarkToMarket.sol";
 import "./interfaces/IPaymentAggregator.sol";
-import "./interfaces/ISettlementEngine.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @title Payment Aggregator contract is used to aggregate payments
@@ -22,53 +21,31 @@ import "./interfaces/ISettlementEngine.sol";
  *
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
-contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
+contract PaymentAggregator is
+    IPaymentAggregator,
+    ProtocolTypes,
+    MixinAddressResolver,
+    Ownable
+{
     using SafeMath for uint256;
     using Address for address;
     using TimeSlot for TimeSlot.Slot;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    address public override owner;
     uint256 public override settlementWindow = 2;
     uint256 constant MAXPAYNUM = 6;
-
-    // Linked contract addresses
-    EnumerableSet.AddressSet private paymentAggregatorUsers;
-    ICloseOutNetting private closeOutNetting;
-    IMarkToMarket private markToMarket;
-    ISettlementEngine private settlementEngine;
 
     // Mapping structure for storing TimeSlots
     mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) _timeSlots;
     mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => EnumerableSet.Bytes32Set)))
         private deals;
 
-    /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-    /**
-     * @dev Modifier to check if msg.sender is payment aggregator user
-     */
-    modifier acceptedContract() {
+    modifier onlySettlementEngine() {
         require(
-            paymentAggregatorUsers.contains(msg.sender),
-            "not allowed to use payment aggregator"
+            msg.sender == address(settlementEngine()),
+            "NOT_SETTLEMENT_ENGINE"
         );
-        _;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only by passing contract address checks.
-     */
-    modifier onlyContractAddr(address addr) {
-        require(addr != address(0), "INVALID_ADDRESS");
-        require(addr.isContract(), "NOT_CONTRACT");
         _;
     }
 
@@ -76,106 +53,31 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
      * @dev Contract constructor function.
      *
      * @notice sets contract deployer as owner of this contract
+     * @param _resolver The address of the Address Resolver contract
      */
-    constructor() public {
-        owner = msg.sender;
-    }
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
-    /**
-     * @dev Trigers to add contract address to payment aggregator users address set
-     * @param _user Payment aggregator user smart contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function addPaymentAggregatorUser(address _user)
+    function requiredContracts()
         public
+        pure
         override
-        onlyOwner
-        returns (bool)
+        returns (bytes32[] memory contracts)
     {
-        require(_user != address(0), "Zero address");
-        require(_user.isContract(), "Can't add non-contract address");
-        require(
-            !paymentAggregatorUsers.contains(_user),
-            "Can't add existing address"
-        );
-        return paymentAggregatorUsers.add(_user);
+        contracts = new bytes32[](3);
+        contracts[0] = CONTRACT_CLOSE_OUT_NETTING;
+        contracts[1] = CONTRACT_MARK_TO_MARKET;
+        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
-    /**
-     * @dev Trigers to remove payment aggregator user from address set
-     * @param _user Payment aggregator user smart contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on removing non-existing payment aggregator user
-     */
-    function removePaymentAggregatorUser(address _user)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
-        require(
-            paymentAggregatorUsers.contains(_user),
-            "Can't remove non-existing user"
-        );
-        return paymentAggregatorUsers.remove(_user);
-    }
-
-    /**
-     * @dev Trigers to check if provided `addr` is a payment aggregator user from address set
-     * @param _user Contract address to check if it's a payment aggregator user
-     *
-     */
-    function isPaymentAggregatorUser(address _user)
-        public
+    function isAcceptedContract(address account)
+        internal
         view
         override
         returns (bool)
     {
-        return paymentAggregatorUsers.contains(_user);
-    }
-
-    /**
-     * @dev Trigers to set close out netting smart contract
-     * @param _contract CloseOutNetting smart contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function setCloseOutNetting(address _contract)
-        public
-        onlyOwner
-        onlyContractAddr(_contract)
-    {
-        emit UpdateCloseOutNetting(address(closeOutNetting), _contract);
-        closeOutNetting = ICloseOutNetting(_contract);
-    }
-
-    /**
-     * @dev Trigers to set mark to market smart contract
-     * @param _contract MarkToMarket smart contract address
-     *
-     * @notice Trigers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function setMarkToMarket(address _contract)
-        public
-        onlyOwner
-        onlyContractAddr(_contract)
-    {
-        emit UpdateMarkToMarket(address(markToMarket), _contract);
-        markToMarket = IMarkToMarket(_contract);
-    }
-
-    function setSettlementEngine(address _contract)
-        public
-        onlyOwner
-        onlyContractAddr(_contract)
-    {
-        emit UpdateSettlementEngine(address(settlementEngine), _contract);
-        settlementEngine = ISettlementEngine(_contract);
+        return
+            productAddressResolver().isRegisteredProductContract(account) ||
+            super.isAcceptedContract(account);
     }
 
     struct TimeSlotPaymentsLocalVars {
@@ -207,7 +109,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         uint256[] memory timestamps,
         uint256[] memory payments0,
         uint256[] memory payments1
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         TimeSlotPaymentsLocalVars memory vars;
         (vars.packedAddrs, ) = AddressPacking.pack(party0, party1);
 
@@ -254,7 +156,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
             );
         }
 
-        closeOutNetting.addPayments(
+        closeOutNetting().addPayments(
             party0,
             party1,
             ccy,
@@ -295,7 +197,6 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         uint256 payment,
         bytes32 settlementId
     ) external override {
-        require(_onlySettlementEngine(), "NOT_SETTLEMENT_ENGINE");
         require(checkSettlementWindow(timestamp), "OUT_OF_SETTLEMENT_WINDOW");
         PaymentSettlementLocalVars memory vars;
 
@@ -366,9 +267,9 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
             vars.ccy,
             vars.slotPosition
         );
-        markToMarket.updatePVs(dealIds);
+        markToMarket().updatePVs(dealIds);
 
-        closeOutNetting.removePayments(
+        closeOutNetting().removePayments(
             vars.verifier,
             vars.counterparty,
             vars.ccy,
@@ -406,7 +307,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         uint256[] calldata timestamps,
         uint256[] calldata payments0,
         uint256[] calldata payments1
-    ) external override acceptedContract {
+    ) external override onlyAcceptedContracts {
         TimeSlotPaymentsLocalVars memory vars;
         (vars.packedAddrs, ) = AddressPacking.pack(party0, party1);
 
@@ -452,7 +353,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
             );
         }
 
-        closeOutNetting.removePayments(
+        closeOutNetting().removePayments(
             party0,
             party1,
             ccy,
@@ -671,9 +572,5 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes {
         }
 
         return dealIds;
-    }
-
-    function _onlySettlementEngine() internal view returns (bool) {
-        return msg.sender == address(settlementEngine);
     }
 }

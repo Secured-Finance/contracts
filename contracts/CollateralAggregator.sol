@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/ICurrencyController.sol";
@@ -212,7 +212,7 @@ contract CollateralAggregator is ProtocolTypes {
      *
      * @notice sets contract deployer as owner of this contract
      */
-    constructor() public {
+    constructor() {
         owner = msg.sender;
 
         LQLEVEL = 12000; // 120% for liquidation price

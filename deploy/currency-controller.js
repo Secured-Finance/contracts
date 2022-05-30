@@ -7,7 +7,6 @@ const { hexFILString, hexBTCString, hexETHString } =
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
-
   const { deployer } = await getNamedAccounts();
 
   const currencyController = await deploy('CurrencyController', {

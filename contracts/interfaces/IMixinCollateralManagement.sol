@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
-interface ICollateralManagement {
+interface IMixinCollateralManagement {
     event CollateralUserAdded(address indexed user);
     event CollateralUserRemoved(address indexed user);
 
@@ -27,8 +27,6 @@ interface ICollateralManagement {
     event MarginCallThresholdUpdated(uint256 previousRatio, uint256 ratio);
     event MinCollateralRatioUpdated(uint256 previousRatio, uint256 price);
 
-    function owner() external view returns (address);
-
     function AUTOLQLEVEL() external view returns (uint256);
 
     function LQLEVEL() external view returns (uint256);
@@ -36,12 +34,6 @@ interface ICollateralManagement {
     function MARGINLEVEL() external view returns (uint256);
 
     function MIN_COLLATERAL_RATIO() external view returns (uint256);
-
-    function setCurrencyController(address _addr) external;
-
-    function setLiquidationEngine(address _addr) external;
-
-    function setCrosschainAddressResolver(address _addr) external;
 
     function addCollateralUser(address _user) external returns (bool);
 

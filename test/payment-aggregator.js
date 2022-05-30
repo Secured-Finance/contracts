@@ -1,9 +1,9 @@
+const AddressResolver = artifacts.require('AddressResolver');
 const PaymentAggregator = artifacts.require('PaymentAggregator');
 const PaymentAggregatorCallerMock = artifacts.require(
   'PaymentAggregatorCallerMock',
 );
 const TimeSlotTest = artifacts.require('TimeSlotTest');
-const CloseOutNetting = artifacts.require('CloseOutNetting');
 const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
@@ -12,15 +12,10 @@ const MarkToMarketMock = artifacts.require('MarkToMarketMock');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ERC20Mock = artifacts.require('ERC20Mock');
-const WETH9Mock = artifacts.require('WETH9Mock');
 const ChainlinkSettlementAdapterMock = artifacts.require(
   'ChainlinkSettlementAdapterMock',
 );
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const CurrencyController = artifacts.require('CurrencyController');
-const CrosschainAddressResolver = artifacts.require(
-  'CrosschainAddressResolver',
-);
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
@@ -28,9 +23,7 @@ const { secondTxHash } = require('../test-utils/src/strings');
 const {
   toBytes32,
   hexFILString,
-  hexETHString,
   hexUSDCString,
-  zeroAddress,
   testJobId,
   testTxHash,
   aliceFILAddress,
@@ -41,8 +34,6 @@ const {
   toBN,
   IR_BASE,
   ZERO_BN,
-  filToETHRate,
-  ethToUSDRate,
   usdcToUSDRate,
   decimalBase,
   oracleRequestFee,
@@ -52,6 +43,8 @@ const { getLatestTimestamp, ONE_DAY, advanceTimeAndBlock } =
 const { computeNativeSettlementId, computeCrosschainSettlementId } =
   require('../test-utils').settlementId;
 const { PrintTable } = require('../test-utils').helper;
+const { Deployment } = require('../test-utils').deployment;
+
 should();
 
 contract('PaymentAggregator', async (accounts) => {
@@ -137,11 +130,12 @@ contract('PaymentAggregator', async (accounts) => {
   };
 
   let timeLibrary;
-  let paymentAggregator;
-  let aggregatorCaller;
   let timeSlotTest;
-  let addressPacking;
+  let paymentAggregatorMock;
   let closeOutNetting;
+  let paymentAggregator;
+  let currencyController;
+  let crosschainAddressResolver;
 
   let totalPayment0 = ZERO_BN;
   let couponPayment0 = ZERO_BN;
@@ -169,36 +163,30 @@ contract('PaymentAggregator', async (accounts) => {
     bobSigner = signers[2];
     carolSigner = signers[3];
 
+    const addressResolver = await AddressResolver.new();
+    paymentAggregator = await PaymentAggregator.new(addressResolver.address);
+    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
+      paymentAggregator.address,
+    );
+    const markToMarketMock = await MarkToMarketMock.new();
+
+    const deployment = new Deployment();
+    deployment.mock('AddressResolver').useValue(addressResolver);
+    deployment.mock('PaymentAggregator').useValue(paymentAggregator);
+    deployment.mock('MarkToMarket').useValue(markToMarketMock);
+    deployment.mock('Loan').useValue(paymentAggregatorMock);
+    ({
+      closeOutNetting,
+      currencyController,
+      crosschainAddressResolver,
+      settlementEngine,
+    } = await deployment.execute());
+
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     addressPacking = await AddressPackingTest.new();
     timeSlotTest = await TimeSlotTest.new();
-    paymentAggregator = await PaymentAggregator.new();
-    closeOutNetting = await CloseOutNetting.new(paymentAggregator.address);
 
-    markToMarketMock = await MarkToMarketMock.new();
-    aggregatorCaller = await PaymentAggregatorCallerMock.new(
-      paymentAggregator.address,
-    );
-    await paymentAggregator.addPaymentAggregatorUser(aggregatorCaller.address);
-    await paymentAggregator.setCloseOutNetting(closeOutNetting.address);
-    await paymentAggregator.setMarkToMarket(markToMarketMock.address);
-
-    currencyController = await CurrencyController.new();
-    crosschainAddressResolver = await CrosschainAddressResolver.new(
-      zeroAddress,
-    );
-
-    filToETHPriceFeed = await MockV3Aggregator.new(
-      18,
-      hexFILString,
-      filToETHRate,
-    );
-    ethToUSDPriceFeed = await MockV3Aggregator.new(
-      8,
-      hexETHString,
-      ethToUSDRate,
-    );
-    usdcToUSDPriceFeed = await MockV3Aggregator.new(
+    const usdcToUSDPriceFeed = await MockV3Aggregator.new(
       8,
       hexUSDCString,
       usdcToUSDRate,
@@ -211,16 +199,6 @@ contract('PaymentAggregator', async (accounts) => {
       bob,
       bobTokenBalance,
     );
-    wETHToken = await WETH9Mock.new();
-
-    await currencyController.supportCurrency(
-      hexETHString,
-      'Ethereum',
-      60,
-      ethToUSDPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
 
     await currencyController.supportCurrency(
       hexUSDCString,
@@ -230,27 +208,6 @@ contract('PaymentAggregator', async (accounts) => {
       7500,
       usdcToken.address,
     );
-
-    await currencyController.supportCurrency(
-      hexFILString,
-      'Filecoin',
-      461,
-      filToETHPriceFeed.address,
-      7500,
-      zeroAddress,
-    );
-
-    const SettlementEngineFactory = await ethers.getContractFactory(
-      'SettlementEngine',
-    );
-    settlementEngine = await SettlementEngineFactory.deploy(
-      paymentAggregator.address,
-      currencyController.address,
-      crosschainAddressResolver.address,
-      wETHToken.address,
-    );
-
-    await paymentAggregator.setSettlementEngine(settlementEngine.address);
 
     linkToken = await LinkToken.new();
     oracleOperator = await Operator.new(linkToken.address, owner);
@@ -324,7 +281,7 @@ contract('PaymentAggregator', async (accounts) => {
       closeOutPayment0 = closeOutPayment0.add(totalPayment0);
       closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
 
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         alice,
         bob,
         hexUSDCString,
@@ -383,7 +340,7 @@ contract('PaymentAggregator', async (accounts) => {
       let payments0 = await getSchedule(5, couponPayment0, notional);
       let payments1 = [0, 0, 0, 0, 0];
 
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         alice,
         bob,
         hexUSDCString,
@@ -501,7 +458,7 @@ contract('PaymentAggregator', async (accounts) => {
 
       let dealId =
         '0x21aaa47b00000000000000000000000000000000000000000000000000000012';
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         alice,
         bob,
         hexUSDCString,
@@ -554,7 +511,7 @@ contract('PaymentAggregator', async (accounts) => {
 
       let dealId =
         '0x21aaa47b00000000000000000000000000000000000000000000000000000032';
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         bob,
         alice,
         hexUSDCString,
@@ -614,7 +571,7 @@ contract('PaymentAggregator', async (accounts) => {
       closeOutPayment1 = closeOutPayment1.add(totalPayment1);
       closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
 
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         bob,
         alice,
         hexUSDCString,
@@ -672,7 +629,7 @@ contract('PaymentAggregator', async (accounts) => {
       closeOutPayment0 = closeOutPayment0.sub(totalPayment0);
       closeOutNetPayment = closeOutPayment1.sub(closeOutPayment0);
 
-      await aggregatorCaller.removePayments(
+      await paymentAggregatorMock.removePayments(
         alice,
         bob,
         hexUSDCString,
@@ -719,7 +676,7 @@ contract('PaymentAggregator', async (accounts) => {
       let total = notional.add(coupon);
 
       await expectRevert(
-        aggregatorCaller.removePayments(
+        paymentAggregatorMock.removePayments(
           bob,
           alice,
           hexUSDCString,
@@ -741,7 +698,7 @@ contract('PaymentAggregator', async (accounts) => {
       let total = notional.add(coupon);
 
       await expectRevert(
-        aggregatorCaller.removePayments(
+        paymentAggregatorMock.removePayments(
           bob,
           alice,
           hexUSDCString,
@@ -770,7 +727,7 @@ contract('PaymentAggregator', async (accounts) => {
       closeOutPayment1 = closeOutPayment1.sub(totalPayment);
       closeOutNetPayment = closeOutPayment0.sub(closeOutPayment1);
 
-      await aggregatorCaller.removePayments(
+      await paymentAggregatorMock.removePayments(
         bob,
         alice,
         hexUSDCString,
@@ -824,7 +781,7 @@ contract('PaymentAggregator', async (accounts) => {
       let payments0 = await getSchedule(5, couponPayment, notional);
       let payments1 = [0, 0, 0, 0, 0];
 
-      await aggregatorCaller.removePayments(
+      await paymentAggregatorMock.removePayments(
         alice,
         bob,
         hexUSDCString,
@@ -972,7 +929,7 @@ contract('PaymentAggregator', async (accounts) => {
       now = await getLatestTimestamp();
       slotTime = await timeLibrary.addDays(now, 90);
 
-      await aggregatorCaller.registerPayments(
+      await paymentAggregatorMock.registerPayments(
         alice,
         bob,
         hexFILString,

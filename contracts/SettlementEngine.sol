@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.12 <=0.7.0;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Strings.sol";
 import "./libraries/SafeTransfer.sol";
 import "./interfaces/IExternalAdapter.sol";
 import "./interfaces/ISettlementEngine.sol";
-import "./interfaces/ICurrencyController.sol";
-import "./interfaces/ILiquidations.sol";
-import "./interfaces/IPaymentAggregator.sol";
-import "./interfaces/ICrosschainAddressResolver.sol";
 import "./interfaces/IExternalAdapterTxResponse.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @title Settlement Engine contract is used in settlement operations
@@ -25,7 +23,9 @@ import "./interfaces/IExternalAdapterTxResponse.sol";
 contract SettlementEngine is
     ISettlementEngine,
     IExternalAdapterTxResponse,
-    SafeTransfer
+    MixinAddressResolver,
+    SafeTransfer,
+    Ownable
 {
     using SafeMath for uint256;
     using Address for address;
@@ -39,13 +39,7 @@ contract SettlementEngine is
         string txHash;
     }
 
-    address public override owner;
     uint16 private constant VERSION = 1;
-
-    ICurrencyController private currencyController;
-    ILiquidations private liquidationEngine;
-    IPaymentAggregator private paymentAggregator;
-    ICrosschainAddressResolver private crosschainResolver;
 
     // Mapping to external providers addresses by Chain Ids
     // for ETH-based currencies there is no need for external adapters
@@ -55,37 +49,34 @@ contract SettlementEngine is
     mapping(bytes32 => SettlementRequest) public override settlementRequests;
 
     /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner, "INVALID_ACCESS");
-        _;
-    }
-
-    /**
      * @dev Contract constructor function.
      *
      * @notice sets contract deployer as owner of this contract
      */
-    constructor(
-        address _paymentAggregator,
-        address _currencyController,
-        address _crosschainResolver,
-        address _WETH9
-    ) public SafeTransfer(_WETH9) {
-        owner = msg.sender;
+    constructor(address _resolver, address _WETH9)
+        MixinAddressResolver(_resolver)
+        SafeTransfer(_WETH9)
+        Ownable()
+    {}
 
-        paymentAggregator = IPaymentAggregator(_paymentAggregator);
-        currencyController = ICurrencyController(_currencyController);
-        crosschainResolver = ICrosschainAddressResolver(_crosschainResolver);
+    function requiredContracts()
+        public
+        pure
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](3);
+        contracts[0] = CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER;
+        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
+        contracts[2] = CONTRACT_PAYMENT_AGGREGATOR;
     }
 
     /**
-     * @dev Trigers to add new external adapter for specific `_ccy`
+     * @dev Triggers to add new external adapter for specific `_ccy`
      * @param _adapter External adapter contract address
      * @param _ccy Short identifier of a currency
      *
-     * @notice Trigers only be contract owner
+     * @notice Triggers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
     function addExternalAdapter(address _adapter, bytes32 _ccy)
@@ -94,9 +85,9 @@ contract SettlementEngine is
         onlyOwner
     {
         require(_adapter.isContract(), "NOT_CONTRACT");
-        require(currencyController.isSupportedCcy(_ccy), "NON_SUPPORTED_CCY");
+        require(currencyController().isSupportedCcy(_ccy), "NON_SUPPORTED_CCY");
 
-        uint16 chainId = currencyController.getChainId(_ccy);
+        uint16 chainId = currencyController().getChainId(_ccy);
         require(chainId != 60, "NOT_ANOTHER_CHAIN");
         require(
             externalAdapters[chainId] == address(0),
@@ -109,11 +100,11 @@ contract SettlementEngine is
     }
 
     /**
-     * @dev Trigers to replace existing external adapter for specific `_ccy`
+     * @dev Triggers to replace existing external adapter for specific `_ccy`
      * @param _adapter External adapter contract address
      * @param _ccy Short identifier of a currency
      *
-     * @notice Trigers only be contract owner
+     * @notice Triggers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
     function replaceExternalAdapter(address _adapter, bytes32 _ccy)
@@ -122,7 +113,7 @@ contract SettlementEngine is
         onlyOwner
     {
         require(_adapter.isContract(), "NOT_CONTRACT");
-        uint16 chainId = currencyController.getChainId(_ccy);
+        uint16 chainId = currencyController().getChainId(_ccy);
 
         require(
             externalAdapters[chainId] != address(0),
@@ -136,7 +127,7 @@ contract SettlementEngine is
 
     /**
      * @dev External function to verify payment by msg.sender as a part of a settlement process
-     * It could validate either a cross-chain settlment or native settlement
+     * It could validate either a cross-chain settlement or native settlement
      * @param _counterparty Counterparty address
      * @param _ccy Main payment settlement currency
      * @param _payment Payment amount in currency
@@ -151,11 +142,11 @@ contract SettlementEngine is
         string memory _txHash
     ) external payable override returns (bytes32) {
         // TODO: add a way for third party to trigger ERC20 approved coupon payments
-        uint16 chainId = currencyController.getChainId(_ccy);
+        uint16 chainId = currencyController().getChainId(_ccy);
         bytes32 requestId;
 
         require(
-            !paymentAggregator.isSettled(
+            !paymentAggregator().isSettled(
                 msg.sender,
                 _counterparty,
                 _ccy,
@@ -186,20 +177,20 @@ contract SettlementEngine is
     }
 
     /**
-     * @dev External function to fullfill cross-chain settlement request.
+     * @dev External function to fulfill cross-chain settlement request.
      * Expects to get transaction object to validate the correct settlement values
      * on the PaymentAggregator contract level
      * @param _txData Transaction object from external adapter
      * @param _ccy Main currency of the external adapter
      *
-     * @notice Trigers only be external adapter for specific chain
+     * @notice Triggers only be external adapter for specific chain
      */
-    function fullfillSettlementRequest(
+    function fulfillSettlementRequest(
         bytes32 _requestId,
         FulfillData memory _txData,
         bytes32 _ccy
     ) external override {
-        uint16 chainId = currencyController.getChainId(_ccy);
+        uint16 chainId = currencyController().getChainId(_ccy);
         require(
             externalAdapters[chainId] == msg.sender,
             "NOT_EXTERNAL_ADAPTER"
@@ -210,7 +201,7 @@ contract SettlementEngine is
 
         bytes32 _settlementId = keccak256(abi.encodePacked(_txData.txHash));
 
-        paymentAggregator.verifyPayment(
+        paymentAggregator().verifyPayment(
             request.payer,
             request.receiver,
             _ccy,
@@ -250,7 +241,7 @@ contract SettlementEngine is
     ) internal returns (bytes32) {
         require(msg.value == 0, "INCORRECT_ETH_VALUE");
         require(
-            paymentAggregator.checkSettlementWindow(_timestamp),
+            paymentAggregator().checkSettlementWindow(_timestamp),
             "OUT_OF_SETTLEMENT_WINDOW"
         );
 
@@ -305,7 +296,7 @@ contract SettlementEngine is
             _safeTransferETH(_counterparty, msg.value);
         } else {
             require(msg.value == 0, "INCORRECT_ETH_VALUE");
-            address token = currencyController.tokenAddresses(_ccy);
+            address token = currencyController().tokenAddresses(_ccy);
             require(token != address(0), "INVALID_TOKEN_ADDRESS");
             _safeTransferFrom(token, _payer, _counterparty, _payment);
         }
@@ -314,7 +305,7 @@ contract SettlementEngine is
             abi.encodePacked(_payer, _counterparty, _ccy, _payment, _timestamp)
         );
 
-        paymentAggregator.verifyPayment(
+        paymentAggregator().verifyPayment(
             _payer,
             _counterparty,
             _ccy,
@@ -335,15 +326,13 @@ contract SettlementEngine is
     ) internal view returns (bool) {
         require(_request.txHash.isEqual(_txData.txHash), "INCORRECT_TX_HASH");
 
-        string memory payerAddress = crosschainResolver.getUserAddress(
+        string memory payerAddress = crosschainAddressResolver().getUserAddress(
             _request.payer,
             _chainId
         );
 
-        string memory receiverAddress = crosschainResolver.getUserAddress(
-            _request.receiver,
-            _chainId
-        );
+        string memory receiverAddress = crosschainAddressResolver()
+            .getUserAddress(_request.receiver, _chainId);
 
         require(payerAddress.isEqual(_txData.from), "INCORRECT_ADDRESS_FROM");
         require(receiverAddress.isEqual(_txData.to), "INCORRECT_ADDRESS_TO");
@@ -353,7 +342,7 @@ contract SettlementEngine is
      * @dev Get the version of the underlying contract
      * @return implementation version
      */
-    function getVersion() public view override returns (uint16) {
+    function getVersion() public pure override returns (uint16) {
         return VERSION;
     }
 }

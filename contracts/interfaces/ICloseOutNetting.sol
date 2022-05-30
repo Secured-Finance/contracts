@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 interface ICloseOutNetting {
@@ -24,14 +24,6 @@ interface ICloseOutNetting {
         uint256 netPayment,
         bytes32 txHash
     );
-    event UpdateCollateralAggregator(
-        address indexed prevAddr,
-        address indexed addr
-    );
-    event UpdatePaymentAggregator(
-        address indexed prevAddr,
-        address indexed addr
-    );
     event VerifyCloseOut(
         address indexed party0,
         address indexed party1,
@@ -50,8 +42,6 @@ interface ICloseOutNetting {
 
     function checkDefault(address _party) external view returns (bool);
 
-    function owner() external view returns (address);
-
     function removePayments(
         address party0,
         address party1,
@@ -59,8 +49,4 @@ interface ICloseOutNetting {
         uint256 payment0,
         uint256 payment1
     ) external;
-
-    function updateCollateralAggregator(address addr) external;
-
-    function updatePaymentAggregator(address addr) external;
 }

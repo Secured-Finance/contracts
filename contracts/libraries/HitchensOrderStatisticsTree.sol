@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 
 import "./HitchensOrderStatisticsTreeLib.sol";
 
@@ -21,7 +21,7 @@ contract HitchensOrderStatisticsTree {
         uint256 _id
     );
 
-    constructor() public {}
+    constructor() {}
 
     function treeRootNode() public view returns (uint256 _value) {
         _value = tree.root;

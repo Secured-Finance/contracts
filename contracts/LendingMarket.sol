@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./interfaces/ICollateralAggregator.sol";
+import "./interfaces/ILendingMarket.sol";
 import "./interfaces/ILoanV2.sol";
-import "./interfaces/ILendingMarketController.sol";
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
 import "./ProtocolTypes.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @dev Lending Market contract module which allows lending market participants
@@ -17,68 +17,20 @@ import "./ProtocolTypes.sol";
  *
  * It will store market orders in structured red-black tree and doubly linked list in each node.
  */
-contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
+contract LendingMarket is
+    ILendingMarket,
+    MixinAddressResolver,
+    ProtocolTypes,
+    ReentrancyGuard,
+    Pausable
+{
     using SafeMath for uint256;
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
-    // Contracts interfaces
-    ICollateralAggregator collateralAggregator;
-    ILoanV2 loan;
-
-    /**
-     * @dev Emitted when market order created by market maker.
-     */
-    event MakeOrder(
-        uint256 orderId,
-        address indexed maker,
-        Side side,
-        bytes32 ccy,
-        uint256 term,
-        uint256 amount,
-        uint256 rate
-    );
-
-    /**
-     * @dev Emitted when market order canceled by market maker.
-     *
-     * Requirements:
-     *
-     * - Market order must be active and cancelable.
-     */
-    event CancelOrder(
-        uint256 orderId,
-        address indexed maker,
-        Side side,
-        uint256 amount,
-        uint256 rate
-    );
-
-    /**
-     * @dev Emitted when market order taken by market taker.
-     *
-     * Requirements:
-     *
-     * - Market order must be active.
-     */
-    event TakeOrder(
-        uint256 orderId,
-        address indexed taker,
-        Side side,
-        uint256 amount,
-        uint256 rate
-    );
-
+    bytes4 constant prefix = 0x21aaa47b;
     uint256 public last_order_id;
     bytes32 public MarketCcy;
     uint256 public MarketTerm;
-    address public lendingController;
-
-    struct MarketOrder {
-        Side side;
-        uint256 amount;
-        uint256 rate; // in basis points
-        address maker;
-    }
 
     /**
      * @dev Order Book mapping for all Market Orders.
@@ -93,25 +45,35 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
      * @param _term The main term for order book lending deals
      */
     constructor(
+        address _resolver,
         bytes32 _ccy,
-        uint256 _term,
-        address _lendingController
-    ) public {
+        uint256 _term
+    ) MixinAddressResolver(_resolver) {
         MarketCcy = _ccy;
         MarketTerm = _term;
-        lendingController = _lendingController;
+        buildCache();
     }
 
-    /**
-     * @dev Modifier to make a function callable only by lending market controller owner.
-     */
-    modifier onlyLendingControllerAdmin() {
-        require(
-            msg.sender == ILendingMarketController(lendingController).owner() ||
-                msg.sender == lendingController,
-            "Incorrect access"
-        );
-        _;
+    function requiredContracts()
+        public
+        pure
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](3);
+        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[1] = CONTRACT_LENDING_MARKET_CONTROLLER;
+        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+    }
+
+    function acceptedContracts()
+        public
+        pure
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_LENDING_MARKET_CONTROLLER;
     }
 
     /**
@@ -124,55 +86,36 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @dev Triggers to make a set collateral contract address.
-     * @param colAddr Collateral contract addreess
-     *
-     * Requirements:
-     *
-     * - Can be executed only by lending market controller owner.
-     */
-    function setCollateral(address colAddr) public onlyLendingControllerAdmin {
-        collateralAggregator = ICollateralAggregator(colAddr);
-    }
-
-    /**
-     * @dev Triggers to make a set loan contract address.
-     * @param addr Loan smart contract addreess
-     *
-     * Requirements:
-     *
-     * - Can be executed only by lending market controller owner.
-     */
-    function setLoan(address addr) public onlyLendingControllerAdmin {
-        loan = ILoanV2(addr);
-    }
-
-    /**
      * @dev Triggers to get order maker address.
      * @param orderId Market order id
      */
-    function getMaker(uint256 orderId) public view returns (address maker) {
+    function getMaker(uint256 orderId)
+        public
+        view
+        override
+        returns (address maker)
+    {
         return orders[orderId].maker;
     }
 
     /**
      * @dev Triggers to get highest borrow rate.
      */
-    function getBorrowRate() public view returns (uint256 rate) {
+    function getBorrowRate() public view override returns (uint256 rate) {
         return borrowOrders.last();
     }
 
     /**
      * @dev Triggers to get highest lend rate.
      */
-    function getLendRate() public view returns (uint256 rate) {
+    function getLendRate() public view override returns (uint256 rate) {
         return lendOrders.last();
     }
 
     /**
      * @dev Triggers to get mid rate.
      */
-    function getMidRate() public view returns (uint256 rate) {
+    function getMidRate() public view override returns (uint256 rate) {
         uint256 borrowRate = getBorrowRate();
         uint256 lendRate = getLendRate();
         uint256 combinedRate = borrowRate.add(lendRate);
@@ -187,6 +130,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     function getOrder(uint256 orderId)
         public
         view
+        override
         returns (MarketOrder memory)
     {
         return orders[orderId];
@@ -195,6 +139,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     function getOrderFromTree(uint256 orderId)
         public
         view
+        override
         returns (
             uint256,
             uint256,
@@ -229,6 +174,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
      */
     function cancelOrder(uint256 orderId)
         public
+        override
         onlyMaker(orderId)
         returns (bool success)
     {
@@ -242,7 +188,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
         }
         delete orders[orderId];
 
-        collateralAggregator.releaseUnsettledCollateral(
+        collateralAggregator().releaseUnsettledCollateral(
             order.maker,
             MarketCcy,
             order.amount.mul(MKTMAKELEVEL).div(PCT)
@@ -282,7 +228,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
         orderId = _next_id();
 
         orders[orderId] = order;
-        collateralAggregator.useUnsettledCollateral(
+        collateralAggregator().useUnsettledCollateral(
             msg.sender,
             MarketCcy,
             _amount.mul(MKTMAKELEVEL).div(PCT)
@@ -335,7 +281,11 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
             );
         }
 
-        loan.register(
+        address productAddress = productAddressResolver().getProductContract(
+            prefix
+        );
+
+        ILoanV2(productAddress).register(
             order.maker,
             msg.sender,
             uint8(order.side),
@@ -366,7 +316,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
         Side side,
         uint256 amount,
         uint256 rate
-    ) public view returns (uint256) {
+    ) external view override returns (uint256) {
         if (side == Side.LEND) {
             require(
                 borrowOrders.exists(rate),
@@ -394,7 +344,7 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
         Side side,
         uint256 amount,
         uint256 rate
-    ) public nonReentrant returns (bool) {
+    ) external override nonReentrant returns (bool) {
         uint256 orderId;
 
         if (side == Side.LEND) {
@@ -412,14 +362,14 @@ contract LendingMarket is ProtocolTypes, ReentrancyGuard, Pausable {
     /**
      * @dev Triggered to pause lending market.
      */
-    function pauseMarket() public virtual onlyLendingControllerAdmin {
+    function pauseMarket() public override onlyAcceptedContracts {
         _pause();
     }
 
     /**
      * @dev Triggered to pause lending market.
      */
-    function unpauseMarket() public virtual onlyLendingControllerAdmin {
+    function unpauseMarket() public override onlyAcceptedContracts {
         _unpause();
     }
 

@@ -4,16 +4,17 @@ pragma experimental ABIEncoderV2;
 
 import "@chainlink/contracts/src/v0.7/ChainlinkClient.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/ISettlementEngine.sol";
 import "./interfaces/IExternalAdapterTxResponse.sol";
+import "./mixins/MixinAddressResolver.sol";
 
 /**
  * @title ChainlinkSettlementAdapter is managing requests to Chainlink for a settlement process.
  */
 contract ChainlinkSettlementAdapter is
+    IExternalAdapterTxResponse,
     ChainlinkClient,
-    Ownable,
-    IExternalAdapterTxResponse
+    MixinAddressResolver,
+    Ownable
 {
     using Chainlink for Chainlink.Request;
 
@@ -22,40 +23,64 @@ contract ChainlinkSettlementAdapter is
     uint256 public requestFee;
     bytes32 public ccy;
 
-    ISettlementEngine private settlementEngine;
-
     /**
      * @dev Contract constructor function.
+     * @param _resolver The address of the Address Resolver contract
      * @param _oracle The address of the oracle contract
      * @param _jobId The job id on the Chainlink node
      * @param _requestFee The amount of LINK sent for the request
      * @param _link The address of the LINK token contract
      * @param _ccy Settlement adapter currency identifier
-     * @param _settlementEngine Address of a SettlementEngine contract
      *
      * @notice `_link` is provided for development usage
      */
     constructor(
+        address _resolver,
         address _oracle,
         bytes32 _jobId,
         uint256 _requestFee,
         address _link,
-        bytes32 _ccy,
-        address _settlementEngine
-    ) public Ownable() {
+        bytes32 _ccy
+    ) MixinAddressResolver(_resolver) Ownable() {
         setChainlinkOracle(_oracle);
         jobId = _jobId;
         ccy = _ccy;
 
         requestFee = _requestFee;
 
-        settlementEngine = ISettlementEngine(_settlementEngine);
-
         if (_link == address(0)) {
             setPublicChainlinkToken();
         } else {
             setChainlinkToken(_link);
         }
+
+        buildCache();
+    }
+
+    /**
+     * @dev The overridden method from MixinAddressResolver
+     */
+    function requiredContracts()
+        public
+        pure
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_SETTLEMENT_ENGINE;
+    }
+
+    /**
+     * @dev The overridden method from MixinAddressResolver
+     */
+    function acceptedContracts()
+        public
+        pure
+        override
+        returns (bytes32[] memory contracts)
+    {
+        contracts = new bytes32[](1);
+        contracts[0] = CONTRACT_SETTLEMENT_ENGINE;
     }
 
     /**
@@ -107,9 +132,9 @@ contract ChainlinkSettlementAdapter is
      */
     function createRequest(string memory _txHash)
         public
+        onlyAcceptedContracts
         returns (bytes32 requestId)
     {
-        _onlySettlementEngine();
         require(!isRequested[_txHash], "REQUEST_EXIST_ALREADY");
         isRequested[_txHash] = true;
         Chainlink.Request memory req = buildChainlinkRequest(
@@ -133,8 +158,7 @@ contract ChainlinkSettlementAdapter is
         bytes32 _requestId,
         bytes4 _callbackFunctionId,
         uint256 _expiration
-    ) public {
-        _onlySettlementEngine();
+    ) public onlyAcceptedContracts {
         isRequested[_txHash] = false;
         cancelChainlinkRequest(
             _requestId,
@@ -170,7 +194,7 @@ contract ChainlinkSettlementAdapter is
             txHash: _txHash
         });
 
-        settlementEngine.fullfillSettlementRequest(_requestId, txData, ccy);
+        settlementEngine().fulfillSettlementRequest(_requestId, txData, ccy);
     }
 
     /**
@@ -182,13 +206,6 @@ contract ChainlinkSettlementAdapter is
         require(
             link.transfer(msg.sender, link.balanceOf(address(this))),
             "Unable to transfer"
-        );
-    }
-
-    function _onlySettlementEngine() internal {
-        require(
-            msg.sender == address(settlementEngine),
-            "NOT_SETTLEMENT_ENGINE"
         );
     }
 }

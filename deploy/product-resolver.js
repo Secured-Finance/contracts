@@ -15,4 +15,4 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 };
 
 module.exports.tags = ['ProductAddressResolver'];
-module.exports.dependencies = ['Libraries'];
+module.exports.dependencies = ['Libraries', 'Loan', 'LendingMarketController'];

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "../ProtocolTypes.sol";
@@ -8,7 +8,7 @@ import "../interfaces/IPaymentAggregator.sol";
 contract PaymentAggregatorCallerMock is ProtocolTypes {
     IPaymentAggregator public paymentAggregator;
 
-    constructor(address _paymentAggregator) public {
+    constructor(address _paymentAggregator) {
         paymentAggregator = IPaymentAggregator(_paymentAggregator);
     }
 

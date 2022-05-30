@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 struct Slot {
@@ -13,19 +13,6 @@ struct Slot {
 }
 
 interface IPaymentAggregator {
-    event UpdateCloseOutNetting(
-        address indexed prevContract,
-        address indexed closeOutNetting
-    );
-    event UpdateMarkToMarket(
-        address indexed prevContract,
-        address indexed closeOutNetting
-    );
-    event UpdateSettlementEngine(
-        address indexed prevContract,
-        address indexed settlementEngine
-    );
-
     event RegisterPayment(
         address indexed party0,
         address indexed party1,
@@ -70,15 +57,6 @@ interface IPaymentAggregator {
         uint256 payment1
     );
 
-    function addPaymentAggregatorUser(address _user) external returns (bool);
-
-    function isPaymentAggregatorUser(address _user)
-        external
-        view
-        returns (bool);
-
-    function owner() external view returns (address);
-
     function registerPayments(
         address party0,
         address party1,
@@ -88,8 +66,6 @@ interface IPaymentAggregator {
         uint256[] memory payments0,
         uint256[] memory payments1
     ) external;
-
-    function removePaymentAggregatorUser(address _user) external returns (bool);
 
     function removePayments(
         address party0,

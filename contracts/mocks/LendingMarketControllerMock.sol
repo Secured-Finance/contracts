@@ -1,48 +1,30 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.6.12;
+pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ILendingMarketController.sol";
 import "../ProtocolTypes.sol";
 import "../libraries/DiscountFactor.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract LendingMarketControllerMock is
     ILendingMarketController,
-    ProtocolTypes
+    ProtocolTypes,
+    Ownable
 {
     using SafeMath for uint256;
 
-    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
-
-    address public override owner;
     uint256 public override numberOfMarkets = 0;
 
     mapping(bytes32 => mapping(uint256 => uint256)) public lendRates;
     mapping(bytes32 => mapping(uint256 => uint256)) public borrowRates;
     mapping(bytes32 => uint256[]) public supportedTerms;
 
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
     /**
      * @dev Lending Market Controller Constructor.
      */
-    constructor() public {
-        owner = msg.sender;
-    }
-
-    /**
-     * @dev Sets owner of the controller market.
-     * @param _owner Address of new owner
-     */
-    function setOwner(address _owner) public onlyOwner {
-        require(_owner != address(0), "new owner is the zero address");
-        emit OwnerChanged(owner, _owner);
-        owner = _owner;
-    }
+    constructor() Ownable() {}
 
     /**
      * @dev Triggers to get borrow rates for selected currency.
@@ -153,6 +135,7 @@ contract LendingMarketControllerMock is
 
     function deployLendingMarket(bytes32 _ccy, uint256 _term)
         public
+        pure
         override
         returns (address)
     {
@@ -163,7 +146,7 @@ contract LendingMarketControllerMock is
 
     function lendingMarkets(bytes32 _ccy, uint256 _term)
         public
-        view
+        pure
         override
         returns (address)
     {
@@ -172,13 +155,19 @@ contract LendingMarketControllerMock is
         return address(0);
     }
 
-    function pauseLendingMarkets(bytes32 _ccy) public override returns (bool) {
+    function pauseLendingMarkets(bytes32 _ccy)
+        public
+        pure
+        override
+        returns (bool)
+    {
         _ccy;
         return true;
     }
 
     function unpauseLendingMarkets(bytes32 _ccy)
         public
+        pure
         override
         returns (bool)
     {
@@ -188,6 +177,7 @@ contract LendingMarketControllerMock is
 
     function placeBulkOrders(Order[] memory orders)
         public
+        pure
         override
         returns (bool)
     {
