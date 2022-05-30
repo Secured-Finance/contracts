@@ -46,10 +46,7 @@ interface ILendingMarket {
 
     function getMidRate() external view returns (uint256 rate);
 
-    function getOrder(uint256 orderId)
-        external
-        view
-        returns (MarketOrder memory);
+    function getOrder(uint256 orderId) external view returns (MarketOrder memory);
 
     function getOrderFromTree(uint256 orderId)
         external

@@ -51,24 +51,13 @@ contract DoubleLinkedList {
         )
     {
         Object memory object = objects[_id];
-        return (
-            object.orderId,
-            object.next,
-            object.prev,
-            object.timestamp,
-            object.amount
-        );
+        return (object.orderId, object.next, object.prev, object.timestamp, object.amount);
     }
 
     /**
      * @dev Return the id of the first Object matching `_amount` in the amount field.
      */
-    function findIdForAmount(uint256 _amount)
-        public
-        view
-        virtual
-        returns (uint256)
-    {
+    function findIdForAmount(uint256 _amount) public view virtual returns (uint256) {
         Object memory object = objects[head];
         while (object.amount != _amount) {
             object = objects[object.next];
@@ -198,10 +187,7 @@ contract DoubleLinkedList {
     /**
      * @dev Internal function to create an unlinked Object.
      */
-    function _createObject(uint256 _amount, uint256 _orderId)
-        internal
-        returns (uint256)
-    {
+    function _createObject(uint256 _amount, uint256 _orderId) internal returns (uint256) {
         idCounter += 1;
         Object memory object = Object(_orderId, 0, 0, block.timestamp, _amount);
         objects[object.orderId] = object;

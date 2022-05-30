@@ -21,12 +21,7 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
-contract PaymentAggregator is
-    IPaymentAggregator,
-    ProtocolTypes,
-    MixinAddressResolver,
-    Ownable
-{
+contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressResolver, Ownable {
     using SafeMath for uint256;
     using Address for address;
     using TimeSlot for TimeSlot.Slot;
@@ -42,10 +37,7 @@ contract PaymentAggregator is
         private deals;
 
     modifier onlySettlementEngine() {
-        require(
-            msg.sender == address(settlementEngine()),
-            "NOT_SETTLEMENT_ENGINE"
-        );
+        require(msg.sender == address(settlementEngine()), "NOT_SETTLEMENT_ENGINE");
         _;
     }
 
@@ -57,24 +49,14 @@ contract PaymentAggregator is
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
         contracts[0] = CONTRACT_CLOSE_OUT_NETTING;
         contracts[1] = CONTRACT_MARK_TO_MARKET;
         contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
-    function isAcceptedContract(address account)
-        internal
-        view
-        override
-        returns (bool)
-    {
+    function isAcceptedContract(address account) internal view override returns (bool) {
         return
             productAddressResolver().isRegisteredProductContract(account) ||
             super.isAcceptedContract(account);
@@ -116,13 +98,10 @@ contract PaymentAggregator is
         for (uint256 i = 0; i < timestamps.length; i++) {
             if (timestamps[i] == 0) continue;
 
-            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary
-                .timestampToDate(timestamps[i]);
-            vars.slotPosition = TimeSlot.position(
-                vars.year,
-                vars.month,
-                vars.day
+            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary.timestampToDate(
+                timestamps[i]
             );
+            vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
             deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);
 
             if (payments0[i] > 0) {
@@ -156,13 +135,7 @@ contract PaymentAggregator is
             );
         }
 
-        closeOutNetting().addPayments(
-            party0,
-            party1,
-            ccy,
-            vars.totalPayment0,
-            vars.totalPayment1
-        );
+        closeOutNetting().addPayments(party0, party1, ccy, vars.totalPayment0, vars.totalPayment1);
     }
 
     struct PaymentSettlementLocalVars {
@@ -206,8 +179,7 @@ contract PaymentAggregator is
         vars.counterparty = counterparty;
         vars.ccy = ccy;
 
-        (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary
-            .timestampToDate(timestamp);
+        (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary.timestampToDate(timestamp);
         vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
 
         TimeSlot.verifyPayment(
@@ -314,13 +286,10 @@ contract PaymentAggregator is
         for (uint256 i = 0; i < timestamps.length; i++) {
             if (timestamps[i] == 0) continue;
 
-            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary
-                .timestampToDate(timestamps[i]);
-            vars.slotPosition = TimeSlot.position(
-                vars.year,
-                vars.month,
-                vars.day
+            (vars.year, vars.month, vars.day) = BokkyPooBahsDateTimeLibrary.timestampToDate(
+                timestamps[i]
             );
+            vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
 
             require(
                 deals[vars.packedAddrs][ccy][vars.slotPosition].remove(dealId),
@@ -488,8 +457,9 @@ contract PaymentAggregator is
     {
         uint256 numDays = numSeconds.div(86400);
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
-        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary
-            .timestampToDate(timestamp);
+        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(
+            timestamp
+        );
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
         return (slotPosition, timestamp);
@@ -501,8 +471,9 @@ contract PaymentAggregator is
      * @return TimeSlot position
      */
     function _slotPosition(uint256 timestamp) internal pure returns (bytes32) {
-        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary
-            .timestampToDate(timestamp);
+        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(
+            timestamp
+        );
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
         return slotPosition;
@@ -522,17 +493,12 @@ contract PaymentAggregator is
         bytes32 ccy,
         uint256 timestamp
     ) external view override returns (bool status) {
-        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary
-            .timestampToDate(timestamp);
+        (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(
+            timestamp
+        );
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
-        status = TimeSlot.isSettled(
-            _timeSlots,
-            party0,
-            party1,
-            ccy,
-            slotPosition
-        );
+        status = TimeSlot.isSettled(_timeSlots, party0, party1, ccy, slotPosition);
     }
 
     /**
@@ -540,12 +506,7 @@ contract PaymentAggregator is
      * @param targetTime target time for settlement of time slot
      * @return Boolean if slot within the settlement window
      */
-    function checkSettlementWindow(uint256 targetTime)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function checkSettlementWindow(uint256 targetTime) public view override returns (bool) {
         uint256 time = block.timestamp;
         uint256 delta = BokkyPooBahsDateTimeLibrary.diffDays(time, targetTime);
 
@@ -559,9 +520,7 @@ contract PaymentAggregator is
         bytes32 slotPosition
     ) public view override returns (bytes32[] memory) {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.Bytes32Set storage set = deals[packedAddrs][ccy][
-            slotPosition
-        ];
+        EnumerableSet.Bytes32Set storage set = deals[packedAddrs][ccy][slotPosition];
 
         uint256 numDeals = set.length();
         bytes32[] memory dealIds = new bytes32[](numDeals);

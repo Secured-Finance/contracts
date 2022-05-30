@@ -14,10 +14,7 @@ contract ExternalAdapterCallerMock is IExternalAdapterTxResponse {
         adapter = IExternalAdapter(_adapter);
     }
 
-    function createRequest(string memory txHash)
-        public
-        returns (bytes32 loanId)
-    {
+    function createRequest(string memory txHash) public returns (bytes32 loanId) {
         return adapter.createRequest(txHash);
     }
 
@@ -27,13 +24,7 @@ contract ExternalAdapterCallerMock is IExternalAdapterTxResponse {
         bytes4 _callbackFunctionId,
         uint256 _expiration
     ) public {
-        return
-            adapter.cancelRequest(
-                _txHash,
-                _requestId,
-                _callbackFunctionId,
-                _expiration
-            );
+        return adapter.cancelRequest(_txHash, _requestId, _callbackFunctionId, _expiration);
     }
 
     function fulfillSettlementRequest(

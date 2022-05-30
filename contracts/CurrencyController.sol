@@ -103,15 +103,9 @@ contract CurrencyController is ICurrencyController {
         haircuts[_ccy] = _haircut;
 
         if (_ccy != "ETH") {
-            require(
-                linkPriceFeed(_ccy, _ethPriceFeed, true),
-                "Invalid PriceFeed"
-            );
+            require(linkPriceFeed(_ccy, _ethPriceFeed, true), "Invalid PriceFeed");
         } else {
-            require(
-                linkPriceFeed(_ccy, _ethPriceFeed, false),
-                "Invalid PriceFeed"
-            );
+            require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
         }
         emit CcyAdded(_ccy, _name, _chainId, _haircut);
     }
@@ -206,12 +200,7 @@ contract CurrencyController is ICurrencyController {
      * @dev Triggers to get minimal margin percentage for specific currency.
      * @param _ccy Currency short ticket
      */
-    function getMinMargin(bytes32 _ccy)
-        external
-        view
-        override
-        returns (uint256)
-    {
+    function getMinMargin(bytes32 _ccy) external view override returns (uint256) {
         require(isCollateral[_ccy], "Unable to get MinMargin");
         return minMargins[_ccy];
     }
@@ -305,12 +294,7 @@ contract CurrencyController is ICurrencyController {
      * @dev Triggers to get last price in USD for selected currency.
      * @param _ccy Currency
      */
-    function getLastUSDPrice(bytes32 _ccy)
-        public
-        view
-        override
-        returns (int256)
-    {
+    function getLastUSDPrice(bytes32 _ccy) public view override returns (int256) {
         AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
@@ -329,9 +313,7 @@ contract CurrencyController is ICurrencyController {
         returns (int256)
     {
         AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
-        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(
-            _roundId
-        );
+        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(_roundId);
 
         require(timeStamp > 0, "Round not completed yet");
         return price;
@@ -341,12 +323,7 @@ contract CurrencyController is ICurrencyController {
      * @dev Triggers to get last price in ETH for selected currency.
      * @param _ccy Currency
      */
-    function getLastETHPrice(bytes32 _ccy)
-        public
-        view
-        override
-        returns (int256)
-    {
+    function getLastETHPrice(bytes32 _ccy) public view override returns (int256) {
         if (_isETH(_ccy)) return 1e18;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
@@ -369,9 +346,7 @@ contract CurrencyController is ICurrencyController {
         if (_isETH(_ccy)) return 1e18;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
-        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(
-            _roundId
-        );
+        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(_roundId);
 
         require(timeStamp > 0, "Round not completed yet");
         return price;
@@ -382,12 +357,7 @@ contract CurrencyController is ICurrencyController {
      * @param _ccy Currency that has to be convered to ETH
      * @param _amount Amount of funds to be converted
      */
-    function convertToETH(bytes32 _ccy, uint256 _amount)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function convertToETH(bytes32 _ccy, uint256 _amount) public view override returns (uint256) {
         if (_isETH(_ccy)) return _amount;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];

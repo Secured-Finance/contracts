@@ -9,10 +9,10 @@ contract AddressResolver is IAddressResolver, Ownable {
 
     constructor() Ownable() {}
 
-    function importAddresses(
-        bytes32[] calldata _names,
-        address[] calldata _addresses
-    ) external onlyOwner {
+    function importAddresses(bytes32[] calldata _names, address[] calldata _addresses)
+        external
+        onlyOwner
+    {
         require(_names.length == _addresses.length, "Input lengths must match");
 
         for (uint256 i = 0; i < _names.length; i++) {
@@ -23,10 +23,11 @@ contract AddressResolver is IAddressResolver, Ownable {
         }
     }
 
-    function areAddressesImported(
-        bytes32[] calldata _names,
-        address[] calldata _addresses
-    ) external view returns (bool) {
+    function areAddressesImported(bytes32[] calldata _names, address[] calldata _addresses)
+        external
+        view
+        returns (bool)
+    {
         for (uint256 i = 0; i < _names.length; i++) {
             if (addresses[_names[i]] != _addresses[i]) {
                 return false;
@@ -46,12 +47,7 @@ contract AddressResolver is IAddressResolver, Ownable {
         return _foundAddress;
     }
 
-    function getAddress(bytes32 _name)
-        external
-        view
-        override
-        returns (address)
-    {
+    function getAddress(bytes32 _name) external view override returns (address) {
         return addresses[_name];
     }
 }

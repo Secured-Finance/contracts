@@ -2,16 +2,8 @@
 pragma solidity ^0.7.0;
 
 interface ILiquidations {
-    event DealAddedToLiquidationQueue(
-        address party0,
-        address party1,
-        bytes32 dealId
-    );
-    event DealRemovedFromLiquidationQueue(
-        address party0,
-        address party1,
-        bytes32 dealId
-    );
+    event DealAddedToLiquidationQueue(address party0, address party1, bytes32 dealId);
+    event DealRemovedFromLiquidationQueue(address party0, address party1, bytes32 dealId);
     event LiquidationAgentAdded(address indexed liquidationAgent);
     event LiquidationAgentRemoved(address indexed liquidationAgent);
     event OffsetUpdated(uint256 oldOffset, uint256 newOffset);

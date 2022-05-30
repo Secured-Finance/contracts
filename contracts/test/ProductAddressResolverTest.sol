@@ -4,22 +4,14 @@ pragma solidity ^0.7.0;
 import "../ProductAddressResolver.sol";
 
 contract ProductAddressResolverTest is ProductAddressResolver {
-    function getGasCostOfGetProductContract(bytes4 _prefix)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGetProductContract(bytes4 _prefix) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         getProductContract(_prefix);
 
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfGetControllerContract(bytes4 _prefix)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGetControllerContract(bytes4 _prefix) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         getControllerContract(_prefix);
 
@@ -42,9 +34,11 @@ contract ProductAddressResolverTest is ProductAddressResolver {
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfGetControllerContractWithTypeConversion(
-        bytes32 _dealID
-    ) external view returns (uint256) {
+    function getGasCostOfGetControllerContractWithTypeConversion(bytes32 _dealID)
+        external
+        view
+        returns (uint256)
+    {
         uint256 gasBefore = gasleft();
         bytes4 _prefix;
         assembly {

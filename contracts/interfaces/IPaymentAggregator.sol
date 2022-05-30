@@ -118,8 +118,5 @@ interface IPaymentAggregator {
 
     function settlementWindow() external view returns (uint256);
 
-    function checkSettlementWindow(uint256 targetTime)
-        external
-        view
-        returns (bool);
+    function checkSettlementWindow(uint256 targetTime) external view returns (bool);
 }

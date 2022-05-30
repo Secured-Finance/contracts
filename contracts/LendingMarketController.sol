@@ -18,20 +18,14 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * It will store lending market addresses by ccy and term in lendingMarkets mapping.
  */
-contract LendingMarketController is
-    ILendingMarketController,
-    MixinAddressResolver,
-    Ownable
-{
+contract LendingMarketController is ILendingMarketController, MixinAddressResolver, Ownable {
     using SafeMath for uint256;
     using QuickSort for uint256[];
 
     bytes4 constant prefix = 0x21aaa47b;
     uint256 public override numberOfMarkets = 0;
 
-    mapping(bytes32 => mapping(uint256 => address))
-        public
-        override lendingMarkets;
+    mapping(bytes32 => mapping(uint256 => address)) public override lendingMarkets;
     mapping(bytes32 => uint256[]) public supportedTerms;
 
     /**
@@ -41,12 +35,7 @@ contract LendingMarketController is
         // owner = msg.sender;
     }
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
         contracts[0] = CONTRACT_CURRENCY_CONTROLLER;
         contracts[1] = CONTRACT_TERM_STRUCTURE;
@@ -58,12 +47,7 @@ contract LendingMarketController is
      * @dev Triggers to get borrow rates for selected currency.
      * @param _ccy Currency
      */
-    function getBorrowRatesForCcy(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
         uint256[] memory rates = new uint256[](terms.length);
 
@@ -80,12 +64,7 @@ contract LendingMarketController is
      * @dev Triggers to get lend rates for selected currency.
      * @param _ccy Currency
      */
-    function getLendRatesForCcy(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
         uint256[] memory rates = new uint256[](terms.length);
 
@@ -102,12 +81,7 @@ contract LendingMarketController is
      * @dev Triggers to get mid rates for selected currency.
      * @param _ccy Currency
      */
-    function getMidRatesForCcy(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
         uint256[] memory rates = new uint256[](terms.length);
 
@@ -132,12 +106,7 @@ contract LendingMarketController is
         return DiscountFactor.calculateDFs(rates, supportedTerms[_ccy]);
     }
 
-    function getSupportedTerms(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getSupportedTerms(bytes32 _ccy) public view override returns (uint256[] memory) {
         return supportedTerms[_ccy];
     }
 
@@ -157,14 +126,8 @@ contract LendingMarketController is
         returns (address market)
     {
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
-        require(
-            termStructure().isSupportedTerm(_term, prefix, _ccy),
-            "NON SUPPORTED TERM"
-        );
-        require(
-            lendingMarkets[_ccy][_term] == address(0),
-            "Couldn't rewrite existing market"
-        );
+        require(termStructure().isSupportedTerm(_term, prefix, _ccy), "NON SUPPORTED TERM");
+        require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
         market = address(new LendingMarket(address(resolver), _ccy, _term));
         lendingMarkets[_ccy][_term] = market;
 
@@ -181,12 +144,7 @@ contract LendingMarketController is
      * @dev Pauses previously deployed lending market by currency
      * @param _ccy Currency for pausing all lending markets
      */
-    function pauseLendingMarkets(bytes32 _ccy)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function pauseLendingMarkets(bytes32 _ccy) public override onlyOwner returns (bool) {
         uint256[] memory terms = supportedTerms[_ccy];
 
         for (uint256 i = 0; i < terms.length; i++) {
@@ -203,12 +161,7 @@ contract LendingMarketController is
      * @dev Unpauses previously deployed lending market by currency
      * @param _ccy Currency for pausing all lending markets
      */
-    function unpauseLendingMarkets(bytes32 _ccy)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function unpauseLendingMarkets(bytes32 _ccy) public override onlyOwner returns (bool) {
         uint256[] memory terms = supportedTerms[_ccy];
 
         for (uint256 i = 0; i < terms.length; i++) {
@@ -227,17 +180,11 @@ contract LendingMarketController is
      * @dev Places orders in multiple Lending Markets.
      * @param orders Lending Market orders array with ccy and terms to identify right market
      */
-    function placeBulkOrders(Order[] memory orders)
-        public
-        override
-        returns (bool)
-    {
+    function placeBulkOrders(Order[] memory orders) public override returns (bool) {
         for (uint8 i = 0; i < orders.length; i++) {
             Order memory order = orders[i];
 
-            ILendingMarket market = ILendingMarket(
-                lendingMarkets[order.ccy][order.term]
-            );
+            ILendingMarket market = ILendingMarket(lendingMarkets[order.ccy][order.term]);
             market.order(order.side, order.amount, order.rate);
         }
     }

@@ -17,11 +17,7 @@ struct LoanDeal {
 }
 
 interface ILoanV2 {
-    event EarlyTermination(
-        bytes32 dealId,
-        address indexed acceptedBy,
-        uint256 payment
-    );
+    event EarlyTermination(bytes32 dealId, address indexed acceptedBy, uint256 payment);
     event Liquidate(bytes32 dealId);
     event MarkToMarket(bytes32 dealId, uint256 prevPV, uint256 currPV);
     event Novation(bytes32 indexed dealId, address currLender);
@@ -45,10 +41,7 @@ interface ILoanV2 {
         address addr
     ) external;
 
-    function getDF(bytes32 loanId, uint256 date)
-        external
-        view
-        returns (uint256);
+    function getDF(bytes32 loanId, uint256 date) external view returns (uint256);
 
     function getDealPV(bytes32 loanId) external view returns (uint256 pv);
 
@@ -58,20 +51,11 @@ interface ILoanV2 {
         bytes32 loanId
     ) external view returns (uint256, uint256);
 
-    function getDealSettlementStatus(bytes32 loanId)
-        external
-        view
-        returns (bool);
+    function getDealSettlementStatus(bytes32 loanId) external view returns (bool);
 
-    function getLastSettledPayment(bytes32 loanId)
-        external
-        view
-        returns (uint256);
+    function getLastSettledPayment(bytes32 loanId) external view returns (uint256);
 
-    function getLoanDeal(bytes32 loanId)
-        external
-        view
-        returns (LoanDeal memory);
+    function getLoanDeal(bytes32 loanId) external view returns (LoanDeal memory);
 
     function getPaymentSchedule(bytes32 loanId)
         external

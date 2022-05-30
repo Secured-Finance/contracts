@@ -20,11 +20,7 @@ contract FXRatesAggregator is ProtocolTypes {
 
     event OwnerChanged(address indexed oldOwner, address indexed newOwner);
     event PriceFeedAdded(Ccy ccy, string secondCcy, address indexed priceFeed);
-    event PriceFeedRemoved(
-        Ccy ccy,
-        string secondCcy,
-        address indexed priceFeed
-    );
+    event PriceFeedRemoved(Ccy ccy, string secondCcy, address indexed priceFeed);
 
     address public owner;
 
@@ -92,10 +88,7 @@ contract FXRatesAggregator is ProtocolTypes {
      * @param _ccy Specified currency
      * @param _isEthPriceFeed Boolean for price feed with ETH price
      */
-    function removePriceFeed(Ccy _ccy, bool _isEthPriceFeed)
-        external
-        onlyOwner
-    {
+    function removePriceFeed(Ccy _ccy, bool _isEthPriceFeed) external onlyOwner {
         if (_isEthPriceFeed == true) {
             address priceFeed = address(ethPriceFeeds[_ccy]);
 
@@ -133,15 +126,9 @@ contract FXRatesAggregator is ProtocolTypes {
      * @param _ccy Currency
      * @param _roundId RoundId
      */
-    function getHistoricalUSDPrice(Ccy _ccy, uint80 _roundId)
-        public
-        view
-        returns (int256)
-    {
+    function getHistoricalUSDPrice(Ccy _ccy, uint80 _roundId) public view returns (int256) {
         AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
-        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(
-            _roundId
-        );
+        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(_roundId);
 
         require(timeStamp > 0, "Round not completed yet");
         return price;
@@ -165,17 +152,11 @@ contract FXRatesAggregator is ProtocolTypes {
      * @param _ccy Currency
      * @param _roundId RoundId
      */
-    function getHistoricalETHPrice(Ccy _ccy, uint80 _roundId)
-        public
-        view
-        returns (int256)
-    {
+    function getHistoricalETHPrice(Ccy _ccy, uint80 _roundId) public view returns (int256) {
         if (_isETH(_ccy)) return 1;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
-        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(
-            _roundId
-        );
+        (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(_roundId);
 
         require(timeStamp > 0, "Round not completed yet");
         return price;
@@ -186,11 +167,7 @@ contract FXRatesAggregator is ProtocolTypes {
      * @param _ccy Currency that has to be convered to ETH
      * @param _amount Amount of funds to be converted
      */
-    function convertToETH(Ccy _ccy, uint256 _amount)
-        public
-        view
-        returns (uint256)
-    {
+    function convertToETH(Ccy _ccy, uint256 _amount) public view returns (uint256) {
         if (_isETH(_ccy)) return _amount;
 
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];

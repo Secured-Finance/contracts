@@ -10,11 +10,7 @@ contract DealIdTest {
         id = DealId.generate(sample_prefix, number);
     }
 
-    function getGasCostOfGenerate(uint256 number)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGenerate(uint256 number) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         DealId.generate(sample_prefix, number);
 

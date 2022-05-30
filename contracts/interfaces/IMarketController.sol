@@ -2,23 +2,14 @@
 pragma solidity ^0.7.0;
 
 interface IMarketController {
-    function getBorrowRatesForCcy(bytes32 _ccy)
-        external
-        view
-        returns (uint256[] memory rates);
+    function getBorrowRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
 
     function getDiscountFactorsForCcy(bytes32 _ccy)
         external
         view
         returns (uint256[] memory, uint256[] memory);
 
-    function getLendRatesForCcy(bytes32 _ccy)
-        external
-        view
-        returns (uint256[] memory rates);
+    function getLendRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
 
-    function getMidRatesForCcy(bytes32 _ccy)
-        external
-        view
-        returns (uint256[] memory rates);
+    function getMidRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
 }

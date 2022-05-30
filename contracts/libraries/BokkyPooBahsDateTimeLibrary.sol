@@ -206,11 +206,7 @@ library BokkyPooBahsDateTimeLibrary {
         }
     }
 
-    function isLeapYear(uint256 timestamp)
-        internal
-        pure
-        returns (bool leapYear)
-    {
+    function isLeapYear(uint256 timestamp) internal pure returns (bool leapYear) {
         (uint256 year, , ) = _daysToDate(timestamp / SECONDS_PER_DAY);
         leapYear = _isLeapYear(year);
     }
@@ -227,14 +223,8 @@ library BokkyPooBahsDateTimeLibrary {
         weekEnd = getDayOfWeek(timestamp) >= DOW_SAT;
     }
 
-    function getDaysInMonth(uint256 timestamp)
-        internal
-        pure
-        returns (uint256 daysInMonth)
-    {
-        (uint256 year, uint256 month, ) = _daysToDate(
-            timestamp / SECONDS_PER_DAY
-        );
+    function getDaysInMonth(uint256 timestamp) internal pure returns (uint256 daysInMonth) {
+        (uint256 year, uint256 month, ) = _daysToDate(timestamp / SECONDS_PER_DAY);
         daysInMonth = _getDaysInMonth(year, month);
     }
 
@@ -261,11 +251,7 @@ library BokkyPooBahsDateTimeLibrary {
     }
 
     // 1 = Monday, 7 = Sunday
-    function getDayOfWeek(uint256 timestamp)
-        internal
-        pure
-        returns (uint256 dayOfWeek)
-    {
+    function getDayOfWeek(uint256 timestamp) internal pure returns (uint256 dayOfWeek) {
         uint256 _days = timestamp / SECONDS_PER_DAY;
         dayOfWeek = ((_days + 3) % 7) + 1;
     }
@@ -287,20 +273,12 @@ library BokkyPooBahsDateTimeLibrary {
         hour = secs / SECONDS_PER_HOUR;
     }
 
-    function getMinute(uint256 timestamp)
-        internal
-        pure
-        returns (uint256 minute)
-    {
+    function getMinute(uint256 timestamp) internal pure returns (uint256 minute) {
         uint256 secs = timestamp % SECONDS_PER_HOUR;
         minute = secs / SECONDS_PER_MINUTE;
     }
 
-    function getSecond(uint256 timestamp)
-        internal
-        pure
-        returns (uint256 second)
-    {
+    function getSecond(uint256 timestamp) internal pure returns (uint256 second) {
         second = timestamp % SECONDS_PER_MINUTE;
     }
 
@@ -309,9 +287,7 @@ library BokkyPooBahsDateTimeLibrary {
         pure
         returns (uint256 newTimestamp)
     {
-        (uint256 year, uint256 month, uint256 day) = _daysToDate(
-            timestamp / SECONDS_PER_DAY
-        );
+        (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         year += _years;
         uint256 daysInMonth = _getDaysInMonth(year, month);
         if (day > daysInMonth) {
@@ -329,9 +305,7 @@ library BokkyPooBahsDateTimeLibrary {
         pure
         returns (uint256 newTimestamp)
     {
-        (uint256 year, uint256 month, uint256 day) = _daysToDate(
-            timestamp / SECONDS_PER_DAY
-        );
+        (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         month += _months;
         year += (month - 1) / 12;
         month = ((month - 1) % 12) + 1;
@@ -387,9 +361,7 @@ library BokkyPooBahsDateTimeLibrary {
         pure
         returns (uint256 newTimestamp)
     {
-        (uint256 year, uint256 month, uint256 day) = _daysToDate(
-            timestamp / SECONDS_PER_DAY
-        );
+        (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         year -= _years;
         uint256 daysInMonth = _getDaysInMonth(year, month);
         if (day > daysInMonth) {
@@ -407,9 +379,7 @@ library BokkyPooBahsDateTimeLibrary {
         pure
         returns (uint256 newTimestamp)
     {
-        (uint256 year, uint256 month, uint256 day) = _daysToDate(
-            timestamp / SECONDS_PER_DAY
-        );
+        (uint256 year, uint256 month, uint256 day) = _daysToDate(timestamp / SECONDS_PER_DAY);
         uint256 yearMonth = year * 12 + (month - 1) - _months;
         year = yearMonth / 12;
         month = (yearMonth % 12) + 1;
@@ -477,12 +447,8 @@ library BokkyPooBahsDateTimeLibrary {
         returns (uint256 _months)
     {
         require(fromTimestamp <= toTimestamp);
-        (uint256 fromYear, uint256 fromMonth, ) = _daysToDate(
-            fromTimestamp / SECONDS_PER_DAY
-        );
-        (uint256 toYear, uint256 toMonth, ) = _daysToDate(
-            toTimestamp / SECONDS_PER_DAY
-        );
+        (uint256 fromYear, uint256 fromMonth, ) = _daysToDate(fromTimestamp / SECONDS_PER_DAY);
+        (uint256 toYear, uint256 toMonth, ) = _daysToDate(toTimestamp / SECONDS_PER_DAY);
         _months = toYear * 12 + toMonth - fromYear * 12 - fromMonth;
     }
 

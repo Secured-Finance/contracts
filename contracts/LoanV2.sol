@@ -18,12 +18,7 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to Lending Market contracts, LendingMarketController and Collateral contract.
  */
-contract LoanV2 is
-    ProtocolTypes,
-    IProductWithOneLeg,
-    MixinAddressResolver,
-    Ownable
-{
+contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Ownable {
     using SafeMath for uint256;
 
     uint256 constant NOTICE = 2 weeks;
@@ -90,12 +85,7 @@ contract LoanV2 is
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](4);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
         contracts[1] = CONTRACT_LENDING_MARKET_CONTROLLER;
@@ -126,10 +116,7 @@ contract LoanV2 is
         uint256 _term,
         address addr
     ) public onlyOwner {
-        require(
-            lendingMarkets[_ccy][_term] == address(0),
-            "Couldn't rewrite existing market"
-        );
+        require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
         lendingMarkets[_ccy][_term] = addr;
     }
 
@@ -211,12 +198,7 @@ contract LoanV2 is
      * @dev Triggers to get settlement status of loan deal.
      * @param loanId Loan deal ID
      */
-    function getDealSettlementStatus(bytes32 loanId)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function getDealSettlementStatus(bytes32 loanId) public view override returns (bool) {
         return isSettled[loanId];
     }
 
@@ -224,12 +206,7 @@ contract LoanV2 is
      * @dev Triggers to get main currency the deal by `dealId`.
      * @param loanId Loan deal ID
      */
-    function getDealCurrency(bytes32 loanId)
-        public
-        view
-        override
-        returns (bytes32)
-    {
+    function getDealCurrency(bytes32 loanId) public view override returns (bytes32) {
         return loans[loanId].ccy;
     }
 
@@ -245,11 +222,7 @@ contract LoanV2 is
      * @dev Triggers to get termination state for loan with `loanId`.
      * @param loanId Loan deal ID
      */
-    function getTerminationState(bytes32 loanId)
-        public
-        view
-        returns (Termination memory)
-    {
+    function getTerminationState(bytes32 loanId) public view returns (Termination memory) {
         return terminations[loanId];
     }
 
@@ -276,30 +249,15 @@ contract LoanV2 is
      * @dev Returns the timestamp of the last settled payment in payment schedule
      * @param loanId Loan deal ID
      */
-    function getLastSettledPayment(bytes32 loanId)
-        external
-        view
-        returns (uint256 settlementTime)
-    {
+    function getLastSettledPayment(bytes32 loanId) external view returns (uint256 settlementTime) {
         LoanDeal memory deal = loans[loanId];
 
-        uint256 payNums = termStructure().getNumPayments(
-            deal.term,
-            paymentFrequency
-        );
-        uint256[] memory daysArr = termStructure().getTermSchedule(
-            deal.term,
-            paymentFrequency
-        );
+        uint256 payNums = termStructure().getNumPayments(deal.term, paymentFrequency);
+        uint256[] memory daysArr = termStructure().getTermSchedule(deal.term, paymentFrequency);
 
         for (uint256 i = payNums; i > 0; i--) {
             uint256 time = _timeShift(deal.start, daysArr[i - 1]);
-            bool status = paymentAggregator().isSettled(
-                deal.lender,
-                deal.borrower,
-                deal.ccy,
-                time
-            );
+            bool status = paymentAggregator().isSettled(deal.lender, deal.borrower, deal.ccy, time);
 
             if (status) {
                 settlementTime = time;
@@ -342,10 +300,7 @@ contract LoanV2 is
     function requestTermination(bytes32 loanId) public override {
         Termination storage termination = terminations[loanId];
         LoanDeal memory deal = loans[loanId];
-        require(
-            msg.sender == deal.lender || msg.sender == deal.borrower,
-            "parties must request"
-        );
+        require(msg.sender == deal.lender || msg.sender == deal.borrower, "parties must request");
         require(updateLoanPV(loanId), "failed MtM");
 
         termination.terminationAsker = msg.sender;
@@ -361,10 +316,7 @@ contract LoanV2 is
      */
     function acceptTermination(bytes32 loanId) public override {
         Termination storage termination = terminations[loanId];
-        require(
-            termination.terminationAsker != address(0),
-            "no termination request"
-        );
+        require(termination.terminationAsker != address(0), "no termination request");
 
         LoanDeal memory deal = loans[loanId];
 
@@ -377,11 +329,10 @@ contract LoanV2 is
         require(updateLoanPV(loanId), "failed MtM");
 
         if (isSettled[loanId]) {
-            (
-                uint256[] memory payments,
-                ,
-                bool[] memory settlements
-            ) = _constructSchedule(deal, true);
+            (uint256[] memory payments, , bool[] memory settlements) = _constructSchedule(
+                deal,
+                true
+            );
 
             uint256 i;
             for (i = 0; i < settlements.length; i++) {
@@ -391,23 +342,14 @@ contract LoanV2 is
             uint256 deltaDays;
 
             if (i == 0) {
-                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(
-                    deal.start,
-                    block.timestamp
-                );
+                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(deal.start, block.timestamp);
             } else {
-                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(
-                    payments[i - 1],
-                    block.timestamp
-                );
+                deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(payments[i - 1], block.timestamp);
             }
 
             uint256 interestRatePerDay = deal.rate.mul(1e18).div(36500);
             uint256 accuredInterestRate = interestRatePerDay.mul(deltaDays);
-            uint256 accuredInterest = deal
-                .notional
-                .mul(accuredInterestRate)
-                .div(1e20);
+            uint256 accuredInterest = deal.notional.mul(accuredInterestRate).div(1e20);
             uint256 totalPayment = accuredInterest.add(deal.pv);
             collateralAggregator().liquidate(
                 deal.borrower,
@@ -434,16 +376,10 @@ contract LoanV2 is
      */
     function rejectTermination(bytes32 loanId) public override {
         Termination memory termination = terminations[loanId];
-        require(
-            termination.terminationAsker != address(0),
-            "no termination request"
-        );
+        require(termination.terminationAsker != address(0), "no termination request");
 
         LoanDeal memory deal = loans[loanId];
-        require(
-            msg.sender == deal.lender || msg.sender == deal.borrower,
-            "parties must reject"
-        );
+        require(msg.sender == deal.lender || msg.sender == deal.borrower, "parties must reject");
         require(updateLoanPV(loanId), "failed MtM");
 
         delete terminations[loanId];
@@ -458,11 +394,7 @@ contract LoanV2 is
      *
      * @notice Executed only by original lender
      */
-    function novation(bytes32 loanId, address newOwner)
-        public
-        override
-        workingLoan(loanId)
-    {
+    function novation(bytes32 loanId, address newOwner) public override workingLoan(loanId) {
         LoanDeal storage deal = loans[loanId];
         require(isTransferable, "transfers not allowed");
 
@@ -482,14 +414,7 @@ contract LoanV2 is
         deal.lender = newOwner;
 
         _registerPaymentSchedule(loanId, deal);
-        collateralAggregator().useCollateral(
-            newOwner,
-            deal.borrower,
-            deal.ccy,
-            0,
-            deal.pv,
-            true
-        );
+        collateralAggregator().useCollateral(newOwner, deal.borrower, deal.ccy, 0, deal.pv, true);
 
         emit Novation(loanId, newOwner);
     }
@@ -551,25 +476,14 @@ contract LoanV2 is
      * @dev Triggers to recalculate present value of loan deal.
      * @param loanId Loan ID to update PV for
      */
-    function getDealPV(bytes32 loanId)
-        public
-        view
-        override
-        returns (uint256 pv)
-    {
+    function getDealPV(bytes32 loanId) public view override returns (uint256 pv) {
         LoanDeal memory deal = loans[loanId];
         if (!isSettled[loanId]) return deal.notional;
 
-        (
-            uint256[] memory dfs,
-            uint256[] memory terms
-        ) = lendingMarketController().getDiscountFactorsForCcy(deal.ccy);
+        (uint256[] memory dfs, uint256[] memory terms) = lendingMarketController()
+            .getDiscountFactorsForCcy(deal.ccy);
 
-        (
-            uint256[] memory payments,
-            uint256[] memory amounts,
-
-        ) = _constructSchedule(deal, false);
+        (uint256[] memory payments, uint256[] memory amounts, ) = _constructSchedule(deal, false);
 
         for (uint256 i = 0; i < payments.length; i++) {
             if (payments[i] < block.timestamp) continue;
@@ -599,11 +513,7 @@ contract LoanV2 is
      * @param numDays number of days to add
      * @return Updated timestamp and TimeSlot position
      */
-    function _timeShift(uint256 timestamp, uint256 numDays)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _timeShift(uint256 timestamp, uint256 numDays) internal pure returns (uint256) {
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
 
         return timestamp;
@@ -614,14 +524,8 @@ contract LoanV2 is
      * @param loanId Loan deal ID
      * @param deal LoanDeal structure
      */
-    function _registerPaymentSchedule(bytes32 loanId, LoanDeal memory deal)
-        internal
-    {
-        (
-            uint256[] memory payments,
-            uint256[] memory amounts,
-
-        ) = _constructSchedule(deal, false);
+    function _registerPaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
+        (uint256[] memory payments, uint256[] memory amounts, ) = _constructSchedule(deal, false);
 
         uint256[] memory lenderLeg = new uint256[](payments.length);
         lenderLeg[0] = deal.notional;
@@ -642,14 +546,8 @@ contract LoanV2 is
      * @param loanId Loan deal ID
      * @param deal LoanDeal structure
      */
-    function _removePaymentSchedule(bytes32 loanId, LoanDeal memory deal)
-        internal
-    {
-        (
-            uint256[] memory payments,
-            uint256[] memory amounts,
-
-        ) = _constructSchedule(deal, false);
+    function _removePaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
+        (uint256[] memory payments, uint256[] memory amounts, ) = _constructSchedule(deal, false);
 
         uint256[] memory lenderLeg = new uint256[](payments.length);
         if (!isSettled[loanId]) {
@@ -693,19 +591,11 @@ contract LoanV2 is
     {
         ScheduleConstructionLocalVars memory vars;
 
-        vars.payNums = termStructure().getNumPayments(
-            deal.term,
-            paymentFrequency
-        );
-        vars.daysArr = termStructure().getTermSchedule(
-            deal.term,
-            paymentFrequency
-        );
+        vars.payNums = termStructure().getNumPayments(deal.term, paymentFrequency);
+        vars.daysArr = termStructure().getTermSchedule(deal.term, paymentFrequency);
         vars.dfFrac = termStructure().getDfFrac(deal.term);
 
-        vars.coupon = (deal.notional.mul(deal.rate).mul(vars.dfFrac))
-            .div(BP)
-            .div(BP);
+        vars.coupon = (deal.notional.mul(deal.rate).mul(vars.dfFrac)).div(BP).div(BP);
 
         uint256 len = vars.payNums.add(1);
         uint256[] memory payments = new uint256[](len);
@@ -747,12 +637,7 @@ contract LoanV2 is
         if (!isSettled[loanId]) {
             LoanDeal memory deal = loans[loanId];
             uint256 time = _timeShift(deal.start, 2);
-            bool status = paymentAggregator().isSettled(
-                deal.lender,
-                deal.borrower,
-                deal.ccy,
-                time
-            );
+            bool status = paymentAggregator().isSettled(deal.lender, deal.borrower, deal.ccy, time);
 
             if (status) {
                 isSettled[loanId] = true;

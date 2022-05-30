@@ -12,11 +12,7 @@ contract TermScheduleTest {
         return TermSchedule.getTermSchedule(numDays, frequency);
     }
 
-    function getNumPayments(uint256 numDays, uint8 frequency)
-        external
-        pure
-        returns (uint256)
-    {
+    function getNumPayments(uint256 numDays, uint8 frequency) external pure returns (uint256) {
         return TermSchedule.getNumPayments(numDays, frequency);
     }
 
@@ -46,11 +42,7 @@ contract TermScheduleTest {
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfGetDfFrac(uint256 numDays)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGetDfFrac(uint256 numDays) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         TermSchedule.getDfFrac(numDays);
 

@@ -54,10 +54,7 @@ library NetPV {
         address party1,
         bytes32 ccy
     ) internal view returns (NetPV.CcyNetting memory netting) {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         netting = self[packedAddrs][ccy];
         netting = _handleFlippedCase(netting, flipped);
     }
@@ -83,10 +80,7 @@ library NetPV {
         uint256 additionalPV1,
         bool isSettled
     ) internal view returns (NetPV.CcyNetting memory netting) {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         netting = self[packedAddrs][ccy];
         netting = _handleFlippedCase(netting, flipped);
 
@@ -118,10 +112,7 @@ library NetPV {
         uint256 amount1,
         bool isSettled
     ) internal {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         NetPV.CcyNetting storage netting = self[packedAddrs][ccy];
 
         if (!flipped) {
@@ -166,10 +157,7 @@ library NetPV {
         uint256 amount0,
         uint256 amount1
     ) internal {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         NetPV.CcyNetting storage netting = self[packedAddrs][ccy];
 
         if (!flipped) {
@@ -211,10 +199,7 @@ library NetPV {
         uint256 amount1,
         bool isSettled
     ) internal {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         NetPV.CcyNetting storage netting = self[packedAddrs][ccy];
 
         if (!flipped) {
@@ -263,33 +248,22 @@ library NetPV {
         uint256 currentPV0,
         uint256 currentPV1
     ) internal {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         NetPV.CcyNetting storage netting = self[packedAddrs][ccy];
 
         if (!flipped) {
             if (currentPV0 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV0).add(
-                    currentPV0
-                );
+                netting.party0PV = netting.party0PV.sub(prevPV0).add(currentPV0);
             }
             if (currentPV1 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV1).add(
-                    currentPV1
-                );
+                netting.party1PV = netting.party1PV.sub(prevPV1).add(currentPV1);
             }
         } else {
             if (currentPV0 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV0).add(
-                    currentPV0
-                );
+                netting.party1PV = netting.party1PV.sub(prevPV0).add(currentPV0);
             }
             if (currentPV1 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV1).add(
-                    currentPV1
-                );
+                netting.party0PV = netting.party0PV.sub(prevPV1).add(currentPV1);
             }
         }
     }

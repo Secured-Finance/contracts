@@ -2,11 +2,7 @@
 pragma solidity ^0.7.0;
 
 interface IProductAddressResolver {
-    event RegisterProduct(
-        bytes4 prefix,
-        address indexed product,
-        address indexed controller
-    );
+    event RegisterProduct(bytes4 prefix, address indexed product, address indexed controller);
 
     /**
      * @dev Trigers to register new product type in a address resolver
@@ -50,30 +46,21 @@ interface IProductAddressResolver {
      * @param _dealId Product deal idenfitier
      * @notice To work with the contract this address should be wrapped around IProduct interface
      */
-    function getProductContractByDealId(bytes32 _dealId)
-        external
-        view
-        returns (address);
+    function getProductContractByDealId(bytes32 _dealId) external view returns (address);
 
     /**
      * @dev Trigers to get market controller address by short prefix.
      * @param _prefix Bytes4 prefix for product type
      * @notice To work with the contract this address should be wrapped around IYieldCurve interface
      */
-    function getControllerContract(bytes4 _prefix)
-        external
-        view
-        returns (address);
+    function getControllerContract(bytes4 _prefix) external view returns (address);
 
     /**
      * @dev Trigers to get market controller address by deal id
      * @param _dealId Product deal idenfitier
      * @notice To work with the contract this address should be wrapped around IYieldCurve interface
      */
-    function getControllerContractByDealId(bytes32 _dealId)
-        external
-        view
-        returns (address);
+    function getControllerContractByDealId(bytes32 _dealId) external view returns (address);
 
     /**
      * @dev Triggers to verify if a specific product is supported by short prefix.
@@ -85,17 +72,11 @@ interface IProductAddressResolver {
      * @dev Triggers to verify if a specific product is supported by deal id.
      * @param _dealId Product deal idenfitier
      */
-    function isSupportedProductByDealId(bytes32 _dealId)
-        external
-        view
-        returns (bool);
+    function isSupportedProductByDealId(bytes32 _dealId) external view returns (bool);
 
     /**
      * @dev Triggers to verify if a specific product contract is registered.
      * @param _product Product contract address
      */
-    function isRegisteredProductContract(address _product)
-        external
-        view
-        returns (bool);
+    function isRegisteredProductContract(address _product) external view returns (bool);
 }

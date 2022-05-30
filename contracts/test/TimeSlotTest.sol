@@ -87,15 +87,7 @@ contract TimeSlotTest {
         uint256 totalPaymentBefore0 = timeSlot.totalPayment0;
         uint256 totalPaymentBefore1 = timeSlot.totalPayment1;
 
-        TimeSlot.addPayment(
-            _timeSlots,
-            party0,
-            party1,
-            ccy,
-            slot,
-            payment0,
-            payment1
-        );
+        TimeSlot.addPayment(_timeSlots, party0, party1, ccy, slot, payment0, payment1);
 
         timeSlot = _timeSlots[addrPack][ccy][slot];
 
@@ -134,15 +126,7 @@ contract TimeSlotTest {
         uint256 totalPaymentBefore0 = timeSlot.totalPayment0;
         uint256 totalPaymentBefore1 = timeSlot.totalPayment1;
 
-        TimeSlot.removePayment(
-            _timeSlots,
-            party0,
-            party1,
-            ccy,
-            slot,
-            payment0,
-            payment1
-        );
+        TimeSlot.removePayment(_timeSlots, party0, party1, ccy, slot, payment0, payment1);
 
         timeSlot = _timeSlots[addrPack][ccy][slot];
 
@@ -188,14 +172,10 @@ contract TimeSlotTest {
         timeSlot = _timeSlots[addrPack][ccy][slot];
 
         require(
-            timeSlot.confirmations[settlementId].verificationParty ==
-                msg.sender,
+            timeSlot.confirmations[settlementId].verificationParty == msg.sender,
             "INCORRECT VERIFIER"
         );
-        require(
-            timeSlot.confirmations[settlementId].amount == payment,
-            "INCORRECT PAYMENT AMOUNT"
-        );
+        require(timeSlot.confirmations[settlementId].amount == payment, "INCORRECT PAYMENT AMOUNT");
     }
 
     function clear(
@@ -206,14 +186,8 @@ contract TimeSlotTest {
         (bytes32 addrPack, ) = AddressPacking.pack(party0, party1);
         TimeSlot.clear(_timeSlots, party0, party1, ccy, slot);
 
-        require(
-            _timeSlots[addrPack][ccy][slot].totalPayment0 == 0,
-            "PAYMENT NOT CLEARED"
-        );
-        require(
-            _timeSlots[addrPack][ccy][slot].totalPayment1 == 0,
-            "PAYMENT NOT CLEARED"
-        );
+        require(_timeSlots[addrPack][ccy][slot].totalPayment0 == 0, "PAYMENT NOT CLEARED");
+        require(_timeSlots[addrPack][ccy][slot].totalPayment1 == 0, "PAYMENT NOT CLEARED");
     }
 
     function isSettled(

@@ -101,12 +101,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      * @param _prefix Bytes4 prefix for product type
      * @notice To work with the contract this address should be wrapped around IProduct interface
      */
-    function getProductContract(bytes4 _prefix)
-        public
-        view
-        override
-        returns (address)
-    {
+    function getProductContract(bytes4 _prefix) public view override returns (address) {
         return _productContracts[_prefix];
     }
 
@@ -115,12 +110,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      * @param _dealId Product deal idenfitier
      * @notice To work with the contract this address should be wrapped around IProduct interface
      */
-    function getProductContractByDealId(bytes32 _dealId)
-        public
-        view
-        override
-        returns (address)
-    {
+    function getProductContractByDealId(bytes32 _dealId) public view override returns (address) {
         bytes4 prefix = DealId.getPrefix(_dealId);
         return _productContracts[prefix];
     }
@@ -130,12 +120,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      * @param _prefix Bytes4 prefix for product type
      * @notice To work with the contract this address should be wrapped around IYieldCurve interface
      */
-    function getControllerContract(bytes4 _prefix)
-        public
-        view
-        override
-        returns (address)
-    {
+    function getControllerContract(bytes4 _prefix) public view override returns (address) {
         return _controllerContracts[_prefix];
     }
 
@@ -144,12 +129,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      * @param _dealId Product deal idenfitier
      * @notice To work with the contract this address should be wrapped around IYieldCurve interface
      */
-    function getControllerContractByDealId(bytes32 _dealId)
-        public
-        view
-        override
-        returns (address)
-    {
+    function getControllerContractByDealId(bytes32 _dealId) public view override returns (address) {
         bytes4 prefix = DealId.getPrefix(_dealId);
         return _controllerContracts[prefix];
     }
@@ -158,12 +138,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      * @dev Triggers to verify if a specific product is supported by short prefix.
      * @param _prefix Bytes4 prefix for product type
      */
-    function isSupportedProduct(bytes4 _prefix)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function isSupportedProduct(bytes4 _prefix) public view override returns (bool) {
         return _productContracts[_prefix] != address(0);
     }
 
@@ -171,12 +146,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      * @dev Triggers to verify if a specific product is supported by deal id.
      * @param _dealId Product deal idenfitier
      */
-    function isSupportedProductByDealId(bytes32 _dealId)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function isSupportedProductByDealId(bytes32 _dealId) public view override returns (bool) {
         bytes4 prefix = DealId.getPrefix(_dealId);
         return _productContracts[prefix] != address(0);
     }
@@ -185,12 +155,7 @@ contract ProductAddressResolver is IProductAddressResolver {
      * @dev Triggers to verify if a specific product contract is registered.
      * @param _product Product contract address
      */
-    function isRegisteredProductContract(address _product)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function isRegisteredProductContract(address _product) public view override returns (bool) {
         return _productPrefix[_product] != "";
     }
 }

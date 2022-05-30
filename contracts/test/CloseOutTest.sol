@@ -26,14 +26,7 @@ contract CloseOutTest {
         uint256 payment0,
         uint256 payment1
     ) external {
-        CloseOut.addPayments(
-            _closeOuts,
-            party0,
-            party1,
-            ccy,
-            payment0,
-            payment1
-        );
+        CloseOut.addPayments(_closeOuts, party0, party1, ccy, payment0, payment1);
     }
 
     function removePayments(
@@ -42,31 +35,18 @@ contract CloseOutTest {
         uint256 payment0,
         uint256 payment1
     ) external {
-        CloseOut.removePayments(
-            _closeOuts,
-            party0,
-            party1,
-            ccy,
-            payment0,
-            payment1
-        );
+        CloseOut.removePayments(_closeOuts, party0, party1, ccy, payment0, payment1);
     }
 
     function close(address party0, address party1) external {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
         CloseOut.close(_closeOuts, party0, party1, ccy);
-        require(
-            _closeOuts[packedAddrs][ccy].closed == true,
-            "PAYMENTS NOT SETTLED"
-        );
+        require(_closeOuts[packedAddrs][ccy].closed == true, "PAYMENTS NOT SETTLED");
     }
 
     function clear(address party0, address party1) external {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
         CloseOut.clear(_closeOuts, party0, party1, ccy);
-        require(
-            _closeOuts[packedAddrs][ccy].netPayment == 0,
-            "PAYMENTS NOT CLEARED"
-        );
+        require(_closeOuts[packedAddrs][ccy].netPayment == 0, "PAYMENTS NOT CLEARED");
     }
 }

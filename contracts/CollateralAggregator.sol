@@ -61,11 +61,7 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 amount1,
         bool isSettled
     );
-    event UseUnsettledCollateral(
-        address indexed party,
-        bytes32 ccy,
-        uint256 amount
-    );
+    event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
 
     event SettleCollateral(
         address indexed partyA,
@@ -93,17 +89,8 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 ethAmount
     );
 
-    event UpdateState(
-        address indexed addr,
-        CollateralState prevState,
-        CollateralState currState
-    );
-    event UpdatePV(
-        address indexed addr,
-        uint256 prevPV,
-        uint256 newPV,
-        Ccy ccy
-    );
+    event UpdateState(address indexed addr, CollateralState prevState, CollateralState currState);
+    event UpdatePV(address indexed addr, uint256 prevPV, uint256 newPV, Ccy ccy);
 
     /**
      * @dev Global collateral book used to track user's total amount
@@ -145,8 +132,7 @@ contract CollateralAggregator is ProtocolTypes {
     mapping(address => mapping(bytes32 => uint256)) private unsettledCollateral;
 
     // Mapping for total amount of collateral locked in global collateral book by currency code.
-    mapping(address => EnumerableSet.Bytes32Set)
-        private exposedUnsettledCurrencies;
+    mapping(address => EnumerableSet.Bytes32Set) private exposedUnsettledCurrencies;
 
     // Mapping for all registered books.
     mapping(address => bool) private isRegistered;
@@ -155,12 +141,10 @@ contract CollateralAggregator is ProtocolTypes {
     mapping(address => mapping(address => Position)) private positions;
 
     // Mapping for used currencies set in bilateral position.
-    mapping(address => mapping(address => EnumerableSet.Bytes32Set))
-        private exposedCurrencies;
+    mapping(address => mapping(address => EnumerableSet.Bytes32Set)) private exposedCurrencies;
 
     // Mapping for exposures per currency in bilateral position.
-    mapping(address => mapping(address => mapping(bytes32 => CcyNetting)))
-        private ccyNettings;
+    mapping(address => mapping(address => mapping(bytes32 => CcyNetting))) private ccyNettings;
 
     uint256 public LQLEVEL; // 120% for liquidation price
     uint256 public MARGINLEVEL; // 150% margin call threshold
@@ -184,10 +168,7 @@ contract CollateralAggregator is ProtocolTypes {
      * @dev Modifier to check if msg.sender is collateral user
      */
     modifier acceptedContract() {
-        require(
-            collateralUsers.contains(msg.sender),
-            "not allowed to use collateral"
-        );
+        require(collateralUsers.contains(msg.sender), "not allowed to use collateral");
         _;
     }
 
@@ -243,15 +224,8 @@ contract CollateralAggregator is ProtocolTypes {
      * @notice Trigers only be contract owner
      * @notice Reverts on removing non-existing collateral user
      */
-    function removeCollateralUser(address _user)
-        public
-        onlyOwner
-        returns (bool)
-    {
-        require(
-            collateralUsers.contains(_user),
-            "Can't remove non-existing user"
-        );
+    function removeCollateralUser(address _user) public onlyOwner returns (bool) {
+        require(collateralUsers.contains(_user), "Can't remove non-existing user");
         return collateralUsers.remove(_user);
     }
 
@@ -348,11 +322,7 @@ contract CollateralAggregator is ProtocolTypes {
      * @param _counterparty Counterparty address in bilateral position
      * @notice payable function increases locked collateral by msg.value
      */
-    function deposit(address _counterparty)
-        public
-        payable
-        registeredBook(msg.sender)
-    {
+    function deposit(address _counterparty) public payable registeredBook(msg.sender) {
         (address _partyA, address _partyB, bool flipped) = _checkAddresses(
             msg.sender,
             _counterparty
@@ -375,10 +345,7 @@ contract CollateralAggregator is ProtocolTypes {
      *
      * @notice Triggers by collateral owner
      */
-    function rebalanceTo(address _counterparty, uint256 _amount)
-        public
-        registeredBook(msg.sender)
-    {
+    function rebalanceTo(address _counterparty, uint256 _amount) public registeredBook(msg.sender) {
         _rebalanceFromBook(msg.sender, _counterparty, _amount);
     }
 
@@ -404,21 +371,19 @@ contract CollateralAggregator is ProtocolTypes {
         address _toParty,
         uint256 _amount
     ) public registeredBook(msg.sender) {
-        (
-            address _fromPartyA,
-            address _fromPartyB,
-            bool fromFlipped
-        ) = _checkAddresses(msg.sender, _fromParty);
-        (
-            address _toPartyA,
-            address _toPartyB,
-            bool toFlipped
-        ) = _checkAddresses(msg.sender, _toParty);
+        (address _fromPartyA, address _fromPartyB, bool fromFlipped) = _checkAddresses(
+            msg.sender,
+            _fromParty
+        );
+        (address _toPartyA, address _toPartyB, bool toFlipped) = _checkAddresses(
+            msg.sender,
+            _toParty
+        );
 
-        (
-            uint256 maxWidthdraw0,
-            uint256 maxWidthdraw1
-        ) = _calcMaxCollateralWidthdraw(_fromPartyA, _fromPartyB);
+        (uint256 maxWidthdraw0, uint256 maxWidthdraw1) = _calcMaxCollateralWidthdraw(
+            _fromPartyA,
+            _fromPartyB
+        );
 
         if (!fromFlipped) {
             require(maxWidthdraw0 >= _amount, "positionFrom uncovered");
@@ -448,10 +413,10 @@ contract CollateralAggregator is ProtocolTypes {
             _mainParty,
             _counterparty
         );
-        (
-            uint256 maxWidthdraw0,
-            uint256 maxWidthdraw1
-        ) = _calcMaxCollateralWidthdraw(_partyA, _partyB);
+        (uint256 maxWidthdraw0, uint256 maxWidthdraw1) = _calcMaxCollateralWidthdraw(
+            _partyA,
+            _partyB
+        );
         Book storage book = books[_mainParty];
 
         if (!flipped) {
@@ -484,9 +449,7 @@ contract CollateralAggregator is ProtocolTypes {
         exposedUnsettledCurrencies[user].add(ccy);
         require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
 
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].add(
-            amount
-        );
+        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].add(amount);
 
         emit UseUnsettledCollateral(user, ccy, amount);
     }
@@ -509,10 +472,7 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 amount1,
         bool isSettled
     ) external acceptedContract {
-        (address _partyA, address _partyB, bool flipped) = _checkAddresses(
-            partyA,
-            partyB
-        );
+        (address _partyA, address _partyB, bool flipped) = _checkAddresses(partyA, partyB);
         exposedCurrencies[_partyA][_partyB].add(ccy);
 
         if (!flipped) {
@@ -598,10 +558,7 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 amount0,
         uint256 amount1
     ) external acceptedContract {
-        (address _partyA, address _partyB, bool flipped) = _checkAddresses(
-            partyA,
-            partyB
-        );
+        (address _partyA, address _partyB, bool flipped) = _checkAddresses(partyA, partyB);
 
         CcyNetting storage netting = ccyNettings[_partyA][_partyB][ccy];
 
@@ -634,11 +591,7 @@ contract CollateralAggregator is ProtocolTypes {
      * @param _user User's address
      */
     function getTotalUnsettledExp(address _user) public view returns (uint256) {
-        uint256 totalExpInETH = _netTotalUnsettledAndHypotheticalPV(
-            _user,
-            "",
-            0
-        );
+        uint256 totalExpInETH = _netTotalUnsettledAndHypotheticalPV(_user, "", 0);
 
         return totalExpInETH;
     }
@@ -659,12 +612,14 @@ contract CollateralAggregator is ProtocolTypes {
         )
     {
         (address _party0, address _party1, ) = _checkAddresses(party0, party1);
-        (
-            uint256 net0,
-            uint256 net1,
-            uint256 total0,
-            uint256 total1
-        ) = _netTotalAndHypotheticalPV(_party0, _party1, "", 0, 0, false);
+        (uint256 net0, uint256 net1, uint256 total0, uint256 total1) = _netTotalAndHypotheticalPV(
+            _party0,
+            _party1,
+            "",
+            0,
+            0,
+            false
+        );
 
         return (net0, net1, total0, total1);
     }
@@ -704,10 +659,7 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 _party1PV,
         bool _isSettled
     ) public view returns (bool, bool) {
-        (address _party0, address _party1, bool flipped) = _checkAddresses(
-            party0,
-            party1
-        );
+        (address _party0, address _party1, bool flipped) = _checkAddresses(party0, party1);
 
         if (!flipped) {
             (uint256 cover0, uint256 cover1) = _calculateCoverage(
@@ -736,11 +688,7 @@ contract CollateralAggregator is ProtocolTypes {
      * @dev Triggers to get maximum amount of ETH available to widthdraw from `_user` collateral book.
      * @param _user User's address
      */
-    function getMaxCollateralBookWidthdraw(address _user)
-        public
-        view
-        returns (uint256)
-    {
+    function getMaxCollateralBookWidthdraw(address _user) public view returns (uint256) {
         (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(_user);
 
         return maxWidthdraw;
@@ -757,14 +705,11 @@ contract CollateralAggregator is ProtocolTypes {
         view
         returns (uint256, uint256)
     {
-        (address _partyA, address _partyB, ) = _checkAddresses(
-            _party0,
-            _party1
+        (address _partyA, address _partyB, ) = _checkAddresses(_party0, _party1);
+        (uint256 maxWidthdraw0, uint256 maxWidthdraw1) = _calcMaxCollateralWidthdraw(
+            _partyA,
+            _partyB
         );
-        (
-            uint256 maxWidthdraw0,
-            uint256 maxWidthdraw1
-        ) = _calcMaxCollateralWidthdraw(_partyA, _partyB);
 
         return (maxWidthdraw0, maxWidthdraw1);
     }
@@ -774,11 +719,7 @@ contract CollateralAggregator is ProtocolTypes {
      * @param _user User's address
      */
     function getUnsettledCoverage(address _user) public view returns (uint256) {
-        (uint256 coverage, ) = _calculateUnsettledCoverageAndTotalExposure(
-            _user,
-            "",
-            0
-        );
+        (uint256 coverage, ) = _calculateUnsettledCoverageAndTotalExposure(_user, "", 0);
         return coverage;
     }
 
@@ -822,15 +763,8 @@ contract CollateralAggregator is ProtocolTypes {
      * @param party0 Counterparty A address
      * @param party1 Counterparty B address
      */
-    function getCoverage(address party0, address party1)
-        public
-        view
-        returns (uint256, uint256)
-    {
-        (address _party0, address _party1, bool flipped) = _checkAddresses(
-            party0,
-            party1
-        );
+    function getCoverage(address party0, address party1) public view returns (uint256, uint256) {
+        (address _party0, address _party1, bool flipped) = _checkAddresses(party0, party1);
 
         if (!flipped) {
             (uint256 cover0, uint256 cover1) = _calculateCoverage(
@@ -868,9 +802,7 @@ contract CollateralAggregator is ProtocolTypes {
         bytes32 ccy,
         uint256 amount
     ) external acceptedContract {
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].sub(
-            amount
-        );
+        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].sub(amount);
 
         if (unsettledCollateral[user][ccy] == 0) {
             exposedUnsettledCurrencies[user].remove(ccy);
@@ -897,14 +829,8 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 amount1,
         bool isSettled
     ) external acceptedContract {
-        (address _partyA, address _partyB, bool flipped) = _checkAddresses(
-            partyA,
-            partyB
-        );
-        require(
-            exposedCurrencies[_partyA][_partyB].contains(ccy),
-            "non-used ccy"
-        );
+        (address _partyA, address _partyB, bool flipped) = _checkAddresses(partyA, partyB);
+        require(exposedCurrencies[_partyA][_partyB].contains(ccy), "non-used ccy");
         CcyNetting storage netting = ccyNettings[_partyA][_partyB][ccy];
 
         if (!flipped) {
@@ -943,9 +869,7 @@ contract CollateralAggregator is ProtocolTypes {
      */
     function withdraw(uint256 _amt) public registeredBook(msg.sender) {
         Book storage book = books[msg.sender];
-        (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(
-            msg.sender
-        );
+        (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(msg.sender);
 
         // if (totalUnsettledExp == 0) {
         //     maxWidthdraw = book.independentAmount;
@@ -969,18 +893,15 @@ contract CollateralAggregator is ProtocolTypes {
      *
      * @notice If requested more that independent amount withdraw all available collateral not used
      */
-    function withdrawFrom(address _counterparty, uint256 _amt)
-        public
-        registeredBook(msg.sender)
-    {
+    function withdrawFrom(address _counterparty, uint256 _amt) public registeredBook(msg.sender) {
         (address _partyA, address _partyB, bool flipped) = _checkAddresses(
             msg.sender,
             _counterparty
         );
-        (
-            uint256 maxWidthdraw0,
-            uint256 maxWidthdraw1
-        ) = _calcMaxCollateralWidthdraw(_partyA, _partyB);
+        (uint256 maxWidthdraw0, uint256 maxWidthdraw1) = _calcMaxCollateralWidthdraw(
+            _partyA,
+            _partyB
+        );
 
         Position storage position = positions[_partyA][_partyB];
         uint256 withdrawAmt;
@@ -1021,34 +942,23 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 currentPV0,
         uint256 currentPV1
     ) external acceptedContract {
-        (address _party0, address _party1, bool flipped) = _checkAddresses(
-            party0,
-            party1
-        );
+        (address _party0, address _party1, bool flipped) = _checkAddresses(party0, party1);
 
         CcyNetting storage netting = ccyNettings[_party0][_party1][ccy];
 
         if (!flipped) {
             if (currentPV0 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV0).add(
-                    currentPV0
-                );
+                netting.party0PV = netting.party0PV.sub(prevPV0).add(currentPV0);
             }
             if (currentPV1 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV1).add(
-                    currentPV1
-                );
+                netting.party1PV = netting.party1PV.sub(prevPV1).add(currentPV1);
             }
         } else {
             if (currentPV0 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV0).add(
-                    currentPV0
-                );
+                netting.party1PV = netting.party1PV.sub(prevPV0).add(currentPV0);
             }
             if (currentPV1 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV1).add(
-                    currentPV1
-                );
+                netting.party0PV = netting.party0PV.sub(prevPV1).add(currentPV1);
             }
         }
         // updatePositionState(_party0, _party1);
@@ -1098,26 +1008,17 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 amount
     ) external {
         require(collateralUsers.contains(msg.sender), "incorrect liquidator");
-        (address _partyA, address _partyB, bool flipped) = _checkAddresses(
-            from,
-            to
-        );
+        (address _partyA, address _partyB, bool flipped) = _checkAddresses(from, to);
         uint256 amt = currencyController.convertToETH(ccy, amount);
         // TODO: rebalance required amount of collateral, transfer excess into global book
         Position storage position = positions[_partyA][_partyB];
 
         if (!flipped) {
-            require(
-                position.lockedCollateralA >= amt,
-                "Liquidation amount not enough"
-            );
+            require(position.lockedCollateralA >= amt, "Liquidation amount not enough");
             position.lockedCollateralA -= amt;
             position.lockedCollateralB += amt;
         } else {
-            require(
-                position.lockedCollateralB >= amt,
-                "Liquidation amount not enough"
-            );
+            require(position.lockedCollateralB >= amt, "Liquidation amount not enough");
             position.lockedCollateralB -= amt;
             position.lockedCollateralA += amt;
         }
@@ -1168,10 +1069,7 @@ contract CollateralAggregator is ProtocolTypes {
     ) public view returns (CcyNetting memory) {
         (address _partyA, address _partyB, ) = _checkAddresses(partyA, partyB);
 
-        require(
-            exposedCurrencies[_partyA][_partyB].contains(ccy),
-            "non-used ccy"
-        );
+        require(exposedCurrencies[_partyA][_partyB].contains(ccy), "non-used ccy");
 
         CcyNetting memory netting = ccyNettings[_partyA][_partyB][ccy];
 
@@ -1184,9 +1082,7 @@ contract CollateralAggregator is ProtocolTypes {
         returns (bytes32[] memory)
     {
         (address _partyA, address _partyB, ) = _checkAddresses(partyA, partyB);
-        EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[_partyA][
-            _partyB
-        ];
+        EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[_partyA][_partyB];
 
         uint256 numCcy = expCcy.length();
         bytes32[] memory currencies = new bytes32[](numCcy);
@@ -1237,9 +1133,7 @@ contract CollateralAggregator is ProtocolTypes {
         )
     {
         require(party0 != party1, "Identical addresses");
-        (address _party0, address _party1) = party0 < party1
-            ? (party0, party1)
-            : (party1, party0);
+        (address _party0, address _party1) = party0 < party1 ? (party0, party1) : (party1, party0);
         require(_party0 != address(0), "Invalid address");
         require(_party1 != address(0), "Invalid counterparty");
 
@@ -1264,9 +1158,7 @@ contract CollateralAggregator is ProtocolTypes {
         );
         Book storage book = books[_mainParty];
 
-        (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(
-            _mainParty
-        );
+        (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(_mainParty);
         require(maxWidthdraw >= _amount, "Invalid rebalance amount");
 
         book.independentAmount = book.independentAmount.sub(_amount); // includes overflow checks
@@ -1330,9 +1222,7 @@ contract CollateralAggregator is ProtocolTypes {
             uint256
         )
     {
-        EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[_party0][
-            _party1
-        ];
+        EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[_party0][_party1];
         NetAndTotalPVLocalVars memory vars;
 
         vars.maxCcy = expCcy.length();
@@ -1365,35 +1255,19 @@ contract CollateralAggregator is ProtocolTypes {
                         .div(1e18);
                 }
             } else {
-                vars.unsettledExp0 = vars
-                    .netting
-                    .unsettled0PV
-                    .mul(uint256(vars.exchangeRate))
-                    .div(1e18);
-                vars.unsettledExp1 = vars
-                    .netting
-                    .unsettled1PV
-                    .mul(uint256(vars.exchangeRate))
-                    .div(1e18);
+                vars.unsettledExp0 = vars.netting.unsettled0PV.mul(uint256(vars.exchangeRate)).div(
+                    1e18
+                );
+                vars.unsettledExp1 = vars.netting.unsettled1PV.mul(uint256(vars.exchangeRate)).div(
+                    1e18
+                );
 
-                vars.exp0 = vars
-                    .netting
-                    .party0PV
-                    .mul(uint256(vars.exchangeRate))
-                    .div(1e18);
-                vars.exp1 = vars
-                    .netting
-                    .party1PV
-                    .mul(uint256(vars.exchangeRate))
-                    .div(1e18);
+                vars.exp0 = vars.netting.party0PV.mul(uint256(vars.exchangeRate)).div(1e18);
+                vars.exp1 = vars.netting.party1PV.mul(uint256(vars.exchangeRate)).div(1e18);
             }
 
-            vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH.add(
-                vars.unsettledExp0
-            );
-            vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH.add(
-                vars.unsettledExp1
-            );
+            vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH.add(vars.unsettledExp0);
+            vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH.add(vars.unsettledExp1);
 
             vars.haircutRatio = currencyController.getHaircut(ccy);
 
@@ -1417,31 +1291,18 @@ contract CollateralAggregator is ProtocolTypes {
 
         (vars.netExp0, vars.netExp1) = vars.expDiff0 > vars.expDiff1
             ? (
-                vars.expDiff0.sub(vars.expDiff1).add(
-                    vars.totalUnsettledPV0inETH
-                ),
+                vars.expDiff0.sub(vars.expDiff1).add(vars.totalUnsettledPV0inETH),
                 vars.totalUnsettledPV1inETH
             )
             : (
                 vars.totalUnsettledPV0inETH,
-                vars.expDiff1.sub(vars.expDiff0).add(
-                    vars.totalUnsettledPV1inETH
-                )
+                vars.expDiff1.sub(vars.expDiff0).add(vars.totalUnsettledPV1inETH)
             );
 
-        vars.totalCombinedPV0inETH = vars.totalUnsettledPV0inETH.add(
-            vars.totalPV0inETH
-        );
-        vars.totalCombinedPV1inETH = vars.totalUnsettledPV1inETH.add(
-            vars.totalPV1inETH
-        );
+        vars.totalCombinedPV0inETH = vars.totalUnsettledPV0inETH.add(vars.totalPV0inETH);
+        vars.totalCombinedPV1inETH = vars.totalUnsettledPV1inETH.add(vars.totalPV1inETH);
 
-        return (
-            vars.netExp0,
-            vars.netExp1,
-            vars.totalCombinedPV0inETH,
-            vars.totalCombinedPV1inETH
-        );
+        return (vars.netExp0, vars.netExp1, vars.totalCombinedPV0inETH, vars.totalCombinedPV1inETH);
     }
 
     struct CollateralReqLocalVars {
@@ -1476,12 +1337,7 @@ contract CollateralAggregator is ProtocolTypes {
     ) internal view returns (uint256, uint256) {
         CollateralReqLocalVars memory vars;
 
-        (
-            vars.net0,
-            vars.net1,
-            vars.total0,
-            vars.total1
-        ) = _netTotalAndHypotheticalPV(
+        (vars.net0, vars.net1, vars.total0, vars.total1) = _netTotalAndHypotheticalPV(
             _party0,
             _party1,
             _ccy,
@@ -1496,18 +1352,14 @@ contract CollateralAggregator is ProtocolTypes {
 
         if (vars.net0 > 0) {
             vars.netCover0 = (vars.net0.mul(MARGINLEVEL)).div(BP);
-            vars.req0 = vars.minMarginReq0 > vars.netCover0
-                ? vars.minMarginReq0
-                : vars.net0;
+            vars.req0 = vars.minMarginReq0 > vars.netCover0 ? vars.minMarginReq0 : vars.net0;
         } else {
             vars.req0 = vars.minMarginReq0;
         }
 
         if (vars.net1 > 0) {
             vars.netCover1 = (vars.net1.mul(MARGINLEVEL)).div(BP);
-            vars.req1 = vars.minMarginReq1 > vars.netCover1
-                ? vars.minMarginReq1
-                : vars.net1;
+            vars.req1 = vars.minMarginReq1 > vars.netCover1 ? vars.minMarginReq1 : vars.net1;
         } else {
             vars.req1 = vars.minMarginReq1;
         }
@@ -1704,9 +1556,7 @@ contract CollateralAggregator is ProtocolTypes {
         bytes32 _ccy,
         uint256 _unsettledExp
     ) internal view returns (uint256) {
-        EnumerableSet.Bytes32Set storage expCcy = exposedUnsettledCurrencies[
-            _user
-        ];
+        EnumerableSet.Bytes32Set storage expCcy = exposedUnsettledCurrencies[_user];
 
         NetUnsettledExpLocalVars memory vars;
 
@@ -1722,10 +1572,7 @@ contract CollateralAggregator is ProtocolTypes {
                     .mul(uint256(vars.exchangeRate))
                     .div(1e18);
             } else {
-                vars.ccyExpInETH = vars
-                    .ccyExp
-                    .mul(uint256(vars.exchangeRate))
-                    .div(1e18);
+                vars.ccyExpInETH = vars.ccyExp.mul(uint256(vars.exchangeRate)).div(1e18);
             }
 
             vars.totalExp = vars.totalExp.add(vars.ccyExpInETH);
@@ -1746,18 +1593,12 @@ contract CollateralAggregator is ProtocolTypes {
     ) internal view returns (uint256, uint256) {
         UnsettledCoverageLocalVars memory vars;
 
-        vars.totalExpInETH = _netTotalUnsettledAndHypotheticalPV(
-            _user,
-            _ccy,
-            _unsettledExp
-        );
+        vars.totalExpInETH = _netTotalUnsettledAndHypotheticalPV(_user, _ccy, _unsettledExp);
 
         Book memory book = books[_user];
 
         if (vars.totalExpInETH > 0) {
-            vars.coverage = (PCT.mul(book.independentAmount)).div(
-                vars.totalExpInETH
-            );
+            vars.coverage = (PCT.mul(book.independentAmount)).div(vars.totalExpInETH);
         } else {
             return (0, vars.totalExpInETH);
         }
@@ -1785,19 +1626,18 @@ contract CollateralAggregator is ProtocolTypes {
     {
         MaxCollateralBookWidthdrawLocalVars memory vars;
 
-        (
-            vars.coverage,
-            vars.totalExpInETH
-        ) = _calculateUnsettledCoverageAndTotalExposure(_user, "", 0);
+        (vars.coverage, vars.totalExpInETH) = _calculateUnsettledCoverageAndTotalExposure(
+            _user,
+            "",
+            0
+        );
 
         Book memory book = books[_user];
 
         if (vars.coverage > MARGINLEVEL) {
             vars.delta = vars.coverage.sub(MARGINLEVEL);
 
-            vars.maxWidthdraw = book.independentAmount.mul(vars.delta).div(
-                vars.coverage
-            );
+            vars.maxWidthdraw = book.independentAmount.mul(vars.delta).div(vars.coverage);
         } else if (vars.totalExpInETH == 0) {
             return (book.independentAmount, vars.totalExpInETH);
         } else {

@@ -5,22 +5,12 @@ interface IMixinCollateralManagement {
     event CollateralUserAdded(address indexed user);
     event CollateralUserRemoved(address indexed user);
 
-    event CollateralVaultLinked(
-        address indexed vault,
-        bytes32 ccy,
-        address tokenAddress
-    );
-    event CollateralVaultRemoved(
-        address indexed vault,
-        bytes32 ccy,
-        address tokenAddress
-    );
+    event CollateralVaultLinked(address indexed vault, bytes32 ccy, address tokenAddress);
+    event CollateralVaultRemoved(address indexed vault, bytes32 ccy, address tokenAddress);
 
     event CurrencyControllerUpdated(address indexed controller);
     event LiquidationEngineUpdated(address indexed liquidations);
-    event CrosschainAddressResolverUpdated(
-        address indexed crosschainAddressResolver
-    );
+    event CrosschainAddressResolverUpdated(address indexed crosschainAddressResolver);
 
     event LiquidationPriceUpdated(uint256 previousPrice, uint256 price);
     event AutoLiquidationThresholdUpdated(uint256 previousRatio, uint256 ratio);

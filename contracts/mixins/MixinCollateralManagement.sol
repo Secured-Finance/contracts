@@ -20,11 +20,7 @@ import "./MixinAddressResolver.sol";
  *    Auto-Liquidation level, Liquidation price, and Minimal collateral ratio
  *
  */
-contract MixinCollateralManagement is
-    IMixinCollateralManagement,
-    MixinAddressResolver,
-    Ownable
-{
+contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressResolver, Ownable {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -49,12 +45,7 @@ contract MixinCollateralManagement is
         _;
     }
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](4);
         contracts[0] = CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER;
         contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
@@ -62,12 +53,7 @@ contract MixinCollateralManagement is
         contracts[3] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
-    function isAcceptedContract(address account)
-        internal
-        view
-        override
-        returns (bool)
-    {
+    function isAcceptedContract(address account) internal view override returns (bool) {
         return
             isCollateralUser(account) ||
             productAddressResolver().isRegisteredProductContract(account) ||
@@ -96,12 +82,7 @@ contract MixinCollateralManagement is
      * @notice Trifgers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
-    function addCollateralUser(address _user)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function addCollateralUser(address _user) public override onlyOwner returns (bool) {
         require(_user != address(0), "Zero address");
         require(_user.isContract(), "Can't add non-contract address");
         require(!collateralUsers.contains(_user), "Can't add existing address");
@@ -118,12 +99,7 @@ contract MixinCollateralManagement is
      * @notice Trigers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
-    function linkCollateralVault(address _vault)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function linkCollateralVault(address _vault) public override onlyOwner returns (bool) {
         require(_vault != address(0), "Zero address");
         require(_vault.isContract(), "Can't add non-contract address");
         require(!isCollateralVault(_vault), "Can't add existing address");
@@ -144,16 +120,8 @@ contract MixinCollateralManagement is
      * @notice Triggers only be contract owner
      * @notice Reverts on removing non-existing collateral user
      */
-    function removeCollateralUser(address _user)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
-        require(
-            collateralUsers.contains(_user),
-            "Can't remove non-existing user"
-        );
+    function removeCollateralUser(address _user) public override onlyOwner returns (bool) {
+        require(collateralUsers.contains(_user), "Can't remove non-existing user");
 
         emit CollateralUserRemoved(_user);
         return collateralUsers.remove(_user);
@@ -166,12 +134,7 @@ contract MixinCollateralManagement is
      * @notice Triggers only be contract owner
      * @notice Reverts on removing non-existing collateral vault
      */
-    function removeCollateralVault(address _vault)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function removeCollateralVault(address _vault) public override onlyOwner returns (bool) {
         require(isCollateralVault(_vault), "Can't remove non-existing user");
 
         ICollateralVault vaultContract = ICollateralVault(_vault);
@@ -188,12 +151,7 @@ contract MixinCollateralManagement is
      * @dev Trigers to check if provided `addr` is a CollateralUser from address set
      * @param _user Contract address to check if it's a CollateralUser
      */
-    function isCollateralUser(address _user)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function isCollateralUser(address _user) public view override returns (bool) {
         return collateralUsers.contains(_user);
     }
 
@@ -201,12 +159,7 @@ contract MixinCollateralManagement is
      * @dev Trigers to check if provided address is valid CollateralVault
      * @param _vault Contract address to check if it's a CollateralVault
      */
-    function isCollateralVault(address _vault)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function isCollateralVault(address _vault) public view override returns (bool) {
         return collateralVaults.contains(_vault);
     }
 
@@ -242,11 +195,7 @@ contract MixinCollateralManagement is
      * @param _ratio Auto Liquidation level ratio
      * @notice Trigers only be contract owner
      */
-    function updateAutoLiquidationThreshold(uint256 _ratio)
-        public
-        override
-        onlyOwner
-    {
+    function updateAutoLiquidationThreshold(uint256 _ratio) public override onlyOwner {
         require(_ratio > 0, "INCORRECT_RATIO");
         require(_ratio < MARGINLEVEL, "AUTO_LIQUIDATION_RATIO_OVERFLOW");
 
@@ -259,11 +208,7 @@ contract MixinCollateralManagement is
      * @param _ratio Margin call ratio
      * @notice Trigers only be contract owner
      */
-    function updateMarginCallThreshold(uint256 _ratio)
-        public
-        override
-        onlyOwner
-    {
+    function updateMarginCallThreshold(uint256 _ratio) public override onlyOwner {
         require(_ratio > 0, "INCORRECT_RATIO");
 
         emit MarginCallThresholdUpdated(MARGINLEVEL, _ratio);
@@ -288,11 +233,7 @@ contract MixinCollateralManagement is
      * @param _ratio Minimal collateral ratio in basis points
      * @notice Trigers only be contract owner
      */
-    function updateMinCollateralRatio(uint256 _ratio)
-        public
-        override
-        onlyOwner
-    {
+    function updateMinCollateralRatio(uint256 _ratio) public override onlyOwner {
         require(_ratio > 0, "INCORRECT_RATIO");
         require(_ratio < AUTOLQLEVEL, "MIN_COLLATERAL_RATIO_OVERFLOW");
 

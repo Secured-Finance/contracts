@@ -25,15 +25,9 @@ interface ICollateralVault {
 
     function deposit(uint256 _amount) external payable;
 
-    function getIndependentCollateral(address _user)
-        external
-        view
-        returns (uint256);
+    function getIndependentCollateral(address _user) external view returns (uint256);
 
-    function getIndependentCollateralInETH(address _user)
-        external
-        view
-        returns (uint256);
+    function getIndependentCollateralInETH(address _user) external view returns (uint256);
 
     function getLockedCollateral(address _partyA, address _partyB)
         external
@@ -47,10 +41,7 @@ interface ICollateralVault {
         view
         returns (uint256, uint256);
 
-    function getLockedCollateralInETH(address _user)
-        external
-        view
-        returns (uint256);
+    function getLockedCollateralInETH(address _user) external view returns (uint256);
 
     function liquidate(
         address _from,

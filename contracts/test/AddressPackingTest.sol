@@ -4,19 +4,11 @@ pragma solidity ^0.7.0;
 import "../libraries/AddressPacking.sol";
 
 contract AddressPackingTest {
-    function pack(address party0, address party1)
-        external
-        pure
-        returns (bytes32, bool)
-    {
+    function pack(address party0, address party1) external pure returns (bytes32, bool) {
         return AddressPacking.pack(party0, party1);
     }
 
-    function getGasCostOfPack(address party0, address party1)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfPack(address party0, address party1) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         AddressPacking.pack(party0, party1);
 

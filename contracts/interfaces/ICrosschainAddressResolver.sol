@@ -46,8 +46,5 @@ interface ICrosschainAddressResolver {
      * @param _user Ethereum address of the Secured Finance user
      * @param _user Chain ID number
      */
-    function getUserAddress(address _user, uint256 _chainId)
-        external
-        view
-        returns (string memory);
+    function getUserAddress(address _user, uint256 _chainId) external view returns (string memory);
 }

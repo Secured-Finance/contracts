@@ -8,11 +8,7 @@ import "../interfaces/ILendingMarketController.sol";
 import "../ProtocolTypes.sol";
 import "../libraries/DiscountFactor.sol";
 
-contract LendingMarketControllerMock is
-    ILendingMarketController,
-    ProtocolTypes,
-    Ownable
-{
+contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes, Ownable {
     using SafeMath for uint256;
 
     uint256 public override numberOfMarkets = 0;
@@ -30,12 +26,7 @@ contract LendingMarketControllerMock is
      * @dev Triggers to get borrow rates for selected currency.
      * @param _ccy Currency short identifier
      */
-    function getBorrowRatesForCcy(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getBorrowRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
         uint256[] memory rates = new uint256[](terms.length);
 
@@ -52,12 +43,7 @@ contract LendingMarketControllerMock is
      * @dev Triggers to get lend rates for selected currency.
      * @param _ccy Currency short identifier
      */
-    function getLendRatesForCcy(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getLendRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
         uint256[] memory rates = new uint256[](terms.length);
 
@@ -74,12 +60,7 @@ contract LendingMarketControllerMock is
      * @dev Triggers to get mid rates for selected currency.
      * @param _ccy Currency short identifier
      */
-    function getMidRatesForCcy(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getMidRatesForCcy(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory terms = supportedTerms[_ccy];
         uint256[] memory rates = new uint256[](terms.length);
 
@@ -98,10 +79,7 @@ contract LendingMarketControllerMock is
      * @dev Triggers to set borrow rates for selected currency.
      * @param _ccy Currency short identifier
      */
-    function setBorrowRatesForCcy(bytes32 _ccy, uint256[] memory _rates)
-        public
-        onlyOwner
-    {
+    function setBorrowRatesForCcy(bytes32 _ccy, uint256[] memory _rates) public onlyOwner {
         for (uint8 i = 0; i < _rates.length; i++) {
             borrowRates[_ccy][i] = _rates[i];
         }
@@ -111,10 +89,7 @@ contract LendingMarketControllerMock is
      * @dev Triggers to set lend rates for selected currency.
      * @param _ccy Currency short identifier
      */
-    function setLendRatesForCcy(bytes32 _ccy, uint256[] memory _rates)
-        public
-        onlyOwner
-    {
+    function setLendRatesForCcy(bytes32 _ccy, uint256[] memory _rates) public onlyOwner {
         for (uint8 i = 0; i < _rates.length; i++) {
             lendRates[_ccy][i] = _rates[i];
         }
@@ -144,43 +119,23 @@ contract LendingMarketControllerMock is
         return address(0);
     }
 
-    function lendingMarkets(bytes32 _ccy, uint256 _term)
-        public
-        pure
-        override
-        returns (address)
-    {
+    function lendingMarkets(bytes32 _ccy, uint256 _term) public pure override returns (address) {
         _ccy;
         _term;
         return address(0);
     }
 
-    function pauseLendingMarkets(bytes32 _ccy)
-        public
-        pure
-        override
-        returns (bool)
-    {
+    function pauseLendingMarkets(bytes32 _ccy) public pure override returns (bool) {
         _ccy;
         return true;
     }
 
-    function unpauseLendingMarkets(bytes32 _ccy)
-        public
-        pure
-        override
-        returns (bool)
-    {
+    function unpauseLendingMarkets(bytes32 _ccy) public pure override returns (bool) {
         _ccy;
         return true;
     }
 
-    function placeBulkOrders(Order[] memory orders)
-        public
-        pure
-        override
-        returns (bool)
-    {
+    function placeBulkOrders(Order[] memory orders) public pure override returns (bool) {
         orders;
         return true;
     }
@@ -189,12 +144,7 @@ contract LendingMarketControllerMock is
         supportedTerms[_ccy] = terms;
     }
 
-    function getSupportedTerms(bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getSupportedTerms(bytes32 _ccy) public view override returns (uint256[] memory) {
         return supportedTerms[_ccy];
     }
 }

@@ -10,11 +10,7 @@ import "../interfaces/IExternalAdapterTxResponse.sol";
 /**
  * @title ChainlinkSettlementAdapterMock is mocking Chainlink external adapter.
  */
-contract ChainlinkSettlementAdapterMock is
-    ChainlinkClient,
-    Ownable,
-    IExternalAdapterTxResponse
-{
+contract ChainlinkSettlementAdapterMock is ChainlinkClient, Ownable, IExternalAdapterTxResponse {
     using Chainlink for Chainlink.Request;
 
     mapping(bytes32 => FulfillData) public results; // TODO: remove tmp data
@@ -80,10 +76,7 @@ contract ChainlinkSettlementAdapterMock is
      * @param _txHash The hash that is specify the data to get
      */
     // TODO: replace modifier for other contracts to call
-    function createRequest(string memory _txHash)
-        public
-        returns (bytes32 requestId)
-    {
+    function createRequest(string memory _txHash) public returns (bytes32 requestId) {
         _onlySettlementEngine();
         Chainlink.Request memory req = buildChainlinkRequest(
             jobId,
@@ -106,12 +99,7 @@ contract ChainlinkSettlementAdapterMock is
         uint256 _expiration
     ) public {
         _onlySettlementEngine();
-        cancelChainlinkRequest(
-            _requestId,
-            requestFee,
-            _callbackFunctionId,
-            _expiration
-        );
+        cancelChainlinkRequest(_requestId, requestFee, _callbackFunctionId, _expiration);
     }
 
     /**
@@ -151,16 +139,10 @@ contract ChainlinkSettlementAdapterMock is
      */
     function withdrawLink() public onlyOwner {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(
-            link.transfer(msg.sender, link.balanceOf(address(this))),
-            "Unable to transfer"
-        );
+        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
     }
 
     function _onlySettlementEngine() internal view {
-        require(
-            msg.sender == address(settlementEngine),
-            "NOT_SETTLEMENT_ENGINE"
-        );
+        require(msg.sender == address(settlementEngine), "NOT_SETTLEMENT_ENGINE");
     }
 }
