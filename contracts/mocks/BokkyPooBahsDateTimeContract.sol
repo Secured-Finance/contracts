@@ -190,7 +190,7 @@ contract BokkyPooBahsDateTimeContract {
     }
 
     function getDayOfWeek(uint256 timestamp) public pure returns (uint256 dayOfWeek) {
-        dayOfWeek = BokkyPooBahsDateTimeLibrary.getDayOfWeek(timestamp);
+        dayOfWeek = BokkyPooBahsDateTimeLibrary.getDayOfWeek(timestamp) % 7;
     }
 
     function getYear(uint256 timestamp) public pure returns (uint256 year) {
@@ -198,7 +198,7 @@ contract BokkyPooBahsDateTimeContract {
     }
 
     function getMonth(uint256 timestamp) public pure returns (uint256 month) {
-        month = BokkyPooBahsDateTimeLibrary.getMonth(timestamp);
+        month = BokkyPooBahsDateTimeLibrary.getMonth(timestamp) - 1;
     }
 
     function getDay(uint256 timestamp) public pure returns (uint256 day) {

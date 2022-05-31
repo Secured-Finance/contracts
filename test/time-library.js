@@ -51,10 +51,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
 
       it('getDayOfWeek', async () => {
         let day = await timeLibrary.getDayOfWeek(now);
-        // moment and timeLibrary have different day of week numbers
-        // moment: 0->6 (SUN->SAT)
-        // timeLibrary: 1->7 (MON->SUN)
-        day.toString().should.be.equal((date.utc().days() || 7).toString());
+        day.toString().should.be.equal(date.utc().days().toString());
       });
 
       it('getYear', async () => {
@@ -64,7 +61,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
 
       it('getMonth', async () => {
         let month = await timeLibrary.getMonth(now);
-        month.toString().should.be.equal((date.utc().month() + 1).toString());
+        month.toString().should.be.equal(date.utc().month().toString());
       });
 
       it('getDay', async () => {
@@ -97,7 +94,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
         let months = await timeLibrary.getMonth(addedMonths);
         months
           .toString()
-          .should.be.equal((date.utc().add(2, 'M').month() + 1).toString());
+          .should.be.equal(date.utc().add(2, 'M').month().toString());
       });
 
       it('addDays', async () => {
@@ -139,9 +136,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
         let months = await timeLibrary.getMonth(subMonths);
         months
           .toString()
-          .should.be.equal(
-            (date.utc().subtract(2, 'M').month() + 1).toString(),
-          );
+          .should.be.equal(date.utc().subtract(2, 'M').month().toString());
       });
 
       it('subDays', async () => {
