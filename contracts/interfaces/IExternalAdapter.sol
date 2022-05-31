@@ -2,9 +2,7 @@
 pragma solidity ^0.7.0;
 
 interface IExternalAdapter {
-    function createRequest(string memory _txHash)
-        external
-        returns (bytes32 requestId);
+    function createRequest(string memory _txHash) external returns (bytes32 requestId);
 
     function cancelRequest(
         string memory _txHash,

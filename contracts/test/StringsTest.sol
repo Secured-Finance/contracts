@@ -4,11 +4,7 @@ pragma solidity ^0.7.0;
 import "../libraries/Strings.sol";
 
 contract StringsTest {
-    function isEqual(string memory text0, string memory text1)
-        external
-        pure
-        returns (bool)
-    {
+    function isEqual(string memory text0, string memory text1) external pure returns (bool) {
         return Strings.isEqual(text0, text1);
     }
 
@@ -38,11 +34,7 @@ contract StringsTest {
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfToHex16(bytes16 _halfOfHash)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfToHex16(bytes16 _halfOfHash) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         Strings.toHex16(_halfOfHash);
 

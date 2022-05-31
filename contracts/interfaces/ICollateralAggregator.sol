@@ -37,12 +37,7 @@ interface ICollateralAggregator {
         uint256 amount0,
         uint256 amount1
     );
-    event UpdatePV(
-        address indexed addr,
-        uint256 prevPV,
-        uint256 newPV,
-        uint8 ccy
-    );
+    event UpdatePV(address indexed addr, uint256 prevPV, uint256 newPV, uint8 ccy);
     event UpdateState(address indexed addr, uint8 prevState, uint8 currState);
     event UseCollateral(
         address indexed partyA,
@@ -67,10 +62,7 @@ interface ICollateralAggregator {
 
     function deposit(address _counterparty) external payable;
 
-    function getCoverage(address party0, address party1)
-        external
-        view
-        returns (uint256, uint256);
+    function getCoverage(address party0, address party1) external view returns (uint256, uint256);
 
     function getExposedCurrencies(address partyA, address partyB)
         external
@@ -187,10 +179,7 @@ interface ICollateralAggregator {
         view
         returns (uint256, uint256);
 
-    function getMaxCollateralBookWidthdraw(address _user)
-        external
-        view
-        returns (uint256);
+    function getMaxCollateralBookWidthdraw(address _user) external view returns (uint256);
 
     function enterVault(address _user) external;
 

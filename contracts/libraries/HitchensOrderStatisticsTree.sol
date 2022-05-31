@@ -8,18 +8,8 @@ contract HitchensOrderStatisticsTree {
 
     HitchensOrderStatisticsTreeLib.Tree tree;
 
-    event InsertOrder(
-        string action,
-        uint256 amount,
-        uint256 value,
-        uint256 orderId
-    );
-    event RemoveOrder(
-        string action,
-        uint256 amount,
-        uint256 value,
-        uint256 _id
-    );
+    event InsertOrder(string action, uint256 amount, uint256 value, uint256 orderId);
+    event RemoveOrder(string action, uint256 amount, uint256 value, uint256 _id);
 
     constructor() {}
 
@@ -47,11 +37,7 @@ contract HitchensOrderStatisticsTree {
         _exists = tree.exists(value);
     }
 
-    function amountValueExists(uint256 amount, uint256 value)
-        public
-        view
-        returns (bool _exists)
-    {
+    function amountValueExists(uint256 amount, uint256 value) public view returns (bool _exists) {
         _exists = tree.amountExistsInNode(amount, value);
     }
 
@@ -68,8 +54,7 @@ contract HitchensOrderStatisticsTree {
             uint256 _orderCounter
         )
     {
-        (_parent, _left, _right, _red, _head, _tail, _orderCounter) = tree
-            .getNode(value);
+        (_parent, _left, _right, _red, _head, _tail, _orderCounter) = tree.getNode(value);
     }
 
     function getOrderByID(uint256 value, uint256 id)
@@ -83,21 +68,14 @@ contract HitchensOrderStatisticsTree {
             uint256 _amount
         )
     {
-        (_orderId, _next, _prev, _timestamp, _amount) = tree.getOrderById(
-            value,
-            id
-        );
+        (_orderId, _next, _prev, _timestamp, _amount) = tree.getOrderById(value, id);
     }
 
     function getRootCount() public view returns (uint256 _orderCounter) {
         _orderCounter = tree.count();
     }
 
-    function getValueCount(uint256 value)
-        public
-        view
-        returns (uint256 _orderCounter)
-    {
+    function getValueCount(uint256 value) public view returns (uint256 _orderCounter) {
         _orderCounter = tree.getNodeCount(value);
     }
 

@@ -3,19 +3,11 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 contract BytesConversion {
-    function getBytes32(string memory _product)
-        external
-        view
-        returns (bytes32)
-    {
+    function getBytes32(string memory _product) external view returns (bytes32) {
         return keccak256(abi.encode(_product));
     }
 
-    function getGasCostOfGetBytes32(string memory _product)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGetBytes32(string memory _product) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         keccak256(abi.encode(_product));
 
@@ -53,11 +45,7 @@ contract BytesConversion {
         }
     }
 
-    function getGasCostOfGetBytes4(string memory _product)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGetBytes4(string memory _product) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         bytes32 z = keccak256(abi.encode(_product));
         bytes4 r;

@@ -12,10 +12,11 @@ contract DiscountFactorTest {
         return DiscountFactor.bootstrapTerms(rates, terms);
     }
 
-    function getGasCostOfBootstrapTerms(
-        uint256[] memory rates,
-        uint256[] memory terms
-    ) external view returns (uint256) {
+    function getGasCostOfBootstrapTerms(uint256[] memory rates, uint256[] memory terms)
+        external
+        view
+        returns (uint256)
+    {
         uint256 gasBefore = gasleft();
         DiscountFactor.bootstrapTerms(rates, terms);
 
@@ -30,10 +31,11 @@ contract DiscountFactorTest {
         return DiscountFactor.calculateDFs(rates, terms);
     }
 
-    function getGasCostOfCalculateDFs(
-        uint256[] memory rates,
-        uint256[] memory terms
-    ) external view returns (uint256) {
+    function getGasCostOfCalculateDFs(uint256[] memory rates, uint256[] memory terms)
+        external
+        view
+        returns (uint256)
+    {
         uint256 gasBefore = gasleft();
         DiscountFactor.calculateDFs(rates, terms);
 

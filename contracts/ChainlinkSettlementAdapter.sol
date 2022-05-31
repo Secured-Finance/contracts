@@ -60,12 +60,7 @@ contract ChainlinkSettlementAdapter is
     /**
      * @dev The overridden method from MixinAddressResolver
      */
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_SETTLEMENT_ENGINE;
     }
@@ -73,12 +68,7 @@ contract ChainlinkSettlementAdapter is
     /**
      * @dev The overridden method from MixinAddressResolver
      */
-    function acceptedContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_SETTLEMENT_ENGINE;
     }
@@ -160,12 +150,7 @@ contract ChainlinkSettlementAdapter is
         uint256 _expiration
     ) public onlyAcceptedContracts {
         isRequested[_txHash] = false;
-        cancelChainlinkRequest(
-            _requestId,
-            requestFee,
-            _callbackFunctionId,
-            _expiration
-        );
+        cancelChainlinkRequest(_requestId, requestFee, _callbackFunctionId, _expiration);
     }
 
     /**
@@ -203,9 +188,6 @@ contract ChainlinkSettlementAdapter is
      */
     function withdrawLink() public onlyOwner {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(
-            link.transfer(msg.sender, link.balanceOf(address(this))),
-            "Unable to transfer"
-        );
+        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
     }
 }

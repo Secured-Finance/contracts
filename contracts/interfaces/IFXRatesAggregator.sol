@@ -24,22 +24,13 @@ interface IFXRatesAggregator {
 
     function getLastUSDPrice(uint8 _ccy) external view returns (int256);
 
-    function getHistoricalUSDPrice(uint8 _ccy, uint80 _roundId)
-        external
-        view
-        returns (int256);
+    function getHistoricalUSDPrice(uint8 _ccy, uint80 _roundId) external view returns (int256);
 
     function getLastETHPrice(uint8 _ccy) external view returns (int256);
 
-    function getHistoricalETHPrice(uint8 _ccy, uint80 _roundId)
-        external
-        view
-        returns (int256);
+    function getHistoricalETHPrice(uint8 _ccy, uint80 _roundId) external view returns (int256);
 
-    function convertToETH(uint8 _ccy, uint256 _amount)
-        external
-        view
-        returns (uint256);
+    function convertToETH(uint8 _ccy, uint256 _amount) external view returns (uint256);
 
     function convertBulkToETH(uint8 _ccy, uint256[] memory _amounts)
         external

@@ -29,8 +29,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
     }
 
     mapping(uint256 => uint256) private terms;
-    mapping(bytes4 => mapping(bytes32 => EnumerableSet.UintSet))
-        private termsForProductAndCcy;
+    mapping(bytes4 => mapping(bytes32 => EnumerableSet.UintSet)) private termsForProductAndCcy;
 
     modifier existingTermOnly(uint256 _numDays) {
         require(terms[_numDays] == _numDays, "NON EXISTING TERM");
@@ -43,12 +42,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
         contracts[0] = CONTRACT_CURRENCY_CONTROLLER;
         contracts[1] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
@@ -96,10 +90,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         bytes32 _ccy,
         bool _isSupported
     ) public override onlyOwner existingTermOnly(_numDays) returns (bool) {
-        require(
-            productAddressResolver().isSupportedProduct(_product),
-            "NON SUPPORTED PRODUCT"
-        );
+        require(productAddressResolver().isSupportedProduct(_product), "NON SUPPORTED PRODUCT");
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 
         if (_isSupported) {
@@ -154,12 +145,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      * number of days follows ACT365 market convention
      * @param _numDays Number of days in term
      */
-    function getNumDays(uint256 _numDays)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getNumDays(uint256 _numDays) public view override returns (uint256) {
         return terms[_numDays];
     }
 
@@ -167,12 +153,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      * @dev Triggers to get discount factor fractions.
      * @param _numDays Number of days in term
      */
-    function getDfFrac(uint256 _numDays)
-        public
-        pure
-        override
-        returns (uint256)
-    {
+    function getDfFrac(uint256 _numDays) public pure override returns (uint256) {
         return TermSchedule.getDfFrac(_numDays);
     }
 
@@ -201,9 +182,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         bytes4 _product,
         bytes32 _ccy
     ) public view override returns (bool) {
-        EnumerableSet.UintSet storage set = termsForProductAndCcy[_product][
-            _ccy
-        ];
+        EnumerableSet.UintSet storage set = termsForProductAndCcy[_product][_ccy];
         return set.contains(_numDays);
     }
 
@@ -217,9 +196,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         bytes32 _ccy,
         bool sort
     ) public view override returns (uint256[] memory) {
-        EnumerableSet.UintSet storage set = termsForProductAndCcy[_product][
-            _ccy
-        ];
+        EnumerableSet.UintSet storage set = termsForProductAndCcy[_product][_ccy];
         uint256 numTerms = set.length();
         uint256[] memory supportedTerms = new uint256[](numTerms);
 

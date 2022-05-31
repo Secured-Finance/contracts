@@ -30,14 +30,10 @@ library CloseOut {
         address party1,
         bytes32 ccy
     ) internal view returns (CloseOut.Payment memory payment) {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         payment = self[packedAddrs][ccy];
 
-        flipped ? payment.flipped = !payment.flipped : payment.flipped = payment
-            .flipped;
+        flipped ? payment.flipped = !payment.flipped : payment.flipped = payment.flipped;
     }
 
     struct CloseOutLocalVars {
@@ -79,34 +75,18 @@ library CloseOut {
         CloseOut.Payment storage closeOut = self[vars.packedAddrs][ccy];
 
         if (closeOut.flipped) {
-            if (
-                vars.payment0 > closeOut.netPayment &&
-                vars.payment1 < vars.payment0
-            ) {
-                closeOut.netPayment = vars.payment0.sub(
-                    closeOut.netPayment.add(vars.payment1)
-                );
+            if (vars.payment0 > closeOut.netPayment && vars.payment1 < vars.payment0) {
+                closeOut.netPayment = vars.payment0.sub(closeOut.netPayment.add(vars.payment1));
                 closeOut.flipped = false;
             } else {
-                closeOut.netPayment = closeOut
-                    .netPayment
-                    .add(vars.payment1)
-                    .sub(vars.payment0);
+                closeOut.netPayment = closeOut.netPayment.add(vars.payment1).sub(vars.payment0);
             }
         } else {
-            if (
-                vars.payment1 > closeOut.netPayment &&
-                vars.payment0 < vars.payment1
-            ) {
-                closeOut.netPayment = vars.payment1.sub(
-                    closeOut.netPayment.add(vars.payment0)
-                );
+            if (vars.payment1 > closeOut.netPayment && vars.payment0 < vars.payment1) {
+                closeOut.netPayment = vars.payment1.sub(closeOut.netPayment.add(vars.payment0));
                 closeOut.flipped = true;
             } else {
-                closeOut.netPayment = closeOut
-                    .netPayment
-                    .add(vars.payment0)
-                    .sub(vars.payment1);
+                closeOut.netPayment = closeOut.netPayment.add(vars.payment0).sub(vars.payment1);
             }
         }
 

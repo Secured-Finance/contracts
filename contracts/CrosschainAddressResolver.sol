@@ -7,10 +7,7 @@ import "./ProtocolTypes.sol";
 import "./interfaces/ICrosschainAddressResolver.sol";
 import "./mixins/MixinAddressResolver.sol";
 
-contract CrosschainAddressResolver is
-    ICrosschainAddressResolver,
-    MixinAddressResolver
-{
+contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressResolver {
     using SafeMath for uint256;
 
     // Mapping for storing user cross-chain addresses
@@ -24,22 +21,12 @@ contract CrosschainAddressResolver is
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) {}
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
     }
 
-    function acceptedContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
     }
@@ -73,10 +60,7 @@ contract CrosschainAddressResolver is
      * @notice This function triggers by the user, and stores addresses for `msg.sender`
      *
      */
-    function updateAddress(uint256 _chainId, string memory _address)
-        public
-        override
-    {
+    function updateAddress(uint256 _chainId, string memory _address) public override {
         _updateAddress(msg.sender, _chainId, _address);
     }
 

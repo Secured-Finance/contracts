@@ -59,12 +59,7 @@ contract SettlementEngine is
         Ownable()
     {}
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
         contracts[0] = CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER;
         contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
@@ -79,20 +74,13 @@ contract SettlementEngine is
      * @notice Triggers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
-    function addExternalAdapter(address _adapter, bytes32 _ccy)
-        public
-        override
-        onlyOwner
-    {
+    function addExternalAdapter(address _adapter, bytes32 _ccy) public override onlyOwner {
         require(_adapter.isContract(), "NOT_CONTRACT");
         require(currencyController().isSupportedCcy(_ccy), "NON_SUPPORTED_CCY");
 
         uint16 chainId = currencyController().getChainId(_ccy);
         require(chainId != 60, "NOT_ANOTHER_CHAIN");
-        require(
-            externalAdapters[chainId] == address(0),
-            "CAN'T_REPLACE_EXTERNAL_ADAPTER"
-        );
+        require(externalAdapters[chainId] == address(0), "CAN'T_REPLACE_EXTERNAL_ADAPTER");
 
         externalAdapters[chainId] = _adapter;
 
@@ -107,18 +95,11 @@ contract SettlementEngine is
      * @notice Triggers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
-    function replaceExternalAdapter(address _adapter, bytes32 _ccy)
-        public
-        override
-        onlyOwner
-    {
+    function replaceExternalAdapter(address _adapter, bytes32 _ccy) public override onlyOwner {
         require(_adapter.isContract(), "NOT_CONTRACT");
         uint16 chainId = currencyController().getChainId(_ccy);
 
-        require(
-            externalAdapters[chainId] != address(0),
-            "ADAPTER_DOESN'T_EXIST"
-        );
+        require(externalAdapters[chainId] != address(0), "ADAPTER_DOESN'T_EXIST");
 
         externalAdapters[chainId] = _adapter;
 
@@ -146,23 +127,12 @@ contract SettlementEngine is
         bytes32 requestId;
 
         require(
-            !paymentAggregator().isSettled(
-                msg.sender,
-                _counterparty,
-                _ccy,
-                _timestamp
-            ),
+            !paymentAggregator().isSettled(msg.sender, _counterparty, _ccy, _timestamp),
             "TIMESLOT_SETTLED_ALREADY"
         );
 
         if (chainId == 60) {
-            _performNativeSettlement(
-                msg.sender,
-                _counterparty,
-                _ccy,
-                _payment,
-                _timestamp
-            );
+            _performNativeSettlement(msg.sender, _counterparty, _ccy, _payment, _timestamp);
         } else {
             requestId = _performCrosschainSettlement(
                 msg.sender,
@@ -191,10 +161,7 @@ contract SettlementEngine is
         bytes32 _ccy
     ) external override {
         uint16 chainId = currencyController().getChainId(_ccy);
-        require(
-            externalAdapters[chainId] == msg.sender,
-            "NOT_EXTERNAL_ADAPTER"
-        );
+        require(externalAdapters[chainId] == msg.sender, "NOT_EXTERNAL_ADAPTER");
 
         SettlementRequest memory request = settlementRequests[_requestId];
         _validateSettlementRequest(chainId, request, _txData);
@@ -240,10 +207,7 @@ contract SettlementEngine is
         string memory _txHash
     ) internal returns (bytes32) {
         require(msg.value == 0, "INCORRECT_ETH_VALUE");
-        require(
-            paymentAggregator().checkSettlementWindow(_timestamp),
-            "OUT_OF_SETTLEMENT_WINDOW"
-        );
+        require(paymentAggregator().checkSettlementWindow(_timestamp), "OUT_OF_SETTLEMENT_WINDOW");
 
         address adapterAddr = externalAdapters[_chainId];
         require(adapterAddr != address(0), "ADAPTER_DOESN'T_EXIST");
@@ -331,8 +295,10 @@ contract SettlementEngine is
             _chainId
         );
 
-        string memory receiverAddress = crosschainAddressResolver()
-            .getUserAddress(_request.receiver, _chainId);
+        string memory receiverAddress = crosschainAddressResolver().getUserAddress(
+            _request.receiver,
+            _chainId
+        );
 
         require(payerAddress.isEqual(_txData.from), "INCORRECT_ADDRESS_FROM");
         require(receiverAddress.isEqual(_txData.to), "INCORRECT_ADDRESS_TO");

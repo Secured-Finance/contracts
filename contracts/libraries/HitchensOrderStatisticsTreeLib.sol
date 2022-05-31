@@ -47,15 +47,8 @@ library HitchensOrderStatisticsTreeLib {
         }
     }
 
-    function next(Tree storage self, uint256 value)
-        internal
-        view
-        returns (uint256 _cursor)
-    {
-        require(
-            value != EMPTY,
-            "OrderStatisticsTree(401) - Starting value cannot be zero"
-        );
+    function next(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
+        require(value != EMPTY, "OrderStatisticsTree(401) - Starting value cannot be zero");
         if (self.nodes[value].right != EMPTY) {
             _cursor = treeMinimum(self, self.nodes[value].right);
         } else {
@@ -67,15 +60,8 @@ library HitchensOrderStatisticsTreeLib {
         }
     }
 
-    function prev(Tree storage self, uint256 value)
-        internal
-        view
-        returns (uint256 _cursor)
-    {
-        require(
-            value != EMPTY,
-            "OrderStatisticsTree(402) - Starting value cannot be zero"
-        );
+    function prev(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
+        require(value != EMPTY, "OrderStatisticsTree(402) - Starting value cannot be zero");
         if (self.nodes[value].left != EMPTY) {
             _cursor = treeMaximum(self, self.nodes[value].left);
         } else {
@@ -87,11 +73,7 @@ library HitchensOrderStatisticsTreeLib {
         }
     }
 
-    function exists(Tree storage self, uint256 value)
-        internal
-        view
-        returns (bool _exists)
-    {
+    function exists(Tree storage self, uint256 value) internal view returns (bool _exists) {
         if (value == EMPTY) return false;
         if (value == self.root) return true;
         if (self.nodes[value].parent != EMPTY) return true;
@@ -130,27 +112,12 @@ library HitchensOrderStatisticsTreeLib {
             uint256
         )
     {
-        require(
-            exists(self, value),
-            "OrderStatisticsTree(403) - Value does not exist."
-        );
+        require(exists(self, value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
-        return (
-            gn.parent,
-            gn.left,
-            gn.right,
-            gn.red,
-            gn.head,
-            gn.tail,
-            gn.orderCounter
-        );
+        return (gn.parent, gn.left, gn.right, gn.red, gn.head, gn.tail, gn.orderCounter);
     }
 
-    function getNodeCount(Tree storage self, uint256 value)
-        internal
-        view
-        returns (uint256)
-    {
+    function getNodeCount(Tree storage self, uint256 value) internal view returns (uint256) {
         Node storage gn = self.nodes[value];
         return gn.orderCounter;
     }
@@ -165,10 +132,7 @@ library HitchensOrderStatisticsTreeLib {
         uint256 value,
         uint256 orderId
     ) internal {
-        require(
-            value != EMPTY,
-            "OrderStatisticsTree(405) - Value to insert cannot be zero"
-        );
+        require(value != EMPTY, "OrderStatisticsTree(405) - Value to insert cannot be zero");
         uint256 cursor;
         uint256 probe = self.root;
         while (probe != EMPTY) {
@@ -204,10 +168,7 @@ library HitchensOrderStatisticsTreeLib {
         uint256 value,
         uint256 orderId
     ) internal {
-        require(
-            value != EMPTY,
-            "OrderStatisticsTree(407) - Value to delete cannot be zero"
-        );
+        require(value != EMPTY, "OrderStatisticsTree(407) - Value to delete cannot be zero");
         require(
             orderExistsInNode(self, amount, value, orderId),
             "OrderStatisticsTree(408) - Value to delete does not exist."
@@ -217,10 +178,7 @@ library HitchensOrderStatisticsTreeLib {
         uint256 probe;
         uint256 cursor;
         if (nValue.orderCounter == 0) {
-            if (
-                self.nodes[value].left == EMPTY ||
-                self.nodes[value].right == EMPTY
-            ) {
+            if (self.nodes[value].left == EMPTY || self.nodes[value].right == EMPTY) {
                 cursor = value;
             } else {
                 cursor = self.nodes[value].right;
@@ -261,22 +219,14 @@ library HitchensOrderStatisticsTreeLib {
         }
     }
 
-    function treeMinimum(Tree storage self, uint256 value)
-        private
-        view
-        returns (uint256)
-    {
+    function treeMinimum(Tree storage self, uint256 value) private view returns (uint256) {
         while (self.nodes[value].left != EMPTY) {
             value = self.nodes[value].left;
         }
         return value;
     }
 
-    function treeMaximum(Tree storage self, uint256 value)
-        private
-        view
-        returns (uint256)
-    {
+    function treeMaximum(Tree storage self, uint256 value) private view returns (uint256) {
         while (self.nodes[value].right != EMPTY) {
             value = self.nodes[value].right;
         }
@@ -327,9 +277,7 @@ library HitchensOrderStatisticsTreeLib {
         uint256 cursor;
         while (value != self.root && self.nodes[self.nodes[value].parent].red) {
             uint256 valueParent = self.nodes[value].parent;
-            if (
-                valueParent == self.nodes[self.nodes[valueParent].parent].left
-            ) {
+            if (valueParent == self.nodes[self.nodes[valueParent].parent].left) {
                 cursor = self.nodes[self.nodes[valueParent].parent].right;
                 if (self.nodes[cursor].red) {
                     self.nodes[valueParent].red = false;
@@ -468,20 +416,11 @@ library HitchensOrderStatisticsTreeLib {
             uint256
         )
     {
-        require(
-            exists(self, value),
-            "OrderStatisticsTree(403) - Value does not exist."
-        );
+        require(exists(self, value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[orderId];
-        return (
-            order.orderId,
-            order.next,
-            order.prev,
-            order.timestamp,
-            order.amount
-        );
+        return (order.orderId, order.next, order.prev, order.timestamp, order.amount);
     }
 
     /**
@@ -564,9 +503,7 @@ library HitchensOrderStatisticsTreeLib {
         } else {
             if (gn.orders[gn.head].amount < newAmount) {
                 OrderItem memory rootOrder = gn.orders[gn.head];
-                while (
-                    rootOrder.orderId != gn.tail && rootOrder.amount < newAmount
-                ) {
+                while (rootOrder.orderId != gn.tail && rootOrder.amount < newAmount) {
                     rootOrder = gn.orders[rootOrder.next];
                 }
                 if (order.amount > _amount) {
@@ -606,9 +543,7 @@ library HitchensOrderStatisticsTreeLib {
 
         if (gn.orders[gn.head].amount < newAmount) {
             OrderItem memory rootOrder = gn.orders[gn.head];
-            while (
-                rootOrder.orderId != gn.tail && rootOrder.amount < newAmount
-            ) {
+            while (rootOrder.orderId != gn.tail && rootOrder.amount < newAmount) {
                 rootOrder = gn.orders[rootOrder.next];
             }
             if (order.amount > _amount) {
@@ -673,10 +608,7 @@ library HitchensOrderStatisticsTreeLib {
         uint256 value,
         uint256 orderId
     ) internal {
-        require(
-            exists(self, value),
-            "OrderStatisticsTree(403) - Value does not exist."
-        );
+        require(exists(self, value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[orderId];
@@ -717,21 +649,9 @@ library HitchensOrderStatisticsTreeLib {
                     order = gn.orders[order.next];
                 }
                 if (order.amount > _amount) {
-                    insertOrderBefore(
-                        self,
-                        value,
-                        order.orderId,
-                        _amount,
-                        _orderId
-                    );
+                    insertOrderBefore(self, value, order.orderId, _amount, _orderId);
                 } else {
-                    insertOrderAfter(
-                        self,
-                        value,
-                        order.orderId,
-                        _amount,
-                        _orderId
-                    );
+                    insertOrderAfter(self, value, order.orderId, _amount, _orderId);
                 }
             } else {
                 addHead(self, value, _amount, _orderId);
@@ -779,13 +699,7 @@ library HitchensOrderStatisticsTreeLib {
         if (_nextId == gn.head) {
             addHead(self, value, _amount, _orderId);
         } else {
-            insertOrderAfter(
-                self,
-                value,
-                gn.orders[_nextId].prev,
-                _amount,
-                _orderId
-            );
+            insertOrderAfter(self, value, gn.orders[_nextId].prev, _amount, _orderId);
         }
     }
 
@@ -830,13 +744,7 @@ library HitchensOrderStatisticsTreeLib {
             newId = 1;
         }
         gn.orderCounter += 1;
-        OrderItem memory order = OrderItem(
-            orderId,
-            0,
-            0,
-            block.timestamp,
-            amount
-        );
+        OrderItem memory order = OrderItem(orderId, 0, 0, block.timestamp, amount);
         gn.orders[order.orderId] = order;
         return order.orderId;
     }

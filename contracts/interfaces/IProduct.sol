@@ -8,11 +8,7 @@ interface IProduct {
     event Liquidate(bytes32 dealId);
     event RequestTermination(bytes32 dealId, address indexed requestedBy);
     event RejectTermination(bytes32 dealId, address indexed rejectedBy);
-    event EarlyTermination(
-        bytes32 dealId,
-        address indexed acceptedBy,
-        uint256 payment
-    );
+    event EarlyTermination(bytes32 dealId, address indexed acceptedBy, uint256 payment);
     event MarkToMarket(bytes32 dealId, uint256 prevPV, uint256 currPV);
 
     /**
@@ -87,10 +83,7 @@ interface IProduct {
      *
      * @return Settlement bool identifier
      */
-    function getDealSettlementStatus(bytes32 dealId)
-        external
-        view
-        returns (bool);
+    function getDealSettlementStatus(bytes32 dealId) external view returns (bool);
 
     /**
      * Get the version of the underlying contract.

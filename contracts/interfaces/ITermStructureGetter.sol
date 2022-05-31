@@ -7,10 +7,7 @@ interface ITermStructureGetter {
 
     function getNumDays(uint256 _numDays) external view returns (uint256);
 
-    function getNumPayments(uint256 _numDays, uint8 frequency)
-        external
-        view
-        returns (uint256);
+    function getNumPayments(uint256 _numDays, uint8 frequency) external view returns (uint256);
 
     function getTerm(uint256 _numDays, uint8 frequency)
         external

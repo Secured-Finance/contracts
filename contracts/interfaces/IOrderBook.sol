@@ -11,13 +11,7 @@ struct MarketOrder {
 }
 
 interface IOrderBook {
-    event CancelOrder(
-        uint256 id,
-        address indexed maker,
-        uint8 side,
-        uint256 amount,
-        uint256 rate
-    );
+    event CancelOrder(uint256 id, address indexed maker, uint8 side, uint256 amount, uint256 rate);
     event MakeOrder(
         uint256 id,
         address indexed maker,
@@ -28,17 +22,8 @@ interface IOrderBook {
         uint256 rate,
         uint256 deadline
     );
-    event OwnershipTransferred(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-    event TakeOrder(
-        uint256 id,
-        address indexed taker,
-        uint8 side,
-        uint256 amount,
-        uint256 rate
-    );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event TakeOrder(uint256 id, address indexed taker, uint8 side, uint256 amount, uint256 rate);
 
     function MarketCcy() external view returns (uint8);
 

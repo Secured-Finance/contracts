@@ -28,22 +28,14 @@ contract TermStructureTest is TermStructure {
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfGetNumDays(uint256 _numDays)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGetNumDays(uint256 _numDays) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         getNumDays(_numDays);
 
         return gasBefore - gasleft();
     }
 
-    function getGasCostOfGetDfFrac(uint256 _numDays)
-        external
-        view
-        returns (uint256)
-    {
+    function getGasCostOfGetDfFrac(uint256 _numDays) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         getDfFrac(_numDays);
 

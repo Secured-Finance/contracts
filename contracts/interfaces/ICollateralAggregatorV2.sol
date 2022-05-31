@@ -12,12 +12,7 @@ interface ICollateralAggregator {
         uint256 amount1,
         bool isSettled
     );
-    event Liquidate(
-        address indexed from,
-        address indexed to,
-        bytes32 ccy,
-        uint256 amount
-    );
+    event Liquidate(address indexed from, address indexed to, bytes32 ccy, uint256 amount);
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event SettleCollateral(
         address indexed partyA,
@@ -43,11 +38,7 @@ interface ICollateralAggregator {
         uint256 amount1,
         bool isSettled
     );
-    event UseUnsettledCollateral(
-        address indexed party,
-        bytes32 ccy,
-        uint256 amount
-    );
+    event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
 
     function checkRegisteredUser(address addr) external view returns (bool);
 
@@ -73,10 +64,7 @@ interface ICollateralAggregator {
             uint256
         );
 
-    function getCoverage(address _party0, address _party1)
-        external
-        view
-        returns (uint256, uint256);
+    function getCoverage(address _party0, address _party1) external view returns (uint256, uint256);
 
     function getExposedCurrencies(address partyA, address partyB)
         external
@@ -108,15 +96,9 @@ interface ICollateralAggregator {
         view
         returns (uint256, uint256);
 
-    function getTotalUnsettledExp(address _user)
-        external
-        view
-        returns (uint256);
+    function getTotalUnsettledExp(address _user) external view returns (uint256);
 
-    function getUnsettledCoverage(address _user)
-        external
-        view
-        returns (uint256 coverage);
+    function getUnsettledCoverage(address _user) external view returns (uint256 coverage);
 
     function isCovered(
         address _party0,
@@ -150,8 +132,7 @@ interface ICollateralAggregator {
 
     function register() external;
 
-    function register(string[] memory _addresses, uint256[] memory _chainIds)
-        external;
+    function register(string[] memory _addresses, uint256[] memory _chainIds) external;
 
     function releaseCollateral(
         address partyA,
@@ -201,13 +182,7 @@ interface ICollateralAggregator {
         uint256 amount
     ) external;
 
-    function getUsedVaults(address user)
-        external
-        view
-        returns (address[] memory);
+    function getUsedVaults(address user) external view returns (address[] memory);
 
-    function getUsedVaults(address party0, address party1)
-        external
-        view
-        returns (address[] memory);
+    function getUsedVaults(address party0, address party1) external view returns (address[] memory);
 }

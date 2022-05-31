@@ -2,11 +2,7 @@
 pragma solidity ^0.7.0;
 
 library QuickSort {
-    function sort(uint256[] memory data)
-        public
-        pure
-        returns (uint256[] memory)
-    {
+    function sort(uint256[] memory data) public pure returns (uint256[] memory) {
         quickSort(data, int256(0), int256(data.length - 1));
         return data;
     }
@@ -24,10 +20,7 @@ library QuickSort {
             while (arr[uint256(i)] < pivot) i++;
             while (pivot < arr[uint256(j)]) j--;
             if (i <= j) {
-                (arr[uint256(i)], arr[uint256(j)]) = (
-                    arr[uint256(j)],
-                    arr[uint256(i)]
-                );
+                (arr[uint256(i)], arr[uint256(j)]) = (arr[uint256(j)], arr[uint256(i)]);
                 i++;
                 j--;
             }

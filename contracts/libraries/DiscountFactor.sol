@@ -43,23 +43,17 @@ library DiscountFactor {
     {
         require(rates.length == terms.length, "INVALID_PARAMS");
 
-        (
-            uint256[] memory bootstrapedRates,
-            uint256[] memory bootstrapedTerms
-        ) = bootstrapTerms(rates, terms);
+        (uint256[] memory bootstrapedRates, uint256[] memory bootstrapedTerms) = bootstrapTerms(
+            rates,
+            terms
+        );
 
         uint256 len = bootstrapedTerms.length;
         uint256[] memory dfs = new uint256[](len);
         uint256 dfSum;
 
         for (uint256 i = 0; i < len; i++) {
-            dfSum = determineDF(
-                bootstrapedRates[i],
-                bootstrapedTerms[i],
-                dfs,
-                dfSum,
-                i
-            );
+            dfSum = determineDF(bootstrapedRates[i], bootstrapedTerms[i], dfs, dfSum, i);
         }
 
         return (dfs, bootstrapedTerms);
@@ -115,9 +109,7 @@ library DiscountFactor {
             }
             vars.nextKnownRate = rates[i + 1];
             vars.nextKnownTerm = terms[i + 1];
-            vars.upwards = vars.nextKnownRate > vars.lastKnownRate
-                ? true
-                : false;
+            vars.upwards = vars.nextKnownRate > vars.lastKnownRate ? true : false;
             vars.deltaRate = vars.upwards
                 ? vars.nextKnownRate.sub(vars.lastKnownRate)
                 : vars.lastKnownRate.sub(vars.nextKnownRate);
@@ -176,17 +168,15 @@ library DiscountFactor {
             vars.left = vars.termSeconds.sub(vars.timeDelta);
 
             return
-                (BP.mul(vars.left).add(discountFactors[0].mul(vars.timeDelta)))
-                    .div(vars.termSeconds);
+                (BP.mul(vars.left).add(discountFactors[0].mul(vars.timeDelta))).div(
+                    vars.termSeconds
+                );
         } else {
             for (uint256 i = 1; i < terms.length; i++) {
                 vars.termSeconds = terms[i].mul(86400);
                 vars.prevTermSeconds = terms[i - 1].mul(86400);
 
-                if (
-                    vars.prevTermSeconds < vars.timeDelta &&
-                    vars.timeDelta <= vars.termSeconds
-                ) {
+                if (vars.prevTermSeconds < vars.timeDelta && vars.timeDelta <= vars.termSeconds) {
                     vars.left = vars.timeDelta.sub(vars.prevTermSeconds);
 
                     if (vars.left == 0) {

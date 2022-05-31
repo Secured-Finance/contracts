@@ -42,9 +42,7 @@ library TermSchedule {
 
                 return paymentSchedule;
             }
-        } else if (
-            PaymentFrequency(_frequency) == PaymentFrequency.SEMI_ANNUAL
-        ) {
+        } else if (PaymentFrequency(_frequency) == PaymentFrequency.SEMI_ANNUAL) {
             if (_numDays >= 180) {
                 uint256 numHalfYears = _numDays.div(180);
                 uint256[] memory paymentSchedule = new uint256[](numHalfYears);
@@ -121,24 +119,16 @@ library TermSchedule {
      * @param _numDays Number of days in term
      * @param _frequency Payment frequency (like annual, semi-annual, etc.)
      */
-    function getNumPayments(uint256 _numDays, uint8 _frequency)
-        internal
-        pure
-        returns (uint256)
-    {
+    function getNumPayments(uint256 _numDays, uint8 _frequency) internal pure returns (uint256) {
         if (PaymentFrequency(_frequency) == PaymentFrequency.ANNUAL) {
             if (_numDays >= 365) {
                 return _numDays.div(365);
             } else if (_numDays > 0) {
                 return 1;
             } else return 0;
-        } else if (
-            PaymentFrequency(_frequency) == PaymentFrequency.SEMI_ANNUAL
-        ) {
+        } else if (PaymentFrequency(_frequency) == PaymentFrequency.SEMI_ANNUAL) {
             if (_numDays >= 365) {
-                uint256 _monthConvention = _numDays.sub(
-                    _numDays.div(365).mul(5)
-                );
+                uint256 _monthConvention = _numDays.sub(_numDays.div(365).mul(5));
                 return _monthConvention.div(180);
             } else if (_numDays >= 180) {
                 return _numDays.div(180);
@@ -147,9 +137,7 @@ library TermSchedule {
             } else return 0;
         } else if (PaymentFrequency(_frequency) == PaymentFrequency.QUARTERLY) {
             if (_numDays >= 365) {
-                uint256 _monthConvention = _numDays.sub(
-                    _numDays.div(365).mul(5)
-                );
+                uint256 _monthConvention = _numDays.sub(_numDays.div(365).mul(5));
                 return _monthConvention.div(90);
             } else if (_numDays >= 90) {
                 return _numDays.div(90);
@@ -158,9 +146,7 @@ library TermSchedule {
             } else return 0;
         } else if (PaymentFrequency(_frequency) == PaymentFrequency.MONTHLY) {
             if (_numDays >= 365) {
-                uint256 _monthConvention = _numDays.sub(
-                    _numDays.div(365).mul(5)
-                );
+                uint256 _monthConvention = _numDays.sub(_numDays.div(365).mul(5));
                 return _monthConvention.div(30);
             } else if (_numDays >= 30) {
                 return _numDays.div(30);

@@ -53,8 +53,7 @@ library TimeSlot {
      * @param day Day in which to find a timeslot
      */
     function get(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,
@@ -74,13 +73,7 @@ library TimeSlot {
         )
     {
         return
-            getBySlotId(
-                self,
-                party0,
-                party1,
-                ccy,
-                keccak256(abi.encodePacked(year, month, day))
-            );
+            getBySlotId(self, party0, party1, ccy, keccak256(abi.encodePacked(year, month, day)));
     }
 
     /**
@@ -94,8 +87,7 @@ library TimeSlot {
      * @param settlementId Unique settlement id to find payment confirmation for
      */
     function getPaymentConfirmation(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,
@@ -124,8 +116,7 @@ library TimeSlot {
      * @param settlementId Unique settlement id to find payment confirmation for
      */
     function getPaymentConfirmationById(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,
@@ -135,8 +126,7 @@ library TimeSlot {
         (bytes32 addr, ) = AddressPacking.pack(party0, party1);
         TimeSlot.Slot storage timeSlot = self[addr][ccy][slotId];
 
-        TimeSlot.PaymentConfirmation memory confirmation = timeSlot
-            .confirmations[settlementId];
+        TimeSlot.PaymentConfirmation memory confirmation = timeSlot.confirmations[settlementId];
 
         return (confirmation.verificationParty, confirmation.amount);
     }
@@ -149,8 +139,7 @@ library TimeSlot {
      * @param slotId Time slot identifier
      */
     function getBySlotId(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,
@@ -209,8 +198,7 @@ library TimeSlot {
      * @param payment1 Payment obligated to the second counterparty
      */
     function addPayment(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,
@@ -218,10 +206,7 @@ library TimeSlot {
         uint256 payment0,
         uint256 payment1
     ) internal {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         TimeSlot.Slot storage timeSlot = self[packedAddrs][ccy][slot];
         require(!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
 
@@ -244,8 +229,7 @@ library TimeSlot {
      * @param payment1 Payment amount to remove for the second counterparty
      */
     function removePayment(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,
@@ -253,10 +237,7 @@ library TimeSlot {
         uint256 payment0,
         uint256 payment1
     ) internal {
-        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(
-            party0,
-            party1
-        );
+        (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
         TimeSlot.Slot storage timeSlot = self[packedAddrs][ccy][slot];
         if (timeSlot.isSettled) return;
 
@@ -279,8 +260,7 @@ library TimeSlot {
      * @param settlementId Unique settlement id of the successfull payment
      */
     function verifyPayment(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address sender,
         address recipient,
         bytes32 ccy,
@@ -329,8 +309,7 @@ library TimeSlot {
      * @param slot TimeSlot identifier to be cleared
      */
     function clear(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,
@@ -350,8 +329,7 @@ library TimeSlot {
      * @return Boolean of settlement status
      */
     function isSettled(
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot)))
-            storage self,
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) storage self,
         address party0,
         address party1,
         bytes32 ccy,

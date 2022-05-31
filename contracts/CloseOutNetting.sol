@@ -50,22 +50,12 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
     }
 
-    function acceptedContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
     }
@@ -101,14 +91,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
         uint256 payment0,
         uint256 payment1
     ) external override onlyAcceptedContracts {
-        CloseOut.addPayments(
-            _closeOuts,
-            party0,
-            party1,
-            ccy,
-            payment0,
-            payment1
-        );
+        CloseOut.addPayments(_closeOuts, party0, party1, ccy, payment0, payment1);
 
         emit AddCloseOutPayments(party0, party1, ccy, payment0, payment1);
     }
@@ -130,14 +113,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
         uint256 payment0,
         uint256 payment1
     ) external override onlyAcceptedContracts {
-        CloseOut.removePayments(
-            _closeOuts,
-            party0,
-            party1,
-            ccy,
-            payment0,
-            payment1
-        );
+        CloseOut.removePayments(_closeOuts, party0, party1, ccy, payment0, payment1);
 
         emit RemoveCloseOutPayments(party0, party1, ccy, payment0, payment1);
     }
@@ -145,12 +121,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
     /**
      * @dev External function to check if `_party` is in default
      */
-    function checkDefault(address _party)
-        external
-        view
-        override
-        returns (bool)
-    {
+    function checkDefault(address _party) external view override returns (bool) {
         return _isDefaulted[_party];
     }
 

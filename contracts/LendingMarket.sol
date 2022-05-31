@@ -54,24 +54,14 @@ contract LendingMarket is
         buildCache();
     }
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
         contracts[1] = CONTRACT_LENDING_MARKET_CONTROLLER;
         contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
-    function acceptedContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_LENDING_MARKET_CONTROLLER;
     }
@@ -89,12 +79,7 @@ contract LendingMarket is
      * @dev Triggers to get order maker address.
      * @param orderId Market order id
      */
-    function getMaker(uint256 orderId)
-        public
-        view
-        override
-        returns (address maker)
-    {
+    function getMaker(uint256 orderId) public view override returns (address maker) {
         return orders[orderId].maker;
     }
 
@@ -127,12 +112,7 @@ contract LendingMarket is
      * @dev Triggers to get market order information.
      * @param orderId Market order id
      */
-    function getOrder(uint256 orderId)
-        public
-        view
-        override
-        returns (MarketOrder memory)
-    {
+    function getOrder(uint256 orderId) public view override returns (MarketOrder memory) {
         return orders[orderId];
     }
 
@@ -193,13 +173,7 @@ contract LendingMarket is
             MarketCcy,
             order.amount.mul(MKTMAKELEVEL).div(PCT)
         );
-        emit CancelOrder(
-            orderId,
-            order.maker,
-            order.side,
-            order.amount,
-            order.rate
-        );
+        emit CancelOrder(orderId, order.maker, order.side, order.amount, order.rate);
 
         success = true;
     }
@@ -270,20 +244,12 @@ contract LendingMarket is
 
         orders[orderId].amount = order.amount.sub(_amount);
         if (order.side == Side.LEND) {
-            require(
-                lendOrders.fillOrder(order.rate, orderId, _amount),
-                "Couldn't fill order"
-            );
+            require(lendOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
         } else if (order.side == Side.BORROW) {
-            require(
-                borrowOrders.fillOrder(order.rate, orderId, _amount),
-                "Couldn't fill order"
-            );
+            require(borrowOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
         }
 
-        address productAddress = productAddressResolver().getProductContract(
-            prefix
-        );
+        address productAddress = productAddressResolver().getProductContract(prefix);
 
         ILoanV2(productAddress).register(
             order.maker,
@@ -318,16 +284,10 @@ contract LendingMarket is
         uint256 rate
     ) external view override returns (uint256) {
         if (side == Side.LEND) {
-            require(
-                borrowOrders.exists(rate),
-                "No orders exists for selected interest rate"
-            );
+            require(borrowOrders.exists(rate), "No orders exists for selected interest rate");
             return borrowOrders.findOrderIdForAmount(rate, amount);
         } else {
-            require(
-                lendOrders.exists(rate),
-                "No orders exists for selected interest rate"
-            );
+            require(lendOrders.exists(rate), "No orders exists for selected interest rate");
             return lendOrders.findOrderIdForAmount(rate, amount);
         }
     }

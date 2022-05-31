@@ -20,12 +20,7 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
 
     constructor(address _resolver) CollateralAggregatorV2(_resolver) {}
 
-    function getMaxCollateralBookWidthdraw(address user)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getMaxCollateralBookWidthdraw(address user) public view override returns (uint256) {
         return _maxWithdrawals[user];
     }
 
@@ -36,17 +31,13 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         returns (uint256, uint256)
     {
         (bytes32 addrPack, bool flipped) = AddressPacking.pack(party0, party1);
-        PositionWithdrawal memory withdrawal = _maxPositionWithdrawals[
-            addrPack
-        ];
+        PositionWithdrawal memory withdrawal = _maxPositionWithdrawals[addrPack];
         withdrawal = _handleFlippedCase(withdrawal, flipped);
 
         return (withdrawal.withdraw0, withdrawal.withdraw1);
     }
 
-    function setMaxCollateralBookWidthdraw(address user, uint256 amount)
-        public
-    {
+    function setMaxCollateralBookWidthdraw(address user, uint256 amount) public {
         _maxWithdrawals[user] = amount;
     }
 
@@ -66,10 +57,11 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         _maxPositionWithdrawals[addrPack] = withdrawal;
     }
 
-    function _handleFlippedCase(
-        PositionWithdrawal memory withdrawal,
-        bool flipped
-    ) internal pure returns (PositionWithdrawal memory) {
+    function _handleFlippedCase(PositionWithdrawal memory withdrawal, bool flipped)
+        internal
+        pure
+        returns (PositionWithdrawal memory)
+    {
         if (flipped) {
             uint256 withdraw = withdrawal.withdraw0;
 
@@ -86,12 +78,7 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         uint256 _amountETH,
         address _vault
     ) external returns (uint256) {
-        return
-            ICollateralVault(_vault).rebalanceTo(
-                _user,
-                _counterparty,
-                _amountETH
-            );
+        return ICollateralVault(_vault).rebalanceTo(_user, _counterparty, _amountETH);
     }
 
     function rebalanceFrom(
@@ -100,12 +87,7 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         uint256 _amountETH,
         address _vault
     ) external returns (uint256) {
-        return
-            ICollateralVault(_vault).rebalanceFrom(
-                _user,
-                _counterparty,
-                _amountETH
-            );
+        return ICollateralVault(_vault).rebalanceFrom(_user, _counterparty, _amountETH);
     }
 
     function rebalanceBetween(
@@ -115,13 +97,7 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         uint256 _amountETH,
         address _vault
     ) external returns (uint256) {
-        return
-            ICollateralVault(_vault).rebalanceBetween(
-                _user,
-                _fromParty,
-                _toParty,
-                _amountETH
-            );
+        return ICollateralVault(_vault).rebalanceBetween(_user, _fromParty, _toParty, _amountETH);
     }
 
     function liquidate(

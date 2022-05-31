@@ -8,15 +8,9 @@ library AddressPacking {
      * @param addr1 Second address
      * @return Boolean to identify if addresses were flipped
      */
-    function pack(address addr0, address addr1)
-        internal
-        pure
-        returns (bytes32, bool)
-    {
+    function pack(address addr0, address addr1) internal pure returns (bytes32, bool) {
         require(addr0 != addr1, "Identical addresses");
-        (address _addr0, address _addr1) = addr0 < addr1
-            ? (addr0, addr1)
-            : (addr1, addr0);
+        (address _addr0, address _addr1) = addr0 < addr1 ? (addr0, addr1) : (addr1, addr0);
         require(_addr0 != address(0), "Invalid address");
 
         if (_addr0 != addr0) {

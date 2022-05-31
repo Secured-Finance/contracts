@@ -22,18 +22,14 @@ contract MixinAddressResolver {
     mapping(bytes32 => address) private addressCache;
 
     bytes32 public constant CONTRACT_CLOSE_OUT_NETTING = "CloseOutNetting";
-    bytes32 public constant CONTRACT_COLLATERAL_AGGREGATOR =
-        "CollateralAggregator";
-    bytes32 public constant CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER =
-        "CrosschainAddressResolver";
+    bytes32 public constant CONTRACT_COLLATERAL_AGGREGATOR = "CollateralAggregator";
+    bytes32 public constant CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER = "CrosschainAddressResolver";
     bytes32 public constant CONTRACT_CURRENCY_CONTROLLER = "CurrencyController";
     bytes32 public constant CONTRACT_MARK_TO_MARKET = "MarkToMarket";
-    bytes32 public constant CONTRACT_LENDING_MARKET_CONTROLLER =
-        "LendingMarketController";
+    bytes32 public constant CONTRACT_LENDING_MARKET_CONTROLLER = "LendingMarketController";
     bytes32 public constant CONTRACT_LIQUIDATIONS = "Liquidations";
     bytes32 public constant CONTRACT_PAYMENT_AGGREGATOR = "PaymentAggregator";
-    bytes32 public constant CONTRACT_PRODUCT_ADDRESS_RESOLVER =
-        "ProductAddressResolver";
+    bytes32 public constant CONTRACT_PRODUCT_ADDRESS_RESOLVER = "ProductAddressResolver";
     bytes32 public constant CONTRACT_SETTLEMENT_ENGINE = "SettlementEngine";
     bytes32 public constant CONTRACT_TERM_STRUCTURE = "TermStructure";
 
@@ -53,22 +49,12 @@ contract MixinAddressResolver {
     /**
      * @dev Returns required contract names in this contract
      */
-    function requiredContracts()
-        public
-        pure
-        virtual
-        returns (bytes32[] memory contracts)
-    {}
+    function requiredContracts() public pure virtual returns (bytes32[] memory contracts) {}
 
     /**
      * @dev Returns contract names that can call this contract.
      */
-    function acceptedContracts()
-        public
-        pure
-        virtual
-        returns (bytes32[] memory contracts)
-    {}
+    function acceptedContracts() public pure virtual returns (bytes32[] memory contracts) {}
 
     function buildCache() public {
         // The resolver must call this function whenever it updates its state
@@ -91,8 +77,7 @@ contract MixinAddressResolver {
             bytes32 name = contractNames[i];
             // false if our cache is invalid or if the resolver doesn't have the required address
             if (
-                resolver.getAddress(name) != addressCache[name] ||
-                addressCache[name] == address(0)
+                resolver.getAddress(name) != addressCache[name] || addressCache[name] == address(0)
             ) {
                 return false;
             }
@@ -103,19 +88,11 @@ contract MixinAddressResolver {
 
     function getAddress(bytes32 name) internal view returns (address) {
         address _foundAddress = addressCache[name];
-        require(
-            _foundAddress != address(0),
-            string(abi.encodePacked("Missing address: ", name))
-        );
+        require(_foundAddress != address(0), string(abi.encodePacked("Missing address: ", name)));
         return _foundAddress;
     }
 
-    function isAcceptedContract(address account)
-        internal
-        view
-        virtual
-        returns (bool)
-    {
+    function isAcceptedContract(address account) internal view virtual returns (bool) {
         bytes32[] memory contractNames = acceptedContracts();
         for (uint256 i = 0; i < contractNames.length; i++) {
             if (account == getAddress(contractNames[i])) {
@@ -130,24 +107,12 @@ contract MixinAddressResolver {
         return ICloseOutNetting(getAddress(CONTRACT_CLOSE_OUT_NETTING));
     }
 
-    function collateralAggregator()
-        internal
-        view
-        returns (ICollateralAggregator)
-    {
-        return
-            ICollateralAggregator(getAddress(CONTRACT_COLLATERAL_AGGREGATOR));
+    function collateralAggregator() internal view returns (ICollateralAggregator) {
+        return ICollateralAggregator(getAddress(CONTRACT_COLLATERAL_AGGREGATOR));
     }
 
-    function crosschainAddressResolver()
-        internal
-        view
-        returns (ICrosschainAddressResolver)
-    {
-        return
-            ICrosschainAddressResolver(
-                getAddress(CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER)
-            );
+    function crosschainAddressResolver() internal view returns (ICrosschainAddressResolver) {
+        return ICrosschainAddressResolver(getAddress(CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER));
     }
 
     function currencyController() internal view returns (ICurrencyController) {
@@ -158,15 +123,8 @@ contract MixinAddressResolver {
         return IMarkToMarket(getAddress(CONTRACT_MARK_TO_MARKET));
     }
 
-    function lendingMarketController()
-        internal
-        view
-        returns (ILendingMarketController)
-    {
-        return
-            ILendingMarketController(
-                getAddress(CONTRACT_LENDING_MARKET_CONTROLLER)
-            );
+    function lendingMarketController() internal view returns (ILendingMarketController) {
+        return ILendingMarketController(getAddress(CONTRACT_LENDING_MARKET_CONTROLLER));
     }
 
     function liquidations() internal view returns (ILiquidations) {
@@ -177,15 +135,8 @@ contract MixinAddressResolver {
         return IPaymentAggregator(getAddress(CONTRACT_PAYMENT_AGGREGATOR));
     }
 
-    function productAddressResolver()
-        internal
-        view
-        returns (IProductAddressResolver)
-    {
-        return
-            IProductAddressResolver(
-                getAddress(CONTRACT_PRODUCT_ADDRESS_RESOLVER)
-            );
+    function productAddressResolver() internal view returns (IProductAddressResolver) {
+        return IProductAddressResolver(getAddress(CONTRACT_PRODUCT_ADDRESS_RESOLVER));
     }
 
     function settlementEngine() internal view returns (ISettlementEngine) {

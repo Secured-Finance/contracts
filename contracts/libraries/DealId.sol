@@ -8,11 +8,7 @@ library DealId {
      * @param counter Number of deal to be generated
      * @return id in bytes32 with prefix on the left and counter on the right side
      */
-    function generate(bytes32 prefix, uint256 counter)
-        public
-        pure
-        returns (bytes32 id)
-    {
+    function generate(bytes32 prefix, uint256 counter) public pure returns (bytes32 id) {
         uint224 num = toUint224(counter);
         bytes4 r;
         bytes32 zero = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000;

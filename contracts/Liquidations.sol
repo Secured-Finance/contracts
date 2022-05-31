@@ -35,32 +35,19 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * @notice sets contract deployer as owner of this contract,
      * liquidation agent and liquidation offset
      */
-    constructor(address _resolver, uint256 _offset)
-        MixinAddressResolver(_resolver)
-        Ownable()
-    {
+    constructor(address _resolver, uint256 _offset) MixinAddressResolver(_resolver) Ownable() {
         liquidationAgents.add(msg.sender);
         offset = _offset;
     }
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
         contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
         contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
 
-    function isAcceptedContract(address account)
-        internal
-        view
-        override
-        returns (bool)
-    {
+    function isAcceptedContract(address account) internal view override returns (bool) {
         return
             productAddressResolver().isRegisteredProductContract(account) ||
             super.isAcceptedContract(account);
@@ -70,11 +57,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * @dev Updates offset for maximum number of deals liquidated per one execution.
      * @param _offset New liquidation offset
      */
-    function updateLiquidationOffset(uint256 _offset)
-        public
-        override
-        onlyOwner
-    {
+    function updateLiquidationOffset(uint256 _offset) public override onlyOwner {
         require(_offset > 0, "INCORRECT_OFFSET");
         emit OffsetUpdated(offset, _offset);
         offset = _offset;
@@ -84,11 +67,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * @dev Adds liquidation agent address into the set.
      * @param _liquidationAgent Liquidation agent address
      */
-    function addLiquidationAgent(address _liquidationAgent)
-        public
-        override
-        onlyOwner
-    {
+    function addLiquidationAgent(address _liquidationAgent) public override onlyOwner {
         liquidationAgents.add(_liquidationAgent);
         emit LiquidationAgentAdded(_liquidationAgent);
     }
@@ -97,11 +76,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * @dev Removes liquidation agent address from the set.
      * @param _liquidationAgent Liquidation agent address
      */
-    function removeLiquidationAgent(address _liquidationAgent)
-        public
-        override
-        onlyOwner
-    {
+    function removeLiquidationAgent(address _liquidationAgent) public override onlyOwner {
         liquidationAgents.remove(_liquidationAgent);
         emit LiquidationAgentRemoved(_liquidationAgent);
     }
@@ -139,11 +114,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * @param party0 First counterparty address
      * @param party1 Second counterparty address
      */
-    function liquidateDeals(address party0, address party1)
-        public
-        override
-        onlyLiquidationAgent
-    {
+    function liquidateDeals(address party0, address party1) public override onlyLiquidationAgent {
         (bool coverage0, bool coverage1) = collateralAggregator().isCovered(
             party0,
             party1,
@@ -159,9 +130,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
 
         uint256 numDeals = set.length();
         uint256 numLiquidations;
-        numDeals > offset
-            ? numLiquidations = offset
-            : numLiquidations = numDeals;
+        numDeals > offset ? numLiquidations = offset : numLiquidations = numDeals;
         bytes32[] memory dealIds = new bytes32[](numLiquidations);
 
         for (uint256 i = 0; i < numLiquidations; i++) {
@@ -217,9 +186,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
 
         for (uint256 i = 0; i < dealIds.length; i++) {
             vars.dealId = dealIds[i];
-            vars.product = productAddressResolver().getProductContractByDealId(
-                vars.dealId
-            );
+            vars.product = productAddressResolver().getProductContractByDealId(vars.dealId);
 
             vars.currency = IProduct(vars.product).getDealCurrency(vars.dealId);
 
@@ -228,37 +195,23 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
                 party1,
                 vars.dealId
             );
-            vars.exchangeRate = uint256(
-                currencyController().getLastETHPrice(vars.currency)
-            );
+            vars.exchangeRate = uint256(currencyController().getLastETHPrice(vars.currency));
 
             vars.dealPV0 = vars.dealPV0.mul(vars.exchangeRate).div(1e18);
             vars.dealPV1 = vars.dealPV1.mul(vars.exchangeRate).div(1e18);
 
-            vars.totalLiquidationPVInETH0 = vars.totalLiquidationPVInETH0.add(
-                vars.dealPV0
-            );
-            vars.totalLiquidationPVInETH1 = vars.totalLiquidationPVInETH1.add(
-                vars.dealPV1
-            );
+            vars.totalLiquidationPVInETH0 = vars.totalLiquidationPVInETH0.add(vars.dealPV0);
+            vars.totalLiquidationPVInETH1 = vars.totalLiquidationPVInETH1.add(vars.dealPV1);
 
             IProduct(vars.product).liquidate(vars.dealId);
         }
 
         if (vars.totalLiquidationPVInETH0 > 0) {
-            collateralAggregator().liquidate(
-                party0,
-                party1,
-                vars.totalLiquidationPVInETH0
-            );
+            collateralAggregator().liquidate(party0, party1, vars.totalLiquidationPVInETH0);
         }
 
         if (vars.totalLiquidationPVInETH1 > 0) {
-            collateralAggregator().liquidate(
-                party1,
-                party0,
-                vars.totalLiquidationPVInETH1
-            );
+            collateralAggregator().liquidate(party1, party0, vars.totalLiquidationPVInETH1);
         }
     }
 }

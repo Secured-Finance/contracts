@@ -28,14 +28,7 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 amount1,
         bool isSettled
     ) public {
-        collateralAggregator.useCollateral(
-            partyA,
-            partyB,
-            ccy,
-            amount0,
-            amount1,
-            isSettled
-        );
+        collateralAggregator.useCollateral(partyA, partyB, ccy, amount0, amount1, isSettled);
     }
 
     function settleCollateral(
@@ -45,13 +38,7 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 amount0,
         uint256 amount1
     ) public {
-        collateralAggregator.settleCollateral(
-            partyA,
-            partyB,
-            ccy,
-            amount0,
-            amount1
-        );
+        collateralAggregator.settleCollateral(partyA, partyB, ccy, amount0, amount1);
     }
 
     function releaseUnsettledCollateral(
@@ -70,14 +57,7 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 amount1,
         bool isSettled
     ) public {
-        collateralAggregator.releaseCollateral(
-            partyA,
-            partyB,
-            ccy,
-            amount0,
-            amount1,
-            isSettled
-        );
+        collateralAggregator.releaseCollateral(partyA, partyB, ccy, amount0, amount1, isSettled);
     }
 
     function updatePV(
@@ -108,14 +88,7 @@ contract CollateralAggregatorCallerMock is ProtocolTypes {
         uint256 pvForRelease,
         bool isSettled
     ) external {
-        collateralAggregator.liquidate(
-            from,
-            to,
-            ccy,
-            liquidationAmount,
-            pvForRelease,
-            isSettled
-        );
+        collateralAggregator.liquidate(from, to, ccy, liquidationAmount, pvForRelease, isSettled);
     }
 
     function liquidate(

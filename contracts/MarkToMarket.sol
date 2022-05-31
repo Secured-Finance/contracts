@@ -23,12 +23,7 @@ contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Ownable {
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) {}
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
     }
@@ -46,14 +41,9 @@ contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Ownable {
      * @param dealId Deal ID to update PV for
      */
     function updatePV(bytes32 dealId) public override {
-        address product = productAddressResolver().getProductContractByDealId(
-            dealId
-        );
+        address product = productAddressResolver().getProductContractByDealId(dealId);
 
-        require(
-            IProduct(product).markToMarket(dealId),
-            "CAN'T DO MARK-TO-MARKET"
-        );
+        require(IProduct(product).markToMarket(dealId), "CAN'T DO MARK-TO-MARKET");
     }
 
     /**
@@ -66,14 +56,9 @@ contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Ownable {
         for (uint256 i = 0; i < dealIds.length; i++) {
             bytes32 dealId = dealIds[i];
 
-            vars.product = productAddressResolver().getProductContractByDealId(
-                dealId
-            );
+            vars.product = productAddressResolver().getProductContractByDealId(dealId);
 
-            require(
-                IProduct(vars.product).markToMarket(dealId),
-                "CAN'T DO MARK-TO-MARKET"
-            );
+            require(IProduct(vars.product).markToMarket(dealId), "CAN'T DO MARK-TO-MARKET");
         }
     }
 }

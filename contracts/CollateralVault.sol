@@ -22,12 +22,7 @@ import "./mixins/MixinAddressResolver.sol";
  * single or multi-deal liquidation.
  *
  */
-contract CollateralVault is
-    ICollateralVault,
-    MixinAddressResolver,
-    Ownable,
-    SafeTransfer
-{
+contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, SafeTransfer {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using CollateralPosition for CollateralPosition.Position;
@@ -50,10 +45,7 @@ contract CollateralVault is
      * @dev Modifier to check if user registered on collateral aggregator
      */
     modifier onlyRegisteredUser() {
-        require(
-            collateralAggregator().checkRegisteredUser(msg.sender),
-            "NON_REGISTERED_USER"
-        );
+        require(collateralAggregator().checkRegisteredUser(msg.sender), "NON_REGISTERED_USER");
         _;
     }
 
@@ -74,29 +66,16 @@ contract CollateralVault is
 
         buildCache();
 
-        require(
-            currencyController().isCollateral(_ccy),
-            "COLLATERAL_ASSET_NOT_SUPPORTED"
-        );
+        require(currencyController().isCollateral(_ccy), "COLLATERAL_ASSET_NOT_SUPPORTED");
     }
 
-    function requiredContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
         contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
     }
 
-    function acceptedContracts()
-        public
-        pure
-        override
-        returns (bytes32[] memory contracts)
-    {
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
     }
@@ -105,12 +84,7 @@ contract CollateralVault is
      * @dev Trigers to deposit funds by the msg.sender into collateral book
      * @param _amount Number of funds to deposit
      */
-    function deposit(uint256 _amount)
-        public
-        payable
-        override
-        onlyRegisteredUser
-    {
+    function deposit(uint256 _amount) public payable override onlyRegisteredUser {
         require(_amount > 0, "INVALID_AMOUNT");
         _depositAssets(tokenAddress, msg.sender, address(this), _amount);
 
@@ -127,20 +101,11 @@ contract CollateralVault is
      * @param _counterparty Counterparty address in bilateral position
      * @notice payable function increases locked collateral by msg.value
      */
-    function deposit(address _counterparty, uint256 _amount)
-        public
-        override
-        onlyRegisteredUser
-    {
+    function deposit(address _counterparty, uint256 _amount) public override onlyRegisteredUser {
         require(_amount > 0, "INVALID_AMOUNT");
         _depositAssets(tokenAddress, msg.sender, address(this), _amount);
 
-        CollateralPosition.deposit(
-            _positions,
-            msg.sender,
-            _counterparty,
-            _amount
-        );
+        CollateralPosition.deposit(_positions, msg.sender, _counterparty, _amount);
 
         Book storage book = books[msg.sender];
         book.lockedCollateral = book.lockedCollateral.add(_amount);
@@ -183,19 +148,10 @@ contract CollateralVault is
             : book.independentAmount;
 
         if (vars.rebalanceAmount > 0) {
-            book.independentAmount = book.independentAmount.sub(
-                vars.rebalanceAmount
-            );
-            book.lockedCollateral = book.lockedCollateral.add(
-                vars.rebalanceAmount
-            );
+            book.independentAmount = book.independentAmount.sub(vars.rebalanceAmount);
+            book.lockedCollateral = book.lockedCollateral.add(vars.rebalanceAmount);
 
-            CollateralPosition.deposit(
-                _positions,
-                _user,
-                _counterparty,
-                vars.rebalanceAmount
-            );
+            CollateralPosition.deposit(_positions, _user, _counterparty, vars.rebalanceAmount);
             _afterTransfer(_user, _counterparty);
 
             emit RebalanceTo(_user, _counterparty, vars.rebalanceAmount);
@@ -235,12 +191,8 @@ contract CollateralVault is
 
         if (vars.rebalanceAmount > 0) {
             Book storage book = books[_user];
-            book.lockedCollateral = book.lockedCollateral.sub(
-                vars.rebalanceAmount
-            );
-            book.independentAmount = book.independentAmount.add(
-                vars.rebalanceAmount
-            );
+            book.lockedCollateral = book.lockedCollateral.sub(vars.rebalanceAmount);
+            book.independentAmount = book.independentAmount.add(vars.rebalanceAmount);
 
             _afterTransfer(_user, _counterparty);
 
@@ -286,12 +238,7 @@ contract CollateralVault is
         _afterTransfer(_user, _fromParty);
         _afterTransfer(_user, _toParty);
 
-        emit RebalanceBetween(
-            _user,
-            _fromParty,
-            _toParty,
-            vars.rebalanceAmount
-        );
+        emit RebalanceBetween(_user, _fromParty, _toParty, vars.rebalanceAmount);
 
         return vars.left.mul(uint256(vars.exchangeRate)).div(1e18);
     }
@@ -311,16 +258,9 @@ contract CollateralVault is
         address _from,
         address _to,
         uint256 _amountETH
-    )
-        external
-        override
-        onlyAcceptedContracts
-        returns (uint256 liquidationLeftETH)
-    {
+    ) external override onlyAcceptedContracts returns (uint256 liquidationLeftETH) {
         int256 exchangeRate = currencyController().getLastETHPrice(ccy);
-        uint256 liquidationTarget = _amountETH.mul(1e18).div(
-            uint256(exchangeRate)
-        );
+        uint256 liquidationTarget = _amountETH.mul(1e18).div(uint256(exchangeRate));
         uint256 liquidated = CollateralPosition.liquidate(
             _positions,
             _from,
@@ -350,9 +290,7 @@ contract CollateralVault is
             liquidationLeft = liquidationLeft.sub(independentLiquidation);
         }
 
-        liquidationLeftETH = liquidationLeft.mul(uint256(exchangeRate)).div(
-            1e18
-        );
+        liquidationLeftETH = liquidationLeft.mul(uint256(exchangeRate)).div(1e18);
     }
 
     function _tryLiquidateIndependentCollateral(
@@ -360,12 +298,8 @@ contract CollateralVault is
         address _to,
         uint256 _amount
     ) internal returns (uint256 liquidated) {
-        uint256 maxWidthdrawETH = collateralAggregator()
-            .getMaxCollateralBookWidthdraw(_from);
-        uint256 maxLiquidation = currencyController().convertFromETH(
-            ccy,
-            maxWidthdrawETH
-        );
+        uint256 maxWidthdrawETH = collateralAggregator().getMaxCollateralBookWidthdraw(_from);
+        uint256 maxLiquidation = currencyController().convertFromETH(ccy, maxWidthdrawETH);
 
         liquidated = _amount > maxLiquidation ? maxLiquidation : _amount;
 
@@ -389,12 +323,8 @@ contract CollateralVault is
         require(_amount > 0, "INVALID_AMOUNT");
 
         address user = msg.sender;
-        uint256 maxWidthdrawETH = collateralAggregator()
-            .getMaxCollateralBookWidthdraw(user);
-        uint256 maxWidthdraw = currencyController().convertFromETH(
-            ccy,
-            maxWidthdrawETH
-        );
+        uint256 maxWidthdrawETH = collateralAggregator().getMaxCollateralBookWidthdraw(user);
+        uint256 maxWidthdraw = currencyController().convertFromETH(ccy, maxWidthdrawETH);
         uint256 withdrawAmt = _amount > maxWidthdraw ? maxWidthdraw : _amount;
 
         Book storage book = books[user];
@@ -421,16 +351,13 @@ contract CollateralVault is
         require(_amount > 0, "INVALID_AMOUNT");
         address user = msg.sender;
 
-        (uint256 maxWidthdrawETH, ) = collateralAggregator()
-            .getMaxCollateralWidthdraw(user, _counterparty);
-        uint256 maxWidthdraw = currencyController().convertFromETH(
-            ccy,
-            maxWidthdrawETH
+        (uint256 maxWidthdrawETH, ) = collateralAggregator().getMaxCollateralWidthdraw(
+            user,
+            _counterparty
         );
+        uint256 maxWidthdraw = currencyController().convertFromETH(ccy, maxWidthdrawETH);
 
-        uint256 targetWithdraw = _amount > maxWidthdraw
-            ? maxWidthdraw
-            : _amount;
+        uint256 targetWithdraw = _amount > maxWidthdraw ? maxWidthdraw : _amount;
         uint256 withdrawn = CollateralPosition.withdraw(
             _positions,
             user,
@@ -452,12 +379,7 @@ contract CollateralVault is
      *
      * @param _user Address of collateral user
      */
-    function getIndependentCollateral(address _user)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getIndependentCollateral(address _user) public view override returns (uint256) {
         return books[_user].independentAmount;
     }
 
@@ -466,12 +388,7 @@ contract CollateralVault is
      *
      * @param _user Address of collateral user
      */
-    function getIndependentCollateralInETH(address _user)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getIndependentCollateralInETH(address _user) public view override returns (uint256) {
         uint256 amount = books[_user].independentAmount;
 
         return currencyController().convertToETH(ccy, amount);
@@ -482,12 +399,7 @@ contract CollateralVault is
      *
      * @param _user Address of collateral user
      */
-    function getLockedCollateral(address _user)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getLockedCollateral(address _user) public view override returns (uint256) {
         return books[_user].lockedCollateral;
     }
 
@@ -496,12 +408,7 @@ contract CollateralVault is
      *
      * @param _user Address of collateral user
      */
-    function getLockedCollateralInETH(address _user)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getLockedCollateralInETH(address _user) public view override returns (uint256) {
         uint256 amount = books[_user].lockedCollateral;
 
         return currencyController().convertToETH(ccy, amount);
@@ -536,11 +443,7 @@ contract CollateralVault is
         override
         returns (uint256, uint256)
     {
-        (uint256 lockedA, uint256 lockedB) = CollateralPosition.get(
-            _positions,
-            _partyA,
-            _partyB
-        );
+        (uint256 lockedA, uint256 lockedB) = CollateralPosition.get(_positions, _partyA, _partyB);
 
         uint256[] memory ethAmounts = new uint256[](2);
         ethAmounts[0] = lockedA;
@@ -552,10 +455,7 @@ contract CollateralVault is
     }
 
     function _afterTransfer() internal {
-        if (
-            books[msg.sender].independentAmount > 0 ||
-            books[msg.sender].lockedCollateral > 0
-        ) {
+        if (books[msg.sender].independentAmount > 0 || books[msg.sender].lockedCollateral > 0) {
             collateralAggregator().enterVault(msg.sender);
         } else {
             collateralAggregator().exitVault(msg.sender);
