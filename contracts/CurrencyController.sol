@@ -4,6 +4,7 @@ pragma solidity ^0.7.0;
 import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/math/SignedSafeMath.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICurrencyController.sol";
 
 /**
@@ -13,11 +14,10 @@ import "./interfaces/ICurrencyController.sol";
  * Contract links new currencies to ETH Chainlink price feeds, without existing price feed
  * contract owner is not able to add a new currency into the protocol
  */
-contract CurrencyController is ICurrencyController {
+contract CurrencyController is ICurrencyController, Ownable {
     using SignedSafeMath for int256;
     using SafeMath for uint256;
 
-    address public override owner;
     uint8 public override last_ccy_index;
 
     struct Currency {
@@ -41,11 +41,6 @@ contract CurrencyController is ICurrencyController {
 
     uint8 public override supportedCurrencies;
 
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
     modifier supportedCcyOnly(bytes32 _ccy) {
         require(isSupportedCcy(_ccy), "Unsupported asset");
         _;
@@ -54,19 +49,7 @@ contract CurrencyController is ICurrencyController {
     /**
      * @dev Lending Market Controller Constructor.
      */
-    constructor() {
-        owner = msg.sender;
-    }
-
-    /**
-     * @dev Sets owner of the controller market.
-     * @param _owner Address of new owner
-     */
-    function setOwner(address _owner) public override onlyOwner {
-        require(_owner != address(0), "new owner is the zero address");
-        emit OwnerChanged(owner, _owner);
-        owner = _owner;
-    }
+    constructor() Ownable() {}
 
     // =========== CURRENCY CONTROL SECTION ===========
 
