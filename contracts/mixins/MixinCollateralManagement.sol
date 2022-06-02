@@ -62,8 +62,6 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
 
     /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {

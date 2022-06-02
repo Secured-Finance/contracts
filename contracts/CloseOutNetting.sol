@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/CloseOut.sol";
 import "./interfaces/ICloseOutNetting.sol";
 import "./mixins/MixinAddressResolver.sol";
@@ -16,7 +15,7 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to all product based contracts (ex. Loan, Swap, etc), and Collateral Aggregator contract.
  */
-contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
+contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
     using SafeMath for uint256;
     using Address for address;
     using CloseOut for CloseOut.Payment;
@@ -45,10 +44,9 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Ownable {
 
     /**
      * @dev Contract constructor function.
-     * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
+    constructor(address _resolver) MixinAddressResolver(_resolver) {}
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
