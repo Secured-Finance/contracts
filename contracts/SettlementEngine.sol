@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Strings.sol";
@@ -287,7 +286,7 @@ contract SettlementEngine is
         uint16 _chainId,
         SettlementRequest memory _request,
         FulfillData memory _txData
-    ) internal view returns (bool) {
+    ) internal view {
         require(_request.txHash.isEqual(_txData.txHash), "INCORRECT_TX_HASH");
 
         string memory payerAddress = crosschainAddressResolver().getUserAddress(

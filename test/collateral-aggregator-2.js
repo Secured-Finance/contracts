@@ -12,6 +12,7 @@ const {
   hexBTCString,
   loanPrefix,
   zeroAddress,
+  overflowErrorMsg,
 } = require('../test-utils').strings;
 const { sortedTermDays } = require('../test-utils').terms;
 const { ZERO_BN, decimalBase, toBN } = require('../test-utils').numbers;
@@ -336,7 +337,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         filVault
           .connect(aliceSigner)
           ['withdraw(uint256)'](withdrawAmt.toString()),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
 
       // expect succesfull execution of full tFIL deposit withdraw
@@ -516,7 +517,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
           hexFILString,
           useAmount,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
@@ -643,7 +644,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
           filAmount,
           ZERO_BN,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
@@ -659,7 +660,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
           ZERO_BN,
           false,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
@@ -762,7 +763,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
           newPV,
           ZERO_BN,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
@@ -956,7 +957,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
           filAmount,
           true,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
@@ -1001,7 +1002,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
           filAmount,
           true,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
   });

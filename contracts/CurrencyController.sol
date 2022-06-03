@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/ICurrencyController.sol";
 
 /**
@@ -84,7 +84,7 @@ contract CurrencyController is ICurrencyController {
         address _ethPriceFeed,
         uint256 _haircut,
         address _tokenAddress
-    ) public override onlyOwner returns (bool) {
+    ) public override onlyOwner {
         last_ccy_index = last_ccy_index++;
 
         Currency memory currency;
@@ -115,12 +115,7 @@ contract CurrencyController is ICurrencyController {
      * @param _ccy Currency short ticket
      * @param _isSupported Boolean whether currency supported as collateral or not
      */
-    function updateCurrencySupport(bytes32 _ccy, bool _isSupported)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) public override onlyOwner {
         Currency storage currency = currencies[_ccy];
         currency.isSupported = _isSupported;
 
@@ -137,7 +132,6 @@ contract CurrencyController is ICurrencyController {
         override
         onlyOwner
         supportedCcyOnly(_ccy)
-        returns (bool)
     {
         isCollateral[_ccy] = _isSupported;
 
@@ -154,7 +148,6 @@ contract CurrencyController is ICurrencyController {
         override
         onlyOwner
         supportedCcyOnly(_ccy)
-        returns (bool)
     {
         require(_haircut > 0, "Incorrect haircut ratio");
         require(_haircut <= 10000, "Haircut ratio overflow");
@@ -174,7 +167,6 @@ contract CurrencyController is ICurrencyController {
         override
         onlyOwner
         supportedCcyOnly(_ccy)
-        returns (bool)
     {
         require(_minMargin > 0, "Incorrect MinMargin");
         require(_minMargin <= 10000, "MinMargin overflow");

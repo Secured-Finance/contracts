@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 interface ICrosschainAddressResolver {
     event UpdateAddress(address _user, uint256 _chainId, string _address);

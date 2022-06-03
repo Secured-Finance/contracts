@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ITermStructure.sol";
 import "./libraries/QuickSort.sol";
@@ -58,7 +57,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         uint256 _numDays,
         bytes4[] memory _products,
         bytes32[] memory _currencies
-    ) public override onlyOwner returns (bool) {
+    ) public override onlyOwner {
         last_term_index = last_term_index++;
 
         terms[_numDays] = _numDays;
@@ -89,7 +88,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         bytes4 _product,
         bytes32 _ccy,
         bool _isSupported
-    ) public override onlyOwner existingTermOnly(_numDays) returns (bool) {
+    ) public override onlyOwner existingTermOnly(_numDays) {
         require(productAddressResolver().isSupportedProduct(_product), "NON SUPPORTED PRODUCT");
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 

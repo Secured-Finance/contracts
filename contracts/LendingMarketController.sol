@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/QuickSort.sol";
 import "./libraries/DiscountFactor.sol";
@@ -187,5 +186,7 @@ contract LendingMarketController is ILendingMarketController, MixinAddressResolv
             ILendingMarket market = ILendingMarket(lendingMarkets[order.ccy][order.term]);
             market.order(order.side, order.amount, order.rate);
         }
+
+        return true;
     }
 }

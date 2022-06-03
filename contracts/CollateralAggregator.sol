@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 import "./interfaces/ICurrencyController.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./ProtocolTypes.sol";
 
@@ -877,11 +876,11 @@ contract CollateralAggregator is ProtocolTypes {
 
         if (_amt > maxWidthdraw) {
             book.independentAmount = book.independentAmount.sub(maxWidthdraw);
-            msg.sender.transfer(maxWidthdraw);
+            payable(msg.sender).transfer(maxWidthdraw);
             emit Withdraw(msg.sender, maxWidthdraw);
         } else {
             book.independentAmount = book.independentAmount.sub(_amt);
-            msg.sender.transfer(_amt);
+            payable(msg.sender).transfer(_amt);
             emit Withdraw(msg.sender, _amt);
         }
     }
@@ -917,7 +916,7 @@ contract CollateralAggregator is ProtocolTypes {
         }
 
         books[msg.sender].lockedCollateral -= withdrawAmt; // save deposited collateral in global book
-        msg.sender.transfer(withdrawAmt);
+        payable(msg.sender).transfer(withdrawAmt);
     }
 
     /**

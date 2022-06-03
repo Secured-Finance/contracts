@@ -4,6 +4,7 @@ const utils = require('web3-utils');
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { PrintTable } = require('../test-utils').helper;
+const { overflowErrorMsg } = require('../test-utils').strings;
 
 should();
 
@@ -96,14 +97,14 @@ contract('NetPVTest', async (accounts) => {
 
       await expectRevert(
         netPVTest.settle(alice, bob, aliceSettleAmt, bobSettleAmt),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
     it('Try to settle empty netting between Bob and Carol, expect revert', async () => {
       await expectRevert(
         netPVTest.settle(bob, carol, ETH, ETH),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
@@ -159,7 +160,7 @@ contract('NetPVTest', async (accounts) => {
     it('Try to release empty unsettled PV between Alice and Bob, expect revert', async () => {
       await expectRevert(
         netPVTest.release(alice, bob, ETH, ETH, false),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
   });
@@ -208,7 +209,7 @@ contract('NetPVTest', async (accounts) => {
           aliceNewPV,
           bobNewPV,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 
@@ -218,7 +219,7 @@ contract('NetPVTest', async (accounts) => {
 
       await expectRevert(
         netPVTest.update(bob, carol, ETH, ETH, bobNewPV, carolNewPV),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
   });

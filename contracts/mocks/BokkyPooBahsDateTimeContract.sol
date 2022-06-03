@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GNU Lesser General Public License 3.0
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
 // ----------------------------------------------------------------------------
 // BokkyPooBah's DateTime Library v1.00 - Contract Instance

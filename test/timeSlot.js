@@ -3,7 +3,8 @@ const AddressPackingTest = artifacts.require('AddressPackingTest');
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { toBytes32, zeroAddress } = require('../test-utils').strings;
+const { toBytes32, zeroAddress, overflowErrorMsg } =
+  require('../test-utils').strings;
 should();
 
 const { hashPosition } = require('../test-utils').timeSlot;
@@ -132,7 +133,7 @@ contract('TimeSlotTest', async (accounts) => {
           alicePayment,
           bobPayment,
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 

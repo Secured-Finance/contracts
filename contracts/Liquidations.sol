@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/AddressPacking.sol";
 import "./interfaces/IProduct.sol";
@@ -92,7 +92,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         require(!set.contains(dealId), "ALREADY EXISTING DEAL");
         set.add(dealId);
 
-        DealAddedToLiquidationQueue(party0, party1, dealId);
+        emit DealAddedToLiquidationQueue(party0, party1, dealId);
     }
 
     function removeDealFromLiquidationQueue(
@@ -106,7 +106,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         require(set.contains(dealId), "NON EXISTING DEAL");
         set.remove(dealId);
 
-        DealRemovedFromLiquidationQueue(party0, party1, dealId);
+        emit DealRemovedFromLiquidationQueue(party0, party1, dealId);
     }
 
     /**

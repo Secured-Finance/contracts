@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
 interface ILiquidations {
     event DealAddedToLiquidationQueue(address party0, address party1, bytes32 dealId);

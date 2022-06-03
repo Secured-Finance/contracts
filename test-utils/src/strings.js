@@ -28,6 +28,9 @@ const testTxHash = toBytes32('0xTestTxHash');
 const secondTxHash = toBytes32('0xSecondTxHash');
 const thirdTxHash = toBytes32('0xThirdTxHash');
 
+const overflowErrorMsg =
+  'VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)';
+
 module.exports = {
   toBytes32,
   fromBytes32,
@@ -49,4 +52,5 @@ module.exports = {
   testTxHash,
   secondTxHash,
   thirdTxHash,
+  overflowErrorMsg,
 };

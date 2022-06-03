@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 interface ITermStructureGetter {
     function getDfFrac(uint256 _numDays) external view returns (uint256);
