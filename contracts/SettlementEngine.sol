@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Strings.sol";
@@ -26,7 +25,6 @@ contract SettlementEngine is
     SafeTransfer,
     Ownable
 {
-    using SafeMath for uint256;
     using Address for address;
     using Strings for string;
 

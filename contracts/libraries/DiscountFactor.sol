@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
 library DiscountFactor {
-    using SafeMath for uint256;
-
     uint256 internal constant BP = 10000; // basis point
     uint256 internal constant NON_ANNUAL_TERMS = 3;
 
@@ -17,18 +13,18 @@ library DiscountFactor {
         uint256 index
     ) internal pure returns (uint256 df) {
         if (term < 365) {
-            df = BP.mul(BP).div((BP.add(rate.mul(term).div(360))));
+            df = (BP * BP) / (BP + ((rate * term) / 360));
         } else if (term == 365) {
-            df = BP.mul(BP).div((BP.add(rate)));
-            dfSum = dfSum.add(df);
+            df = (BP * BP) / ((BP + rate));
+            dfSum = dfSum + df;
         } else {
-            uint256 rateSum = (rate.mul(dfSum)).div(BP);
+            uint256 rateSum = (rate * dfSum) / BP;
             if (rateSum > BP) {
                 df = 0;
             } else {
-                df = BP.mul(BP.sub(rate.mul(dfSum).div(BP))).div(BP.add(rate));
+                df = (BP * (BP - ((rate * dfSum) / BP))) / (BP + rate);
             }
-            dfSum = dfSum.add(df);
+            dfSum = dfSum + df;
         }
 
         cache[index] = df;
@@ -60,7 +56,7 @@ library DiscountFactor {
     }
 
     function maxDFs(uint256 maxTerm) internal pure returns (uint256) {
-        return maxTerm.div(365).add(NON_ANNUAL_TERMS);
+        return maxTerm / 365 + NON_ANNUAL_TERMS;
     }
 
     struct TermBootstrapingLocalVars {
@@ -86,13 +82,13 @@ library DiscountFactor {
         uint256[] memory filledTerms = new uint256[](len);
         TermBootstrapingLocalVars memory vars;
 
-        for (uint256 i = 0; i < terms.length.sub(1); i++) {
+        for (uint256 i = 0; i < terms.length - 1; i++) {
             if (terms[i] < 365) {
                 filledRates[i] = rates[i];
                 filledTerms[i] = terms[i];
                 continue;
             }
-            vars.delta = terms[i + 1].sub(terms[i]);
+            vars.delta = terms[i + 1] - terms[i];
 
             if (vars.delta <= 365) {
                 filledRates[i] = rates[i];
@@ -100,7 +96,7 @@ library DiscountFactor {
                 continue;
             }
 
-            vars.numItems = vars.delta.div(365);
+            vars.numItems = vars.delta / 365;
             vars.lastKnownRate = rates[i];
 
             if (vars.extendedTerms == 0) {
@@ -111,24 +107,24 @@ library DiscountFactor {
             vars.nextKnownTerm = terms[i + 1];
             vars.upwards = vars.nextKnownRate > vars.lastKnownRate ? true : false;
             vars.deltaRate = vars.upwards
-                ? vars.nextKnownRate.sub(vars.lastKnownRate)
-                : vars.lastKnownRate.sub(vars.nextKnownRate);
-            vars.step = vars.deltaRate.div(vars.numItems);
+                ? vars.nextKnownRate - vars.lastKnownRate
+                : vars.lastKnownRate - vars.nextKnownRate;
+            vars.step = vars.deltaRate / vars.numItems;
 
             for (uint256 j = 1; j < vars.numItems; j++) {
-                vars.extendedTerms = vars.extendedTerms.add(1);
+                vars.extendedTerms = vars.extendedTerms + 1;
 
-                uint256 newIndex = i.add(vars.extendedTerms);
+                uint256 newIndex = i + vars.extendedTerms;
                 uint256 missedRate = vars.upwards
-                    ? filledRates[newIndex.sub(1)].add(vars.step)
-                    : filledRates[newIndex.sub(1)].sub(vars.step);
-                uint256 missedTerm = terms[i].add(uint256(365).mul(j));
+                    ? filledRates[newIndex - 1] + vars.step
+                    : filledRates[newIndex - 1] - vars.step;
+                uint256 missedTerm = terms[i] + uint256(365) * j;
 
                 filledRates[newIndex] = missedRate;
                 filledTerms[newIndex] = missedTerm;
 
-                if (j == vars.numItems.sub(1)) {
-                    uint256 shifterIndex = newIndex.add(1);
+                if (j == vars.numItems - 1) {
+                    uint256 shifterIndex = newIndex + 1;
 
                     filledRates[shifterIndex] = vars.nextKnownRate;
                     filledTerms[shifterIndex] = vars.nextKnownTerm;
@@ -161,40 +157,35 @@ library DiscountFactor {
         uint256 date
     ) public view returns (uint256) {
         DFInterpolationLocalVars memory vars;
-        vars.timeDelta = date.sub(block.timestamp);
+        vars.timeDelta = date - block.timestamp;
 
-        if (vars.timeDelta <= terms[0].mul(86400)) {
-            vars.termSeconds = terms[0].mul(86400);
-            vars.left = vars.termSeconds.sub(vars.timeDelta);
+        if (vars.timeDelta <= terms[0] * 86400) {
+            vars.termSeconds = terms[0] * 86400;
+            vars.left = vars.termSeconds - vars.timeDelta;
 
-            return
-                (BP.mul(vars.left).add(discountFactors[0].mul(vars.timeDelta))).div(
-                    vars.termSeconds
-                );
+            return (BP * vars.left + (discountFactors[0] * vars.timeDelta)) / (vars.termSeconds);
         } else {
             for (uint256 i = 1; i < terms.length; i++) {
-                vars.termSeconds = terms[i].mul(86400);
-                vars.prevTermSeconds = terms[i - 1].mul(86400);
+                vars.termSeconds = terms[i] * 86400;
+                vars.prevTermSeconds = terms[i - 1] * 86400;
 
                 if (vars.prevTermSeconds < vars.timeDelta && vars.timeDelta <= vars.termSeconds) {
-                    vars.left = vars.timeDelta.sub(vars.prevTermSeconds);
+                    vars.left = vars.timeDelta - vars.prevTermSeconds;
 
                     if (vars.left == 0) {
                         return discountFactors[i]; // gas savings only
                     }
 
-                    vars.right = vars.termSeconds.sub(vars.timeDelta);
+                    vars.right = vars.termSeconds - vars.timeDelta;
                     if (vars.right == 0) {
                         return discountFactors[i];
                     }
 
-                    vars.total = vars.termSeconds.sub(vars.prevTermSeconds);
+                    vars.total = vars.termSeconds - vars.prevTermSeconds;
 
-                    return (
-                        (discountFactors[i - 1].mul(vars.right))
-                            .add((discountFactors[i].mul(vars.left)))
-                            .div(vars.total)
-                    );
+                    return
+                        (discountFactors[i - 1] * vars.right + discountFactors[i] * vars.left) /
+                        vars.total;
                 }
             }
         }

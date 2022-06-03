@@ -7,9 +7,6 @@ pragma solidity ^0.8.9;
  *
  * Contract links new currencies to ETH Chainlink price feeds, without existing price feed
  * contract owner is not able to add a new currency into the protocol
- *
- * Currency controller contract copies the logic of FXRatesAggregator contract, and
- * will replace that contract in connection with Collateral Aggregator
  */
 interface ICurrencyController {
     event CcyAdded(bytes32 indexed ccy, string name, uint16 chainId, uint256 haircut);

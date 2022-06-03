@@ -2,8 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/utils/math/SignedSafeMath.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/ICurrencyController.sol";
 
 /**
@@ -14,9 +12,6 @@ import "./interfaces/ICurrencyController.sol";
  * contract owner is not able to add a new currency into the protocol
  */
 contract CurrencyController is ICurrencyController {
-    using SignedSafeMath for int256;
-    using SafeMath for uint256;
-
     address public override owner;
     uint8 public override last_ccy_index;
 
@@ -355,7 +350,7 @@ contract CurrencyController is ICurrencyController {
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        return _amount.mul(uint256(price)).div(1e18);
+        return (_amount * uint256(price)) / 1e18;
     }
 
     /**
@@ -379,7 +374,7 @@ contract CurrencyController is ICurrencyController {
             uint256 amount = _amounts[i];
 
             if (amount > 0) {
-                amounts[i] = amount.mul(uint256(price)).div(1e18);
+                amounts[i] = (amount * uint256(price)) / 1e18;
             } else {
                 amounts[i] = 0;
             }
@@ -404,7 +399,7 @@ contract CurrencyController is ICurrencyController {
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        return (_amountETH.mul(1e18)).div(uint256(price)); // add decimals checks
+        return (_amountETH * 1e18) / uint256(price); // add decimals checks
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {

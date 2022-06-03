@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../libraries/AddressPacking.sol";
 import "../libraries/CloseOut.sol";
 
 contract CloseOutTest {
-    using SafeMath for uint256;
-
     mapping(bytes32 => mapping(bytes32 => CloseOut.Payment)) _closeOuts;
     bytes32 ccy = "0xSampleCCY";
 

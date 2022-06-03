@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "./interfaces/ICurrencyController.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./ProtocolTypes.sol";
@@ -16,7 +15,6 @@ import "./ProtocolTypes.sol";
  * Contract linked to Product based contracts (like Loan, Swap, etc), LendingMarkets, CurrencyController contracts.
  */
 contract CollateralAggregator is ProtocolTypes {
-    using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using Address for address;
@@ -426,8 +424,8 @@ contract CollateralAggregator is ProtocolTypes {
             positions[_partyA][_partyB].lockedCollateralB -= _amount;
         }
 
-        book.lockedCollateral = book.lockedCollateral.sub(_amount);
-        book.independentAmount = book.independentAmount.add(_amount);
+        book.lockedCollateral = book.lockedCollateral - _amount;
+        book.independentAmount = book.independentAmount + _amount;
     }
 
     // TODO: Rebalance from position to book once position coverage more than 150%
@@ -448,7 +446,7 @@ contract CollateralAggregator is ProtocolTypes {
         exposedUnsettledCurrencies[user].add(ccy);
         require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
 
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].add(amount);
+        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy] + amount;
 
         emit UseUnsettledCollateral(user, ccy, amount);
     }
@@ -514,25 +512,33 @@ contract CollateralAggregator is ProtocolTypes {
 
         if (!flipped) {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.add(amount0)
-                    : netting.unsettled0PV = netting.unsettled0PV.add(amount0);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV + amount0;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV + amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.add(amount1)
-                    : netting.unsettled1PV = netting.unsettled1PV.add(amount1);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV + amount1;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV + amount1;
+                }
             }
         } else {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.add(amount0)
-                    : netting.unsettled1PV = netting.unsettled1PV.add(amount0);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV + amount0;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV + amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.add(amount1)
-                    : netting.unsettled0PV = netting.unsettled0PV.add(amount1);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV + amount1;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV + amount1;
+                }
             }
         }
 
@@ -563,21 +569,21 @@ contract CollateralAggregator is ProtocolTypes {
 
         if (!flipped) {
             if (amount0 > 0) {
-                netting.unsettled0PV = netting.unsettled0PV.sub(amount0);
-                netting.party0PV = netting.party0PV.add(amount0);
+                netting.unsettled0PV = netting.unsettled0PV - amount0;
+                netting.party0PV = netting.party0PV + amount0;
             }
             if (amount1 > 0) {
-                netting.unsettled1PV = netting.unsettled1PV.sub(amount1);
-                netting.party1PV = netting.party1PV.add(amount1);
+                netting.unsettled1PV = netting.unsettled1PV - amount1;
+                netting.party1PV = netting.party1PV + amount1;
             }
         } else {
             if (amount0 > 0) {
-                netting.unsettled1PV = netting.unsettled1PV.sub(amount0);
-                netting.party1PV = netting.party1PV.add(amount0);
+                netting.unsettled1PV = netting.unsettled1PV - amount0;
+                netting.party1PV = netting.party1PV + amount0;
             }
             if (amount1 > 0) {
-                netting.unsettled0PV = netting.unsettled0PV.sub(amount1);
-                netting.party0PV = netting.party0PV.add(amount1);
+                netting.unsettled0PV = netting.unsettled0PV - amount1;
+                netting.party0PV = netting.party0PV + amount1;
             }
         }
 
@@ -801,7 +807,7 @@ contract CollateralAggregator is ProtocolTypes {
         bytes32 ccy,
         uint256 amount
     ) external acceptedContract {
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].sub(amount);
+        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy] - amount;
 
         if (unsettledCollateral[user][ccy] == 0) {
             exposedUnsettledCurrencies[user].remove(ccy);
@@ -834,25 +840,33 @@ contract CollateralAggregator is ProtocolTypes {
 
         if (!flipped) {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.sub(amount0)
-                    : netting.unsettled0PV = netting.unsettled0PV.sub(amount0);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV - amount0;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV - amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.sub(amount1)
-                    : netting.unsettled1PV = netting.unsettled1PV.sub(amount1);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV - amount1;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV - amount1;
+                }
             }
         } else {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.sub(amount0)
-                    : netting.unsettled1PV = netting.unsettled1PV.sub(amount0);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV - amount0;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV - amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.sub(amount1)
-                    : netting.unsettled0PV = netting.unsettled0PV.sub(amount1);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV - amount1;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV - amount1;
+                }
             }
         }
 
@@ -875,11 +889,11 @@ contract CollateralAggregator is ProtocolTypes {
         // }
 
         if (_amt > maxWidthdraw) {
-            book.independentAmount = book.independentAmount.sub(maxWidthdraw);
+            book.independentAmount = book.independentAmount - maxWidthdraw;
             payable(msg.sender).transfer(maxWidthdraw);
             emit Withdraw(msg.sender, maxWidthdraw);
         } else {
-            book.independentAmount = book.independentAmount.sub(_amt);
+            book.independentAmount = book.independentAmount - _amt;
             payable(msg.sender).transfer(_amt);
             emit Withdraw(msg.sender, _amt);
         }
@@ -947,17 +961,17 @@ contract CollateralAggregator is ProtocolTypes {
 
         if (!flipped) {
             if (currentPV0 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV0).add(currentPV0);
+                netting.party0PV = netting.party0PV - prevPV0 + currentPV0;
             }
             if (currentPV1 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV1).add(currentPV1);
+                netting.party1PV = netting.party1PV - prevPV1 + currentPV1;
             }
         } else {
             if (currentPV0 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV0).add(currentPV0);
+                netting.party1PV = netting.party1PV - prevPV0 + currentPV0;
             }
             if (currentPV1 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV1).add(currentPV1);
+                netting.party0PV = netting.party0PV - prevPV1 + currentPV1;
             }
         }
         // updatePositionState(_party0, _party1);
@@ -983,7 +997,7 @@ contract CollateralAggregator is ProtocolTypes {
         require(collateralUsers.contains(msg.sender), "incorrect liquidator");
         uint256 amt = currencyController.convertToETH(ccy, amount);
 
-        unsettledCollateral[from][ccy].sub(amount);
+        unsettledCollateral[from][ccy] - amount;
 
         books[from].independentAmount -= amt; // save deposited collateral in global book
         books[to].independentAmount += amt; // save deposited collateral in global book
@@ -1160,8 +1174,8 @@ contract CollateralAggregator is ProtocolTypes {
         (uint256 maxWidthdraw, ) = _calcMaxCollateralWidthdrawFromBook(_mainParty);
         require(maxWidthdraw >= _amount, "Invalid rebalance amount");
 
-        book.independentAmount = book.independentAmount.sub(_amount); // includes overflow checks
-        book.lockedCollateral = book.lockedCollateral.add(_amount);
+        book.independentAmount = book.independentAmount - _amount; // includes overflow checks
+        book.lockedCollateral = book.lockedCollateral + _amount;
 
         if (!flipped) {
             positions[_partyA][_partyB].lockedCollateralA += _amount;
@@ -1233,73 +1247,63 @@ contract CollateralAggregator is ProtocolTypes {
 
             if (_ccy == ccy) {
                 if (isSettled) {
-                    vars.exp0 = (vars.netting.party0PV.add(_party0PV))
-                        .mul(uint256(vars.exchangeRate))
-                        .div(1e18);
-                    vars.exp1 = (vars.netting.party1PV.add(_party1PV))
-                        .mul(uint256(vars.exchangeRate))
-                        .div(1e18);
+                    vars.exp0 =
+                        ((vars.netting.party0PV + _party0PV) * uint256(vars.exchangeRate)) /
+                        1e18;
+                    vars.exp1 =
+                        ((vars.netting.party1PV + _party1PV) * uint256(vars.exchangeRate)) /
+                        1e18;
                 } else {
-                    vars.unsettledExp0 = vars
-                        .netting
-                        .unsettled0PV
-                        .add(_party0PV)
-                        .mul(uint256(vars.exchangeRate))
-                        .div(1e18);
-                    vars.unsettledExp1 = vars
-                        .netting
-                        .unsettled1PV
-                        .add(_party1PV)
-                        .mul(uint256(vars.exchangeRate))
-                        .div(1e18);
+                    vars.unsettledExp0 =
+                        ((vars.netting.unsettled0PV + _party0PV) * uint256(vars.exchangeRate)) /
+                        1e18;
+                    vars.unsettledExp1 =
+                        ((vars.netting.unsettled1PV + _party1PV) * uint256(vars.exchangeRate)) /
+                        1e18;
                 }
             } else {
-                vars.unsettledExp0 = vars.netting.unsettled0PV.mul(uint256(vars.exchangeRate)).div(
-                    1e18
-                );
-                vars.unsettledExp1 = vars.netting.unsettled1PV.mul(uint256(vars.exchangeRate)).div(
-                    1e18
-                );
+                vars.unsettledExp0 =
+                    (vars.netting.unsettled0PV * uint256(vars.exchangeRate)) /
+                    1e18;
+                vars.unsettledExp1 =
+                    (vars.netting.unsettled1PV * uint256(vars.exchangeRate)) /
+                    1e18;
 
-                vars.exp0 = vars.netting.party0PV.mul(uint256(vars.exchangeRate)).div(1e18);
-                vars.exp1 = vars.netting.party1PV.mul(uint256(vars.exchangeRate)).div(1e18);
+                vars.exp0 = (vars.netting.party0PV * uint256(vars.exchangeRate)) / 1e18;
+                vars.exp1 = (vars.netting.party1PV * uint256(vars.exchangeRate)) / 1e18;
             }
 
-            vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH.add(vars.unsettledExp0);
-            vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH.add(vars.unsettledExp1);
+            vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH + vars.unsettledExp0;
+            vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH + vars.unsettledExp1;
 
             vars.haircutRatio = currencyController.getHaircut(ccy);
 
-            vars.totalPV0inETH = vars.totalPV0inETH.add(vars.exp0);
-            vars.totalPV1inETH = vars.totalPV1inETH.add(vars.exp1);
+            vars.totalPV0inETH = vars.totalPV0inETH + vars.exp0;
+            vars.totalPV1inETH = vars.totalPV1inETH + vars.exp1;
 
-            vars.totalHaircutPV0 = vars.totalHaircutPV0.add(
-                vars.exp0.mul(vars.haircutRatio).div(BP)
-            );
-            vars.totalHaircutPV1 = vars.totalHaircutPV1.add(
-                vars.exp1.mul(vars.haircutRatio).div(BP)
-            );
+            vars.totalHaircutPV0 = ((vars.totalHaircutPV0 + vars.exp0) * vars.haircutRatio) / BP;
+            vars.totalHaircutPV1 = ((vars.totalHaircutPV1 + vars.exp1) * vars.haircutRatio) / BP;
         }
 
         vars.expDiff0 = vars.totalPV0inETH >= vars.totalHaircutPV1
-            ? vars.totalPV0inETH.sub(vars.totalHaircutPV1)
+            ? vars.totalPV0inETH - vars.totalHaircutPV1
             : 0;
         vars.expDiff1 = vars.totalPV1inETH >= vars.totalHaircutPV0
-            ? vars.totalPV1inETH.sub(vars.totalHaircutPV0)
+            ? vars.totalPV1inETH - vars.totalHaircutPV0
             : 0;
 
         (vars.netExp0, vars.netExp1) = vars.expDiff0 > vars.expDiff1
             ? (
-                vars.expDiff0.sub(vars.expDiff1).add(vars.totalUnsettledPV0inETH),
+                vars.expDiff0 - vars.expDiff1 + vars.totalUnsettledPV0inETH,
                 vars.totalUnsettledPV1inETH
             )
             : (
                 vars.totalUnsettledPV0inETH,
-                vars.expDiff1.sub(vars.expDiff0).add(vars.totalUnsettledPV1inETH)
+                vars.expDiff1 - vars.expDiff0 + vars.totalUnsettledPV1inETH
             );
 
-        vars.totalCombinedPV0inETH = vars.totalUnsettledPV0inETH.add(vars.totalPV0inETH);
-        vars.totalCombinedPV1inETH = vars.totalUnsettledPV1inETH.add(vars.totalPV1inETH);
+        vars.totalCombinedPV0inETH = vars.totalUnsettledPV0inETH + vars.totalPV0inETH;
+        vars.totalCombinedPV1inETH = vars.totalUnsettledPV1inETH + vars.totalPV1inETH;
 
         return (vars.netExp0, vars.netExp1, vars.totalCombinedPV0inETH, vars.totalCombinedPV1inETH);
     }
@@ -1346,18 +1350,18 @@ contract CollateralAggregator is ProtocolTypes {
         );
 
         vars.minMarginRatio = currencyController.getMinMargin("ETH");
-        vars.minMarginReq0 = vars.total0.mul(vars.minMarginRatio).div(BP);
-        vars.minMarginReq1 = vars.total1.mul(vars.minMarginRatio).div(BP);
+        vars.minMarginReq0 = (vars.total0 * vars.minMarginRatio) / BP;
+        vars.minMarginReq1 = (vars.total1 * vars.minMarginRatio) / BP;
 
         if (vars.net0 > 0) {
-            vars.netCover0 = (vars.net0.mul(MARGINLEVEL)).div(BP);
+            vars.netCover0 = (vars.net0 * MARGINLEVEL) / BP;
             vars.req0 = vars.minMarginReq0 > vars.netCover0 ? vars.minMarginReq0 : vars.net0;
         } else {
             vars.req0 = vars.minMarginReq0;
         }
 
         if (vars.net1 > 0) {
-            vars.netCover1 = (vars.net1.mul(MARGINLEVEL)).div(BP);
+            vars.netCover1 = (vars.net1 * MARGINLEVEL) / BP;
             vars.req1 = vars.minMarginReq1 > vars.netCover1 ? vars.minMarginReq1 : vars.net1;
         } else {
             vars.req1 = vars.minMarginReq1;
@@ -1403,11 +1407,11 @@ contract CollateralAggregator is ProtocolTypes {
         Position memory position = positions[_party0][_party1];
 
         if (vars.req0 > 0) {
-            vars.cover0 = (PCT.mul(position.lockedCollateralA)).div(vars.req0);
+            vars.cover0 = (PCT * position.lockedCollateralA) / vars.req0;
         }
 
         if (vars.req1 > 0) {
-            vars.cover1 = (PCT.mul(position.lockedCollateralB)).div(vars.req1);
+            vars.cover1 = (PCT * position.lockedCollateralB) / vars.req1;
         }
 
         return (vars.cover0, vars.cover1);
@@ -1448,14 +1452,14 @@ contract CollateralAggregator is ProtocolTypes {
             false
         );
 
-        vars.targetReq0 = vars.req0.mul(MARGINLEVEL).div(BP);
-        vars.targetReq1 = vars.req1.mul(MARGINLEVEL).div(BP);
+        vars.targetReq0 = (vars.req0 * MARGINLEVEL) / BP;
+        vars.targetReq1 = (vars.req1 * MARGINLEVEL) / BP;
 
         Position memory position = positions[_party0][_party1];
 
         if (position.lockedCollateralA > 0 && vars.targetReq0 > 0) {
             vars.maxWidthdraw0 = position.lockedCollateralA > vars.targetReq0
-                ? position.lockedCollateralA.sub(vars.targetReq0)
+                ? position.lockedCollateralA - vars.targetReq0
                 : 0;
         } else {
             vars.maxWidthdraw0 = position.lockedCollateralA;
@@ -1463,7 +1467,7 @@ contract CollateralAggregator is ProtocolTypes {
 
         if (position.lockedCollateralB > 0 && vars.targetReq1 > 0) {
             vars.maxWidthdraw1 = position.lockedCollateralB > vars.targetReq1
-                ? position.lockedCollateralB.sub(vars.targetReq1)
+                ? position.lockedCollateralB - vars.targetReq1
                 : 0;
         } else {
             vars.maxWidthdraw1 = position.lockedCollateralB;
@@ -1511,15 +1515,15 @@ contract CollateralAggregator is ProtocolTypes {
             _isSettled
         );
 
-        vars.targetReq0 = vars.req0.mul(MARGINLEVEL).div(BP);
-        vars.targetReq1 = vars.req1.mul(MARGINLEVEL).div(BP);
+        vars.targetReq0 = (vars.req0 * MARGINLEVEL) / BP;
+        vars.targetReq1 = (vars.req1 * MARGINLEVEL) / BP;
 
         Position memory position = positions[_party0][_party1];
 
         if (position.lockedCollateralA > 0 && vars.targetReq0 > 0) {
             vars.reqCollateral0 = position.lockedCollateralA > vars.targetReq0
                 ? 0
-                : vars.targetReq0.sub(position.lockedCollateralA);
+                : vars.targetReq0 - position.lockedCollateralA;
         } else {
             vars.reqCollateral0 = vars.targetReq0;
         }
@@ -1527,7 +1531,7 @@ contract CollateralAggregator is ProtocolTypes {
         if (position.lockedCollateralB > 0 && vars.targetReq1 > 0) {
             vars.reqCollateral1 = position.lockedCollateralB > vars.targetReq1
                 ? 0
-                : vars.targetReq1.sub(position.lockedCollateralB);
+                : vars.targetReq1 - position.lockedCollateralB;
         } else {
             vars.reqCollateral1 = vars.targetReq1;
         }
@@ -1567,14 +1571,14 @@ contract CollateralAggregator is ProtocolTypes {
             vars.exchangeRate = currencyController.getLastETHPrice(ccy);
 
             if (_ccy == ccy) {
-                vars.ccyExpInETH = (vars.ccyExp.add(_unsettledExp))
-                    .mul(uint256(vars.exchangeRate))
-                    .div(1e18);
+                vars.ccyExpInETH =
+                    ((vars.ccyExp + _unsettledExp) * uint256(vars.exchangeRate)) /
+                    1e18;
             } else {
-                vars.ccyExpInETH = vars.ccyExp.mul(uint256(vars.exchangeRate)).div(1e18);
+                vars.ccyExpInETH = (vars.ccyExp * uint256(vars.exchangeRate)) / 1e18;
             }
 
-            vars.totalExp = vars.totalExp.add(vars.ccyExpInETH);
+            vars.totalExp = vars.totalExp + vars.ccyExpInETH;
         }
 
         return vars.totalExp;
@@ -1597,7 +1601,7 @@ contract CollateralAggregator is ProtocolTypes {
         Book memory book = books[_user];
 
         if (vars.totalExpInETH > 0) {
-            vars.coverage = (PCT.mul(book.independentAmount)).div(vars.totalExpInETH);
+            vars.coverage = (PCT * book.independentAmount) / vars.totalExpInETH;
         } else {
             return (0, vars.totalExpInETH);
         }
@@ -1634,9 +1638,9 @@ contract CollateralAggregator is ProtocolTypes {
         Book memory book = books[_user];
 
         if (vars.coverage > MARGINLEVEL) {
-            vars.delta = vars.coverage.sub(MARGINLEVEL);
+            vars.delta = vars.coverage - MARGINLEVEL;
 
-            vars.maxWidthdraw = book.independentAmount.mul(vars.delta).div(vars.coverage);
+            vars.maxWidthdraw = (book.independentAmount * vars.delta) / vars.coverage;
         } else if (vars.totalExpInETH == 0) {
             return (book.independentAmount, vars.totalExpInETH);
         } else {

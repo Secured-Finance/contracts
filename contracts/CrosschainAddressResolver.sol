@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./ProtocolTypes.sol";
 import "./interfaces/ICrosschainAddressResolver.sol";
 import "./mixins/MixinAddressResolver.sol";
 
 contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressResolver {
-    using SafeMath for uint256;
-
     // Mapping for storing user cross-chain addresses
     mapping(address => mapping(uint256 => string)) _crosschainAddreses;
 

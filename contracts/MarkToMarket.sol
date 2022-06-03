@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ProtocolTypes.sol";
 import "./interfaces/IMarketController.sol";
@@ -10,8 +9,6 @@ import "./interfaces/IProduct.sol";
 import "./mixins/MixinAddressResolver.sol";
 
 contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Ownable {
-    using SafeMath for uint256;
-
     uint256 constant NOTICE = 2 weeks;
 
     /**

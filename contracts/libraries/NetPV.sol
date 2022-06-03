@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./AddressPacking.sol";
 
 library NetPV {
-    using SafeMath for uint256;
-
     /**
      * @dev CcyNetting keeps track of total amount of obligations owed
      * by two counterparties per currency, used to calculate the
@@ -85,11 +82,11 @@ library NetPV {
         netting = _handleFlippedCase(netting, flipped);
 
         if (isSettled) {
-            netting.party0PV = netting.party0PV.add(additionalPV0);
-            netting.party1PV = netting.party1PV.add(additionalPV1);
+            netting.party0PV = netting.party0PV + additionalPV0;
+            netting.party1PV = netting.party1PV + additionalPV1;
         } else {
-            netting.unsettled0PV = netting.unsettled0PV.add(additionalPV0);
-            netting.unsettled1PV = netting.unsettled1PV.add(additionalPV1);
+            netting.unsettled0PV = netting.unsettled0PV + additionalPV0;
+            netting.unsettled1PV = netting.unsettled1PV + additionalPV1;
         }
     }
 
@@ -117,25 +114,33 @@ library NetPV {
 
         if (!flipped) {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.add(amount0)
-                    : netting.unsettled0PV = netting.unsettled0PV.add(amount0);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV + amount0;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV + amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.add(amount1)
-                    : netting.unsettled1PV = netting.unsettled1PV.add(amount1);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV + amount1;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV + amount1;
+                }
             }
         } else {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.add(amount0)
-                    : netting.unsettled1PV = netting.unsettled1PV.add(amount0);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV + amount0;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV + amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.add(amount1)
-                    : netting.unsettled0PV = netting.unsettled0PV.add(amount1);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV + amount1;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV + amount1;
+                }
             }
         }
     }
@@ -162,21 +167,21 @@ library NetPV {
 
         if (!flipped) {
             if (amount0 > 0) {
-                netting.unsettled0PV = netting.unsettled0PV.sub(amount0);
-                netting.party0PV = netting.party0PV.add(amount0);
+                netting.unsettled0PV = netting.unsettled0PV - amount0;
+                netting.party0PV = netting.party0PV + amount0;
             }
             if (amount1 > 0) {
-                netting.unsettled1PV = netting.unsettled1PV.sub(amount1);
-                netting.party1PV = netting.party1PV.add(amount1);
+                netting.unsettled1PV = netting.unsettled1PV - amount1;
+                netting.party1PV = netting.party1PV + amount1;
             }
         } else {
             if (amount0 > 0) {
-                netting.unsettled1PV = netting.unsettled1PV.sub(amount0);
-                netting.party1PV = netting.party1PV.add(amount0);
+                netting.unsettled1PV = netting.unsettled1PV - amount0;
+                netting.party1PV = netting.party1PV + amount0;
             }
             if (amount1 > 0) {
-                netting.unsettled0PV = netting.unsettled0PV.sub(amount1);
-                netting.party0PV = netting.party0PV.add(amount1);
+                netting.unsettled0PV = netting.unsettled0PV - amount1;
+                netting.party0PV = netting.party0PV + amount1;
             }
         }
     }
@@ -204,25 +209,33 @@ library NetPV {
 
         if (!flipped) {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.sub(amount0)
-                    : netting.unsettled0PV = netting.unsettled0PV.sub(amount0);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV - amount0;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV - amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.sub(amount1)
-                    : netting.unsettled1PV = netting.unsettled1PV.sub(amount1);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV - amount1;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV - amount1;
+                }
             }
         } else {
             if (amount0 > 0) {
-                isSettled
-                    ? netting.party1PV = netting.party1PV.sub(amount0)
-                    : netting.unsettled1PV = netting.unsettled1PV.sub(amount0);
+                if (isSettled) {
+                    netting.party1PV = netting.party1PV - amount0;
+                } else {
+                    netting.unsettled1PV = netting.unsettled1PV - amount0;
+                }
             }
             if (amount1 > 0) {
-                isSettled
-                    ? netting.party0PV = netting.party0PV.sub(amount1)
-                    : netting.unsettled0PV = netting.unsettled0PV.sub(amount1);
+                if (isSettled) {
+                    netting.party0PV = netting.party0PV - amount1;
+                } else {
+                    netting.unsettled0PV = netting.unsettled0PV - amount1;
+                }
             }
         }
     }
@@ -253,17 +266,17 @@ library NetPV {
 
         if (!flipped) {
             if (currentPV0 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV0).add(currentPV0);
+                netting.party0PV = netting.party0PV - prevPV0 + currentPV0;
             }
             if (currentPV1 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV1).add(currentPV1);
+                netting.party1PV = netting.party1PV - prevPV1 + currentPV1;
             }
         } else {
             if (currentPV0 > 0) {
-                netting.party1PV = netting.party1PV.sub(prevPV0).add(currentPV0);
+                netting.party1PV = netting.party1PV - prevPV0 + currentPV0;
             }
             if (currentPV1 > 0) {
-                netting.party0PV = netting.party0PV.sub(prevPV1).add(currentPV1);
+                netting.party0PV = netting.party0PV - prevPV1 + currentPV1;
             }
         }
     }

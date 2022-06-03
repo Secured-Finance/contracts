@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ITermStructure.sol";
@@ -15,7 +14,6 @@ import "./mixins/MixinAddressResolver.sol";
  *
  */
 contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
-    using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
     using QuickSort for uint256[];
 

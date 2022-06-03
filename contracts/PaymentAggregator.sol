@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -21,7 +20,6 @@ import "./mixins/MixinAddressResolver.sol";
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
 contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressResolver, Ownable {
-    using SafeMath for uint256;
     using Address for address;
     using TimeSlot for TimeSlot.Slot;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -104,11 +102,11 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
             deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);
 
             if (payments0[i] > 0) {
-                vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
+                vars.totalPayment0 = vars.totalPayment0 + payments0[i];
             }
 
             if (payments1[i] > 0) {
-                vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
+                vars.totalPayment1 = vars.totalPayment1 + payments1[i];
             }
 
             TimeSlot.addPayment(
@@ -295,8 +293,8 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
                 "NON_REGISTERED_DEAL"
             );
 
-            vars.totalPayment0 = vars.totalPayment0.add(payments0[i]);
-            vars.totalPayment1 = vars.totalPayment1.add(payments1[i]);
+            vars.totalPayment0 = vars.totalPayment0 + payments0[i];
+            vars.totalPayment1 = vars.totalPayment1 + payments1[i];
 
             TimeSlot.removePayment(
                 _timeSlots,
@@ -454,7 +452,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
         pure
         returns (bytes32, uint256)
     {
-        uint256 numDays = numSeconds.div(86400);
+        uint256 numDays = numSeconds / 86400;
         timestamp = BokkyPooBahsDateTimeLibrary.addDays(timestamp, numDays);
         (uint256 year, uint256 month, uint256 day) = BokkyPooBahsDateTimeLibrary.timestampToDate(
             timestamp

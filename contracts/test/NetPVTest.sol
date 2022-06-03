@@ -4,8 +4,6 @@ pragma solidity ^0.8.9;
 import "../libraries/NetPV.sol";
 
 contract NetPVTest {
-    using SafeMath for uint256;
-
     mapping(bytes32 => mapping(bytes32 => NetPV.CcyNetting)) private _ccyNettings;
     bytes32 public ccy = "0xSampleCCY";
 
@@ -50,14 +48,14 @@ contract NetPVTest {
 
         if (isSettled) {
             require(
-                nettingAfter.party0PV == nettingBefore.party0PV.add(amount0) &&
-                    nettingAfter.party1PV == nettingBefore.party1PV.add(amount1),
+                nettingAfter.party0PV == nettingBefore.party0PV + amount0 &&
+                    nettingAfter.party1PV == nettingBefore.party1PV + amount1,
                 "INCORRECT_CCY_NETTING_USE"
             );
         } else {
             require(
-                nettingAfter.unsettled0PV == nettingBefore.unsettled0PV.add(amount0) &&
-                    nettingAfter.unsettled1PV == nettingBefore.unsettled1PV.add(amount1),
+                nettingAfter.unsettled0PV == nettingBefore.unsettled0PV + amount0 &&
+                    nettingAfter.unsettled1PV == nettingBefore.unsettled1PV + amount1,
                 "INCORRECT_CCY_NETTING_USE"
             );
         }
@@ -76,14 +74,14 @@ contract NetPVTest {
         NetPV.CcyNetting memory nettingAfter = _get(party0, party1);
 
         require(
-            nettingAfter.unsettled0PV == nettingBefore.unsettled0PV.sub(amount0) &&
-                nettingAfter.party0PV == nettingBefore.party0PV.add(amount0),
+            nettingAfter.unsettled0PV == nettingBefore.unsettled0PV - amount0 &&
+                nettingAfter.party0PV == nettingBefore.party0PV + amount0,
             "INCORRECT_CCY_NETTING_SETTLE"
         );
 
         require(
-            nettingAfter.unsettled1PV == nettingBefore.unsettled1PV.sub(amount1) &&
-                nettingAfter.party1PV == nettingBefore.party1PV.add(amount1),
+            nettingAfter.unsettled1PV == nettingBefore.unsettled1PV - amount1 &&
+                nettingAfter.party1PV == nettingBefore.party1PV + amount1,
             "INCORRECT_CCY_NETTING_SETTLE"
         );
     }
@@ -103,14 +101,14 @@ contract NetPVTest {
 
         if (isSettled) {
             require(
-                nettingAfter.party0PV == nettingBefore.party0PV.sub(amount0) &&
-                    nettingAfter.party1PV == nettingBefore.party1PV.sub(amount1),
+                nettingAfter.party0PV == nettingBefore.party0PV - amount0 &&
+                    nettingAfter.party1PV == nettingBefore.party1PV - amount1,
                 "INCORRECT_CCY_NETTING_RELEASE"
             );
         } else {
             require(
-                nettingAfter.unsettled0PV == nettingBefore.unsettled0PV.sub(amount0) &&
-                    nettingAfter.unsettled1PV == nettingBefore.unsettled1PV.sub(amount1),
+                nettingAfter.unsettled0PV == nettingBefore.unsettled0PV - amount0 &&
+                    nettingAfter.unsettled1PV == nettingBefore.unsettled1PV - amount1,
                 "INCORRECT_CCY_NETTING_RELEASE"
             );
         }
@@ -131,12 +129,12 @@ contract NetPVTest {
         NetPV.CcyNetting memory nettingAfter = _get(party0, party1);
 
         require(
-            nettingAfter.party0PV == nettingBefore.party0PV.sub(prevPV0).add(currentPV0),
+            nettingAfter.party0PV == nettingBefore.party0PV - prevPV0 + currentPV0,
             "INCORRECT_CCY_NETTING_UPDATE"
         );
 
         require(
-            nettingAfter.party1PV == nettingBefore.party1PV.sub(prevPV1).add(currentPV1),
+            nettingAfter.party1PV == nettingBefore.party1PV - prevPV1 + currentPV1,
             "INCORRECT_CCY_NETTING_SETTLE"
         );
     }

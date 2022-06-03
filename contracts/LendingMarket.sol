@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/ILendingMarket.sol";
@@ -23,7 +22,6 @@ contract LendingMarket is
     ReentrancyGuard,
     Pausable
 {
-    using SafeMath for uint256;
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     bytes4 constant prefix = 0x21aaa47b;
@@ -102,9 +100,9 @@ contract LendingMarket is
     function getMidRate() public view override returns (uint256 rate) {
         uint256 borrowRate = getBorrowRate();
         uint256 lendRate = getLendRate();
-        uint256 combinedRate = borrowRate.add(lendRate);
+        uint256 combinedRate = borrowRate + lendRate;
 
-        return combinedRate.div(2);
+        return combinedRate / 2;
     }
 
     /**
@@ -170,7 +168,7 @@ contract LendingMarket is
         collateralAggregator().releaseUnsettledCollateral(
             marketOrder.maker,
             MarketCcy,
-            marketOrder.amount.mul(MKTMAKELEVEL).div(PCT)
+            (marketOrder.amount * MKTMAKELEVEL) / PCT
         );
         emit CancelOrder(
             orderId,
@@ -210,7 +208,7 @@ contract LendingMarket is
         collateralAggregator().useUnsettledCollateral(
             msg.sender,
             MarketCcy,
-            _amount.mul(MKTMAKELEVEL).div(PCT)
+            (_amount * MKTMAKELEVEL) / PCT
         );
         if (marketOrder.side == Side.LEND) {
             lendOrders.insert(marketOrder.amount, marketOrder.rate, orderId);
@@ -247,7 +245,7 @@ contract LendingMarket is
         require(marketOrder.maker != msg.sender, "Maker couldn't take its order");
         _beforeMarketOrder();
 
-        orders[orderId].amount = marketOrder.amount.sub(_amount);
+        orders[orderId].amount = marketOrder.amount - _amount;
         if (marketOrder.side == Side.LEND) {
             require(
                 lendOrders.fillOrder(marketOrder.rate, orderId, _amount),

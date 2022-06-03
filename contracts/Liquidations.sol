@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/AddressPacking.sol";
@@ -10,7 +9,6 @@ import "./interfaces/ILiquidations.sol";
 import "./mixins/MixinAddressResolver.sol";
 
 contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
-    using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -197,11 +195,11 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
             );
             vars.exchangeRate = uint256(currencyController().getLastETHPrice(vars.currency));
 
-            vars.dealPV0 = vars.dealPV0.mul(vars.exchangeRate).div(1e18);
-            vars.dealPV1 = vars.dealPV1.mul(vars.exchangeRate).div(1e18);
+            vars.dealPV0 = (vars.dealPV0 * vars.exchangeRate) / 1e18;
+            vars.dealPV1 = (vars.dealPV1 * vars.exchangeRate) / 1e18;
 
-            vars.totalLiquidationPVInETH0 = vars.totalLiquidationPVInETH0.add(vars.dealPV0);
-            vars.totalLiquidationPVInETH1 = vars.totalLiquidationPVInETH1.add(vars.dealPV1);
+            vars.totalLiquidationPVInETH0 = vars.totalLiquidationPVInETH0 + vars.dealPV0;
+            vars.totalLiquidationPVInETH1 = vars.totalLiquidationPVInETH1 + vars.dealPV1;
 
             IProduct(vars.product).liquidate(vars.dealId);
         }

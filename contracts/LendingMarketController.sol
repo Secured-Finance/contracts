@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/QuickSort.sol";
 import "./libraries/DiscountFactor.sol";
@@ -18,7 +17,6 @@ import "./mixins/MixinAddressResolver.sol";
  * It will store lending market addresses by ccy and term in lendingMarkets mapping.
  */
 contract LendingMarketController is ILendingMarketController, MixinAddressResolver, Ownable {
-    using SafeMath for uint256;
     using QuickSort for uint256[];
 
     bytes4 constant prefix = 0x21aaa47b;
