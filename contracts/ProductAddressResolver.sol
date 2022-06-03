@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IProductAddressResolver.sol";
 import "./libraries/DealId.sol";
 
@@ -10,10 +11,8 @@ import "./libraries/DealId.sol";
  * type supported on the protocol. Addresses stored per bytes4 prefixes which
  * are a simple identifiers of the product type
  */
-contract ProductAddressResolver is IProductAddressResolver {
+contract ProductAddressResolver is IProductAddressResolver, Ownable {
     using Address for address;
-
-    address public owner;
 
     // Mapping for storing product contract addresses
     mapping(bytes4 => address) _productContracts;
@@ -30,21 +29,9 @@ contract ProductAddressResolver is IProductAddressResolver {
     }
 
     /**
-     * @dev Modifier to make a function callable only by contract owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner, "INVALID_ACCESS");
-        _;
-    }
-
-    /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract
      */
-    constructor() {
-        owner = msg.sender;
-    }
+    constructor() Ownable() {}
 
     /**
      * @dev Triggers to register new product type in a address resolver

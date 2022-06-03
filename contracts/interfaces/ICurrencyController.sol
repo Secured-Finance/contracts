@@ -14,7 +14,6 @@ interface ICurrencyController {
     event CcySupportUpdate(bytes32 indexed ccy, bool isSupported);
     event HaircutUpdated(bytes32 indexed ccy, uint256 haircut);
     event MinMarginUpdated(bytes32 indexed ccy, uint256 minMargin);
-    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
     event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
     event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
 
@@ -68,11 +67,7 @@ interface ICurrencyController {
 
     function minMargins(bytes32) external view returns (uint256);
 
-    function owner() external view returns (address);
-
     function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external;
-
-    function setOwner(address _owner) external;
 
     function supportCurrency(
         bytes32 _ccy,

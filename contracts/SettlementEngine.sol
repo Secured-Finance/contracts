@@ -47,8 +47,8 @@ contract SettlementEngine is
 
     /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract
+     * @param _resolver The address of the Address Resolver contract
+     * @param _WETH9 The address of the Wrapped ETH contract
      */
     constructor(address _resolver, address _WETH9)
         MixinAddressResolver(_resolver)

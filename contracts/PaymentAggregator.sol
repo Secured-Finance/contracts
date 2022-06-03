@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ProtocolTypes.sol";
 import "./libraries/TimeSlot.sol";
 import "./libraries/AddressPacking.sol";
@@ -19,7 +18,7 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
-contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressResolver, Ownable {
+contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressResolver {
     using Address for address;
     using TimeSlot for TimeSlot.Slot;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -40,11 +39,9 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
 
     /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
+    constructor(address _resolver) MixinAddressResolver(_resolver) {}
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);

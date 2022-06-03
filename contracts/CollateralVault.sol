@@ -49,9 +49,10 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
 
     /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract and links
-     * with collateral aggregator and currency controller contracts
+     * @param _resolver The address of the Address Resolver contract
+     * @param _ccy The main currency for this vault
+     * @param _tokenAddress The address of ERC20 token
+     * @param _WETH9 The address of the Wrapped ETH contract
      */
     constructor(
         address _resolver,

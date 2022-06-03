@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ProtocolTypes.sol";
 import "./interfaces/IMarketController.sol";
 import "./interfaces/IMarkToMarket.sol";
 import "./interfaces/IProduct.sol";
 import "./mixins/MixinAddressResolver.sol";
 
-contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Ownable {
+contract MarkToMarket is IMarkToMarket, MixinAddressResolver {
     uint256 constant NOTICE = 2 weeks;
 
     /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract and connects to product address resolver contract
      * @param _resolver The address of the Address Resolver contract
      */
     constructor(address _resolver) MixinAddressResolver(_resolver) {}

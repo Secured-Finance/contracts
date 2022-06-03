@@ -26,11 +26,10 @@ contract LendingMarketController is ILendingMarketController, MixinAddressResolv
     mapping(bytes32 => uint256[]) public supportedTerms;
 
     /**
-     * @dev Lending Market Controller Constructor.
+     * @dev Contract constructor function.
+     * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {
-        // owner = msg.sender;
-    }
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);

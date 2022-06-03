@@ -65,8 +65,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
 
     /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract
      * @param _resolver The address of the Address Resolver contract
      */
     constructor(address _resolver) MixinCollateralManagement(_resolver) {}

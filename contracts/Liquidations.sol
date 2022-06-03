@@ -29,9 +29,8 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
 
     /**
      * @dev Contract constructor function.
-     *
-     * @notice sets contract deployer as owner of this contract,
-     * liquidation agent and liquidation offset
+     * @param _resolver The address of the Address Resolver contract
+     * @param _offset The liquidation offset
      */
     constructor(address _resolver, uint256 _offset) MixinAddressResolver(_resolver) Ownable() {
         liquidationAgents.add(msg.sender);

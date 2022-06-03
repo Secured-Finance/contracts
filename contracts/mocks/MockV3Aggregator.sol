@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "../ProtocolTypes.sol";
 
 /**
@@ -12,11 +13,8 @@ import "../ProtocolTypes.sol";
  * aggregator contract, but how the aggregator got
  * its answer is unimportant
  */
-contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes {
-    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
-
+contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes, Ownable {
     uint256 public constant override version = 0;
-    address public owner;
 
     bytes32 public priceFeedCcy;
     uint8 public override decimals;
@@ -32,26 +30,10 @@ contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes {
         uint8 _decimals,
         bytes32 _ccy,
         int256 _initialAnswer
-    ) {
-        owner = msg.sender;
+    ) Ownable() {
         priceFeedCcy = _ccy;
         decimals = _decimals;
         updateAnswer(_initialAnswer);
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-    /**
-     * @dev Sets owner of the controller market.
-     * @param _owner Address of new owner
-     */
-    function setOwner(address _owner) public onlyOwner {
-        require(_owner != address(0), "new owner is the zero address");
-        emit OwnerChanged(owner, _owner);
-        owner = _owner;
     }
 
     function updateAnswer(int256 _answer) public onlyOwner {
