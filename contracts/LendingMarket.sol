@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/ILendingMarket.sol";
 import "./interfaces/ILoanV2.sol";
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
-import "./ProtocolTypes.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./types/ProtocolTypes.sol";
 
 /**
  * @dev Lending Market contract module which allows lending market participants
@@ -15,13 +15,7 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * It will store market orders in structured red-black tree and doubly linked list in each node.
  */
-contract LendingMarket is
-    ILendingMarket,
-    MixinAddressResolver,
-    ProtocolTypes,
-    ReentrancyGuard,
-    Pausable
-{
+contract LendingMarket is ILendingMarket, MixinAddressResolver, ReentrancyGuard, Pausable {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     bytes4 constant prefix = 0x21aaa47b;
@@ -53,14 +47,14 @@ contract LendingMarket is
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
-        contracts[1] = CONTRACT_LENDING_MARKET_CONTROLLER;
-        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
+        contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts[2] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_LENDING_MARKET_CONTROLLER;
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     /**
@@ -127,7 +121,7 @@ contract LendingMarket is
     {
         MarketOrder memory marketOrder = orders[orderId];
 
-        if (marketOrder.side == Side.LEND) {
+        if (marketOrder.side == ProtocolTypes.Side.LEND) {
             return lendOrders.getOrderById(marketOrder.rate, orderId);
         } else {
             return borrowOrders.getOrderById(marketOrder.rate, orderId);
@@ -158,9 +152,9 @@ contract LendingMarket is
         _beforeMarketOrder();
 
         MarketOrder memory marketOrder = orders[orderId];
-        if (marketOrder.side == Side.LEND) {
+        if (marketOrder.side == ProtocolTypes.Side.LEND) {
             lendOrders.remove(marketOrder.amount, marketOrder.rate, orderId);
-        } else if (marketOrder.side == Side.BORROW) {
+        } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
             borrowOrders.remove(marketOrder.amount, marketOrder.rate, orderId);
         }
         delete orders[orderId];
@@ -168,7 +162,7 @@ contract LendingMarket is
         collateralAggregator().releaseUnsettledCollateral(
             marketOrder.maker,
             MarketCcy,
-            (marketOrder.amount * MKTMAKELEVEL) / PCT
+            (marketOrder.amount * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
         );
         emit CancelOrder(
             orderId,
@@ -188,7 +182,7 @@ contract LendingMarket is
      * @param _rate Preferable interest rate
      */
     function makeOrder(
-        Side _side,
+        ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _rate
     ) internal returns (uint256 orderId) {
@@ -208,11 +202,11 @@ contract LendingMarket is
         collateralAggregator().useUnsettledCollateral(
             msg.sender,
             MarketCcy,
-            (_amount * MKTMAKELEVEL) / PCT
+            (_amount * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
         );
-        if (marketOrder.side == Side.LEND) {
+        if (marketOrder.side == ProtocolTypes.Side.LEND) {
             lendOrders.insert(marketOrder.amount, marketOrder.rate, orderId);
-        } else if (marketOrder.side == Side.BORROW) {
+        } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
             borrowOrders.insert(marketOrder.amount, marketOrder.rate, orderId);
         }
 
@@ -236,7 +230,7 @@ contract LendingMarket is
      * - Market order has to be active
      */
     function takeOrder(
-        Side side,
+        ProtocolTypes.Side side,
         uint256 orderId,
         uint256 _amount
     ) internal returns (bool) {
@@ -246,12 +240,12 @@ contract LendingMarket is
         _beforeMarketOrder();
 
         orders[orderId].amount = marketOrder.amount - _amount;
-        if (marketOrder.side == Side.LEND) {
+        if (marketOrder.side == ProtocolTypes.Side.LEND) {
             require(
                 lendOrders.fillOrder(marketOrder.rate, orderId, _amount),
                 "Couldn't fill order"
             );
-        } else if (marketOrder.side == Side.BORROW) {
+        } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
             require(
                 borrowOrders.fillOrder(marketOrder.rate, orderId, _amount),
                 "Couldn't fill order"
@@ -288,11 +282,11 @@ contract LendingMarket is
      * Returns zero if didn't find a matched order, reverts if no orders for specified interest rate
      */
     function matchOrders(
-        Side side,
+        ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     ) external view override returns (uint256) {
-        if (side == Side.LEND) {
+        if (side == ProtocolTypes.Side.LEND) {
             require(borrowOrders.exists(rate), "No orders exists for selected interest rate");
             return borrowOrders.findOrderIdForAmount(rate, amount);
         } else {
@@ -310,18 +304,18 @@ contract LendingMarket is
      * Returns true after successful execution
      */
     function order(
-        Side side,
+        ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     ) external override nonReentrant returns (bool) {
         uint256 orderId;
 
-        if (side == Side.LEND) {
+        if (side == ProtocolTypes.Side.LEND) {
             orderId = borrowOrders.findOrderIdForAmount(rate, amount);
-            if (orderId != 0) return takeOrder(Side.BORROW, orderId, amount);
+            if (orderId != 0) return takeOrder(ProtocolTypes.Side.BORROW, orderId, amount);
         } else {
             orderId = lendOrders.findOrderIdForAmount(rate, amount);
-            if (orderId != 0) return takeOrder(Side.LEND, orderId, amount);
+            if (orderId != 0) return takeOrder(ProtocolTypes.Side.LEND, orderId, amount);
         }
 
         makeOrder(side, amount, rate);

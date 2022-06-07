@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../ProtocolTypes.sol";
 import "../interfaces/ICollateralAggregatorV2.sol";
 
-contract CollateralAggregatorCallerMock is ProtocolTypes {
+contract CollateralAggregatorCallerMock {
     ICollateralAggregator public collateralAggregator;
 
     constructor(address _collateralAggregator) {

@@ -3,10 +3,9 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ILendingMarketController.sol";
-import "../ProtocolTypes.sol";
 import "../libraries/DiscountFactor.sol";
 
-contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes, Ownable {
+contract LendingMarketControllerMock is ILendingMarketController, Ownable {
     uint256 public override numberOfMarkets = 0;
 
     mapping(bytes32 => mapping(uint256 => uint256)) public lendRates;

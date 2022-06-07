@@ -47,12 +47,12 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
+        contracts[0] = Contracts.PAYMENT_AGGREGATOR;
     }
 
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
+        contracts[0] = Contracts.PAYMENT_AGGREGATOR;
     }
 
     /**

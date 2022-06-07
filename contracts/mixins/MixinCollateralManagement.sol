@@ -47,10 +47,10 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](4);
-        contracts[0] = CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER;
-        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
-        contracts[2] = CONTRACT_LIQUIDATIONS;
-        contracts[3] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.CROSSCHAIN_ADDRESS_RESOLVER;
+        contracts[1] = Contracts.CURRENCY_CONTROLLER;
+        contracts[2] = Contracts.LIQUIDATIONS;
+        contracts[3] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     function isAcceptedContract(address account) internal view override returns (bool) {

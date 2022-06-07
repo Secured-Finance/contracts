@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./ProtocolTypes.sol";
 import "./interfaces/ICrosschainAddressResolver.sol";
 import "./mixins/MixinAddressResolver.sol";
 
@@ -17,12 +16,12 @@ contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressRe
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
     }
 
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
     }
 
     /**

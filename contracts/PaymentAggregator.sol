@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./ProtocolTypes.sol";
 import "./libraries/TimeSlot.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
@@ -18,7 +17,7 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
-contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressResolver {
+contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver {
     using Address for address;
     using TimeSlot for TimeSlot.Slot;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -45,9 +44,9 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
-        contracts[0] = CONTRACT_CLOSE_OUT_NETTING;
-        contracts[1] = CONTRACT_MARK_TO_MARKET;
-        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.CLOSE_OUT_NETTING;
+        contracts[1] = Contracts.MARK_TO_MARKET;
+        contracts[2] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     function isAcceptedContract(address account) internal view override returns (bool) {

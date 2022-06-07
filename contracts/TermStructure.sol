@@ -41,8 +41,8 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
-        contracts[0] = CONTRACT_CURRENCY_CONTROLLER;
-        contracts[1] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.CURRENCY_CONTROLLER;
+        contracts[1] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     /**

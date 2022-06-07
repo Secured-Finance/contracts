@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "../types/ProtocolTypes.sol";
+
 /**
  * @dev Currency Controller contract is responsible for managing supported
  * currencies in Secured Finance Protocol
@@ -26,16 +28,11 @@ interface ICurrencyController {
 
     function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256);
 
-    function currencies(bytes32)
-        external
-        view
-        returns (
-            bool isSupported,
-            string memory name,
-            uint16 chainId
-        );
+    function getCurrencies(bytes32) external view returns (ProtocolTypes.Currency memory);
 
-    function ethDecimals(bytes32) external view returns (uint8);
+    function getEthDecimals(bytes32) external view returns (uint8);
+
+    function getUsdDecimals(bytes32) external view returns (uint8);
 
     function getHaircut(bytes32 _ccy) external view returns (uint256);
 
@@ -51,21 +48,15 @@ interface ICurrencyController {
 
     function getChainId(bytes32 _ccy) external view returns (uint16);
 
-    function haircuts(bytes32) external view returns (uint256);
-
     function isCollateral(bytes32) external view returns (bool);
 
     function isSupportedCcy(bytes32 _ccy) external view returns (bool);
-
-    function last_ccy_index() external view returns (uint8);
 
     function linkPriceFeed(
         bytes32 _ccy,
         address _priceFeedAddr,
         bool _isEthPriceFeed
     ) external returns (bool);
-
-    function minMargins(bytes32) external view returns (uint256);
 
     function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external;
 
@@ -78,8 +69,6 @@ interface ICurrencyController {
         address _tokenAddress
     ) external;
 
-    function supportedCurrencies() external view returns (uint8);
-
     function updateCcyHaircut(bytes32 _ccy, uint256 _haircut) external;
 
     function updateCollateralSupport(bytes32 _ccy, bool _isSupported) external;
@@ -88,7 +77,5 @@ interface ICurrencyController {
 
     function updateMinMargin(bytes32 _ccy, uint256 _minMargin) external;
 
-    function usdDecimals(bytes32) external view returns (uint8);
-
-    function tokenAddresses(bytes32) external view returns (address);
+    function getTokenAddresses(bytes32) external view returns (address);
 }

@@ -33,8 +33,8 @@ contract LendingMarketController is ILendingMarketController, MixinAddressResolv
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
-        contracts[0] = CONTRACT_CURRENCY_CONTROLLER;
-        contracts[1] = CONTRACT_TERM_STRUCTURE;
+        contracts[0] = Contracts.CURRENCY_CONTROLLER;
+        contracts[1] = Contracts.TERM_STRUCTURE;
     }
 
     // =========== YIELD CURVE FUNCTIONS ===========

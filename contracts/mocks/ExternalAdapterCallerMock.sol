@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../ProtocolTypes.sol";
 import "../interfaces/IExternalAdapterTxResponse.sol";
 import "../interfaces/IExternalAdapter.sol";
 

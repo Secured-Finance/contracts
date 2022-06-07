@@ -4,8 +4,8 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
-import "./ProtocolTypes.sol";
 import "./mixins/MixinCollateralManagement.sol";
+import "./types/ProtocolTypes.sol";
 
 /**
  * @title Collateral Aggregator contract is used to manage Secured Finance
@@ -21,7 +21,7 @@ import "./mixins/MixinCollateralManagement.sol";
  * Contract linked to Product based contracts (like Loan, Swap, etc),
  * LendingMarkets, CurrencyController contracts and Liquidation Engine.
  */
-contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCollateralManagement {
+contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagement {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.AddressSet;
     using NetPV for NetPV.CcyNetting;
@@ -440,7 +440,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         uint256 pv,
         bool isSettled
     ) external override onlyAcceptedContracts {
-        uint256 liquidationTarget = (liquidationAmount * LQLEVEL) / BP;
+        uint256 liquidationTarget = (liquidationAmount * LQLEVEL) / ProtocolTypes.BP;
         uint256 liqudationInETH = currencyController().convertToETH(ccy, liquidationTarget);
 
         require(
@@ -634,11 +634,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             vars.totalHaircutPV0 =
                 vars.totalHaircutPV0 +
                 (vars.netting.party0PV * vars.haircutRatio) /
-                BP;
+                ProtocolTypes.BP;
             vars.totalHaircutPV1 =
                 vars.totalHaircutPV1 +
                 (vars.netting.party1PV * vars.haircutRatio) /
-                BP;
+                ProtocolTypes.BP;
         }
 
         vars.pvDiff0 = vars.totalPV0inETH >= vars.totalHaircutPV1
@@ -726,11 +726,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             _isSettled
         );
 
-        vars.minMarginReq0 = (vars.total0 * MIN_COLLATERAL_RATIO) / BP;
-        vars.minMarginReq1 = (vars.total1 * MIN_COLLATERAL_RATIO) / BP;
+        vars.minMarginReq0 = (vars.total0 * MIN_COLLATERAL_RATIO) / ProtocolTypes.BP;
+        vars.minMarginReq1 = (vars.total1 * MIN_COLLATERAL_RATIO) / ProtocolTypes.BP;
 
         if (vars.net0 > 0) {
-            vars.req0 = vars.minMarginReq0 > (vars.net0 * MARGINLEVEL) / BP
+            vars.req0 = vars.minMarginReq0 > (vars.net0 * MARGINLEVEL) / ProtocolTypes.BP
                 ? vars.minMarginReq0
                 : vars.net0;
         } else {
@@ -738,7 +738,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         }
 
         if (vars.net1 > 0) {
-            vars.req1 = vars.minMarginReq1 > (vars.net1 * MARGINLEVEL) / BP
+            vars.req1 = vars.minMarginReq1 > (vars.net1 * MARGINLEVEL) / ProtocolTypes.BP
                 ? vars.minMarginReq1
                 : vars.net1;
         } else {
@@ -790,11 +790,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         );
 
         if (vars.req0 > 0) {
-            vars.cover0 = (PCT * vars.lockedCollateral0) / vars.req0;
+            vars.cover0 = (ProtocolTypes.PCT * vars.lockedCollateral0) / vars.req0;
         }
 
         if (vars.req1 > 0) {
-            vars.cover1 = (PCT * vars.lockedCollateral1) / vars.req1;
+            vars.cover1 = (ProtocolTypes.PCT * vars.lockedCollateral1) / vars.req1;
         }
 
         return (vars.cover0, vars.cover1);
@@ -841,8 +841,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         );
 
         if (_safeRebalance) {
-            vars.targetReq0 = (vars.targetReq0 * MARGINLEVEL) / BP;
-            vars.targetReq1 = (vars.targetReq1 * MARGINLEVEL) / BP;
+            vars.targetReq0 = (vars.targetReq0 * MARGINLEVEL) / ProtocolTypes.BP;
+            vars.targetReq1 = (vars.targetReq1 * MARGINLEVEL) / ProtocolTypes.BP;
         }
 
         (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(
@@ -943,7 +943,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         vars.independentAmount = _totalIndependentCollateralInETH(_user);
 
         if (vars.totalExpInETH > 0) {
-            vars.coverage = (PCT * vars.independentAmount) / vars.totalExpInETH;
+            vars.coverage = (ProtocolTypes.PCT * vars.independentAmount) / vars.totalExpInETH;
         } else {
             return (0, vars.totalExpInETH);
         }

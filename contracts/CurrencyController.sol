@@ -2,8 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/ICurrencyController.sol";
+import "./utils/Ownable.sol";
+import {CurrencyControllerStorage as Storage} from "./storages/CurrencyControllerStorage.sol";
 
 /**
  * @dev Currency Controller contract is responsible for managing supported
@@ -12,39 +14,19 @@ import "./interfaces/ICurrencyController.sol";
  * Contract links new currencies to ETH Chainlink price feeds, without existing price feed
  * contract owner is not able to add a new currency into the protocol
  */
-contract CurrencyController is ICurrencyController, Ownable {
-    uint8 public override last_ccy_index;
-
-    struct Currency {
-        bool isSupported;
-        string name;
-        uint16 chainId; // chain id for address conversion
-    }
-
-    // Protocol currencies storage
-    mapping(bytes32 => Currency) public override currencies;
-    mapping(bytes32 => uint256) public override haircuts;
-    mapping(bytes32 => uint256) public override minMargins;
-    mapping(bytes32 => bool) public override isCollateral;
-    mapping(bytes32 => address) public override tokenAddresses;
-
-    // PriceFeed storage
-    mapping(bytes32 => AggregatorV3Interface) private usdPriceFeeds;
-    mapping(bytes32 => AggregatorV3Interface) private ethPriceFeeds;
-    mapping(bytes32 => uint8) public override usdDecimals;
-    mapping(bytes32 => uint8) public override ethDecimals;
-
-    uint8 public override supportedCurrencies;
-
+contract CurrencyController is ICurrencyController, Ownable, Initializable {
     modifier supportedCcyOnly(bytes32 _ccy) {
         require(isSupportedCcy(_ccy), "Unsupported asset");
         _;
     }
 
     /**
-     * @dev Lending Market Controller Constructor.
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor() Ownable() {}
+    function initialize(address owner) public initializer {
+        _transferOwnership(owner);
+    }
 
     // =========== CURRENCY CONTROL SECTION ===========
 
@@ -63,22 +45,20 @@ contract CurrencyController is ICurrencyController, Ownable {
         uint256 _haircut,
         address _tokenAddress
     ) public override onlyOwner {
-        last_ccy_index = last_ccy_index++;
-
-        Currency memory currency;
+        ProtocolTypes.Currency memory currency;
         currency.name = _name;
         if (_chainId != 0) {
             currency.chainId = _chainId;
         }
 
         if (_tokenAddress != address(0)) {
-            tokenAddresses[_ccy] = _tokenAddress;
+            Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         }
 
         currency.isSupported = true;
 
-        currencies[_ccy] = currency;
-        haircuts[_ccy] = _haircut;
+        Storage.slot().currencies[_ccy] = currency;
+        Storage.slot().haircuts[_ccy] = _haircut;
 
         if (_ccy != "ETH") {
             require(linkPriceFeed(_ccy, _ethPriceFeed, true), "Invalid PriceFeed");
@@ -94,7 +74,7 @@ contract CurrencyController is ICurrencyController, Ownable {
      * @param _isSupported Boolean whether currency supported as collateral or not
      */
     function updateCurrencySupport(bytes32 _ccy, bool _isSupported) public override onlyOwner {
-        Currency storage currency = currencies[_ccy];
+        ProtocolTypes.Currency storage currency = Storage.slot().currencies[_ccy];
         currency.isSupported = _isSupported;
 
         emit CcySupportUpdate(_ccy, _isSupported);
@@ -111,7 +91,7 @@ contract CurrencyController is ICurrencyController, Ownable {
         onlyOwner
         supportedCcyOnly(_ccy)
     {
-        isCollateral[_ccy] = _isSupported;
+        Storage.slot().isCollateral[_ccy] = _isSupported;
 
         emit CcyCollateralUpdate(_ccy, _isSupported);
     }
@@ -130,7 +110,7 @@ contract CurrencyController is ICurrencyController, Ownable {
         require(_haircut > 0, "Incorrect haircut ratio");
         require(_haircut <= 10000, "Haircut ratio overflow");
 
-        haircuts[_ccy] = _haircut;
+        Storage.slot().haircuts[_ccy] = _haircut;
 
         emit HaircutUpdated(_ccy, _haircut);
     }
@@ -148,9 +128,9 @@ contract CurrencyController is ICurrencyController, Ownable {
     {
         require(_minMargin > 0, "Incorrect MinMargin");
         require(_minMargin <= 10000, "MinMargin overflow");
-        require(isCollateral[_ccy], "Unable to set MinMargin");
+        require(isCollateral(_ccy), "Unable to set MinMargin");
 
-        minMargins[_ccy] = _minMargin;
+        Storage.slot().minMargins[_ccy] = _minMargin;
 
         emit MinMarginUpdated(_ccy, _minMargin);
     }
@@ -158,12 +138,40 @@ contract CurrencyController is ICurrencyController, Ownable {
     // =========== EXTERNAL GET FUNCTIONS ===========
 
     /**
+     * @dev Triggers to get specified currency.
+     * @param _ccy Currency short ticket
+     */
+    function getCurrencies(bytes32 _ccy)
+        external
+        view
+        returns (ProtocolTypes.Currency memory currency)
+    {
+        currency = Storage.slot().currencies[_ccy];
+    }
+
+    /**
+     * @dev Triggers to get ETH decimal for specific currency.
+     * @param _ccy Currency short ticket
+     */
+    function getEthDecimals(bytes32 _ccy) external view returns (uint8) {
+        return Storage.slot().ethDecimals[_ccy];
+    }
+
+    /**
+     * @dev Triggers to get USD decimal for specific currency.
+     * @param _ccy Currency short ticket
+     */
+    function getUsdDecimals(bytes32 _ccy) external view returns (uint8) {
+        return Storage.slot().usdDecimals[_ccy];
+    }
+
+    /**
      * @dev Triggers to get haircut ratio for specific currency.
      * Haircut is used in bilateral netting cross-calculation.
      * @param _ccy Currency short ticket
      */
     function getHaircut(bytes32 _ccy) external view override returns (uint256) {
-        return haircuts[_ccy];
+        return Storage.slot().haircuts[_ccy];
     }
 
     /**
@@ -171,8 +179,16 @@ contract CurrencyController is ICurrencyController, Ownable {
      * @param _ccy Currency short ticket
      */
     function getMinMargin(bytes32 _ccy) external view override returns (uint256) {
-        require(isCollateral[_ccy], "Unable to get MinMargin");
-        return minMargins[_ccy];
+        require(isCollateral(_ccy), "Unable to get MinMargin");
+        return Storage.slot().minMargins[_ccy];
+    }
+
+    /**
+     * @dev Triggers to get token address for specific currency.
+     * @param _ccy Currency short ticket
+     */
+    function getTokenAddresses(bytes32 _ccy) external view returns (address) {
+        return Storage.slot().tokenAddresses[_ccy];
     }
 
     /**
@@ -180,7 +196,15 @@ contract CurrencyController is ICurrencyController, Ownable {
      * @param _ccy Currency short ticket
      */
     function isSupportedCcy(bytes32 _ccy) public view override returns (bool) {
-        return currencies[_ccy].isSupported;
+        return Storage.slot().currencies[_ccy].isSupported;
+    }
+
+    /**
+     * @dev Triggers to get if specified currency is collateral.
+     * @param _ccy Currency short ticket
+     */
+    function isCollateral(bytes32 _ccy) public view returns (bool) {
+        return Storage.slot().isCollateral[_ccy];
     }
 
     /**
@@ -189,7 +213,7 @@ contract CurrencyController is ICurrencyController, Ownable {
      * @param _ccy Currency short ticket
      */
     function getChainId(bytes32 _ccy) external view override returns (uint16) {
-        return currencies[_ccy].chainId;
+        return Storage.slot().currencies[_ccy].chainId;
     }
 
     // =========== CHAINLINK PRICE FEED FUNCTIONS ===========
@@ -216,12 +240,12 @@ contract CurrencyController is ICurrencyController, Ownable {
 
         if (_isEthPriceFeed) {
             require(!_isETH(_ccy), "Can't link to ETH");
-            ethPriceFeeds[_ccy] = priceFeed;
-            ethDecimals[_ccy] = decimals;
+            Storage.slot().ethPriceFeeds[_ccy] = priceFeed;
+            Storage.slot().ethDecimals[_ccy] = decimals;
             emit PriceFeedAdded(_ccy, "ETH", _priceFeedAddr);
         } else {
-            usdPriceFeeds[_ccy] = priceFeed;
-            usdDecimals[_ccy] = decimals;
+            Storage.slot().usdPriceFeeds[_ccy] = priceFeed;
+            Storage.slot().usdDecimals[_ccy] = decimals;
             emit PriceFeedAdded(_ccy, "USD", _priceFeedAddr);
         }
 
@@ -240,19 +264,19 @@ contract CurrencyController is ICurrencyController, Ownable {
         supportedCcyOnly(_ccy)
     {
         if (_isEthPriceFeed == true) {
-            address priceFeed = address(ethPriceFeeds[_ccy]);
+            address priceFeed = address(Storage.slot().ethPriceFeeds[_ccy]);
 
             require(priceFeed != address(0), "Invalid PriceFeed");
-            delete ethPriceFeeds[_ccy];
-            delete ethDecimals[_ccy];
+            delete Storage.slot().ethPriceFeeds[_ccy];
+            delete Storage.slot().ethDecimals[_ccy];
 
             emit PriceFeedRemoved(_ccy, "ETH", priceFeed);
         } else {
-            address priceFeed = address(usdPriceFeeds[_ccy]);
+            address priceFeed = address(Storage.slot().usdPriceFeeds[_ccy]);
 
             require(priceFeed != address(0), "Invalid PriceFeed");
-            delete usdPriceFeeds[_ccy];
-            delete usdDecimals[_ccy];
+            delete Storage.slot().usdPriceFeeds[_ccy];
+            delete Storage.slot().usdDecimals[_ccy];
 
             emit PriceFeedRemoved(_ccy, "USD", priceFeed);
         }
@@ -265,7 +289,7 @@ contract CurrencyController is ICurrencyController, Ownable {
      * @param _ccy Currency
      */
     function getLastUSDPrice(bytes32 _ccy) public view override returns (int256) {
-        AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
+        AggregatorV3Interface priceFeed = Storage.slot().usdPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return price;
@@ -282,7 +306,7 @@ contract CurrencyController is ICurrencyController, Ownable {
         override
         returns (int256)
     {
-        AggregatorV3Interface priceFeed = usdPriceFeeds[_ccy];
+        AggregatorV3Interface priceFeed = Storage.slot().usdPriceFeeds[_ccy];
         (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(_roundId);
 
         require(timeStamp > 0, "Round not completed yet");
@@ -296,7 +320,7 @@ contract CurrencyController is ICurrencyController, Ownable {
     function getLastETHPrice(bytes32 _ccy) public view override returns (int256) {
         if (_isETH(_ccy)) return 1e18;
 
-        AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
+        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return price;
@@ -315,7 +339,7 @@ contract CurrencyController is ICurrencyController, Ownable {
     {
         if (_isETH(_ccy)) return 1e18;
 
-        AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
+        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , uint256 timeStamp, ) = priceFeed.getRoundData(_roundId);
 
         require(timeStamp > 0, "Round not completed yet");
@@ -330,7 +354,7 @@ contract CurrencyController is ICurrencyController, Ownable {
     function convertToETH(bytes32 _ccy, uint256 _amount) public view override returns (uint256) {
         if (_isETH(_ccy)) return _amount;
 
-        AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
+        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return (_amount * uint256(price)) / 1e18;
@@ -349,7 +373,7 @@ contract CurrencyController is ICurrencyController, Ownable {
     {
         if (_isETH(_ccy)) return _amounts;
 
-        AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
+        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
         uint256[] memory amounts = new uint256[](_amounts.length);
 
@@ -379,7 +403,7 @@ contract CurrencyController is ICurrencyController, Ownable {
     {
         if (_isETH(_ccy)) return _amountETH;
 
-        AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
+        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return (_amountETH * 1e18) / uint256(price); // add decimals checks

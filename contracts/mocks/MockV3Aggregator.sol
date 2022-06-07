@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../ProtocolTypes.sol";
 
 /**
  * @title MockV3Aggregator
@@ -13,7 +12,7 @@ import "../ProtocolTypes.sol";
  * aggregator contract, but how the aggregator got
  * its answer is unimportant
  */
-contract MockV3Aggregator is AggregatorV2V3Interface, ProtocolTypes, Ownable {
+contract MockV3Aggregator is AggregatorV2V3Interface, Ownable {
     uint256 public constant override version = 0;
 
     bytes32 public priceFeedCcy;

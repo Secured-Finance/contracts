@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./ProtocolTypes.sol";
 import "./interfaces/IMarketController.sol";
 import "./interfaces/IMarkToMarket.sol";
 import "./interfaces/IProduct.sol";
@@ -18,7 +17,7 @@ contract MarkToMarket is IMarkToMarket, MixinAddressResolver {
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     struct PresentValueCalcLocalVars {

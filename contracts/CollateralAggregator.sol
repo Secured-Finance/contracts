@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "./interfaces/ICurrencyController.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./ProtocolTypes.sol";
+import "./types/ProtocolTypes.sol";
 
 /**
  * @title Collateral Aggregator contract is used to collect Secured Finance
@@ -14,7 +14,7 @@ import "./ProtocolTypes.sol";
  *
  * Contract linked to Product based contracts (like Loan, Swap, etc), LendingMarkets, CurrencyController contracts.
  */
-contract CollateralAggregator is ProtocolTypes {
+contract CollateralAggregator {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using Address for address;
@@ -86,8 +86,12 @@ contract CollateralAggregator is ProtocolTypes {
         uint256 ethAmount
     );
 
-    event UpdateState(address indexed addr, CollateralState prevState, CollateralState currState);
-    event UpdatePV(address indexed addr, uint256 prevPV, uint256 newPV, Ccy ccy);
+    event UpdateState(
+        address indexed addr,
+        ProtocolTypes.CollateralState prevState,
+        ProtocolTypes.CollateralState currState
+    );
+    event UpdatePV(address indexed addr, uint256 prevPV, uint256 newPV, ProtocolTypes.Ccy ccy);
 
     /**
      * @dev Global collateral book used to track user's total amount
@@ -1281,8 +1285,12 @@ contract CollateralAggregator is ProtocolTypes {
             vars.totalPV0inETH = vars.totalPV0inETH + vars.exp0;
             vars.totalPV1inETH = vars.totalPV1inETH + vars.exp1;
 
-            vars.totalHaircutPV0 = ((vars.totalHaircutPV0 + vars.exp0) * vars.haircutRatio) / BP;
-            vars.totalHaircutPV1 = ((vars.totalHaircutPV1 + vars.exp1) * vars.haircutRatio) / BP;
+            vars.totalHaircutPV0 =
+                ((vars.totalHaircutPV0 + vars.exp0) * vars.haircutRatio) /
+                ProtocolTypes.BP;
+            vars.totalHaircutPV1 =
+                ((vars.totalHaircutPV1 + vars.exp1) * vars.haircutRatio) /
+                ProtocolTypes.BP;
         }
 
         vars.expDiff0 = vars.totalPV0inETH >= vars.totalHaircutPV1
@@ -1350,18 +1358,18 @@ contract CollateralAggregator is ProtocolTypes {
         );
 
         vars.minMarginRatio = currencyController.getMinMargin("ETH");
-        vars.minMarginReq0 = (vars.total0 * vars.minMarginRatio) / BP;
-        vars.minMarginReq1 = (vars.total1 * vars.minMarginRatio) / BP;
+        vars.minMarginReq0 = (vars.total0 * vars.minMarginRatio) / ProtocolTypes.BP;
+        vars.minMarginReq1 = (vars.total1 * vars.minMarginRatio) / ProtocolTypes.BP;
 
         if (vars.net0 > 0) {
-            vars.netCover0 = (vars.net0 * MARGINLEVEL) / BP;
+            vars.netCover0 = (vars.net0 * MARGINLEVEL) / ProtocolTypes.BP;
             vars.req0 = vars.minMarginReq0 > vars.netCover0 ? vars.minMarginReq0 : vars.net0;
         } else {
             vars.req0 = vars.minMarginReq0;
         }
 
         if (vars.net1 > 0) {
-            vars.netCover1 = (vars.net1 * MARGINLEVEL) / BP;
+            vars.netCover1 = (vars.net1 * MARGINLEVEL) / ProtocolTypes.BP;
             vars.req1 = vars.minMarginReq1 > vars.netCover1 ? vars.minMarginReq1 : vars.net1;
         } else {
             vars.req1 = vars.minMarginReq1;
@@ -1407,11 +1415,11 @@ contract CollateralAggregator is ProtocolTypes {
         Position memory position = positions[_party0][_party1];
 
         if (vars.req0 > 0) {
-            vars.cover0 = (PCT * position.lockedCollateralA) / vars.req0;
+            vars.cover0 = (ProtocolTypes.PCT * position.lockedCollateralA) / vars.req0;
         }
 
         if (vars.req1 > 0) {
-            vars.cover1 = (PCT * position.lockedCollateralB) / vars.req1;
+            vars.cover1 = (ProtocolTypes.PCT * position.lockedCollateralB) / vars.req1;
         }
 
         return (vars.cover0, vars.cover1);
@@ -1452,8 +1460,8 @@ contract CollateralAggregator is ProtocolTypes {
             false
         );
 
-        vars.targetReq0 = (vars.req0 * MARGINLEVEL) / BP;
-        vars.targetReq1 = (vars.req1 * MARGINLEVEL) / BP;
+        vars.targetReq0 = (vars.req0 * MARGINLEVEL) / ProtocolTypes.BP;
+        vars.targetReq1 = (vars.req1 * MARGINLEVEL) / ProtocolTypes.BP;
 
         Position memory position = positions[_party0][_party1];
 
@@ -1515,8 +1523,8 @@ contract CollateralAggregator is ProtocolTypes {
             _isSettled
         );
 
-        vars.targetReq0 = (vars.req0 * MARGINLEVEL) / BP;
-        vars.targetReq1 = (vars.req1 * MARGINLEVEL) / BP;
+        vars.targetReq0 = (vars.req0 * MARGINLEVEL) / ProtocolTypes.BP;
+        vars.targetReq1 = (vars.req1 * MARGINLEVEL) / ProtocolTypes.BP;
 
         Position memory position = positions[_party0][_party1];
 
@@ -1601,7 +1609,7 @@ contract CollateralAggregator is ProtocolTypes {
         Book memory book = books[_user];
 
         if (vars.totalExpInETH > 0) {
-            vars.coverage = (PCT * book.independentAmount) / vars.totalExpInETH;
+            vars.coverage = (ProtocolTypes.PCT * book.independentAmount) / vars.totalExpInETH;
         } else {
             return (0, vars.totalExpInETH);
         }

@@ -6,7 +6,9 @@ const CrosschainAddressResolver = artifacts.require(
 const CurrencyController = artifacts.require('CurrencyController');
 const ERC20Mock = artifacts.require('ERC20Mock');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
+const ProxyController = artifacts.require('ProxyController');
 const WETH9Mock = artifacts.require('WETH9Mock');
+const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 
 const { toBytes32, hexFILString, zeroAddress, overflowErrorMsg } =
   require('../test-utils').strings;
@@ -37,6 +39,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
   let aliceLockedInPositionWithCarol;
 
+  let currencyControllerProxy;
+
   before(
     'deploy CollateralVault, CollateralAggregator, CurrencyController, price feeds and ERC20 mock contracts',
     async () => {
@@ -47,8 +51,14 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       const dealIdLibrary = await DealId.deploy();
       await dealIdLibrary.deployed();
       const addressResolver = await AddressResolver.new();
-      currencyController = await CurrencyController.new();
+      const currencyController = await CurrencyController.new();
       const crosschainAddressResolver = await CrosschainAddressResolver.new(
+        addressResolver.address,
+      );
+      const proxyController = await ProxyController.new(
+        addressResolver.address,
+      );
+      const migrationAddressResolver = await MigrationAddressResolver.new(
         addressResolver.address,
       );
       tokenContract = await ERC20Mock.new(
@@ -72,7 +82,18 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         })
         .then((factory) => factory.deploy());
 
-      // Set up for testing
+      // Set up for Proxies
+      await proxyController.setCurrencyControllerImpl(
+        currencyController.address,
+      );
+
+      const currencyControllerProxyAddress =
+        await proxyController.getCurrencyControllerAddress();
+      currencyControllerProxy = await CurrencyController.at(
+        currencyControllerProxyAddress,
+      );
+
+      // Set up for AddressResolver and build caches using MigrationAddressResolver
       await addressResolver.importAddresses(
         [
           'CollateralAggregator',
@@ -85,16 +106,20 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         [
           collateral.address,
           crosschainAddressResolver.address,
-          currencyController.address,
+          currencyControllerProxyAddress,
           utils.randomHex(20),
           utils.randomHex(20),
           productAddressResolver.address,
         ],
       );
-      await collateral.buildCache();
-      await crosschainAddressResolver.buildCache();
 
-      await currencyController.supportCurrency(
+      await migrationAddressResolver.buildCaches([
+        collateral.address,
+        crosschainAddressResolver.address,
+      ]);
+
+      // Set up for CurrencyController
+      await currencyControllerProxy.supportCurrency(
         hexFILString,
         'Filecoin',
         461,
@@ -102,7 +127,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         7500,
         zeroAddress,
       );
-      await currencyController.updateCollateralSupport(hexFILString, true);
+      await currencyControllerProxy.updateCollateralSupport(hexFILString, true);
 
       vault = await ethers
         .getContractFactory('CollateralVault')
@@ -148,7 +173,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         .toString()
         .should.be.equal(aliceLockedTokens.toString());
 
-      aliceMaxWithdraw = await currencyController.convertToETH(
+      aliceMaxWithdraw = await currencyControllerProxy.convertToETH(
         hexFILString,
         aliceLockedTokens,
       );
@@ -218,7 +243,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
     it('Rebalance more collateral than deposited by Alice and Bob, expect no state changes', async () => {
       let rebalanceAmtAlice = aliceMaxWithdraw.div(toBN(10));
       let rebalanceAmtBob = decimalBase.mul(toBN('10'));
-      rebalanceAmtBob = await currencyController.convertToETH(
+      rebalanceAmtBob = await currencyControllerProxy.convertToETH(
         hexFILString,
         rebalanceAmtBob,
       );
@@ -248,7 +273,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
     it("Rebalance from Bob's position with Alice, expect no state changes as Bob deposited 0 tokens into position", async () => {
       let rebalanceAmtBob = decimalBase.mul(toBN('10'));
-      rebalanceAmtBob = await currencyController.convertToETH(
+      rebalanceAmtBob = await currencyControllerProxy.convertToETH(
         hexFILString,
         rebalanceAmtBob,
       );
@@ -276,7 +301,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
     it("Rebalance between Bob's position with Alice to Carol, expect no state changes", async () => {
       let rebalanceAmtBob = decimalBase.mul(toBN('10'));
-      rebalanceAmtBob = await currencyController.convertToETH(
+      rebalanceAmtBob = await currencyControllerProxy.convertToETH(
         hexFILString,
         rebalanceAmtBob,
       );
@@ -400,7 +425,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
     let carolLockedInPositionWithAlice;
 
     it('Liquidate all collateral from Alice to Carol, validate state changes', async () => {
-      let liquidationAmt = await currencyController.convertToETH(
+      let liquidationAmt = await currencyControllerProxy.convertToETH(
         hexFILString,
         aliceLockedInPositionWithCarol,
       );
@@ -429,7 +454,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       carolLockedInPositionWithAlice =
         carolLockedInPositionWithAlice.add(liquidationAmt);
 
-      liquidationAmt = await currencyController.convertToETH(
+      liquidationAmt = await currencyControllerProxy.convertToETH(
         hexFILString,
         liquidationAmt,
       );
@@ -452,7 +477,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
     it('Try to liquidate too much collateral from Carol to Alice, validate correct liquidation state changes', async () => {
       let liquidationAmt = decimalBase.mul(toBN('10000'));
-      liquidationAmt = await currencyController.convertToETH(
+      liquidationAmt = await currencyControllerProxy.convertToETH(
         hexFILString,
         liquidationAmt,
       );
@@ -539,7 +564,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
     it('Try to withdraw by Bob from empty collateral book, even with corrupted aggregator, expect revert', async () => {
       const [, , bobSigner] = await ethers.getSigners();
 
-      let bobMaxWithdraw = await currencyController.convertToETH(
+      let bobMaxWithdraw = await currencyControllerProxy.convertToETH(
         hexFILString,
         withdrawAmt,
       );
@@ -589,7 +614,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         .connect(bobSigner)
         ['deposit(address,uint256)'](carol, bobTokenBalance.toString());
 
-      let bobMaxWithdraw = await currencyController.convertToETH(
+      let bobMaxWithdraw = await currencyControllerProxy.convertToETH(
         hexFILString,
         bobTokenBalance.toString(),
       );

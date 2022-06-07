@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../ProtocolTypes.sol";
+import "../types/ProtocolTypes.sol";
 
 struct Order {
     bytes32 ccy;
