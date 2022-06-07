@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 interface ITermStructure {
     event TermAdded(uint256 numDays);
@@ -44,14 +43,14 @@ interface ITermStructure {
         uint256 _numDays,
         bytes4[] memory _products,
         bytes32[] memory _currencies
-    ) external returns (bool);
+    ) external;
 
     function updateTermSupport(
         uint256 _numDays,
         bytes4 _product,
         bytes32 _ccy,
         bool _isSupported
-    ) external returns (bool);
+    ) external;
 
     function getTermsForProductAndCcy(
         bytes4 _product,

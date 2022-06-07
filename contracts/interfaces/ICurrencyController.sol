@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 /**
  * @dev Currency Controller contract is responsible for managing supported
@@ -8,9 +7,6 @@ pragma experimental ABIEncoderV2;
  *
  * Contract links new currencies to ETH Chainlink price feeds, without existing price feed
  * contract owner is not able to add a new currency into the protocol
- *
- * Currency controller contract copies the logic of FXRatesAggregator contract, and
- * will replace that contract in connection with Collateral Aggregator
  */
 interface ICurrencyController {
     event CcyAdded(bytes32 indexed ccy, string name, uint16 chainId, uint256 haircut);
@@ -80,17 +76,17 @@ interface ICurrencyController {
         address _ethPriceFeed,
         uint256 _haircut,
         address _tokenAddress
-    ) external returns (bool);
+    ) external;
 
     function supportedCurrencies() external view returns (uint8);
 
-    function updateCcyHaircut(bytes32 _ccy, uint256 _haircut) external returns (bool);
+    function updateCcyHaircut(bytes32 _ccy, uint256 _haircut) external;
 
-    function updateCollateralSupport(bytes32 _ccy, bool _isSupported) external returns (bool);
+    function updateCollateralSupport(bytes32 _ccy, bool _isSupported) external;
 
-    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) external returns (bool);
+    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) external;
 
-    function updateMinMargin(bytes32 _ccy, uint256 _minMargin) external returns (bool);
+    function updateMinMargin(bytes32 _ccy, uint256 _minMargin) external;
 
     function usdDecimals(bytes32) external view returns (uint8);
 

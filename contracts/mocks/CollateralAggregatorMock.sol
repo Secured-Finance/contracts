@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../libraries/AddressPacking.sol";
 import "../interfaces/ICollateralVault.sol";
 import "../CollateralAggregatorV2.sol";
 
 contract CollateralAggregatorMock is CollateralAggregatorV2 {
-    using SafeMath for uint256;
-
     mapping(address => uint256) _maxWithdrawals;
     mapping(bytes32 => PositionWithdrawal) _maxPositionWithdrawals;
 

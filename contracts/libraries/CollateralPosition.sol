@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./AddressPacking.sol";
 
 library CollateralPosition {
-    using SafeMath for uint256;
-
     /**
      * @dev Position structure used for keeping track of collateral
      * amounts locked by counterparties in bilateral relations
@@ -66,9 +63,9 @@ library CollateralPosition {
         CollateralPosition.Position storage position = self[packedAddrs];
 
         if (!flipped) {
-            position.lockedCollateralA = position.lockedCollateralA.add(amount);
+            position.lockedCollateralA = position.lockedCollateralA + amount;
         } else {
-            position.lockedCollateralB = position.lockedCollateralB.add(amount);
+            position.lockedCollateralB = position.lockedCollateralB + amount;
         }
     }
 
@@ -91,8 +88,8 @@ library CollateralPosition {
     //     (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
     //     CollateralPosition.Position storage position = self[packedAddrs];
 
-    //     position.lockedCollateralA = flipped ? position.lockedCollateralA.add(amount1) : position.lockedCollateralA.add(amount0);
-    //     position.lockedCollateralB = flipped ? position.lockedCollateralB.add(amount0) : position.lockedCollateralB.add(amount1);
+    //     position.lockedCollateralA = flipped ? position.lockedCollateralA + amount1 : position.lockedCollateralA + amount0;
+    //     position.lockedCollateralB = flipped ? position.lockedCollateralB + amount0 : position.lockedCollateralB + amount1;
     // }
 
     /**
@@ -116,12 +113,12 @@ library CollateralPosition {
             maxWithdraw = position.lockedCollateralA >= amount
                 ? amount
                 : position.lockedCollateralA;
-            position.lockedCollateralA = position.lockedCollateralA.sub(maxWithdraw);
+            position.lockedCollateralA = position.lockedCollateralA - maxWithdraw;
         } else {
             maxWithdraw = position.lockedCollateralB >= amount
                 ? amount
                 : position.lockedCollateralB;
-            position.lockedCollateralB = position.lockedCollateralB.sub(maxWithdraw);
+            position.lockedCollateralB = position.lockedCollateralB - maxWithdraw;
         }
     }
 
@@ -143,8 +140,8 @@ library CollateralPosition {
     //     (bytes32 packedAddrs, bool flipped) = AddressPacking.pack(party0, party1);
     //     CollateralPosition.Position storage position = self[packedAddrs];
 
-    //     position.lockedCollateralA = flipped ? position.lockedCollateralA.sub(amount1) : position.lockedCollateralA.sub(amount0);
-    //     position.lockedCollateralB = flipped ? position.lockedCollateralB.sub(amount0) : position.lockedCollateralB.sub(amount1);
+    //     position.lockedCollateralA = flipped ? position.lockedCollateralA - amount1 : position.lockedCollateralA - amount0;
+    //     position.lockedCollateralB = flipped ? position.lockedCollateralB - amount0 : position.lockedCollateralB - amount1;
     // }
 
     /**
@@ -165,12 +162,12 @@ library CollateralPosition {
 
         if (!flipped) {
             liquidated = position.lockedCollateralA >= amount ? amount : position.lockedCollateralA;
-            position.lockedCollateralA = position.lockedCollateralA.sub(liquidated);
-            position.lockedCollateralB = position.lockedCollateralB.add(liquidated);
+            position.lockedCollateralA = position.lockedCollateralA - liquidated;
+            position.lockedCollateralB = position.lockedCollateralB + liquidated;
         } else {
             liquidated = position.lockedCollateralB >= amount ? amount : position.lockedCollateralB;
-            position.lockedCollateralB = position.lockedCollateralB.sub(liquidated);
-            position.lockedCollateralA = position.lockedCollateralA.add(liquidated);
+            position.lockedCollateralB = position.lockedCollateralB - liquidated;
+            position.lockedCollateralA = position.lockedCollateralA + liquidated;
         }
     }
 
@@ -195,19 +192,19 @@ library CollateralPosition {
 
         if (!flipped) {
             rebalanced = position.lockedCollateralA >= amount ? amount : position.lockedCollateralA;
-            position.lockedCollateralA = position.lockedCollateralA.sub(rebalanced);
+            position.lockedCollateralA = position.lockedCollateralA - rebalanced;
         } else {
             rebalanced = position.lockedCollateralB >= amount ? amount : position.lockedCollateralB;
-            position.lockedCollateralB = position.lockedCollateralB.sub(rebalanced);
+            position.lockedCollateralB = position.lockedCollateralB - rebalanced;
         }
 
         (packedAddr, flipped) = AddressPacking.pack(user, toParty);
         position = self[packedAddr];
 
         if (!flipped) {
-            position.lockedCollateralA = position.lockedCollateralA.add(rebalanced);
+            position.lockedCollateralA = position.lockedCollateralA + rebalanced;
         } else {
-            position.lockedCollateralB = position.lockedCollateralB.add(rebalanced);
+            position.lockedCollateralB = position.lockedCollateralB + rebalanced;
         }
     }
 

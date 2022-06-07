@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
 import "./ProtocolTypes.sol";
@@ -24,7 +22,6 @@ import "./mixins/MixinCollateralManagement.sol";
  * LendingMarkets, CurrencyController contracts and Liquidation Engine.
  */
 contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCollateralManagement {
-    using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.AddressSet;
     using NetPV for NetPV.CcyNetting;
@@ -113,7 +110,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         exposedUnsettledCurrencies[user].add(ccy);
         require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
 
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].add(amount);
+        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy] + amount;
 
         emit UseUnsettledCollateral(user, ccy, amount);
     }
@@ -345,7 +342,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         bytes32 ccy,
         uint256 amount
     ) external override onlyAcceptedContracts {
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy].sub(amount);
+        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy] - amount;
 
         if (unsettledCollateral[user][ccy] == 0) {
             exposedUnsettledCurrencies[user].remove(ccy);
@@ -443,7 +440,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         uint256 pv,
         bool isSettled
     ) external override onlyAcceptedContracts {
-        uint256 liquidationTarget = liquidationAmount.mul(LQLEVEL).div(BP);
+        uint256 liquidationTarget = (liquidationAmount * LQLEVEL) / BP;
         uint256 liqudationInETH = currencyController().convertToETH(ccy, liquidationTarget);
 
         require(
@@ -627,44 +624,42 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             vars.exchangeRate = uint256(currencyController().getLastETHPrice(vars.ccy));
             vars.netting = _convertPositionToETH(vars.netting, vars.exchangeRate);
 
-            vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH.add(
-                vars.netting.unsettled0PV
-            );
-            vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH.add(
-                vars.netting.unsettled1PV
-            );
+            vars.totalUnsettledPV0inETH = vars.totalUnsettledPV0inETH + vars.netting.unsettled0PV;
+            vars.totalUnsettledPV1inETH = vars.totalUnsettledPV1inETH + vars.netting.unsettled1PV;
 
             vars.haircutRatio = currencyController().getHaircut(vars.ccy);
 
-            vars.totalPV0inETH = vars.totalPV0inETH.add(vars.netting.party0PV);
-            vars.totalPV1inETH = vars.totalPV1inETH.add(vars.netting.party1PV);
-            vars.totalHaircutPV0 = vars.totalHaircutPV0.add(
-                vars.netting.party0PV.mul(vars.haircutRatio).div(BP)
-            );
-            vars.totalHaircutPV1 = vars.totalHaircutPV1.add(
-                vars.netting.party1PV.mul(vars.haircutRatio).div(BP)
-            );
+            vars.totalPV0inETH = vars.totalPV0inETH + vars.netting.party0PV;
+            vars.totalPV1inETH = vars.totalPV1inETH + vars.netting.party1PV;
+            vars.totalHaircutPV0 =
+                vars.totalHaircutPV0 +
+                (vars.netting.party0PV * vars.haircutRatio) /
+                BP;
+            vars.totalHaircutPV1 =
+                vars.totalHaircutPV1 +
+                (vars.netting.party1PV * vars.haircutRatio) /
+                BP;
         }
 
         vars.pvDiff0 = vars.totalPV0inETH >= vars.totalHaircutPV1
-            ? vars.totalPV0inETH.sub(vars.totalHaircutPV1)
+            ? vars.totalPV0inETH - vars.totalHaircutPV1
             : 0;
         vars.pvDiff1 = vars.totalPV1inETH >= vars.totalHaircutPV0
-            ? vars.totalPV1inETH.sub(vars.totalHaircutPV0)
+            ? vars.totalPV1inETH - vars.totalHaircutPV0
             : 0;
 
         (vars.netPV0, vars.netPV1) = vars.pvDiff0 > vars.pvDiff1
             ? (
-                vars.pvDiff0.sub(vars.pvDiff1).add(vars.totalUnsettledPV0inETH),
+                vars.pvDiff0 - vars.pvDiff1 + vars.totalUnsettledPV0inETH,
                 vars.totalUnsettledPV1inETH
             )
             : (
                 vars.totalUnsettledPV0inETH,
-                vars.pvDiff1.sub(vars.pvDiff0).add(vars.totalUnsettledPV1inETH)
+                vars.pvDiff1 - vars.pvDiff0 + vars.totalUnsettledPV1inETH
             );
 
-        vars.totalCombinedPV0inETH = vars.totalUnsettledPV0inETH.add(vars.totalPV0inETH);
-        vars.totalCombinedPV1inETH = vars.totalUnsettledPV1inETH.add(vars.totalPV1inETH);
+        vars.totalCombinedPV0inETH = vars.totalUnsettledPV0inETH + vars.totalPV0inETH;
+        vars.totalCombinedPV1inETH = vars.totalUnsettledPV1inETH + vars.totalPV1inETH;
 
         return (vars.netPV0, vars.netPV1, vars.totalCombinedPV0inETH, vars.totalCombinedPV1inETH);
     }
@@ -675,19 +670,19 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         returns (NetPV.CcyNetting memory)
     {
         if (netting.unsettled0PV > 0) {
-            netting.unsettled0PV = netting.unsettled0PV.mul(exchangeRate).div(1e18);
+            netting.unsettled0PV = (netting.unsettled0PV * exchangeRate) / 1e18;
         }
 
         if (netting.unsettled1PV > 0) {
-            netting.unsettled1PV = netting.unsettled1PV.mul(exchangeRate).div(1e18);
+            netting.unsettled1PV = (netting.unsettled1PV * exchangeRate) / 1e18;
         }
 
         if (netting.party0PV > 0) {
-            netting.party0PV = netting.party0PV.mul(exchangeRate).div(1e18);
+            netting.party0PV = (netting.party0PV * exchangeRate) / 1e18;
         }
 
         if (netting.party1PV > 0) {
-            netting.party1PV = netting.party1PV.mul(exchangeRate).div(1e18);
+            netting.party1PV = (netting.party1PV * exchangeRate) / 1e18;
         }
 
         return netting;
@@ -731,11 +726,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             _isSettled
         );
 
-        vars.minMarginReq0 = vars.total0.mul(MIN_COLLATERAL_RATIO).div(BP);
-        vars.minMarginReq1 = vars.total1.mul(MIN_COLLATERAL_RATIO).div(BP);
+        vars.minMarginReq0 = (vars.total0 * MIN_COLLATERAL_RATIO) / BP;
+        vars.minMarginReq1 = (vars.total1 * MIN_COLLATERAL_RATIO) / BP;
 
         if (vars.net0 > 0) {
-            vars.req0 = vars.minMarginReq0 > (vars.net0.mul(MARGINLEVEL)).div(BP)
+            vars.req0 = vars.minMarginReq0 > (vars.net0 * MARGINLEVEL) / BP
                 ? vars.minMarginReq0
                 : vars.net0;
         } else {
@@ -743,7 +738,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         }
 
         if (vars.net1 > 0) {
-            vars.req1 = vars.minMarginReq1 > (vars.net1.mul(MARGINLEVEL)).div(BP)
+            vars.req1 = vars.minMarginReq1 > (vars.net1 * MARGINLEVEL) / BP
                 ? vars.minMarginReq1
                 : vars.net1;
         } else {
@@ -795,11 +790,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         );
 
         if (vars.req0 > 0) {
-            vars.cover0 = (PCT.mul(vars.lockedCollateral0)).div(vars.req0);
+            vars.cover0 = (PCT * vars.lockedCollateral0) / vars.req0;
         }
 
         if (vars.req1 > 0) {
-            vars.cover1 = (PCT.mul(vars.lockedCollateral1)).div(vars.req1);
+            vars.cover1 = (PCT * vars.lockedCollateral1) / vars.req1;
         }
 
         return (vars.cover0, vars.cover1);
@@ -846,8 +841,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         );
 
         if (_safeRebalance) {
-            vars.targetReq0 = vars.targetReq0.mul(MARGINLEVEL).div(BP);
-            vars.targetReq1 = vars.targetReq1.mul(MARGINLEVEL).div(BP);
+            vars.targetReq0 = (vars.targetReq0 * MARGINLEVEL) / BP;
+            vars.targetReq1 = (vars.targetReq1 * MARGINLEVEL) / BP;
         }
 
         (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(
@@ -874,10 +869,10 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
     {
         if (_lockedCollateral > 0 && _targetReq > 0) {
             if (_lockedCollateral > _targetReq) {
-                amount = _lockedCollateral.sub(_targetReq);
+                amount = _lockedCollateral - _targetReq;
                 isWithdraw = true;
             } else {
-                amount = _targetReq.sub(_lockedCollateral);
+                amount = _targetReq - _lockedCollateral;
                 isWithdraw = false;
             }
         } else if (_lockedCollateral > 0 && _targetReq == 0) {
@@ -921,11 +916,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             vars.ccyExp = unsettledCollateral[_user][ccy];
 
             if (_ccy == ccy) {
-                vars.ccyExp = vars.ccyExp.add(_unsettledExp);
+                vars.ccyExp = vars.ccyExp + _unsettledExp;
             }
 
             vars.ccyExpInETH = currencyController().convertToETH(ccy, vars.ccyExp);
-            vars.totalExp = vars.totalExp.add(vars.ccyExpInETH);
+            vars.totalExp = vars.totalExp + vars.ccyExpInETH;
         }
 
         return vars.totalExp;
@@ -948,7 +943,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         vars.independentAmount = _totalIndependentCollateralInETH(_user);
 
         if (vars.totalExpInETH > 0) {
-            vars.coverage = (PCT.mul(vars.independentAmount)).div(vars.totalExpInETH);
+            vars.coverage = (PCT * vars.independentAmount) / vars.totalExpInETH;
         } else {
             return (0, vars.totalExpInETH);
         }
@@ -986,9 +981,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
 
         if (vars.coverage > MARGINLEVEL) {
             // TODO: discuss if it makes sense to decrease to 100%
-            vars.delta = vars.coverage.sub(MARGINLEVEL);
+            vars.delta = vars.coverage - MARGINLEVEL;
 
-            vars.maxWidthdraw = vars.independentAmount.mul(vars.delta).div(vars.coverage);
+            vars.maxWidthdraw = (vars.independentAmount * vars.delta) / vars.coverage;
         } else if (vars.totalExpInETH == 0) {
             return (vars.independentAmount, vars.totalExpInETH);
         } else {
@@ -1023,8 +1018,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             (vars.lockedCollateral0, vars.lockedCollateral1) = ICollateralVault(vaultAddr)
                 .getLockedCollateralInETH(_party0, _party1);
 
-            vars.totalCollateral0 = vars.totalCollateral0.add(vars.lockedCollateral0);
-            vars.totalCollateral1 = vars.totalCollateral1.add(vars.lockedCollateral1);
+            vars.totalCollateral0 = vars.totalCollateral0 + vars.lockedCollateral0;
+            vars.totalCollateral1 = vars.totalCollateral1 + vars.lockedCollateral1;
         }
 
         return (vars.totalCollateral0, vars.totalCollateral1);
@@ -1041,7 +1036,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             address vaultAddr = vaults.at(i);
             lockedCollateral = ICollateralVault(vaultAddr).getIndependentCollateralInETH(_party);
 
-            totalCollateral = totalCollateral.add(lockedCollateral);
+            totalCollateral = totalCollateral + lockedCollateral;
         }
 
         return totalCollateral;

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ProtocolTypes.sol";
 import "./interfaces/IProductWithOneLeg.sol";
@@ -19,8 +17,6 @@ import "./mixins/MixinAddressResolver.sol";
  * Contract linked to Lending Market contracts, LendingMarketController and Collateral contract.
  */
 contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Ownable {
-    using SafeMath for uint256;
-
     uint256 constant NOTICE = 2 weeks;
     uint256 constant SETTLE = 2 days;
     uint256 constant MAXPAYNUM = 6;
@@ -163,13 +159,13 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
         collateralAggregator().releaseUnsettledCollateral(
             lender,
             ccy,
-            notional.mul(MKTMAKELEVEL).div(PCT)
+            (notional * MKTMAKELEVEL) / PCT
         );
         collateralAggregator().useCollateral(
             lender,
             borrower,
             ccy,
-            notional.mul(MKTMAKELEVEL).div(PCT),
+            (notional * MKTMAKELEVEL) / PCT,
             notional,
             false
         );
@@ -182,7 +178,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
         deal.notional = notional;
         deal.rate = rate;
         deal.start = block.timestamp;
-        deal.end = block.timestamp.add(deal.term.mul(86400));
+        deal.end = block.timestamp + deal.term * 86400;
 
         loanId = _generateDealId();
         loans[loanId] = deal;
@@ -346,10 +342,10 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
                 deltaDays = BokkyPooBahsDateTimeLibrary.diffDays(payments[i - 1], block.timestamp);
             }
 
-            uint256 interestRatePerDay = deal.rate.mul(1e18).div(36500);
-            uint256 accuredInterestRate = interestRatePerDay.mul(deltaDays);
-            uint256 accuredInterest = deal.notional.mul(accuredInterestRate).div(1e20);
-            uint256 totalPayment = accuredInterest.add(deal.pv);
+            uint256 interestRatePerDay = (deal.rate * 1e18) / 36500;
+            uint256 accuredInterestRate = interestRatePerDay * deltaDays;
+            uint256 accuredInterest = (deal.notional * accuredInterestRate) / 1e20;
+            uint256 totalPayment = accuredInterest + deal.pv;
             collateralAggregator().liquidate(
                 deal.borrower,
                 deal.lender,
@@ -488,10 +484,10 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
             if (payments[i] < block.timestamp) continue;
             uint256 d = DiscountFactor.interpolateDF(dfs, terms, payments[i]);
 
-            pv = pv.add((amounts[i].mul(d)));
+            pv = pv + amounts[i] * d;
         }
 
-        return pv.div(BP);
+        return pv / BP;
     }
 
     /**
@@ -594,9 +590,9 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
         vars.daysArr = termStructure().getTermSchedule(deal.term, paymentFrequency);
         vars.dfFrac = termStructure().getDfFrac(deal.term);
 
-        vars.coupon = (deal.notional.mul(deal.rate).mul(vars.dfFrac)).div(BP).div(BP);
+        vars.coupon = (deal.notional * deal.rate * vars.dfFrac) / BP / BP;
 
-        uint256 len = vars.payNums.add(1);
+        uint256 len = vars.payNums + 1;
         uint256[] memory payments = new uint256[](len);
         uint256[] memory amounts = new uint256[](len);
         bool[] memory settlements = new bool[](len);
@@ -606,7 +602,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
 
             payments[i] = time;
             if (i == vars.payNums) {
-                amounts[i] = deal.notional.add(vars.coupon);
+                amounts[i] = deal.notional + vars.coupon;
             } else {
                 amounts[i] = vars.coupon;
             }
@@ -644,7 +640,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
                     deal.lender,
                     deal.borrower,
                     deal.ccy,
-                    deal.notional.mul(MKTMAKELEVEL).div(PCT),
+                    (deal.notional * MKTMAKELEVEL) / PCT,
                     0,
                     false
                 );

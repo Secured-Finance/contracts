@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./AddressPacking.sol";
 
 library CloseOut {
-    using SafeMath for uint256;
-
     /**
      * @dev Payment keeps track of net payment for close out netting
      * and an indicator if party's obligations are flipped
@@ -76,17 +73,17 @@ library CloseOut {
 
         if (closeOut.flipped) {
             if (vars.payment0 > closeOut.netPayment && vars.payment1 < vars.payment0) {
-                closeOut.netPayment = vars.payment0.sub(closeOut.netPayment.add(vars.payment1));
+                closeOut.netPayment = vars.payment0 - closeOut.netPayment - vars.payment1;
                 closeOut.flipped = false;
             } else {
-                closeOut.netPayment = closeOut.netPayment.add(vars.payment1).sub(vars.payment0);
+                closeOut.netPayment = closeOut.netPayment + vars.payment1 - vars.payment0;
             }
         } else {
             if (vars.payment1 > closeOut.netPayment && vars.payment0 < vars.payment1) {
-                closeOut.netPayment = vars.payment1.sub(closeOut.netPayment.add(vars.payment0));
+                closeOut.netPayment = vars.payment1 - closeOut.netPayment - vars.payment0;
                 closeOut.flipped = true;
             } else {
-                closeOut.netPayment = closeOut.netPayment.add(vars.payment0).sub(vars.payment1);
+                closeOut.netPayment = closeOut.netPayment + vars.payment0 - vars.payment1;
             }
         }
 
@@ -124,8 +121,8 @@ library CloseOut {
 
         CloseOut.Payment storage closeOut = self[vars.packedAddrs][ccy];
         uint256 paymentDelta = vars.payment0 > vars.payment1
-            ? vars.payment0.sub(vars.payment1)
-            : vars.payment1.sub(vars.payment0);
+            ? vars.payment0 - vars.payment1
+            : vars.payment1 - vars.payment0;
         bool substraction;
 
         if (closeOut.flipped) {
@@ -135,12 +132,12 @@ library CloseOut {
         }
 
         if (paymentDelta >= closeOut.netPayment && substraction) {
-            closeOut.netPayment = paymentDelta.sub(closeOut.netPayment);
+            closeOut.netPayment = paymentDelta - closeOut.netPayment;
             closeOut.flipped = !closeOut.flipped;
         } else {
             closeOut.netPayment = substraction
-                ? closeOut.netPayment.sub(paymentDelta)
-                : closeOut.netPayment.add(paymentDelta);
+                ? closeOut.netPayment - paymentDelta
+                : closeOut.netPayment + paymentDelta;
         }
 
         return closeOut.flipped;

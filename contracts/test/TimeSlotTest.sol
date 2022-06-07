@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../libraries/TimeSlot.sol";
 import "../libraries/AddressPacking.sol";
 
 contract TimeSlotTest {
     using TimeSlot for TimeSlot.Slot;
-    using SafeMath for uint256;
 
     mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) _timeSlots;
     bytes32 public ccy = "0xSampleCCY";
@@ -93,20 +90,20 @@ contract TimeSlotTest {
 
         if (flipped) {
             require(
-                timeSlot.totalPayment0 == totalPaymentBefore0.add(payment1),
+                timeSlot.totalPayment0 == totalPaymentBefore0 + payment1,
                 "PAYMENT1 CHANGED INCORRECTLY"
             );
             require(
-                timeSlot.totalPayment1 == totalPaymentBefore1.add(payment0),
+                timeSlot.totalPayment1 == totalPaymentBefore1 + payment0,
                 "PAYMENT0 CHANGED INCORRECTLY"
             );
         } else {
             require(
-                timeSlot.totalPayment0 == totalPaymentBefore0.add(payment0),
+                timeSlot.totalPayment0 == totalPaymentBefore0 + payment0,
                 "PAYMENT0 CHANGED INCORRECTLY"
             );
             require(
-                timeSlot.totalPayment1 == totalPaymentBefore1.add(payment1),
+                timeSlot.totalPayment1 == totalPaymentBefore1 + payment1,
                 "PAYMENT1 CHANGED INCORRECTLY"
             );
         }
@@ -132,20 +129,20 @@ contract TimeSlotTest {
 
         if (flipped) {
             require(
-                timeSlot.totalPayment0 == totalPaymentBefore0.sub(payment1),
+                timeSlot.totalPayment0 == totalPaymentBefore0 - payment1,
                 "PAYMENT1 REMOVED INCORRECTLY"
             );
             require(
-                timeSlot.totalPayment1 == totalPaymentBefore1.sub(payment0),
+                timeSlot.totalPayment1 == totalPaymentBefore1 - payment0,
                 "PAYMENT0 REMOVED INCORRECTLY"
             );
         } else {
             require(
-                timeSlot.totalPayment0 == totalPaymentBefore0.sub(payment0),
+                timeSlot.totalPayment0 == totalPaymentBefore0 - payment0,
                 "PAYMENT0 REMOVED INCORRECTLY"
             );
             require(
-                timeSlot.totalPayment1 == totalPaymentBefore1.sub(payment1),
+                timeSlot.totalPayment1 == totalPaymentBefore1 - payment1,
                 "PAYMENT1 REMOVED INCORRECTLY"
             );
         }

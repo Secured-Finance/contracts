@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/ILendingMarket.sol";
 import "./interfaces/ILoanV2.sol";
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
@@ -24,7 +22,6 @@ contract LendingMarket is
     ReentrancyGuard,
     Pausable
 {
-    using SafeMath for uint256;
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     bytes4 constant prefix = 0x21aaa47b;
@@ -103,9 +100,9 @@ contract LendingMarket is
     function getMidRate() public view override returns (uint256 rate) {
         uint256 borrowRate = getBorrowRate();
         uint256 lendRate = getLendRate();
-        uint256 combinedRate = borrowRate.add(lendRate);
+        uint256 combinedRate = borrowRate + lendRate;
 
-        return combinedRate.div(2);
+        return combinedRate / 2;
     }
 
     /**
@@ -128,12 +125,12 @@ contract LendingMarket is
             uint256
         )
     {
-        MarketOrder memory order = orders[orderId];
+        MarketOrder memory marketOrder = orders[orderId];
 
-        if (order.side == Side.LEND) {
-            return lendOrders.getOrderById(order.rate, orderId);
+        if (marketOrder.side == Side.LEND) {
+            return lendOrders.getOrderById(marketOrder.rate, orderId);
         } else {
-            return borrowOrders.getOrderById(order.rate, orderId);
+            return borrowOrders.getOrderById(marketOrder.rate, orderId);
         }
     }
 
@@ -160,20 +157,26 @@ contract LendingMarket is
     {
         _beforeMarketOrder();
 
-        MarketOrder memory order = orders[orderId];
-        if (order.side == Side.LEND) {
-            lendOrders.remove(order.amount, order.rate, orderId);
-        } else if (order.side == Side.BORROW) {
-            borrowOrders.remove(order.amount, order.rate, orderId);
+        MarketOrder memory marketOrder = orders[orderId];
+        if (marketOrder.side == Side.LEND) {
+            lendOrders.remove(marketOrder.amount, marketOrder.rate, orderId);
+        } else if (marketOrder.side == Side.BORROW) {
+            borrowOrders.remove(marketOrder.amount, marketOrder.rate, orderId);
         }
         delete orders[orderId];
 
         collateralAggregator().releaseUnsettledCollateral(
-            order.maker,
+            marketOrder.maker,
             MarketCcy,
-            order.amount.mul(MKTMAKELEVEL).div(PCT)
+            (marketOrder.amount * MKTMAKELEVEL) / PCT
         );
-        emit CancelOrder(orderId, order.maker, order.side, order.amount, order.rate);
+        emit CancelOrder(
+            orderId,
+            marketOrder.maker,
+            marketOrder.side,
+            marketOrder.amount,
+            marketOrder.rate
+        );
 
         success = true;
     }
@@ -189,38 +192,38 @@ contract LendingMarket is
         uint256 _amount,
         uint256 _rate
     ) internal returns (uint256 orderId) {
-        MarketOrder memory order;
+        MarketOrder memory marketOrder;
 
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
         _beforeMarketOrder();
 
-        order.side = _side;
-        order.amount = _amount;
-        order.rate = _rate;
-        order.maker = msg.sender;
+        marketOrder.side = _side;
+        marketOrder.amount = _amount;
+        marketOrder.rate = _rate;
+        marketOrder.maker = msg.sender;
         orderId = _next_id();
 
-        orders[orderId] = order;
+        orders[orderId] = marketOrder;
         collateralAggregator().useUnsettledCollateral(
             msg.sender,
             MarketCcy,
-            _amount.mul(MKTMAKELEVEL).div(PCT)
+            (_amount * MKTMAKELEVEL) / PCT
         );
-        if (order.side == Side.LEND) {
-            lendOrders.insert(order.amount, order.rate, orderId);
-        } else if (order.side == Side.BORROW) {
-            borrowOrders.insert(order.amount, order.rate, orderId);
+        if (marketOrder.side == Side.LEND) {
+            lendOrders.insert(marketOrder.amount, marketOrder.rate, orderId);
+        } else if (marketOrder.side == Side.BORROW) {
+            borrowOrders.insert(marketOrder.amount, marketOrder.rate, orderId);
         }
 
         emit MakeOrder(
             orderId,
-            order.maker,
-            order.side,
+            marketOrder.maker,
+            marketOrder.side,
             MarketCcy,
             MarketTerm,
-            order.amount,
-            order.rate
+            marketOrder.amount,
+            marketOrder.rate
         );
     }
 
@@ -237,33 +240,39 @@ contract LendingMarket is
         uint256 orderId,
         uint256 _amount
     ) internal returns (bool) {
-        MarketOrder memory order = orders[orderId];
-        require(_amount <= order.amount, "Insuficient amount");
-        require(order.maker != msg.sender, "Maker couldn't take its order");
+        MarketOrder memory marketOrder = orders[orderId];
+        require(_amount <= marketOrder.amount, "Insuficient amount");
+        require(marketOrder.maker != msg.sender, "Maker couldn't take its order");
         _beforeMarketOrder();
 
-        orders[orderId].amount = order.amount.sub(_amount);
-        if (order.side == Side.LEND) {
-            require(lendOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
-        } else if (order.side == Side.BORROW) {
-            require(borrowOrders.fillOrder(order.rate, orderId, _amount), "Couldn't fill order");
+        orders[orderId].amount = marketOrder.amount - _amount;
+        if (marketOrder.side == Side.LEND) {
+            require(
+                lendOrders.fillOrder(marketOrder.rate, orderId, _amount),
+                "Couldn't fill order"
+            );
+        } else if (marketOrder.side == Side.BORROW) {
+            require(
+                borrowOrders.fillOrder(marketOrder.rate, orderId, _amount),
+                "Couldn't fill order"
+            );
         }
 
         address productAddress = productAddressResolver().getProductContract(prefix);
 
         ILoanV2(productAddress).register(
-            order.maker,
+            marketOrder.maker,
             msg.sender,
-            uint8(order.side),
+            uint8(marketOrder.side),
             MarketCcy,
             MarketTerm,
             _amount,
-            order.rate
+            marketOrder.rate
         );
 
-        emit TakeOrder(orderId, msg.sender, side, _amount, order.rate);
+        emit TakeOrder(orderId, msg.sender, side, _amount, marketOrder.rate);
 
-        if (order.amount == 0) {
+        if (marketOrder.amount == 0) {
             delete orders[orderId];
         }
 

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./libraries/CloseOut.sol";
 import "./interfaces/ICloseOutNetting.sol";
@@ -16,7 +14,6 @@ import "./mixins/MixinAddressResolver.sol";
  * Contract linked to all product based contracts (ex. Loan, Swap, etc), and Collateral Aggregator contract.
  */
 contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
-    using SafeMath for uint256;
     using Address for address;
     using CloseOut for CloseOut.Payment;
 

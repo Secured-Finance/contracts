@@ -8,7 +8,7 @@ const ERC20Mock = artifacts.require('ERC20Mock');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const WETH9Mock = artifacts.require('WETH9Mock');
 
-const { toBytes32, hexFILString, zeroAddress, nonZeroAddress } =
+const { toBytes32, hexFILString, zeroAddress, overflowErrorMsg } =
   require('../test-utils').strings;
 const { ZERO_BN, decimalBase, toBN } = require('../test-utils').numbers;
 const { checkTokenBalances } = require('../test-utils').balances;
@@ -547,7 +547,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
       await expectRevert(
         vault.connect(bobSigner)['withdraw(uint256)'](withdrawAmt.toString()),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 

@@ -19,7 +19,7 @@ const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { secondTxHash } = require('../test-utils/src/strings');
+const { secondTxHash, overflowErrorMsg } = require('../test-utils').strings;
 const {
   toBytes32,
   hexFILString,
@@ -685,7 +685,7 @@ contract('PaymentAggregator', async (accounts) => {
           [total],
           [0],
         ),
-        'SafeMath: subtraction overflow',
+        overflowErrorMsg,
       );
     });
 

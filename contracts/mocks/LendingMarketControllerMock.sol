@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ILendingMarketController.sol";
 import "../ProtocolTypes.sol";
 import "../libraries/DiscountFactor.sol";
 
 contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes, Ownable {
-    using SafeMath for uint256;
-
     uint256 public override numberOfMarkets = 0;
 
     mapping(bytes32 => mapping(uint256 => uint256)) public lendRates;
@@ -67,9 +63,9 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes,
         for (uint8 i = 0; i < terms.length; i++) {
             uint256 borrowRate = borrowRates[_ccy][i];
             uint256 lendRate = lendRates[_ccy][i];
-            uint256 combinedRate = borrowRate.add(lendRate);
+            uint256 combinedRate = borrowRate + lendRate;
 
-            rates[i] = combinedRate.div(2);
+            rates[i] = combinedRate / 2;
         }
 
         return rates;

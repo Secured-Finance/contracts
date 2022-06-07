@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
 contract BytesConversion {
     function getBytes32(string memory _product) external view returns (bytes32) {
@@ -36,7 +35,7 @@ contract BytesConversion {
     }
 
     function getMaxValue() public view returns (uint224 value) {
-        value = uint224(-1);
+        value = type(uint224).max - 1;
     }
 
     function getPrefix(bytes32 id) public view returns (bytes4 prefix) {

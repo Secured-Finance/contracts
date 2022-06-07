@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/math/SignedSafeMath.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICurrencyController.sol";
 
@@ -15,9 +13,6 @@ import "./interfaces/ICurrencyController.sol";
  * contract owner is not able to add a new currency into the protocol
  */
 contract CurrencyController is ICurrencyController, Ownable {
-    using SignedSafeMath for int256;
-    using SafeMath for uint256;
-
     uint8 public override last_ccy_index;
 
     struct Currency {
@@ -67,7 +62,7 @@ contract CurrencyController is ICurrencyController, Ownable {
         address _ethPriceFeed,
         uint256 _haircut,
         address _tokenAddress
-    ) public override onlyOwner returns (bool) {
+    ) public override onlyOwner {
         last_ccy_index = last_ccy_index++;
 
         Currency memory currency;
@@ -98,12 +93,7 @@ contract CurrencyController is ICurrencyController, Ownable {
      * @param _ccy Currency short ticket
      * @param _isSupported Boolean whether currency supported as collateral or not
      */
-    function updateCurrencySupport(bytes32 _ccy, bool _isSupported)
-        public
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) public override onlyOwner {
         Currency storage currency = currencies[_ccy];
         currency.isSupported = _isSupported;
 
@@ -120,7 +110,6 @@ contract CurrencyController is ICurrencyController, Ownable {
         override
         onlyOwner
         supportedCcyOnly(_ccy)
-        returns (bool)
     {
         isCollateral[_ccy] = _isSupported;
 
@@ -137,7 +126,6 @@ contract CurrencyController is ICurrencyController, Ownable {
         override
         onlyOwner
         supportedCcyOnly(_ccy)
-        returns (bool)
     {
         require(_haircut > 0, "Incorrect haircut ratio");
         require(_haircut <= 10000, "Haircut ratio overflow");
@@ -157,7 +145,6 @@ contract CurrencyController is ICurrencyController, Ownable {
         override
         onlyOwner
         supportedCcyOnly(_ccy)
-        returns (bool)
     {
         require(_minMargin > 0, "Incorrect MinMargin");
         require(_minMargin <= 10000, "MinMargin overflow");
@@ -346,7 +333,7 @@ contract CurrencyController is ICurrencyController, Ownable {
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        return _amount.mul(uint256(price)).div(1e18);
+        return (_amount * uint256(price)) / 1e18;
     }
 
     /**
@@ -370,7 +357,7 @@ contract CurrencyController is ICurrencyController, Ownable {
             uint256 amount = _amounts[i];
 
             if (amount > 0) {
-                amounts[i] = amount.mul(uint256(price)).div(1e18);
+                amounts[i] = (amount * uint256(price)) / 1e18;
             } else {
                 amounts[i] = 0;
             }
@@ -395,7 +382,7 @@ contract CurrencyController is ICurrencyController, Ownable {
         AggregatorV3Interface priceFeed = ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        return (_amountETH.mul(1e18)).div(uint256(price)); // add decimals checks
+        return (_amountETH * 1e18) / uint256(price); // add decimals checks
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ICollateralVault.sol";
 import "./libraries/SafeTransfer.sol";
@@ -23,7 +22,6 @@ import "./mixins/MixinAddressResolver.sol";
  *
  */
 contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, SafeTransfer {
-    using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using CollateralPosition for CollateralPosition.Position;
 
@@ -90,7 +88,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         _depositAssets(tokenAddress, msg.sender, address(this), _amount);
 
         Book storage book = books[msg.sender];
-        book.independentAmount = book.independentAmount.add(_amount);
+        book.independentAmount = book.independentAmount + _amount;
 
         _afterTransfer();
 
@@ -109,7 +107,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         CollateralPosition.deposit(_positions, msg.sender, _counterparty, _amount);
 
         Book storage book = books[msg.sender];
-        book.lockedCollateral = book.lockedCollateral.add(_amount);
+        book.lockedCollateral = book.lockedCollateral + _amount;
 
         _afterTransfer(_counterparty);
 
@@ -141,7 +139,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
     ) external override onlyAcceptedContracts returns (uint256) {
         RebalanceLocalVars memory vars;
         vars.exchangeRate = currencyController().getLastETHPrice(ccy);
-        vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
+        vars.target = (_amountETH * 1e18) / uint256(vars.exchangeRate);
 
         Book storage book = books[_user];
         vars.rebalanceAmount = book.independentAmount >= vars.target
@@ -149,8 +147,8 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
             : book.independentAmount;
 
         if (vars.rebalanceAmount > 0) {
-            book.independentAmount = book.independentAmount.sub(vars.rebalanceAmount);
-            book.lockedCollateral = book.lockedCollateral.add(vars.rebalanceAmount);
+            book.independentAmount = book.independentAmount - vars.rebalanceAmount;
+            book.lockedCollateral = book.lockedCollateral + vars.rebalanceAmount;
 
             CollateralPosition.deposit(_positions, _user, _counterparty, vars.rebalanceAmount);
             _afterTransfer(_user, _counterparty);
@@ -158,9 +156,9 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
             emit RebalanceTo(_user, _counterparty, vars.rebalanceAmount);
         }
 
-        vars.left = vars.target.sub(vars.rebalanceAmount);
+        vars.left = vars.target - vars.rebalanceAmount;
 
-        return vars.left.mul(uint256(vars.exchangeRate)).div(1e18);
+        return (vars.left * uint256(vars.exchangeRate)) / 1e18;
     }
 
     /**
@@ -182,7 +180,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         RebalanceLocalVars memory vars;
 
         vars.exchangeRate = currencyController().getLastETHPrice(ccy);
-        vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
+        vars.target = (_amountETH * 1e18) / uint256(vars.exchangeRate);
         vars.rebalanceAmount = CollateralPosition.withdraw(
             _positions,
             _user,
@@ -192,17 +190,17 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
 
         if (vars.rebalanceAmount > 0) {
             Book storage book = books[_user];
-            book.lockedCollateral = book.lockedCollateral.sub(vars.rebalanceAmount);
-            book.independentAmount = book.independentAmount.add(vars.rebalanceAmount);
+            book.lockedCollateral = book.lockedCollateral - vars.rebalanceAmount;
+            book.independentAmount = book.independentAmount + vars.rebalanceAmount;
 
             _afterTransfer(_user, _counterparty);
 
             emit RebalanceFrom(_user, _counterparty, vars.rebalanceAmount);
         }
 
-        vars.left = vars.target.sub(vars.rebalanceAmount);
+        vars.left = vars.target - vars.rebalanceAmount;
 
-        return vars.left.mul(uint256(vars.exchangeRate)).div(1e18);
+        return (vars.left * uint256(vars.exchangeRate)) / 1e18;
     }
 
     /**
@@ -226,7 +224,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         RebalanceLocalVars memory vars;
 
         vars.exchangeRate = currencyController().getLastETHPrice(ccy);
-        vars.target = _amountETH.mul(1e18).div(uint256(vars.exchangeRate));
+        vars.target = (_amountETH * 1e18) / uint256(vars.exchangeRate);
         vars.rebalanceAmount = CollateralPosition.rebalance(
             _positions,
             _user,
@@ -234,14 +232,14 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
             _toParty,
             vars.target
         );
-        vars.left = vars.target.sub(vars.rebalanceAmount);
+        vars.left = vars.target - vars.rebalanceAmount;
 
         _afterTransfer(_user, _fromParty);
         _afterTransfer(_user, _toParty);
 
         emit RebalanceBetween(_user, _fromParty, _toParty, vars.rebalanceAmount);
 
-        return vars.left.mul(uint256(vars.exchangeRate)).div(1e18);
+        return (vars.left * uint256(vars.exchangeRate)) / 1e18;
     }
 
     /**
@@ -261,7 +259,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         uint256 _amountETH
     ) external override onlyAcceptedContracts returns (uint256 liquidationLeftETH) {
         int256 exchangeRate = currencyController().getLastETHPrice(ccy);
-        uint256 liquidationTarget = _amountETH.mul(1e18).div(uint256(exchangeRate));
+        uint256 liquidationTarget = (_amountETH * 1e18) / uint256(exchangeRate);
         uint256 liquidated = CollateralPosition.liquidate(
             _positions,
             _from,
@@ -270,17 +268,17 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         );
 
         Book storage book = books[_from];
-        book.lockedCollateral = book.lockedCollateral.sub(liquidated);
+        book.lockedCollateral = book.lockedCollateral - liquidated;
 
         book = books[_to];
-        book.lockedCollateral = book.lockedCollateral.add(liquidated);
+        book.lockedCollateral = book.lockedCollateral + liquidated;
 
         if (liquidated > 0) {
             _afterTransfer(_from, _to);
             emit Liquidate(_from, _to, liquidated);
         }
 
-        uint256 liquidationLeft = liquidationTarget.sub(liquidated);
+        uint256 liquidationLeft = liquidationTarget - liquidated;
 
         if (liquidationLeft > 0) {
             uint256 independentLiquidation = _tryLiquidateIndependentCollateral(
@@ -288,10 +286,10 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
                 _to,
                 liquidationLeft
             );
-            liquidationLeft = liquidationLeft.sub(independentLiquidation);
+            liquidationLeft = liquidationLeft - independentLiquidation;
         }
 
-        liquidationLeftETH = liquidationLeft.mul(uint256(exchangeRate)).div(1e18);
+        liquidationLeftETH = (liquidationLeft * uint256(exchangeRate)) / 1e18;
     }
 
     function _tryLiquidateIndependentCollateral(
@@ -305,10 +303,10 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         liquidated = _amount > maxLiquidation ? maxLiquidation : _amount;
 
         Book storage book = books[_from];
-        book.independentAmount = book.independentAmount.sub(liquidated);
+        book.independentAmount = book.independentAmount - liquidated;
 
         book = books[_to];
-        book.lockedCollateral = book.lockedCollateral.add(liquidated);
+        book.lockedCollateral = book.lockedCollateral + liquidated;
 
         CollateralPosition.deposit(_positions, _to, _from, liquidated);
 
@@ -329,7 +327,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         uint256 withdrawAmt = _amount > maxWidthdraw ? maxWidthdraw : _amount;
 
         Book storage book = books[user];
-        book.independentAmount = book.independentAmount.sub(withdrawAmt);
+        book.independentAmount = book.independentAmount - withdrawAmt;
 
         _withdrawAssets(tokenAddress, msg.sender, withdrawAmt);
         _afterTransfer();
@@ -367,7 +365,7 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         );
 
         Book storage book = books[user];
-        book.lockedCollateral = book.lockedCollateral.sub(withdrawn);
+        book.lockedCollateral = book.lockedCollateral - withdrawn;
 
         _withdrawAssets(tokenAddress, msg.sender, withdrawn);
         _afterTransfer(_counterparty);

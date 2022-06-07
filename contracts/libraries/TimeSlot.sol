@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
 import "./BokkyPooBahsDateTimeLibrary.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./AddressPacking.sol";
 
 library TimeSlot {
     using BokkyPooBahsDateTimeLibrary for uint256;
-    using SafeMath for uint256;
 
     /**
      * @dev Slot keeps track of total payments to be settled per one day
@@ -170,10 +168,10 @@ library TimeSlot {
         }
 
         if (totalPayment1 > totalPayment0) {
-            netPayment = totalPayment1.sub(totalPayment0);
+            netPayment = totalPayment1 - totalPayment0;
             flipped = true;
         } else {
-            netPayment = totalPayment0.sub(totalPayment1);
+            netPayment = totalPayment0 - totalPayment1;
             flipped = false;
         }
 
@@ -211,11 +209,11 @@ library TimeSlot {
         require(!timeSlot.isSettled, "TIMESLOT SETTLED ALREADY");
 
         timeSlot.totalPayment0 = flipped
-            ? timeSlot.totalPayment0.add(payment1)
-            : timeSlot.totalPayment0.add(payment0);
+            ? timeSlot.totalPayment0 + payment1
+            : timeSlot.totalPayment0 + payment0;
         timeSlot.totalPayment1 = flipped
-            ? timeSlot.totalPayment1.add(payment0)
-            : timeSlot.totalPayment1.add(payment1);
+            ? timeSlot.totalPayment1 + payment0
+            : timeSlot.totalPayment1 + payment1;
     }
 
     /**
@@ -242,11 +240,11 @@ library TimeSlot {
         if (timeSlot.isSettled) return;
 
         timeSlot.totalPayment0 = flipped
-            ? timeSlot.totalPayment0.sub(payment1)
-            : timeSlot.totalPayment0.sub(payment0);
+            ? timeSlot.totalPayment0 - payment1
+            : timeSlot.totalPayment0 - payment0;
         timeSlot.totalPayment1 = flipped
-            ? timeSlot.totalPayment1.sub(payment0)
-            : timeSlot.totalPayment1.sub(payment1);
+            ? timeSlot.totalPayment1 - payment0
+            : timeSlot.totalPayment1 - payment1;
     }
 
     /**
@@ -278,16 +276,16 @@ library TimeSlot {
                 timeSlot.totalPayment1 > timeSlot.totalPayment0,
                 "Incorrect verification party"
             );
-            netPayment = timeSlot.totalPayment1.sub(timeSlot.totalPayment0);
+            netPayment = timeSlot.totalPayment1 - timeSlot.totalPayment0;
         } else {
             require(
                 timeSlot.totalPayment0 > timeSlot.totalPayment1,
                 "Incorrect verification party"
             );
-            netPayment = timeSlot.totalPayment0.sub(timeSlot.totalPayment1);
+            netPayment = timeSlot.totalPayment0 - timeSlot.totalPayment1;
         }
 
-        timeSlot.paidAmount = timeSlot.paidAmount.add(payment);
+        timeSlot.paidAmount = timeSlot.paidAmount + payment;
         require(timeSlot.paidAmount <= netPayment, "Payment overflow");
 
         TimeSlot.PaymentConfirmation memory confirmation;
@@ -295,7 +293,7 @@ library TimeSlot {
         confirmation.verificationParty = sender;
         timeSlot.confirmations[settlementId] = confirmation;
 
-        if (netPayment.sub(timeSlot.paidAmount) == 0) {
+        if (netPayment - timeSlot.paidAmount == 0) {
             timeSlot.isSettled = true;
         }
     }

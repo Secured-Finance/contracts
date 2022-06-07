@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-
-import "@openzeppelin/contracts/math/SafeMath.sol";
+pragma solidity ^0.8.9;
 
 library HitchensOrderStatisticsTreeLib {
-    using SafeMath for uint256;
     uint256 private constant EMPTY = 0;
 
     struct Node {
@@ -495,7 +492,7 @@ library HitchensOrderStatisticsTreeLib {
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[orderId];
-        uint256 newAmount = order.amount.sub(_amount);
+        uint256 newAmount = order.amount - _amount;
         gn.orders[orderId].amount = newAmount;
 
         if (gn.orders[orderId].amount == 0) {
@@ -538,7 +535,7 @@ library HitchensOrderStatisticsTreeLib {
         Node storage gn = self.nodes[value];
 
         OrderItem memory order = gn.orders[orderId];
-        uint256 newAmount = order.amount.add(_amount);
+        uint256 newAmount = order.amount + _amount;
         gn.orders[orderId].amount = newAmount;
 
         if (gn.orders[gn.head].amount < newAmount) {

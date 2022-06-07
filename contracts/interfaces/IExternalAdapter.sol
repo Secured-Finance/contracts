@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
 interface IExternalAdapter {
     function createRequest(string memory _txHash) external returns (bytes32 requestId);

@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.9;
 
 import "../libraries/CollateralPosition.sol";
 
 contract CollateralPositionTest {
-    using SafeMath for uint256;
-
     mapping(bytes32 => CollateralPosition.Position) private _positions;
 
     function get(address party0, address party1) public view returns (uint256, uint256) {
@@ -31,7 +29,7 @@ contract CollateralPositionTest {
         (uint256 lockedCollateralAfterDepositor, ) = get(depositor, counterparty);
 
         require(
-            lockedCollateralAfterDepositor == lockedCollateralBeforeDepositor.add(amount),
+            lockedCollateralAfterDepositor == lockedCollateralBeforeDepositor + amount,
             "INCORRECT_DEPOSIT_ADDITION"
         );
     }
@@ -51,7 +49,7 @@ contract CollateralPositionTest {
             ? amount
             : lockedCollateralBeforeUser;
         require(
-            lockedCollateralAfterUser == lockedCollateralBeforeUser.sub(withdrawn),
+            lockedCollateralAfterUser == lockedCollateralBeforeUser - withdrawn,
             "INCORRECT_WITHDRAW_SUBSTRACTION"
         );
     }
@@ -72,11 +70,11 @@ contract CollateralPositionTest {
             : lockedCollateralBeforeFrom;
 
         require(
-            lockedCollateralAfterFrom == lockedCollateralBeforeFrom.sub(liquidated),
+            lockedCollateralAfterFrom == lockedCollateralBeforeFrom - liquidated,
             "INCORRECT_LIQUIDATION_SUBSTRACTION"
         );
         require(
-            lockedCollateralAfterTo == lockedCollateralBeforeTo.add(liquidated),
+            lockedCollateralAfterTo == lockedCollateralBeforeTo + liquidated,
             "INCORRECT_LIQUIDATION_ADDITION"
         );
     }
@@ -100,12 +98,12 @@ contract CollateralPositionTest {
             : lockedCollateralBeforeUser0;
 
         require(
-            lockedCollateralAfterUser0 == lockedCollateralBeforeUser0.sub(rebalanced),
+            lockedCollateralAfterUser0 == lockedCollateralBeforeUser0 - rebalanced,
             "INCORRECT_REBALANCE_SUBSTRACTION"
         );
 
         require(
-            lockedCollateralAfterUser1 == lockedCollateralBeforeUser1.add(rebalanced),
+            lockedCollateralAfterUser1 == lockedCollateralBeforeUser1 + rebalanced,
             "INCORRECT_REBALANCE_ADDITION"
         );
     }

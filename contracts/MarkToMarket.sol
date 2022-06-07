@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ProtocolTypes.sol";
 import "./interfaces/IMarketController.sol";
 import "./interfaces/IMarkToMarket.sol";
@@ -10,8 +8,6 @@ import "./interfaces/IProduct.sol";
 import "./mixins/MixinAddressResolver.sol";
 
 contract MarkToMarket is IMarkToMarket, MixinAddressResolver {
-    using SafeMath for uint256;
-
     uint256 constant NOTICE = 2 weeks;
 
     /**
