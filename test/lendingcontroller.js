@@ -1,4 +1,3 @@
-const CollateralAggregator = artifacts.require('CollateralAggregator');
 const LendingMarket = artifacts.require('LendingMarket');
 
 const { should } = require('chai');
@@ -6,7 +5,8 @@ const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 should();
 
-const { hexFILString, loanPrefix } = require('../test-utils').strings;
+const { hexFILString, loanPrefix, hexETHString } =
+  require('../test-utils').strings;
 const { termDays, sortedTermDays } = require('../test-utils').terms;
 const { Deployment } = require('../test-utils').deployment;
 const { orders } = require('./orders');
@@ -14,37 +14,41 @@ const { orders } = require('./orders');
 contract('LendingMarketController', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
-  let currencyController;
   let collateralAggregator;
   let loan;
   let lendingMarketController;
   let lendingMarkets = [];
   let orderList;
   let termStructure;
+  let ethVault;
 
   before('deploy LendingMarketController', async () => {
-    collateralAggregator = await CollateralAggregator.new();
-
     const deployment = new Deployment();
-    // TODO: Need to update to V2
-    deployment.mock('CollateralAggregator').useValue(collateralAggregator);
     ({
+      addressResolver,
       dealIdLibrary,
       closeOutNetting,
+      collateralAggregator,
       currencyController,
       crosschainAddressResolver,
       termStructure,
       settlementEngine,
       lendingMarketController,
       loan,
+      wETHToken,
     } = await deployment.execute());
 
-    await collateralAggregator.setCurrencyController(
-      currencyController.address,
-      {
-        from: owner,
-      },
-    );
+    ethVault = await ethers
+      .getContractFactory('CollateralVault')
+      .then((factory) =>
+        factory.deploy(
+          addressResolver.address,
+          hexETHString,
+          wETHToken.address,
+          wETHToken.address,
+        ),
+      );
+    await collateralAggregator.linkCollateralVault(ethVault.address);
 
     orderList = orders;
 
@@ -59,11 +63,21 @@ contract('LendingMarketController', async (accounts) => {
 
   describe('Init Collateral with 100,000 Wei for Bob', async () => {
     it('Register collateral book with 100,000 Wei payment', async () => {
+      const [, , bobSigner] = await ethers.getSigners();
+      let collateral = web3.utils.toBN('1000000').toString();
       let result = await collateralAggregator.register({
         from: bob,
-        value: 100000,
       });
+      await (
+        await ethVault.connect(bobSigner)['deposit(uint256)'](collateral, {
+          value: collateral,
+        })
+      ).wait();
+
       expectEvent(result, 'Register');
+
+      let independentCollateral = await ethVault.getIndependentCollateral(bob);
+      independentCollateral.toString().should.be.equal(collateral);
     });
   });
 

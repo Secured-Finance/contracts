@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./libraries/TimeSlot.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import "./interfaces/IPaymentAggregator.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
 import {PaymentAggregatorStorage as Storage} from "./storages/PaymentAggregatorStorage.sol";
 
 /**
@@ -18,7 +18,7 @@ import {PaymentAggregatorStorage as Storage} from "./storages/PaymentAggregatorS
  *
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
-contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Initializable {
+contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     uint256 public constant SETTLEMENT_WINDOW = 2;
@@ -32,7 +32,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Initiali
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address resolver) public initializer {
+    function initialize(address resolver) public initializer onlyProxy {
         registerAddressResolver(resolver);
     }
 

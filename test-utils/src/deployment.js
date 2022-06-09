@@ -25,7 +25,7 @@ const {
 } = require('./strings');
 const { btcToETHRate, ethToUSDRate, filToETHRate } = require('./numbers');
 
-const deployContracts = async (mockCallbacks) => {
+const deployContracts = async (mockCallbacks, mockContractNames) => {
   // Deploy libraries
   const DealId = await ethers.getContractFactory('DealId');
   const dealIdLibrary = await DealId.deploy();
@@ -52,31 +52,41 @@ const deployContracts = async (mockCallbacks) => {
   // Deploy contracts
   const addressResolver =
     instances['AddressResolver'] || (await AddressResolver.new());
-  const closeOutNetting = await CloseOutNetting.new();
-  const collateralAggregator = await CollateralAggregatorV2.new();
-  const crosschainAddressResolver = await CrosschainAddressResolver.new();
-  const currencyController = await CurrencyController.new();
-  const liquidations = await Liquidations.new();
-  const markToMarket = await MarkToMarket.new();
-  const paymentAggregator = await PaymentAggregator.new();
+  const closeOutNetting =
+    instances['CloseOutNetting'] || (await CloseOutNetting.new());
+  const collateralAggregator =
+    instances['CollateralAggregator'] || (await CollateralAggregatorV2.new());
+  const crosschainAddressResolver =
+    instances['CrosschainAddressResolver'] ||
+    (await CrosschainAddressResolver.new());
+  const currencyController =
+    instances['CurrencyController'] || (await CurrencyController.new());
+  const liquidations = instances['Liquidations'] || (await Liquidations.new());
+  const markToMarket = instances['MarkToMarket'] || (await MarkToMarket.new());
+  const paymentAggregator =
+    instances['PaymentAggregator'] || (await PaymentAggregator.new());
 
   const wETHToken = await WETH9Mock.new();
 
-  const productAddressResolver = await ethers
-    .getContractFactory('ProductAddressResolver', {
-      libraries: {
-        DealId: dealIdLibrary.address,
-      },
-    })
-    .then((factory) => factory.deploy());
+  const productAddressResolver =
+    instances['ProductAddressResolver'] ||
+    (await ethers
+      .getContractFactory('ProductAddressResolver', {
+        libraries: {
+          DealId: dealIdLibrary.address,
+        },
+      })
+      .then((factory) => factory.deploy()));
 
-  const termStructure = await ethers
-    .getContractFactory('TermStructure', {
-      libraries: {
-        QuickSort: quickSortLibrary.address,
-      },
-    })
-    .then((factory) => factory.deploy());
+  const termStructure =
+    instances['TermStructure'] ||
+    (await ethers
+      .getContractFactory('TermStructure', {
+        libraries: {
+          QuickSort: quickSortLibrary.address,
+        },
+      })
+      .then((factory) => factory.deploy()));
   const loan =
     instances['Loan'] ||
     (await ethers
@@ -88,18 +98,22 @@ const deployContracts = async (mockCallbacks) => {
       })
       .then((factory) => factory.deploy(addressResolver.address)));
 
-  const settlementEngine = await ethers
-    .getContractFactory('SettlementEngine')
-    .then((factory) => factory.deploy());
+  const settlementEngine =
+    instances['SettlementEngine'] ||
+    (await ethers
+      .getContractFactory('SettlementEngine')
+      .then((factory) => factory.deploy()));
 
-  const lendingMarketController = await ethers
-    .getContractFactory('LendingMarketController', {
-      libraries: {
-        QuickSort: quickSortLibrary.address,
-        DiscountFactor: discountFactorLibrary.address,
-      },
-    })
-    .then((factory) => factory.deploy());
+  const lendingMarketController =
+    instances['LendingMarketController'] ||
+    (await ethers
+      .getContractFactory('LendingMarketController', {
+        libraries: {
+          QuickSort: quickSortLibrary.address,
+          DiscountFactor: discountFactorLibrary.address,
+        },
+      })
+      .then((factory) => factory.deploy()));
 
   const proxyController = await ProxyController.new(addressResolver.address);
   const migrationAddressResolver = await MigrationAddressResolver.new(
@@ -131,75 +145,70 @@ const deployContracts = async (mockCallbacks) => {
   await proxyController.setTermStructureImpl(termStructure.address);
 
   // Get the Proxy contract addresses
-  const closeOutNettingProxy =
-    instances['CloseOutNetting'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('CloseOutNetting'))
-      .then((address) => CloseOutNetting.at(address)));
+  const closeOutNettingProxy = await proxyController
+    .getProxyAddress(toBytes32('CloseOutNetting'))
+    .then((address) => CloseOutNetting.at(address));
 
-  const collateralAggregatorProxy =
-    instances['CollateralAggregator'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('CollateralAggregator'))
-      .then((address) => CollateralAggregatorV2.at(address)));
+  const collateralAggregatorProxy = await proxyController
+    .getProxyAddress(toBytes32('CollateralAggregator'))
+    .then((address) => CollateralAggregatorV2.at(address));
 
-  const crosschainAddressResolverProxy =
-    instances['CrosschainAddressResolver'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('CrosschainAddressResolver'))
-      .then((address) => CrosschainAddressResolver.at(address)));
+  const crosschainAddressResolverProxy = await proxyController
+    .getProxyAddress(toBytes32('CrosschainAddressResolver'))
+    .then((address) => CrosschainAddressResolver.at(address));
 
-  const currencyControllerProxy =
-    instances['CurrencyController'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('CurrencyController'))
-      .then((address) => CurrencyController.at(address)));
+  const currencyControllerProxy = await proxyController
+    .getProxyAddress(toBytes32('CurrencyController'))
+    .then((address) => CurrencyController.at(address));
 
-  const lendingMarketControllerProxy =
-    instances['LendingMarketController'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('LendingMarketController'))
-      .then((address) =>
-        ethers.getContractAt('LendingMarketController', address),
-      ));
+  const lendingMarketControllerProxy = await proxyController
+    .getProxyAddress(toBytes32('LendingMarketController'))
+    .then((address) =>
+      ethers.getContractAt(
+        mockContractNames['LendingMarketController'] ||
+          'LendingMarketController',
+        address,
+      ),
+    );
 
-  const liquidationsProxy =
-    instances['Liquidations'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('Liquidations'))
-      .then((address) => Liquidations.at(address)));
+  const liquidationsProxy = await proxyController
+    .getProxyAddress(toBytes32('Liquidations'))
+    .then((address) => Liquidations.at(address));
 
-  const markToMarketProxy =
-    instances['MarkToMarket'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('MarkToMarket'))
-      .then((address) => MarkToMarket.at(address)));
+  const markToMarketProxy = await proxyController
+    .getProxyAddress(toBytes32('MarkToMarket'))
+    .then((address) => MarkToMarket.at(address));
 
-  const paymentAggregatorProxy =
-    instances['PaymentAggregator'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('PaymentAggregator'))
-      .then((address) => PaymentAggregator.at(address)));
+  const paymentAggregatorProxy = await proxyController
+    .getProxyAddress(toBytes32('PaymentAggregator'))
+    .then((address) => PaymentAggregator.at(address));
 
-  const productAddressResolverProxy =
-    instances['ProductAddressResolver'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('ProductAddressResolver'))
-      .then((address) =>
-        ethers.getContractAt('ProductAddressResolver', address),
-      ));
+  const productAddressResolverProxy = await proxyController
+    .getProxyAddress(toBytes32('ProductAddressResolver'))
+    .then((address) =>
+      ethers.getContractAt(
+        mockContractNames['ProductAddressResolver'] || 'ProductAddressResolver',
+        address,
+      ),
+    );
 
-  const settlementEngineProxy =
-    instances['SettlementEngine'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('SettlementEngine'))
-      .then((address) => ethers.getContractAt('SettlementEngine', address)));
+  const settlementEngineProxy = await proxyController
+    .getProxyAddress(toBytes32('SettlementEngine'))
+    .then((address) =>
+      ethers.getContractAt(
+        mockContractNames['SettlementEngine'] || 'SettlementEngine',
+        address,
+      ),
+    );
 
-  const termStructureProxy =
-    instances['TermStructure'] ||
-    (await proxyController
-      .getProxyAddress(toBytes32('TermStructure'))
-      .then((address) => ethers.getContractAt('TermStructure', address)));
+  const termStructureProxy = await proxyController
+    .getProxyAddress(toBytes32('TermStructure'))
+    .then((address) =>
+      ethers.getContractAt(
+        mockContractNames['TermStructure'] || 'TermStructure',
+        address,
+      ),
+    );
 
   // Set up for CurrencyController
   const btcToETHPriceFeed = await MockV3Aggregator.new(
@@ -324,6 +333,7 @@ const deployContracts = async (mockCallbacks) => {
 
 class Deployment {
   #mockCallbacks = {};
+  #mockContractNames = {};
 
   mock(name) {
     return {
@@ -346,13 +356,14 @@ class Deployment {
             .then((factory) => factory.deploy(...args));
         };
         this.#mockCallbacks[name] = newCallback;
+        this.#mockContractNames[name] = key;
       };
       return { deploy };
     };
   }
 
   execute() {
-    return deployContracts(this.#mockCallbacks);
+    return deployContracts(this.#mockCallbacks, this.#mockContractNames);
   }
 }
 

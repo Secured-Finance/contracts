@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/IMarketController.sol";
 import "./interfaces/IMarkToMarket.sol";
 import "./interfaces/IProduct.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
 
-contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Initializable {
+contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Proxyable {
     uint256 constant NOTICE = 2 weeks;
 
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address resolver) public initializer {
+    function initialize(address resolver) public initializer onlyProxy {
         registerAddressResolver(resolver);
     }
 

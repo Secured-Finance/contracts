@@ -146,7 +146,6 @@ contract('ProxyController', (accounts) => {
       );
 
       const haircut1 = await currencyControllerProxy1.getHaircut(hexBTCString);
-      console.log('haircut1.toString()', haircut1.toString());
       haircut1.toString().should.be.equal(HAIRCUT.toString());
 
       // update (second time)
@@ -163,8 +162,18 @@ contract('ProxyController', (accounts) => {
       );
 
       const haircut2 = await currencyControllerProxy2.getHaircut(hexBTCString);
-      console.log('haircut2.toString()', haircut2.toString());
       haircut2.toString().should.be.equal(HAIRCUT.toString());
+    });
+
+    it('Fail to call a CurrencyController contract with direct access', async () => {
+      const currencyController = await CurrencyController.new(
+        addressResolver.address,
+      );
+
+      expectRevert(
+        currencyController.initialize(owner),
+        'Must be called from UpgradeabilityProxy',
+      );
     });
   });
 });

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IProductAddressResolver.sol";
 import "./libraries/DealId.sol";
 import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
 import {ProductAddressResolverStorage as Storage} from "./storages/ProductAddressResolverStorage.sol";
 
 /**
@@ -13,7 +13,7 @@ import {ProductAddressResolverStorage as Storage} from "./storages/ProductAddres
  * type supported on the protocol. Addresses stored per bytes4 prefixes which
  * are a simple identifiers of the product type
  */
-contract ProductAddressResolver is IProductAddressResolver, Ownable, Initializable {
+contract ProductAddressResolver is IProductAddressResolver, Ownable, Proxyable {
     using Address for address;
 
     /**
@@ -28,7 +28,7 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable, Initializab
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address owner) public initializer {
+    function initialize(address owner) public initializer onlyProxy {
         _transferOwnership(owner);
     }
 

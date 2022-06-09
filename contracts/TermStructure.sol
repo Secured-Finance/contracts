@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/ITermStructure.sol";
 import "./libraries/QuickSort.sol";
 import "./libraries/TermSchedule.sol";
 import "./mixins/MixinAddressResolver.sol";
 import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
 import {TermStructureStorage as Storage} from "./storages/TermStructureStorage.sol";
 
 /**
@@ -15,7 +15,7 @@ import {TermStructureStorage as Storage} from "./storages/TermStructureStorage.s
  * terms in Secured Finance Protocol per product and currency
  *
  */
-contract TermStructure is ITermStructure, MixinAddressResolver, Ownable, Initializable {
+contract TermStructure is ITermStructure, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.UintSet;
     using QuickSort for uint256[];
 
@@ -28,7 +28,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable, Initial
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address owner, address resolver) public initializer {
+    function initialize(address owner, address resolver) public initializer onlyProxy {
         _transferOwnership(owner);
         registerAddressResolver(resolver);
     }

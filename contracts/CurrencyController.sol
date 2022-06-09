@@ -2,9 +2,9 @@
 pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/ICurrencyController.sol";
 import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
 import {CurrencyControllerStorage as Storage} from "./storages/CurrencyControllerStorage.sol";
 
 /**
@@ -14,7 +14,7 @@ import {CurrencyControllerStorage as Storage} from "./storages/CurrencyControlle
  * Contract links new currencies to ETH Chainlink price feeds, without existing price feed
  * contract owner is not able to add a new currency into the protocol
  */
-contract CurrencyController is ICurrencyController, Ownable, Initializable {
+contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     modifier supportedCcyOnly(bytes32 _ccy) {
         require(isSupportedCcy(_ccy), "Unsupported asset");
         _;
@@ -24,7 +24,7 @@ contract CurrencyController is ICurrencyController, Ownable, Initializable {
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address owner) public initializer {
+    function initialize(address owner) public initializer onlyProxy {
         _transferOwnership(owner);
     }
 

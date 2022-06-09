@@ -1,21 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/ICrosschainAddressResolver.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
 import {CrosschainAddressResolverStorage as Storage} from "./storages/CrosschainAddressResolverStorage.sol";
 
-contract CrosschainAddressResolver is
-    ICrosschainAddressResolver,
-    MixinAddressResolver,
-    Initializable
-{
+contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressResolver, Proxyable {
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address resolver) public initializer {
+    function initialize(address resolver) public initializer onlyProxy {
         registerAddressResolver(resolver);
     }
 

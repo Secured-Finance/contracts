@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./libraries/QuickSort.sol";
 import "./libraries/DiscountFactor.sol";
 import "./LendingMarket.sol";
@@ -9,6 +8,7 @@ import "./interfaces/ILendingMarketController.sol";
 import "./interfaces/ILendingMarket.sol";
 import "./mixins/MixinAddressResolver.sol";
 import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
@@ -22,7 +22,7 @@ contract LendingMarketController is
     ILendingMarketController,
     MixinAddressResolver,
     Ownable,
-    Initializable
+    Proxyable
 {
     using QuickSort for uint256[];
     bytes4 constant prefix = 0x21aaa47b;
@@ -31,7 +31,7 @@ contract LendingMarketController is
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address owner, address resolver) public initializer {
+    function initialize(address owner, address resolver) public initializer onlyProxy {
         _transferOwnership(owner);
         registerAddressResolver(resolver);
     }

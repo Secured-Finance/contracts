@@ -3,10 +3,10 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../interfaces/ICollateralVault.sol";
 import "../interfaces/IMixinCollateralManagement.sol";
 import "../utils/Ownable.sol";
+import "../utils/Proxyable.sol";
 import {CollateralAggregatorStorage as Storage} from "../storages/CollateralAggregatorStorage.sol";
 import "./MixinAddressResolver.sol";
 
@@ -26,7 +26,7 @@ contract MixinCollateralManagement is
     IMixinCollateralManagement,
     MixinAddressResolver,
     Ownable,
-    Initializable
+    Proxyable
 {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -55,7 +55,7 @@ contract MixinCollateralManagement is
         uint256 autoLiquidationThresholdRate,
         uint256 liquidationPriceRate,
         uint256 minCollateralRate
-    ) public initializer {
+    ) public initializer onlyProxy {
         _transferOwnership(owner);
         registerAddressResolver(resolver);
         _updateMarginCallThresholdRate(marginCallThresholdRate);

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./libraries/Strings.sol";
 import "./libraries/SafeTransfer.sol";
@@ -10,6 +9,7 @@ import "./interfaces/ISettlementEngine.sol";
 import "./interfaces/IExternalAdapterTxResponse.sol";
 import "./mixins/MixinAddressResolver.sol";
 import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
 import "./types/ProtocolTypes.sol";
 import {SettlementEngineStorage as Storage} from "./storages/SettlementEngineStorage.sol";
 
@@ -27,7 +27,7 @@ contract SettlementEngine is
     MixinAddressResolver,
     SafeTransfer,
     Ownable,
-    Initializable
+    Proxyable
 {
     using Address for address;
     using Strings for string;
@@ -42,7 +42,7 @@ contract SettlementEngine is
         address owner,
         address resolver,
         address WETH9
-    ) public initializer {
+    ) public initializer onlyProxy {
         _transferOwnership(owner);
         _registerToken(WETH9);
         registerAddressResolver(resolver);

@@ -15,7 +15,6 @@ contract('TermStructure', async (accounts) => {
   const [owner, alice] = accounts;
 
   let termStructure;
-  let productAddressResolver;
   let lendingMarketController;
 
   const generateId = (value, prefix) => {
@@ -44,7 +43,7 @@ contract('TermStructure', async (accounts) => {
       .useFactory('TermStructureTest', (instances) => ({
         QuickSort: instances.quickSortLibrary.address,
       }))
-      .deploy(addressResolver.address);
+      .deploy();
 
     ({
       currencyController,

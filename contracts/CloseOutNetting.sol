@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./libraries/CloseOut.sol";
 import "./interfaces/ICloseOutNetting.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
 import {CloseOutNettingStorage as Storage} from "./storages/CloseOutNettingStorage.sol";
 
 /**
@@ -15,7 +15,7 @@ import {CloseOutNettingStorage as Storage} from "./storages/CloseOutNettingStora
  *
  * Contract linked to all product based contracts (ex. Loan, Swap, etc), and Collateral Aggregator contract.
  */
-contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Initializable {
+contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Proxyable {
     /**
      * @dev Modifier to make a function callable only by defaulted counterparty.
      */
@@ -36,7 +36,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Initializabl
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(address resolver) public initializer {
+    function initialize(address resolver) public initializer onlyProxy {
         registerAddressResolver(resolver);
     }
 

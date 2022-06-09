@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./libraries/AddressPacking.sol";
 import "./interfaces/IProduct.sol";
 import "./interfaces/ILiquidations.sol";
 import "./mixins/MixinAddressResolver.sol";
 import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
 import {LiquidationsStorage as Storage} from "./storages/LiquidationsStorage.sol";
 
-contract Liquidations is ILiquidations, MixinAddressResolver, Ownable, Initializable {
+contract Liquidations is ILiquidations, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -30,7 +30,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable, Initializ
         address owner,
         address resolver,
         uint256 offset
-    ) public initializer {
+    ) public initializer onlyProxy {
         _transferOwnership(owner);
         registerAddressResolver(resolver);
         Storage.slot().liquidationAgents.add(owner);
