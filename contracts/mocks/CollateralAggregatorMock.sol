@@ -14,7 +14,7 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         uint256 withdraw1;
     }
 
-    constructor(address _resolver) CollateralAggregatorV2(_resolver) {
+    constructor(address _resolver) {
         initialize(msg.sender, _resolver, 15000, 12500, 12000, 2500);
     }
 

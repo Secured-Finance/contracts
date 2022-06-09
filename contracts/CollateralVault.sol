@@ -59,7 +59,9 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         bytes32 _ccy,
         address _tokenAddress,
         address _WETH9
-    ) MixinAddressResolver(_resolver) SafeTransfer(_WETH9) {
+    ) {
+        registerAddressResolver(_resolver);
+        _registerToken(_WETH9);
         tokenAddress = _tokenAddress;
         ccy = _ccy;
 

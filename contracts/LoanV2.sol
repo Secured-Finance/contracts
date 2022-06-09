@@ -78,7 +78,9 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable {
      * @dev Contract constructor function.
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
+    constructor(address _resolver) {
+        registerAddressResolver(_resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](4);

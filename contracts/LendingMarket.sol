@@ -39,7 +39,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, ReentrancyGuard,
         address _resolver,
         bytes32 _ccy,
         uint256 _term
-    ) MixinAddressResolver(_resolver) {
+    ) {
+        registerAddressResolver(_resolver);
         MarketCcy = _ccy;
         MarketTerm = _term;
         buildCache();

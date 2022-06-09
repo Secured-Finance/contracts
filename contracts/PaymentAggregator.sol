@@ -29,12 +29,6 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Initiali
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     */
-    constructor(address _resolver) MixinAddressResolver(_resolver) {}
-
-    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */

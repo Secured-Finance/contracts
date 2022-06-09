@@ -23,16 +23,6 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable, Initializ
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     * @param _offset The liquidation offset
-     */
-    constructor(address _resolver, uint256 _offset) MixinAddressResolver(_resolver) Ownable() {
-        Storage.slot().liquidationAgents.add(msg.sender);
-        Storage.slot().offset = _offset;
-    }
-
-    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */

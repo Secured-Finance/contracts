@@ -52,19 +52,13 @@ const deployContracts = async (mockCallbacks) => {
   // Deploy contracts
   const addressResolver =
     instances['AddressResolver'] || (await AddressResolver.new());
-  const closeOutNetting = await CloseOutNetting.new(addressResolver.address);
-  const collateralAggregator = await CollateralAggregatorV2.new(
-    addressResolver.address,
-  );
-  const crosschainAddressResolver = await CrosschainAddressResolver.new(
-    addressResolver.address,
-  );
+  const closeOutNetting = await CloseOutNetting.new();
+  const collateralAggregator = await CollateralAggregatorV2.new();
+  const crosschainAddressResolver = await CrosschainAddressResolver.new();
   const currencyController = await CurrencyController.new();
-  const liquidations = await Liquidations.new(addressResolver.address, 10);
-  const markToMarket = await MarkToMarket.new(addressResolver.address);
-  const paymentAggregator = await PaymentAggregator.new(
-    addressResolver.address,
-  );
+  const liquidations = await Liquidations.new();
+  const markToMarket = await MarkToMarket.new();
+  const paymentAggregator = await PaymentAggregator.new();
 
   const wETHToken = await WETH9Mock.new();
 
@@ -82,7 +76,7 @@ const deployContracts = async (mockCallbacks) => {
         QuickSort: quickSortLibrary.address,
       },
     })
-    .then((factory) => factory.deploy(addressResolver.address));
+    .then((factory) => factory.deploy());
   const loan =
     instances['Loan'] ||
     (await ethers
@@ -96,9 +90,7 @@ const deployContracts = async (mockCallbacks) => {
 
   const settlementEngine = await ethers
     .getContractFactory('SettlementEngine')
-    .then((factory) =>
-      factory.deploy(addressResolver.address, wETHToken.address),
-    );
+    .then((factory) => factory.deploy());
 
   const lendingMarketController = await ethers
     .getContractFactory('LendingMarketController', {
@@ -107,7 +99,7 @@ const deployContracts = async (mockCallbacks) => {
         DiscountFactor: discountFactorLibrary.address,
       },
     })
-    .then((factory) => factory.deploy(addressResolver.address));
+    .then((factory) => factory.deploy());
 
   const proxyController = await ProxyController.new(addressResolver.address);
   const migrationAddressResolver = await MigrationAddressResolver.new(

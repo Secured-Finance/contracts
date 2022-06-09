@@ -43,12 +43,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         _;
     }
 
-    /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     */
-    constructor(address _resolver) MixinCollateralManagement(_resolver) {}
-
     // =========== COLLATERAL BOOK SECTION ===========
 
     /**

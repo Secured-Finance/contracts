@@ -28,14 +28,6 @@ contract MixinAddressResolver {
     }
 
     /**
-     * @dev Constructor.
-     * @param _resolver The address of the Address Resolver contract
-     */
-    constructor(address _resolver) {
-        registerAddressResolver(_resolver);
-    }
-
-    /**
      * @dev Returns required contract names in this contract
      */
     function requiredContracts() public pure virtual returns (bytes32[] memory contracts) {}
@@ -80,6 +72,7 @@ contract MixinAddressResolver {
      * @param _resolver The address of the Address Resolver contract
      */
     function registerAddressResolver(address _resolver) internal {
+        require(address(resolver) == address(0), "resolver registered already");
         resolver = IAddressResolver(_resolver);
     }
 

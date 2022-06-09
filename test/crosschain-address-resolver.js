@@ -16,9 +16,7 @@ contract('CrossChainAddressResolver test', async (accounts) => {
     const crosschainResolverFactory = await ethers.getContractFactory(
       'CrosschainAddressResolver',
     );
-    const crosschainResolver = await crosschainResolverFactory.deploy(
-      addressResolver.address,
-    );
+    const crosschainResolver = await crosschainResolverFactory.deploy();
 
     // Set up for Proxies
     const proxyController = await ProxyController.new(addressResolver.address);

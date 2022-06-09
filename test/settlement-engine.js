@@ -15,6 +15,7 @@ const BokkyPooBahsDateTimeContract = artifacts.require(
 );
 const TimeSlotTest = artifacts.require('TimeSlotTest');
 const MarkToMarketMock = artifacts.require('MarkToMarketMock');
+const ProxyController = artifacts.require('ProxyController');
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
@@ -62,7 +63,7 @@ contract('SettlementEngine', async (accounts) => {
   let linkToken;
   let oracleOperator;
   let timeLibrary;
-  let paymentAggregator;
+  let paymentAggregatorProxy;
   let paymentAggregatorMock;
   let timeSlotTest;
   let crosschainAddressResolver;
@@ -91,15 +92,23 @@ contract('SettlementEngine', async (accounts) => {
     carolSigner = signers[3];
 
     const addressResolver = await AddressResolver.new();
-    paymentAggregator = await PaymentAggregator.new(addressResolver.address);
-    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
-      paymentAggregator.address,
-    );
+    const paymentAggregator = await PaymentAggregator.new();
     const markToMarketMock = await MarkToMarketMock.new();
+    const proxyController = await ProxyController.new(addressResolver.address);
+
+    // Set up for the Proxy
+    await proxyController.setPaymentAggregatorImpl(paymentAggregator.address);
+    paymentAggregatorProxy = await proxyController
+      .getProxyAddress(toBytes32('PaymentAggregator'))
+      .then((address) => PaymentAggregator.at(address));
+
+    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
+      paymentAggregatorProxy.address,
+    );
 
     const deployment = new Deployment();
     deployment.mock('AddressResolver').useValue(addressResolver);
-    deployment.mock('PaymentAggregator').useValue(paymentAggregator);
+    deployment.mock('PaymentAggregator').useValue(paymentAggregatorProxy);
     deployment.mock('MarkToMarket').useValue(markToMarketMock);
     deployment.mock('Loan').useValue(paymentAggregatorMock);
     ({ currencyController, settlementEngine, crosschainAddressResolver } =
@@ -215,7 +224,7 @@ contract('SettlementEngine', async (accounts) => {
         [0],
       );
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         alice,
         bob,
         hexFILString,
@@ -352,7 +361,7 @@ contract('SettlementEngine', async (accounts) => {
         testTxHash,
       );
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         alice,
         bob,
         hexFILString,
@@ -441,7 +450,7 @@ contract('SettlementEngine', async (accounts) => {
         secondTxHash,
       );
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         alice,
         bob,
         hexFILString,
@@ -503,7 +512,7 @@ contract('SettlementEngine', async (accounts) => {
         [0],
       );
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         bob,
         alice,
         hexUSDCString,
@@ -569,7 +578,7 @@ contract('SettlementEngine', async (accounts) => {
         .toString()
         .should.be.equal('0');
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         bob,
         alice,
         hexUSDCString,
@@ -627,7 +636,7 @@ contract('SettlementEngine', async (accounts) => {
         .toString()
         .should.be.equal('0');
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         bob,
         alice,
         hexUSDCString,
@@ -688,7 +697,7 @@ contract('SettlementEngine', async (accounts) => {
         [0],
       );
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         bob,
         alice,
         hexETHString,
@@ -798,7 +807,7 @@ contract('SettlementEngine', async (accounts) => {
       );
       engineBalance.toString().should.be.equal('0');
 
-      const timeSlot = await paymentAggregator.getTimeSlotBySlotId(
+      const timeSlot = await paymentAggregatorProxy.getTimeSlotBySlotId(
         bob,
         alice,
         hexETHString,

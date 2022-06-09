@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "../TermStructure.sol";
 
 contract TermStructureTest is TermStructure {
-    constructor(address _resolver) TermStructure(_resolver) {
+    constructor(address _resolver) {
         initialize(msg.sender, _resolver);
     }
 

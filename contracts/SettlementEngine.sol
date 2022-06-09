@@ -35,17 +35,6 @@ contract SettlementEngine is
     uint16 private constant VERSION = 1;
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     * @param _WETH9 The address of the Wrapped ETH contract
-     */
-    constructor(address _resolver, address _WETH9)
-        MixinAddressResolver(_resolver)
-        SafeTransfer(_WETH9)
-        Ownable()
-    {}
-
-    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */

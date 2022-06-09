@@ -40,7 +40,8 @@ contract ChainlinkSettlementAdapter is
         uint256 _requestFee,
         address _link,
         bytes32 _ccy
-    ) MixinAddressResolver(_resolver) Ownable() {
+    ) {
+        registerAddressResolver(_resolver);
         setChainlinkOracle(_oracle);
         jobId = _jobId;
         ccy = _ccy;

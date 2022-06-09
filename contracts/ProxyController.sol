@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/IAddressResolver.sol";
 import "./interfaces/IProxyController.sol";
 import "./libraries/Contracts.sol";
-import "./mixins/MixinAddressResolver.sol";
 import "./utils/UpgradeabilityProxy.sol";
 
 contract ProxyController is IProxyController, Ownable {
