@@ -15,7 +15,7 @@ interface IProxyController {
         address oldImplementationAddress
     );
 
-    function registeredProxies() external view returns (address[] memory);
+    function getRegisteredProxies() external view returns (address[] memory);
 
-    function registeredContractNames() external view returns (bytes32[] memory);
+    function getRegisteredContractNames() external view returns (bytes32[] memory);
 }

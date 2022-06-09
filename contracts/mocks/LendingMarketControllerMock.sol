@@ -6,8 +6,6 @@ import "../interfaces/ILendingMarketController.sol";
 import "../libraries/DiscountFactor.sol";
 
 contract LendingMarketControllerMock is ILendingMarketController, Ownable {
-    uint256 public override numberOfMarkets = 0;
-
     mapping(bytes32 => mapping(uint256 => uint256)) public lendRates;
     mapping(bytes32 => mapping(uint256 => uint256)) public borrowRates;
     mapping(bytes32 => uint256[]) public supportedTerms;
@@ -114,7 +112,7 @@ contract LendingMarketControllerMock is ILendingMarketController, Ownable {
         return address(0);
     }
 
-    function lendingMarkets(bytes32 _ccy, uint256 _term) public pure override returns (address) {
+    function getLendingMarket(bytes32 _ccy, uint256 _term) public pure override returns (address) {
         _ccy;
         _term;
         return address(0);

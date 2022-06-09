@@ -26,8 +26,8 @@ contract AddressResolver is IAddressResolver, Ownable {
 
     function importProxyAddresses(address _proxyController) external onlyOwner {
         IProxyController proxyController = IProxyController(_proxyController);
-        bytes32[] memory contractNames = proxyController.registeredContractNames();
-        address[] memory proxies = proxyController.registeredProxies();
+        bytes32[] memory contractNames = proxyController.getRegisteredContractNames();
+        address[] memory proxies = proxyController.getRegisteredProxies();
 
         importAddresses(contractNames, proxies);
     }

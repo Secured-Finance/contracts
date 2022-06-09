@@ -4,9 +4,14 @@ pragma solidity ^0.8.9;
 import "../interfaces/IWETH9.sol";
 
 abstract contract SafeTransfer {
-    address public immutable WETH9;
+    address public WETH9;
 
     constructor(address _WETH9) {
+        WETH9 = _WETH9;
+    }
+
+    function _registerToken(address _WETH9) internal {
+        require(WETH9 == address(0), "WETH9 registered already");
         WETH9 = _WETH9;
     }
 

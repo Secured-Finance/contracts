@@ -4,6 +4,10 @@ pragma solidity ^0.8.9;
 import "../ProductAddressResolver.sol";
 
 contract ProductAddressResolverTest is ProductAddressResolver {
+    constructor() {
+        initialize(msg.sender);
+    }
+
     function getGasCostOfGetProductContract(bytes4 _prefix) external view returns (uint256) {
         uint256 gasBefore = gasleft();
         getProductContract(_prefix);

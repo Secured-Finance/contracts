@@ -33,7 +33,7 @@ contract('ProxyController', (accounts) => {
       );
 
       const currencyControllerProxyAddress =
-        await proxyController.getCurrencyControllerAddress();
+        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
 
       currencyControllerProxyAddress
         .toString()
@@ -63,7 +63,7 @@ contract('ProxyController', (accounts) => {
         currencyController1.address,
       );
       const currencyControllerProxyAddress1 =
-        await proxyController.getCurrencyControllerAddress();
+        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
 
       await addressResolver.importAddresses(
         [toBytes32('CurrencyController')],
@@ -78,7 +78,7 @@ contract('ProxyController', (accounts) => {
         currencyController2.address,
       );
       const currencyControllerProxyAddress2 =
-        await proxyController.getCurrencyControllerAddress();
+        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
 
       currencyControllerProxyAddress1
         .toString()
@@ -96,9 +96,9 @@ contract('ProxyController', (accounts) => {
         currencyController.address,
       );
 
-      const registeredProxies = await proxyController.registeredProxies();
+      const registeredProxies = await proxyController.getRegisteredProxies();
       const registeredContractNames =
-        await proxyController.registeredContractNames();
+        await proxyController.getRegisteredContractNames();
 
       registeredProxies.should.have.lengthOf(1);
       registeredContractNames.should.have.lengthOf(1);
@@ -120,7 +120,7 @@ contract('ProxyController', (accounts) => {
         currencyController1.address,
       );
       const currencyControllerProxyAddress1 =
-        await proxyController.getCurrencyControllerAddress();
+        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
       const currencyControllerProxy1 = await CurrencyController.at(
         currencyControllerProxyAddress1,
       );
@@ -157,7 +157,7 @@ contract('ProxyController', (accounts) => {
         currencyController2.address,
       );
       const currencyControllerProxyAddress2 =
-        await proxyController.getCurrencyControllerAddress();
+        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
       const currencyControllerProxy2 = await CurrencyController.at(
         currencyControllerProxyAddress2,
       );

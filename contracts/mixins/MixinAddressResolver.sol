@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../AddressResolver.sol";
 import "../libraries/Contracts.sol";
+import "../interfaces/IAddressResolver.sol";
 import "../interfaces/ICloseOutNetting.sol";
 import "../interfaces/ICollateralAggregatorV2.sol";
 import "../interfaces/ICrosschainAddressResolver.sol";
@@ -18,7 +18,7 @@ import "../interfaces/ITermStructure.sol";
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
 
-    AddressResolver public resolver;
+    IAddressResolver public resolver;
 
     mapping(bytes32 => address) private addressCache;
 
@@ -32,7 +32,7 @@ contract MixinAddressResolver {
      * @param _resolver The address of the Address Resolver contract
      */
     constructor(address _resolver) {
-        resolver = AddressResolver(_resolver);
+        registerAddressResolver(_resolver);
     }
 
     /**
@@ -73,6 +73,14 @@ contract MixinAddressResolver {
         }
 
         return true;
+    }
+
+    /**
+     * @dev Register the Address Resolver contract
+     * @param _resolver The address of the Address Resolver contract
+     */
+    function registerAddressResolver(address _resolver) internal {
+        resolver = IAddressResolver(_resolver);
     }
 
     function getAddress(bytes32 name) internal view returns (address) {

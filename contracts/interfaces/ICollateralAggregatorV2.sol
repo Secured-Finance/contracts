@@ -184,4 +184,6 @@ interface ICollateralAggregator {
     function getUsedVaults(address user) external view returns (address[] memory);
 
     function getUsedVaults(address party0, address party1) external view returns (address[] memory);
+
+    function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256);
 }

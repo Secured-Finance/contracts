@@ -3,9 +3,11 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../interfaces/ICollateralVault.sol";
 import "../interfaces/IMixinCollateralManagement.sol";
+import "../utils/Ownable.sol";
+import {CollateralAggregatorStorage as Storage} from "../storages/CollateralAggregatorStorage.sol";
 import "./MixinAddressResolver.sol";
 
 /**
@@ -20,17 +22,14 @@ import "./MixinAddressResolver.sol";
  *    Auto-Liquidation level, Liquidation price, and Minimal collateral ratio
  *
  */
-contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressResolver, Ownable {
+contract MixinCollateralManagement is
+    IMixinCollateralManagement,
+    MixinAddressResolver,
+    Ownable,
+    Initializable
+{
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
-
-    uint256 public override LQLEVEL; // 120% for liquidation price
-    uint256 public override MARGINLEVEL; // 150% margin call threshold
-    uint256 public override AUTOLQLEVEL; // 125% auto liquidation
-    uint256 public override MIN_COLLATERAL_RATIO; // 25% minimal collateral ratio
-
-    EnumerableSet.AddressSet private collateralUsers;
-    EnumerableSet.AddressSet private collateralVaults;
 
     /**
      * @dev Modifier to check if msg.sender is a CollateralVault
@@ -43,6 +42,32 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
     modifier onlyLiquidations() {
         require(msg.sender == address(liquidations()), "NON_LIQUIDATIONS");
         _;
+    }
+
+    /**
+     * @dev Contract constructor function.
+     * @param _resolver The address of the Address Resolver contract
+     */
+    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
+
+    /**
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
+     */
+    function initialize(
+        address owner,
+        address resolver,
+        uint256 marginCallThresholdRate,
+        uint256 autoLiquidationThresholdRate,
+        uint256 liquidationPriceRate,
+        uint256 minCollateralRate
+    ) public initializer {
+        _transferOwnership(owner);
+        registerAddressResolver(resolver);
+        _updateMarginCallThresholdRate(marginCallThresholdRate);
+        _updateAutoLiquidationThresholdRate(autoLiquidationThresholdRate);
+        _updateLiquidationPriceRate(liquidationPriceRate);
+        _updateMinCollateralRate(minCollateralRate);
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
@@ -61,19 +86,6 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     */
-    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {
-        LQLEVEL = 12000; // 120% for liquidation price
-        MARGINLEVEL = 15000; // 150% margin call threshold
-        AUTOLQLEVEL = 12500; // 125% auto liquidation
-        MIN_COLLATERAL_RATIO = 2500; // 25% min collateral ratio
-    }
-
-    // =========== LINKED CONTRACT MANAGEMENT SECTION ===========
-
-    /**
      * @dev Triggers to add contract address to collateral users address set
      * @param _user Collateral user smart contract address
      *
@@ -83,18 +95,18 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
     function addCollateralUser(address _user) public override onlyOwner returns (bool) {
         require(_user != address(0), "Zero address");
         require(_user.isContract(), "Can't add non-contract address");
-        require(!collateralUsers.contains(_user), "Can't add existing address");
+        require(!Storage.slot().collateralUsers.contains(_user), "Can't add existing address");
 
         emit CollateralUserAdded(_user);
 
-        return collateralUsers.add(_user);
+        return Storage.slot().collateralUsers.add(_user);
     }
 
     /**
-     * @dev Trigers to link CollateralVault with aggregator
+     * @dev Triggers to link CollateralVault with aggregator
      * @param _vault CollateralVault address
      *
-     * @notice Trigers only be contract owner
+     * @notice Triggers only be contract owner
      * @notice Reverts on saving 0x0 address
      */
     function linkCollateralVault(address _vault) public override onlyOwner returns (bool) {
@@ -108,7 +120,7 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
         address tokenAddress = vaultContract.tokenAddress();
 
         emit CollateralVaultLinked(_vault, ccy, tokenAddress);
-        return collateralVaults.add(_vault);
+        return Storage.slot().collateralVaults.add(_vault);
     }
 
     /**
@@ -119,10 +131,10 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
      * @notice Reverts on removing non-existing collateral user
      */
     function removeCollateralUser(address _user) public override onlyOwner returns (bool) {
-        require(collateralUsers.contains(_user), "Can't remove non-existing user");
+        require(Storage.slot().collateralUsers.contains(_user), "Can't remove non-existing user");
 
         emit CollateralUserRemoved(_user);
-        return collateralUsers.remove(_user);
+        return Storage.slot().collateralUsers.remove(_user);
     }
 
     /**
@@ -142,100 +154,150 @@ contract MixinCollateralManagement is IMixinCollateralManagement, MixinAddressRe
 
         emit CollateralVaultRemoved(_vault, ccy, tokenAddress);
 
-        return collateralVaults.remove(_vault);
+        return Storage.slot().collateralVaults.remove(_vault);
     }
 
     /**
-     * @dev Trigers to check if provided `addr` is a CollateralUser from address set
+     * @dev Triggers to check if provided `addr` is a CollateralUser from address set
      * @param _user Contract address to check if it's a CollateralUser
      */
     function isCollateralUser(address _user) public view override returns (bool) {
-        return collateralUsers.contains(_user);
+        return Storage.slot().collateralUsers.contains(_user);
     }
 
     /**
-     * @dev Trigers to check if provided address is valid CollateralVault
+     * @dev Triggers to check if provided address is valid CollateralVault
      * @param _vault Contract address to check if it's a CollateralVault
      */
     function isCollateralVault(address _vault) public view override returns (bool) {
-        return collateralVaults.contains(_vault);
+        return Storage.slot().collateralVaults.contains(_vault);
     }
 
     /**
-     * @dev Trigers to safely update main collateral parameters this function
+     * @dev Triggers to safely update main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning
      *
-     * @param _marginCallRatio Margin call ratio
-     * @param _autoLiquidationThreshold Auto Liquidation level ratio
-     * @param _liquidationPrice Liquidation price in basis point
-     * @notice Trigers only be contract owner
+     * @param _marginCallThresholdRate Margin call threshold ratio
+     * @param _autoLiquidationThresholdRate Auto liquidation threshold rate
+     * @param _liquidationPriceRate Liquidation price rate
+     * @notice Triggers only be contract owner
      */
     function updateMainParameters(
-        uint256 _marginCallRatio,
-        uint256 _autoLiquidationThreshold,
-        uint256 _liquidationPrice
+        uint256 _marginCallThresholdRate,
+        uint256 _autoLiquidationThresholdRate,
+        uint256 _liquidationPriceRate
     ) public override onlyOwner {
-        if (_marginCallRatio != MARGINLEVEL) {
-            updateMarginCallThreshold(_marginCallRatio);
+        if (_marginCallThresholdRate != Storage.slot().marginCallThresholdRate) {
+            _updateMarginCallThresholdRate(_marginCallThresholdRate);
         }
 
-        if (_autoLiquidationThreshold != AUTOLQLEVEL) {
-            updateAutoLiquidationThreshold(_autoLiquidationThreshold);
+        if (_autoLiquidationThresholdRate != Storage.slot().autoLiquidationThresholdRate) {
+            _updateAutoLiquidationThresholdRate(_autoLiquidationThresholdRate);
         }
 
-        if (_liquidationPrice != LQLEVEL) {
-            updateLiquidationPrice(_liquidationPrice);
+        if (_liquidationPriceRate != Storage.slot().liquidationPriceRate) {
+            _updateLiquidationPriceRate(_liquidationPriceRate);
         }
     }
 
     /**
-     * @dev Trigers to update liquidation level ratio
-     * @param _ratio Auto Liquidation level ratio
-     * @notice Trigers only be contract owner
+     * @dev Triggers to update liquidation level rate
+     * @param _rate Auto Liquidation level rate
+     * @notice Triggers only be contract owner
      */
-    function updateAutoLiquidationThreshold(uint256 _ratio) public override onlyOwner {
-        require(_ratio > 0, "INCORRECT_RATIO");
-        require(_ratio < MARGINLEVEL, "AUTO_LIQUIDATION_RATIO_OVERFLOW");
-
-        emit AutoLiquidationThresholdUpdated(AUTOLQLEVEL, _ratio);
-        AUTOLQLEVEL = _ratio;
+    function updateAutoLiquidationThresholdRate(uint256 _rate) public override onlyOwner {
+        _updateAutoLiquidationThresholdRate(_rate);
     }
 
     /**
-     * @dev Trigers to update margin call level
-     * @param _ratio Margin call ratio
-     * @notice Trigers only be contract owner
+     * @dev Triggers to update margin call level
+     * @param _rate Margin call rate
+     * @notice Triggers only be contract owner
      */
-    function updateMarginCallThreshold(uint256 _ratio) public override onlyOwner {
-        require(_ratio > 0, "INCORRECT_RATIO");
-
-        emit MarginCallThresholdUpdated(MARGINLEVEL, _ratio);
-        MARGINLEVEL = _ratio;
+    function updateMarginCallThresholdRate(uint256 _rate) public override onlyOwner {
+        _updateMarginCallThresholdRate(_rate);
     }
 
     /**
-     * @dev Trigers to update liquidation price
-     * @param _price Liquidation price in basis point
-     * @notice Trigers only be contract owner
+     * @dev Triggers to update liquidation price rate
+     * @param _rate Liquidation price rate in basis point
+     * @notice Triggers only be contract owner
      */
-    function updateLiquidationPrice(uint256 _price) public override onlyOwner {
-        require(_price > 0, "INCORRECT_PRICE");
-        require(_price < AUTOLQLEVEL, "LIQUIDATION_PRICE_OVERFLOW");
-
-        emit LiquidationPriceUpdated(LQLEVEL, _price);
-        LQLEVEL = _price;
+    function updateLiquidationPriceRate(uint256 _rate) public override onlyOwner {
+        _updateLiquidationPriceRate(_rate);
     }
 
     /**
-     * @dev Trigers to update minimal collateral ratio
-     * @param _ratio Minimal collateral ratio in basis points
-     * @notice Trigers only be contract owner
+     * @dev Triggers to update minimal collateral rate
+     * @param _rate Minimal collateral rate in basis points
+     * @notice Triggers only be contract owner
      */
-    function updateMinCollateralRatio(uint256 _ratio) public override onlyOwner {
-        require(_ratio > 0, "INCORRECT_RATIO");
-        require(_ratio < AUTOLQLEVEL, "MIN_COLLATERAL_RATIO_OVERFLOW");
+    function updateMinCollateralRate(uint256 _rate) public override onlyOwner {
+        _updateMinCollateralRate(_rate);
+    }
 
-        emit MinCollateralRatioUpdated(MIN_COLLATERAL_RATIO, _ratio);
-        MIN_COLLATERAL_RATIO = _ratio;
+    /**
+     * @dev Triggers to get auto liquidation threshold rate
+     */
+    function getAutoLiquidationThresholdRate() public view override returns (uint256) {
+        return Storage.slot().autoLiquidationThresholdRate;
+    }
+
+    /**
+     * @dev Triggers to get liquidation price rate
+     */
+    function getLiquidationPriceRate() public view override returns (uint256) {
+        return Storage.slot().liquidationPriceRate;
+    }
+
+    /**
+     * @dev Triggers to get margin call threshold rate
+     */
+    function getMarginCallThresholdRate() public view override returns (uint256) {
+        return Storage.slot().marginCallThresholdRate;
+    }
+
+    /**
+     * @dev Triggers to get min collateral rate
+     */
+    function getMinCollateralRate() public view override returns (uint256) {
+        return Storage.slot().minCollateralRate;
+    }
+
+    function _updateAutoLiquidationThresholdRate(uint256 _rate) private {
+        require(_rate > 0, "INCORRECT_RATIO");
+        require(_rate < Storage.slot().marginCallThresholdRate, "AUTO_LIQUIDATION_RATIO_OVERFLOW");
+
+        emit AutoLiquidationThresholdRateUpdated(
+            Storage.slot().autoLiquidationThresholdRate,
+            _rate
+        );
+        Storage.slot().autoLiquidationThresholdRate = _rate;
+    }
+
+    function _updateMarginCallThresholdRate(uint256 _rate) private {
+        require(_rate > 0, "INCORRECT_RATIO");
+
+        emit MarginCallThresholdRateUpdated(Storage.slot().marginCallThresholdRate, _rate);
+        Storage.slot().marginCallThresholdRate = _rate;
+    }
+
+    function _updateLiquidationPriceRate(uint256 _rate) private {
+        require(_rate > 0, "INCORRECT_RATIO");
+        require(_rate < Storage.slot().autoLiquidationThresholdRate, "LIQUIDATION_PRICE_OVERFLOW");
+
+        emit LiquidationPriceRateUpdated(Storage.slot().liquidationPriceRate, _rate);
+        Storage.slot().liquidationPriceRate = _rate;
+    }
+
+    function _updateMinCollateralRate(uint256 _rate) private {
+        require(_rate > 0, "INCORRECT_RATIO");
+        require(
+            _rate < Storage.slot().autoLiquidationThresholdRate,
+            "MIN_COLLATERAL_RATIO_OVERFLOW"
+        );
+
+        emit MinCollateralRateUpdated(Storage.slot().minCollateralRate, _rate);
+        Storage.slot().minCollateralRate = _rate;
     }
 }

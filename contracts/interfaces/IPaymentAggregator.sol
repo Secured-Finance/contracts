@@ -115,7 +115,5 @@ interface IPaymentAggregator {
     //     bytes32 slot
     // ) external view returns (Slot memory timeSlot);
 
-    function settlementWindow() external view returns (uint256);
-
     function checkSettlementWindow(uint256 targetTime) external view returns (bool);
 }

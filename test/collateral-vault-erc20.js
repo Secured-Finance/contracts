@@ -87,11 +87,9 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         currencyController.address,
       );
 
-      const currencyControllerProxyAddress =
-        await proxyController.getCurrencyControllerAddress();
-      currencyControllerProxy = await CurrencyController.at(
-        currencyControllerProxyAddress,
-      );
+      currencyControllerProxy = await proxyController
+        .getProxyAddress(toBytes32('CurrencyController'))
+        .then((address) => CurrencyController.at(address));
 
       // Set up for AddressResolver and build caches using MigrationAddressResolver
       await addressResolver.importAddresses(
@@ -106,7 +104,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         [
           collateral.address,
           crosschainAddressResolver.address,
-          currencyControllerProxyAddress,
+          currencyControllerProxy.address,
           utils.randomHex(20),
           utils.randomHex(20),
           productAddressResolver.address,

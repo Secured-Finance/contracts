@@ -24,7 +24,7 @@ interface ILiquidations {
 
     function liquidateDeals(address party0, address party1) external;
 
-    function offset() external view returns (uint256);
+    function getOffset() external view returns (uint256);
 
     function removeDealFromLiquidationQueue(
         address party0,

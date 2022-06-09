@@ -37,8 +37,6 @@ interface ITermStructure {
         bytes32 _ccy
     ) external view returns (bool);
 
-    function last_term_index() external view returns (uint8);
-
     function supportTerm(
         uint256 _numDays,
         bytes4[] memory _products,

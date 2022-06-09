@@ -80,4 +80,12 @@ library ProtocolTypes {
         string name;
         uint16 chainId; // chain id for address conversion
     }
+
+    struct SettlementRequest {
+        address payer;
+        address receiver;
+        uint16 chainId;
+        uint256 timestamp;
+        string txHash;
+    }
 }
