@@ -66,4 +66,8 @@ contract PaymentAggregatorCallerMock {
             settlementId
         );
     }
+
+    function isRegisteredProductContract(address _product) public pure returns (bool) {
+        return address(_product) != address(0);
+    }
 }
