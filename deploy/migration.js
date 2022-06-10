@@ -10,56 +10,49 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deployer } = await getNamedAccounts();
 
   // Get deployments
-  const addressResolver = await deployments.get('AddressResolver');
-  const closeOutNetting = await deployments.get('CloseOutNetting');
-  const collateralAggregator = await deployments.get('CollateralAggregatorV2');
-  const crosschainAddressResolver = await deployments.get(
-    'CrosschainAddressResolver',
-  );
-  const currencyController = await deployments.get('CurrencyController');
-  const markToMarket = await deployments.get('MarkToMarket');
-  const lendingMarketController = await deployments.get(
-    'LendingMarketController',
-  );
-  const liquidations = await deployments.get('Liquidations');
-  const loan = await deployments.get('LoanV2');
-  const paymentAggregator = await deployments.get('PaymentAggregator');
-  const productAddressResolver = await deployments.get(
-    'ProductAddressResolver',
-  );
-  const settlementEngine = await deployments.get('SettlementEngine');
-  const termStructure = await deployments.get('TermStructure');
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-  // Get Contracts
-  const addressResolverContract = await ethers.getContractAt(
-    'AddressResolver',
-    addressResolver.address,
-  );
-  const collateralAggregatorContract = await ethers.getContractAt(
+  const getProxy = (key, contract) =>
+    proxyController
+      .getProxyAddress(toBytes32(key))
+      .then((address) => ethers.getContractAt(contract || key, address));
+
+  // Get contracts from proxyController
+  const closeOutNetting = await getProxy('CloseOutNetting');
+  const collateralAggregator = await getProxy(
+    'CollateralAggregator',
     'CollateralAggregatorV2',
-    collateralAggregator.address,
   );
-  const productAddressResolverContract = await ethers.getContractAt(
-    'ProductAddressResolver',
-    productAddressResolver.address,
-  );
-  const termStructureContract = await ethers.getContractAt(
-    'TermStructure',
-    termStructure.address,
-  );
+  const crosschainAddressResolver = await getProxy('CrosschainAddressResolver');
+  const currencyController = await getProxy('CurrencyController');
+  const markToMarket = await getProxy('MarkToMarket');
+  const lendingMarketController = await getProxy('LendingMarketController');
+  const liquidations = await getProxy('Liquidations');
+  const paymentAggregator = await getProxy('PaymentAggregator');
+  const productAddressResolver = await getProxy('ProductAddressResolver');
+  const settlementEngine = await getProxy('SettlementEngine');
+  const termStructure = await getProxy('TermStructure');
+
+  // Get deployed contracts
+  const addressResolver = await deployments
+    .get('AddressResolver')
+    .then(({ address }) => ethers.getContractAt('AddressResolver', address));
+
+  const loan = await deployments
+    .get('LoanV2')
+    .then(({ address }) => ethers.getContractAt('LoanV2', address));
 
   // Deploy contracts
   const migrationAddressResolver = await deploy('MigrationAddressResolver', {
     from: deployer,
-  });
+  }).then(({ address }) =>
+    ethers.getContractAt('MigrationAddressResolver', address),
+  );
 
   console.log(
     'Deployed MigrationAddressResolver at ' + migrationAddressResolver.address,
-  );
-
-  const migrationAddressResolverContract = await ethers.getContractAt(
-    'MigrationAddressResolver',
-    migrationAddressResolver.address,
   );
 
   // Set up for AddressResolver
@@ -76,7 +69,8 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'SettlementEngine',
     'TermStructure',
   ].map(toBytes32);
-  const contracAddresses = [
+
+  const contractAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,
     crosschainAddressResolver.address,
@@ -103,41 +97,35 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     termStructure.address,
   ];
 
-  await (
-    await addressResolverContract.importAddresses(
-      contractNames,
-      contracAddresses,
-    )
-  ).wait();
-  await (
-    await migrationAddressResolverContract.buildCaches(buildCachesAddresses)
-  ).wait();
+  await addressResolver
+    .importAddresses(contractNames, contractAddresses)
+    .then((tx) => tx.wait());
+
+  await migrationAddressResolver
+    .buildCaches(buildCachesAddresses)
+    .then((tx) => tx.wait());
 
   // Set up for CollateralAggregator
-  await (
-    await collateralAggregatorContract.functions[
-      'register(string[],uint256[])'
-    ]([btcAddress, filAddress], [0, 461])
-  ).wait();
+
+  await collateralAggregator.functions['register(string[],uint256[])'](
+    [btcAddress, filAddress],
+    [0, 461],
+  ).then((tx) => tx.wait());
 
   // Set up for ProductAddressResolver
-  await (
-    await productAddressResolverContract.registerProduct(
-      loanPrefix,
-      loan.address,
-      lendingMarketController.address,
-    )
-  ).wait();
+  await productAddressResolver
+    .registerProduct(loanPrefix, loan.address, lendingMarketController.address)
+    .then((tx) => tx.wait());
 
   // Set up for TermStructure
   for (i = 0; i < sortedTermDays.length; i++) {
-    await (
-      await termStructureContract.supportTerm(
+    await termStructure
+      .supportTerm(
         sortedTermDays[i],
         [loanPrefix],
         [hexFILString, hexBTCString, hexETHString],
       )
-    ).wait();
+      .then((tx) => tx.wait());
   }
 };
 

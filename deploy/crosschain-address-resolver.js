@@ -2,17 +2,21 @@ module.exports = async function ({ deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const addressResolver = await deployments.get('AddressResolver');
-
   const crosschainResolver = await deploy('CrosschainAddressResolver', {
     from: deployer,
-    args: [addressResolver.address],
   });
-
   console.log(
     'Deployed CrosschainAddressResolver at ' + crosschainResolver.address,
   );
+
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+  await proxyController
+    .setCrosschainAddressResolverImpl(crosschainResolver.address)
+    .then((tx) => tx.wait());
 };
 
 module.exports.tags = ['CrosschainAddressResolver'];
-module.exports.dependencies = ['AddressResolver'];
+module.exports.dependencies = ['ProxyController'];

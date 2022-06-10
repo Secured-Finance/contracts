@@ -3,16 +3,22 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const { deployer } = await getNamedAccounts();
 
-  const addressResolver = await deployments.get('AddressResolver');
-  const wETHToken = await deployments.get('WETH9Mock');
-
   const settlementEngine = await deploy('SettlementEngine', {
     from: deployer,
-    args: [addressResolver.address, wETHToken.address],
   });
 
   console.log('Deployed SettlementEngine at ' + settlementEngine.address);
+
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+  const wETHToken = await deployments.get('WETH9Mock');
+
+  await proxyController
+    .setSettlementEngineImpl(settlementEngine.address, wETHToken.address)
+    .then((tx) => tx.wait());
 };
 
 module.exports.tags = ['SettlementEngine'];
-module.exports.dependencies = ['AddressResolver', 'WETH'];
+module.exports.dependencies = ['ProxyController', 'WETH'];
