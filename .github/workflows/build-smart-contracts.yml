@@ -44,6 +44,7 @@ jobs:
       - name: Run Unit Tests
         run: npm run test:cov
       - name: Upload Code Coverage
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
