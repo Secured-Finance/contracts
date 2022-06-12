@@ -17,9 +17,12 @@ jobs:
     name: Static Code Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
       - name: Run Prettier
         run: npm run prettier:check
       - name: Run ESLint
@@ -30,10 +33,17 @@ jobs:
     name: Build and Unit Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
       - name: Build Smart Contracts
         run: npm run compile
       - name: Run Unit Tests
-        run: npm run test
+        run: npm run test:cov
+      - name: Upload Code Coverage
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
