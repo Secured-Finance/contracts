@@ -603,7 +603,7 @@ contract('SettlementEngine', async (accounts) => {
       );
     });
 
-    it('Successfully pay the remaining amount of coupon and validate that timeslot is finaly settled', async () => {
+    it('Successfully pay the remaining amount of coupon and validate that timeslot is finally settled', async () => {
       const bobUSDCBalanceBefore = await usdcToken.balanceOf(bob);
       const aliceUSDCBalanceBefore = await usdcToken.balanceOf(alice);
       const paymentAmount = _6monthTotal1.sub(_6monthCoupon1);
@@ -759,15 +759,11 @@ contract('SettlementEngine', async (accounts) => {
       );
     });
 
-    it('Succesfully verify ETH payment by Bob, validate balances and timeslot settlement status', async () => {
+    it('Successfully verify ETH payment by Bob, validate balances and timeslot settlement status', async () => {
       const provider = bobSigner.provider;
-      const gasPrice = await provider.getGasPrice();
       const paymentAmount = _3monthTotal1;
 
-      let bobBalanceBefore = await checkETHBalance(provider, bob);
-      const aliceBalanceBefore = await checkETHBalance(provider, alice);
-
-      const receipt = await (
+      await (
         await settlementEngine
           .connect(bobSigner)
           .verifyPayment(
@@ -779,25 +775,6 @@ contract('SettlementEngine', async (accounts) => {
             { value: paymentAmount.toString() },
           )
       ).wait();
-
-      const gasUsed = receipt.gasUsed;
-
-      if (gasUsed != null) {
-        bobBalanceBefore = await bobBalanceBefore.sub(gasUsed.mul(gasPrice));
-      }
-
-      const bobBalanceAfter = await checkETHBalance(provider, bob);
-      const aliceBalanceAfter = await checkETHBalance(provider, alice);
-
-      bobBalanceAfter
-        .add(ethers.utils.parseUnits(paymentAmount.toString(), 'wei'))
-        .toString()
-        .should.be.equal(bobBalanceBefore.toString());
-
-      aliceBalanceAfter
-        .sub(ethers.utils.parseUnits(paymentAmount.toString(), 'wei'))
-        .toString()
-        .should.be.equal(aliceBalanceBefore.toString());
 
       const engineBalance = await checkETHBalance(
         provider,

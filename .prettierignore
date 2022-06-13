@@ -3,4 +3,5 @@ build/
 node_modules/
 deployments/
 coverage/
+contracts/artifacts/
 coverage.json
