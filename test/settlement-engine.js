@@ -1,4 +1,3 @@
-const AddressResolver = artifacts.require('AddressResolver');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 const ERC20Mock = artifacts.require('ERC20Mock');
@@ -9,7 +8,6 @@ const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const PaymentAggregatorCallerMock = artifacts.require(
   'PaymentAggregatorCallerMock',
 );
-const PaymentAggregator = artifacts.require('PaymentAggregator');
 const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
@@ -31,6 +29,7 @@ const {
   bobFILAddress,
   secondTxHash,
   thirdTxHash,
+  loanPrefix,
 } = require('../test-utils').strings;
 const {
   toEther,
@@ -90,20 +89,28 @@ contract('SettlementEngine', async (accounts) => {
     bobSigner = signers[2];
     carolSigner = signers[3];
 
-    const addressResolver = await AddressResolver.new();
-    paymentAggregator = await PaymentAggregator.new(addressResolver.address);
-    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
-      paymentAggregator.address,
-    );
     const markToMarketMock = await MarkToMarketMock.new();
 
     const deployment = new Deployment();
-    deployment.mock('AddressResolver').useValue(addressResolver);
-    deployment.mock('PaymentAggregator').useValue(paymentAggregator);
     deployment.mock('MarkToMarket').useValue(markToMarketMock);
-    deployment.mock('Loan').useValue(paymentAggregatorMock);
-    ({ currencyController, settlementEngine, crosschainAddressResolver } =
-      await deployment.execute());
+    ({
+      currencyController,
+      settlementEngine,
+      crosschainAddressResolver,
+      paymentAggregator,
+      productAddressResolver,
+      lendingMarketController,
+    } = await deployment.execute());
+
+    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
+      paymentAggregator.address,
+    );
+
+    await productAddressResolver.registerProduct(
+      loanPrefix,
+      paymentAggregatorMock.address,
+      lendingMarketController.address,
+    );
 
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     timeSlotTest = await TimeSlotTest.new();

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../ProtocolTypes.sol";
 import "../interfaces/IPaymentAggregator.sol";
 
-contract PaymentAggregatorCallerMock is ProtocolTypes {
+contract PaymentAggregatorCallerMock {
     IPaymentAggregator public paymentAggregator;
 
     constructor(address _paymentAggregator) {
@@ -66,5 +65,9 @@ contract PaymentAggregatorCallerMock is ProtocolTypes {
             payment,
             settlementId
         );
+    }
+
+    function isRegisteredProductContract(address _product) public pure returns (bool) {
+        return address(_product) != address(0);
     }
 }

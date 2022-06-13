@@ -1,4 +1,4 @@
-const { hexFILString } = require('../test-utils').strings;
+const { hexFILString, toBytes32 } = require('../test-utils').strings;
 const { sortedTermDays } = require('../test-utils').terms;
 
 module.exports = async function ({ deployments }) {
@@ -6,24 +6,27 @@ module.exports = async function ({ deployments }) {
   const baseRate = 500;
   const baseAmount = 100000;
 
-  const loanV2 = await deployments.get('LoanV2');
-  const loanV2Contract = await ethers.getContractAt('LoanV2', loanV2.address);
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-  const collateralAggregator = await deployments.get('CollateralAggregatorV2');
-  const collateralAggregatorContract = await ethers.getContractAt(
-    'CollateralAggregatorV2',
-    collateralAggregator.address,
-  );
-  const lendingMarketController = await deployments.get(
-    'LendingMarketController',
-  );
-  const lendingMarketControllerContract = await ethers.getContractAt(
-    'LendingMarketController',
-    lendingMarketController.address,
-  );
+  // Get contracts from proxyController
+  const loan = await proxyController
+    .getProxyAddress(toBytes32('Loan'))
+    .then((address) => ethers.getContractAt('LoanV2', address));
+
+  const collateralAggregator = await proxyController
+    .getProxyAddress(toBytes32('CollateralAggregator'))
+    .then((address) => ethers.getContractAt('CollateralAggregatorV2', address));
+
+  const lendingMarketController = await proxyController
+    .getProxyAddress(toBytes32('LendingMarketController'))
+    .then((address) =>
+      ethers.getContractAt('LendingMarketController', address),
+    );
 
   for (i = 0; i < sortedTermDays.length; i++) {
-    const tx = await lendingMarketControllerContract.deployLendingMarket(
+    const tx = await lendingMarketController.deployLendingMarket(
       hexFILString,
       sortedTermDays[i],
     );
@@ -44,18 +47,18 @@ module.exports = async function ({ deployments }) {
       'LendingMarket',
       marketAddr,
     );
-    await (
-      await loanV2Contract.addLendingMarket(
+
+    await loan
+      .addLendingMarket(
         hexFILString,
         sortedTermDays[i],
         lendingMarketContract.address,
       )
-    ).wait();
-    await (
-      await collateralAggregatorContract.addCollateralUser(
-        lendingMarketContract.address,
-      )
-    ).wait();
+      .then((tx) => tx.wait());
+
+    await collateralAggregator
+      .addCollateralUser(lendingMarketContract.address)
+      .then((tx) => tx.wait());
 
     const borrowRate = baseRate + 50 * i;
     const borrowAmount = baseAmount + 1500 * i;
@@ -66,10 +69,13 @@ module.exports = async function ({ deployments }) {
     console.log('LendRate:', lendRate);
     console.log('LendRate:', lendAmount);
 
-    await (
-      await lendingMarketContract.order(0, borrowAmount, borrowRate)
-    ).wait();
-    await (await lendingMarketContract.order(1, lendAmount, lendRate)).wait();
+    await lendingMarketContract
+      .order(0, borrowAmount, borrowRate)
+      .then((tx) => tx.wait());
+
+    await lendingMarketContract
+      .order(1, lendAmount, lendRate)
+      .then((tx) => tx.wait());
   }
 };
 

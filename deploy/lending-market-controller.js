@@ -4,7 +4,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const discountFactorLibrary = await deployments.get('DiscountFactor');
   const quickSortLibrary = await deployments.get('QuickSort');
-  const addressResolver = await deployments.get('AddressResolver');
 
   const lendingController = await deploy('LendingMarketController', {
     from: deployer,
@@ -12,12 +11,19 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       QuickSort: quickSortLibrary.address,
       DiscountFactor: discountFactorLibrary.address,
     },
-    args: [addressResolver.address],
   });
   console.log(
     'Deployed LendingMarketController at ' + lendingController.address,
   );
+
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+  await proxyController
+    .setLendingMarketControllerImpl(lendingController.address)
+    .then((tx) => tx.wait());
 };
 
 module.exports.tags = ['LendingMarketController'];
-module.exports.dependencies = ['AddressResolver', 'Libraries'];
+module.exports.dependencies = ['ProxyController', 'Libraries'];

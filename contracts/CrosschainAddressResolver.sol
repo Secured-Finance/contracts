@@ -1,28 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./ProtocolTypes.sol";
 import "./interfaces/ICrosschainAddressResolver.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
+import {CrosschainAddressResolverStorage as Storage} from "./storages/CrosschainAddressResolverStorage.sol";
 
-contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressResolver {
-    // Mapping for storing user cross-chain addresses
-    mapping(address => mapping(uint256 => string)) _crosschainAddreses;
-
+contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressResolver, Proxyable {
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) {}
+    function initialize(address resolver) public initializer onlyProxy {
+        registerAddressResolver(resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
     }
 
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
     }
 
     /**
@@ -86,7 +86,7 @@ contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressRe
         override
         returns (string memory)
     {
-        return _crosschainAddreses[_user][_chainId];
+        return Storage.slot().crosschainAddreses[_user][_chainId];
     }
 
     /**
@@ -101,7 +101,7 @@ contract CrosschainAddressResolver is ICrosschainAddressResolver, MixinAddressRe
         uint256 _chainId,
         string memory _address
     ) internal {
-        _crosschainAddreses[_user][_chainId] = _address;
+        Storage.slot().crosschainAddreses[_user][_chainId] = _address;
         emit UpdateAddress(_user, _chainId, _address);
     }
 }

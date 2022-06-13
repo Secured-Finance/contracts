@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../ProtocolTypes.sol";
+import "../types/ProtocolTypes.sol";
 
 struct Order {
     bytes32 ccy;
@@ -29,15 +29,13 @@ interface ILendingMarketController {
 
     function getMidRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
 
-    function lendingMarkets(bytes32, uint256) external view returns (address);
+    function getLendingMarket(bytes32, uint256) external view returns (address);
 
     function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
 
     function placeBulkOrders(Order[] memory orders) external returns (bool);
 
     function unpauseLendingMarkets(bytes32 _ccy) external returns (bool);
-
-    function numberOfMarkets() external view returns (uint256);
 
     function getSupportedTerms(bytes32 _ccy) external view returns (uint256[] memory);
 }

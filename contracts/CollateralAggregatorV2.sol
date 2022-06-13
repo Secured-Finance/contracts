@@ -4,8 +4,9 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/NetPV.sol";
-import "./ProtocolTypes.sol";
+import "./interfaces/ICollateralAggregatorV2.sol";
 import "./mixins/MixinCollateralManagement.sol";
+import "./types/ProtocolTypes.sol";
 
 /**
  * @title Collateral Aggregator contract is used to manage Secured Finance
@@ -21,37 +22,16 @@ import "./mixins/MixinCollateralManagement.sol";
  * Contract linked to Product based contracts (like Loan, Swap, etc),
  * LendingMarkets, CurrencyController contracts and Liquidation Engine.
  */
-contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCollateralManagement {
+contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagement {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.AddressSet;
     using NetPV for NetPV.CcyNetting;
-
-    // Mapping for total amount of collateral locked against independent collateral from all books.
-    mapping(address => mapping(bytes32 => uint256)) public unsettledCollateral;
-
-    // Mapping for used currencies in unsettled exposures.
-    mapping(address => EnumerableSet.Bytes32Set) private exposedUnsettledCurrencies;
-
-    // Mapping for all registered users.
-    mapping(address => bool) private isRegistered;
-
-    // Mapping for used currencies set in bilateral position.
-    mapping(bytes32 => EnumerableSet.Bytes32Set) private exposedCurrencies;
-
-    // Mapping for used collateral vaults in bilateral position.
-    mapping(bytes32 => EnumerableSet.AddressSet) private usedVaultsInPosition;
-
-    // Mapping for used collateral vaults per user.
-    mapping(address => EnumerableSet.AddressSet) private usedVaults;
-
-    // Mapping for exposures per currency in bilateral position.
-    mapping(bytes32 => mapping(bytes32 => NetPV.CcyNetting)) private ccyNettings;
 
     /**
      * @dev Modifier to check if user registered already
      */
     modifier registeredUser(address _user) {
-        require(isRegistered[_user], "NOT_REGISTERED");
+        require(Storage.slot().isRegistered[_user], "NOT_REGISTERED");
         _;
     }
 
@@ -59,15 +39,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
      * @dev Modifier to check if user hasn't been registered yet
      */
     modifier nonRegisteredUser(address _user) {
-        require(!isRegistered[_user], "REGISTERED_ALREADY");
+        require(!Storage.slot().isRegistered[_user], "REGISTERED_ALREADY");
         _;
     }
-
-    /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     */
-    constructor(address _resolver) MixinCollateralManagement(_resolver) {}
 
     // =========== COLLATERAL BOOK SECTION ===========
 
@@ -107,10 +81,10 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         bytes32 ccy,
         uint256 amount
     ) external override onlyAcceptedContracts {
-        exposedUnsettledCurrencies[user].add(ccy);
+        Storage.slot().exposedUnsettledCurrencies[user].add(ccy);
         require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
 
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy] + amount;
+        Storage.slot().unsettledCollateral[user][ccy] += amount;
 
         emit UseUnsettledCollateral(user, ccy, amount);
     }
@@ -132,9 +106,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         bool isSettled
     ) external override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
-        exposedCurrencies[packedAddrs].add(ccy);
+        Storage.slot().exposedCurrencies[packedAddrs].add(ccy);
 
-        NetPV.use(ccyNettings, partyA, partyB, ccy, amount0, amount1, isSettled);
+        NetPV.use(Storage.slot().ccyNettings, partyA, partyB, ccy, amount0, amount1, isSettled);
         _rebalanceIfRequired(partyA, partyB, true);
 
         emit UseCollateral(partyA, partyB, ccy, amount0, amount1, isSettled);
@@ -155,7 +129,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         uint256 amount0,
         uint256 amount1
     ) external override onlyAcceptedContracts {
-        NetPV.settle(ccyNettings, partyA, partyB, ccy, amount0, amount1);
+        NetPV.settle(Storage.slot().ccyNettings, partyA, partyB, ccy, amount0, amount1);
         _rebalanceIfRequired(partyA, partyB, true);
 
         emit SettleCollateral(partyA, partyB, ccy, amount0, amount1);
@@ -204,7 +178,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             _ccy,
             _unsettledExp
         );
-        return coverage >= MARGINLEVEL;
+        return coverage >= Storage.slot().marginCallThresholdRate;
     }
 
     /**
@@ -232,7 +206,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             _isSettled
         );
 
-        return (cover0 >= MARGINLEVEL, cover1 >= MARGINLEVEL);
+        return (cover0 >= getMarginCallThresholdRate(), cover1 >= getMarginCallThresholdRate());
     }
 
     /**
@@ -342,10 +316,10 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         bytes32 ccy,
         uint256 amount
     ) external override onlyAcceptedContracts {
-        unsettledCollateral[user][ccy] = unsettledCollateral[user][ccy] - amount;
+        Storage.slot().unsettledCollateral[user][ccy] -= amount;
 
-        if (unsettledCollateral[user][ccy] == 0) {
-            exposedUnsettledCurrencies[user].remove(ccy);
+        if (Storage.slot().unsettledCollateral[user][ccy] == 0) {
+            Storage.slot().exposedUnsettledCurrencies[user].remove(ccy);
         }
 
         emit ReleaseUnsettled(user, ccy, amount);
@@ -368,9 +342,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         bool isSettled
     ) external override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
-        require(exposedCurrencies[packedAddrs].contains(ccy), "non-used ccy");
+        require(Storage.slot().exposedCurrencies[packedAddrs].contains(ccy), "non-used ccy");
 
-        NetPV.release(ccyNettings, partyA, partyB, ccy, amount0, amount1, isSettled);
+        NetPV.release(Storage.slot().ccyNettings, partyA, partyB, ccy, amount0, amount1, isSettled);
         _rebalanceIfRequired(partyA, partyB, true);
 
         emit Release(partyA, partyB, ccy, amount0, amount1, isSettled);
@@ -396,7 +370,16 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         uint256 currentPV0,
         uint256 currentPV1
     ) external override onlyAcceptedContracts {
-        NetPV.update(ccyNettings, party0, party1, ccy, prevPV0, prevPV1, currentPV0, currentPV1);
+        NetPV.update(
+            Storage.slot().ccyNettings,
+            party0,
+            party1,
+            ccy,
+            prevPV0,
+            prevPV1,
+            currentPV0,
+            currentPV1
+        );
 
         _rebalanceIfRequired(party0, party1, true);
 
@@ -440,7 +423,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         uint256 pv,
         bool isSettled
     ) external override onlyAcceptedContracts {
-        uint256 liquidationTarget = (liquidationAmount * LQLEVEL) / BP;
+        uint256 liquidationTarget = (liquidationAmount * getAutoLiquidationThresholdRate()) /
+            ProtocolTypes.BP;
         uint256 liqudationInETH = currencyController().convertToETH(ccy, liquidationTarget);
 
         require(
@@ -450,7 +434,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
 
         emit Liquidate(from, to, ccy, liquidationAmount);
 
-        NetPV.release(ccyNettings, from, to, ccy, pv, 0, isSettled);
+        NetPV.release(Storage.slot().ccyNettings, from, to, ccy, pv, 0, isSettled);
 
         emit Release(from, to, ccy, pv, 0, isSettled);
 
@@ -458,7 +442,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
     }
 
     function checkRegisteredUser(address addr) public view override returns (bool) {
-        return isRegistered[addr];
+        return Storage.slot().isRegistered[addr];
     }
 
     function getCcyExposures(
@@ -477,8 +461,13 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         )
     {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
-        require(exposedCurrencies[packedAddrs].contains(ccy), "non-used ccy");
-        NetPV.CcyNetting memory netting = NetPV.get(ccyNettings, partyA, partyB, ccy);
+        require(Storage.slot().exposedCurrencies[packedAddrs].contains(ccy), "non-used ccy");
+        NetPV.CcyNetting memory netting = NetPV.get(
+            Storage.slot().ccyNettings,
+            partyA,
+            partyB,
+            ccy
+        );
 
         return (netting.unsettled0PV, netting.unsettled1PV, netting.party0PV, netting.party1PV);
     }
@@ -490,7 +479,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         returns (bytes32[] memory)
     {
         (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
-        EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[packedAddrs];
+        EnumerableSet.Bytes32Set storage expCcy = Storage.slot().exposedCurrencies[packedAddrs];
 
         uint256 numCcy = expCcy.length();
         bytes32[] memory currencies = new bytes32[](numCcy);
@@ -510,7 +499,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         returns (address[] memory)
     {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.AddressSet storage vaultsSet = usedVaultsInPosition[packedAddrs];
+        EnumerableSet.AddressSet storage vaultsSet = Storage.slot().usedVaultsInPosition[
+            packedAddrs
+        ];
 
         uint256 numVaults = vaultsSet.length();
         address[] memory vaults = new address[](numVaults);
@@ -524,7 +515,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
     }
 
     function getUsedVaults(address user) public view override returns (address[] memory) {
-        EnumerableSet.AddressSet storage vaultsSet = usedVaults[user];
+        EnumerableSet.AddressSet storage vaultsSet = Storage.slot().usedVaults[user];
 
         uint256 numVaults = vaultsSet.length();
         address[] memory vaults = new address[](numVaults);
@@ -537,13 +528,17 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         return vaults;
     }
 
+    function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256) {
+        return Storage.slot().unsettledCollateral[user][ccy];
+    }
+
     // =========== INTERNAL FUNCTIONS ===========
 
     /**
      * @dev Triggers internaly to store new collateral book
      */
     function _register(string[] memory _addresses, uint256[] memory _chainIds) internal {
-        isRegistered[msg.sender] = true;
+        Storage.slot().isRegistered[msg.sender] = true;
         // perform onboarding steps here
 
         crosschainAddressResolver().updateAddresses(msg.sender, _chainIds, _addresses);
@@ -600,7 +595,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
     {
         NetAndTotalPVLocalVars memory vars;
         (vars.packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        EnumerableSet.Bytes32Set storage expCcy = exposedCurrencies[vars.packedAddrs];
+        EnumerableSet.Bytes32Set storage expCcy = Storage.slot().exposedCurrencies[
+            vars.packedAddrs
+        ];
 
         vars.maxCcy = expCcy.length();
 
@@ -609,7 +606,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
 
             if (_ccy == vars.ccy) {
                 vars.netting = NetPV.get(
-                    ccyNettings,
+                    Storage.slot().ccyNettings,
                     _party0,
                     _party1,
                     vars.ccy,
@@ -618,7 +615,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
                     isSettled
                 );
             } else {
-                vars.netting = NetPV.get(ccyNettings, _party0, _party1, vars.ccy);
+                vars.netting = NetPV.get(Storage.slot().ccyNettings, _party0, _party1, vars.ccy);
             }
 
             vars.exchangeRate = uint256(currencyController().getLastETHPrice(vars.ccy));
@@ -634,11 +631,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             vars.totalHaircutPV0 =
                 vars.totalHaircutPV0 +
                 (vars.netting.party0PV * vars.haircutRatio) /
-                BP;
+                ProtocolTypes.BP;
             vars.totalHaircutPV1 =
                 vars.totalHaircutPV1 +
                 (vars.netting.party1PV * vars.haircutRatio) /
-                BP;
+                ProtocolTypes.BP;
         }
 
         vars.pvDiff0 = vars.totalPV0inETH >= vars.totalHaircutPV1
@@ -726,11 +723,12 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
             _isSettled
         );
 
-        vars.minMarginReq0 = (vars.total0 * MIN_COLLATERAL_RATIO) / BP;
-        vars.minMarginReq1 = (vars.total1 * MIN_COLLATERAL_RATIO) / BP;
+        vars.minMarginReq0 = (vars.total0 * getMinCollateralRate()) / ProtocolTypes.BP;
+        vars.minMarginReq1 = (vars.total1 * getMinCollateralRate()) / ProtocolTypes.BP;
 
         if (vars.net0 > 0) {
-            vars.req0 = vars.minMarginReq0 > (vars.net0 * MARGINLEVEL) / BP
+            vars.req0 = vars.minMarginReq0 >
+                (vars.net0 * getMarginCallThresholdRate()) / ProtocolTypes.BP
                 ? vars.minMarginReq0
                 : vars.net0;
         } else {
@@ -738,7 +736,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         }
 
         if (vars.net1 > 0) {
-            vars.req1 = vars.minMarginReq1 > (vars.net1 * MARGINLEVEL) / BP
+            vars.req1 = vars.minMarginReq1 >
+                (vars.net1 * getMarginCallThresholdRate()) / ProtocolTypes.BP
                 ? vars.minMarginReq1
                 : vars.net1;
         } else {
@@ -790,11 +789,11 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         );
 
         if (vars.req0 > 0) {
-            vars.cover0 = (PCT * vars.lockedCollateral0) / vars.req0;
+            vars.cover0 = (ProtocolTypes.PCT * vars.lockedCollateral0) / vars.req0;
         }
 
         if (vars.req1 > 0) {
-            vars.cover1 = (PCT * vars.lockedCollateral1) / vars.req1;
+            vars.cover1 = (ProtocolTypes.PCT * vars.lockedCollateral1) / vars.req1;
         }
 
         return (vars.cover0, vars.cover1);
@@ -841,8 +840,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         );
 
         if (_safeRebalance) {
-            vars.targetReq0 = (vars.targetReq0 * MARGINLEVEL) / BP;
-            vars.targetReq1 = (vars.targetReq1 * MARGINLEVEL) / BP;
+            vars.targetReq0 = (vars.targetReq0 * getMarginCallThresholdRate()) / ProtocolTypes.BP;
+            vars.targetReq1 = (vars.targetReq1 * getMarginCallThresholdRate()) / ProtocolTypes.BP;
         }
 
         (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(
@@ -905,7 +904,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         bytes32 _ccy,
         uint256 _unsettledExp
     ) internal view returns (uint256) {
-        EnumerableSet.Bytes32Set storage expCcy = exposedUnsettledCurrencies[_user];
+        EnumerableSet.Bytes32Set storage expCcy = Storage.slot().exposedUnsettledCurrencies[_user];
 
         NetUnsettledExpLocalVars memory vars;
 
@@ -913,7 +912,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
 
         for (uint256 i = 0; i < vars.maxCcy; i++) {
             bytes32 ccy = expCcy.at(i);
-            vars.ccyExp = unsettledCollateral[_user][ccy];
+            vars.ccyExp = Storage.slot().unsettledCollateral[_user][ccy];
 
             if (_ccy == ccy) {
                 vars.ccyExp = vars.ccyExp + _unsettledExp;
@@ -943,7 +942,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         vars.independentAmount = _totalIndependentCollateralInETH(_user);
 
         if (vars.totalExpInETH > 0) {
-            vars.coverage = (PCT * vars.independentAmount) / vars.totalExpInETH;
+            vars.coverage = (ProtocolTypes.PCT * vars.independentAmount) / vars.totalExpInETH;
         } else {
             return (0, vars.totalExpInETH);
         }
@@ -979,9 +978,9 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         );
         vars.independentAmount = _totalIndependentCollateralInETH(_user);
 
-        if (vars.coverage > MARGINLEVEL) {
+        if (vars.coverage > getMarginCallThresholdRate()) {
             // TODO: discuss if it makes sense to decrease to 100%
-            vars.delta = vars.coverage - MARGINLEVEL;
+            vars.delta = vars.coverage - getMarginCallThresholdRate();
 
             vars.maxWidthdraw = (vars.independentAmount * vars.delta) / vars.coverage;
         } else if (vars.totalExpInETH == 0) {
@@ -1007,7 +1006,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         returns (uint256, uint256)
     {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        EnumerableSet.AddressSet storage vaults = usedVaultsInPosition[packedAddrs];
+        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaultsInPosition[packedAddrs];
 
         TotalLockedCollateralLocalVars memory vars;
         vars.len = vaults.length();
@@ -1026,7 +1025,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
     }
 
     function _totalIndependentCollateralInETH(address _party) internal view returns (uint256) {
-        EnumerableSet.AddressSet storage vaults = usedVaults[_party];
+        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_party];
         uint256 lockedCollateral;
         uint256 totalCollateral;
 
@@ -1047,7 +1046,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         address _to,
         uint256 _liquidationTarget
     ) internal returns (bool) {
-        EnumerableSet.AddressSet storage vaults = usedVaults[_from];
+        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_from];
         uint256 len = vaults.length();
         uint256 i = 0;
 
@@ -1073,7 +1072,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
         uint256 _rebalanceTarget,
         bool isRebalanceFrom
     ) internal returns (bool) {
-        EnumerableSet.AddressSet storage vaults = usedVaults[_party0];
+        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_party0];
         uint256 len = vaults.length();
         uint256 i = 0;
 
@@ -1130,20 +1129,20 @@ contract CollateralAggregatorV2 is ICollateralAggregator, ProtocolTypes, MixinCo
     }
 
     function enterVault(address _user) external override onlyCollateralVault {
-        usedVaults[_user].add(msg.sender);
+        Storage.slot().usedVaults[_user].add(msg.sender);
     }
 
     function exitVault(address _user) external override onlyCollateralVault {
-        usedVaults[_user].remove(msg.sender);
+        Storage.slot().usedVaults[_user].remove(msg.sender);
     }
 
     function enterVault(address _party0, address _party1) external override onlyCollateralVault {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        usedVaultsInPosition[packedAddrs].add(msg.sender);
+        Storage.slot().usedVaultsInPosition[packedAddrs].add(msg.sender);
     }
 
     function exitVault(address _party0, address _party1) external override onlyCollateralVault {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        usedVaultsInPosition[packedAddrs].remove(msg.sender);
+        Storage.slot().usedVaultsInPosition[packedAddrs].remove(msg.sender);
     }
 }

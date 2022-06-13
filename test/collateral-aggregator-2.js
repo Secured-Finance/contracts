@@ -519,7 +519,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
     });
 
     it('Successfully release all unsettled exposure for Bob, validate state changes', async () => {
-      let filUnsettledExp = await collateralAggregator.unsettledCollateral(
+      let filUnsettledExp = await collateralAggregator.getUnsettledCollateral(
         bob,
         hexFILString,
       );

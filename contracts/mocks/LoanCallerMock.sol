@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../ProtocolTypes.sol";
 import "../interfaces/ILoanV2.sol";
 
-contract LoanCallerMock is ProtocolTypes {
+contract LoanCallerMock {
     ILoanV2 public loan;
 
     constructor(address _loan) {

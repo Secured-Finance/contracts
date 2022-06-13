@@ -1,8 +1,6 @@
-const { zeroAddress } = require('../test-utils/src/strings');
-
 const { filToETHRate, ethToUSDRate, btcToETHRate } =
   require('../test-utils').numbers;
-const { hexFILString, hexBTCString, hexETHString } =
+const { hexFILString, hexBTCString, hexETHString, zeroAddress, toBytes32 } =
   require('../test-utils').strings;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
@@ -12,12 +10,21 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const currencyController = await deploy('CurrencyController', {
     from: deployer,
   });
-  const currencyControllerContract = await ethers.getContractAt(
-    'CurrencyController',
-    currencyController.address,
-  );
   console.log('Deployed CurrencyController at ' + currencyController.address);
 
+  // Set up for Proxies
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
+  await proxyController
+    .setCurrencyControllerImpl(currencyController.address)
+    .then((tx) => tx.wait());
+
+  const currencyControllerContract = await proxyController
+    .getProxyAddress(toBytes32('CurrencyController'))
+    .then((address) => ethers.getContractAt('CurrencyController', address));
+
+  // Set up for CurrencyController
   const filToETHPriceFeed = await deploy('MockV3Aggregator', {
     from: deployer,
     args: [18, hexFILString, filToETHRate.toString()],
@@ -45,8 +52,8 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       btcToETHPriceFeed.address,
   );
 
-  await (
-    await currencyControllerContract.supportCurrency(
+  await currencyControllerContract
+    .supportCurrency(
       hexETHString,
       'Ethereum',
       60,
@@ -54,10 +61,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       7500,
       zeroAddress,
     )
-  ).wait();
+    .then((tx) => tx.wait());
 
-  await (
-    await currencyControllerContract.supportCurrency(
+  await currencyControllerContract
+    .supportCurrency(
       hexFILString,
       'Filecoin',
       461,
@@ -65,10 +72,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       7500,
       zeroAddress,
     )
-  ).wait();
+    .then((tx) => tx.wait());
 
-  await (
-    await currencyControllerContract.supportCurrency(
+  await currencyControllerContract
+    .supportCurrency(
       hexBTCString,
       'Bitcoin',
       0,
@@ -76,15 +83,16 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       7500,
       zeroAddress,
     )
-  ).wait();
+    .then((tx) => tx.wait());
 
-  await (
-    await currencyControllerContract.updateCollateralSupport(hexETHString, true)
-  ).wait();
-  await (
-    await currencyControllerContract.updateMinMargin(hexETHString, 2500)
-  ).wait();
+  await currencyControllerContract
+    .updateCollateralSupport(hexETHString, true)
+    .then((tx) => tx.wait());
+
+  await currencyControllerContract
+    .updateMinMargin(hexETHString, 2500)
+    .then((tx) => tx.wait());
 };
 
 module.exports.tags = ['CurrencyController'];
-module.exports.dependencies = ['CloseOutNetting'];
+module.exports.dependencies = ['CloseOutNetting', 'ProxyController'];

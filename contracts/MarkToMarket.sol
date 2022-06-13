@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./ProtocolTypes.sol";
 import "./interfaces/IMarketController.sol";
 import "./interfaces/IMarkToMarket.sol";
 import "./interfaces/IProduct.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
 
-contract MarkToMarket is IMarkToMarket, MixinAddressResolver {
+contract MarkToMarket is IMarkToMarket, MixinAddressResolver, Proxyable {
     uint256 constant NOTICE = 2 weeks;
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) {}
+    function initialize(address resolver) public initializer onlyProxy {
+        registerAddressResolver(resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     struct PresentValueCalcLocalVars {

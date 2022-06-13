@@ -5,16 +5,12 @@ pragma solidity ^0.8.9;
  * @dev ProtocolTypes is a base-level contract that holds common Secured Finance protocol types
  * @author Secured Finance
  */
-contract ProtocolTypes {
+library ProtocolTypes {
     // Constant values
-    uint8 internal constant NUMCCY = 3;
-    uint8 internal constant NUMTERM = 6;
-    uint8 internal constant NUMDF = 7; // number of discount factors
-    uint256 internal constant BP = 10000; // basis point
-
-    uint256 internal constant PCT = 10000; // percentage point in basis
-    uint256 internal constant PENALTYLEVEL = 1000; // 10% settlement failure penalty
-    uint256 internal constant MKTMAKELEVEL = 2000; // 20% for market making
+    uint256 public constant BP = 10000; // basis point
+    uint256 public constant PCT = 10000; // percentage point in basis
+    uint256 public constant PENALTYLEVEL = 1000; // 10% settlement failure penalty
+    uint256 public constant MKTMAKELEVEL = 2000; // 20% for market making
 
     // Lending market common types
     enum Side {
@@ -77,5 +73,19 @@ contract ProtocolTypes {
         QUARTERLY,
         MONTHLY,
         FORWARD
+    }
+
+    struct Currency {
+        bool isSupported;
+        string name;
+        uint16 chainId; // chain id for address conversion
+    }
+
+    struct SettlementRequest {
+        address payer;
+        address receiver;
+        uint16 chainId;
+        uint256 timestamp;
+        string txHash;
     }
 }

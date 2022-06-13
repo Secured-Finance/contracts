@@ -59,7 +59,9 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
         bytes32 _ccy,
         address _tokenAddress,
         address _WETH9
-    ) MixinAddressResolver(_resolver) SafeTransfer(_WETH9) {
+    ) {
+        registerAddressResolver(_resolver);
+        _registerToken(_WETH9);
         tokenAddress = _tokenAddress;
         ccy = _ccy;
 
@@ -70,13 +72,13 @@ contract CollateralVault is ICollateralVault, MixinAddressResolver, Ownable, Saf
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
-        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
+        contracts[1] = Contracts.CURRENCY_CONTROLLER;
     }
 
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
     }
 
     /**

@@ -2,46 +2,46 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/AddressPacking.sol";
 import "./interfaces/IProduct.sol";
 import "./interfaces/ILiquidations.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
+import {LiquidationsStorage as Storage} from "./storages/LiquidationsStorage.sol";
 
-contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
+contract Liquidations is ILiquidations, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
-
-    uint256 public override offset;
-    EnumerableSet.AddressSet private liquidationAgents;
-    EnumerableSet.AddressSet private linkedContracts;
-
-    // Mapping structure for storing liquidation queue to bilateral position
-    mapping(bytes32 => EnumerableSet.Bytes32Set) private liquidationQueue;
 
     /**
      * @dev Modifier to make a function callable only by liquidation agent.
      */
     modifier onlyLiquidationAgent() {
-        require(liquidationAgents.contains(msg.sender), "INVALID ACCESS");
+        require(Storage.slot().liquidationAgents.contains(msg.sender), "INVALID ACCESS");
         _;
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     * @param _offset The liquidation offset
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver, uint256 _offset) MixinAddressResolver(_resolver) Ownable() {
-        liquidationAgents.add(msg.sender);
-        offset = _offset;
+    function initialize(
+        address owner,
+        address resolver,
+        uint256 offset
+    ) public initializer onlyProxy {
+        _transferOwnership(owner);
+        registerAddressResolver(resolver);
+        Storage.slot().liquidationAgents.add(owner);
+        Storage.slot().offset = offset;
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
-        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
-        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
+        contracts[1] = Contracts.CURRENCY_CONTROLLER;
+        contracts[2] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     function isAcceptedContract(address account) internal view override returns (bool) {
@@ -56,8 +56,8 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      */
     function updateLiquidationOffset(uint256 _offset) public override onlyOwner {
         require(_offset > 0, "INCORRECT_OFFSET");
-        emit OffsetUpdated(offset, _offset);
-        offset = _offset;
+        emit OffsetUpdated(Storage.slot().offset, _offset);
+        Storage.slot().offset = _offset;
     }
 
     /**
@@ -65,7 +65,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * @param _liquidationAgent Liquidation agent address
      */
     function addLiquidationAgent(address _liquidationAgent) public override onlyOwner {
-        liquidationAgents.add(_liquidationAgent);
+        Storage.slot().liquidationAgents.add(_liquidationAgent);
         emit LiquidationAgentAdded(_liquidationAgent);
     }
 
@@ -74,7 +74,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
      * @param _liquidationAgent Liquidation agent address
      */
     function removeLiquidationAgent(address _liquidationAgent) public override onlyOwner {
-        liquidationAgents.remove(_liquidationAgent);
+        Storage.slot().liquidationAgents.remove(_liquidationAgent);
         emit LiquidationAgentRemoved(_liquidationAgent);
     }
 
@@ -84,7 +84,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         bytes32 dealId
     ) public override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.Bytes32Set storage set = liquidationQueue[packedAddrs];
+        EnumerableSet.Bytes32Set storage set = Storage.slot().liquidationQueue[packedAddrs];
 
         require(!set.contains(dealId), "ALREADY EXISTING DEAL");
         set.add(dealId);
@@ -98,7 +98,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         bytes32 dealId
     ) public override onlyAcceptedContracts {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.Bytes32Set storage set = liquidationQueue[packedAddrs];
+        EnumerableSet.Bytes32Set storage set = Storage.slot().liquidationQueue[packedAddrs];
 
         require(set.contains(dealId), "NON EXISTING DEAL");
         set.remove(dealId);
@@ -123,11 +123,13 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         if (coverage0 && coverage1) return;
 
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.Bytes32Set storage set = liquidationQueue[packedAddrs];
+        EnumerableSet.Bytes32Set storage set = Storage.slot().liquidationQueue[packedAddrs];
 
         uint256 numDeals = set.length();
         uint256 numLiquidations;
-        numDeals > offset ? numLiquidations = offset : numLiquidations = numDeals;
+        numDeals > Storage.slot().offset
+            ? numLiquidations = Storage.slot().offset
+            : numLiquidations = numDeals;
         bytes32[] memory dealIds = new bytes32[](numLiquidations);
 
         for (uint256 i = 0; i < numLiquidations; i++) {
@@ -149,7 +151,7 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         address party1,
         bytes32[] memory dealIds
     ) public override onlyLiquidationAgent {
-        require(dealIds.length < offset, "TOO MUCH DEALS");
+        require(dealIds.length < Storage.slot().offset, "TOO MUCH DEALS");
         (bool coverage0, bool coverage1) = collateralAggregator().isCovered(
             party0,
             party1,
@@ -161,6 +163,13 @@ contract Liquidations is ILiquidations, MixinAddressResolver, Ownable {
         if (coverage0 && coverage1) return;
 
         _liquidateDeals(party0, party1, dealIds);
+    }
+
+    /**
+     * @dev Triggers to get liquidation offset.
+     */
+    function getOffset() external view returns (uint256) {
+        return Storage.slot().offset;
     }
 
     struct LiquidationLocalVars {

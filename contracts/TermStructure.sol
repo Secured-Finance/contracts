@@ -2,47 +2,41 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ITermStructure.sol";
 import "./libraries/QuickSort.sol";
 import "./libraries/TermSchedule.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
+import {TermStructureStorage as Storage} from "./storages/TermStructureStorage.sol";
 
 /**
  * @dev Term Structure contract is responsible for managing supported
  * terms in Secured Finance Protocol per product and currency
  *
  */
-contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
+contract TermStructure is ITermStructure, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.UintSet;
     using QuickSort for uint256[];
 
-    uint8 public override last_term_index;
-
-    struct Term {
-        uint256 numDays;
-        uint256 dfFrac;
-        uint256 numPayments;
-    }
-
-    mapping(uint256 => uint256) private terms;
-    mapping(bytes4 => mapping(bytes32 => EnumerableSet.UintSet)) private termsForProductAndCcy;
-
     modifier existingTermOnly(uint256 _numDays) {
-        require(terms[_numDays] == _numDays, "NON EXISTING TERM");
+        require(Storage.slot().terms[_numDays] == _numDays, "NON EXISTING TERM");
         _;
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
+    function initialize(address owner, address resolver) public initializer onlyProxy {
+        _transferOwnership(owner);
+        registerAddressResolver(resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
-        contracts[0] = CONTRACT_CURRENCY_CONTROLLER;
-        contracts[1] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.CURRENCY_CONTROLLER;
+        contracts[1] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     /**
@@ -56,9 +50,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         bytes4[] memory _products,
         bytes32[] memory _currencies
     ) public override onlyOwner {
-        last_term_index = last_term_index++;
-
-        terms[_numDays] = _numDays;
+        Storage.slot().terms[_numDays] = _numDays;
 
         if (_products.length > 0) {
             for (uint256 i = 0; i < _products.length; i++) {
@@ -91,9 +83,9 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 
         if (_isSupported) {
-            termsForProductAndCcy[_product][_ccy].add(_numDays);
+            Storage.slot().termsForProductAndCcy[_product][_ccy].add(_numDays);
         } else {
-            termsForProductAndCcy[_product][_ccy].remove(_numDays);
+            Storage.slot().termsForProductAndCcy[_product][_ccy].remove(_numDays);
         }
 
         emit ProductTermSupportUpdated(_numDays, _product, _ccy, _isSupported);
@@ -108,18 +100,14 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         view
         override
         returns (
-            uint256,
-            uint256,
-            uint256
+            uint256 numDays,
+            uint256 dfFrac,
+            uint256 numPayments
         )
     {
-        Term memory term;
-
-        term.numDays = terms[_numDays];
-        term.dfFrac = getDfFrac(_numDays);
-        term.numPayments = getNumPayments(_numDays, _frequency);
-
-        return (term.numDays, term.dfFrac, term.numPayments);
+        numDays = Storage.slot().terms[_numDays];
+        dfFrac = getDfFrac(_numDays);
+        numPayments = getNumPayments(_numDays, _frequency);
     }
 
     /**
@@ -143,7 +131,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
      * @param _numDays Number of days in term
      */
     function getNumDays(uint256 _numDays) public view override returns (uint256) {
-        return terms[_numDays];
+        return Storage.slot().terms[_numDays];
     }
 
     /**
@@ -179,7 +167,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         bytes4 _product,
         bytes32 _ccy
     ) public view override returns (bool) {
-        EnumerableSet.UintSet storage set = termsForProductAndCcy[_product][_ccy];
+        EnumerableSet.UintSet storage set = Storage.slot().termsForProductAndCcy[_product][_ccy];
         return set.contains(_numDays);
     }
 
@@ -193,7 +181,7 @@ contract TermStructure is ITermStructure, MixinAddressResolver, Ownable {
         bytes32 _ccy,
         bool sort
     ) public view override returns (uint256[] memory) {
-        EnumerableSet.UintSet storage set = termsForProductAndCcy[_product][_ccy];
+        EnumerableSet.UintSet storage set = Storage.slot().termsForProductAndCcy[_product][_ccy];
         uint256 numTerms = set.length();
         uint256[] memory supportedTerms = new uint256[](numTerms);
 

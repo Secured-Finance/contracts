@@ -3,6 +3,7 @@
 pragma solidity ^0.8.9;
 
 import "./IExternalAdapterTxResponse.sol";
+import "../types/ProtocolTypes.sol";
 
 interface ISettlementEngine {
     event CrosschainSettlementRequested(
@@ -27,7 +28,7 @@ interface ISettlementEngine {
 
     function addExternalAdapter(address _adapter, bytes32 _ccy) external;
 
-    function externalAdapters(uint16) external view returns (address);
+    function getExternalAdapters(bytes32) external view returns (address);
 
     function fulfillSettlementRequest(
         bytes32 _requestId,
@@ -39,16 +40,10 @@ interface ISettlementEngine {
 
     function replaceExternalAdapter(address _adapter, bytes32 _ccy) external;
 
-    function settlementRequests(bytes32)
+    function getSettlementRequests(bytes32)
         external
         view
-        returns (
-            address payer,
-            address receiver,
-            uint16 chainId,
-            uint256 timestamp,
-            string memory txHash
-        );
+        returns (ProtocolTypes.SettlementRequest memory);
 
     function verifyPayment(
         address _counterparty,

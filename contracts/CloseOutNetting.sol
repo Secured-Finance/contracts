@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./libraries/CloseOut.sol";
 import "./interfaces/ICloseOutNetting.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
+import {CloseOutNettingStorage as Storage} from "./storages/CloseOutNettingStorage.sol";
 
 /**
  * @title Close Out Netting contract is used in close out operations
@@ -13,21 +15,12 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to all product based contracts (ex. Loan, Swap, etc), and Collateral Aggregator contract.
  */
-contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
-    using Address for address;
-    using CloseOut for CloseOut.Payment;
-
-    // Mapping structure for storing Close Out payments
-    mapping(bytes32 => mapping(bytes32 => CloseOut.Payment)) _closeOuts;
-
-    // Mapping structure for storing default boolean per address
-    mapping(address => bool) _isDefaulted;
-
+contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Proxyable {
     /**
      * @dev Modifier to make a function callable only by defaulted counterparty.
      */
     modifier defaultedParty() {
-        require(_isDefaulted[msg.sender]);
+        require(Storage.slot().isDefaulted[msg.sender]);
         _;
     }
 
@@ -35,24 +28,26 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
      * @dev Modifier to make a function callable only by non defaulted counterparty.
      */
     modifier nonDefaultedParty() {
-        require(!_isDefaulted[msg.sender]);
+        require(!Storage.slot().isDefaulted[msg.sender]);
         _;
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) {}
+    function initialize(address resolver) public initializer onlyProxy {
+        registerAddressResolver(resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
+        contracts[0] = Contracts.PAYMENT_AGGREGATOR;
     }
 
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_PAYMENT_AGGREGATOR;
+        contracts[0] = Contracts.PAYMENT_AGGREGATOR;
     }
 
     /**
@@ -66,7 +61,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
         address party1,
         bytes32 ccy
     ) public view returns (CloseOut.Payment memory payment) {
-        payment = CloseOut.get(_closeOuts, party0, party1, ccy);
+        payment = CloseOut.get(Storage.slot().closeOuts, party0, party1, ccy);
     }
 
     /**
@@ -86,7 +81,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
         uint256 payment0,
         uint256 payment1
     ) external override onlyAcceptedContracts {
-        CloseOut.addPayments(_closeOuts, party0, party1, ccy, payment0, payment1);
+        CloseOut.addPayments(Storage.slot().closeOuts, party0, party1, ccy, payment0, payment1);
 
         emit AddCloseOutPayments(party0, party1, ccy, payment0, payment1);
     }
@@ -108,7 +103,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
         uint256 payment0,
         uint256 payment1
     ) external override onlyAcceptedContracts {
-        CloseOut.removePayments(_closeOuts, party0, party1, ccy, payment0, payment1);
+        CloseOut.removePayments(Storage.slot().closeOuts, party0, party1, ccy, payment0, payment1);
 
         emit RemoveCloseOutPayments(party0, party1, ccy, payment0, payment1);
     }
@@ -117,14 +112,14 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
      * @dev External function to check if `_party` is in default
      */
     function checkDefault(address _party) external view override returns (bool) {
-        return _isDefaulted[_party];
+        return Storage.slot().isDefaulted[_party];
     }
 
     /**
      * @dev Internal function to declare default for `_defaultedParty`
      */
     function _handleDefault(address _defaultedParty) internal {
-        _isDefaulted[_defaultedParty] = true;
+        Storage.slot().isDefaulted[_defaultedParty] = true;
     }
 
     // TODO: Need to update using CollateralAggregatorV2
@@ -135,7 +130,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
     //  */
     // function _handleCloseOut(address party0, address party1) internal {
     //     require(
-    //         _isDefaulted[party0] || _isDefaulted[party1],
+    //         Storage.slot().isDefaulted[party0] || Storage.slot().isDefaulted[party1],
     //         "NON_DEFAULTED_PARTIES"
     //     );
     //     bytes32[] memory currencies = collateralAggregator.getExposedCurrencies(
@@ -147,7 +142,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
     //         bytes32 ccy = currencies[i];
 
     //         CloseOut.Payment memory payment = CloseOut.get(
-    //             _closeOuts,
+    //             Storage.slot().closeOuts,
     //             party0,
     //             party1,
     //             ccy
@@ -169,7 +164,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver {
     //             );
     //         }
 
-    //         CloseOut.close(_closeOuts, party0, party1, ccy);
+    //         CloseOut.close(Storage.slot().closeOuts, party0, party1, ccy);
     //     }
     // }
 }

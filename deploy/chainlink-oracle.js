@@ -37,10 +37,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   console.log('Deployed Oracle at ' + oracle.address);
 
   const oracleContract = await ethers.getContractAt('Operator', oracle.address);
-  const tx = await oracleContract.setAuthorizedSenders([
-    process.env.CHAINLINK_NODE_ACCOUNT,
-  ]);
-  await tx.wait();
+
+  await oracleContract
+    .setAuthorizedSenders([process.env.CHAINLINK_NODE_ACCOUNT])
+    .then((tx) => tx.wait());
 };
 
 module.exports.tags = ['ChainlinkOracle'];

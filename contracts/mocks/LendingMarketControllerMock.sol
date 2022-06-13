@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+// import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ILendingMarketController.sol";
-import "../ProtocolTypes.sol";
 import "../libraries/DiscountFactor.sol";
+import "../utils/Ownable.sol";
 
-contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes, Ownable {
-    uint256 public override numberOfMarkets = 0;
-
+contract LendingMarketControllerMock is ILendingMarketController, Ownable {
     mapping(bytes32 => mapping(uint256 => uint256)) public lendRates;
     mapping(bytes32 => mapping(uint256 => uint256)) public borrowRates;
     mapping(bytes32 => uint256[]) public supportedTerms;
 
-    /**
-     * @dev Lending Market Controller Constructor.
-     */
-    constructor() Ownable() {}
+    constructor() {
+        _transferOwnership(msg.sender);
+    }
+
+    function initialize(address owner, address resolver) public {
+        _transferOwnership(owner);
+    }
 
     /**
      * @dev Triggers to get borrow rates for selected currency.
@@ -115,7 +116,7 @@ contract LendingMarketControllerMock is ILendingMarketController, ProtocolTypes,
         return address(0);
     }
 
-    function lendingMarkets(bytes32 _ccy, uint256 _term) public pure override returns (address) {
+    function getLendingMarket(bytes32 _ccy, uint256 _term) public pure override returns (address) {
         _ccy;
         _term;
         return address(0);

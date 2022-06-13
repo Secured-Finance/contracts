@@ -2,36 +2,35 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IProductAddressResolver.sol";
 import "./libraries/DealId.sol";
+import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
+import {ProductAddressResolverStorage as Storage} from "./storages/ProductAddressResolverStorage.sol";
 
 /**
  * @title ProductAddressResolver contract is used to store addresses for each product
  * type supported on the protocol. Addresses stored per bytes4 prefixes which
  * are a simple identifiers of the product type
  */
-contract ProductAddressResolver is IProductAddressResolver, Ownable {
+contract ProductAddressResolver is IProductAddressResolver, Ownable, Proxyable {
     using Address for address;
-
-    // Mapping for storing product contract addresses
-    mapping(bytes4 => address) _productContracts;
-    mapping(bytes4 => address) _controllerContracts;
-    // Mapping from product contract address to prefix for product type
-    mapping(address => bytes4) _productPrefix;
 
     /**
      * @dev Modifier to check if passed prefix is valid
      */
     modifier validPrefix(bytes4 _prefix) {
-        require(_productContracts[_prefix] != address(0), "INVALID_ADDRESS");
+        require(Storage.slot().productContracts[_prefix] != address(0), "INVALID_ADDRESS");
         _;
     }
 
     /**
-     * @dev Contract constructor function.
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor() Ownable() {}
+    function initialize(address owner) public initializer onlyProxy {
+        _transferOwnership(owner);
+    }
 
     /**
      * @dev Triggers to register new product type in a address resolver
@@ -50,12 +49,12 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
         require(_product.isContract(), "Can't add non-contract address");
         require(_controller.isContract(), "Can't add non-contract address");
 
-        address prevProduct = _productContracts[_prefix];
-        _productContracts[_prefix] = _product;
-        _controllerContracts[_prefix] = _controller;
+        address prevProduct = Storage.slot().productContracts[_prefix];
+        Storage.slot().productContracts[_prefix] = _product;
+        Storage.slot().controllerContracts[_prefix] = _controller;
 
-        _productPrefix[prevProduct] = "";
-        _productPrefix[_product] = _prefix;
+        Storage.slot().productPrefix[prevProduct] = "";
+        Storage.slot().productPrefix[_product] = _prefix;
 
         emit RegisterProduct(_prefix, _product, _controller);
     }
@@ -89,7 +88,7 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
      * @notice To work with the contract this address should be wrapped around IProduct interface
      */
     function getProductContract(bytes4 _prefix) public view override returns (address) {
-        return _productContracts[_prefix];
+        return Storage.slot().productContracts[_prefix];
     }
 
     /**
@@ -99,7 +98,7 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
      */
     function getProductContractByDealId(bytes32 _dealId) public view override returns (address) {
         bytes4 prefix = DealId.getPrefix(_dealId);
-        return _productContracts[prefix];
+        return Storage.slot().productContracts[prefix];
     }
 
     /**
@@ -108,7 +107,7 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
      * @notice To work with the contract this address should be wrapped around IYieldCurve interface
      */
     function getControllerContract(bytes4 _prefix) public view override returns (address) {
-        return _controllerContracts[_prefix];
+        return Storage.slot().controllerContracts[_prefix];
     }
 
     /**
@@ -118,7 +117,7 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
      */
     function getControllerContractByDealId(bytes32 _dealId) public view override returns (address) {
         bytes4 prefix = DealId.getPrefix(_dealId);
-        return _controllerContracts[prefix];
+        return Storage.slot().controllerContracts[prefix];
     }
 
     /**
@@ -126,7 +125,7 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
      * @param _prefix Bytes4 prefix for product type
      */
     function isSupportedProduct(bytes4 _prefix) public view override returns (bool) {
-        return _productContracts[_prefix] != address(0);
+        return Storage.slot().productContracts[_prefix] != address(0);
     }
 
     /**
@@ -135,7 +134,7 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
      */
     function isSupportedProductByDealId(bytes32 _dealId) public view override returns (bool) {
         bytes4 prefix = DealId.getPrefix(_dealId);
-        return _productContracts[prefix] != address(0);
+        return Storage.slot().productContracts[prefix] != address(0);
     }
 
     /**
@@ -143,6 +142,6 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable {
      * @param _product Product contract address
      */
     function isRegisteredProductContract(address _product) public view override returns (bool) {
-        return _productPrefix[_product] != "";
+        return Storage.slot().productPrefix[_product] != "";
     }
 }

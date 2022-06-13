@@ -2,12 +2,12 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./ProtocolTypes.sol";
 import "./interfaces/IProductWithOneLeg.sol";
 import "./libraries/DealId.sol";
 import "./libraries/DiscountFactor.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./types/ProtocolTypes.sol";
 
 /**
  * @title LoanV2 contract is used to store Lending deals in Secured Finance
@@ -16,14 +16,14 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to Lending Market contracts, LendingMarketController and Collateral contract.
  */
-contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Ownable {
+contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable {
     uint256 constant NOTICE = 2 weeks;
     uint256 constant SETTLE = 2 days;
     uint256 constant MAXPAYNUM = 6;
     bytes4 constant prefix = 0x21aaa47b;
     uint16 private constant VERSION = 1;
     uint256 public settlementWindow = 2;
-    uint8 public paymentFrequency = uint8(PaymentFrequency.ANNUAL);
+    uint8 public paymentFrequency = uint8(ProtocolTypes.PaymentFrequency.ANNUAL);
 
     struct LoanDeal {
         address lender;
@@ -78,14 +78,16 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
      * @dev Contract constructor function.
      * @param _resolver The address of the Address Resolver contract
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) Ownable() {}
+    constructor(address _resolver) {
+        registerAddressResolver(_resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](4);
-        contracts[0] = CONTRACT_COLLATERAL_AGGREGATOR;
-        contracts[1] = CONTRACT_LENDING_MARKET_CONTROLLER;
-        contracts[2] = CONTRACT_PAYMENT_AGGREGATOR;
-        contracts[3] = CONTRACT_TERM_STRUCTURE;
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
+        contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts[2] = Contracts.PAYMENT_AGGREGATOR;
+        contracts[3] = Contracts.TERM_STRUCTURE;
     }
 
     /**
@@ -148,10 +150,10 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
         address lender;
         address borrower;
 
-        if (Side(side) == Side.LEND) {
+        if (ProtocolTypes.Side(side) == ProtocolTypes.Side.LEND) {
             lender = maker;
             borrower = taker;
-        } else if (Side(side) == Side.BORROW) {
+        } else if (ProtocolTypes.Side(side) == ProtocolTypes.Side.BORROW) {
             lender = taker;
             borrower = maker;
         }
@@ -159,13 +161,13 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
         collateralAggregator().releaseUnsettledCollateral(
             lender,
             ccy,
-            (notional * MKTMAKELEVEL) / PCT
+            (notional * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
         );
         collateralAggregator().useCollateral(
             lender,
             borrower,
             ccy,
-            (notional * MKTMAKELEVEL) / PCT,
+            (notional * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT,
             notional,
             false
         );
@@ -487,7 +489,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
             pv = pv + amounts[i] * d;
         }
 
-        return pv / BP;
+        return pv / ProtocolTypes.BP;
     }
 
     /**
@@ -590,7 +592,10 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
         vars.daysArr = termStructure().getTermSchedule(deal.term, paymentFrequency);
         vars.dfFrac = termStructure().getDfFrac(deal.term);
 
-        vars.coupon = (deal.notional * deal.rate * vars.dfFrac) / BP / BP;
+        vars.coupon =
+            (deal.notional * deal.rate * vars.dfFrac) /
+            ProtocolTypes.BP /
+            ProtocolTypes.BP;
 
         uint256 len = vars.payNums + 1;
         uint256[] memory payments = new uint256[](len);
@@ -640,7 +645,7 @@ contract LoanV2 is ProtocolTypes, IProductWithOneLeg, MixinAddressResolver, Owna
                     deal.lender,
                     deal.borrower,
                     deal.ccy,
-                    (deal.notional * MKTMAKELEVEL) / PCT,
+                    (deal.notional * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT,
                     0,
                     false
                 );

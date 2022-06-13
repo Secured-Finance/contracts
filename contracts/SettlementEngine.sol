@@ -2,13 +2,16 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./libraries/Strings.sol";
 import "./libraries/SafeTransfer.sol";
 import "./interfaces/IExternalAdapter.sol";
 import "./interfaces/ISettlementEngine.sol";
 import "./interfaces/IExternalAdapterTxResponse.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
+import "./types/ProtocolTypes.sol";
+import {SettlementEngineStorage as Storage} from "./storages/SettlementEngineStorage.sol";
 
 /**
  * @title Settlement Engine contract is used in settlement operations
@@ -23,44 +26,33 @@ contract SettlementEngine is
     IExternalAdapterTxResponse,
     MixinAddressResolver,
     SafeTransfer,
-    Ownable
+    Ownable,
+    Proxyable
 {
     using Address for address;
     using Strings for string;
 
-    struct SettlementRequest {
-        address payer;
-        address receiver;
-        uint16 chainId;
-        uint256 timestamp;
-        string txHash;
-    }
-
     uint16 private constant VERSION = 1;
 
-    // Mapping to external providers addresses by Chain Ids
-    // for ETH-based currencies there is no need for external adapters
-    mapping(uint16 => address) public override externalAdapters;
-
-    // Mapping of cross-chain settlement requests per requestId
-    mapping(bytes32 => SettlementRequest) public override settlementRequests;
-
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
-     * @param _WETH9 The address of the Wrapped ETH contract
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver, address _WETH9)
-        MixinAddressResolver(_resolver)
-        SafeTransfer(_WETH9)
-        Ownable()
-    {}
+    function initialize(
+        address owner,
+        address resolver,
+        address WETH9
+    ) public initializer onlyProxy {
+        _transferOwnership(owner);
+        _registerToken(WETH9);
+        registerAddressResolver(resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
-        contracts[0] = CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER;
-        contracts[1] = CONTRACT_CURRENCY_CONTROLLER;
-        contracts[2] = CONTRACT_PAYMENT_AGGREGATOR;
+        contracts[0] = Contracts.CROSSCHAIN_ADDRESS_RESOLVER;
+        contracts[1] = Contracts.CURRENCY_CONTROLLER;
+        contracts[2] = Contracts.PAYMENT_AGGREGATOR;
     }
 
     /**
@@ -77,11 +69,23 @@ contract SettlementEngine is
 
         uint16 chainId = currencyController().getChainId(_ccy);
         require(chainId != 60, "NOT_ANOTHER_CHAIN");
-        require(externalAdapters[chainId] == address(0), "CAN'T_REPLACE_EXTERNAL_ADAPTER");
+        require(
+            Storage.slot().externalAdapters[chainId] == address(0),
+            "CAN'T_REPLACE_EXTERNAL_ADAPTER"
+        );
 
-        externalAdapters[chainId] = _adapter;
+        Storage.slot().externalAdapters[chainId] = _adapter;
 
         emit ExternalAdapterAdded(_adapter, _ccy);
+    }
+
+    /**
+     * @dev Triggers to get external adapter for specific currency.
+     * @param _ccy Short identifier of a currency
+     */
+    function getExternalAdapters(bytes32 _ccy) external view returns (address) {
+        uint16 chainId = currencyController().getChainId(_ccy);
+        return Storage.slot().externalAdapters[chainId];
     }
 
     /**
@@ -96,11 +100,23 @@ contract SettlementEngine is
         require(_adapter.isContract(), "NOT_CONTRACT");
         uint16 chainId = currencyController().getChainId(_ccy);
 
-        require(externalAdapters[chainId] != address(0), "ADAPTER_DOESN'T_EXIST");
+        require(Storage.slot().externalAdapters[chainId] != address(0), "ADAPTER_DOESN'T_EXIST");
 
-        externalAdapters[chainId] = _adapter;
+        Storage.slot().externalAdapters[chainId] = _adapter;
 
         emit ExternalAdapterUpdated(_adapter, _ccy);
+    }
+
+    /**
+     * @dev Triggers to get settlement request
+     * @param _requestId The id to specify a request
+     */
+    function getSettlementRequests(bytes32 _requestId)
+        external
+        view
+        returns (ProtocolTypes.SettlementRequest memory)
+    {
+        return Storage.slot().settlementRequests[_requestId];
     }
 
     /**
@@ -158,9 +174,11 @@ contract SettlementEngine is
         bytes32 _ccy
     ) external override {
         uint16 chainId = currencyController().getChainId(_ccy);
-        require(externalAdapters[chainId] == msg.sender, "NOT_EXTERNAL_ADAPTER");
+        require(Storage.slot().externalAdapters[chainId] == msg.sender, "NOT_EXTERNAL_ADAPTER");
 
-        SettlementRequest memory request = settlementRequests[_requestId];
+        ProtocolTypes.SettlementRequest memory request = Storage.slot().settlementRequests[
+            _requestId
+        ];
         _validateSettlementRequest(chainId, request, _txData);
 
         bytes32 _settlementId = keccak256(abi.encodePacked(_txData.txHash));
@@ -184,7 +202,7 @@ contract SettlementEngine is
             _settlementId
         );
 
-        delete settlementRequests[_requestId];
+        delete Storage.slot().settlementRequests[_requestId];
     }
 
     // TODO: Add cancel external adapter request function
@@ -206,7 +224,7 @@ contract SettlementEngine is
         require(msg.value == 0, "INCORRECT_ETH_VALUE");
         require(paymentAggregator().checkSettlementWindow(_timestamp), "OUT_OF_SETTLEMENT_WINDOW");
 
-        address adapterAddr = externalAdapters[_chainId];
+        address adapterAddr = Storage.slot().externalAdapters[_chainId];
         require(adapterAddr != address(0), "ADAPTER_DOESN'T_EXIST");
         IExternalAdapter adapter = IExternalAdapter(adapterAddr);
 
@@ -214,7 +232,7 @@ contract SettlementEngine is
         // TODO: make sure we're not duplicating requests with the same txHashes
         // on external adapter contract
 
-        settlementRequests[requestId] = SettlementRequest({
+        Storage.slot().settlementRequests[requestId] = ProtocolTypes.SettlementRequest({
             payer: _payer,
             receiver: _counterparty,
             chainId: _chainId,
@@ -257,7 +275,7 @@ contract SettlementEngine is
             _safeTransferETH(_counterparty, msg.value);
         } else {
             require(msg.value == 0, "INCORRECT_ETH_VALUE");
-            address token = currencyController().tokenAddresses(_ccy);
+            address token = currencyController().getTokenAddresses(_ccy);
             require(token != address(0), "INVALID_TOKEN_ADDRESS");
             _safeTransferFrom(token, _payer, _counterparty, _payment);
         }
@@ -282,7 +300,7 @@ contract SettlementEngine is
      */
     function _validateSettlementRequest(
         uint16 _chainId,
-        SettlementRequest memory _request,
+        ProtocolTypes.SettlementRequest memory _request,
         FulfillData memory _txData
     ) internal view {
         require(_request.txHash.isEqual(_txData.txHash), "INCORRECT_TX_HASH");

@@ -4,8 +4,6 @@ pragma solidity ^0.8.9;
 import "../TermStructure.sol";
 
 contract TermStructureTest is TermStructure {
-    constructor(address _resolver) TermStructure(_resolver) {}
-
     function getGasCostOfGetTerm(uint256 _numDays, uint8 frequency)
         external
         view

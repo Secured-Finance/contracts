@@ -40,7 +40,8 @@ contract ChainlinkSettlementAdapter is
         uint256 _requestFee,
         address _link,
         bytes32 _ccy
-    ) MixinAddressResolver(_resolver) Ownable() {
+    ) {
+        registerAddressResolver(_resolver);
         setChainlinkOracle(_oracle);
         jobId = _jobId;
         ccy = _ccy;
@@ -61,7 +62,7 @@ contract ChainlinkSettlementAdapter is
      */
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_SETTLEMENT_ENGINE;
+        contracts[0] = Contracts.SETTLEMENT_ENGINE;
     }
 
     /**
@@ -69,7 +70,7 @@ contract ChainlinkSettlementAdapter is
      */
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
-        contracts[0] = CONTRACT_SETTLEMENT_ENGINE;
+        contracts[0] = Contracts.SETTLEMENT_ENGINE;
     }
 
     /**

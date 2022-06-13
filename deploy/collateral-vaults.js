@@ -1,4 +1,4 @@
-const { hexETHString } = require('../test-utils').strings;
+const { hexETHString, toBytes32 } = require('../test-utils').strings;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
@@ -22,20 +22,22 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'CollateralVault',
     ethVault.address,
   );
-  const collateralAggregator = await deployments.get('CollateralAggregatorV2');
-  const collateralAggregatorContract = await ethers.getContractAt(
-    'CollateralAggregatorV2',
-    collateralAggregator.address,
-  );
 
-  await (
-    await collateralAggregatorContract.linkCollateralVault(ethVault.address)
-  ).wait();
-  await (
-    await ethVaultContract.functions['deposit(uint256)']('10000000000000000', {
-      value: '10000000000000000',
-    })
-  ).wait();
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+  const collateralAggregator = await proxyController
+    .getProxyAddress(toBytes32('CollateralAggregator'))
+    .then((address) => ethers.getContractAt('CollateralAggregatorV2', address));
+
+  await collateralAggregator
+    .linkCollateralVault(ethVault.address)
+    .then((tx) => tx.wait());
+
+  await ethVaultContract.functions['deposit(uint256)']('10000000000000000', {
+    value: '10000000000000000',
+  }).then((tx) => tx.wait());
 };
 
 module.exports.tags = ['CollateralVaults'];

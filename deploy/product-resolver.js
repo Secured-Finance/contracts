@@ -12,7 +12,20 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     },
   });
   console.log('Deployed ProductAddressResolver at ' + productResolver.address);
+
+  const proxyController = await deployments
+    .get('ProxyController')
+    .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+  await proxyController
+    .setProductAddressResolverImpl(productResolver.address)
+    .then((tx) => tx.wait());
 };
 
 module.exports.tags = ['ProductAddressResolver'];
-module.exports.dependencies = ['Libraries', 'Loan', 'LendingMarketController'];
+module.exports.dependencies = [
+  'Libraries',
+  'Loan',
+  'LendingMarketController',
+  'ProxyController',
+];

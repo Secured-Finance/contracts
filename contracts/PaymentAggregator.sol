@@ -2,13 +2,13 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "./ProtocolTypes.sol";
 import "./libraries/TimeSlot.sol";
 import "./libraries/AddressPacking.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import "./interfaces/IPaymentAggregator.sol";
 import "./mixins/MixinAddressResolver.sol";
+import "./utils/Proxyable.sol";
+import {PaymentAggregatorStorage as Storage} from "./storages/PaymentAggregatorStorage.sol";
 
 /**
  * @title Payment Aggregator contract is used to aggregate payments
@@ -18,19 +18,10 @@ import "./mixins/MixinAddressResolver.sol";
  *
  * Contract linked to all product based contracts like Loan, Swap, etc.
  */
-contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressResolver {
-    using Address for address;
-    using TimeSlot for TimeSlot.Slot;
-    using EnumerableSet for EnumerableSet.AddressSet;
+contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    uint256 public override settlementWindow = 2;
-    uint256 constant MAXPAYNUM = 6;
-
-    // Mapping structure for storing TimeSlots
-    mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) _timeSlots;
-    mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => EnumerableSet.Bytes32Set)))
-        private deals;
+    uint256 public constant SETTLEMENT_WINDOW = 2;
 
     modifier onlySettlementEngine() {
         require(msg.sender == address(settlementEngine()), "NOT_SETTLEMENT_ENGINE");
@@ -38,16 +29,18 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver) MixinAddressResolver(_resolver) {}
+    function initialize(address resolver) public initializer onlyProxy {
+        registerAddressResolver(resolver);
+    }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
-        contracts[0] = CONTRACT_CLOSE_OUT_NETTING;
-        contracts[1] = CONTRACT_MARK_TO_MARKET;
-        contracts[2] = CONTRACT_PRODUCT_ADDRESS_RESOLVER;
+        contracts[0] = Contracts.CLOSE_OUT_NETTING;
+        contracts[1] = Contracts.MARK_TO_MARKET;
+        contracts[2] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     function isAcceptedContract(address account) internal view override returns (bool) {
@@ -96,7 +89,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
                 timestamps[i]
             );
             vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
-            deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);
+            Storage.slot().deals[vars.packedAddrs][ccy][vars.slotPosition].add(dealId);
 
             if (payments0[i] > 0) {
                 vars.totalPayment0 = vars.totalPayment0 + payments0[i];
@@ -107,7 +100,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
             }
 
             TimeSlot.addPayment(
-                _timeSlots,
+                Storage.slot()._timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -177,7 +170,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
         vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
 
         TimeSlot.verifyPayment(
-            _timeSlots,
+            Storage.slot()._timeSlots,
             vars.verifier,
             vars.counterparty,
             vars.ccy,
@@ -199,7 +192,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
         );
 
         vars.isSettled = TimeSlot.isSettled(
-            _timeSlots,
+            Storage.slot()._timeSlots,
             vars.verifier,
             vars.counterparty,
             vars.ccy,
@@ -218,7 +211,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
     function _settlePayment(PaymentSettlementLocalVars memory vars) internal {
         // TODO: Rework the settlement workflow to reduce gas consumption
         (vars.totalPayment0, vars.totalPayment1, , , , ) = TimeSlot.get(
-            _timeSlots,
+            Storage.slot()._timeSlots,
             vars.verifier,
             vars.counterparty,
             vars.ccy,
@@ -286,7 +279,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
             vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
 
             require(
-                deals[vars.packedAddrs][ccy][vars.slotPosition].remove(dealId),
+                Storage.slot().deals[vars.packedAddrs][ccy][vars.slotPosition].remove(dealId),
                 "NON_REGISTERED_DEAL"
             );
 
@@ -294,7 +287,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
             vars.totalPayment1 = vars.totalPayment1 + payments1[i];
 
             TimeSlot.removePayment(
-                _timeSlots,
+                Storage.slot()._timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -350,7 +343,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
             bool
         )
     {
-        return TimeSlot.get(_timeSlots, party0, party1, ccy, year, month, day);
+        return TimeSlot.get(Storage.slot()._timeSlots, party0, party1, ccy, year, month, day);
     }
 
     /**
@@ -377,7 +370,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
             bool
         )
     {
-        return TimeSlot.getBySlotId(_timeSlots, party0, party1, ccy, slot);
+        return TimeSlot.getBySlotId(Storage.slot()._timeSlots, party0, party1, ccy, slot);
     }
 
     /**
@@ -401,7 +394,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
     ) public view returns (address, uint256) {
         return
             TimeSlot.getPaymentConfirmation(
-                _timeSlots,
+                Storage.slot()._timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -429,7 +422,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
     ) public view returns (address, uint256) {
         return
             TimeSlot.getPaymentConfirmationById(
-                _timeSlots,
+                Storage.slot()._timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -492,7 +485,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
         );
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
-        status = TimeSlot.isSettled(_timeSlots, party0, party1, ccy, slotPosition);
+        status = TimeSlot.isSettled(Storage.slot()._timeSlots, party0, party1, ccy, slotPosition);
     }
 
     /**
@@ -504,7 +497,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
         uint256 time = block.timestamp;
         uint256 delta = BokkyPooBahsDateTimeLibrary.diffDays(time, targetTime);
 
-        return !(delta > settlementWindow);
+        return !(delta > SETTLEMENT_WINDOW);
     }
 
     function getDealsFromSlot(
@@ -514,7 +507,7 @@ contract PaymentAggregator is IPaymentAggregator, ProtocolTypes, MixinAddressRes
         bytes32 slotPosition
     ) public view override returns (bytes32[] memory) {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.Bytes32Set storage set = deals[packedAddrs][ccy][slotPosition];
+        EnumerableSet.Bytes32Set storage set = Storage.slot().deals[packedAddrs][ccy][slotPosition];
 
         uint256 numDeals = set.length();
         bytes32[] memory dealIds = new bytes32[](numDeals);

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../AddressResolver.sol";
+import "../libraries/Contracts.sol";
+import "../interfaces/IAddressResolver.sol";
 import "../interfaces/ICloseOutNetting.sol";
 import "../interfaces/ICollateralAggregatorV2.sol";
 import "../interfaces/ICrosschainAddressResolver.sol";
@@ -17,33 +18,13 @@ import "../interfaces/ITermStructure.sol";
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
 
-    AddressResolver public resolver;
+    IAddressResolver public resolver;
 
     mapping(bytes32 => address) private addressCache;
-
-    bytes32 public constant CONTRACT_CLOSE_OUT_NETTING = "CloseOutNetting";
-    bytes32 public constant CONTRACT_COLLATERAL_AGGREGATOR = "CollateralAggregator";
-    bytes32 public constant CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER = "CrosschainAddressResolver";
-    bytes32 public constant CONTRACT_CURRENCY_CONTROLLER = "CurrencyController";
-    bytes32 public constant CONTRACT_MARK_TO_MARKET = "MarkToMarket";
-    bytes32 public constant CONTRACT_LENDING_MARKET_CONTROLLER = "LendingMarketController";
-    bytes32 public constant CONTRACT_LIQUIDATIONS = "Liquidations";
-    bytes32 public constant CONTRACT_PAYMENT_AGGREGATOR = "PaymentAggregator";
-    bytes32 public constant CONTRACT_PRODUCT_ADDRESS_RESOLVER = "ProductAddressResolver";
-    bytes32 public constant CONTRACT_SETTLEMENT_ENGINE = "SettlementEngine";
-    bytes32 public constant CONTRACT_TERM_STRUCTURE = "TermStructure";
 
     modifier onlyAcceptedContracts() {
         require(isAcceptedContract(msg.sender), "Only Accepted Contracts");
         _;
-    }
-
-    /**
-     * @dev Constructor.
-     * @param _resolver The address of the Address Resolver contract
-     */
-    constructor(address _resolver) {
-        resolver = AddressResolver(_resolver);
     }
 
     /**
@@ -86,6 +67,15 @@ contract MixinAddressResolver {
         return true;
     }
 
+    /**
+     * @dev Register the Address Resolver contract
+     * @param _resolver The address of the Address Resolver contract
+     */
+    function registerAddressResolver(address _resolver) internal {
+        require(address(resolver) == address(0), "resolver registered already");
+        resolver = IAddressResolver(_resolver);
+    }
+
     function getAddress(bytes32 name) internal view returns (address) {
         address _foundAddress = addressCache[name];
         require(_foundAddress != address(0), string(abi.encodePacked("Missing address: ", name)));
@@ -104,46 +94,46 @@ contract MixinAddressResolver {
     }
 
     function closeOutNetting() internal view returns (ICloseOutNetting) {
-        return ICloseOutNetting(getAddress(CONTRACT_CLOSE_OUT_NETTING));
+        return ICloseOutNetting(getAddress(Contracts.CLOSE_OUT_NETTING));
     }
 
     function collateralAggregator() internal view returns (ICollateralAggregator) {
-        return ICollateralAggregator(getAddress(CONTRACT_COLLATERAL_AGGREGATOR));
+        return ICollateralAggregator(getAddress(Contracts.COLLATERAL_AGGREGATOR));
     }
 
     function crosschainAddressResolver() internal view returns (ICrosschainAddressResolver) {
-        return ICrosschainAddressResolver(getAddress(CONTRACT_CROSSCHAIN_ADDRESS_RESOLVER));
+        return ICrosschainAddressResolver(getAddress(Contracts.CROSSCHAIN_ADDRESS_RESOLVER));
     }
 
     function currencyController() internal view returns (ICurrencyController) {
-        return ICurrencyController(getAddress(CONTRACT_CURRENCY_CONTROLLER));
+        return ICurrencyController(getAddress(Contracts.CURRENCY_CONTROLLER));
     }
 
     function markToMarket() internal view returns (IMarkToMarket) {
-        return IMarkToMarket(getAddress(CONTRACT_MARK_TO_MARKET));
+        return IMarkToMarket(getAddress(Contracts.MARK_TO_MARKET));
     }
 
     function lendingMarketController() internal view returns (ILendingMarketController) {
-        return ILendingMarketController(getAddress(CONTRACT_LENDING_MARKET_CONTROLLER));
+        return ILendingMarketController(getAddress(Contracts.LENDING_MARKET_CONTROLLER));
     }
 
     function liquidations() internal view returns (ILiquidations) {
-        return ILiquidations(getAddress(CONTRACT_LIQUIDATIONS));
+        return ILiquidations(getAddress(Contracts.LIQUIDATIONS));
     }
 
     function paymentAggregator() internal view returns (IPaymentAggregator) {
-        return IPaymentAggregator(getAddress(CONTRACT_PAYMENT_AGGREGATOR));
+        return IPaymentAggregator(getAddress(Contracts.PAYMENT_AGGREGATOR));
     }
 
     function productAddressResolver() internal view returns (IProductAddressResolver) {
-        return IProductAddressResolver(getAddress(CONTRACT_PRODUCT_ADDRESS_RESOLVER));
+        return IProductAddressResolver(getAddress(Contracts.PRODUCT_ADDRESS_RESOLVER));
     }
 
     function settlementEngine() internal view returns (ISettlementEngine) {
-        return ISettlementEngine(getAddress(CONTRACT_SETTLEMENT_ENGINE));
+        return ISettlementEngine(getAddress(Contracts.SETTLEMENT_ENGINE));
     }
 
     function termStructure() internal view returns (ITermStructure) {
-        return ITermStructure(getAddress(CONTRACT_TERM_STRUCTURE));
+        return ITermStructure(getAddress(Contracts.TERM_STRUCTURE));
     }
 }

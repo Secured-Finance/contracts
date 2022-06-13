@@ -1,5 +1,3 @@
-const AddressResolver = artifacts.require('AddressResolver');
-const PaymentAggregator = artifacts.require('PaymentAggregator');
 const PaymentAggregatorCallerMock = artifacts.require(
   'PaymentAggregatorCallerMock',
 );
@@ -19,7 +17,8 @@ const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 
 const { should } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { secondTxHash, overflowErrorMsg } = require('../test-utils').strings;
+const { secondTxHash, overflowErrorMsg, loanPrefix } =
+  require('../test-utils').strings;
 const {
   toBytes32,
   hexFILString,
@@ -163,24 +162,29 @@ contract('PaymentAggregator', async (accounts) => {
     bobSigner = signers[2];
     carolSigner = signers[3];
 
-    const addressResolver = await AddressResolver.new();
-    paymentAggregator = await PaymentAggregator.new(addressResolver.address);
-    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
-      paymentAggregator.address,
-    );
     const markToMarketMock = await MarkToMarketMock.new();
 
     const deployment = new Deployment();
-    deployment.mock('AddressResolver').useValue(addressResolver);
-    deployment.mock('PaymentAggregator').useValue(paymentAggregator);
     deployment.mock('MarkToMarket').useValue(markToMarketMock);
-    deployment.mock('Loan').useValue(paymentAggregatorMock);
     ({
       closeOutNetting,
       currencyController,
       crosschainAddressResolver,
+      lendingMarketController,
+      paymentAggregator,
+      productAddressResolver,
       settlementEngine,
     } = await deployment.execute());
+
+    paymentAggregatorMock = await PaymentAggregatorCallerMock.new(
+      paymentAggregator.address,
+    );
+
+    await productAddressResolver.registerProduct(
+      loanPrefix,
+      paymentAggregatorMock.address,
+      lendingMarketController.address,
+    );
 
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
     addressPacking = await AddressPackingTest.new();
