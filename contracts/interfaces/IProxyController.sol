@@ -14,8 +14,4 @@ interface IProxyController {
         address indexed newImplementationAddress,
         address oldImplementationAddress
     );
-
-    function getRegisteredProxies() external view returns (address[] memory);
-
-    function getRegisteredContractNames() external view returns (bytes32[] memory);
 }

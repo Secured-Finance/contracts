@@ -12,6 +12,11 @@ const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
 
+const getNewProxyAddress = ({ logs }) =>
+  logs.find(({ event }) => event === 'ProxyCreated').args.proxyAddress;
+const getUpdatedProxyAddress = ({ logs }) =>
+  logs.find(({ event }) => event === 'ProxyUpdated').args.proxyAddress;
+
 contract('ProxyController', (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
@@ -32,8 +37,7 @@ contract('ProxyController', (accounts) => {
         currencyController.address,
       );
 
-      const currencyControllerProxyAddress =
-        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
+      const currencyControllerProxyAddress = getNewProxyAddress(tx);
 
       currencyControllerProxyAddress
         .toString()
@@ -59,11 +63,9 @@ contract('ProxyController', (accounts) => {
       const currencyController1 = await CurrencyController.new(
         addressResolver.address,
       );
-      await proxyController.setCurrencyControllerImpl(
-        currencyController1.address,
-      );
-      const currencyControllerProxyAddress1 =
-        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
+      const currencyControllerProxyAddress1 = await proxyController
+        .setCurrencyControllerImpl(currencyController1.address)
+        .then(getNewProxyAddress);
 
       await addressResolver.importAddresses(
         [toBytes32('CurrencyController')],
@@ -74,37 +76,15 @@ contract('ProxyController', (accounts) => {
       const currencyController2 = await CurrencyController.new(
         currencyController1.address,
       );
-      const tx = await proxyController.setCurrencyControllerImpl(
+      const tx2 = await proxyController.setCurrencyControllerImpl(
         currencyController2.address,
       );
-      const currencyControllerProxyAddress2 =
-        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
+      const currencyControllerProxyAddress2 = getUpdatedProxyAddress(tx2);
 
       currencyControllerProxyAddress1
         .toString()
         .should.be.equal(currencyControllerProxyAddress2);
-      expectEvent(tx, 'ProxyUpdated');
-    });
-  });
-
-  describe('Get registered data', async () => {
-    it('Successfully get registered data (proxy addresses and contract names)', async () => {
-      const currencyController = await CurrencyController.new(
-        addressResolver.address,
-      );
-      await proxyController.setCurrencyControllerImpl(
-        currencyController.address,
-      );
-
-      const registeredProxies = await proxyController.getRegisteredProxies();
-      const registeredContractNames =
-        await proxyController.getRegisteredContractNames();
-
-      registeredProxies.should.have.lengthOf(1);
-      registeredContractNames.should.have.lengthOf(1);
-      registeredContractNames[0]
-        .toString()
-        .should.be.equal(toBytes32('CurrencyController'));
+      expectEvent(tx2, 'ProxyUpdated');
     });
   });
 
@@ -116,11 +96,9 @@ contract('ProxyController', (accounts) => {
       const currencyController1 = await CurrencyController.new(
         addressResolver.address,
       );
-      await proxyController.setCurrencyControllerImpl(
-        currencyController1.address,
-      );
-      const currencyControllerProxyAddress1 =
-        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
+      const currencyControllerProxyAddress1 = await proxyController
+        .setCurrencyControllerImpl(currencyController1.address)
+        .then(getNewProxyAddress);
       const currencyControllerProxy1 = await CurrencyController.at(
         currencyControllerProxyAddress1,
       );
@@ -152,11 +130,9 @@ contract('ProxyController', (accounts) => {
       const currencyController2 = await CurrencyController.new(
         currencyController1.address,
       );
-      await proxyController.setCurrencyControllerImpl(
-        currencyController2.address,
-      );
-      const currencyControllerProxyAddress2 =
-        await proxyController.getProxyAddress(toBytes32('CurrencyController'));
+      const currencyControllerProxyAddress2 = await proxyController
+        .setCurrencyControllerImpl(currencyController2.address)
+        .then(getUpdatedProxyAddress);
       const currencyControllerProxy2 = await CurrencyController.at(
         currencyControllerProxyAddress2,
       );

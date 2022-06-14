@@ -121,94 +121,78 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   );
 
   // Set contract addresses to the Proxy contract
-  await proxyController.setCloseOutNettingImpl(closeOutNetting.address);
-  await proxyController.setCollateralAggregatorImpl(
-    collateralAggregator.address,
+  const [
+    closeOutNettingAddress,
+    collateralAggregatorAddress,
+    crosschainAddressResolverAddress,
+    currencyControllerAddress,
+    lendingMarketControllerAddress,
+    liquidationsAddress,
+    markToMarketAddress,
+    paymentAggregatorAddress,
+    productAddressResolverAddress,
+    settlementEngineAddress,
+    termStructureAddress,
+  ] = await Promise.all([
+    proxyController.setCloseOutNettingImpl(closeOutNetting.address),
+    proxyController.setCollateralAggregatorImpl(collateralAggregator.address),
+    proxyController.setCrosschainAddressResolverImpl(
+      crosschainAddressResolver.address,
+    ),
+    proxyController.setCurrencyControllerImpl(currencyController.address),
+    proxyController.setLendingMarketControllerImpl(
+      lendingMarketController.address,
+    ),
+    proxyController.setLiquidationsImpl(liquidations.address, 10),
+    proxyController.setMarkToMarketImpl(markToMarket.address),
+    proxyController.setPaymentAggregatorImpl(paymentAggregator.address),
+    proxyController.setProductAddressResolverImpl(
+      productAddressResolver.address,
+    ),
+    proxyController.setSettlementEngineImpl(
+      settlementEngine.address,
+      wETHToken.address,
+    ),
+    proxyController.setTermStructureImpl(termStructure.address),
+  ]).then((txs) =>
+    txs.map(
+      ({ logs }) =>
+        logs.find(({ event }) => event === 'ProxyCreated').args.proxyAddress,
+    ),
   );
-  await proxyController.setCrosschainAddressResolverImpl(
-    crosschainAddressResolver.address,
-  );
-  await proxyController.setCurrencyControllerImpl(currencyController.address);
-  await proxyController.setLendingMarketControllerImpl(
-    lendingMarketController.address,
-  );
-  await proxyController.setLiquidationsImpl(liquidations.address, 10);
-  await proxyController.setMarkToMarketImpl(markToMarket.address);
-  await proxyController.setPaymentAggregatorImpl(paymentAggregator.address);
-  await proxyController.setProductAddressResolverImpl(
-    productAddressResolver.address,
-  );
-  await proxyController.setSettlementEngineImpl(
-    settlementEngine.address,
-    wETHToken.address,
-  );
-  await proxyController.setTermStructureImpl(termStructure.address);
 
   // Get the Proxy contract addresses
-  const closeOutNettingProxy = await proxyController
-    .getProxyAddress(toBytes32('CloseOutNetting'))
-    .then((address) => CloseOutNetting.at(address));
-
-  const collateralAggregatorProxy = await proxyController
-    .getProxyAddress(toBytes32('CollateralAggregator'))
-    .then((address) => CollateralAggregatorV2.at(address));
-
-  const crosschainAddressResolverProxy = await proxyController
-    .getProxyAddress(toBytes32('CrosschainAddressResolver'))
-    .then((address) => CrosschainAddressResolver.at(address));
-
-  const currencyControllerProxy = await proxyController
-    .getProxyAddress(toBytes32('CurrencyController'))
-    .then((address) => CurrencyController.at(address));
-
-  const lendingMarketControllerProxy = await proxyController
-    .getProxyAddress(toBytes32('LendingMarketController'))
-    .then((address) =>
-      ethers.getContractAt(
-        mockContractNames['LendingMarketController'] ||
-          'LendingMarketController',
-        address,
-      ),
-    );
-
-  const liquidationsProxy = await proxyController
-    .getProxyAddress(toBytes32('Liquidations'))
-    .then((address) => Liquidations.at(address));
-
-  const markToMarketProxy = await proxyController
-    .getProxyAddress(toBytes32('MarkToMarket'))
-    .then((address) => MarkToMarket.at(address));
-
-  const paymentAggregatorProxy = await proxyController
-    .getProxyAddress(toBytes32('PaymentAggregator'))
-    .then((address) => PaymentAggregator.at(address));
-
-  const productAddressResolverProxy = await proxyController
-    .getProxyAddress(toBytes32('ProductAddressResolver'))
-    .then((address) =>
-      ethers.getContractAt(
-        mockContractNames['ProductAddressResolver'] || 'ProductAddressResolver',
-        address,
-      ),
-    );
-
-  const settlementEngineProxy = await proxyController
-    .getProxyAddress(toBytes32('SettlementEngine'))
-    .then((address) =>
-      ethers.getContractAt(
-        mockContractNames['SettlementEngine'] || 'SettlementEngine',
-        address,
-      ),
-    );
-
-  const termStructureProxy = await proxyController
-    .getProxyAddress(toBytes32('TermStructure'))
-    .then((address) =>
-      ethers.getContractAt(
-        mockContractNames['TermStructure'] || 'TermStructure',
-        address,
-      ),
-    );
+  const closeOutNettingProxy = await CloseOutNetting.at(closeOutNettingAddress);
+  const collateralAggregatorProxy = await CollateralAggregatorV2.at(
+    collateralAggregatorAddress,
+  );
+  const crosschainAddressResolverProxy = await CrosschainAddressResolver.at(
+    crosschainAddressResolverAddress,
+  );
+  const currencyControllerProxy = await CurrencyController.at(
+    currencyControllerAddress,
+  );
+  const lendingMarketControllerProxy = await ethers.getContractAt(
+    mockContractNames['LendingMarketController'] || 'LendingMarketController',
+    lendingMarketControllerAddress,
+  );
+  const liquidationsProxy = await Liquidations.at(liquidationsAddress);
+  const markToMarketProxy = await MarkToMarket.at(markToMarketAddress);
+  const paymentAggregatorProxy = await PaymentAggregator.at(
+    paymentAggregatorAddress,
+  );
+  const productAddressResolverProxy = await ethers.getContractAt(
+    mockContractNames['ProductAddressResolver'] || 'ProductAddressResolver',
+    productAddressResolverAddress,
+  );
+  const settlementEngineProxy = await ethers.getContractAt(
+    mockContractNames['SettlementEngine'] || 'SettlementEngine',
+    settlementEngineAddress,
+  );
+  const termStructureProxy = await ethers.getContractAt(
+    mockContractNames['TermStructure'] || 'TermStructure',
+    termStructureAddress,
+  );
 
   // Set up for CurrencyController
   const btcToETHPriceFeed = await MockV3Aggregator.new(

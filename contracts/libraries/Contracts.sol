@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./AddressPacking.sol";
-
 library Contracts {
     bytes32 public constant CLOSE_OUT_NETTING = "CloseOutNetting";
     bytes32 public constant COLLATERAL_AGGREGATOR = "CollateralAggregator";

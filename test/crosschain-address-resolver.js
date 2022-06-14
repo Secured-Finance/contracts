@@ -20,14 +20,17 @@ contract('CrossChainAddressResolver test', async (accounts) => {
 
     // Set up for Proxies
     const proxyController = await ProxyController.new(addressResolver.address);
-    await proxyController.setCrosschainAddressResolverImpl(
-      crosschainResolver.address,
-    );
-    crosschainAddressResolverProxy = await proxyController
-      .getProxyAddress(toBytes32('CrosschainAddressResolver'))
-      .then((address) =>
-        ethers.getContractAt('CrosschainAddressResolver', address),
+    const crosschainResolverAddress = await proxyController
+      .setCrosschainAddressResolverImpl(crosschainResolver.address)
+      .then(
+        ({ logs }) =>
+          logs.find(({ event }) => event === 'ProxyCreated').args.proxyAddress,
       );
+
+    crosschainAddressResolverProxy = await ethers.getContractAt(
+      'CrosschainAddressResolver',
+      crosschainResolverAddress,
+    );
 
     // Set up for AddressResolver
     await addressResolver.importAddresses(

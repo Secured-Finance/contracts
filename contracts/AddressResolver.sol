@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAddressResolver.sol";
-import "./interfaces/IProxyController.sol";
 
 contract AddressResolver is IAddressResolver, Ownable {
     mapping(bytes32 => address) public addresses;
@@ -22,14 +21,6 @@ contract AddressResolver is IAddressResolver, Ownable {
             addresses[name] = destination;
             emit AddressImported(name, destination);
         }
-    }
-
-    function importProxyAddresses(address _proxyController) external onlyOwner {
-        IProxyController proxyController = IProxyController(_proxyController);
-        bytes32[] memory contractNames = proxyController.getRegisteredContractNames();
-        address[] memory proxies = proxyController.getRegisteredProxies();
-
-        importAddresses(contractNames, proxies);
     }
 
     function areAddressesImported(bytes32[] calldata _names, address[] calldata _addresses)
