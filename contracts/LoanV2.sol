@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IProductWithOneLeg.sol";
 import "./libraries/DealId.sol";
 import "./libraries/DiscountFactor.sol";
 import "./libraries/BokkyPooBahsDateTimeLibrary.sol";
+import "./libraries/ProductPrefixes.sol";
 import "./mixins/MixinAddressResolver.sol";
 import "./types/ProtocolTypes.sol";
+import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
 
 /**
  * @title LoanV2 contract is used to store Lending deals in Secured Finance
@@ -16,11 +18,10 @@ import "./types/ProtocolTypes.sol";
  *
  * Contract linked to Lending Market contracts, LendingMarketController and Collateral contract.
  */
-contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable {
+contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable {
     uint256 constant NOTICE = 2 weeks;
     uint256 constant SETTLE = 2 days;
     uint256 constant MAXPAYNUM = 6;
-    bytes4 constant prefix = 0x21aaa47b;
     uint16 private constant VERSION = 1;
     uint256 public settlementWindow = 2;
     uint8 public paymentFrequency = uint8(ProtocolTypes.PaymentFrequency.ANNUAL);
@@ -75,11 +76,12 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable {
     }
 
     /**
-     * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    constructor(address _resolver) {
-        registerAddressResolver(_resolver);
+    function initialize(address owner, address resolver) public initializer onlyProxy {
+        _transferOwnership(owner);
+        registerAddressResolver(resolver);
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
@@ -122,7 +124,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable {
      */
     function _generateDealId() internal returns (bytes32 id) {
         last_loan_id += 1;
-        id = DealId.generate(prefix, last_loan_id);
+        id = DealId.generate(ProductPrefixes.LOAN, last_loan_id);
     }
 
     /**

@@ -4,8 +4,9 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAddressResolver.sol";
 import "./interfaces/IProxyController.sol";
+import "./interfaces/IProductAddressResolver.sol";
 import "./libraries/Contracts.sol";
-import "./libraries/Products.sol";
+import "./libraries/ProductPrefixes.sol";
 import "./utils/UpgradeabilityProxy.sol";
 
 contract ProxyController is IProxyController, Ownable {
@@ -23,13 +24,33 @@ contract ProxyController is IProxyController, Ownable {
      * @dev Gets the proxy address to specified name
      * @param name The cache name of the contract
      */
-    function getProxyAddress(bytes32 name) external returns (address) {
-        address proxyAddress = resolver.getAddress(name);
-        require(proxyAddress != address(0), "Address not found");
+    function getProxyAddress(bytes32 name) public view returns (address) {
+        address proxyAddress = resolver.getAddress(name, "Address not found");
         UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
+
         require(proxy.implementation() != address(0), "Proxy address not found");
 
-        return resolver.getAddress(name);
+        return proxyAddress;
+    }
+
+    /**
+     * @dev Gets the product proxy address to specified prefix
+     * @param prefix Bytes4 prefix for product type
+     */
+    function getProductProxyAddress(bytes4 prefix) external view returns (address) {
+        address productAddressResolverAddress = resolver.getAddress(
+            Contracts.PRODUCT_ADDRESS_RESOLVER,
+            "Address not found"
+        );
+        IProductAddressResolver productAddressResolver = IProductAddressResolver(
+            productAddressResolverAddress
+        );
+        address proxyAddress = productAddressResolver.getProductContract(prefix);
+        UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
+
+        require(proxy.implementation() != address(0), "Proxy address not found");
+
+        return proxyAddress;
     }
 
     /**
@@ -162,8 +183,12 @@ contract ProxyController is IProxyController, Ownable {
      * @param newImpl The address of implementation contract
      */
     function setLoanImpl(address newImpl) external onlyOwner {
-        bytes memory data = abi.encodeWithSignature("initialize(address)", resolver);
-        _updateImpl(Products.LOAN, newImpl, data);
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address)",
+            msg.sender,
+            resolver
+        );
+        _updateImpl(ProductPrefixes.LOAN, newImpl, data);
     }
 
     /**
@@ -187,12 +212,12 @@ contract ProxyController is IProxyController, Ownable {
         if (proxyAddress == address(0)) {
             proxy = new UpgradeabilityProxy(payable(newAddress), data);
 
-            emit ProxyCreated(Contracts.CURRENCY_CONTROLLER, address(proxy), newAddress);
+            emit ProxyCreated(name, address(proxy), newAddress);
         } else {
             proxy = UpgradeabilityProxy(payable(proxyAddress));
             address oldAddress = proxy.implementation();
             proxy.upgradeTo(newAddress);
-            emit ProxyUpdated(Contracts.CURRENCY_CONTROLLER, proxyAddress, newAddress, oldAddress);
+            emit ProxyUpdated(name, proxyAddress, newAddress, oldAddress);
         }
     }
 }

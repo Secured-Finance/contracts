@@ -14,10 +14,15 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
+  const filter = proxyController.filters.ProxyCreated();
+  const proxyCreatedEvents = await proxyController.queryFilter(filter);
+  const proxyObj = proxyCreatedEvents.reduce((obj, event) => {
+    obj[event.args.id] = event.args.proxyAddress;
+    return obj;
+  }, {});
+
   const getProxy = (key, contract) =>
-    proxyController
-      .getProxyAddress(toBytes32(key))
-      .then((address) => ethers.getContractAt(contract || key, address));
+    ethers.getContractAt(contract || key, proxyObj[toBytes32(key)]);
 
   // Get contracts from proxyController
   const closeOutNetting = await getProxy('CloseOutNetting');
@@ -34,15 +39,15 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const productAddressResolver = await getProxy('ProductAddressResolver');
   const settlementEngine = await getProxy('SettlementEngine');
   const termStructure = await getProxy('TermStructure');
+  const loan = await ethers.getContractAt(
+    'LoanV2',
+    proxyObj[loanPrefix.padEnd(66, 0)],
+  );
 
   // Get deployed contracts
   const addressResolver = await deployments
     .get('AddressResolver')
     .then(({ address }) => ethers.getContractAt('AddressResolver', address));
-
-  const loan = await deployments
-    .get('LoanV2')
-    .then(({ address }) => ethers.getContractAt('LoanV2', address));
 
   // Deploy contracts
   const migrationAddressResolver = await deploy('MigrationAddressResolver', {

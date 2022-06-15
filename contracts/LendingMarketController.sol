@@ -6,6 +6,7 @@ import "./libraries/DiscountFactor.sol";
 import "./LendingMarket.sol";
 import "./interfaces/ILendingMarketController.sol";
 import "./interfaces/ILendingMarket.sol";
+import "./libraries/ProductPrefixes.sol";
 import "./mixins/MixinAddressResolver.sol";
 import "./utils/Ownable.sol";
 import "./utils/Proxyable.sol";
@@ -25,7 +26,6 @@ contract LendingMarketController is
     Proxyable
 {
     using QuickSort for uint256[];
-    bytes4 constant prefix = 0x21aaa47b;
 
     /**
      * @notice Initializes the contract.
@@ -149,7 +149,10 @@ contract LendingMarketController is
         returns (address market)
     {
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
-        require(termStructure().isSupportedTerm(_term, prefix, _ccy), "NON SUPPORTED TERM");
+        require(
+            termStructure().isSupportedTerm(_term, ProductPrefixes.LOAN, _ccy),
+            "NON SUPPORTED TERM"
+        );
         require(
             Storage.slot().lendingMarkets[_ccy][_term] == address(0),
             "Couldn't rewrite existing market"

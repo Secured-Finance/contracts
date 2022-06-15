@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/ILendingMarket.sol";
 import "./interfaces/ILoanV2.sol";
 import "./libraries/HitchensOrderStatisticsTreeLib.sol";
+import "./libraries/ProductPrefixes.sol";
 import "./mixins/MixinAddressResolver.sol";
 import "./types/ProtocolTypes.sol";
 
@@ -18,7 +19,6 @@ import "./types/ProtocolTypes.sol";
 contract LendingMarket is ILendingMarket, MixinAddressResolver, ReentrancyGuard, Pausable {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
-    bytes4 constant prefix = 0x21aaa47b;
     uint256 public last_order_id;
     bytes32 public MarketCcy;
     uint256 public MarketTerm;
@@ -253,7 +253,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, ReentrancyGuard,
             );
         }
 
-        address productAddress = productAddressResolver().getProductContract(prefix);
+        address productAddress = productAddressResolver().getProductContract(ProductPrefixes.LOAN);
 
         ILoanV2(productAddress).register(
             marketOrder.maker,

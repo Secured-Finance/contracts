@@ -96,7 +96,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
           DiscountFactor: discountFactorLibrary.address,
         },
       })
-      .then((factory) => factory.deploy(addressResolver.address)));
+      .then((factory) => factory.deploy()));
 
   const settlementEngine =
     instances['SettlementEngine'] ||
@@ -115,7 +115,9 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
       })
       .then((factory) => factory.deploy()));
 
-  const proxyController = await ProxyController.new(addressResolver.address);
+  const proxyController =
+    instances['ProxyController'] ||
+    (await ProxyController.new(addressResolver.address));
   const migrationAddressResolver = await MigrationAddressResolver.new(
     addressResolver.address,
   );
@@ -133,6 +135,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     productAddressResolverAddress,
     settlementEngineAddress,
     termStructureAddress,
+    loanAddress,
   ] = await Promise.all([
     proxyController.setCloseOutNettingImpl(closeOutNetting.address),
     proxyController.setCollateralAggregatorImpl(collateralAggregator.address),
@@ -154,6 +157,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
       wETHToken.address,
     ),
     proxyController.setTermStructureImpl(termStructure.address),
+    proxyController.setLoanImpl(loan.address),
   ]).then((txs) =>
     txs.map(
       ({ logs }) =>
@@ -192,6 +196,10 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   const termStructureProxy = await ethers.getContractAt(
     mockContractNames['TermStructure'] || 'TermStructure',
     termStructureAddress,
+  );
+  const loanProxy = await ethers.getContractAt(
+    mockContractNames['Loan'] || 'LoanV2',
+    loanAddress,
   );
 
   // Set up for CurrencyController
@@ -243,7 +251,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   // Set up for ProductAddressResolver
   await productAddressResolverProxy.registerProduct(
     loanPrefix,
-    loan.address,
+    loanProxy.address,
     lendingMarketControllerProxy.address,
   );
 
@@ -274,7 +282,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     markToMarketProxy,
     lendingMarketControllerProxy,
     liquidationsProxy,
-    loan,
+    loanProxy,
     paymentAggregatorProxy,
     settlementEngineProxy,
     termStructureProxy,
@@ -301,10 +309,11 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     currencyController: currencyControllerProxy,
     lendingMarketController: lendingMarketControllerProxy,
     liquidations: liquidationsProxy,
-    loan,
+    loan: loanProxy,
     markToMarket: markToMarketProxy,
     paymentAggregator: paymentAggregatorProxy,
     productAddressResolver: productAddressResolverProxy,
+    proxyController,
     settlementEngine: settlementEngineProxy,
     termStructure: termStructureProxy,
     wETHToken,

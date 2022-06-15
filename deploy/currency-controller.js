@@ -1,6 +1,6 @@
 const { filToETHRate, ethToUSDRate, btcToETHRate } =
   require('../test-utils').numbers;
-const { hexFILString, hexBTCString, hexETHString, zeroAddress, toBytes32 } =
+const { hexFILString, hexBTCString, hexETHString, zeroAddress } =
   require('../test-utils').strings;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
@@ -16,13 +16,18 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
-  await proxyController
+
+  const { events } = await proxyController
     .setCurrencyControllerImpl(currencyController.address)
     .then((tx) => tx.wait());
 
-  const currencyControllerContract = await proxyController
-    .getProxyAddress(toBytes32('CurrencyController'))
-    .then((address) => ethers.getContractAt('CurrencyController', address));
+  const proxyAddress = events.find(({ event }) => event === 'ProxyCreated').args
+    .proxyAddress;
+
+  const currencyControllerContract = await ethers.getContractAt(
+    'CurrencyController',
+    proxyAddress,
+  );
 
   // Set up for CurrencyController
   const filToETHPriceFeed = await deploy('MockV3Aggregator', {
