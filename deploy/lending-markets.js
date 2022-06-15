@@ -1,4 +1,5 @@
-const { hexFILString, toBytes32 } = require('../test-utils').strings;
+const { loanPrefix, hexFILString, toBytes32 } =
+  require('../test-utils').strings;
 const { sortedTermDays } = require('../test-utils').terms;
 
 module.exports = async function ({ deployments }) {
@@ -12,7 +13,7 @@ module.exports = async function ({ deployments }) {
 
   // Get contracts from proxyController
   const loan = await proxyController
-    .getProxyAddress(toBytes32('Loan'))
+    .getProductProxyAddress(loanPrefix)
     .then((address) => ethers.getContractAt('LoanV2', address));
 
   const collateralAggregator = await proxyController

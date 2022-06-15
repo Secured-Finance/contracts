@@ -2,21 +2,14 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/IAddressResolver.sol";
 import "./interfaces/IProxyController.sol";
+import "./interfaces/IProductAddressResolver.sol";
 import "./libraries/Contracts.sol";
+import "./libraries/ProductPrefixes.sol";
 import "./utils/UpgradeabilityProxy.sol";
 
 contract ProxyController is IProxyController, Ownable {
-    using EnumerableSet for EnumerableSet.AddressSet;
-    using EnumerableSet for EnumerableSet.Bytes32Set;
-
-    // Map of registered addresses (name => registeredAddresses)
-    mapping(bytes32 => address) private _registeredProxies;
-    EnumerableSet.AddressSet private _registeredProxySet;
-    EnumerableSet.Bytes32Set private _registeredContractNameSet;
-
     IAddressResolver private resolver;
 
     /**
@@ -28,25 +21,36 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Gets registered proxy addresses
-     */
-    function getRegisteredProxies() external view returns (address[] memory) {
-        return _registeredProxySet.values();
-    }
-
-    /**
-     * @dev Gets registered contract names
-     */
-    function getRegisteredContractNames() external view returns (bytes32[] memory) {
-        return _registeredContractNameSet.values();
-    }
-
-    /**
      * @dev Gets the proxy address to specified name
      * @param name The cache name of the contract
      */
-    function getProxyAddress(bytes32 name) external view returns (address) {
-        return _registeredProxies[name];
+    function getProxyAddress(bytes32 name) public view returns (address) {
+        address proxyAddress = resolver.getAddress(name, "Address not found");
+        UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
+
+        require(proxy.implementation() != address(0), "Proxy address not found");
+
+        return proxyAddress;
+    }
+
+    /**
+     * @dev Gets the product proxy address to specified prefix
+     * @param prefix Bytes4 prefix for product type
+     */
+    function getProductProxyAddress(bytes4 prefix) external view returns (address) {
+        address productAddressResolverAddress = resolver.getAddress(
+            Contracts.PRODUCT_ADDRESS_RESOLVER,
+            "Address not found"
+        );
+        IProductAddressResolver productAddressResolver = IProductAddressResolver(
+            productAddressResolverAddress
+        );
+        address proxyAddress = productAddressResolver.getProductContract(prefix);
+        UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
+
+        require(proxy.implementation() != address(0), "Proxy address not found");
+
+        return proxyAddress;
     }
 
     /**
@@ -175,6 +179,19 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
+     * @dev Sets the implementation contract of Loan product
+     * @param newImpl The address of implementation contract
+     */
+    function setLoanImpl(address newImpl) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address)",
+            msg.sender,
+            resolver
+        );
+        _updateImpl(ProductPrefixes.LOAN, newImpl, data);
+    }
+
+    /**
      * @dev Sets the implementation contract of specified contract
      * The first time the contract address is set, `UpgradeabilityProxy` is created.
      * From the second time, the contract address set in the created `UpgradeabilityProxy`
@@ -195,16 +212,12 @@ contract ProxyController is IProxyController, Ownable {
         if (proxyAddress == address(0)) {
             proxy = new UpgradeabilityProxy(payable(newAddress), data);
 
-            _registeredProxies[name] = proxyAddress = address(proxy);
-            _registeredProxySet.add(proxyAddress);
-            _registeredContractNameSet.add(name);
-
-            emit ProxyCreated(Contracts.CURRENCY_CONTROLLER, proxyAddress, newAddress);
+            emit ProxyCreated(name, address(proxy), newAddress);
         } else {
             proxy = UpgradeabilityProxy(payable(proxyAddress));
             address oldAddress = proxy.implementation();
             proxy.upgradeTo(newAddress);
-            emit ProxyUpdated(Contracts.CURRENCY_CONTROLLER, proxyAddress, newAddress, oldAddress);
+            emit ProxyUpdated(name, proxyAddress, newAddress, oldAddress);
         }
     }
 }

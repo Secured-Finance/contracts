@@ -2,17 +2,16 @@
 pragma solidity ^0.8.9;
 
 import "../libraries/DealId.sol";
+import "../libraries/ProductPrefixes.sol";
 
 contract DealIdTest {
-    bytes4 sample_prefix = 0x21aaa47b;
-
-    function generate(uint256 number) external view returns (bytes32 id) {
-        id = DealId.generate(sample_prefix, number);
+    function generate(uint256 number) external pure returns (bytes32 id) {
+        id = DealId.generate(ProductPrefixes.LOAN, number);
     }
 
     function getGasCostOfGenerate(uint256 number) external view returns (uint256) {
         uint256 gasBefore = gasleft();
-        DealId.generate(sample_prefix, number);
+        DealId.generate(ProductPrefixes.LOAN, number);
 
         return gasBefore - gasleft();
     }

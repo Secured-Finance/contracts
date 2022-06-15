@@ -82,33 +82,43 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         .then((factory) => factory.deploy());
 
       // Set contract addresses to the Proxy contract
-      await proxyController.setCollateralAggregatorImpl(
-        collateralAggregatorMock.address,
-      );
-      await proxyController.setCurrencyControllerImpl(
-        currencyController.address,
-      );
-      await proxyController.setCrosschainAddressResolverImpl(
-        crosschainAddressResolver.address,
-      );
-      await proxyController.setProductAddressResolverImpl(
-        productAddressResolver.address,
+      const [
+        collateralAggregatorAddress,
+        currencyControllerAddress,
+        crosschainAddressResolverAddress,
+        productAddressResolverAddress,
+      ] = await Promise.all([
+        proxyController.setCollateralAggregatorImpl(
+          collateralAggregatorMock.address,
+        ),
+        proxyController.setCurrencyControllerImpl(currencyController.address),
+        proxyController.setCrosschainAddressResolverImpl(
+          crosschainAddressResolver.address,
+        ),
+        proxyController.setProductAddressResolverImpl(
+          productAddressResolver.address,
+        ),
+      ]).then((txs) =>
+        txs.map(
+          ({ logs }) =>
+            logs.find(({ event }) => event === 'ProxyCreated').args
+              .proxyAddress,
+        ),
       );
 
       // Get the Proxy contract addresses
-      collateralAggregatorProxy = await proxyController
-        .getProxyAddress(toBytes32('CollateralAggregator'))
-        .then((address) => CollateralAggregatorMock.at(address));
-      currencyControllerProxy = await proxyController
-        .getProxyAddress(toBytes32('CurrencyController'))
-        .then((address) => CurrencyController.at(address));
-      const crosschainAddressResolverProxy = await proxyController
-        .getProxyAddress(toBytes32('CrosschainAddressResolver'))
-        .then((address) => CrosschainAddressResolver.at(address));
-
-      const productAddressResolverProxy = await proxyController
-        .getProxyAddress(toBytes32('ProductAddressResolver'))
-        .then((address) => ProductAddressResolver.at(address));
+      collateralAggregatorProxy = await CollateralAggregatorMock.at(
+        collateralAggregatorAddress,
+      );
+      currencyControllerProxy = await CurrencyController.at(
+        currencyControllerAddress,
+      );
+      const crosschainAddressResolverProxy = await CrosschainAddressResolver.at(
+        crosschainAddressResolverAddress,
+      );
+      const productAddressResolverProxy = await ProductAddressResolver.at(
+        productAddressResolverAddress,
+      );
 
       // Set up for AddressResolver and build caches using MigrationAddressResolver
       await addressResolver.importAddresses(
