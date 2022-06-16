@@ -80,6 +80,21 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
+     * @dev  Sets the implementation contract of CollateralVault
+     * @param newImpl The address of implementation contract
+     * @param _WETH9 The address of WETH
+     */
+    function setCollateralVaultImpl(address newImpl, address _WETH9) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address,address)",
+            msg.sender,
+            resolver,
+            _WETH9
+        );
+        _updateImpl(Contracts.COLLATERAL_VAULT, newImpl, data);
+    }
+
+    /**
      * @dev Sets the implementation contract of CrosschainAddressResolver
      * @param newImpl The address of implementation contract
      */

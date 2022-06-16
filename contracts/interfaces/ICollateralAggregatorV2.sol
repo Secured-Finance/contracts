@@ -41,13 +41,21 @@ interface ICollateralAggregator {
 
     function checkRegisteredUser(address addr) external view returns (bool);
 
-    function enterVault(address _user) external;
+    function enterVault(address _user, bytes32 _ccy) external;
 
-    function enterVault(address _party0, address _party1) external;
+    function enterVault(
+        address _party0,
+        address _party1,
+        bytes32 _ccy
+    ) external;
 
-    function exitVault(address _user) external;
+    function exitVault(address _user, bytes32 _ccy) external;
 
-    function exitVault(address _party0, address _party1) external;
+    function exitVault(
+        address _party0,
+        address _party1,
+        bytes32 _ccy
+    ) external;
 
     function getCcyExposures(
         address partyA,
@@ -181,9 +189,12 @@ interface ICollateralAggregator {
         uint256 amount
     ) external;
 
-    function getUsedVaults(address user) external view returns (address[] memory);
+    function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
-    function getUsedVaults(address party0, address party1) external view returns (address[] memory);
+    function getUsedCurrencies(address party0, address party1)
+        external
+        view
+        returns (bytes32[] memory);
 
     function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256);
 }

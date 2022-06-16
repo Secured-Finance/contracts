@@ -5,6 +5,7 @@ import "../libraries/Contracts.sol";
 import "../interfaces/IAddressResolver.sol";
 import "../interfaces/ICloseOutNetting.sol";
 import "../interfaces/ICollateralAggregatorV2.sol";
+import "../interfaces/ICollateralVault.sol";
 import "../interfaces/ICrosschainAddressResolver.sol";
 import "../interfaces/ICurrencyController.sol";
 import "../interfaces/IMarkToMarket.sol";
@@ -99,6 +100,10 @@ contract MixinAddressResolver {
 
     function collateralAggregator() internal view returns (ICollateralAggregator) {
         return ICollateralAggregator(getAddress(Contracts.COLLATERAL_AGGREGATOR));
+    }
+
+    function collateralVault() internal view returns (ICollateralVault) {
+        return ICollateralVault(getAddress(Contracts.COLLATERAL_VAULT));
     }
 
     function crosschainAddressResolver() internal view returns (ICrosschainAddressResolver) {

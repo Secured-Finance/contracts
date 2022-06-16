@@ -492,40 +492,40 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         return currencies;
     }
 
-    function getUsedVaults(address party0, address party1)
+    function getUsedCurrencies(address party0, address party1)
         public
         view
         override
-        returns (address[] memory)
+        returns (bytes32[] memory)
     {
         (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.AddressSet storage vaultsSet = Storage.slot().usedVaultsInPosition[
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrenciesInPosition[
             packedAddrs
         ];
 
-        uint256 numVaults = vaultsSet.length();
-        address[] memory vaults = new address[](numVaults);
+        uint256 numCurrencies = currencySet.length();
+        bytes32[] memory currencies = new bytes32[](numCurrencies);
 
-        for (uint256 i = 0; i < numVaults; i++) {
-            address vault = vaultsSet.at(i);
-            vaults[i] = vault;
+        for (uint256 i = 0; i < numCurrencies; i++) {
+            bytes32 currency = currencySet.at(i);
+            currencies[i] = currency;
         }
 
-        return vaults;
+        return currencies;
     }
 
-    function getUsedVaults(address user) public view override returns (address[] memory) {
-        EnumerableSet.AddressSet storage vaultsSet = Storage.slot().usedVaults[user];
+    function getUsedCurrencies(address user) public view override returns (bytes32[] memory) {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[user];
 
-        uint256 numVaults = vaultsSet.length();
-        address[] memory vaults = new address[](numVaults);
+        uint256 numCurrencies = currencySet.length();
+        bytes32[] memory currencies = new bytes32[](numCurrencies);
 
-        for (uint256 i = 0; i < numVaults; i++) {
-            address vault = vaultsSet.at(i);
-            vaults[i] = vault;
+        for (uint256 i = 0; i < numCurrencies; i++) {
+            bytes32 currency = currencySet.at(i);
+            currencies[i] = currency;
         }
 
-        return vaults;
+        return currencies;
     }
 
     function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256) {
@@ -1006,16 +1006,18 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         returns (uint256, uint256)
     {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaultsInPosition[packedAddrs];
+        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrenciesInPosition[
+            packedAddrs
+        ];
 
         TotalLockedCollateralLocalVars memory vars;
-        vars.len = vaults.length();
+        vars.len = currencies.length();
 
         for (uint256 i = 0; i < vars.len; i++) {
-            address vaultAddr = vaults.at(i);
+            bytes32 ccy = currencies.at(i);
 
-            (vars.lockedCollateral0, vars.lockedCollateral1) = ICollateralVault(vaultAddr)
-                .getLockedCollateralInETH(_party0, _party1);
+            (vars.lockedCollateral0, vars.lockedCollateral1) = collateralVault()
+                .getLockedCollateralInETH(ccy, _party0, _party1);
 
             vars.totalCollateral0 = vars.totalCollateral0 + vars.lockedCollateral0;
             vars.totalCollateral1 = vars.totalCollateral1 + vars.lockedCollateral1;
@@ -1025,15 +1027,15 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
     }
 
     function _totalIndependentCollateralInETH(address _party) internal view returns (uint256) {
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_party];
+        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_party];
         uint256 lockedCollateral;
         uint256 totalCollateral;
 
-        uint256 len = vaults.length();
+        uint256 len = currencies.length();
 
         for (uint256 i = 0; i < len; i++) {
-            address vaultAddr = vaults.at(i);
-            lockedCollateral = ICollateralVault(vaultAddr).getIndependentCollateralInETH(_party);
+            bytes32 ccy = currencies.at(i);
+            lockedCollateral = collateralVault().getIndependentCollateralInETH(ccy, _party);
 
             totalCollateral = totalCollateral + lockedCollateral;
         }
@@ -1046,17 +1048,13 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         address _to,
         uint256 _liquidationTarget
     ) internal returns (bool) {
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_from];
-        uint256 len = vaults.length();
+        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_from];
+        uint256 len = currencies.length();
         uint256 i = 0;
 
         while (_liquidationTarget != 0 && i < len) {
-            address vaultAddr = vaults.at(i);
-            _liquidationTarget = ICollateralVault(vaultAddr).liquidate(
-                _from,
-                _to,
-                _liquidationTarget
-            );
+            bytes32 ccy = currencies.at(i);
+            _liquidationTarget = collateralVault().liquidate(ccy, _from, _to, _liquidationTarget);
 
             i += 1;
         }
@@ -1072,21 +1070,23 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         uint256 _rebalanceTarget,
         bool isRebalanceFrom
     ) internal returns (bool) {
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_party0];
-        uint256 len = vaults.length();
+        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_party0];
+        uint256 len = currencies.length();
         uint256 i = 0;
 
         while (_rebalanceTarget != 0 && i < len) {
-            address vaultAddr = vaults.at(i);
+            bytes32 ccy = currencies.at(i);
 
             if (isRebalanceFrom) {
-                _rebalanceTarget = ICollateralVault(vaultAddr).rebalanceFrom(
+                _rebalanceTarget = collateralVault().rebalanceFrom(
+                    ccy,
                     _party0,
                     _party1,
                     _rebalanceTarget
                 );
             } else {
-                _rebalanceTarget = ICollateralVault(vaultAddr).rebalanceTo(
+                _rebalanceTarget = collateralVault().rebalanceTo(
+                    ccy,
                     _party0,
                     _party1,
                     _rebalanceTarget
@@ -1128,21 +1128,29 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         }
     }
 
-    function enterVault(address _user) external override onlyCollateralVault {
-        Storage.slot().usedVaults[_user].add(msg.sender);
+    function enterVault(address _user, bytes32 _ccy) external override onlyCollateralVault {
+        Storage.slot().usedCurrencies[_user].add(_ccy);
     }
 
-    function exitVault(address _user) external override onlyCollateralVault {
-        Storage.slot().usedVaults[_user].remove(msg.sender);
+    function exitVault(address _user, bytes32 _ccy) external override onlyCollateralVault {
+        Storage.slot().usedCurrencies[_user].remove(_ccy);
     }
 
-    function enterVault(address _party0, address _party1) external override onlyCollateralVault {
+    function enterVault(
+        address _party0,
+        address _party1,
+        bytes32 _ccy
+    ) external override onlyCollateralVault {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        Storage.slot().usedVaultsInPosition[packedAddrs].add(msg.sender);
+        Storage.slot().usedCurrenciesInPosition[packedAddrs].add(_ccy);
     }
 
-    function exitVault(address _party0, address _party1) external override onlyCollateralVault {
+    function exitVault(
+        address _party0,
+        address _party1,
+        bytes32 _ccy
+    ) external override onlyCollateralVault {
         (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        Storage.slot().usedVaultsInPosition[packedAddrs].remove(msg.sender);
+        Storage.slot().usedCurrenciesInPosition[packedAddrs].remove(_ccy);
     }
 }

@@ -18,7 +18,6 @@ const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const utils = require('web3-utils');
 
 const {
-  toBytes32,
   loanPrefix,
   hexFILString,
   hexBTCString,
@@ -41,6 +40,7 @@ should();
 
 contract('LoanV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
+  const targetCurrency = hexETHString;
 
   let signers;
 
@@ -52,9 +52,9 @@ contract('LoanV2', async (accounts) => {
 
   let aliceRequestId;
 
-  let addressResolver;
   let closeOutNetting;
   let collateralAggregator;
+  let collateralVault;
   let crosschainAddressResolver;
   let currencyController;
   let lendingMarketController;
@@ -109,6 +109,7 @@ contract('LoanV2', async (accounts) => {
       paymentAggregator,
       closeOutNetting,
       collateralAggregator,
+      collateralVault,
       currencyController,
       crosschainAddressResolver,
       termStructure,
@@ -126,20 +127,8 @@ contract('LoanV2', async (accounts) => {
 
     await loan.addLendingMarket(hexFILString, '1825', loanCaller.address);
     await loan.addLendingMarket(hexFILString, '90', loanCaller.address);
-
-    ethVault = await ethers
-      .getContractFactory('CollateralVault')
-      .then((factory) =>
-        factory.deploy(
-          addressResolver.address,
-          hexETHString,
-          wETHToken.address,
-          wETHToken.address,
-        ),
-      );
-
+    await collateralVault.registerCurrency(targetCurrency, wETHToken.address);
     await collateralAggregator.addCollateralUser(collateralCaller.address);
-    await collateralAggregator.linkCollateralVault(ethVault.address);
 
     for (i = 0; i < sortedTermDays.length; i++) {
       await termStructure.supportTerm(
@@ -246,16 +235,19 @@ contract('LoanV2', async (accounts) => {
       expectEvent(result, 'Register');
 
       await (
-        await ethVault
+        await collateralVault
           .connect(aliceSigner)
-          ['deposit(uint256)'](aliceDepositAmt.toString(), {
-            value: aliceDepositAmt.toString(),
-          })
+          ['deposit(bytes32,uint256)'](
+            targetCurrency,
+            aliceDepositAmt.toString(),
+            {
+              value: aliceDepositAmt.toString(),
+            },
+          )
       ).wait();
 
-      let independentCollateral = await ethVault.getIndependentCollateral(
-        alice,
-      );
+      let independentCollateral =
+        await collateralVault.getIndependentCollateral(targetCurrency, alice);
       independentCollateral
         .toString()
         .should.be.equal(aliceDepositAmt.toString());
@@ -264,14 +256,21 @@ contract('LoanV2', async (accounts) => {
       expectEvent(result, 'Register');
 
       await (
-        await ethVault
+        await collateralVault
           .connect(bobSigner)
-          ['deposit(uint256)'](bobDepositAmt.toString(), {
-            value: bobDepositAmt.toString(),
-          })
+          ['deposit(bytes32,uint256)'](
+            targetCurrency,
+            bobDepositAmt.toString(),
+            {
+              value: bobDepositAmt.toString(),
+            },
+          )
       ).wait();
 
-      independentCollateral = await ethVault.getIndependentCollateral(bob);
+      independentCollateral = await collateralVault.getIndependentCollateral(
+        targetCurrency,
+        bob,
+      );
       independentCollateral
         .toString()
         .should.be.equal(bobDepositAmt.toString());
@@ -404,17 +403,19 @@ contract('LoanV2', async (accounts) => {
         bobFILUsed,
       );
 
-      let lockedCollateral = await ethVault['getLockedCollateral(address)'](
-        alice,
-      );
+      let lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](targetCurrency, alice);
       lockedCollateral.toString().should.be.equal(aliceFILInETH.toString());
 
-      lockedCollateral = await ethVault['getLockedCollateral(address)'](bob);
+      lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](targetCurrency, bob);
       lockedCollateral.toString().should.be.equal(bobFILInETH.toString());
 
-      let lockedCollaterals = await ethVault[
-        'getLockedCollateral(address,address)'
-      ](alice, bob);
+      let lockedCollaterals = await collateralVault[
+        'getLockedCollateral(bytes32,address,address)'
+      ](targetCurrency, alice, bob);
       lockedCollaterals[0].toString().should.be.equal(aliceFILInETH.toString());
       lockedCollaterals[1].toString().should.be.equal(bobFILInETH.toString());
     });
@@ -680,25 +681,25 @@ contract('LoanV2', async (accounts) => {
     let slotPosition;
     let timeSlot;
 
-    let testTxHash = toBytes32('0xTestTxHash2');
-
     it('Deposit more collateral for Alice', async () => {
       const [, aliceSigner] = await ethers.getSigners();
       const depositAmt = toBN('9000000000000000000');
-      let independentCollateral = await ethVault.getIndependentCollateral(
-        alice,
-      );
+      let independentCollateral =
+        await collateralVault.getIndependentCollateral(targetCurrency, alice);
       let initialIndependentAmount = toBN(independentCollateral);
 
       await (
-        await ethVault
+        await collateralVault
           .connect(aliceSigner)
-          ['deposit(uint256)'](depositAmt.toString(), {
+          ['deposit(bytes32,uint256)'](targetCurrency, depositAmt.toString(), {
             value: depositAmt.toString(),
           })
       ).wait();
 
-      independentCollateral = await ethVault.getIndependentCollateral(alice);
+      independentCollateral = await collateralVault.getIndependentCollateral(
+        targetCurrency,
+        alice,
+      );
       independentCollateral
         .toString()
         .should.be.equal(

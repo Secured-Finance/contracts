@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "../interfaces/ICollateralVault.sol";
 import "../interfaces/IMixinCollateralManagement.sol";
 import "../utils/Ownable.sol";
 import "../utils/Proxyable.sol";
@@ -32,15 +31,18 @@ contract MixinCollateralManagement is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /**
-     * @dev Modifier to check if msg.sender is a CollateralVault
+     * @dev Modifier to check if msg.sender is the CollateralVault
      */
     modifier onlyCollateralVault() {
-        require(isCollateralVault(msg.sender), "NON_COLLATERAL_VAULT");
+        require(msg.sender == address(collateralVault()), "Caller is not the collateral vault");
         _;
     }
 
+    /**
+     * @dev Modifier to check if msg.sender is the Liquidations
+     */
     modifier onlyLiquidations() {
-        require(msg.sender == address(liquidations()), "NON_LIQUIDATIONS");
+        require(msg.sender == address(liquidations()), "Caller is not the liquidations");
         _;
     }
 
@@ -65,11 +67,12 @@ contract MixinCollateralManagement is
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](4);
-        contracts[0] = Contracts.CROSSCHAIN_ADDRESS_RESOLVER;
-        contracts[1] = Contracts.CURRENCY_CONTROLLER;
-        contracts[2] = Contracts.LIQUIDATIONS;
-        contracts[3] = Contracts.PRODUCT_ADDRESS_RESOLVER;
+        contracts = new bytes32[](5);
+        contracts[0] = Contracts.COLLATERAL_VAULT;
+        contracts[1] = Contracts.CROSSCHAIN_ADDRESS_RESOLVER;
+        contracts[2] = Contracts.CURRENCY_CONTROLLER;
+        contracts[3] = Contracts.LIQUIDATIONS;
+        contracts[4] = Contracts.PRODUCT_ADDRESS_RESOLVER;
     }
 
     function isAcceptedContract(address account) internal view override returns (bool) {
@@ -97,27 +100,6 @@ contract MixinCollateralManagement is
     }
 
     /**
-     * @dev Triggers to link CollateralVault with aggregator
-     * @param _vault CollateralVault address
-     *
-     * @notice Triggers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function linkCollateralVault(address _vault) public override onlyOwner returns (bool) {
-        require(_vault != address(0), "Zero address");
-        require(_vault.isContract(), "Can't add non-contract address");
-        require(!isCollateralVault(_vault), "Can't add existing address");
-
-        ICollateralVault vaultContract = ICollateralVault(_vault);
-
-        bytes32 ccy = vaultContract.ccy();
-        address tokenAddress = vaultContract.tokenAddress();
-
-        emit CollateralVaultLinked(_vault, ccy, tokenAddress);
-        return Storage.slot().collateralVaults.add(_vault);
-    }
-
-    /**
      * @dev Triggers to remove collateral user from address set
      * @param _user Collateral user smart contract address
      *
@@ -132,39 +114,11 @@ contract MixinCollateralManagement is
     }
 
     /**
-     * @dev Triggers to remove CollateralVault from address set
-     * @param _vault CollateralVault smart contract address
-     *
-     * @notice Triggers only be contract owner
-     * @notice Reverts on removing non-existing collateral vault
-     */
-    function removeCollateralVault(address _vault) public override onlyOwner returns (bool) {
-        require(isCollateralVault(_vault), "Can't remove non-existing user");
-
-        ICollateralVault vaultContract = ICollateralVault(_vault);
-
-        bytes32 ccy = vaultContract.ccy();
-        address tokenAddress = vaultContract.tokenAddress();
-
-        emit CollateralVaultRemoved(_vault, ccy, tokenAddress);
-
-        return Storage.slot().collateralVaults.remove(_vault);
-    }
-
-    /**
      * @dev Triggers to check if provided `addr` is a CollateralUser from address set
      * @param _user Contract address to check if it's a CollateralUser
      */
     function isCollateralUser(address _user) public view override returns (bool) {
         return Storage.slot().collateralUsers.contains(_user);
-    }
-
-    /**
-     * @dev Triggers to check if provided address is valid CollateralVault
-     * @param _vault Contract address to check if it's a CollateralVault
-     */
-    function isCollateralVault(address _vault) public view override returns (bool) {
-        return Storage.slot().collateralVaults.contains(_vault);
     }
 
     /**

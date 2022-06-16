@@ -26,11 +26,9 @@ should();
 contract('CollateralAggregatorV2', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
 
-  let addressResolver;
   let collateralAggregator;
+  let collateralVault;
   let collateralCaller;
-  let filVault;
-  let ethVault;
 
   let alice_tFIL_locked;
   let alice_tFIL_balance;
@@ -81,6 +79,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         discountFactorLibrary,
         paymentAggregator,
         collateralAggregator,
+        collateralVault,
         termStructure,
         currencyController,
         loan,
@@ -105,27 +104,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
       await collateralAggregator.addCollateralUser(collateralCaller.address);
 
-      const collateralVaultFactory = await ethers.getContractFactory(
-        'CollateralVault',
-      );
-      filVault = await collateralVaultFactory.deploy(
-        addressResolver.address,
-        hexFILString,
-        tFILToken.address,
-        wETHToken.address,
-      );
-      ethVault = await collateralVaultFactory.deploy(
-        addressResolver.address,
-        hexETHString,
-        wETHToken.address,
-        wETHToken.address,
-      );
-
-      await collateralAggregator.linkCollateralVault(filVault.address);
-      await collateralAggregator.linkCollateralVault(ethVault.address);
-
-      console.log('filVault is ' + filVault.address);
-      console.log('ethVault is ' + ethVault.address);
+      await collateralVault.registerCurrency(hexFILString, tFILToken.address);
+      await collateralVault.registerCurrency(hexETHString, wETHToken.address);
 
       const lendingControllerFactory = await ethers.getContractFactory(
         'LendingMarketControllerMock',
@@ -161,42 +141,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
   );
 
   describe('Test the execution of management functions', async () => {
-    it('Check that contracts linked correctly to CollateralAggregator', async () => {
-      let status = await collateralAggregator.isCollateralVault(zeroAddress);
-      status.should.be.equal(false);
-
-      status = await collateralAggregator.isCollateralVault(filVault.address);
-      status.should.be.equal(true);
-
-      status = await collateralAggregator.isCollateralVault(ethVault.address);
-      status.should.be.equal(true);
-    });
-
     it('Try to trigger any changes, expect revert by different modifiers', async () => {
-      await expectRevert(
-        collateralAggregator.linkCollateralVault(zeroAddress, { from: alice }),
-        'Ownable: caller is not the owner',
-      );
-
-      await expectRevert(
-        collateralAggregator.linkCollateralVault(zeroAddress, { from: owner }),
-        'Zero address',
-      );
-
-      await expectRevert(
-        collateralAggregator.removeCollateralVault(ethVault.address, {
-          from: bob,
-        }),
-        'Ownable: caller is not the owner',
-      );
-
-      await expectRevert(
-        collateralAggregator.removeCollateralVault(zeroAddress, {
-          from: owner,
-        }),
-        "Can't remove non-existing user",
-      );
-
       await expectRevert(
         collateralAggregator.updateMainParameters(12500, 10500, 10000, {
           from: alice,
@@ -241,24 +186,27 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       await tFILToken.approveInternal(
         alice,
-        filVault.address,
+        collateralVault.address,
         alice_tFIL_balance,
       );
-      await filVault
+      await collateralVault
         .connect(aliceSigner)
-        ['deposit(uint256)'](alice_tFIL_balance.toString());
+        ['deposit(bytes32,uint256)'](
+          hexFILString,
+          alice_tFIL_balance.toString(),
+        );
 
       alice_tFIL_locked = alice_tFIL_balance;
       alice_tFIL_balance = ZERO_BN;
 
       await checkTokenBalances(
-        [alice, filVault.address],
+        [alice, collateralVault.address],
         [alice_tFIL_balance, alice_tFIL_locked],
         tFILToken,
       );
 
-      let vaults = await collateralAggregator.getUsedVaults(alice);
-      vaults.includes(filVault.address).should.be.equal(true);
+      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      currencies.includes(hexFILString).should.be.equal(true);
     });
 
     it('Mint 100 tFIL tokens for Bob and deposit them into the vault, validate token balances', async () => {
@@ -267,22 +215,22 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       await collateralAggregator.register({ from: bob });
       await tFILToken.mint(bob, bobDeposit);
-      await tFILToken.approveInternal(bob, filVault.address, bobDeposit);
-      await filVault
+      await tFILToken.approveInternal(bob, collateralVault.address, bobDeposit);
+      await collateralVault
         .connect(bobSigner)
-        ['deposit(uint256)'](bobDeposit.toString());
+        ['deposit(bytes32,uint256)'](hexFILString, bobDeposit.toString());
 
       bob_tFIL_balance = ZERO_BN;
       bob_tFIL_locked = bobDeposit;
 
       await checkTokenBalances(
-        [bob, filVault.address],
+        [bob, collateralVault.address],
         [bob_tFIL_balance, bob_tFIL_locked.add(alice_tFIL_locked)],
         tFILToken,
       );
 
-      let vaults = await collateralAggregator.getUsedVaults(bob);
-      vaults.includes(filVault.address).should.be.equal(true);
+      let currencies = await collateralAggregator.getUsedCurrencies(bob);
+      currencies.includes(hexFILString).should.be.equal(true);
     });
 
     it('Deposit 1 ETH into the vault by Alice, validate wETH balances', async () => {
@@ -298,17 +246,21 @@ contract('CollateralAggregatorV2', async (accounts) => {
         .getBalance(alice)
         .then((res) => (aliceBalanceBefore = web3.utils.toBN(res)));
 
-      await checkTokenBalances([ethVault.address], [ZERO_BN], wETHToken);
+      await checkTokenBalances([collateralVault.address], [ZERO_BN], wETHToken);
 
       alice_ETH_locked = decimalBase.mul(toBN('1'));
       aliceBalanceAfter = aliceBalanceBefore.sub(alice_ETH_locked);
 
       let receipt = await (
-        await ethVault
+        await collateralVault
           .connect(aliceSigner)
-          ['deposit(uint256)'](alice_ETH_locked.toString(), {
-            value: alice_ETH_locked.toString(),
-          })
+          ['deposit(bytes32,uint256)'](
+            hexETHString,
+            alice_ETH_locked.toString(),
+            {
+              value: alice_ETH_locked.toString(),
+            },
+          )
       ).wait();
       const gasUsed = receipt.gasUsed;
 
@@ -319,13 +271,13 @@ contract('CollateralAggregatorV2', async (accounts) => {
       }
 
       await checkTokenBalances(
-        [ethVault.address],
+        [collateralVault.address],
         [alice_ETH_locked],
         wETHToken,
       );
 
-      let vaults = await collateralAggregator.getUsedVaults(alice);
-      vaults.includes(ethVault.address).should.be.equal(true);
+      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      currencies.includes(hexETHString).should.be.equal(true);
     });
 
     it('Try to withdraw 1000 FIL from the vault by Alice, validate collateral balances', async () => {
@@ -334,28 +286,31 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       // expect revert on withdrawing double the amount of original deposit
       await expectRevert(
-        filVault
+        collateralVault
           .connect(aliceSigner)
-          ['withdraw(uint256)'](withdrawAmt.toString()),
+          ['withdraw(bytes32,uint256)'](hexFILString, withdrawAmt.toString()),
         overflowErrorMsg,
       );
 
       // expect successful execution of full tFIL deposit withdraw
-      await filVault
+      await collateralVault
         .connect(aliceSigner)
-        ['withdraw(uint256)'](alice_tFIL_locked.toString());
+        ['withdraw(bytes32,uint256)'](
+          hexFILString,
+          alice_tFIL_locked.toString(),
+        );
 
       alice_tFIL_balance = alice_tFIL_locked;
       alice_tFIL_locked = ZERO_BN;
 
       await checkTokenBalances(
-        [alice, filVault.address],
+        [alice, collateralVault.address],
         [alice_tFIL_balance, bob_tFIL_locked],
         tFILToken,
       );
 
-      let vaults = await collateralAggregator.getUsedVaults(alice);
-      vaults.includes(filVault.address).should.be.equal(false);
+      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      currencies.includes(hexFILString).should.be.equal(false);
 
       let maxWithdraw =
         await collateralAggregator.getMaxCollateralBookWidthdraw(alice);
@@ -384,9 +339,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       // expect successful withdraw of only 1 ETH instead of 2 ETH
       let receipt = await (
-        await ethVault
+        await collateralVault
           .connect(aliceSigner)
-          ['withdraw(uint256)'](withdrawAmt.toString())
+          ['withdraw(bytes32,uint256)'](hexETHString, withdrawAmt.toString())
       ).wait();
       const gasUsed = receipt.gasUsed;
 
@@ -402,13 +357,13 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       // check that Alice didn't get WETH instead of native ETH
       await checkTokenBalances(
-        [alice, ethVault.address],
+        [alice, collateralVault.address],
         [ZERO_BN, ZERO_BN],
         wETHToken,
       );
 
-      let vaults = await collateralAggregator.getUsedVaults(alice);
-      vaults.includes(ethVault.address).should.be.equal(false);
+      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      currencies.includes(hexETHString).should.be.equal(false);
     });
   });
 
@@ -493,13 +448,13 @@ contract('CollateralAggregatorV2', async (accounts) => {
       let coverage = await collateralAggregator.getUnsettledCoverage(bob);
       coverage.toString().should.be.equal('15000'); // should cover margin call
 
-      await filVault
+      await collateralVault
         .connect(bobSigner)
-        ['withdraw(uint256)'](withdrawAmt.toString());
+        ['withdraw(bytes32,uint256)'](hexFILString, withdrawAmt.toString());
 
       // expect no change in tFIL token balances
       await checkTokenBalances(
-        [bob, filVault.address],
+        [bob, collateralVault.address],
         [ZERO_BN, bob_tFIL_locked],
         tFILToken,
       );
@@ -564,24 +519,24 @@ contract('CollateralAggregatorV2', async (accounts) => {
         false,
       );
 
-      let lockedCollateral = await filVault['getLockedCollateral(address)'](
-        bob,
-      );
+      let lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](hexFILString, bob);
       lockedCollateral
         .toString()
         .should.be.equal(filRebalanceAmount.toString());
 
-      lockedCollateral = await filVault['getLockedCollateralInETH(address)'](
-        bob,
-      );
+      lockedCollateral = await collateralVault[
+        'getLockedCollateralInETH(bytes32,address)'
+      ](hexFILString, bob);
       lockedCollateral
         .toString()
         .should.be.equal(ethRebalanceAmount.toString());
 
-      let vaults = await collateralAggregator.methods[
-        'getUsedVaults(address,address)'
+      let currencies = await collateralAggregator.methods[
+        'getUsedCurrencies(address,address)'
       ](alice, bob);
-      vaults.includes(filVault.address).should.be.equal(true);
+      currencies.includes(hexFILString).should.be.equal(true);
 
       let coverage = await collateralAggregator.getCoverage(alice, bob);
       coverage[0].toString().should.be.equal('0');
@@ -615,16 +570,16 @@ contract('CollateralAggregatorV2', async (accounts) => {
       ccyExp[2].toString().should.be.equal('0');
       ccyExp[3].toString().should.be.equal(filAmount.toString());
 
-      let lockedCollateral = await filVault['getLockedCollateral(address)'](
-        bob,
-      );
+      let lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](hexFILString, bob);
       lockedCollateral
         .toString()
         .should.be.equal(filRebalanceAmount.toString());
 
-      lockedCollateral = await filVault['getLockedCollateralInETH(address)'](
-        bob,
-      );
+      lockedCollateral = await collateralVault[
+        'getLockedCollateralInETH(bytes32,address)'
+      ](hexFILString, bob);
       lockedCollateral
         .toString()
         .should.be.equal(ethRebalanceAmount.toString());
@@ -690,14 +645,14 @@ contract('CollateralAggregatorV2', async (accounts) => {
       coverage[0].toString().should.be.equal('0');
       coverage[1].toString().should.be.equal('15000');
 
-      let lockedCollateral = await filVault['getLockedCollateral(address)'](
-        bob,
-      );
+      let lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](hexFILString, bob);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
-      lockedCollateral = await filVault['getLockedCollateralInETH(address)'](
-        bob,
-      );
+      lockedCollateral = await collateralVault[
+        'getLockedCollateralInETH(bytes32,address)'
+      ](hexFILString, bob);
       lockedCollateral.toString().should.be.equal(lockedInETHTarget.toString());
 
       let ccyExp = await collateralAggregator.getCcyExposures(
@@ -726,9 +681,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
 
       let lockedTarget = newPV.mul(toBN('150')).div(toBN('100'));
-      let lockedCollateral = await filVault['getLockedCollateral(address)'](
-        bob,
-      );
+      let lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](hexFILString, bob);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
       let coverage = await collateralAggregator.getCoverage(alice, bob);
@@ -770,18 +725,17 @@ contract('CollateralAggregatorV2', async (accounts) => {
       // Deposit 5 ETH for Alice in ETH. Check WETH balances
       let deposit = decimalBase.mul(toBN('5'));
       await (
-        await ethVault
+        await collateralVault
           .connect(aliceSigner)
-          ['deposit(uint256)'](deposit.toString(), {
+          ['deposit(bytes32,uint256)'](hexETHString, deposit.toString(), {
             value: deposit.toString(),
           })
       ).wait();
 
-      await checkTokenBalances([ethVault.address], [deposit], wETHToken);
+      await checkTokenBalances([collateralVault.address], [deposit], wETHToken);
 
-      let independentCollateral = await ethVault.getIndependentCollateral(
-        alice,
-      );
+      let independentCollateral =
+        await collateralVault.getIndependentCollateral(hexETHString, alice);
       independentCollateral.toString().should.be.equal(deposit.toString());
 
       filAmount = decimalBase.mul(toBN('35'));
@@ -821,9 +775,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
       actualNetPVs[3].toString().should.be.equal(targetNetPVs[3].toString());
 
       let lockedTarget = targetNetPVs[0].mul(toBN('150')).div(toBN('100'));
-      let lockedCollateral = await ethVault['getLockedCollateral(address)'](
-        alice,
-      );
+      let lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](hexETHString, alice);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
       let coverage = await collateralAggregator.getCoverage(alice, bob);
@@ -837,10 +791,14 @@ contract('CollateralAggregatorV2', async (accounts) => {
       const [, aliceSigner] = await ethers.getSigners();
       let depositAmount = decimalBase.mul(toBN('30')); // deposit 30 FIL as additional collateral
 
-      await tFILToken.approveInternal(alice, filVault.address, depositAmount);
-      await filVault
+      await tFILToken.approveInternal(
+        alice,
+        collateralVault.address,
+        depositAmount,
+      );
+      await collateralVault
         .connect(aliceSigner)
-        ['deposit(uint256)'](depositAmount.toString());
+        ['deposit(bytes32,uint256)'](hexFILString, depositAmount.toString());
 
       filAmount = decimalBase.mul(toBN('50'));
 
@@ -879,9 +837,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
       actualNetPVs[3].toString().should.be.equal(targetNetPVs[3].toString());
 
       let lockedTarget = targetNetPVs[0].mul(toBN('150')).div(toBN('100'));
-      let lockedCollateral = await ethVault['getLockedCollateral(address)'](
-        alice,
-      );
+      let lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](hexETHString, alice);
 
       let aliceDepositWETH = decimalBase.mul(toBN('5'));
       lockedCollateral.toString().should.be.equal(aliceDepositWETH.toString());
@@ -893,7 +851,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
       console.log(lockedTarget.toString());
 
-      lockedCollateral = await filVault['getLockedCollateral(address)'](alice);
+      lockedCollateral = await collateralVault[
+        'getLockedCollateral(bytes32,address)'
+      ](hexFILString, alice);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
       let coverage = await collateralAggregator.getCoverage(alice, bob);
