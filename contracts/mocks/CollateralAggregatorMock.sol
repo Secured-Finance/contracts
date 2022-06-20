@@ -82,13 +82,13 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
     }
 
     function rebalanceBetween(
-        bytes32 _ccy,
         address _user,
         address _fromParty,
         address _toParty,
+        bytes32 _ccy,
         uint256 _amountETH
     ) external returns (uint256) {
-        return collateralVault().rebalanceBetween(_ccy, _user, _fromParty, _toParty, _amountETH);
+        return collateralVault().rebalanceBetween(_user, _fromParty, _toParty, _ccy, _amountETH);
     }
 
     function liquidateAll(

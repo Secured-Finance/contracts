@@ -2,51 +2,51 @@
 pragma solidity ^0.8.9;
 
 interface ICollateralVault {
-    event Deposit(bytes32 _ccy, address user, uint256 amount);
-    event PositionDeposit(bytes32 _ccy, address user, address counterparty, uint256 amount);
+    event Deposit(address user, bytes32 ccy, uint256 amount);
+    event PositionDeposit(address user, address counterparty, bytes32 ccy, uint256 amount);
     event RebalanceBetween(
-        bytes32 _ccy,
         address user,
         address fromCounterparty,
         address toCounterparty,
+        bytes32 ccy,
         uint256 amount
     );
-    event RebalanceFrom(bytes32 _ccy, address user, address counterparty, uint256 amount);
-    event RebalanceTo(bytes32 _ccy, address user, address counterparty, uint256 amount);
-    event Withdraw(bytes32 _ccy, address from, uint256 amount);
-    event PositionWithdraw(bytes32 _ccy, address from, address counterparty, uint256 amount);
-    event Liquidate(bytes32 _ccy, address from, address to, uint256 amount);
-    event LiquidateIndependent(bytes32 _ccy, address from, address to, uint256 amount);
+    event RebalanceFrom(address user, address counterparty, bytes32 ccy, uint256 amount);
+    event RebalanceTo(address user, address counterparty, bytes32 ccy, uint256 amount);
+    event Withdraw(address from, bytes32 ccy, uint256 amount);
+    event PositionWithdraw(address from, address counterparty, bytes32 ccy, uint256 amount);
+    event Liquidate(address from, address to, bytes32 ccy, uint256 amount);
+    event LiquidateIndependent(address from, address to, bytes32 ccy, uint256 amount);
 
     function deposit(
-        bytes32 _ccy,
         address _counterparty,
+        bytes32 _ccy,
         uint256 _amount
     ) external;
 
     function deposit(bytes32 _ccy, uint256 _amount) external payable;
 
-    function getIndependentCollateral(bytes32 _ccy, address _user) external view returns (uint256);
+    function getIndependentCollateral(address _user, bytes32 _ccy) external view returns (uint256);
 
-    function getIndependentCollateralInETH(bytes32 _ccy, address _user)
+    function getIndependentCollateralInETH(address _user, bytes32 _ccy)
         external
         view
         returns (uint256);
 
-    function getLockedCollateral(bytes32 _ccy, address _user) external view returns (uint256);
+    function getLockedCollateral(address _user, bytes32 _ccy) external view returns (uint256);
 
-    function getLockedCollateralInETH(bytes32 _ccy, address _user) external view returns (uint256);
+    function getLockedCollateralInETH(address _user, bytes32 _ccy) external view returns (uint256);
 
     function getLockedCollateral(
-        bytes32 _ccy,
         address _partyA,
-        address _partyB
+        address _partyB,
+        bytes32 _ccy
     ) external view returns (uint256, uint256);
 
     function getLockedCollateralInETH(
-        bytes32 _ccy,
         address _partyA,
-        address _partyB
+        address _partyB,
+        bytes32 _ccy
     ) external view returns (uint256, uint256);
 
     function liquidate(
@@ -63,18 +63,18 @@ interface ICollateralVault {
     ) external returns (bool);
 
     function rebalanceBetween(
-        bytes32 _ccy,
         address _user,
         address _fromParty,
         address _toParty,
+        bytes32 _ccy,
         uint256 _amountETH
     ) external returns (uint256);
 
     function withdraw(bytes32 _ccy, uint256 _amount) external;
 
     function withdrawFrom(
-        bytes32 _ccy,
         address _counterparty,
+        bytes32 _ccy,
         uint256 _amount
     ) external;
 

@@ -71,7 +71,7 @@ contract('LendingMarketController', async (accounts) => {
       expectEvent(result, 'Register');
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, bob);
+        await collateralVault.getIndependentCollateral(bob, targetCurrency);
       independentCollateral.toString().should.be.equal(collateral);
     });
   });

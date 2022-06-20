@@ -247,7 +247,7 @@ contract('LoanV2', async (accounts) => {
       ).wait();
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceDepositAmt.toString());
@@ -268,8 +268,8 @@ contract('LoanV2', async (accounts) => {
       ).wait();
 
       independentCollateral = await collateralVault.getIndependentCollateral(
-        targetCurrency,
         bob,
+        targetCurrency,
       );
       independentCollateral
         .toString()
@@ -404,18 +404,18 @@ contract('LoanV2', async (accounts) => {
       );
 
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, targetCurrency);
       lockedCollateral.toString().should.be.equal(aliceFILInETH.toString());
 
       lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, bob);
+        'getLockedCollateral(address,bytes32)'
+      ](bob, targetCurrency);
       lockedCollateral.toString().should.be.equal(bobFILInETH.toString());
 
       let lockedCollaterals = await collateralVault[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       lockedCollaterals[0].toString().should.be.equal(aliceFILInETH.toString());
       lockedCollaterals[1].toString().should.be.equal(bobFILInETH.toString());
     });
@@ -685,7 +685,7 @@ contract('LoanV2', async (accounts) => {
       const [, aliceSigner] = await ethers.getSigners();
       const depositAmt = toBN('9000000000000000000');
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       let initialIndependentAmount = toBN(independentCollateral);
 
       await (
@@ -697,8 +697,8 @@ contract('LoanV2', async (accounts) => {
       ).wait();
 
       independentCollateral = await collateralVault.getIndependentCollateral(
-        targetCurrency,
         alice,
+        targetCurrency,
       );
       independentCollateral
         .toString()

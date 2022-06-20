@@ -21,8 +21,8 @@ library CollateralVaultStorage {
         mapping(bytes32 => EnumerableSet.Bytes32Set) usedCurrenciesInPosition;
         // Mapping for used currency vaults per user.
         mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
-        // Mapping for all deposits of users collateral per currency
-        mapping(bytes32 => mapping(address => Book)) books;
+        // Mapping for all deposits of currency per users collateral
+        mapping(address => mapping(bytes32 => Book)) books;
         // Mapping for bilateral collateral positions between 2 counterparties per currency
         mapping(bytes32 => mapping(bytes32 => CollateralPosition.Position)) positions;
     }

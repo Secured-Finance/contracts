@@ -270,14 +270,14 @@ contract('Integration test', async (accounts) => {
       currencies.includes(targetCurrency).should.be.equal(true);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, carol);
+        await collateralVault.getIndependentCollateral(carol, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(carolInitialCollateral.toString());
 
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, carol);
+        'getLockedCollateral(address,bytes32)'
+      ](carol, targetCurrency);
       lockedCollateral.toString().should.be.equal('0');
     });
 
@@ -499,7 +499,7 @@ contract('Integration test', async (accounts) => {
       currencies.includes(targetCurrency).should.be.equal(true);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral.toString().should.be.equal(depositAmt.toString());
 
       aliceIndependentAmount = await depositAmt;
@@ -537,7 +537,7 @@ contract('Integration test', async (accounts) => {
       aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
@@ -570,7 +570,7 @@ contract('Integration test', async (accounts) => {
       }
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral.toString().should.be.equal('0');
 
       // await web3.eth.getBalance(alice).then((res) => {
@@ -604,7 +604,7 @@ contract('Integration test', async (accounts) => {
       currencies.includes(targetCurrency).should.be.equal(true);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, bob);
+        await collateralVault.getIndependentCollateral(bob, targetCurrency);
       independentCollateral.toString().should.be.equal(depositAmt.toString());
     });
 
@@ -632,7 +632,7 @@ contract('Integration test', async (accounts) => {
       }
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, bob);
+        await collateralVault.getIndependentCollateral(bob, targetCurrency);
       independentCollateral.toString().should.be.equal('3000000000000000000');
 
       web3.eth.getBalance(bob).then((res) => {
@@ -701,7 +701,7 @@ contract('Integration test', async (accounts) => {
       aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
@@ -741,7 +741,7 @@ contract('Integration test', async (accounts) => {
       exp.toString().should.be.equal(filInETH.toString());
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
@@ -749,7 +749,7 @@ contract('Integration test', async (accounts) => {
 
     it('Calculate collateral coverage of the global collateral book, expect to be equal with manual calculations', async () => {
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
@@ -780,7 +780,7 @@ contract('Integration test', async (accounts) => {
       aliceIndependentAmount = await aliceIndependentAmount.sub(maxWidthdrawal);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
@@ -801,7 +801,7 @@ contract('Integration test', async (accounts) => {
       aliceIndependentAmount = await aliceIndependentAmount.sub(maxWidthdrawal);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
@@ -854,7 +854,7 @@ contract('Integration test', async (accounts) => {
       ).wait();
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral.toString().should.be.equal('0');
     });
   });
@@ -900,7 +900,7 @@ contract('Integration test', async (accounts) => {
       aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
@@ -947,8 +947,8 @@ contract('Integration test', async (accounts) => {
       expectEvent(marketOrder, 'TakeOrder');
 
       let lockedCollaterals = await collateralVault[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       aliceLockedCollateral = lockedCollaterals[0];
 
       aliceIndependentAmount = await aliceIndependentAmount.sub(
@@ -956,7 +956,7 @@ contract('Integration test', async (accounts) => {
       );
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
 
       independentCollateral
         .toString()
@@ -1092,7 +1092,7 @@ contract('Integration test', async (accounts) => {
       );
 
       const independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
 
       independentCollateral
         .toString()
@@ -1166,14 +1166,14 @@ contract('Integration test', async (accounts) => {
       aliceIndependentAmount = await aliceIndependentAmount.add(depositAmt);
 
       const independentCollateral =
-        await collateralVault.getIndependentCollateral(targetCurrency, alice);
+        await collateralVault.getIndependentCollateral(alice, targetCurrency);
       independentCollateral
         .toString()
         .should.be.equal(aliceIndependentAmount.toString());
 
       const lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, targetCurrency);
       lockedCollateral.toString().should.be.equal('0');
 
       web3.eth.getBalance(alice).then((res) => {
@@ -1219,8 +1219,8 @@ contract('Integration test', async (accounts) => {
       );
 
       let lockedCollaterals = await collateralVault[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       aliceLockedCollateral = lockedCollaterals[0];
 
       aliceIndependentAmount = await aliceIndependentAmount.sub(
@@ -1474,8 +1474,8 @@ contract('Integration test', async (accounts) => {
         deal.borrower.should.be.equal(zeroAddress);
 
         let lockedCollaterals = await collateralVault[
-          'getLockedCollateral(bytes32,address,address)'
-        ](targetCurrency, alice, bob);
+          'getLockedCollateral(address,address,bytes32)'
+        ](alice, bob, targetCurrency);
         console.log(
           `LockedCollaterals: ${lockedCollaterals
             .map((value) => value.toString())

@@ -528,15 +528,15 @@ contract('CollateralAggregatorV2', async (accounts) => {
       );
 
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](hexFILString, bob);
+        'getLockedCollateral(address,bytes32)'
+      ](bob, hexFILString);
       lockedCollateral
         .toString()
         .should.be.equal(filRebalanceAmount.toString());
 
       lockedCollateral = await collateralVault[
-        'getLockedCollateralInETH(bytes32,address)'
-      ](hexFILString, bob);
+        'getLockedCollateralInETH(address,bytes32)'
+      ](bob, hexFILString);
       lockedCollateral
         .toString()
         .should.be.equal(ethRebalanceAmount.toString());
@@ -579,15 +579,15 @@ contract('CollateralAggregatorV2', async (accounts) => {
       ccyExp[3].toString().should.be.equal(filAmount.toString());
 
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](hexFILString, bob);
+        'getLockedCollateral(address,bytes32)'
+      ](bob, hexFILString);
       lockedCollateral
         .toString()
         .should.be.equal(filRebalanceAmount.toString());
 
       lockedCollateral = await collateralVault[
-        'getLockedCollateralInETH(bytes32,address)'
-      ](hexFILString, bob);
+        'getLockedCollateralInETH(address,bytes32)'
+      ](bob, hexFILString);
       lockedCollateral
         .toString()
         .should.be.equal(ethRebalanceAmount.toString());
@@ -654,13 +654,13 @@ contract('CollateralAggregatorV2', async (accounts) => {
       coverage[1].toString().should.be.equal('15000');
 
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](hexFILString, bob);
+        'getLockedCollateral(address,bytes32)'
+      ](bob, hexFILString);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
       lockedCollateral = await collateralVault[
-        'getLockedCollateralInETH(bytes32,address)'
-      ](hexFILString, bob);
+        'getLockedCollateralInETH(address,bytes32)'
+      ](bob, hexFILString);
       lockedCollateral.toString().should.be.equal(lockedInETHTarget.toString());
 
       let ccyExp = await collateralAggregator.getCcyExposures(
@@ -690,8 +690,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       let lockedTarget = newPV.mul(toBN('150')).div(toBN('100'));
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](hexFILString, bob);
+        'getLockedCollateral(address,bytes32)'
+      ](bob, hexFILString);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
       let coverage = await collateralAggregator.getCoverage(alice, bob);
@@ -743,7 +743,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
       await checkTokenBalances([collateralVault.address], [deposit], wETHToken);
 
       let independentCollateral =
-        await collateralVault.getIndependentCollateral(hexETHString, alice);
+        await collateralVault.getIndependentCollateral(alice, hexETHString);
       independentCollateral.toString().should.be.equal(deposit.toString());
 
       filAmount = decimalBase.mul(toBN('35'));
@@ -784,8 +784,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       let lockedTarget = targetNetPVs[0].mul(toBN('150')).div(toBN('100'));
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](hexETHString, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, hexETHString);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
       let coverage = await collateralAggregator.getCoverage(alice, bob);
@@ -846,8 +846,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
 
       let lockedTarget = targetNetPVs[0].mul(toBN('150')).div(toBN('100'));
       let lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](hexETHString, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, hexETHString);
 
       let aliceDepositWETH = decimalBase.mul(toBN('5'));
       lockedCollateral.toString().should.be.equal(aliceDepositWETH.toString());
@@ -860,8 +860,8 @@ contract('CollateralAggregatorV2', async (accounts) => {
       console.log(lockedTarget.toString());
 
       lockedCollateral = await collateralVault[
-        'getLockedCollateral(bytes32,address)'
-      ](hexFILString, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, hexFILString);
       lockedCollateral.toString().should.be.equal(lockedTarget.toString());
 
       let coverage = await collateralAggregator.getCoverage(alice, bob);

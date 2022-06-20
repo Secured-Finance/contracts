@@ -118,7 +118,6 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       collateralAggregatorProxy = await CollateralAggregatorMock.at(
         collateralAggregatorAddress,
       );
-      // collateralVaultProxy = await CollateralVault.at(collateralVaultAddress);
       collateralVaultProxy = await ethers.getContractAt(
         'CollateralVault',
         collateralVaultAddress,
@@ -208,8 +207,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
       let independentCollateral =
         await collateralVaultProxy.getIndependentCollateral(
-          targetCurrency,
           alice,
+          targetCurrency,
         );
       independentCollateral
         .toString()
@@ -285,16 +284,16 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         false,
       );
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       lockedCollateral[0]
         .toString()
         .should.be.equal(rebalanceAmtTokens.toString());
       lockedCollateral[1].toString().should.be.equal('0');
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, targetCurrency);
       lockedCollateral
         .toString()
         .should.be.equal(rebalanceAmtTokens.toString());
@@ -327,21 +326,21 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
 
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       lockedCollateral[0]
         .toString()
         .should.be.equal(aliceLockedTokens.toString());
       lockedCollateral[1].toString().should.be.equal('0');
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, targetCurrency);
       lockedCollateral.toString().should.be.equal(aliceLockedTokens.toString());
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, bob);
+        'getLockedCollateral(address,bytes32)'
+      ](bob, targetCurrency);
       lockedCollateral.toString().should.be.equal('0');
     });
 
@@ -360,21 +359,21 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
 
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, bob, alice);
+        'getLockedCollateral(address,address,bytes32)'
+      ](bob, alice, targetCurrency);
       lockedCollateral[0].toString().should.be.equal('0');
       lockedCollateral[1]
         .toString()
         .should.be.equal(aliceLockedTokens.toString());
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, bob);
+        'getLockedCollateral(address,bytes32)'
+      ](bob, targetCurrency);
       lockedCollateral.toString().should.be.equal('0');
       let independentCollateral =
         await collateralVaultProxy.getIndependentCollateral(
-          targetCurrency,
           bob,
+          targetCurrency,
         );
       independentCollateral.toString().should.be.equal('0');
     });
@@ -387,21 +386,21 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
 
       await collateralAggregatorProxy.rebalanceBetween(
-        targetCurrency,
         bob,
         alice,
         carol,
+        targetCurrency,
         rebalanceAmtBob,
       );
 
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, bob, alice);
+        'getLockedCollateral(address,address,bytes32)'
+      ](bob, alice, targetCurrency);
       lockedCollateral[0].toString().should.be.equal('0');
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, bob, carol);
+        'getLockedCollateral(address,address,bytes32)'
+      ](bob, carol, targetCurrency);
       lockedCollateral[0].toString().should.be.equal('0');
       lockedCollateral[1].toString().should.be.equal('0');
     });
@@ -411,22 +410,22 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       let lockedAmtAlice = aliceLockedTokens.div(toBN(2));
 
       await collateralAggregatorProxy.rebalanceBetween(
-        targetCurrency,
         alice,
         bob,
         carol,
+        targetCurrency,
         rebalanceAmt,
       );
 
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       lockedCollateral[0].toString().should.be.equal(lockedAmtAlice.toString());
       lockedCollateral[1].toString().should.be.equal('0');
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, carol);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, carol, targetCurrency);
       lockedCollateral[0].toString().should.be.equal(lockedAmtAlice.toString());
       lockedCollateral[1].toString().should.be.equal('0');
     });
@@ -443,19 +442,19 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
 
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       lockedCollateral[0].toString().should.be.equal('0');
       lockedCollateral[1].toString().should.be.equal('0');
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, alice);
+        'getLockedCollateral(address,bytes32)'
+      ](alice, targetCurrency);
       lockedCollateral.toString().should.be.equal(lockedAmtAlice.toString());
       let independentCollateral =
         await collateralVaultProxy.getIndependentCollateral(
-          targetCurrency,
           alice,
+          targetCurrency,
         );
       independentCollateral
         .toString()
@@ -478,29 +477,29 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         false,
       );
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       lockedCollateral[0]
         .toString()
         .should.be.equal(rebalanceAmtToTokens.toString());
       lockedCollateral[1].toString().should.be.equal('0');
 
       await collateralAggregatorProxy.rebalanceBetween(
-        targetCurrency,
         alice,
         bob,
         carol,
+        targetCurrency,
         rebalanceAmt,
       );
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, bob);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, bob, targetCurrency);
       lockedCollateral[0].toString().should.be.equal('0');
       lockedCollateral[1].toString().should.be.equal('0');
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, alice, carol);
+        'getLockedCollateral(address,address,bytes32)'
+      ](alice, carol, targetCurrency);
       lockedCollateral[0]
         .toString()
         .should.be.equal(aliceLockedInPositionWithCarol.toString());
@@ -525,8 +524,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         liquidationAmt,
       );
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, carol, alice);
+        'getLockedCollateral(address,address,bytes32)'
+      ](carol, alice, targetCurrency);
       lockedCollateral[0]
         .toString()
         .should.be.equal(carolLockedInPositionWithAlice.toString());
@@ -535,8 +534,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         .should.be.equal(aliceLockedInPositionWithCarol.toString());
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, carol);
+        'getLockedCollateral(address,bytes32)'
+      ](carol, targetCurrency);
       lockedCollateral
         .toString()
         .should.be.equal(carolLockedInPositionWithAlice.toString());
@@ -559,16 +558,16 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
 
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, carol, alice);
+        'getLockedCollateral(address,address,bytes32)'
+      ](carol, alice, targetCurrency);
       lockedCollateral[0]
         .toString()
         .should.be.equal(carolLockedInPositionWithAlice.toString());
       lockedCollateral[1].toString().should.be.equal('0');
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, carol);
+        'getLockedCollateral(address,bytes32)'
+      ](carol, targetCurrency);
       lockedCollateral
         .toString()
         .should.be.equal(carolLockedInPositionWithAlice.toString());
@@ -591,8 +590,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       carolLockedInPositionWithAlice = ZERO_BN;
 
       let lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address,address)'
-      ](targetCurrency, carol, alice);
+        'getLockedCollateral(address,address,bytes32)'
+      ](carol, alice, targetCurrency);
       lockedCollateral[0]
         .toString()
         .should.be.equal(carolLockedInPositionWithAlice.toString());
@@ -601,8 +600,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         .should.be.equal(aliceLockedInPositionWithCarol.toString());
 
       lockedCollateral = await collateralVaultProxy[
-        'getLockedCollateral(bytes32,address)'
-      ](targetCurrency, carol);
+        'getLockedCollateral(address,bytes32)'
+      ](carol, targetCurrency);
       lockedCollateral.toString().should.be.equal('0');
     });
   });
@@ -615,13 +614,13 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
       let aliceMaxWithdraw =
         await collateralVaultProxy.getIndependentCollateralInETH(
-          targetCurrency,
           alice,
+          targetCurrency,
         );
       let aliceMaxWithdrawTokens =
         await collateralVaultProxy.getIndependentCollateral(
-          targetCurrency,
           alice,
+          targetCurrency,
         );
 
       await collateralAggregatorProxy.setMaxCollateralBookWidthdraw(
@@ -640,8 +639,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
       let independentCollateral =
         await collateralVaultProxy.getIndependentCollateral(
-          targetCurrency,
           alice,
+          targetCurrency,
         );
       independentCollateral
         .toString()
@@ -658,8 +657,8 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
       independentCollateral =
         await collateralVaultProxy.getIndependentCollateral(
-          targetCurrency,
           alice,
+          targetCurrency,
         );
       independentCollateral.toString().should.be.equal('0');
 
@@ -730,7 +729,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
       await collateralVaultProxy
         .connect(bobSigner)
-        .withdrawFrom(targetCurrency, carol, withdrawAmt.toString());
+        .withdrawFrom(carol, targetCurrency, withdrawAmt.toString());
 
       checkTokenBalances(
         [bob, collateralVaultProxy.address],
@@ -749,9 +748,9 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
       await collateralVaultProxy
         .connect(bobSigner)
-        ['deposit(bytes32,address,uint256)'](
-          targetCurrency,
+        ['deposit(address,bytes32,uint256)'](
           carol,
+          targetCurrency,
           bobTokenBalance.toString(),
         );
 
@@ -775,7 +774,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
 
       await collateralVaultProxy
         .connect(bobSigner)
-        .withdrawFrom(targetCurrency, carol, bobTokenBalance.toString());
+        .withdrawFrom(carol, targetCurrency, bobTokenBalance.toString());
 
       checkTokenBalances(
         [bob, collateralVaultProxy.address],
