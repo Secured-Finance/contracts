@@ -205,7 +205,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
         tFILToken,
       );
 
-      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](
+        alice,
+      );
       currencies.includes(hexFILString).should.be.equal(true);
     });
 
@@ -229,7 +231,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         tFILToken,
       );
 
-      let currencies = await collateralAggregator.getUsedCurrencies(bob);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](bob);
       currencies.includes(hexFILString).should.be.equal(true);
     });
 
@@ -276,7 +278,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
         wETHToken,
       );
 
-      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](
+        alice,
+      );
       currencies.includes(hexETHString).should.be.equal(true);
     });
 
@@ -309,7 +313,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
         tFILToken,
       );
 
-      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](
+        alice,
+      );
       currencies.includes(hexFILString).should.be.equal(false);
 
       let maxWithdraw =
@@ -362,7 +368,9 @@ contract('CollateralAggregatorV2', async (accounts) => {
         wETHToken,
       );
 
-      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](
+        alice,
+      );
       currencies.includes(hexETHString).should.be.equal(false);
     });
   });
@@ -533,7 +541,7 @@ contract('CollateralAggregatorV2', async (accounts) => {
         .toString()
         .should.be.equal(ethRebalanceAmount.toString());
 
-      let currencies = await collateralAggregator.methods[
+      let currencies = await collateralVault[
         'getUsedCurrencies(address,address)'
       ](alice, bob);
       currencies.includes(hexFILString).should.be.equal(true);

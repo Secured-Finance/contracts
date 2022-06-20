@@ -66,22 +66,19 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         return withdrawal;
     }
 
-    function rebalanceTo(
-        bytes32 _ccy,
+    function rebalanceCollateral(
         address _user,
         address _counterparty,
-        uint256 _amountETH
-    ) external returns (uint256) {
-        return collateralVault().rebalanceTo(_ccy, _user, _counterparty, _amountETH);
-    }
-
-    function rebalanceFrom(
-        bytes32 _ccy,
-        address _user,
-        address _counterparty,
-        uint256 _amountETH
-    ) external returns (uint256) {
-        return collateralVault().rebalanceFrom(_ccy, _user, _counterparty, _amountETH);
+        uint256 _amountETH,
+        bool isRebalanceFrom
+    ) external returns (bool) {
+        return
+            collateralVault().rebalanceCollateral(
+                _user,
+                _counterparty,
+                _amountETH,
+                isRebalanceFrom
+            );
     }
 
     function rebalanceBetween(
@@ -94,12 +91,11 @@ contract CollateralAggregatorMock is CollateralAggregatorV2 {
         return collateralVault().rebalanceBetween(_ccy, _user, _fromParty, _toParty, _amountETH);
     }
 
-    function liquidate(
-        bytes32 _ccy,
+    function liquidateAll(
         address _from,
         address _to,
         uint256 _amountETH
-    ) external returns (uint256) {
-        return collateralVault().liquidate(_ccy, _from, _to, _amountETH);
+    ) external returns (bool) {
+        return collateralVault().liquidate(_from, _to, _amountETH);
     }
 }

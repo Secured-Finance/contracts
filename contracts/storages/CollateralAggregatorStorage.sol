@@ -21,10 +21,6 @@ library CollateralAggregatorStorage {
         mapping(address => bool) isRegistered;
         // Mapping for used currencies set in bilateral position.
         mapping(bytes32 => EnumerableSet.Bytes32Set) exposedCurrencies;
-        // Mapping for used currency vaults in bilateral position.
-        mapping(bytes32 => EnumerableSet.Bytes32Set) usedCurrenciesInPosition;
-        // Mapping for used currency vaults per user.
-        mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
         // Mapping for exposures per currency in bilateral position.
         mapping(bytes32 => mapping(bytes32 => NetPV.CcyNetting)) ccyNettings;
         // storages for MixinCollateralManagement

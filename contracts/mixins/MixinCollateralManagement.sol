@@ -31,14 +31,6 @@ contract MixinCollateralManagement is
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /**
-     * @dev Modifier to check if msg.sender is the CollateralVault
-     */
-    modifier onlyCollateralVault() {
-        require(msg.sender == address(collateralVault()), "Caller is not the collateral vault");
-        _;
-    }
-
-    /**
      * @dev Modifier to check if msg.sender is the Liquidations
      */
     modifier onlyLiquidations() {

@@ -231,7 +231,9 @@ contract('ERC20 based CollateralVault', async (accounts) => {
           ).toString(),
         );
 
-      let currencies = await collateralAggregatorProxy.getUsedCurrencies(alice);
+      let currencies = await collateralVaultProxy['getUsedCurrencies(address)'](
+        alice,
+      );
       currencies.includes(targetCurrency).should.be.equal(true);
     });
 
@@ -276,11 +278,11 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       let rebalanceAmt = aliceMaxWithdraw;
       let rebalanceAmtTokens = aliceLockedTokens;
 
-      await collateralAggregatorProxy.rebalanceTo(
-        targetCurrency,
+      await collateralAggregatorProxy.rebalanceCollateral(
         alice,
         bob,
         rebalanceAmt,
+        false,
       );
       let lockedCollateral = await collateralVaultProxy[
         'getLockedCollateral(bytes32,address,address)'
@@ -297,7 +299,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         .toString()
         .should.be.equal(rebalanceAmtTokens.toString());
 
-      let currencies = await collateralAggregatorProxy.methods[
+      let currencies = await collateralVaultProxy[
         'getUsedCurrencies(address,address)'
       ](alice, bob);
       currencies.includes(targetCurrency).should.be.equal(true);
@@ -311,17 +313,17 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         rebalanceAmtBob,
       );
 
-      await collateralAggregatorProxy.rebalanceTo(
-        targetCurrency,
+      await collateralAggregatorProxy.rebalanceCollateral(
         alice,
         bob,
-        rebalanceAmtAlice,
+        rebalanceAmtAlice.toString(),
+        false,
       );
-      await collateralAggregatorProxy.rebalanceTo(
-        targetCurrency,
+      await collateralAggregatorProxy.rebalanceCollateral(
         bob,
         alice,
-        rebalanceAmtBob,
+        rebalanceAmtBob.toString(),
+        false,
       );
 
       let lockedCollateral = await collateralVaultProxy[
@@ -350,11 +352,11 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         rebalanceAmtBob,
       );
 
-      await collateralAggregatorProxy.rebalanceFrom(
-        targetCurrency,
+      await collateralAggregatorProxy.rebalanceCollateral(
         bob,
         alice,
-        rebalanceAmtBob,
+        rebalanceAmtBob.toString(),
+        true,
       );
 
       let lockedCollateral = await collateralVaultProxy[
@@ -433,11 +435,11 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       let rebalanceAmt = aliceMaxWithdraw;
       let lockedAmtAlice = aliceLockedTokens.div(toBN(2));
 
-      await collateralAggregatorProxy.rebalanceFrom(
-        targetCurrency,
+      await collateralAggregatorProxy.rebalanceCollateral(
         alice,
         bob,
-        rebalanceAmt,
+        rebalanceAmt.toString(),
+        true,
       );
 
       let lockedCollateral = await collateralVaultProxy[
@@ -469,11 +471,11 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         .div(toBN(2))
         .add(rebalanceAmtToTokens);
 
-      await collateralAggregatorProxy.rebalanceTo(
-        targetCurrency,
+      await collateralAggregatorProxy.rebalanceCollateral(
         alice,
         bob,
-        rebalanceAmtToETH,
+        rebalanceAmtToETH.toString(),
+        false,
       );
       let lockedCollateral = await collateralVaultProxy[
         'getLockedCollateral(bytes32,address,address)'
@@ -517,8 +519,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       carolLockedInPositionWithAlice = aliceLockedInPositionWithCarol;
       aliceLockedInPositionWithCarol = ZERO_BN;
 
-      await collateralAggregatorProxy.liquidate(
-        targetCurrency,
+      await collateralAggregatorProxy.liquidateAll(
         alice,
         carol,
         liquidationAmt,
@@ -551,8 +552,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         liquidationAmt,
       );
 
-      await collateralAggregatorProxy.liquidate(
-        targetCurrency,
+      await collateralAggregatorProxy.liquidateAll(
         alice,
         carol,
         liquidationAmt,
@@ -581,8 +581,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         liquidationAmt,
       );
 
-      await collateralAggregatorProxy.liquidate(
-        targetCurrency,
+      await collateralAggregatorProxy.liquidateAll(
         carol,
         alice,
         liquidationAmt,
@@ -664,7 +663,9 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         );
       independentCollateral.toString().should.be.equal('0');
 
-      let currencies = await collateralAggregatorProxy.getUsedCurrencies(alice);
+      let currencies = await collateralVaultProxy['getUsedCurrencies(address)'](
+        alice,
+      );
       currencies.includes(targetCurrency).should.be.equal(true); // expect no exit from vault as there is some tokens locked
     });
 

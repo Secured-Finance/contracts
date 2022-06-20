@@ -33,13 +33,15 @@ interface ICollateralVault {
         view
         returns (uint256);
 
+    function getLockedCollateral(bytes32 _ccy, address _user) external view returns (uint256);
+
+    function getLockedCollateralInETH(bytes32 _ccy, address _user) external view returns (uint256);
+
     function getLockedCollateral(
         bytes32 _ccy,
         address _partyA,
         address _partyB
     ) external view returns (uint256, uint256);
-
-    function getLockedCollateral(bytes32 _ccy, address _user) external view returns (uint256);
 
     function getLockedCollateralInETH(
         bytes32 _ccy,
@@ -47,34 +49,24 @@ interface ICollateralVault {
         address _partyB
     ) external view returns (uint256, uint256);
 
-    function getLockedCollateralInETH(bytes32 _ccy, address _user) external view returns (uint256);
-
     function liquidate(
-        bytes32 _ccy,
         address _from,
         address _to,
-        uint256 _amountETH
-    ) external returns (uint256 liquidationLeftETH);
+        uint256 _liquidationTarget
+    ) external returns (bool);
+
+    function rebalanceCollateral(
+        address _party0,
+        address _party1,
+        uint256 _rebalanceTarget,
+        bool isRebalanceFrom
+    ) external returns (bool);
 
     function rebalanceBetween(
         bytes32 _ccy,
         address _user,
         address _fromParty,
         address _toParty,
-        uint256 _amountETH
-    ) external returns (uint256);
-
-    function rebalanceFrom(
-        bytes32 _ccy,
-        address _user,
-        address _counterparty,
-        uint256 _amountETH
-    ) external returns (uint256);
-
-    function rebalanceTo(
-        bytes32 _ccy,
-        address _user,
-        address _counterparty,
         uint256 _amountETH
     ) external returns (uint256);
 
@@ -85,4 +77,18 @@ interface ICollateralVault {
         address _counterparty,
         uint256 _amount
     ) external;
+
+    function getUsedCurrencies(address user) external view returns (bytes32[] memory);
+
+    function getUsedCurrencies(address party0, address party1)
+        external
+        view
+        returns (bytes32[] memory);
+
+    function getTotalIndependentCollateralInETH(address _party) external view returns (uint256);
+
+    function getTotalLockedCollateralInETH(address _party0, address _party1)
+        external
+        view
+        returns (uint256, uint256);
 }

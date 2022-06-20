@@ -264,7 +264,9 @@ contract('Integration test', async (accounts) => {
         wETHToken,
       );
 
-      let currencies = await collateralAggregator.getUsedCurrencies(carol);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](
+        carol,
+      );
       currencies.includes(targetCurrency).should.be.equal(true);
 
       let independentCollateral =
@@ -491,7 +493,9 @@ contract('Integration test', async (accounts) => {
         wETHToken,
       );
 
-      let currencies = await collateralAggregator.getUsedCurrencies(alice);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](
+        alice,
+      );
       currencies.includes(targetCurrency).should.be.equal(true);
 
       let independentCollateral =
@@ -596,7 +600,7 @@ contract('Integration test', async (accounts) => {
           })
       ).wait();
 
-      let currencies = await collateralAggregator.getUsedCurrencies(bob);
+      let currencies = await collateralVault['getUsedCurrencies(address)'](bob);
       currencies.includes(targetCurrency).should.be.equal(true);
 
       let independentCollateral =
