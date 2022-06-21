@@ -5,9 +5,6 @@ interface IMixinCollateralManagement {
     event CollateralUserAdded(address indexed user);
     event CollateralUserRemoved(address indexed user);
 
-    event CollateralVaultLinked(address indexed vault, bytes32 ccy, address tokenAddress);
-    event CollateralVaultRemoved(address indexed vault, bytes32 ccy, address tokenAddress);
-
     event CurrencyControllerUpdated(address indexed controller);
     event LiquidationEngineUpdated(address indexed liquidations);
     event CrosschainAddressResolverUpdated(address indexed crosschainAddressResolver);
@@ -30,12 +27,6 @@ interface IMixinCollateralManagement {
     function removeCollateralUser(address _user) external returns (bool);
 
     function isCollateralUser(address _user) external view returns (bool);
-
-    function linkCollateralVault(address _vault) external returns (bool);
-
-    function removeCollateralVault(address _vault) external returns (bool);
-
-    function isCollateralVault(address _vault) external view returns (bool);
 
     function updateMainParameters(
         uint256 _marginCallThresholdRate,

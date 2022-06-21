@@ -21,15 +21,10 @@ library CollateralAggregatorStorage {
         mapping(address => bool) isRegistered;
         // Mapping for used currencies set in bilateral position.
         mapping(bytes32 => EnumerableSet.Bytes32Set) exposedCurrencies;
-        // Mapping for used collateral vaults in bilateral position.
-        mapping(bytes32 => EnumerableSet.AddressSet) usedVaultsInPosition;
-        // Mapping for used collateral vaults per user.
-        mapping(address => EnumerableSet.AddressSet) usedVaults;
         // Mapping for exposures per currency in bilateral position.
         mapping(bytes32 => mapping(bytes32 => NetPV.CcyNetting)) ccyNettings;
         // storages for MixinCollateralManagement
         EnumerableSet.AddressSet collateralUsers;
-        EnumerableSet.AddressSet collateralVaults;
         // liquidation price rate in basis point
         uint256 liquidationPriceRate;
         // margin call threshold rate in basis point

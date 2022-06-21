@@ -24,7 +24,6 @@ import "./types/ProtocolTypes.sol";
  */
 contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagement {
     using EnumerableSet for EnumerableSet.Bytes32Set;
-    using EnumerableSet for EnumerableSet.AddressSet;
     using NetPV for NetPV.CcyNetting;
 
     /**
@@ -400,7 +399,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         uint256 liquidationInETH
     ) external override onlyLiquidations {
         require(
-            _liquidateCollateralAcrossVaults(from, to, liquidationInETH),
+            collateralVault().liquidate(from, to, liquidationInETH),
             "INCORRECT_LIQUIDATION_ACROSS_VAULTS"
         );
     }
@@ -428,7 +427,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         uint256 liqudationInETH = currencyController().convertToETH(ccy, liquidationTarget);
 
         require(
-            _liquidateCollateralAcrossVaults(from, to, liqudationInETH),
+            collateralVault().liquidate(from, to, liqudationInETH),
             "INCORRECT_LIQUIDATION_ACROSS_VAULTS"
         );
 
@@ -490,42 +489,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         }
 
         return currencies;
-    }
-
-    function getUsedVaults(address party0, address party1)
-        public
-        view
-        override
-        returns (address[] memory)
-    {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(party0, party1);
-        EnumerableSet.AddressSet storage vaultsSet = Storage.slot().usedVaultsInPosition[
-            packedAddrs
-        ];
-
-        uint256 numVaults = vaultsSet.length();
-        address[] memory vaults = new address[](numVaults);
-
-        for (uint256 i = 0; i < numVaults; i++) {
-            address vault = vaultsSet.at(i);
-            vaults[i] = vault;
-        }
-
-        return vaults;
-    }
-
-    function getUsedVaults(address user) public view override returns (address[] memory) {
-        EnumerableSet.AddressSet storage vaultsSet = Storage.slot().usedVaults[user];
-
-        uint256 numVaults = vaultsSet.length();
-        address[] memory vaults = new address[](numVaults);
-
-        for (uint256 i = 0; i < numVaults; i++) {
-            address vault = vaultsSet.at(i);
-            vaults[i] = vault;
-        }
-
-        return vaults;
     }
 
     function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256) {
@@ -783,10 +746,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
             _isSettled
         );
 
-        (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(
-            _party0,
-            _party1
-        );
+        (vars.lockedCollateral0, vars.lockedCollateral1) = collateralVault()
+            .getTotalLockedCollateralInETH(_party0, _party1);
 
         if (vars.req0 > 0) {
             vars.cover0 = (ProtocolTypes.PCT * vars.lockedCollateral0) / vars.req0;
@@ -844,10 +805,8 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
             vars.targetReq1 = (vars.targetReq1 * getMarginCallThresholdRate()) / ProtocolTypes.BP;
         }
 
-        (vars.lockedCollateral0, vars.lockedCollateral1) = _totalLockedCollateralInPosition(
-            _party0,
-            _party1
-        );
+        (vars.lockedCollateral0, vars.lockedCollateral1) = collateralVault()
+            .getTotalLockedCollateralInETH(_party0, _party1);
 
         (vars.colAdjustment0, vars.isWithdraw0) = _determineCollateralAdjustment(
             vars.lockedCollateral0,
@@ -939,7 +898,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         UnsettledCoverageLocalVars memory vars;
 
         vars.totalExpInETH = _netTotalUnsettledAndHypotheticalPV(_user, _ccy, _unsettledExp);
-        vars.independentAmount = _totalIndependentCollateralInETH(_user);
+        vars.independentAmount = collateralVault().getTotalIndependentCollateralInETH(_user);
 
         if (vars.totalExpInETH > 0) {
             vars.coverage = (ProtocolTypes.PCT * vars.independentAmount) / vars.totalExpInETH;
@@ -976,7 +935,7 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
             "",
             0
         );
-        vars.independentAmount = _totalIndependentCollateralInETH(_user);
+        vars.independentAmount = collateralVault().getTotalIndependentCollateralInETH(_user);
 
         if (vars.coverage > getMarginCallThresholdRate()) {
             // TODO: discuss if it makes sense to decrease to 100%
@@ -990,115 +949,6 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
         }
 
         return (vars.maxWidthdraw, vars.totalExpInETH);
-    }
-
-    struct TotalLockedCollateralLocalVars {
-        uint256 len;
-        uint256 lockedCollateral0;
-        uint256 lockedCollateral1;
-        uint256 totalCollateral0;
-        uint256 totalCollateral1;
-    }
-
-    function _totalLockedCollateralInPosition(address _party0, address _party1)
-        internal
-        view
-        returns (uint256, uint256)
-    {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaultsInPosition[packedAddrs];
-
-        TotalLockedCollateralLocalVars memory vars;
-        vars.len = vaults.length();
-
-        for (uint256 i = 0; i < vars.len; i++) {
-            address vaultAddr = vaults.at(i);
-
-            (vars.lockedCollateral0, vars.lockedCollateral1) = ICollateralVault(vaultAddr)
-                .getLockedCollateralInETH(_party0, _party1);
-
-            vars.totalCollateral0 = vars.totalCollateral0 + vars.lockedCollateral0;
-            vars.totalCollateral1 = vars.totalCollateral1 + vars.lockedCollateral1;
-        }
-
-        return (vars.totalCollateral0, vars.totalCollateral1);
-    }
-
-    function _totalIndependentCollateralInETH(address _party) internal view returns (uint256) {
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_party];
-        uint256 lockedCollateral;
-        uint256 totalCollateral;
-
-        uint256 len = vaults.length();
-
-        for (uint256 i = 0; i < len; i++) {
-            address vaultAddr = vaults.at(i);
-            lockedCollateral = ICollateralVault(vaultAddr).getIndependentCollateralInETH(_party);
-
-            totalCollateral = totalCollateral + lockedCollateral;
-        }
-
-        return totalCollateral;
-    }
-
-    function _liquidateCollateralAcrossVaults(
-        address _from,
-        address _to,
-        uint256 _liquidationTarget
-    ) internal returns (bool) {
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_from];
-        uint256 len = vaults.length();
-        uint256 i = 0;
-
-        while (_liquidationTarget != 0 && i < len) {
-            address vaultAddr = vaults.at(i);
-            _liquidationTarget = ICollateralVault(vaultAddr).liquidate(
-                _from,
-                _to,
-                _liquidationTarget
-            );
-
-            i += 1;
-        }
-
-        if (_liquidationTarget > 0) return false;
-
-        return true;
-    }
-
-    function _rebalanceCollateralAcrossVaults(
-        address _party0,
-        address _party1,
-        uint256 _rebalanceTarget,
-        bool isRebalanceFrom
-    ) internal returns (bool) {
-        EnumerableSet.AddressSet storage vaults = Storage.slot().usedVaults[_party0];
-        uint256 len = vaults.length();
-        uint256 i = 0;
-
-        while (_rebalanceTarget != 0 && i < len) {
-            address vaultAddr = vaults.at(i);
-
-            if (isRebalanceFrom) {
-                _rebalanceTarget = ICollateralVault(vaultAddr).rebalanceFrom(
-                    _party0,
-                    _party1,
-                    _rebalanceTarget
-                );
-            } else {
-                _rebalanceTarget = ICollateralVault(vaultAddr).rebalanceTo(
-                    _party0,
-                    _party1,
-                    _rebalanceTarget
-                );
-            }
-
-            i += 1;
-        }
-
-        if (_rebalanceTarget > 0) return false;
-
-        return true;
     }
 
     function _rebalanceIfRequired(
@@ -1115,34 +965,26 @@ contract CollateralAggregatorV2 is ICollateralAggregator, MixinCollateralManagem
 
         if (rebalance0 > 0) {
             require(
-                _rebalanceCollateralAcrossVaults(_party0, _party1, rebalance0, isRebalanceFrom0),
+                collateralVault().rebalanceCollateral(
+                    _party0,
+                    _party1,
+                    rebalance0,
+                    isRebalanceFrom0
+                ),
                 "NON_ENOUGH_FUNDS_FOR_REBALANCE"
             );
         }
 
         if (rebalance1 > 0) {
             require(
-                _rebalanceCollateralAcrossVaults(_party1, _party0, rebalance1, isRebalanceFrom1),
+                collateralVault().rebalanceCollateral(
+                    _party1,
+                    _party0,
+                    rebalance1,
+                    isRebalanceFrom1
+                ),
                 "NON_ENOUGH_FUNDS_FOR_REBALANCE"
             );
         }
-    }
-
-    function enterVault(address _user) external override onlyCollateralVault {
-        Storage.slot().usedVaults[_user].add(msg.sender);
-    }
-
-    function exitVault(address _user) external override onlyCollateralVault {
-        Storage.slot().usedVaults[_user].remove(msg.sender);
-    }
-
-    function enterVault(address _party0, address _party1) external override onlyCollateralVault {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        Storage.slot().usedVaultsInPosition[packedAddrs].add(msg.sender);
-    }
-
-    function exitVault(address _party0, address _party1) external override onlyCollateralVault {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(_party0, _party1);
-        Storage.slot().usedVaultsInPosition[packedAddrs].remove(msg.sender);
     }
 }

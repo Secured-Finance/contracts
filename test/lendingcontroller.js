@@ -13,6 +13,7 @@ const { orders } = require('./orders');
 
 contract('LendingMarketController', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
+  const targetCurrency = hexETHString;
 
   let collateralAggregator;
   let loan;
@@ -20,7 +21,7 @@ contract('LendingMarketController', async (accounts) => {
   let lendingMarkets = [];
   let orderList;
   let termStructure;
-  let ethVault;
+  let collateralVault;
 
   before('deploy LendingMarketController', async () => {
     const deployment = new Deployment();
@@ -29,6 +30,7 @@ contract('LendingMarketController', async (accounts) => {
       dealIdLibrary,
       closeOutNetting,
       collateralAggregator,
+      collateralVault,
       currencyController,
       crosschainAddressResolver,
       termStructure,
@@ -38,17 +40,7 @@ contract('LendingMarketController', async (accounts) => {
       wETHToken,
     } = await deployment.execute());
 
-    ethVault = await ethers
-      .getContractFactory('CollateralVault')
-      .then((factory) =>
-        factory.deploy(
-          addressResolver.address,
-          hexETHString,
-          wETHToken.address,
-          wETHToken.address,
-        ),
-      );
-    await collateralAggregator.linkCollateralVault(ethVault.address);
+    await collateralVault.registerCurrency(targetCurrency, wETHToken.address);
 
     orderList = orders;
 
@@ -69,14 +61,17 @@ contract('LendingMarketController', async (accounts) => {
         from: bob,
       });
       await (
-        await ethVault.connect(bobSigner)['deposit(uint256)'](collateral, {
-          value: collateral,
-        })
+        await collateralVault
+          .connect(bobSigner)
+          ['deposit(bytes32,uint256)'](targetCurrency, collateral, {
+            value: collateral,
+          })
       ).wait();
 
       expectEvent(result, 'Register');
 
-      let independentCollateral = await ethVault.getIndependentCollateral(bob);
+      let independentCollateral =
+        await collateralVault.getIndependentCollateral(bob, targetCurrency);
       independentCollateral.toString().should.be.equal(collateral);
     });
   });

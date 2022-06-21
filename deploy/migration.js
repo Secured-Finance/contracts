@@ -10,6 +10,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deployer } = await getNamedAccounts();
 
   // Get deployments
+  const wETHToken = await deployments.get('WETH9Mock');
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
@@ -30,6 +31,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'CollateralAggregator',
     'CollateralAggregatorV2',
   );
+  const collateralVault = await getProxy('CollateralVault');
   const crosschainAddressResolver = await getProxy('CrosschainAddressResolver');
   const currencyController = await getProxy('CurrencyController');
   const markToMarket = await getProxy('MarkToMarket');
@@ -64,6 +66,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const contractNames = [
     'CloseOutNetting',
     'CollateralAggregator',
+    'CollateralVault',
     'CrosschainAddressResolver',
     'CurrencyController',
     'MarkToMarket',
@@ -78,6 +81,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const contractAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,
+    collateralVault.address,
     crosschainAddressResolver.address,
     currencyController.address,
     markToMarket.address,
@@ -92,6 +96,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const buildCachesAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,
+    collateralVault.address,
     crosschainAddressResolver.address,
     markToMarket.address,
     lendingMarketController.address,
@@ -111,10 +116,19 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .then((tx) => tx.wait());
 
   // Set up for CollateralAggregator
-
   await collateralAggregator.functions['register(string[],uint256[])'](
     [btcAddress, filAddress],
     [0, 461],
+  ).then((tx) => tx.wait());
+
+  // Set up for CollateralVault
+  await collateralVault.registerCurrency(hexETHString, wETHToken.address);
+  await collateralVault.functions['deposit(bytes32,uint256)'](
+    hexETHString,
+    '10000000000000000',
+    {
+      value: '10000000000000000',
+    },
   ).then((tx) => tx.wait());
 
   // Set up for ProductAddressResolver
@@ -138,6 +152,7 @@ module.exports.tags = ['Migration'];
 module.exports.dependencies = [
   'CloseOutNetting',
   'CollateralAggregator',
+  'CollateralVault',
   'CrosschainAddressResolver',
   'CurrencyController',
   'MarkToMarket',
@@ -148,4 +163,5 @@ module.exports.dependencies = [
   'ProductAddressResolver',
   'SettlementEngine',
   'TermStructure',
+  'WETH',
 ];
