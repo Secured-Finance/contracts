@@ -1,18 +1,21 @@
 const { BigNumber } = require('ethers');
-const { toBytes32, hexFILString } = require('../test-utils').strings;
+const { toBytes32, hexFILString, testTxHash, secondTxHash } =
+  require('../test-utils').strings;
+
 const { should } = require('chai');
 const {
   expectEvent,
   expectRevert,
   time,
 } = require('@openzeppelin/test-helpers');
-const { testTxHash, secondTxHash } = require('../test-utils/src/strings');
+
 should();
 
 const AddressResolver = artifacts.require('AddressResolver');
 const ChainlinkSettlementAdapter = artifacts.require(
   'ChainlinkSettlementAdapter',
 );
+const ProxyController = artifacts.require('ProxyController');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
 
@@ -35,13 +38,24 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
       .then((factory) => factory.deploy());
     const addressResolver = await AddressResolver.new();
 
-    await addressResolver.importAddresses(
+    const proxyController = await ProxyController.new(
+      ethers.constants.AddressZero,
+    );
+    await proxyController.setAddressResolverImpl(addressResolver.address);
+    const addressResolverProxyAddress =
+      await proxyController.getAddressResolverProxyAddress();
+
+    const addressResolverProxy = await AddressResolver.at(
+      addressResolverProxyAddress,
+    );
+
+    await addressResolverProxy.importAddresses(
       [toBytes32('SettlementEngine')],
       [externalAdapterCaller.address],
     );
 
     chainlinkSettlementAdapter = await ChainlinkSettlementAdapter.new(
-      addressResolver.address,
+      addressResolverProxyAddress,
       operator.address,
       jobId,
       requestFee,

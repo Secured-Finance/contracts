@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAddressResolver.sol";
 import "./interfaces/IProxyController.sol";
@@ -10,14 +11,37 @@ import "./libraries/ProductPrefixes.sol";
 import "./utils/UpgradeabilityProxy.sol";
 
 contract ProxyController is IProxyController, Ownable {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     IAddressResolver private resolver;
+    EnumerableSet.AddressSet private proxyAddressCaches;
+    bytes32 private constant ADDRESS_RESOLVER = "AddressResolver";
 
     /**
      * @dev Contract constructor function.
-     * @param _resolver The address of the Address Resolver contract
+     * @param _controller The address of the previous ProxyController
+     *
+     * @notice Set a previous AddressResolver if it is already deployed.
+     * If not, set zero address here and call `setAddressResolverImpl` using the implementation
+     * address of AddressResolver to create a proxy contract.
      */
-    constructor(address _resolver) Ownable() {
-        resolver = IAddressResolver(_resolver);
+    constructor(address _controller) Ownable() {
+        if (_controller != address(0)) {
+            ProxyController controller = ProxyController(_controller);
+            resolver = IAddressResolver(controller.getAddressResolverProxyAddress());
+            address[] memory caches = controller.getProxyAddressCaches();
+
+            for (uint256 i = 0; i < caches.length; i++) {
+                proxyAddressCaches.add(caches[i]);
+            }
+        }
+    }
+
+    /**
+     * @dev Gets the proxy address of AddressResolver
+     */
+    function getAddressResolverProxyAddress() public view returns (address) {
+        return (address(resolver));
     }
 
     /**
@@ -51,6 +75,16 @@ contract ProxyController is IProxyController, Ownable {
         require(proxy.implementation() != address(0), "Proxy address not found");
 
         return proxyAddress;
+    }
+
+    /**
+     * @dev Sets the implementation contract of AddressResolver
+     * @param newImpl The address of implementation contract
+     */
+    function setAddressResolverImpl(address newImpl) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature("initialize(address)", msg.sender);
+        address proxyAddress = _updateImpl(ADDRESS_RESOLVER, newImpl, data);
+        resolver = IAddressResolver(proxyAddress);
     }
 
     /**
@@ -207,6 +241,34 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
+     * @dev Gets cached addresses of proxy contract
+     */
+    function getProxyAddressCaches() external view returns (address[] memory) {
+        return proxyAddressCaches.values();
+    }
+
+    /**
+     * @dev Updates admin addresses of proxy contract
+     * @param newAdmin The address of new admin
+     */
+    function changeProxyAdmins(address newAdmin) external onlyOwner {
+        address[] memory destinations = proxyAddressCaches.values();
+        for (uint256 i = 0; i < destinations.length; i++) {
+            changeProxyAdmin(newAdmin, destinations[i]);
+        }
+    }
+
+    /**
+     * @dev Update admin address of proxy contract
+     * @param newAdmin The address of new admin
+     * @param destination The destination contract addresses
+     */
+    function changeProxyAdmin(address newAdmin, address destination) public onlyOwner {
+        UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(destination));
+        proxy.changeAdmin(newAdmin);
+    }
+
+    /**
      * @dev Sets the implementation contract of specified contract
      * The first time the contract address is set, `UpgradeabilityProxy` is created.
      * From the second time, the contract address set in the created `UpgradeabilityProxy`
@@ -220,19 +282,29 @@ contract ProxyController is IProxyController, Ownable {
         bytes32 name,
         address newAddress,
         bytes memory data
-    ) internal {
-        address proxyAddress = resolver.getAddress(name);
+    ) internal returns (address proxyAddress) {
+        proxyAddress = _getProxyAddress(name);
         UpgradeabilityProxy proxy;
 
         if (proxyAddress == address(0)) {
             proxy = new UpgradeabilityProxy(payable(newAddress), data);
+            proxyAddress = address(proxy);
+            proxyAddressCaches.add(proxyAddress);
 
-            emit ProxyCreated(name, address(proxy), newAddress);
+            emit ProxyCreated(name, proxyAddress, newAddress);
         } else {
             proxy = UpgradeabilityProxy(payable(proxyAddress));
             address oldAddress = proxy.implementation();
             proxy.upgradeTo(newAddress);
             emit ProxyUpdated(name, proxyAddress, newAddress, oldAddress);
+        }
+    }
+
+    function _getProxyAddress(bytes32 name) internal view returns (address) {
+        if (name == ADDRESS_RESOLVER) {
+            return address(resolver);
+        } else {
+            return resolver.getAddress(name);
         }
     }
 }

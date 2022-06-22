@@ -26,8 +26,11 @@ contract('ProxyController', (accounts) => {
   let proxyController;
 
   beforeEach('deploy ProxyController', async () => {
-    addressResolver = await AddressResolver.new();
-    proxyController = await ProxyController.new(addressResolver.address);
+    proxyController = await ProxyController.new(ethers.constants.AddressZero);
+    addressResolver = await AddressResolver.new()
+      .then(({ address }) => proxyController.setAddressResolverImpl(address))
+      .then(() => proxyController.getAddressResolverProxyAddress())
+      .then((address) => AddressResolver.at(address));
   });
 
   describe('Register contracts', async () => {

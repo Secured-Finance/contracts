@@ -7,6 +7,12 @@ import "../interfaces/IExternalAdapter.sol";
 contract ExternalAdapterCallerMock is IExternalAdapterTxResponse {
     IExternalAdapter private adapter;
 
+    function initialize(
+        address owner,
+        address resolver,
+        address WETH9I
+    ) public {}
+
     function setExternalAdapter(address _adapter) public {
         require(_adapter != address(0), "Zero address");
         adapter = IExternalAdapter(_adapter);

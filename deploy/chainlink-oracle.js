@@ -1,4 +1,5 @@
 require('dotenv/config');
+const { executeIfNewlyDeployment } = require('../test-utils').deployment;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy, getNetworkName } = deployments;
@@ -7,12 +8,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   let linkTokenAddress;
   switch (network) {
-    case 'hardhat': {
-      const linkToken = await deploy('LinkToken', { from: deployer });
-      linkTokenAddress = linkToken.address;
-      console.log('Deployed LinkToken at ' + linkToken.address);
-      break;
-    }
     case 'rinkeby': {
       linkTokenAddress = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
       break;
@@ -22,25 +17,31 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       break;
     }
     default: {
-      linkTokenAddress = process.env.LINK_CONTRACT_ADDRESS;
+      const linkTokenDeployResult = await deploy('LinkToken', {
+        from: deployer,
+      });
+      linkTokenAddress = linkTokenDeployResult.address;
       break;
     }
   }
 
   console.log('LinkToken Address is ' + linkTokenAddress);
 
-  const oracle = await deploy('Operator', {
+  const deployResult = await deploy('Operator', {
     from: deployer,
     args: [linkTokenAddress, deployer],
   });
 
-  console.log('Deployed Oracle at ' + oracle.address);
+  await executeIfNewlyDeployment('Oracle', deployResult, async () => {
+    const oracleContract = await ethers.getContractAt(
+      'Operator',
+      deployResult.address,
+    );
 
-  const oracleContract = await ethers.getContractAt('Operator', oracle.address);
-
-  await oracleContract
-    .setAuthorizedSenders([process.env.CHAINLINK_NODE_ACCOUNT])
-    .then((tx) => tx.wait());
+    await oracleContract
+      .setAuthorizedSenders([process.env.CHAINLINK_NODE_ACCOUNT])
+      .then((tx) => tx.wait());
+  });
 };
 
 module.exports.tags = ['ChainlinkOracle'];

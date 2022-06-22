@@ -1,22 +1,21 @@
+const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
 
   const { deployer } = await getNamedAccounts();
 
-  const dealIdLibrary = await deploy('DealId', {
+  await deploy('DealId', {
     from: deployer,
-  });
-  console.log('Deployed DealId at ' + dealIdLibrary.address);
+  }).then((result) => executeIfNewlyDeployment('DealId', result));
 
-  const quickSortLibrary = await deploy('QuickSort', {
+  await deploy('QuickSort', {
     from: deployer,
-  });
-  console.log('Deployed QuickSort at ' + quickSortLibrary.address);
+  }).then((result) => executeIfNewlyDeployment('QuickSort', result));
 
-  const discountFactorLibrary = await deploy('DiscountFactor', {
+  await deploy('DiscountFactor', {
     from: deployer,
-  });
-  console.log('Deployed DiscountFactor at ' + discountFactorLibrary.address);
+  }).then((result) => executeIfNewlyDeployment('DiscountFactor', result));
 };
 
 module.exports.tags = ['Libraries'];

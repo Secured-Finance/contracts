@@ -27,6 +27,20 @@ module.exports = async function ({ deployments }) {
     );
 
   for (i = 0; i < sortedTermDays.length; i++) {
+    const market = await lendingMarketController.getLendingMarket(
+      hexFILString,
+      sortedTermDays[i],
+    );
+
+    if (market !== ethers.constants.AddressZero) {
+      console.log(
+        'Skipped deploying FIL lending market of',
+        sortedTermDays[i],
+        'days term',
+      );
+      continue;
+    }
+
     const tx = await lendingMarketController.deployLendingMarket(
       hexFILString,
       sortedTermDays[i],
@@ -35,11 +49,11 @@ module.exports = async function ({ deployments }) {
     const { marketAddr } = receipt.events.find(
       ({ event }) => event === 'LendingMarketCreated',
     ).args;
-    console.log(
-      'Deployed FIL lending market with ' +
-        sortedTermDays[i] +
-        ' days term at ' +
-        marketAddr,
+    console.group(
+      'Deployed FIL lending market with',
+      sortedTermDays[i],
+      'days term at',
+      marketAddr,
     );
 
     lendingMarkets.push(marketAddr);
@@ -69,6 +83,7 @@ module.exports = async function ({ deployments }) {
     console.log('BorrowAmount', borrowAmount);
     console.log('LendRate:', lendRate);
     console.log('LendRate:', lendAmount);
+    console.groupEnd();
 
     await lendingMarketContract
       .order(0, borrowAmount, borrowRate)

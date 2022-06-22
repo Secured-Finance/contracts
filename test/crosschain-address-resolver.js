@@ -19,7 +19,13 @@ contract('CrossChainAddressResolver test', async (accounts) => {
     const crosschainResolver = await crosschainResolverFactory.deploy();
 
     // Set up for Proxies
-    const proxyController = await ProxyController.new(addressResolver.address);
+    const proxyController = await ProxyController.new(
+      ethers.constants.AddressZero,
+    );
+    await proxyController.setAddressResolverImpl(addressResolver.address);
+    const addressResolverProxyAddress =
+      await proxyController.getAddressResolverProxyAddress();
+
     const crosschainResolverAddress = await proxyController
       .setCrosschainAddressResolverImpl(crosschainResolver.address)
       .then(
@@ -33,7 +39,10 @@ contract('CrossChainAddressResolver test', async (accounts) => {
     );
 
     // Set up for AddressResolver
-    await addressResolver.importAddresses(
+    const addressResolverProxy = await AddressResolver.at(
+      addressResolverProxyAddress,
+    );
+    await addressResolverProxy.importAddresses(
       ['CollateralAggregator'].map((input) => toBytes32(input)),
       [owner],
     );

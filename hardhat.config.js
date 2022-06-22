@@ -19,10 +19,9 @@ module.exports = {
   networks: {
     hardhat: {},
     development: {
-      url: 'http://0.0.0.0:8545', // Localhost (default: none)
+      url: 'http://0.0.0.0:7545',
       chainId: 1337,
-      // port: 8545, // Standard Ethereum port (default: none)
-      // network_id: '*', // Any network (default: none)
+      network_id: '*',
     },
     ropsten: {
       url: `https://ropsten.infura.io/v3/${process.env.WEB3_INFURA_ID}`,

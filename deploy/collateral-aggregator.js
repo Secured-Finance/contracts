@@ -1,21 +1,28 @@
+const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const collateralAggregator = await deploy('CollateralAggregatorV2', {
+  const deployResult = await deploy('CollateralAggregatorV2', {
     from: deployer,
   });
-  console.log(
-    'Deployed CollateralAggregatorV2 at ' + collateralAggregator.address,
-  );
 
-  const proxyController = await deployments
-    .get('ProxyController')
-    .then(({ address }) => ethers.getContractAt('ProxyController', address));
-  const tx = await proxyController.setCollateralAggregatorImpl(
-    collateralAggregator.address,
+  await executeIfNewlyDeployment(
+    'CollateralAggregatorV2',
+    deployResult,
+    async () => {
+      const proxyController = await deployments
+        .get('ProxyController')
+        .then(({ address }) =>
+          ethers.getContractAt('ProxyController', address),
+        );
+
+      await proxyController
+        .setCollateralAggregatorImpl(deployResult.address)
+        .then((tx) => tx.wait());
+    },
   );
-  await tx.wait();
 };
 
 module.exports.tags = ['CollateralAggregator'];
