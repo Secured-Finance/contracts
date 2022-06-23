@@ -24,7 +24,7 @@ contract('CrossChainAddressResolver test', async (accounts) => {
     );
     await proxyController.setAddressResolverImpl(addressResolver.address);
     const addressResolverProxyAddress =
-      await proxyController.getAddressResolverProxyAddress();
+      await proxyController.getAddressResolverAddress();
 
     const crosschainResolverAddress = await proxyController
       .setCrosschainAddressResolverImpl(crosschainResolver.address)

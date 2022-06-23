@@ -15,10 +15,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
   const addressResolver = await proxyController
-    .getAddressResolverProxyAddress()
+    .getAddressResolverAddress()
     .then((address) => ethers.getContractAt('AddressResolver', address));
   const settlementEngine = await proxyController
-    .getProxyAddress(toBytes32('SettlementEngine'))
+    .getAddress(toBytes32('SettlementEngine'))
     .then((address) => ethers.getContractAt('SettlementEngine', address));
 
   // Deploy contracts

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAddressResolver.sol";
 import "./interfaces/IProxyController.sol";
@@ -11,36 +10,29 @@ import "./libraries/ProductPrefixes.sol";
 import "./utils/UpgradeabilityProxy.sol";
 
 contract ProxyController is IProxyController, Ownable {
-    using EnumerableSet for EnumerableSet.AddressSet;
-
     IAddressResolver private resolver;
-    EnumerableSet.AddressSet private proxyAddressCaches;
     bytes32 private constant ADDRESS_RESOLVER = "AddressResolver";
 
     /**
      * @dev Contract constructor function.
-     * @param _controller The address of the previous ProxyController
+     * @param _resolver The address of the Address Resolver contract
      *
-     * @notice Set a previous AddressResolver if it is already deployed.
+     * @notice Set a proxy contract address of AddressResolver if it already exists.
      * If not, set zero address here and call `setAddressResolverImpl` using the implementation
      * address of AddressResolver to create a proxy contract.
      */
-    constructor(address _controller) Ownable() {
-        if (_controller != address(0)) {
-            ProxyController controller = ProxyController(_controller);
-            resolver = IAddressResolver(controller.getAddressResolverProxyAddress());
-            address[] memory caches = controller.getProxyAddressCaches();
-
-            for (uint256 i = 0; i < caches.length; i++) {
-                proxyAddressCaches.add(caches[i]);
-            }
+    constructor(address _resolver) Ownable() {
+        if (_resolver != address(0)) {
+            UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(_resolver));
+            require(proxy.implementation() != address(0), "Proxy address not found");
+            resolver = IAddressResolver(_resolver);
         }
     }
 
     /**
      * @dev Gets the proxy address of AddressResolver
      */
-    function getAddressResolverProxyAddress() public view returns (address) {
+    function getAddressResolverAddress() public view returns (address) {
         return (address(resolver));
     }
 
@@ -48,26 +40,20 @@ contract ProxyController is IProxyController, Ownable {
      * @dev Gets the proxy address to specified name
      * @param name The cache name of the contract
      */
-    function getProxyAddress(bytes32 name) public view returns (address) {
-        address proxyAddress = resolver.getAddress(name, "Address not found");
+    function getAddress(bytes32 name) public view returns (address proxyAddress) {
+        proxyAddress = resolver.getAddress(name, "Address not found");
         UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
 
         require(proxy.implementation() != address(0), "Proxy address not found");
-
-        return proxyAddress;
     }
 
     /**
      * @dev Gets the product proxy address to specified prefix
      * @param prefix Bytes4 prefix for product type
      */
-    function getProductProxyAddress(bytes4 prefix) external view returns (address) {
-        address productAddressResolverAddress = resolver.getAddress(
-            Contracts.PRODUCT_ADDRESS_RESOLVER,
-            "Address not found"
-        );
+    function getProductAddress(bytes4 prefix) public view returns (address) {
         IProductAddressResolver productAddressResolver = IProductAddressResolver(
-            productAddressResolverAddress
+            getAddress(Contracts.PRODUCT_ADDRESS_RESOLVER)
         );
         address proxyAddress = productAddressResolver.getProductContract(prefix);
         UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
@@ -241,31 +227,18 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Gets cached addresses of proxy contract
-     */
-    function getProxyAddressCaches() external view returns (address[] memory) {
-        return proxyAddressCaches.values();
-    }
-
-    /**
      * @dev Updates admin addresses of proxy contract
      * @param newAdmin The address of new admin
+     * @param destinations The destination contract addresses
      */
-    function changeProxyAdmins(address newAdmin) external onlyOwner {
-        address[] memory destinations = proxyAddressCaches.values();
+    function changeProxyAdmins(address newAdmin, address[] calldata destinations)
+        external
+        onlyOwner
+    {
         for (uint256 i = 0; i < destinations.length; i++) {
-            changeProxyAdmin(newAdmin, destinations[i]);
+            UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(destinations[i]));
+            proxy.changeAdmin(newAdmin);
         }
-    }
-
-    /**
-     * @dev Update admin address of proxy contract
-     * @param newAdmin The address of new admin
-     * @param destination The destination contract addresses
-     */
-    function changeProxyAdmin(address newAdmin, address destination) public onlyOwner {
-        UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(destination));
-        proxy.changeAdmin(newAdmin);
     }
 
     /**
@@ -283,13 +256,12 @@ contract ProxyController is IProxyController, Ownable {
         address newAddress,
         bytes memory data
     ) internal returns (address proxyAddress) {
-        proxyAddress = _getProxyAddress(name);
+        proxyAddress = _getAddress(name);
         UpgradeabilityProxy proxy;
 
         if (proxyAddress == address(0)) {
             proxy = new UpgradeabilityProxy(payable(newAddress), data);
             proxyAddress = address(proxy);
-            proxyAddressCaches.add(proxyAddress);
 
             emit ProxyCreated(name, proxyAddress, newAddress);
         } else {
@@ -300,7 +272,7 @@ contract ProxyController is IProxyController, Ownable {
         }
     }
 
-    function _getProxyAddress(bytes32 name) internal view returns (address) {
+    function _getAddress(bytes32 name) internal view returns (address) {
         if (name == ADDRESS_RESOLVER) {
             return address(resolver);
         } else {

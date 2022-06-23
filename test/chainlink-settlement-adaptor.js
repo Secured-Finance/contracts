@@ -43,7 +43,7 @@ contract('ChainlinkSettlementAdapter', (accounts) => {
     );
     await proxyController.setAddressResolverImpl(addressResolver.address);
     const addressResolverProxyAddress =
-      await proxyController.getAddressResolverProxyAddress();
+      await proxyController.getAddressResolverAddress();
 
     const addressResolverProxy = await AddressResolver.at(
       addressResolverProxyAddress,

@@ -13,15 +13,15 @@ module.exports = async function ({ deployments }) {
 
   // Get contracts from proxyController
   const loan = await proxyController
-    .getProductProxyAddress(loanPrefix)
+    .getProductAddress(loanPrefix)
     .then((address) => ethers.getContractAt('LoanV2', address));
 
   const collateralAggregator = await proxyController
-    .getProxyAddress(toBytes32('CollateralAggregator'))
+    .getAddress(toBytes32('CollateralAggregator'))
     .then((address) => ethers.getContractAt('CollateralAggregatorV2', address));
 
   const lendingMarketController = await proxyController
-    .getProxyAddress(toBytes32('LendingMarketController'))
+    .getAddress(toBytes32('LendingMarketController'))
     .then((address) =>
       ethers.getContractAt('LendingMarketController', address),
     );

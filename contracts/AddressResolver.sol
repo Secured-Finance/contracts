@@ -21,6 +21,8 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
     {
         require(_names.length == _addresses.length, "Input lengths must match");
 
+        Storage.slot().addressCaches = _addresses;
+
         for (uint256 i = 0; i < _names.length; i++) {
             bytes32 name = _names[i];
             address destination = _addresses[i];
@@ -55,5 +57,9 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
 
     function getAddress(bytes32 _name) external view override returns (address) {
         return Storage.slot().addresses[_name];
+    }
+
+    function getAddresses() external view override returns (address[] memory) {
+        return Storage.slot().addressCaches;
     }
 }

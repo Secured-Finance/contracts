@@ -125,7 +125,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   // Get the Proxy contract address of AddressResolver
   await proxyController.setAddressResolverImpl(addressResolver.address);
   const addressResolverProxyAddress =
-    await proxyController.getAddressResolverProxyAddress();
+    await proxyController.getAddressResolverAddress();
 
   // Deploy MigrationAddressResolver
   const migrationAddressResolver = await MigrationAddressResolver.new(

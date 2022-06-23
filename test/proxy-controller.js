@@ -29,7 +29,7 @@ contract('ProxyController', (accounts) => {
     proxyController = await ProxyController.new(ethers.constants.AddressZero);
     addressResolver = await AddressResolver.new()
       .then(({ address }) => proxyController.setAddressResolverImpl(address))
-      .then(() => proxyController.getAddressResolverProxyAddress())
+      .then(() => proxyController.getAddressResolverAddress())
       .then((address) => AddressResolver.at(address));
   });
 
@@ -108,7 +108,7 @@ contract('ProxyController', (accounts) => {
         [currencyControllerProxyAddress],
       );
 
-      const registeredProxyAddress = await proxyController.getProxyAddress(
+      const registeredProxyAddress = await proxyController.getAddress(
         contractName,
       );
       registeredProxyAddress.should.be.equal(currencyControllerProxyAddress);
@@ -116,7 +116,7 @@ contract('ProxyController', (accounts) => {
 
     it('Fail to get a proxy address due to empty data', async () => {
       expectRevert(
-        proxyController.getProxyAddress(toBytes32('Test')),
+        proxyController.getAddress(toBytes32('Test')),
         'Address not found',
       );
     });
@@ -133,7 +133,7 @@ contract('ProxyController', (accounts) => {
       );
 
       expectRevert(
-        proxyController.getProxyAddress(toBytes32('Test')),
+        proxyController.getAddress(toBytes32('Test')),
         'Proxy address not found',
       );
     });
@@ -143,15 +143,16 @@ contract('ProxyController', (accounts) => {
     it('Successfully get a proxy address', async () => {
       const { loan, proxyController } = await new Deployment().execute();
 
-      const registeredProxyAddress =
-        await proxyController.getProductProxyAddress(loanPrefix);
+      const registeredProxyAddress = await proxyController.getProductAddress(
+        loanPrefix,
+      );
 
       registeredProxyAddress.should.be.equal(loan.address);
     });
 
     it('Fail to get a product proxy address due to empty data', async () => {
       expectRevert(
-        proxyController.getProductProxyAddress(loanPrefix),
+        proxyController.getProductAddress(loanPrefix),
         'Address not found',
       );
     });
@@ -168,7 +169,7 @@ contract('ProxyController', (accounts) => {
       );
 
       expectRevert(
-        proxyController.getProductProxyAddress(loanPrefix),
+        proxyController.getProductAddress(loanPrefix),
         'Proxy address not found',
       );
     });

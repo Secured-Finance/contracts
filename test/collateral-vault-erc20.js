@@ -84,7 +84,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       // Get the Proxy contract address of AddressResolver
       await proxyController.setAddressResolverImpl(addressResolver.address);
       const addressResolverProxyAddress =
-        await proxyController.getAddressResolverProxyAddress();
+        await proxyController.getAddressResolverAddress();
 
       // Set contract addresses to the Proxy contract
       const [

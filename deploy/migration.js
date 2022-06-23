@@ -36,9 +36,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const getProxy = async (key, contract) => {
     let address = proxyObj[toBytes32(key)];
-    // Can't get address from events when ProxyController is updated.
+    // When ProxyController is updated, proxyObj is empty because new contract doesn't have old events.
+    // So in that case, the registered contract address is got from AddressResolver through ProxyController.
     if (!address) {
-      address = await proxyController.getProxyAddress(toBytes32(key));
+      address = await proxyController.getAddress(toBytes32(key));
     }
     return ethers.getContractAt(contract || key, address);
   };
@@ -61,12 +62,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const loanAddress =
     proxyObj[loanPrefix.padEnd(66, 0)] ||
-    (await proxyController.getProductProxyAddress(loanPrefix));
+    (await proxyController.getProductAddress(loanPrefix));
   const loan = await ethers.getContractAt('LoanV2', loanAddress);
 
   // Get deployed contracts
   const addressResolver = await proxyController
-    .getAddressResolverProxyAddress()
+    .getAddressResolverAddress()
     .then((address) => ethers.getContractAt('AddressResolver', address));
 
   const contractNames = [
