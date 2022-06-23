@@ -9,9 +9,11 @@ const { Deployment } = require('../test-utils').deployment;
 should();
 
 const AddressResolver = artifacts.require('AddressResolver');
+const CloseOutNetting = artifacts.require('CloseOutNetting');
 const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
+const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');
 const WETH9Mock = artifacts.require('WETH9Mock');
 
 const getNewProxyAddress = ({ logs }) =>
@@ -237,6 +239,47 @@ contract('ProxyController', (accounts) => {
         currencyController.initialize(owner),
         'Must be called from UpgradeabilityProxy',
       );
+    });
+  });
+
+  describe('Change Admin', async () => {
+    it('Successfully change admins of a proxy contract', async () => {
+      const currencyController = await CurrencyController.new(
+        addressResolver.address,
+      );
+      const closeOutNetting = await CloseOutNetting.new(
+        addressResolver.address,
+      );
+
+      const currencyControllerProxyAddress = await proxyController
+        .setCurrencyControllerImpl(currencyController.address)
+        .then(getNewProxyAddress);
+      const closeOutNettingProxyAddress = await proxyController
+        .setCloseOutNettingImpl(closeOutNetting.address)
+        .then(getNewProxyAddress);
+
+      await addressResolver.importAddresses(
+        ['CurrencyController', 'CloseOutNetting'].map(toBytes32),
+        [currencyControllerProxyAddress, closeOutNettingProxyAddress],
+      );
+
+      await proxyController.changeProxyAdmins(alice, [
+        currencyControllerProxyAddress,
+        closeOutNettingProxyAddress,
+      ]);
+
+      const currencyControllerProxy = await UpgradeabilityProxy.at(
+        currencyControllerProxyAddress,
+      );
+      const closeOutNettingProxy = await UpgradeabilityProxy.at(
+        closeOutNettingProxyAddress,
+      );
+
+      const currencyControllerAdmin = await currencyControllerProxy.admin();
+      const closeOutNettingAdmin = await closeOutNettingProxy.admin();
+
+      currencyControllerAdmin.toString().should.be.equal(alice);
+      closeOutNettingAdmin.toString().should.be.equal(alice);
     });
   });
 });

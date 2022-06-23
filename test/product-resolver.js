@@ -76,6 +76,10 @@ contract('ProductAddressResolver contract test', async (accounts) => {
       let contract = await productAddressResolver.getProductContract(parsedId);
       contract.should.be.equal(loan.address);
 
+      let contracts = await productAddressResolver.getProductContracts();
+      assert.equal(contracts.length, 1);
+      contracts[0].should.be.equal(loan.address);
+
       contract = await productAddressResolver.getControllerContract(parsedId);
       contract.should.be.equal(lendingMarketController.address);
     });
