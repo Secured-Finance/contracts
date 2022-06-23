@@ -31,11 +31,13 @@ ABI and bytecode associated with the smart contract will be saved in the json fi
 
 ## Deployment
 
-In order to deploy the protocol please execute `npm run deploy:<NETWORK>` command and replace with the network you want to deploy the protocol.
+In order to deploy the protocol please execute `npm run deploy <NETWORK>` command and replace with the network you want to deploy the protocol.
 
-For example `npm run deploy:hardhat` will deploy the protocol on the local hardhat version of the ethereum blockchain.
+For example `npm run deploy hardhat` will deploy the protocol on the local hardhat version of the ethereum blockchain.
 
-After the successfull deployment you'll be able to find the deployment result in the deployments folder.
+After the successful deployment you'll be able to find the deployment result in the deployments folder.
+
+In case you want to reset and redeploy again, you can use the command `npm run deploy:force <NETWORK>`.
 
 ## Testing
 
