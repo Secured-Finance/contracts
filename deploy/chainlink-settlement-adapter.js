@@ -21,6 +21,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .getAddress(toBytes32('SettlementEngine'))
     .then((address) => ethers.getContractAt('SettlementEngine', address));
 
+  const isInitialDeployment = await deployments
+    .getOrNull('ChainlinkSettlementAdapter')
+    .then((contract) => !contract);
+
   // Deploy contracts
   const linkTokenAddress = await oracle.getChainlinkToken();
   const deployResult = await deploy('ChainlinkSettlementAdapter', {
@@ -45,35 +49,21 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   );
 
   // Set up for ChainlinkSettlementAdapter
-  const isInitialDeployment = await deployments
-    .getOrNull('ChainlinkSettlementAdapter')
-    .then((contract) => !contract);
-
-  if (isInitialDeployment) {
+  const depositAmount = process.env.CHAINLINK_LINK_DEPOSIT || 0;
+  if (isInitialDeployment && depositAmount > 0) {
     const linkContract = await ethers.getContractAt(
       'LinkToken',
       linkTokenAddress,
     );
-    const depositAmount = process.env.CHAINLINK_LINK_DEPOSIT || 0;
-    if (depositAmount > 0) {
-      await linkContract
-        .transfer(deployResult.address, depositAmount)
-        .then((tx) => tx.wait());
-    }
+    await linkContract
+      .transfer(deployResult.address, depositAmount)
+      .then((tx) => tx.wait());
     console.log(
       `Sent ${fromWeiToEther(depositAmount)} LINK to ` + deployResult.address,
     );
   } else {
     console.warn('Skipped Link token transfer');
   }
-
-  // if (settlementAdapter.newlyDeployed) {
-  //   await settlementEngine
-  //     .addExternalAdapter(settlementAdapter.address, hexFILString)
-  //     .then((tx) => tx.wait());
-  // } else {
-  //   console.warn('Skipped adding ExternalAdapter');
-  // }
 };
 
 module.exports.tags = ['ChainlinkSettlementAdapter'];
