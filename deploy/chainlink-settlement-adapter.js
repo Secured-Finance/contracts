@@ -33,7 +33,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       addressResolver.address,
       oracle.address,
       process.env.CHAINLINK_JOB_ID,
-      process.env.CHAINLINK_REQUEST_FEE,
+      process.env.CHAINLINK_REQUEST_FEE || '100000000000000000',
       linkTokenAddress,
       hexFILString,
     ],

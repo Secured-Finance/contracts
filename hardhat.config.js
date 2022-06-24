@@ -23,16 +23,6 @@ module.exports = {
       chainId: 1337,
       network_id: '*',
     },
-    ropsten: {
-      url: `https://ropsten.infura.io/v3/${process.env.WEB3_INFURA_ID}`,
-      chainId: 3,
-      accounts: [process.env.PRIVATE_KEY || DUMMY_PRIVATE_KEY],
-      live: true,
-      saveDeployments: true,
-      gasPrice: 11000000000,
-      gasMultiplier: 3,
-      timeout: 240000,
-    },
     rinkeby: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
