@@ -5,8 +5,6 @@ on:
     branches:
       - master
       - develop
-      # For testing
-      - SF-136-add-workflow
 
 jobs:
   deploy:
@@ -23,8 +21,7 @@ jobs:
         run: npm run compile
       - name: Deploy for development environment
         # For testing
-        # if: ${{ github.ref == 'refs/heads/develop' }}
-        if: ${{ github.ref == 'refs/heads/SF-136-add-workflow' }}
+        if: ${{ github.ref == 'refs/heads/develop' }}
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           CHAINLINK_NODE_ACCOUNT: ${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}
