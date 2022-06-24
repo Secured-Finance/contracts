@@ -59,7 +59,8 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       .transfer(deployResult.address, depositAmount)
       .then((tx) => tx.wait());
     console.log(
-      `Sent ${fromWeiToEther(depositAmount)} LINK to ` + deployResult.address,
+      `Successfully sent ${fromWeiToEther(depositAmount)} LINK to ` +
+        deployResult.address,
     );
   } else {
     console.warn('Skipped Link token transfer');
