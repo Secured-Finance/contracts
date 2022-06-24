@@ -70,6 +70,8 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .getAddressResolverAddress()
     .then((address) => ethers.getContractAt('AddressResolver', address));
 
+  // The contract name list that is managed in AddressResolver
+  // This list is as same as contracts/libraries/Contracts.sol
   const contractNames = [
     'CloseOutNetting',
     'CollateralAggregator',
@@ -85,6 +87,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'TermStructure',
   ];
 
+  // The contract address list that is managed in AddressResolver
   const contractAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,
@@ -100,15 +103,16 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     termStructure.address,
   ];
 
+  // The contract address list that inherited MixinAddressResolver and need to call `buildCache`
   const buildCachesAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,
     collateralVault.address,
     crosschainAddressResolver.address,
-    markToMarket.address,
     lendingMarketController.address,
     liquidations.address,
     loan.address,
+    markToMarket.address,
     paymentAggregator.address,
     settlementEngine.address,
     termStructure.address,
@@ -116,10 +120,18 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   // show log
   const logHeader = 'Proxy Addresses';
-  const log = { AddressResolver: { [logHeader]: addressResolver.address } };
-  contractNames.forEach((name, idx) => {
-    log[name] = { [logHeader]: contractAddresses[idx] };
-  });
+  const log = {
+    AddressResolver: { [logHeader]: addressResolver.address },
+    ...contractNames.reduce(
+      (obj, name, idx) =>
+        Object.assign(obj, {
+          [name]: { [logHeader]: contractAddresses[idx] },
+        }),
+      {},
+    ),
+    Loan: { [logHeader]: loan.address },
+  };
+
   console.table(log);
 
   if (!isInitialDeployment) {
