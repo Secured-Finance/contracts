@@ -39,6 +39,8 @@ jobs:
           CHAINLINK_JOB_ID: ${{ secrets.PRD_CHAINLINK_JOB_ID }}
           ALCHEMY_API_KEY: ${{ secrets.PRD_ALCHEMY_API_KEY }}
         run: npm run deploy rinkeby
+      - run: |
+          git add .
       - name: Check diff
         shell: bash
         id: diff

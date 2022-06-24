@@ -3,6 +3,7 @@ const { loanPrefix, hexFILString, toBytes32 } =
 const { sortedTermDays } = require('../test-utils').terms;
 
 module.exports = async function ({ deployments }) {
+  // TODO: Move this step to the test script on the forked chain
   // const baseRate = 500;
   // const baseAmount = 100000;
 

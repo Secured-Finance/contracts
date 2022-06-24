@@ -163,7 +163,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   await productAddressResolver
     .registerProduct(loanPrefix, loan.address, lendingMarketController.address)
     .then((tx) => tx.wait());
-  console.log('Successfully registered the load product');
+  console.log('Successfully registered the loan product');
 
   // Set up for TermStructure
   for (i = 0; i < sortedTermDays.length; i++) {
