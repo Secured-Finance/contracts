@@ -19,7 +19,7 @@ module.exports = {
   networks: {
     hardhat: {},
     development: {
-      url: process.env.DEV_RPC_ENDPOINT,
+      url: process.env.DEV_RPC_ENDPOINT || 'http://0.0.0.0:8545',
       chainId: 1337,
       network_id: '*',
     },
