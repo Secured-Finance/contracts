@@ -20,6 +20,14 @@ contract UpgradeabilityProxy is ERC1967Proxy {
         _upgradeTo(newImplementation);
     }
 
+    function changeAdmin(address newAdmin) external ifAdmin {
+        _changeAdmin(newAdmin);
+    }
+
+    function admin() external view returns (address) {
+        return _getAdmin();
+    }
+
     function implementation() external view returns (address) {
         return ERC1967Proxy._implementation();
     }

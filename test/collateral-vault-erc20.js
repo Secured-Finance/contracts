@@ -58,10 +58,7 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       const currencyController = await CurrencyController.new();
       const crosschainAddressResolver = await CrosschainAddressResolver.new();
       const proxyController = await ProxyController.new(
-        addressResolver.address,
-      );
-      const migrationAddressResolver = await MigrationAddressResolver.new(
-        addressResolver.address,
+        ethers.constants.AddressZero,
       );
       tokenContract = await ERC20Mock.new(
         toBytes32('Test FIL'),
@@ -83,6 +80,11 @@ contract('ERC20 based CollateralVault', async (accounts) => {
           },
         })
         .then((factory) => factory.deploy());
+
+      // Get the Proxy contract address of AddressResolver
+      await proxyController.setAddressResolverImpl(addressResolver.address);
+      const addressResolverProxyAddress =
+        await proxyController.getAddressResolverAddress();
 
       // Set contract addresses to the Proxy contract
       const [
@@ -115,6 +117,9 @@ contract('ERC20 based CollateralVault', async (accounts) => {
       );
 
       // Get the Proxy contract addresses
+      const addressResolverProxy = await AddressResolver.at(
+        addressResolverProxyAddress,
+      );
       collateralAggregatorProxy = await CollateralAggregatorMock.at(
         collateralAggregatorAddress,
       );
@@ -132,8 +137,13 @@ contract('ERC20 based CollateralVault', async (accounts) => {
         productAddressResolverAddress,
       );
 
+      // Deploy MigrationAddressResolver
+      const migrationAddressResolver = await MigrationAddressResolver.new(
+        addressResolverProxyAddress,
+      );
+
       // Set up for AddressResolver and build caches using MigrationAddressResolver
-      await addressResolver.importAddresses(
+      await addressResolverProxy.importAddresses(
         [
           'CollateralAggregator',
           'CollateralVault',

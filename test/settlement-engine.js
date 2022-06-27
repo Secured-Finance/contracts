@@ -183,13 +183,6 @@ contract('SettlementEngine', async (accounts) => {
         hexFILString,
       );
     });
-
-    it('Should revert on replacing existing adapter with non-contract address', async () => {
-      await expectRevert(
-        settlementEngine.replaceExternalAdapter(zeroAddress(), hexFILString),
-        'NOT_CONTRACT',
-      );
-    });
   });
 
   describe('Test payment verification by chainlink external adapter', async () => {

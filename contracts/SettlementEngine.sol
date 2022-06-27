@@ -69,10 +69,6 @@ contract SettlementEngine is
 
         uint16 chainId = currencyController().getChainId(_ccy);
         require(chainId != 60, "NOT_ANOTHER_CHAIN");
-        require(
-            Storage.slot().externalAdapters[chainId] == address(0),
-            "CAN'T_REPLACE_EXTERNAL_ADAPTER"
-        );
 
         Storage.slot().externalAdapters[chainId] = _adapter;
 
@@ -86,25 +82,6 @@ contract SettlementEngine is
     function getExternalAdapters(bytes32 _ccy) external view returns (address) {
         uint16 chainId = currencyController().getChainId(_ccy);
         return Storage.slot().externalAdapters[chainId];
-    }
-
-    /**
-     * @dev Triggers to replace existing external adapter for specific `_ccy`
-     * @param _adapter External adapter contract address
-     * @param _ccy Short identifier of a currency
-     *
-     * @notice Triggers only be contract owner
-     * @notice Reverts on saving 0x0 address
-     */
-    function replaceExternalAdapter(address _adapter, bytes32 _ccy) public override onlyOwner {
-        require(_adapter.isContract(), "NOT_CONTRACT");
-        uint16 chainId = currencyController().getChainId(_ccy);
-
-        require(Storage.slot().externalAdapters[chainId] != address(0), "ADAPTER_DOESN'T_EXIST");
-
-        Storage.slot().externalAdapters[chainId] = _adapter;
-
-        emit ExternalAdapterUpdated(_adapter, _ccy);
     }
 
     /**

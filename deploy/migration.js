@@ -15,6 +15,18 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
+  // Deploy contracts
+  const prevMigrationAddressResolver = await deployments.getOrNull(
+    'MigrationAddressResolver',
+  );
+  const isInitialDeployment = !prevMigrationAddressResolver;
+  const migrationAddressResolver = await deploy('MigrationAddressResolver', {
+    from: deployer,
+  }).then(({ address }) =>
+    ethers.getContractAt('MigrationAddressResolver', address),
+  );
+
+  // Get contracts from proxyController
   const filter = proxyController.filters.ProxyCreated();
   const proxyCreatedEvents = await proxyController.queryFilter(filter);
   const proxyObj = proxyCreatedEvents.reduce((obj, event) => {
@@ -22,10 +34,16 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     return obj;
   }, {});
 
-  const getProxy = (key, contract) =>
-    ethers.getContractAt(contract || key, proxyObj[toBytes32(key)]);
+  const getProxy = async (key, contract) => {
+    let address = proxyObj[toBytes32(key)];
+    // When ProxyController is updated, proxyObj is empty because new contract doesn't have old events.
+    // So in that case, the registered contract address is got from AddressResolver through ProxyController.
+    if (!address) {
+      address = await proxyController.getAddress(toBytes32(key));
+    }
+    return ethers.getContractAt(contract || key, address);
+  };
 
-  // Get contracts from proxyController
   const closeOutNetting = await getProxy('CloseOutNetting');
   const collateralAggregator = await getProxy(
     'CollateralAggregator',
@@ -41,28 +59,17 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const productAddressResolver = await getProxy('ProductAddressResolver');
   const settlementEngine = await getProxy('SettlementEngine');
   const termStructure = await getProxy('TermStructure');
-  const loan = await ethers.getContractAt(
-    'LoanV2',
-    proxyObj[loanPrefix.padEnd(66, 0)],
-  );
+
+  const loanAddress =
+    proxyObj[loanPrefix.padEnd(66, 0)] ||
+    (await proxyController.getProductAddress(loanPrefix));
+  const loan = await ethers.getContractAt('LoanV2', loanAddress);
 
   // Get deployed contracts
-  const addressResolver = await deployments
-    .get('AddressResolver')
-    .then(({ address }) => ethers.getContractAt('AddressResolver', address));
+  const addressResolver = await proxyController
+    .getAddressResolverAddress()
+    .then((address) => ethers.getContractAt('AddressResolver', address));
 
-  // Deploy contracts
-  const migrationAddressResolver = await deploy('MigrationAddressResolver', {
-    from: deployer,
-  }).then(({ address }) =>
-    ethers.getContractAt('MigrationAddressResolver', address),
-  );
-
-  console.log(
-    'Deployed MigrationAddressResolver at ' + migrationAddressResolver.address,
-  );
-
-  // Set up for AddressResolver
   const contractNames = [
     'CloseOutNetting',
     'CollateralAggregator',
@@ -76,7 +83,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'ProductAddressResolver',
     'SettlementEngine',
     'TermStructure',
-  ].map(toBytes32);
+  ];
 
   const contractAddresses = [
     closeOutNetting.address,
@@ -107,8 +114,22 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     termStructure.address,
   ];
 
+  // show log
+  const logHeader = 'Proxy Addresses';
+  const log = { AddressResolver: { [logHeader]: addressResolver.address } };
+  contractNames.forEach((name, idx) => {
+    log[name] = { [logHeader]: contractAddresses[idx] };
+  });
+  console.table(log);
+
+  if (!isInitialDeployment) {
+    console.warn('Skipped migration settings');
+    return;
+  }
+
+  // Set up for AddressResolver
   await addressResolver
-    .importAddresses(contractNames, contractAddresses)
+    .importAddresses(contractNames.map(toBytes32), contractAddresses)
     .then((tx) => tx.wait());
 
   await migrationAddressResolver

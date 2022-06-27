@@ -24,7 +24,6 @@ interface ISettlementEngine {
         bytes32 settlementId
     );
     event ExternalAdapterAdded(address indexed adapter, bytes32 ccy);
-    event ExternalAdapterUpdated(address indexed adapter, bytes32 ccy);
 
     function addExternalAdapter(address _adapter, bytes32 _ccy) external;
 
@@ -37,8 +36,6 @@ interface ISettlementEngine {
     ) external;
 
     function getVersion() external view returns (uint16);
-
-    function replaceExternalAdapter(address _adapter, bytes32 _ccy) external;
 
     function getSettlementRequests(bytes32)
         external

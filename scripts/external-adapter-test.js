@@ -92,29 +92,29 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   // Get contracts from proxyController
   const closeOutNettingProxy = await proxyController
-    .getProxyAddress(toBytes32('CloseOutNetting'))
+    .getAddress(toBytes32('CloseOutNetting'))
     .then((address) => ethers.getContractAt('CloseOutNetting', address));
 
   const crosschainAddressResolverProxy = await proxyController
-    .getProxyAddress(toBytes32('CrosschainAddressResolver'))
+    .getAddress(toBytes32('CrosschainAddressResolver'))
     .then((address) =>
       ethers.getContractAt('CrosschainAddressResolver', address),
     );
 
   const currencyControllerProxy = await proxyController
-    .getProxyAddress(toBytes32('CurrencyController'))
+    .getAddress(toBytes32('CurrencyController'))
     .then((address) => ethers.getContractAt('CurrencyController', address));
 
   const markToMarketMockProxy = await proxyController
-    .getProxyAddress(toBytes32('MarkToMarket'))
+    .getAddress(toBytes32('MarkToMarket'))
     .then((address) => ethers.getContractAt('MarkToMarketMock', address));
 
   const paymentAggregatorProxy = await proxyController
-    .getProxyAddress(toBytes32('PaymentAggregator'))
+    .getAddress(toBytes32('PaymentAggregator'))
     .then((address) => ethers.getContractAt('PaymentAggregator', address));
 
   const settlementEngineProxy = await proxyController
-    .getProxyAddress(toBytes32('SettlementEngine'))
+    .getAddress(toBytes32('SettlementEngine'))
     .then((address) => ethers.getContractAt('SettlementEngine', address));
 
   // Deploy mock contracts

@@ -120,9 +120,16 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
 
   const proxyController =
     instances['ProxyController'] ||
-    (await ProxyController.new(addressResolver.address));
+    (await ProxyController.new(ethers.constants.AddressZero));
+
+  // Get the Proxy contract address of AddressResolver
+  await proxyController.setAddressResolverImpl(addressResolver.address);
+  const addressResolverProxyAddress =
+    await proxyController.getAddressResolverAddress();
+
+  // Deploy MigrationAddressResolver
   const migrationAddressResolver = await MigrationAddressResolver.new(
-    addressResolver.address,
+    addressResolverProxyAddress,
   );
 
   // Set contract addresses to the Proxy contract
@@ -174,6 +181,9 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   );
 
   // Get the Proxy contract addresses
+  const addressResolverProxy = await AddressResolver.at(
+    addressResolverProxyAddress,
+  );
   const closeOutNettingProxy = await CloseOutNetting.at(closeOutNettingAddress);
   const collateralAggregatorProxy = await CollateralAggregatorV2.at(
     collateralAggregatorAddress,
@@ -304,7 +314,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
     .map((contract) => contract.address);
 
-  await addressResolver.importAddresses(
+  await addressResolverProxy.importAddresses(
     importAddressesArgs.names,
     importAddressesArgs.addresses,
   );
@@ -316,7 +326,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     quickSortLibrary,
     discountFactorLibrary,
     // contracts
-    addressResolver,
+    addressResolver: addressResolverProxy,
     closeOutNetting: closeOutNettingProxy,
     collateralAggregator: collateralAggregatorProxy,
     collateralVault: collateralVaultProxy,
@@ -375,4 +385,14 @@ class Deployment {
   }
 }
 
-module.exports = { Deployment };
+const executeIfNewlyDeployment = async (name, deployResult, callback) => {
+  if (deployResult.newlyDeployed) {
+    console.log(`Deployed ${name} at ${deployResult.address}`);
+
+    callback && (await callback());
+  } else {
+    console.warn(`Skipped deploying ${name}`);
+  }
+};
+
+module.exports = { Deployment, executeIfNewlyDeployment };

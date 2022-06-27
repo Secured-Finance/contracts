@@ -11,39 +11,49 @@ import "./utils/UpgradeabilityProxy.sol";
 
 contract ProxyController is IProxyController, Ownable {
     IAddressResolver private resolver;
+    bytes32 private constant ADDRESS_RESOLVER = "AddressResolver";
 
     /**
      * @dev Contract constructor function.
      * @param _resolver The address of the Address Resolver contract
+     *
+     * @notice Set a proxy contract address of AddressResolver if it already exists.
+     * If not, set zero address here and call `setAddressResolverImpl` using the implementation
+     * address of AddressResolver to create a proxy contract.
      */
     constructor(address _resolver) Ownable() {
-        resolver = IAddressResolver(_resolver);
+        if (_resolver != address(0)) {
+            UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(_resolver));
+            require(proxy.implementation() != address(0), "Proxy address not found");
+            resolver = IAddressResolver(_resolver);
+        }
+    }
+
+    /**
+     * @dev Gets the proxy address of AddressResolver
+     */
+    function getAddressResolverAddress() public view returns (address) {
+        return (address(resolver));
     }
 
     /**
      * @dev Gets the proxy address to specified name
      * @param name The cache name of the contract
      */
-    function getProxyAddress(bytes32 name) public view returns (address) {
-        address proxyAddress = resolver.getAddress(name, "Address not found");
+    function getAddress(bytes32 name) public view returns (address proxyAddress) {
+        proxyAddress = resolver.getAddress(name, "Address not found");
         UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
 
         require(proxy.implementation() != address(0), "Proxy address not found");
-
-        return proxyAddress;
     }
 
     /**
      * @dev Gets the product proxy address to specified prefix
      * @param prefix Bytes4 prefix for product type
      */
-    function getProductProxyAddress(bytes4 prefix) external view returns (address) {
-        address productAddressResolverAddress = resolver.getAddress(
-            Contracts.PRODUCT_ADDRESS_RESOLVER,
-            "Address not found"
-        );
+    function getProductAddress(bytes4 prefix) public view returns (address) {
         IProductAddressResolver productAddressResolver = IProductAddressResolver(
-            productAddressResolverAddress
+            getAddress(Contracts.PRODUCT_ADDRESS_RESOLVER)
         );
         address proxyAddress = productAddressResolver.getProductContract(prefix);
         UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
@@ -51,6 +61,16 @@ contract ProxyController is IProxyController, Ownable {
         require(proxy.implementation() != address(0), "Proxy address not found");
 
         return proxyAddress;
+    }
+
+    /**
+     * @dev Sets the implementation contract of AddressResolver
+     * @param newImpl The address of implementation contract
+     */
+    function setAddressResolverImpl(address newImpl) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature("initialize(address)", msg.sender);
+        address proxyAddress = _updateImpl(ADDRESS_RESOLVER, newImpl, data);
+        resolver = IAddressResolver(proxyAddress);
     }
 
     /**
@@ -207,6 +227,21 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
+     * @dev Updates admin addresses of proxy contract
+     * @param newAdmin The address of new admin
+     * @param destinations The destination contract addresses
+     */
+    function changeProxyAdmins(address newAdmin, address[] calldata destinations)
+        external
+        onlyOwner
+    {
+        for (uint256 i = 0; i < destinations.length; i++) {
+            UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(destinations[i]));
+            proxy.changeAdmin(newAdmin);
+        }
+    }
+
+    /**
      * @dev Sets the implementation contract of specified contract
      * The first time the contract address is set, `UpgradeabilityProxy` is created.
      * From the second time, the contract address set in the created `UpgradeabilityProxy`
@@ -220,19 +255,28 @@ contract ProxyController is IProxyController, Ownable {
         bytes32 name,
         address newAddress,
         bytes memory data
-    ) internal {
-        address proxyAddress = resolver.getAddress(name);
+    ) internal returns (address proxyAddress) {
+        proxyAddress = _getAddress(name);
         UpgradeabilityProxy proxy;
 
         if (proxyAddress == address(0)) {
             proxy = new UpgradeabilityProxy(payable(newAddress), data);
+            proxyAddress = address(proxy);
 
-            emit ProxyCreated(name, address(proxy), newAddress);
+            emit ProxyCreated(name, proxyAddress, newAddress);
         } else {
             proxy = UpgradeabilityProxy(payable(proxyAddress));
             address oldAddress = proxy.implementation();
             proxy.upgradeTo(newAddress);
             emit ProxyUpdated(name, proxyAddress, newAddress, oldAddress);
+        }
+    }
+
+    function _getAddress(bytes32 name) internal view returns (address) {
+        if (name == ADDRESS_RESOLVER) {
+            return address(resolver);
+        } else {
+            return resolver.getAddress(name);
         }
     }
 }

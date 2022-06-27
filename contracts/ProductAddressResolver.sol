@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IProductAddressResolver.sol";
 import "./libraries/DealId.sol";
@@ -15,6 +16,7 @@ import {ProductAddressResolverStorage as Storage} from "./storages/ProductAddres
  */
 contract ProductAddressResolver is IProductAddressResolver, Ownable, Proxyable {
     using Address for address;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     /**
      * @dev Modifier to check if passed prefix is valid
@@ -56,6 +58,8 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable, Proxyable {
         Storage.slot().productPrefix[prevProduct] = "";
         Storage.slot().productPrefix[_product] = _prefix;
 
+        Storage.slot().productAddresses.add(_product);
+
         emit RegisterProduct(_prefix, _product, _controller);
     }
 
@@ -89,6 +93,14 @@ contract ProductAddressResolver is IProductAddressResolver, Ownable, Proxyable {
      */
     function getProductContract(bytes4 _prefix) public view override returns (address) {
         return Storage.slot().productContracts[_prefix];
+    }
+
+    /**
+     * @dev Trigers to get product addresses
+     * @notice To work with the contract this address should be wrapped around IProduct interface
+     */
+    function getProductContracts() public view override returns (address[] memory) {
+        return Storage.slot().productAddresses.values();
     }
 
     /**

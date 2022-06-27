@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAddressResolver.sol";
+import "./utils/Ownable.sol";
+import "./utils/Proxyable.sol";
+import {AddressResolverStorage as Storage} from "./storages/AddressResolverStorage.sol";
 
-contract AddressResolver is IAddressResolver, Ownable {
-    mapping(bytes32 => address) public addresses;
-
-    constructor() Ownable() {}
+contract AddressResolver is IAddressResolver, Ownable, Proxyable {
+    /**
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
+     */
+    function initialize(address owner) public initializer onlyProxy {
+        _transferOwnership(owner);
+    }
 
     function importAddresses(bytes32[] memory _names, address[] memory _addresses)
         public
@@ -15,10 +21,12 @@ contract AddressResolver is IAddressResolver, Ownable {
     {
         require(_names.length == _addresses.length, "Input lengths must match");
 
+        Storage.slot().addressCaches = _addresses;
+
         for (uint256 i = 0; i < _names.length; i++) {
             bytes32 name = _names[i];
             address destination = _addresses[i];
-            addresses[name] = destination;
+            Storage.slot().addresses[name] = destination;
             emit AddressImported(name, destination);
         }
     }
@@ -29,7 +37,7 @@ contract AddressResolver is IAddressResolver, Ownable {
         returns (bool)
     {
         for (uint256 i = 0; i < _names.length; i++) {
-            if (addresses[_names[i]] != _addresses[i]) {
+            if (Storage.slot().addresses[_names[i]] != _addresses[i]) {
                 return false;
             }
         }
@@ -42,12 +50,16 @@ contract AddressResolver is IAddressResolver, Ownable {
         override
         returns (address)
     {
-        address _foundAddress = addresses[_name];
+        address _foundAddress = Storage.slot().addresses[_name];
         require(_foundAddress != address(0), _reason);
         return _foundAddress;
     }
 
     function getAddress(bytes32 _name) external view override returns (address) {
-        return addresses[_name];
+        return Storage.slot().addresses[_name];
+    }
+
+    function getAddresses() external view override returns (address[] memory) {
+        return Storage.slot().addressCaches;
     }
 }

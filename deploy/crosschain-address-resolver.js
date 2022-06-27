@@ -1,21 +1,28 @@
+const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+
 module.exports = async function ({ deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const crosschainResolver = await deploy('CrosschainAddressResolver', {
+  const deployResult = await deploy('CrosschainAddressResolver', {
     from: deployer,
   });
-  console.log(
-    'Deployed CrosschainAddressResolver at ' + crosschainResolver.address,
+
+  await executeIfNewlyDeployment(
+    'CrosschainAddressResolver',
+    deployResult,
+    async () => {
+      const proxyController = await deployments
+        .get('ProxyController')
+        .then(({ address }) =>
+          ethers.getContractAt('ProxyController', address),
+        );
+
+      await proxyController
+        .setCrosschainAddressResolverImpl(deployResult.address)
+        .then((tx) => tx.wait());
+    },
   );
-
-  const proxyController = await deployments
-    .get('ProxyController')
-    .then(({ address }) => ethers.getContractAt('ProxyController', address));
-
-  await proxyController
-    .setCrosschainAddressResolverImpl(crosschainResolver.address)
-    .then((tx) => tx.wait());
 };
 
 module.exports.tags = ['CrosschainAddressResolver'];

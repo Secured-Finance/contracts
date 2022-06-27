@@ -1,17 +1,20 @@
+const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const liquidations = await deploy('Liquidations', { from: deployer });
-  console.log('Deployed Liquidations at ' + liquidations.address);
+  const deployResult = await deploy('Liquidations', { from: deployer });
 
-  const proxyController = await deployments
-    .get('ProxyController')
-    .then(({ address }) => ethers.getContractAt('ProxyController', address));
+  await executeIfNewlyDeployment('Liquidations', deployResult, async () => {
+    const proxyController = await deployments
+      .get('ProxyController')
+      .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-  await proxyController
-    .setLiquidationsImpl(liquidations.address, 10)
-    .then((tx) => tx.wait());
+    await proxyController
+      .setLiquidationsImpl(deployResult.address, 10)
+      .then((tx) => tx.wait());
+  });
 };
 
 module.exports.tags = ['Liquidations'];

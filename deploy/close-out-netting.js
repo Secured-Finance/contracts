@@ -1,17 +1,20 @@
+const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const closeOutNetting = await deploy('CloseOutNetting', { from: deployer });
-  console.log('Deployed CloseOutNetting at ' + closeOutNetting.address);
+  const deployResult = await deploy('CloseOutNetting', { from: deployer });
 
-  const proxyController = await deployments
-    .get('ProxyController')
-    .then(({ address }) => ethers.getContractAt('ProxyController', address));
-  const tx = await proxyController.setCloseOutNettingImpl(
-    closeOutNetting.address,
-  );
-  await tx.wait();
+  await executeIfNewlyDeployment('CloseOutNetting', deployResult, async () => {
+    const proxyController = await deployments
+      .get('ProxyController')
+      .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+    await proxyController
+      .setCloseOutNettingImpl(deployResult.address)
+      .then((tx) => tx.wait());
+  });
 };
 
 module.exports.tags = ['CloseOutNetting'];

@@ -9,9 +9,11 @@ const { Deployment } = require('../test-utils').deployment;
 should();
 
 const AddressResolver = artifacts.require('AddressResolver');
+const CloseOutNetting = artifacts.require('CloseOutNetting');
 const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
+const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');
 const WETH9Mock = artifacts.require('WETH9Mock');
 
 const getNewProxyAddress = ({ logs }) =>
@@ -26,8 +28,11 @@ contract('ProxyController', (accounts) => {
   let proxyController;
 
   beforeEach('deploy ProxyController', async () => {
-    addressResolver = await AddressResolver.new();
-    proxyController = await ProxyController.new(addressResolver.address);
+    proxyController = await ProxyController.new(ethers.constants.AddressZero);
+    addressResolver = await AddressResolver.new()
+      .then(({ address }) => proxyController.setAddressResolverImpl(address))
+      .then(() => proxyController.getAddressResolverAddress())
+      .then((address) => AddressResolver.at(address));
   });
 
   describe('Register contracts', async () => {
@@ -105,7 +110,7 @@ contract('ProxyController', (accounts) => {
         [currencyControllerProxyAddress],
       );
 
-      const registeredProxyAddress = await proxyController.getProxyAddress(
+      const registeredProxyAddress = await proxyController.getAddress(
         contractName,
       );
       registeredProxyAddress.should.be.equal(currencyControllerProxyAddress);
@@ -113,7 +118,7 @@ contract('ProxyController', (accounts) => {
 
     it('Fail to get a proxy address due to empty data', async () => {
       expectRevert(
-        proxyController.getProxyAddress(toBytes32('Test')),
+        proxyController.getAddress(toBytes32('Test')),
         'Address not found',
       );
     });
@@ -130,7 +135,7 @@ contract('ProxyController', (accounts) => {
       );
 
       expectRevert(
-        proxyController.getProxyAddress(toBytes32('Test')),
+        proxyController.getAddress(toBytes32('Test')),
         'Proxy address not found',
       );
     });
@@ -140,15 +145,16 @@ contract('ProxyController', (accounts) => {
     it('Successfully get a proxy address', async () => {
       const { loan, proxyController } = await new Deployment().execute();
 
-      const registeredProxyAddress =
-        await proxyController.getProductProxyAddress(loanPrefix);
+      const registeredProxyAddress = await proxyController.getProductAddress(
+        loanPrefix,
+      );
 
       registeredProxyAddress.should.be.equal(loan.address);
     });
 
     it('Fail to get a product proxy address due to empty data', async () => {
       expectRevert(
-        proxyController.getProductProxyAddress(loanPrefix),
+        proxyController.getProductAddress(loanPrefix),
         'Address not found',
       );
     });
@@ -165,7 +171,7 @@ contract('ProxyController', (accounts) => {
       );
 
       expectRevert(
-        proxyController.getProductProxyAddress(loanPrefix),
+        proxyController.getProductAddress(loanPrefix),
         'Proxy address not found',
       );
     });
@@ -233,6 +239,47 @@ contract('ProxyController', (accounts) => {
         currencyController.initialize(owner),
         'Must be called from UpgradeabilityProxy',
       );
+    });
+  });
+
+  describe('Change Admin', async () => {
+    it('Successfully change admins of a proxy contract', async () => {
+      const currencyController = await CurrencyController.new(
+        addressResolver.address,
+      );
+      const closeOutNetting = await CloseOutNetting.new(
+        addressResolver.address,
+      );
+
+      const currencyControllerProxyAddress = await proxyController
+        .setCurrencyControllerImpl(currencyController.address)
+        .then(getNewProxyAddress);
+      const closeOutNettingProxyAddress = await proxyController
+        .setCloseOutNettingImpl(closeOutNetting.address)
+        .then(getNewProxyAddress);
+
+      await addressResolver.importAddresses(
+        ['CurrencyController', 'CloseOutNetting'].map(toBytes32),
+        [currencyControllerProxyAddress, closeOutNettingProxyAddress],
+      );
+
+      await proxyController.changeProxyAdmins(alice, [
+        currencyControllerProxyAddress,
+        closeOutNettingProxyAddress,
+      ]);
+
+      const currencyControllerProxy = await UpgradeabilityProxy.at(
+        currencyControllerProxyAddress,
+      );
+      const closeOutNettingProxy = await UpgradeabilityProxy.at(
+        closeOutNettingProxyAddress,
+      );
+
+      const currencyControllerAdmin = await currencyControllerProxy.admin();
+      const closeOutNettingAdmin = await closeOutNettingProxy.admin();
+
+      currencyControllerAdmin.toString().should.be.equal(alice);
+      closeOutNettingAdmin.toString().should.be.equal(alice);
     });
   });
 });
