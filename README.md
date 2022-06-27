@@ -10,8 +10,8 @@ This repository contains the core smart contracts of the Secured Finance Protoco
 
 1. Use established node version by running `nvm use`
 2. Install repository dependencies by running `npm install`
-3. Run `hardhat compile` to compile smart contracts
-4. Execute `hardhat test` to run the tests.
+3. Run `npm run compile` to compile smart contracts
+4. Execute `npm run test` to run the tests.
 
 ## Smart Contracts
 
@@ -24,7 +24,7 @@ Private keys are used in order to deploy smart contracts on one of the Ethereum 
 
 ## Compile
 
-To compile smart contracts, type `hardhat compile`. Use `--force` option to recompile everyting if needed.
+To compile smart contracts, type `npm run compile`. Use `npm run compile:force` command to recompile everyting if needed.
 
 The compiled output is a json file called Artifacts and saved in `./build/contracts` directory per contract basis.
 ABI and bytecode associated with the smart contract will be saved in the json file.
@@ -43,12 +43,12 @@ In case you want to reset and redeploy again, you can use the command `npm run d
 
 ### Hardhat EVM testing
 
-1. Run `npx hardhat test` to run all tests from `./test` directory in a local hardhat javascript EVM.
+1. Run `npm run test` to run all tests from `./test` directory in a local hardhat javascript EVM.
 
 ### On-chain ganache testing
 
-1. Run `hardhat node` or `ganache` to start a local blockchain node
-2. Execute `hardhat test --network localhost` to run tests on a local blockchain node
+1. Run `npx hardhat node` or `npm run ganache` to start a local blockchain node
+2. Execute `npx hardhat test --network localhost` to run tests on a local blockchain node
 
 ## Deployed smart contracts
 
