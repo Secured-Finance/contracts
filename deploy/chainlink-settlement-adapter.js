@@ -33,7 +33,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       addressResolver.address,
       oracle.address,
       process.env.CHAINLINK_JOB_ID,
-      process.env.CHAINLINK_REQUEST_FEE,
+      process.env.CHAINLINK_REQUEST_FEE || '100000000000000000',
       linkTokenAddress,
       hexFILString,
     ],
@@ -59,7 +59,8 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       .transfer(deployResult.address, depositAmount)
       .then((tx) => tx.wait());
     console.log(
-      `Sent ${fromWeiToEther(depositAmount)} LINK to ` + deployResult.address,
+      `Successfully sent ${fromWeiToEther(depositAmount)} LINK to ` +
+        deployResult.address,
     );
   } else {
     console.warn('Skipped Link token transfer');

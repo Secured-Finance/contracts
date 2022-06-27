@@ -70,6 +70,8 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .getAddressResolverAddress()
     .then((address) => ethers.getContractAt('AddressResolver', address));
 
+  // The contract name list that is managed in AddressResolver
+  // This list is as same as contracts/libraries/Contracts.sol
   const contractNames = [
     'CloseOutNetting',
     'CollateralAggregator',
@@ -85,6 +87,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     'TermStructure',
   ];
 
+  // The contract address list that is managed in AddressResolver
   const contractAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,
@@ -100,15 +103,16 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     termStructure.address,
   ];
 
+  // The contract address list that inherited MixinAddressResolver and need to call `buildCache`
   const buildCachesAddresses = [
     closeOutNetting.address,
     collateralAggregator.address,
     collateralVault.address,
     crosschainAddressResolver.address,
-    markToMarket.address,
     lendingMarketController.address,
     liquidations.address,
     loan.address,
+    markToMarket.address,
     paymentAggregator.address,
     settlementEngine.address,
     termStructure.address,
@@ -116,10 +120,18 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   // show log
   const logHeader = 'Proxy Addresses';
-  const log = { AddressResolver: { [logHeader]: addressResolver.address } };
-  contractNames.forEach((name, idx) => {
-    log[name] = { [logHeader]: contractAddresses[idx] };
-  });
+  const log = {
+    AddressResolver: { [logHeader]: addressResolver.address },
+    ...contractNames.reduce(
+      (obj, name, idx) =>
+        Object.assign(obj, {
+          [name]: { [logHeader]: contractAddresses[idx] },
+        }),
+      {},
+    ),
+    Loan: { [logHeader]: loan.address },
+  };
+
   console.table(log);
 
   if (!isInitialDeployment) {
@@ -131,31 +143,39 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   await addressResolver
     .importAddresses(contractNames.map(toBytes32), contractAddresses)
     .then((tx) => tx.wait());
+  console.log('Successfully imported Addresses into AddressResolver');
 
   await migrationAddressResolver
     .buildCaches(buildCachesAddresses)
     .then((tx) => tx.wait());
+  console.log('Successfully built address caches');
 
   // Set up for CollateralAggregator
   await collateralAggregator.functions['register(string[],uint256[])'](
     [btcAddress, filAddress],
     [0, 461],
   ).then((tx) => tx.wait());
+  console.log('Successfully registered the currency data');
 
   // Set up for CollateralVault
   await collateralVault.registerCurrency(hexETHString, wETHToken.address);
-  await collateralVault.functions['deposit(bytes32,uint256)'](
-    hexETHString,
-    '10000000000000000',
-    {
-      value: '10000000000000000',
-    },
-  ).then((tx) => tx.wait());
+  console.log('Successfully registered the currency as supported collateral');
+
+  // TODO: Move this step to the test script on the forked chain
+  // await collateralVault.functions['deposit(bytes32,uint256)'](
+  //   hexETHString,
+  //   '10000000000000000',
+  //   {
+  //     value: '10000000000000000',
+  //   },
+  // ).then((tx) => tx.wait());
+  // console.log('Successfully deposited ETH for testing');
 
   // Set up for ProductAddressResolver
   await productAddressResolver
     .registerProduct(loanPrefix, loan.address, lendingMarketController.address)
     .then((tx) => tx.wait());
+  console.log('Successfully registered the loan product');
 
   // Set up for TermStructure
   for (i = 0; i < sortedTermDays.length; i++) {
@@ -167,6 +187,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       )
       .then((tx) => tx.wait());
   }
+  console.log('Successfully registered supported terms');
 };
 
 module.exports.tags = ['Migration'];

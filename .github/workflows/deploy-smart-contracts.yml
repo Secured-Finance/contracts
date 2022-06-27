@@ -1,0 +1,53 @@
+name: Deploy Smart Contracts
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+
+jobs:
+  deploy:
+    name: Deploy Smart Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Smart Contracts
+        run: npm run compile
+      - name: Deploy for development environment
+        # For testing
+        if: ${{ github.ref == 'refs/heads/develop' }}
+        env:
+          PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
+          CHAINLINK_NODE_ACCOUNT: ${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}
+          CHAINLINK_JOB_ID: ${{ secrets.DEV_CHAINLINK_JOB_ID }}
+          ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
+        run: npm run deploy develop
+      - name: Deploy for production environment
+        if: ${{ github.ref == 'refs/heads/master' }}
+        env:
+          PRIVATE_KEY: ${{ secrets.PRD_PRIVATE_KEY }}
+          CHAINLINK_NODE_ACCOUNT: ${{ secrets.PRD_CHAINLINK_NODE_ACCOUNT }}
+          CHAINLINK_JOB_ID: ${{ secrets.PRD_CHAINLINK_JOB_ID }}
+          ALCHEMY_API_KEY: ${{ secrets.PRD_ALCHEMY_API_KEY }}
+        run: npm run deploy master
+      - run: |
+          git add .
+      - name: Check diff
+        shell: bash
+        id: diff
+        run: |
+          echo "::set-output name=count::$(git diff --staged --name-only . |wc -l)"
+      - name: Commit and push
+        shell: bash
+        if: steps.diff.outputs.count > 0
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git commit -m "chore: update deployment files"
+          git push
