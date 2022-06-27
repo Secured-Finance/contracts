@@ -27,7 +27,7 @@ jobs:
           CHAINLINK_NODE_ACCOUNT: ${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}
           CHAINLINK_JOB_ID: ${{ secrets.DEV_CHAINLINK_JOB_ID }}
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
-        run: npm run deploy rinkeby
+        run: npm run deploy develop
       - name: Deploy for production environment
         if: ${{ github.ref == 'refs/heads/master' }}
         env:
@@ -35,7 +35,7 @@ jobs:
           CHAINLINK_NODE_ACCOUNT: ${{ secrets.PRD_CHAINLINK_NODE_ACCOUNT }}
           CHAINLINK_JOB_ID: ${{ secrets.PRD_CHAINLINK_JOB_ID }}
           ALCHEMY_API_KEY: ${{ secrets.PRD_ALCHEMY_API_KEY }}
-        run: npm run deploy rinkeby
+        run: npm run deploy master
       - run: |
           git add .
       - name: Check diff

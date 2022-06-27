@@ -23,7 +23,16 @@ module.exports = {
       chainId: 1337,
       network_id: '*',
     },
-    rinkeby: {
+    develop: {
+      url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      chainId: 4,
+      accounts: [process.env.PRIVATE_KEY || DUMMY_PRIVATE_KEY],
+      live: true,
+      saveDeployments: true,
+      gasPrice: 1500000000,
+      gasMultiplier: 3,
+    },
+    master: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
       accounts: [process.env.PRIVATE_KEY || DUMMY_PRIVATE_KEY],
