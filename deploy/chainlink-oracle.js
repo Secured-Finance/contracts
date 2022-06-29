@@ -40,7 +40,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   await executeIfNewlyDeployment('Oracle', deployResult);
 
-  if (senders[0] != process.env.CHAINLINK_NODE_ACCOUNT) {
+  if (senders[0] !== process.env.CHAINLINK_NODE_ACCOUNT) {
     await oracleContract
       .setAuthorizedSenders([process.env.CHAINLINK_NODE_ACCOUNT])
       .then((tx) => tx.wait());
