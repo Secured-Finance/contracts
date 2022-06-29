@@ -46,26 +46,16 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Create a fork environment
-        env:
-          ALCHEMY_API_KEY: $ALCHEMY_API_KEY
-          TENDERLY_USER: $TENDERLY_USER
-          TENDERLY_PROJECT: $TENDERLY_PROJECT
-          TENDERLY_ACCESS_KEY: $TENDERLY_ACCESS_KEY
         run: |
           FORK_ID=$(npm run fork $NETWORK)
           echo "fork id is $FORK_ID"
           echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
       - name: Deploy for fork environment
-        env:
-          PRIVATE_KEY: $PRIVATE_KEY
-          CHAINLINK_NODE_ACCOUNT: $CHAINLINK_NODE_ACCOUNT
-          CHAINLINK_JOB_ID: $CHAINLINK_JOB_ID
-          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/$FORK_ID
         run: npm run deploy $NETWORK
       - name: Run a Loan Test
         env:
-          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/$FORK_ID
-          HARDHAT_NETWORK: $NETWORK
+          PRIVATE_KEY: '' # Need to be deleted to use default account on a Fork environment
+          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
         run: npm run script ./scripts/loan-test.js
       - name: Delete the fork environment
-        run: npm run unfork --forkid $FORK_ID
+        run: npm run unfork --forkid ${{ env.FORK_ID }}
