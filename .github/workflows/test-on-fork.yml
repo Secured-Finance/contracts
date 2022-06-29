@@ -56,7 +56,6 @@ jobs:
         env:
           PRIVATE_KEY: '' # Need to be deleted to use default account on a Fork environment
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-          HARDHAT_NETWORK: ${{ env.NETWORK }}
         run: npm run script $NETWORK ./scripts/loan-test.js
       - name: Delete the fork environment
         run: npm run unfork --forkid $FORK_ID
