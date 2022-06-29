@@ -7,8 +7,7 @@ require('hardhat-deploy');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-ganache');
 
-const DUMMY_PRIVATE_KEY =
-  'abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd';
+require('./tasks');
 
 module.exports = {
   defaultNetwork: 'hardhat',
@@ -18,24 +17,28 @@ module.exports = {
   },
   networks: {
     hardhat: {},
-    development: {
+    localhost: {
       url: process.env.DEV_RPC_ENDPOINT || 'http://0.0.0.0:8545',
       chainId: 1337,
       network_id: '*',
     },
     develop: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      url:
+        process.env.FORK_RPC_ENDPOINT ||
+        `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
-      accounts: [process.env.PRIVATE_KEY || DUMMY_PRIVATE_KEY],
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
       live: true,
       saveDeployments: true,
       gasPrice: 1500000000,
       gasMultiplier: 3,
     },
     master: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      url:
+        process.env.FORK_RPC_ENDPOINT ||
+        `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
-      accounts: [process.env.PRIVATE_KEY || DUMMY_PRIVATE_KEY],
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
       live: true,
       saveDeployments: true,
       gasPrice: 1500000000,

@@ -1,7 +1,9 @@
 name: Deploy Smart Contracts
 
 on:
-  push:
+  workflow_run:
+    workflows: ['Test on a Fork']
+    types: [completed]
     branches:
       - master
       - develop
@@ -10,6 +12,7 @@ jobs:
   deploy:
     name: Deploy Smart Contracts
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -20,7 +23,6 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Deploy for development environment
-        # For testing
         if: ${{ github.ref == 'refs/heads/develop' }}
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
@@ -28,13 +30,13 @@ jobs:
           CHAINLINK_JOB_ID: ${{ secrets.DEV_CHAINLINK_JOB_ID }}
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
         run: npm run deploy develop
-      - name: Deploy for production environment
+      - name: Deploy for staging environment
         if: ${{ github.ref == 'refs/heads/master' }}
         env:
-          PRIVATE_KEY: ${{ secrets.PRD_PRIVATE_KEY }}
-          CHAINLINK_NODE_ACCOUNT: ${{ secrets.PRD_CHAINLINK_NODE_ACCOUNT }}
-          CHAINLINK_JOB_ID: ${{ secrets.PRD_CHAINLINK_JOB_ID }}
-          ALCHEMY_API_KEY: ${{ secrets.PRD_ALCHEMY_API_KEY }}
+          PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
+          CHAINLINK_NODE_ACCOUNT: ${{ secrets.STG_CHAINLINK_NODE_ACCOUNT }}
+          CHAINLINK_JOB_ID: ${{ secrets.STG_CHAINLINK_JOB_ID }}
+          ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
         run: npm run deploy master
       - run: |
           git add .
@@ -42,7 +44,7 @@ jobs:
         shell: bash
         id: diff
         run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . |wc -l)"
+          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
       - name: Commit and push
         shell: bash
         if: steps.diff.outputs.count > 0
