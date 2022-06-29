@@ -1,0 +1,71 @@
+name: Test on a Fork
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      # For testing
+      - SF-136-test-on-fork
+
+jobs:
+  deploy:
+    name: Test on a Fork
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+      - name: Set outputs for development environment
+        # For testing
+        # if: ${{ github.ref == 'refs/heads/develop' }}
+        if: ${{ github.ref == 'refs/heads/SF-136-test-on-fork' }}
+        run: |
+          echo "NETWORK=develop" >> $GITHUB_ENV
+          echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "CHAINLINK_NODE_ACCOUNT=${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}" >> $GITHUB_ENV
+          echo "CHAINLINK_JOB_ID=${{ secrets.DEV_CHAINLINK_JOB_ID }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.DEV_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "TENDERLY_USER=${{ secrets.DEV_TENDERLY_USER }}" >> $GITHUB_ENV
+          echo "TENDERLY_PROJECT=${{ secrets.DEV_TENDERLY_PROJECT }}" >> $GITHUB_ENV
+          echo "TENDERLY_ACCESS_KEY=${{ secrets.DEV_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
+      - name: Set outputs for staging environment
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: |
+          echo "NETWORK=master" >> $GITHUB_ENV
+          echo "PRIVATE_KEY=${{ secrets.STG_PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "CHAINLINK_NODE_ACCOUNT=${{ secrets.STG_CHAINLINK_NODE_ACCOUNT }}" >> $GITHUB_ENV
+          echo "CHAINLINK_JOB_ID=${{ secrets.STG_CHAINLINK_JOB_ID }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "TENDERLY_USER=${{ secrets.STG_TENDERLY_USER }}" >> $GITHUB_ENV
+          echo "TENDERLY_PROJECT=${{ secrets.STG_TENDERLY_PROJECT }}" >> $GITHUB_ENV
+          echo "TENDERLY_ACCESS_KEY=${{ secrets.STG_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Smart Contracts
+        run: npm run compile
+      - name: Create a fork environment
+        env:
+          ALCHEMY_API_KEY: $ALCHEMY_API_KEY
+          TENDERLY_USER: $TENDERLY_USER
+          TENDERLY_PROJECT: $TENDERLY_PROJECT
+          TENDERLY_ACCESS_KEY: $TENDERLY_ACCESS_KEY
+        run: |
+          FORK_ID=$(npm run fork $NETWORK)
+          echo "fork id is $FORK_ID"
+          echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
+      - name: Deploy for fork environment
+        env:
+          PRIVATE_KEY: $PRIVATE_KEY
+          CHAINLINK_NODE_ACCOUNT: $CHAINLINK_NODE_ACCOUNT
+          CHAINLINK_JOB_ID: $CHAINLINK_JOB_ID
+          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/$FORK_ID
+        run: npm run deploy $NETWORK
+      - name: Run a Loan Test
+        env:
+          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/$FORK_ID
+          HARDHAT_NETWORK: $NETWORK
+        run: npm run script ./scripts/loan-test.js
+      - name: Delete the fork environment
+        run: npm run unfork --forkid $FORK_ID

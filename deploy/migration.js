@@ -28,7 +28,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   // Get contracts from proxyController
   const filter = proxyController.filters.ProxyCreated();
-  const proxyCreatedEvents = await proxyController.queryFilter(filter);
+  // NOTE: When the target network is a forked chain, the contract can't return events and
+  // the `queryFilter` method throw an error.
+  const proxyCreatedEvents = process.env.FORK_RPC_ENDPOINT
+    ? []
+    : await proxyController.queryFilter(filter);
+
   const proxyObj = proxyCreatedEvents.reduce((obj, event) => {
     obj[event.args.id] = event.args.proxyAddress;
     return obj;

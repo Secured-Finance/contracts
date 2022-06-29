@@ -32,16 +32,24 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     args: [linkTokenAddress, deployer],
   });
 
-  await executeIfNewlyDeployment('Oracle', deployResult, async () => {
-    const oracleContract = await ethers.getContractAt(
-      'Operator',
-      deployResult.address,
-    );
+  const oracleContract = await ethers.getContractAt(
+    'Operator',
+    deployResult.address,
+  );
+  const senders = await oracleContract.getAuthorizedSenders();
 
+  await executeIfNewlyDeployment('Oracle', deployResult);
+
+  if (senders[0] != process.env.CHAINLINK_NODE_ACCOUNT) {
     await oracleContract
       .setAuthorizedSenders([process.env.CHAINLINK_NODE_ACCOUNT])
       .then((tx) => tx.wait());
-  });
+
+    console.log(
+      'Updated the autorized sender of Oracle at',
+      process.env.CHAINLINK_NODE_ACCOUNT,
+    );
+  }
 };
 
 module.exports.tags = ['ChainlinkOracle'];
