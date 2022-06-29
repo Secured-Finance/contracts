@@ -45,14 +45,16 @@ In case you want to reset and redeploy again, you can use the command `npm run d
 
 1. Run `npm run test` to run all tests from `./test` directory in a local hardhat javascript EVM.
 
-## Hardhat Scripts
-
-1. Run `npm run script <SCRIPT PATH>` to run a script in the `./scripts` directory.
-
 ### On-chain ganache testing
 
 1. Run `npx hardhat node` or `npm run ganache` to start a local blockchain node
 2. Execute `npx hardhat test --network localhost` to run tests on a local blockchain node
+
+## Hardhat Scripts
+
+In order to run the specified script, execute `npm run script <NETWORK> <SCRIPT PATH>` command due to run a script in the `./scripts` directory.
+
+For example `npm run script develop ./scripts/loan-test.js` will execute the `loan-test` script on the develop environment.
 
 ## Deployed smart contracts
 
