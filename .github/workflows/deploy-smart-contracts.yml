@@ -4,6 +4,11 @@ on:
   workflow_run:
     workflows: ['Test on a Fork']
     types: [completed]
+    branches:
+      - master
+      - develop
+      # For testing
+      - SF-136-test-on-fork
 
 jobs:
   deploy:
