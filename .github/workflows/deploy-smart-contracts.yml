@@ -41,7 +41,7 @@ jobs:
         shell: bash
         id: diff
         run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . |wc -l)"
+          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
       - name: Commit and push
         shell: bash
         if: steps.diff.outputs.count > 0

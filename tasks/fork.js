@@ -25,6 +25,9 @@ task('fork', 'Create a forked environment').setAction(async () => {
 
   const res = await axios.post(url, body, opts);
 
+  console.log(
+    `Successfully forked environment with chain ID ${network.chainId}!`,
+  );
   console.log(res.data.simulation_fork.id);
 });
 
