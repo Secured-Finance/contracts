@@ -9,6 +9,11 @@ require('@nomiclabs/hardhat-ganache');
 
 require('./tasks');
 
+const privateKey =
+  process.env.PRIVATE_KEY && !process.env.FORK_RPC_ENDPOINT
+    ? [process.env.PRIVATE_KEY]
+    : undefined;
+
 module.exports = {
   defaultNetwork: 'hardhat',
   namedAccounts: {
@@ -27,7 +32,7 @@ module.exports = {
         process.env.FORK_RPC_ENDPOINT ||
         `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
+      accounts: privateKey,
       live: true,
       saveDeployments: true,
       gasPrice: 1500000000,
@@ -38,7 +43,7 @@ module.exports = {
         process.env.FORK_RPC_ENDPOINT ||
         `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 4,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : undefined,
+      accounts: privateKey,
       live: true,
       saveDeployments: true,
       gasPrice: 1500000000,

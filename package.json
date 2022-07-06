@@ -9,7 +9,6 @@
     "test": "hardhat test",
     "test:cov": "hardhat coverage",
     "compile": "hardhat compile",
-    "script": "hardhat run --network",
     "fork": "hardhat fork --network",
     "unfork": "hardhat unfork --forkid",
     "compile:force": "hardhat compile --force",

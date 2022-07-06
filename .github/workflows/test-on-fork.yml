@@ -5,6 +5,8 @@ on:
     branches:
       - master
       - develop
+      # For testing
+      - SF-136-update-test-on-fork
 
 jobs:
   deploy:
@@ -16,7 +18,9 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - name: Set env for development environment
-        if: ${{ github.ref == 'refs/heads/develop' }}
+        # For testing
+        # if: ${{ github.ref == 'refs/heads/develop' }}
+        if: ${{ github.ref == 'refs/heads/SF-136-update-test-on-fork' }}
         run: |
           echo "NETWORK=develop" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
@@ -52,8 +56,7 @@ jobs:
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
       - name: Run a Loan Test on fork environment
         env:
-          PRIVATE_KEY: '' # Need to be deleted to use default account on a Fork environment
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-        run: npm run script $NETWORK ./scripts/loan-test.js
+        run: npx hardhat --network $NETWORK test "scripts/loan-e2e.js" --bail
       - name: Delete the fork environment
         run: npm run unfork --forkid $FORK_ID
