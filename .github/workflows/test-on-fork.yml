@@ -56,6 +56,7 @@ jobs:
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
       - name: Run a Loan Test on fork environment
         env:
+          USE_DEFAULT_ACCOUNT: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
         run: npx hardhat --network $NETWORK test "scripts/loan-e2e.js" --bail
       - name: Delete the fork environment

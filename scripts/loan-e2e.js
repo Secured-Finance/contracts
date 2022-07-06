@@ -47,9 +47,12 @@ contract('Loan E2E Test', async () => {
     console.log('Block number is', blockNumber);
     console.log('Chain id is', network.chainId);
 
-    ownerSigner = new ethers.Wallet(process.env.PRIVATE_KEY, ethers.provider);
+    [ownerSigner, aliceSigner, bobSigner, carolSigner] =
+      await ethers.getSigners();
 
-    [, aliceSigner, bobSigner, carolSigner] = await ethers.getSigners();
+    if (process.env.FORK_RPC_ENDPOINT) {
+      ownerSigner = new ethers.Wallet(process.env.PRIVATE_KEY, ethers.provider);
+    }
 
     console.table(
       {
@@ -62,8 +65,10 @@ contract('Loan E2E Test', async () => {
     );
 
     // Get ETH
-    const params = [[ownerSigner.address], ethers.utils.hexValue(10)];
-    await ethers.provider.send('tenderly_addBalance', params);
+    if (process.env.FORK_RPC_ENDPOINT) {
+      const params = [[ownerSigner.address], ethers.utils.hexValue(10)];
+      await ethers.provider.send('tenderly_addBalance', params);
+    }
 
     const getProxy = (key, contract) =>
       proxyController

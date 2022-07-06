@@ -10,9 +10,9 @@ require('@nomiclabs/hardhat-ganache');
 require('./tasks');
 
 const privateKey =
-  process.env.PRIVATE_KEY && !process.env.FORK_RPC_ENDPOINT
-    ? [process.env.PRIVATE_KEY]
-    : undefined;
+  process.env.USE_DEFAULT_ACCOUNTS === 'true' || !process.env.PRIVATE_KEY
+    ? undefined
+    : [process.env.PRIVATE_KEY];
 
 module.exports = {
   defaultNetwork: 'hardhat',
