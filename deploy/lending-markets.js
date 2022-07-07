@@ -3,10 +3,6 @@ const { loanPrefix, hexFILString, toBytes32 } =
 const { sortedTermDays } = require('../test-utils').terms;
 
 module.exports = async function ({ deployments }) {
-  // TODO: Move this step to the test script on the forked chain
-  // const baseRate = 500;
-  // const baseAmount = 100000;
-
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
@@ -72,24 +68,6 @@ module.exports = async function ({ deployments }) {
     await collateralAggregator
       .addCollateralUser(lendingMarketContract.address)
       .then((tx) => tx.wait());
-
-    // TODO: Move this step to the test script on the forked chain
-    // const borrowRate = baseRate + 50 * i;
-    // const borrowAmount = baseAmount + 1500 * i;
-    // const lendRate = borrowRate + 50;
-    // const lendAmount = borrowAmount + 1000;
-    // console.log('BorrowRate:', borrowRate);
-    // console.log('BorrowAmount', borrowAmount);
-    // console.log('LendRate:', lendRate);
-    // console.log('LendRate:', lendAmount);
-
-    // await lendingMarketContract
-    //   .order(0, borrowAmount, borrowRate)
-    //   .then((tx) => tx.wait());
-
-    // await lendingMarketContract
-    //   .order(1, lendAmount, lendRate)
-    //   .then((tx) => tx.wait());
   }
 };
 

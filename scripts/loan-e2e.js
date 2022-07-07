@@ -265,6 +265,7 @@ contract('Loan E2E Test', async () => {
             events.find(({ args }) => args.requestId === requestId).args,
         );
 
+    // Create encoded data to call fulfill method of ChainlinkSettlementAdapter contract
     const abiCoder = new ethers.utils.AbiCoder();
     const data = abiCoder.encode(
       ['bytes32', 'string', 'string', 'uint256', 'uint256', 'string'],
