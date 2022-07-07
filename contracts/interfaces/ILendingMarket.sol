@@ -32,8 +32,7 @@ interface ILendingMarket {
         address indexed taker,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 rate,
-        bytes32 loanId
+        uint256 rate
     );
 
     function cancelOrder(uint256 orderId) external returns (bool success);

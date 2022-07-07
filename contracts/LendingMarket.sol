@@ -255,7 +255,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, ReentrancyGuard,
 
         address productAddress = productAddressResolver().getProductContract(ProductPrefixes.LOAN);
 
-        bytes32 loanId = ILoanV2(productAddress).register(
+        ILoanV2(productAddress).register(
             marketOrder.maker,
             msg.sender,
             uint8(marketOrder.side),
@@ -265,7 +265,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, ReentrancyGuard,
             marketOrder.rate
         );
 
-        emit TakeOrder(orderId, msg.sender, side, _amount, marketOrder.rate, loanId);
+        emit TakeOrder(orderId, msg.sender, side, _amount, marketOrder.rate);
 
         if (marketOrder.amount == 0) {
             delete orders[orderId];

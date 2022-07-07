@@ -194,9 +194,18 @@ contract('Loan E2E Test', async () => {
       .order(1, orderAmountInFIL, orderRate)
       .then((tx) => tx.wait());
 
+    const { dealId } = await loan
+      .queryFilter(loan.filters.Register(), receipt.blockHash)
+      .then(
+        (events) =>
+          events.find(
+            ({ transactionHash }) =>
+              transactionHash === receipt.transactionHash,
+          ).args,
+      );
+    loanId = dealId;
+
     // Check loan deal
-    const event = receipt.events.find(({ event }) => event === 'TakeOrder');
-    loanId = event.args.loanId;
     const deal = await loan.getLoanDeal(loanId);
 
     expect(deal.lender).to.equal(aliceSigner.address);
