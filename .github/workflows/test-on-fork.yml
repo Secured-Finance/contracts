@@ -52,8 +52,8 @@ jobs:
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
       - name: Run a Loan Test on fork environment
         env:
-          PRIVATE_KEY: '' # Need to be deleted to use default account on a Fork environment
+          USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-        run: npm run script $NETWORK ./scripts/loan-test.js
+        run: npx hardhat --network $NETWORK test "scripts/loan-e2e.js" --bail
       - name: Delete the fork environment
         run: npm run unfork --forkid $FORK_ID

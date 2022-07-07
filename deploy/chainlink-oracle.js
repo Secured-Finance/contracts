@@ -8,12 +8,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   let linkTokenAddress;
   switch (network) {
-    case 'rinkeby': {
+    case 'develop': {
       linkTokenAddress = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
       break;
     }
-    case 'mainnet': {
-      linkTokenAddress = '0x0000000000000000000000000000000000000000';
+    case 'master': {
+      linkTokenAddress = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
       break;
     }
     default: {

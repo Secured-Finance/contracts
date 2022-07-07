@@ -166,16 +166,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   await collateralVault.registerCurrency(hexETHString, wETHToken.address);
   console.log('Successfully registered the currency as supported collateral');
 
-  // TODO: Move this step to the test script on the forked chain
-  // await collateralVault.functions['deposit(bytes32,uint256)'](
-  //   hexETHString,
-  //   '10000000000000000',
-  //   {
-  //     value: '10000000000000000',
-  //   },
-  // ).then((tx) => tx.wait());
-  // console.log('Successfully deposited ETH for testing');
-
   // Set up for ProductAddressResolver
   await productAddressResolver
     .registerProduct(loanPrefix, loan.address, lendingMarketController.address)
