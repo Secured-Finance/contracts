@@ -190,6 +190,22 @@ contract('LoanV2', async (accounts) => {
     );
   });
 
+  describe('Check registered data', async () => {
+    it('Get lending market addresses', async () => {
+      const market1825 = await loan.lendingMarkets(hexFILString, '1825');
+      const market90 = await loan.lendingMarkets(hexFILString, '90');
+
+      market1825.should.be.equal(loanCaller.address);
+      market90.should.be.equal(loanCaller.address);
+    });
+
+    it('Get isTransferable flag', async () => {
+      const isTransferable = await loan.isTransferable();
+
+      isTransferable.should.be.equal(false);
+    });
+  });
+
   describe('Test the execution of loan deal between Alice and Bob', async () => {
     let filAmount = utils.toBN('30000000000000000000');
     let filUsed = filAmount.mul(utils.toBN(2000)).div(utils.toBN(10000));
@@ -294,6 +310,7 @@ contract('LoanV2', async (accounts) => {
         filAmount,
         rate,
       );
+
       start = await timeLibrary._now();
       maturity = await timeLibrary.addDays(start, 1825);
 
@@ -307,7 +324,10 @@ contract('LoanV2', async (accounts) => {
       _4yearTimeSlot = annualSlots[3];
       _5yearTimeSlot = annualSlots[4];
 
-      let deal = await loan.getLoanDeal(dealId);
+      const lastLoanId = await loan.lastLoanId();
+      const deal = await loan.getLoanDeal(dealId);
+
+      lastLoanId.toString().should.be.equal('1');
       deal.lender.should.be.equal(alice);
       deal.borrower.should.be.equal(bob);
       deal.ccy.should.be.equal(hexFILString);

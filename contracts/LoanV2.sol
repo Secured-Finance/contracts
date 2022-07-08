@@ -10,6 +10,7 @@ import "./mixins/MixinAddressResolver.sol";
 import "./types/ProtocolTypes.sol";
 import "./utils/Ownable.sol";
 import "./utils/Proxyable.sol";
+import {LoanV2Storage as Storage} from "./storages/LoanV2Storage.sol";
 
 /**
  * @title LoanV2 contract is used to store Lending deals in Secured Finance
@@ -23,38 +24,6 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
     uint256 constant SETTLE = 2 days;
     uint256 constant MAXPAYNUM = 6;
     uint16 private constant VERSION = 1;
-    uint256 public settlementWindow = 2;
-    uint8 public paymentFrequency = uint8(ProtocolTypes.PaymentFrequency.ANNUAL);
-
-    struct LoanDeal {
-        address lender;
-        address borrower;
-        bytes32 ccy;
-        uint256 term;
-        uint256 notional;
-        uint256 rate;
-        uint256 start;
-        uint256 end;
-        uint256 pv;
-        bytes32 startTxHash;
-    }
-
-    struct Termination {
-        address terminationAsker;
-        uint256 terminationDate;
-    }
-
-    /**
-     * @dev Mapping for all storing LoanDeals per loanIDs.
-     */
-    mapping(bytes32 => LoanDeal) private loans;
-    mapping(bytes32 => Termination) private terminations;
-    mapping(bytes32 => bool) private isSettled;
-
-    bool public isTransferable;
-    uint256 public last_loan_id = 0;
-
-    mapping(bytes32 => mapping(uint256 => address)) public lendingMarkets;
 
     /**
      * @dev Modifier to check if LendingMarket contract linked with this contract
@@ -62,7 +31,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param _term LendingMarket term
      */
     modifier lendingMarketExists(bytes32 _ccy, uint256 _term) {
-        require(lendingMarkets[_ccy][_term] == msg.sender);
+        require(Storage.slot().lendingMarkets[_ccy][_term] == msg.sender);
         _;
     }
 
@@ -71,7 +40,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal ID
      */
     modifier workingLoan(bytes32 loanId) {
-        require(isSettled[loanId], "loan is not working");
+        require(Storage.slot().isSettled[loanId], "loan is not working");
         _;
     }
 
@@ -80,6 +49,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
     function initialize(address owner, address resolver) public initializer onlyProxy {
+        Storage.slot().paymentFrequency = uint8(ProtocolTypes.PaymentFrequency.ANNUAL);
         _transferOwnership(owner);
         registerAddressResolver(resolver);
     }
@@ -93,13 +63,34 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
     }
 
     /**
+     * @dev Get if loan ownership can be transferred.
+     */
+    function isTransferable() public view returns (bool) {
+        return Storage.slot().isTransferable;
+    }
+
+    /**
+     * @dev Get the last loan ID.
+     */
+    function lastLoanId() public view returns (uint256) {
+        return Storage.slot().lastLoanId;
+    }
+
+    /**
+     * @dev Get the lending market address for specific currency and term.
+     */
+    function lendingMarkets(bytes32 _ccy, uint256 _term) public view returns (address) {
+        return Storage.slot().lendingMarkets[_ccy][_term];
+    }
+
+    /**
      * @dev Triggers to change ability to transfer loan ownership by lenders.
      * @param isAccepted Boolean to
      *
      * @notice Executed only by contract owner
      */
     function setIsTransferable(bool isAccepted) public onlyOwner {
-        isTransferable = isAccepted;
+        Storage.slot().isTransferable = isAccepted;
     }
 
     /**
@@ -115,16 +106,19 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
         uint256 _term,
         address addr
     ) public onlyOwner {
-        require(lendingMarkets[_ccy][_term] == address(0), "Couldn't rewrite existing market");
-        lendingMarkets[_ccy][_term] = addr;
+        require(
+            Storage.slot().lendingMarkets[_ccy][_term] == address(0),
+            "Couldn't rewrite existing market"
+        );
+        Storage.slot().lendingMarkets[_ccy][_term] = addr;
     }
 
     /**
      * @dev Internal function to generate deal id based on product prefix and deals counter
      */
     function _generateDealId() internal returns (bytes32 id) {
-        last_loan_id += 1;
-        id = DealId.generate(ProductPrefixes.LOAN, last_loan_id);
+        Storage.slot().lastLoanId += 1;
+        id = DealId.generate(ProductPrefixes.LOAN, Storage.slot().lastLoanId);
     }
 
     /**
@@ -174,7 +168,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
             false
         );
 
-        LoanDeal memory deal;
+        Storage.LoanDeal memory deal;
         deal.lender = lender;
         deal.borrower = borrower;
         deal.ccy = ccy;
@@ -185,7 +179,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
         deal.end = block.timestamp + deal.term * 86400;
 
         loanId = _generateDealId();
-        loans[loanId] = deal;
+        Storage.slot().loans[loanId] = deal;
 
         _registerPaymentSchedule(loanId, deal);
         // liquidations.addDealToLiquidationQueue(lender, borrower, loanId);
@@ -198,7 +192,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal ID
      */
     function getDealSettlementStatus(bytes32 loanId) public view override returns (bool) {
-        return isSettled[loanId];
+        return Storage.slot().isSettled[loanId];
     }
 
     /**
@@ -206,23 +200,23 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal ID
      */
     function getDealCurrency(bytes32 loanId) public view override returns (bytes32) {
-        return loans[loanId].ccy;
+        return Storage.slot().loans[loanId].ccy;
     }
 
     /**
      * @dev Triggers to get current information about Loan deal.
      * @param loanId Loan deal ID
      */
-    function getLoanDeal(bytes32 loanId) public view returns (LoanDeal memory) {
-        return loans[loanId];
+    function getLoanDeal(bytes32 loanId) public view returns (Storage.LoanDeal memory) {
+        return Storage.slot().loans[loanId];
     }
 
     /**
      * @dev Triggers to get termination state for loan with `loanId`.
      * @param loanId Loan deal ID
      */
-    function getTerminationState(bytes32 loanId) public view returns (Termination memory) {
-        return terminations[loanId];
+    function getTerminationState(bytes32 loanId) public view returns (Storage.Termination memory) {
+        return Storage.slot().terminations[loanId];
     }
 
     /**
@@ -239,7 +233,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
             bool[] memory
         )
     {
-        LoanDeal memory deal = loans[loanId];
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
 
         return _constructSchedule(deal, true);
     }
@@ -249,10 +243,16 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal ID
      */
     function getLastSettledPayment(bytes32 loanId) external view returns (uint256 settlementTime) {
-        LoanDeal memory deal = loans[loanId];
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
 
-        uint256 payNums = termStructure().getNumPayments(deal.term, paymentFrequency);
-        uint256[] memory daysArr = termStructure().getTermSchedule(deal.term, paymentFrequency);
+        uint256 payNums = termStructure().getNumPayments(
+            deal.term,
+            Storage.slot().paymentFrequency
+        );
+        uint256[] memory daysArr = termStructure().getTermSchedule(
+            deal.term,
+            Storage.slot().paymentFrequency
+        );
 
         for (uint256 i = payNums; i > 0; i--) {
             uint256 time = _timeShift(deal.start, daysArr[i - 1]);
@@ -273,7 +273,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
         address party1,
         bytes32 loanId
     ) public view override returns (uint256, uint256) {
-        LoanDeal memory deal = loans[loanId];
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
 
         if (deal.pv == 0) {
             deal.pv = getDealPV(loanId);
@@ -297,8 +297,8 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @notice Executed only for working loan deal
      */
     function requestTermination(bytes32 loanId) public override {
-        Termination storage termination = terminations[loanId];
-        LoanDeal memory deal = loans[loanId];
+        Storage.Termination storage termination = Storage.slot().terminations[loanId];
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
         require(msg.sender == deal.lender || msg.sender == deal.borrower, "parties must request");
         require(updateLoanPV(loanId), "failed MtM");
 
@@ -314,10 +314,10 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @notice Executed only for working loan deal
      */
     function acceptTermination(bytes32 loanId) public override {
-        Termination storage termination = terminations[loanId];
+        Storage.Termination storage termination = Storage.slot().terminations[loanId];
         require(termination.terminationAsker != address(0), "no termination request");
 
-        LoanDeal memory deal = loans[loanId];
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
 
         if (termination.terminationAsker == deal.lender) {
             require(msg.sender == deal.borrower, "borrower must accept");
@@ -327,7 +327,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
 
         require(updateLoanPV(loanId), "failed MtM");
 
-        if (isSettled[loanId]) {
+        if (Storage.slot().isSettled[loanId]) {
             (uint256[] memory payments, , bool[] memory settlements) = _constructSchedule(
                 deal,
                 true
@@ -374,14 +374,14 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @notice Executed only for working loan deal
      */
     function rejectTermination(bytes32 loanId) public override {
-        Termination memory termination = terminations[loanId];
+        Storage.Termination memory termination = Storage.slot().terminations[loanId];
         require(termination.terminationAsker != address(0), "no termination request");
 
-        LoanDeal memory deal = loans[loanId];
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
         require(msg.sender == deal.lender || msg.sender == deal.borrower, "parties must reject");
         require(updateLoanPV(loanId), "failed MtM");
 
-        delete terminations[loanId];
+        delete Storage.slot().terminations[loanId];
 
         emit RejectTermination(loanId, msg.sender);
     }
@@ -394,8 +394,8 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @notice Executed only by original lender
      */
     function novation(bytes32 loanId, address newOwner) public override workingLoan(loanId) {
-        LoanDeal storage deal = loans[loanId];
-        require(isTransferable, "transfers not allowed");
+        Storage.LoanDeal storage deal = Storage.slot().loans[loanId];
+        require(Storage.slot().isTransferable, "transfers not allowed");
 
         address prevLender = deal.lender;
         require(msg.sender == prevLender, "lender must trasfer");
@@ -449,8 +449,8 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
         uint256 pv = getDealPV(loanId);
 
         if (pv != 0) {
-            LoanDeal storage deal = loans[loanId];
-            if (!isSettled[loanId]) return true;
+            Storage.LoanDeal storage deal = Storage.slot().loans[loanId];
+            if (!Storage.slot().isSettled[loanId]) return true;
 
             uint256 oldPV = deal.pv == 0 ? deal.notional : deal.pv;
             deal.pv = pv;
@@ -476,8 +476,8 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan ID to update PV for
      */
     function getDealPV(bytes32 loanId) public view override returns (uint256 pv) {
-        LoanDeal memory deal = loans[loanId];
-        if (!isSettled[loanId]) return deal.notional;
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
+        if (!Storage.slot().isSettled[loanId]) return deal.notional;
 
         (uint256[] memory dfs, uint256[] memory terms) = lendingMarketController()
             .getDiscountFactorsForCcy(deal.ccy);
@@ -499,11 +499,11 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal ID
      */
     function _liquidateLoan(bytes32 loanId) internal {
-        LoanDeal memory deal = loans[loanId];
+        Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
         _removePaymentSchedule(loanId, deal);
 
         emit Liquidate(loanId);
-        delete loans[loanId];
+        delete Storage.slot().loans[loanId];
     }
 
     /**
@@ -523,7 +523,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal ID
      * @param deal LoanDeal structure
      */
-    function _registerPaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
+    function _registerPaymentSchedule(bytes32 loanId, Storage.LoanDeal memory deal) internal {
         (uint256[] memory payments, uint256[] memory amounts, ) = _constructSchedule(deal, false);
 
         uint256[] memory lenderLeg = new uint256[](payments.length);
@@ -545,11 +545,11 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal ID
      * @param deal LoanDeal structure
      */
-    function _removePaymentSchedule(bytes32 loanId, LoanDeal memory deal) internal {
+    function _removePaymentSchedule(bytes32 loanId, Storage.LoanDeal memory deal) internal {
         (uint256[] memory payments, uint256[] memory amounts, ) = _constructSchedule(deal, false);
 
         uint256[] memory lenderLeg = new uint256[](payments.length);
-        if (!isSettled[loanId]) {
+        if (!Storage.slot().isSettled[loanId]) {
             lenderLeg[0] = deal.notional;
         }
 
@@ -579,7 +579,7 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param settlementStatus Boolean wether settlement status should be returned
      * @return Payment schedule structure
      */
-    function _constructSchedule(LoanDeal memory deal, bool settlementStatus)
+    function _constructSchedule(Storage.LoanDeal memory deal, bool settlementStatus)
         internal
         view
         returns (
@@ -590,8 +590,8 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
     {
         ScheduleConstructionLocalVars memory vars;
 
-        vars.payNums = termStructure().getNumPayments(deal.term, paymentFrequency);
-        vars.daysArr = termStructure().getTermSchedule(deal.term, paymentFrequency);
+        vars.payNums = termStructure().getNumPayments(deal.term, Storage.slot().paymentFrequency);
+        vars.daysArr = termStructure().getTermSchedule(deal.term, Storage.slot().paymentFrequency);
         vars.dfFrac = termStructure().getDfFrac(deal.term);
 
         vars.coupon =
@@ -636,13 +636,13 @@ contract LoanV2 is IProductWithOneLeg, MixinAddressResolver, Ownable, Proxyable 
      * @param loanId Loan deal id
      */
     function _verifyNotionalExchange(bytes32 loanId) internal {
-        if (!isSettled[loanId]) {
-            LoanDeal memory deal = loans[loanId];
+        if (!Storage.slot().isSettled[loanId]) {
+            Storage.LoanDeal memory deal = Storage.slot().loans[loanId];
             uint256 time = _timeShift(deal.start, 2);
             bool status = paymentAggregator().isSettled(deal.lender, deal.borrower, deal.ccy, time);
 
             if (status) {
-                isSettled[loanId] = true;
+                Storage.slot().isSettled[loanId] = true;
                 collateralAggregator().releaseCollateral(
                     deal.lender,
                     deal.borrower,

@@ -12,7 +12,7 @@ library PaymentAggregatorStorage {
 
     struct Storage {
         // Mapping structure for storing TimeSlots
-        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) _timeSlots;
+        mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => TimeSlot.Slot))) timeSlots;
         mapping(bytes32 => mapping(bytes32 => mapping(bytes32 => EnumerableSet.Bytes32Set))) deals;
     }
 
