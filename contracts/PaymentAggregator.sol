@@ -100,7 +100,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
             }
 
             TimeSlot.addPayment(
-                Storage.slot()._timeSlots,
+                Storage.slot().timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -170,7 +170,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
         vars.slotPosition = TimeSlot.position(vars.year, vars.month, vars.day);
 
         TimeSlot.verifyPayment(
-            Storage.slot()._timeSlots,
+            Storage.slot().timeSlots,
             vars.verifier,
             vars.counterparty,
             vars.ccy,
@@ -192,7 +192,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
         );
 
         vars.isSettled = TimeSlot.isSettled(
-            Storage.slot()._timeSlots,
+            Storage.slot().timeSlots,
             vars.verifier,
             vars.counterparty,
             vars.ccy,
@@ -211,7 +211,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
     function _settlePayment(PaymentSettlementLocalVars memory vars) internal {
         // TODO: Rework the settlement workflow to reduce gas consumption
         (vars.totalPayment0, vars.totalPayment1, , , , ) = TimeSlot.get(
-            Storage.slot()._timeSlots,
+            Storage.slot().timeSlots,
             vars.verifier,
             vars.counterparty,
             vars.ccy,
@@ -287,7 +287,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
             vars.totalPayment1 = vars.totalPayment1 + payments1[i];
 
             TimeSlot.removePayment(
-                Storage.slot()._timeSlots,
+                Storage.slot().timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -343,7 +343,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
             bool
         )
     {
-        return TimeSlot.get(Storage.slot()._timeSlots, party0, party1, ccy, year, month, day);
+        return TimeSlot.get(Storage.slot().timeSlots, party0, party1, ccy, year, month, day);
     }
 
     /**
@@ -370,7 +370,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
             bool
         )
     {
-        return TimeSlot.getBySlotId(Storage.slot()._timeSlots, party0, party1, ccy, slot);
+        return TimeSlot.getBySlotId(Storage.slot().timeSlots, party0, party1, ccy, slot);
     }
 
     /**
@@ -394,7 +394,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
     ) public view returns (address, uint256) {
         return
             TimeSlot.getPaymentConfirmation(
-                Storage.slot()._timeSlots,
+                Storage.slot().timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -422,7 +422,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
     ) public view returns (address, uint256) {
         return
             TimeSlot.getPaymentConfirmationById(
-                Storage.slot()._timeSlots,
+                Storage.slot().timeSlots,
                 party0,
                 party1,
                 ccy,
@@ -485,7 +485,7 @@ contract PaymentAggregator is IPaymentAggregator, MixinAddressResolver, Proxyabl
         );
         bytes32 slotPosition = TimeSlot.position(year, month, day);
 
-        status = TimeSlot.isSettled(Storage.slot()._timeSlots, party0, party1, ccy, slotPosition);
+        status = TimeSlot.isSettled(Storage.slot().timeSlots, party0, party1, ccy, slotPosition);
     }
 
     /**
