@@ -27,7 +27,7 @@ module.exports = {
       chainId: 1337,
       network_id: '*',
     },
-    develop: {
+    development: {
       url:
         process.env.FORK_RPC_ENDPOINT ||
         `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
@@ -38,7 +38,7 @@ module.exports = {
       gasPrice: 1500000000,
       gasMultiplier: 3,
     },
-    master: {
+    staging: {
       url:
         process.env.FORK_RPC_ENDPOINT ||
         `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,

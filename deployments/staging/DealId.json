@@ -1,0 +1,104 @@
+{
+  "address": "0x66D7d2409BF88f9F17F4dc614A3B39bB0eF23e22",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "prefix",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "counter",
+          "type": "uint256"
+        }
+      ],
+      "name": "generate",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "id",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "id",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getPrefix",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "prefix",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x3141921448253a4fd7b9df148da316b35d9aa1f40be39f6e2e71b86eee9f0ddd",
+  "receipt": {
+    "to": null,
+    "from": "0xDBA767F3DFF3835BEf5dE1eDEe91A9901402AB21",
+    "contractAddress": "0x66D7d2409BF88f9F17F4dc614A3B39bB0eF23e22",
+    "transactionIndex": 22,
+    "gasUsed": "135583",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x01f0fbf5b5defe461b0aa0b39105574029448fa0726bd5ed0e42e9fe9556611f",
+    "transactionHash": "0x3141921448253a4fd7b9df148da316b35d9aa1f40be39f6e2e71b86eee9f0ddd",
+    "logs": [],
+    "blockNumber": 11010281,
+    "cumulativeGasUsed": "5075672",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "59521d43dda390ded85a5f23871f6cb8",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"prefix\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"counter\",\"type\":\"uint256\"}],\"name\":\"generate\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"id\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"id\",\"type\":\"bytes32\"}],\"name\":\"getPrefix\",\"outputs\":[{\"internalType\":\"bytes4\",\"name\":\"prefix\",\"type\":\"bytes4\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"generate(bytes32,uint256)\":{\"details\":\"Generates a deal id using a product prefix and deal number\",\"params\":{\"counter\":\"Number of deal to be generated\",\"prefix\":\"Product type prefix in bytes4\"},\"returns\":{\"id\":\"in bytes32 with prefix on the left and counter on the right side\"}},\"getPrefix(bytes32)\":{\"details\":\"Returns product based prefix from deal id\",\"params\":{\"id\":\"Deal unique identification string\"},\"returns\":{\"prefix\":\"in bytes4\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/libraries/DealId.sol\":\"DealId\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"contracts/libraries/DealId.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.9;\\n\\nlibrary DealId {\\n    /**\\n     * @dev Generates a deal id using a product prefix and deal number\\n     * @param prefix Product type prefix in bytes4\\n     * @param counter Number of deal to be generated\\n     * @return id in bytes32 with prefix on the left and counter on the right side\\n     */\\n    function generate(bytes32 prefix, uint256 counter) public pure returns (bytes32 id) {\\n        uint224 num = toUint224(counter);\\n        bytes4 r;\\n        bytes32 zero = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000;\\n        assembly {\\n            r := and(prefix, zero)\\n            id := add(r, num)\\n        }\\n    }\\n\\n    /**\\n     * @dev Returns product based prefix from deal id\\n     * @param id Deal unique identification string\\n     * @return prefix in bytes4\\n     */\\n    function getPrefix(bytes32 id) public pure returns (bytes4 prefix) {\\n        assembly {\\n            prefix := shl(0, id)\\n        }\\n    }\\n\\n    /**\\n     * @dev Returns converted number from uint256 to uint224\\n     */\\n    function toUint224(uint256 value) internal pure returns (uint224) {\\n        require(value <= type(uint224).max, \\\"NUMBER_OVERFLOW\\\");\\n        return uint224(value);\\n    }\\n}\\n\",\"keccak256\":\"0x7efb7c15d7de5dc1876b0b220bcdace27ae26bbd5bd4a39b24d71d3fdfeee9b0\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x61017c61003a600b82828239805160001a60731461002d57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106100405760003560e01c80630d6267e81461004557806334b362b614610074575b600080fd5b61005661005336600461010b565b90565b6040516001600160e01b031990911681526020015b60405180910390f35b610087610082366004610124565b610095565b60405190815260200161006b565b6000806100a1836100b8565b6001600160e01b0319949094169093019392505050565b60006001600160e01b038211156101075760405162461bcd60e51b815260206004820152600f60248201526e4e554d4245525f4f564552464c4f5760881b604482015260640160405180910390fd5b5090565b60006020828403121561011d57600080fd5b5035919050565b6000806040838503121561013757600080fd5b5050803592602090910135915056fea2646970667358221220dcd1dbe3ca195f1aeacfd8cc5de1f5183d5eb4d1d04b2dccab4b40f316700dc864736f6c63430008090033",
+  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600436106100405760003560e01c80630d6267e81461004557806334b362b614610074575b600080fd5b61005661005336600461010b565b90565b6040516001600160e01b031990911681526020015b60405180910390f35b610087610082366004610124565b610095565b60405190815260200161006b565b6000806100a1836100b8565b6001600160e01b0319949094169093019392505050565b60006001600160e01b038211156101075760405162461bcd60e51b815260206004820152600f60248201526e4e554d4245525f4f564552464c4f5760881b604482015260640160405180910390fd5b5090565b60006020828403121561011d57600080fd5b5035919050565b6000806040838503121561013757600080fd5b5050803592602090910135915056fea2646970667358221220dcd1dbe3ca195f1aeacfd8cc5de1f5183d5eb4d1d04b2dccab4b40f316700dc864736f6c63430008090033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "generate(bytes32,uint256)": {
+        "details": "Generates a deal id using a product prefix and deal number",
+        "params": {
+          "counter": "Number of deal to be generated",
+          "prefix": "Product type prefix in bytes4"
+        },
+        "returns": {
+          "id": "in bytes32 with prefix on the left and counter on the right side"
+        }
+      },
+      "getPrefix(bytes32)": {
+        "details": "Returns product based prefix from deal id",
+        "params": {
+          "id": "Deal unique identification string"
+        },
+        "returns": {
+          "prefix": "in bytes4"
+        }
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
