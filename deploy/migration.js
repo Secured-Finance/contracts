@@ -39,14 +39,34 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     return obj;
   }, {});
 
+  const saveProxyAddress = async (name, address) => {
+    // NOTE: Save a proxy address to deployment json.
+    // This proxy address is used at the subgraph deployment at `secured-finance-subgraph`.
+    const deployment = await deployments.get(name);
+    deployment['implementation'] = deployment['address'];
+    deployment['address'] = address;
+    await deployments.save(name, deployment);
+  };
+
   const getProxy = async (key, contract) => {
     let address = proxyObj[toBytes32(key)];
-    // When ProxyController is updated, proxyObj is empty because new contract doesn't have old events.
+    // NOTE: When ProxyController is updated, proxyObj is empty because new contract doesn't have old events.
     // So in that case, the registered contract address is got from AddressResolver through ProxyController.
     if (!address) {
       address = await proxyController.getAddress(toBytes32(key));
     }
-    return ethers.getContractAt(contract || key, address);
+
+    const contractName = contract || key;
+    await saveProxyAddress(contractName, address);
+    return ethers.getContractAt(contractName, address);
+  };
+
+  const getProductProxy = async (prefix, key) => {
+    const address =
+      proxyObj[prefix.padEnd(66, 0)] ||
+      (await proxyController.getProductAddress(loanPrefix));
+    await saveProxyAddress(key, address);
+    return ethers.getContractAt(key, address);
   };
 
   const closeOutNetting = await getProxy('CloseOutNetting');
@@ -65,10 +85,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const settlementEngine = await getProxy('SettlementEngine');
   const termStructure = await getProxy('TermStructure');
 
-  const loanAddress =
-    proxyObj[loanPrefix.padEnd(66, 0)] ||
-    (await proxyController.getProductAddress(loanPrefix));
-  const loan = await ethers.getContractAt('LoanV2', loanAddress);
+  const loan = await getProductProxy(loanPrefix, 'LoanV2');
 
   // Get deployed contracts
   const addressResolver = await proxyController
