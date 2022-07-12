@@ -39,13 +39,15 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     return obj;
   }, {});
 
-  const saveProxyAddress = async (name, address) => {
+  const saveProxyAddress = async (name, proxyAddress) => {
     // NOTE: Save a proxy address to deployment json.
     // This proxy address is used at the subgraph deployment at `secured-finance-subgraph`.
     const deployment = await deployments.get(name);
-    deployment['implementation'] = deployment['address'];
-    deployment['address'] = address;
-    await deployments.save(name, deployment);
+    if (deployment.receipt.contractAddress === deployment.address) {
+      deployment.implementation = deployment.receipt.contractAddress;
+      deployment.address = proxyAddress;
+      await deployments.save(name, deployment);
+    }
   };
 
   const getProxy = async (key, contract) => {
