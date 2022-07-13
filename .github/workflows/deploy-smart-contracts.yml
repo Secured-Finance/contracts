@@ -7,6 +7,8 @@ on:
     branches:
       - master
       - develop
+      # For testing
+      - SF-18-add-staging
 
 jobs:
   deploy:
@@ -23,7 +25,9 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Deploy for development environment
-        if: ${{ github.ref == 'refs/heads/develop' }}
+        # For testing
+        # if: ${{ github.ref == 'refs/heads/develop' }}
+        if: ${{ github.ref == 'refs/heads/SF-18-add-staging' }}
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           CHAINLINK_NODE_ACCOUNT: ${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}
@@ -45,11 +49,18 @@ jobs:
         id: diff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+      - name: Generate token
+        if: steps.diff.outputs.count > 0
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
+          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
       - name: Commit and push
         shell: bash
         if: steps.diff.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
           git commit -m "chore: update deployment files"
           git push
