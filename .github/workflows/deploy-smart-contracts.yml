@@ -18,7 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
+          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
       - uses: actions/checkout@v3
+        withL:
+          token: ${{ steps.generate_token.outputs.token }}
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
@@ -51,18 +59,9 @@ jobs:
         id: diff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
-      - name: Generate token
-        if: steps.diff.outputs.count > 0
-        id: generate_token
-        uses: tibdex/github-app-token@v1
-        with:
-          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
-          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
       - name: Commit and push
-        shell: bash
+        uses: EndBug/add-and-commit@v9
         if: steps.diff.outputs.count > 0
-        env:
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-        run: |
-          git commit -m "chore: update deployment files"
-          git push
+        with:
+          message: 'chore: update deployment files'
+          push: true
