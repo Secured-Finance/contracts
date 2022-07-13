@@ -16,4 +16,3 @@ coverage/
 coverage.json
 
 deployments/localhost/
-deployments/development/

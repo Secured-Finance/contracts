@@ -1,0 +1,38 @@
+name: Merge into main
+
+on:
+  workflow_run:
+    workflow_dispatch:
+      inputs:
+        commit:
+          description: 'Commit ID'
+          required: false
+          type: string
+
+jobs:
+  deploy:
+    name: Merge into main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: develop
+      - uses: actions/checkout@v3
+        with:
+          ref: main
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
+          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
+      - name: Merge into main
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          git config user.name "SF Machine User[bot]"
+          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
+          git switch main
+          git merge ${{ github.event.inputs.commit || "develop" }}
+          git push

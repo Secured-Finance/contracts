@@ -8,12 +8,19 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   let linkTokenAddress;
   switch (network) {
-    case 'develop': {
+    case 'development': {
+      // Rinkeby
       linkTokenAddress = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
       break;
     }
-    case 'master': {
+    case 'staging': {
+      // Rinkeby
       linkTokenAddress = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
+      break;
+    }
+    case 'production': {
+      // Mainnet
+      linkTokenAddress = '0x514910771AF9Ca656af840dff83E8264EcF986CA';
       break;
     }
     default: {

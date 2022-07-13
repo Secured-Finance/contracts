@@ -1,5 +1,5 @@
 {
-  "name": "secured-finance",
+  "name": "@secured-finance/smart-contracts",
   "version": "0.1.0",
   "description": "Secured Finance protocol smart contracts",
   "directories": {
