@@ -1,22 +1,18 @@
 name: Deploy Smart Contracts
 
 on:
-  # For testing
-  # workflow_run:
-  #   workflows: ['Test on a Fork']
-  #   types: [completed]
-  push:
+  workflow_run:
+    workflows: ['Test on a Fork']
+    types: [completed]
     branches:
-      - master
+      - main
       - develop
-      # For testing
-      - SF-18-add-staging
 
 jobs:
   deploy:
     name: Deploy Smart Contracts
     runs-on: ubuntu-latest
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -27,9 +23,7 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Deploy for development environment
-        # For testing
-        # if: ${{ github.ref == 'refs/heads/develop' }}
-        if: ${{ github.ref == 'refs/heads/SF-18-add-staging' }}
+        if: ${{ github.ref == 'refs/heads/develop' }}
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           CHAINLINK_NODE_ACCOUNT: ${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}
@@ -37,7 +31,7 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
         run: npm run deploy development
       - name: Deploy for staging environment
-        if: ${{ github.ref == 'refs/heads/master' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         env:
           PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
           CHAINLINK_NODE_ACCOUNT: ${{ secrets.STG_CHAINLINK_NODE_ACCOUNT }}
@@ -67,4 +61,17 @@ jobs:
           git config user.name "SF Machine User[bot]"
           git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
           git commit -m "chore: update deployment files"
+          git push
+      - uses: actions/checkout@v3
+        if: steps.diff.outputs.count > 0 && ${{ github.ref == 'refs/heads/main' }}
+        with:
+          ref: develop
+      - name: Merge main into develop
+        shell: bash
+        if: steps.diff.outputs.count > 0 && ${{ github.ref == 'refs/heads/main' }}
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          git switch develop
+          git merge main
           git push
