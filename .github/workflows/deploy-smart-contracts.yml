@@ -18,15 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Generate token
-        id: generate_token
-        uses: tibdex/github-app-token@v1
-        with:
-          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
-          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
       - uses: actions/checkout@v3
-        with:
-          token: ${{ steps.generate_token.outputs.token }}
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
@@ -59,11 +51,20 @@ jobs:
         id: diff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
-      - name: Commit and push
-        uses: EndBug/add-and-commit@v9
+      - name: Generate token
         if: steps.diff.outputs.count > 0
+        id: generate_token
+        uses: tibdex/github-app-token@v1
         with:
-          message: 'chore: update deployment files'
-          committer_name: ${{ github.actor }}
-          committer_email: ${{ github.actor }}@users.noreply.github.com
-          push: true
+          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
+          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
+      - name: Commit and push
+        shell: bash
+        if: steps.diff.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          git config user.name "SF Machine User[bot]"
+          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
+          git commit -m "chore: update deployment files"
+          git push

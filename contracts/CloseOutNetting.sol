@@ -16,6 +16,8 @@ import {CloseOutNettingStorage as Storage} from "./storages/CloseOutNettingStora
  * Contract linked to all product based contracts (ex. Loan, Swap, etc), and Collateral Aggregator contract.
  */
 contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Proxyable {
+    event Test(string indexed data);
+
     /**
      * @dev Modifier to make a function callable only by defaulted counterparty.
      */
@@ -38,6 +40,7 @@ contract CloseOutNetting is ICloseOutNetting, MixinAddressResolver, Proxyable {
      */
     function initialize(address resolver) public initializer onlyProxy {
         registerAddressResolver(resolver);
+        emit Test("test");
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
