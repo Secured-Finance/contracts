@@ -64,4 +64,6 @@ jobs:
         if: steps.diff.outputs.count > 0
         with:
           message: 'chore: update deployment files'
+          committer_name: ${{ github.actor }}
+          committer_email: ${{ github.actor }}@users.noreply.github.com
           push: true
