@@ -1,9 +1,11 @@
 name: Deploy Smart Contracts
 
 on:
-  workflow_run:
-    workflows: ['Test on a Fork']
-    types: [completed]
+  # For testing
+  # workflow_run:
+  #   workflows: ['Test on a Fork']
+  #   types: [completed]
+  push:
     branches:
       - master
       - develop
