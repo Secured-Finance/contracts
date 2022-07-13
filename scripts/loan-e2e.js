@@ -268,7 +268,7 @@ contract('Loan E2E Test', async () => {
     const operatorFilter = operator.filters.OracleRequest();
     const { payment, callbackAddr, callbackFunctionId, cancelExpiration } =
       await operator
-        .queryFilter(operatorFilter)
+        .queryFilter(operatorFilter, receipt.blockHash)
         .then(
           (events) =>
             events.find(({ args }) => args.requestId === requestId).args,
@@ -293,7 +293,7 @@ contract('Loan E2E Test', async () => {
       .connect(ownerSigner)
       .setAuthorizedSenders([ownerSigner.address]);
 
-    await operator
+    const receipt2 = await operator
       .connect(ownerSigner)
       .fulfillOracleRequest2(
         requestId,
@@ -302,12 +302,13 @@ contract('Loan E2E Test', async () => {
         callbackFunctionId,
         cancelExpiration.toString(),
         data,
-      );
+      )
+      .then((tx) => tx.wait());
 
     const settlementEngineFilter =
       settlementEngine.filters.CrosschainSettlementRequestFulfilled();
     const event = await settlementEngine
-      .queryFilter(settlementEngineFilter)
+      .queryFilter(settlementEngineFilter, receipt2.blockHash)
       .then((events) =>
         events.find(
           ({ event }) => event === 'CrosschainSettlementRequestFulfilled',
