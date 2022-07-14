@@ -1,13 +1,12 @@
 name: Merge into main
 
 on:
-  workflow_run:
-    workflow_dispatch:
-      inputs:
-        commit:
-          description: 'Commit ID'
-          required: false
-          type: string
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Commit ID'
+        required: false
+        type: string
 
 jobs:
   deploy:
