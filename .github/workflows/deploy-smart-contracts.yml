@@ -62,12 +62,12 @@ jobs:
           git commit -m "chore: update deployment files"
           git push
       - uses: actions/checkout@v3
-        if: steps.diff.outputs.count > 0 && ${{ github.ref == 'refs/heads/main' }}
+        if: ${{steps.diff.outputs.count > 0 && github.ref == 'refs/heads/main' }}
         with:
           ref: develop
       - name: Merge main into develop
         shell: bash
-        if: steps.diff.outputs.count > 0 && ${{ github.ref == 'refs/heads/main' }}
+        if: ${{steps.diff.outputs.count > 0 && github.ref == 'refs/heads/main' }}
         run: |
           git switch develop
           git merge main
