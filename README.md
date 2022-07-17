@@ -50,8 +50,6 @@ In case you want to reset and redeploy again, you can use the command `npm run d
 1. Run `npx hardhat node` or `npm run ganache` to start a local blockchain node
 2. Execute `npx hardhat test --network localhost` to run tests on a local blockchain node
 
-### E2E testing
-
 In order to run the specified script, execute `npx hardhat --network <NETWORK> test "<SCRIPT PATH>"`.
 
 For example `npx hardhat --network development test "scripts/loan-e2e.js"` will execute the `loan-e2e` script on the develop environment.
