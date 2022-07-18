@@ -2,8 +2,6 @@ name: Merge into main
 
 on:
   workflow_dispatch:
-    branches:
-      - main
     inputs:
       commit:
         description: 'Commit ID'
