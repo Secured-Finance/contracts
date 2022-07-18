@@ -23,9 +23,6 @@ jobs:
         with:
           ref: develop
           token: ${{ steps.generate_token.outputs.token }}
-      - uses: actions/checkout@v3
-        with:
-          ref: main
       - name: Switch branch
         shell: bash
         run: |
