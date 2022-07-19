@@ -24,14 +24,14 @@ Private keys are used in order to deploy smart contracts on one of the Ethereum 
 
 ## Compile
 
-To compile smart contracts, type `npm run compile`. Use `npm run compile:force` command to recompile everyting if needed.
+Run `npm run compile` to compile smart contracts. Use `npm run compile:force` command to recompile everyting if needed.
 
 The compiled output is a json file called Artifacts and saved in `./build/contracts` directory per contract basis.
 ABI and bytecode associated with the smart contract will be saved in the json file.
 
 ## Deployment
 
-In order to deploy the protocol please execute `npm run deploy <NETWORK>` command and replace with the network you want to deploy the protocol.
+In order to deploy the protocol, run `npm run deploy <NETWORK>` command and replace with the network you want to deploy the protocol.
 
 For example `npm run deploy hardhat` will deploy the protocol on the local hardhat version of the ethereum blockchain.
 
@@ -53,3 +53,20 @@ In case you want to reset and redeploy again, you can use the command `npm run d
 In order to run the specified script, execute `npx hardhat --network <NETWORK> test "<SCRIPT PATH>"`.
 
 For example `npx hardhat --network development test "scripts/loan-e2e.js"` will execute the `loan-e2e` script on the develop environment.
+
+## Publishing
+
+This package is published automatically by workflows when the PR is merged into develop branch or main branch. The package version will be updated by the workflow.
+Versioning is executed as follows
+
+```
+In case that current version is 0.0.1
+-> After merging into develop: 0.0.2-beta.0
+-> After merging into main: 0.0.2
+
+In case that current version is 0.0.1-beta.0
+-> After merging into develop: 0.0.1-beta.1
+-> After merging into main: 0.0.1
+```
+
+If you want to update the major version or minor version, you need to update it manually.
