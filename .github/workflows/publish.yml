@@ -58,6 +58,7 @@ jobs:
       - name: Commit and push
         shell: bash
         run: |
+          git add .
           git commit -m "chore(release): update release notes and package versions"
           git push
       - name: Merge main into develop
