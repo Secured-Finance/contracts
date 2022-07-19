@@ -1,6 +1,6 @@
 {
   "name": "@secured-finance/smart-contracts",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Secured Finance protocol smart contracts",
   "directories": {
     "test": "test"
@@ -24,6 +24,11 @@
   },
   "author": "Secured Finance",
   "license": "ISC",
+  "homepage": "https://github.com/secured-finance/smart-contracts#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/secured-finance/smart-contracts"
+  },
   "dependencies": {
     "@chainlink/contracts": "^0.4.0",
     "@openzeppelin/contracts": "^4.6.0",
