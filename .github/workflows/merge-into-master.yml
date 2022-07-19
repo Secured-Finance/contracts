@@ -23,6 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: develop
+          token: ${{ steps.generate_token.outputs.token }}
       - name: Merge into main
         shell: bash
         env:
