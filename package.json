@@ -1,6 +1,6 @@
 {
   "name": "@secured-finance/smart-contracts",
-  "version": "1.0.0",
+  "version": "1.0.1-beta.0",
   "description": "Secured Finance protocol smart contracts",
   "directories": {
     "test": "test"
