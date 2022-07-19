@@ -1,22 +1,18 @@
 name: Publish to NPM
 
 on:
-  # workflow_run:
-  #   workflows: ['Deploy Smart Contracts']
-  #   types: [completed]
-  #   branches:
-  #     - main
-  #     - develop
-  # For testing
-  push:
+  workflow_run:
+    workflows: ['Deploy Smart Contracts']
+    types: [completed]
     branches:
-      - SF-18-add-publishing-workflow
+      - main
+      - develop
 
 jobs:
   publish-npm:
     name: Publish to NPM
     runs-on: ubuntu-latest
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Generate token
         id: generate_token
