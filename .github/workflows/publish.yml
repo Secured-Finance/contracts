@@ -54,6 +54,8 @@ jobs:
           npm publish
       - name: Commit and push
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
         run: |
           git add .
           git commit -m "chore(release): update release notes and package versions"
