@@ -3,7 +3,7 @@ name: Test on a Fork
 on:
   push:
     branches:
-      - master
+      - main
       - develop
       # For testing
       - SF-18-workflow-infinite-loop-bug
