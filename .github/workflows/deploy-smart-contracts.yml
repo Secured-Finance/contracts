@@ -7,8 +7,6 @@ on:
     branches:
       - main
       - develop
-      # For testing
-      - SF-18-workflow-infinite-loop-bug
 
 jobs:
   deploy:

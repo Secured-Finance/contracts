@@ -5,13 +5,11 @@ on:
     branches:
       - main
       - develop
-      # For testing
-      - SF-18-workflow-infinite-loop-bug
-
 jobs:
   deploy:
     name: Test on a Fork
     runs-on: ubuntu-latest
+    if: github.actor != 'secured-finance-machine-user[bot]'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -39,24 +37,23 @@ jobs:
           echo "TENDERLY_USER=${{ secrets.STG_TENDERLY_USER }}" >> $GITHUB_ENV
           echo "TENDERLY_PROJECT=${{ secrets.STG_TENDERLY_PROJECT }}" >> $GITHUB_ENV
           echo "TENDERLY_ACCESS_KEY=${{ secrets.STG_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
-      # For testing
-      # - name: Install Dependencies
-      #   run: npm ci
-      # - name: Build Smart Contracts
-      #   run: npm run compile
-      # - name: Create a fork environment
-      #   run: |
-      #     FORK_ID=$(npm run fork $NETWORK | tail -n 1)
-      #     echo "fork id is $FORK_ID"
-      #     echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
-      # - name: Deploy for fork environment
-      #   run: npm run deploy $NETWORK
-      #   env:
-      #     FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-      # - name: Run a Loan Test on fork environment
-      #   env:
-      #     USE_DEFAULT_ACCOUNTS: true
-      #     FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-      #   run: npx hardhat --network $NETWORK test "scripts/loan-e2e.js" --bail
-      # - name: Delete the fork environment
-      #   run: npm run unfork --forkid $FORK_ID
+      - name: Install Dependencies
+        run: npm ci
+      - name: Build Smart Contracts
+        run: npm run compile
+      - name: Create a fork environment
+        run: |
+          FORK_ID=$(npm run fork $NETWORK | tail -n 1)
+          echo "fork id is $FORK_ID"
+          echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
+      - name: Deploy for fork environment
+        run: npm run deploy $NETWORK
+        env:
+          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+      - name: Run a Loan Test on fork environment
+        env:
+          USE_DEFAULT_ACCOUNTS: true
+          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+        run: npx hardhat --network $NETWORK test "scripts/loan-e2e.js" --bail
+      - name: Delete the fork environment
+        run: npm run unfork --forkid $FORK_ID

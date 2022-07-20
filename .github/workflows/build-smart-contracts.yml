@@ -3,7 +3,7 @@ name: Build Smart Contracts
 on:
   push:
     branches:
-      - master
+      - main
       - develop
   pull_request:
     types:
@@ -16,6 +16,7 @@ jobs:
   static-code-analysis:
     name: Static Code Analysis
     runs-on: ubuntu-latest
+    if: github.actor != 'secured-finance-machine-user[bot]'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -32,6 +33,7 @@ jobs:
   build-and-unit-test:
     name: Build and Unit Test
     runs-on: ubuntu-latest
+    if: github.actor != 'secured-finance-machine-user[bot]'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
