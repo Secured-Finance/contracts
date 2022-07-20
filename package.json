@@ -20,7 +20,8 @@
     "prettier:fix": "prettier --write '**/*.{ts,js,json,sol}'",
     "solhint:check": "solhint 'contracts/**/*.sol'",
     "prepare": "husky install",
-    "ganache": "ganache"
+    "ganache": "ganache",
+    "prepublishOnly": "npm run compile"
   },
   "author": "Secured Finance",
   "license": "ISC",

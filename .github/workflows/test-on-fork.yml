@@ -3,13 +3,13 @@ name: Test on a Fork
 on:
   push:
     branches:
-      - master
+      - main
       - develop
-
 jobs:
   deploy:
     name: Test on a Fork
     runs-on: ubuntu-latest
+    if: github.actor != 'secured-finance-machine-user[bot]'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
