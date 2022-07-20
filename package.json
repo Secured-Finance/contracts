@@ -21,7 +21,7 @@
     "solhint:check": "solhint 'contracts/**/*.sol'",
     "prepare": "husky install",
     "ganache": "ganache",
-    "prepublish": "npm run compile"
+    "prepublishOnly": "npm run compile"
   },
   "author": "Secured Finance",
   "license": "ISC",
