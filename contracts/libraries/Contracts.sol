@@ -15,3 +15,8 @@ library Contracts {
     bytes32 internal constant SETTLEMENT_ENGINE = "SettlementEngine";
     bytes32 internal constant TERM_STRUCTURE = "TermStructure";
 }
+
+library BeaconContracts {
+    bytes32 internal constant LENDING_MARKET = "LendingMarket";
+    bytes32 internal constant FUTURE_VALUE_TOKEN = "FutureValueToken";
+}
