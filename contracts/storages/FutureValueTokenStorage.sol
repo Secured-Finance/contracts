@@ -10,8 +10,8 @@ library FutureValueTokenStorage {
         uint256 maturity;
         mapping(address => int256) balances;
         mapping(address => uint256) balanceMaturities;
-        uint256 totalLendingSupply;
-        uint256 totalBorrowingSupply;
+        mapping(uint256 => uint256) totalLendingSupply;
+        mapping(uint256 => uint256) totalBorrowingSupply;
     }
 
     function slot() internal pure returns (Storage storage r) {

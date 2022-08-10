@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/Context.sol";
-import "../interfaces/IGenesisValueToken.sol";
-import "../interfaces/IFutureValueToken.sol";
-import "../mixins/MixinAddressResolver.sol";
-import "../types/ProtocolTypes.sol";
-import "../utils/Ownable.sol";
-import "../utils/Proxyable.sol";
+import {IGenesisValueToken} from "../interfaces/IGenesisValueToken.sol";
+import {IFutureValueToken} from "../interfaces/IFutureValueToken.sol";
+import {MixinAddressResolverV2} from "../mixins/MixinAddressResolverV2.sol";
+import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {Contracts} from "../libraries/Contracts.sol";
+import {Ownable} from "../utils/Ownable.sol";
+import {Proxyable} from "../utils/Proxyable.sol";
 import {GenesisValueTokenStorage as Storage, MaturityRate} from "../storages/GenesisValueTokenStorage.sol";
 
 /**
  * @title GenesisValueToken contract is used to store the genesis value as a token for Lending deals.
  */
-contract GenesisValueToken is MixinAddressResolver, IGenesisValueToken, Ownable, Proxyable {
+contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownable, Proxyable {
     function initialize(
         address _owner,
         address _resolver,
@@ -81,6 +81,10 @@ contract GenesisValueToken is MixinAddressResolver, IGenesisValueToken, Ownable,
     }
 
     // =========== ERC20 FUNCTIONS ===========
+
+    function totalSupply() external view returns (uint256) {
+        return Storage.slot().totalLendingSupply;
+    }
 
     function balanceOf(address account) public view virtual returns (int256) {
         return Storage.slot().balances[account];

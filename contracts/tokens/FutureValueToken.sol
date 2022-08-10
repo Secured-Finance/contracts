@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/Context.sol";
-import "../interfaces/IFutureValueToken.sol";
-import "../mixins/MixinAddressResolver.sol";
-import "../types/ProtocolTypes.sol";
-import "../utils/Ownable.sol";
-import "../utils/Proxyable.sol";
+import {IFutureValueToken} from "../interfaces/IFutureValueToken.sol";
+import {MixinAddressResolverV2} from "../mixins/MixinAddressResolverV2.sol";
+import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {Contracts} from "../libraries/Contracts.sol";
+import {Ownable} from "../utils/Ownable.sol";
+import {Proxyable} from "../utils/Proxyable.sol";
 import {FutureValueTokenStorage as Storage} from "../storages/FutureValueTokenStorage.sol";
 
 /**
  * @title FutureValueToken contract is used to store the future value as a token for Lending deals.
  */
-contract FutureValueToken is MixinAddressResolver, IFutureValueToken, Ownable, Proxyable {
+contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable, Proxyable {
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
@@ -42,12 +42,12 @@ contract FutureValueToken is MixinAddressResolver, IFutureValueToken, Ownable, P
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    function totalLendingSupply() public view virtual returns (uint256) {
-        return Storage.slot().totalLendingSupply;
+    function totalLendingSupply(uint256 _maturity) public view virtual returns (uint256) {
+        return Storage.slot().totalLendingSupply[_maturity];
     }
 
-    function totalBorrowingSupply() public view virtual returns (uint256) {
-        return Storage.slot().totalBorrowingSupply;
+    function totalBorrowingSupply(uint256 _maturity) public view virtual returns (uint256) {
+        return Storage.slot().totalBorrowingSupply[_maturity];
     }
 
     function getMaturity(address _account) external view returns (uint256) {
@@ -81,6 +81,10 @@ contract FutureValueToken is MixinAddressResolver, IFutureValueToken, Ownable, P
 
     // =========== ERC20 FUNCTIONS ===========
 
+    function totalSupply() external view returns (uint256) {
+        return Storage.slot().totalLendingSupply[Storage.slot().maturity];
+    }
+
     function balanceOf(address account) external view override returns (int256) {
         return
             Storage.slot().balanceMaturities[account] == Storage.slot().maturity
@@ -99,11 +103,12 @@ contract FutureValueToken is MixinAddressResolver, IFutureValueToken, Ownable, P
 
     function burnFrom(address account) external virtual onlyAcceptedContracts returns (int256) {
         int256 balance = Storage.slot().balances[account];
+        uint256 maturity = Storage.slot().balanceMaturities[account];
 
         if (balance >= 0) {
-            Storage.slot().totalLendingSupply -= uint256(balance);
+            Storage.slot().totalLendingSupply[maturity] -= uint256(balance);
         } else {
-            Storage.slot().totalBorrowingSupply -= uint256(-balance);
+            Storage.slot().totalBorrowingSupply[maturity] -= uint256(-balance);
         }
 
         Storage.slot().balances[account] = 0;
@@ -122,8 +127,12 @@ contract FutureValueToken is MixinAddressResolver, IFutureValueToken, Ownable, P
         require(!hasPastBalance(lender), "lender has balance in past maturity");
         require(!hasPastBalance(borrower), "borrower has balance in past maturity");
 
-        Storage.slot().totalLendingSupply += amount;
-        Storage.slot().totalBorrowingSupply += amount;
+        uint256 maturity = Storage.slot().maturity;
+        Storage.slot().balanceMaturities[lender] = maturity;
+        Storage.slot().balanceMaturities[borrower] = maturity;
+
+        Storage.slot().totalLendingSupply[maturity] += amount;
+        Storage.slot().totalBorrowingSupply[maturity] += amount;
 
         Storage.slot().balances[lender] += int256(amount);
         Storage.slot().balances[borrower] -= int256(amount);

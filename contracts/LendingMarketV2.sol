@@ -1,17 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./interfaces/ILendingMarketV2.sol";
-import "./interfaces/IFutureValueToken.sol";
-import "./interfaces/IGenesisValueToken.sol";
-import "./libraries/HitchensOrderStatisticsTreeLib.sol";
-import "./libraries/ProductPrefixes.sol";
-import "./mixins/MixinAddressResolverV2.sol";
-import "./types/ProtocolTypes.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+// interfaces
+import {ILendingMarketV2} from "./interfaces/ILendingMarketV2.sol";
+import {IFutureValueToken} from "./interfaces/IFutureValueToken.sol";
+import {IGenesisValueToken} from "./interfaces/IGenesisValueToken.sol";
+// libraries
+import {Contracts} from "./libraries/Contracts.sol";
+import {HitchensOrderStatisticsTreeLib} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
+import {ProductPrefixes} from "./libraries/ProductPrefixes.sol";
+// mixins
+import {MixinAddressResolverV2} from "./mixins/MixinAddressResolverV2.sol";
+// types
+import {ProtocolTypes} from "./types/ProtocolTypes.sol";
+// utils
 import {Proxyable} from "./utils/Proxyable.sol";
-import {LendingMarketV2Storage as Storage} from "./storages/LendingMarketV2Storage.sol";
+// storages
+import {LendingMarketV2Storage as Storage, MarketOrder} from "./storages/LendingMarketV2Storage.sol";
 
 /**
  * @dev Lending Market contract module which allows lending market participants
@@ -346,16 +353,13 @@ contract LendingMarketV2 is
         }
 
         // Convert FutureValueToken to GenesisValueToken if there is balance in the past maturity.
-        if (
-            Storage.slot().fvToken.getMaturity(lender) != Storage.slot().maturity &&
-            Storage.slot().fvToken.balanceOf(lender) != 0
-        ) {
+        (int256 balance, uint256 maturity) = Storage.slot().fvToken.balanceInMaturityOf(lender);
+        if (maturity != Storage.slot().maturity && balance != 0) {
             Storage.slot().gvToken.mint(address(Storage.slot().fvToken), lender);
         }
-        if (
-            Storage.slot().fvToken.getMaturity(borrower) != Storage.slot().maturity &&
-            Storage.slot().fvToken.balanceOf(borrower) != 0
-        ) {
+
+        (balance, maturity) = Storage.slot().fvToken.balanceInMaturityOf(borrower);
+        if (maturity != Storage.slot().maturity && balance != 0) {
             Storage.slot().gvToken.mint(address(Storage.slot().fvToken), borrower);
         }
 
