@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import {IFutureValueToken} from "../interfaces/IFutureValueToken.sol";
 import {MixinAddressResolverV2} from "../mixins/MixinAddressResolverV2.sol";
-import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {Contracts} from "../libraries/Contracts.sol";
 import {Ownable} from "../utils/Ownable.sol";
 import {Proxyable} from "../utils/Proxyable.sol";
@@ -42,11 +41,11 @@ contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable,
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    function totalLendingSupply(uint256 _maturity) public view virtual returns (uint256) {
+    function totalLendingSupply(uint256 _maturity) external view virtual returns (uint256) {
         return Storage.slot().totalLendingSupply[_maturity];
     }
 
-    function totalBorrowingSupply(uint256 _maturity) public view virtual returns (uint256) {
+    function totalBorrowingSupply(uint256 _maturity) external view virtual returns (uint256) {
         return Storage.slot().totalBorrowingSupply[_maturity];
     }
 
@@ -62,12 +61,11 @@ contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable,
         return Storage.slot().ccy;
     }
 
-    function updateMaturity(uint256 _maturity) external {
-        require(_maturity > Storage.slot().maturity, "old maturity date");
-        Storage.slot().maturity = _maturity;
+    function balanceInMaturityOf(address account) external view override returns (int256, uint256) {
+        return (Storage.slot().balances[account], Storage.slot().balanceMaturities[account]);
     }
 
-    function hasPastBalance(address account) private view returns (bool) {
+    function hasPastMaturityBalance(address account) public view returns (bool) {
         if (Storage.slot().balanceMaturities[account] == Storage.slot().maturity) {
             return false;
         } else {
@@ -75,8 +73,9 @@ contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable,
         }
     }
 
-    function balanceInMaturityOf(address account) external view override returns (int256, uint256) {
-        return (Storage.slot().balances[account], Storage.slot().balanceMaturities[account]);
+    function updateMaturity(uint256 _maturity) external {
+        require(_maturity > Storage.slot().maturity, "old maturity date");
+        Storage.slot().maturity = _maturity;
     }
 
     // =========== ERC20 FUNCTIONS ===========
@@ -113,6 +112,8 @@ contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable,
 
         Storage.slot().balances[account] = 0;
 
+        emit Transfer(account, address(0), balance);
+
         return balance;
     }
 
@@ -124,8 +125,8 @@ contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable,
         require(lender != borrower, "borrower and lender are the same");
         require(lender != address(0), "mint to the zero address of lender");
         require(borrower != address(0), "mint to the zero address of borrower");
-        require(!hasPastBalance(lender), "lender has balance in past maturity");
-        require(!hasPastBalance(borrower), "borrower has balance in past maturity");
+        require(!hasPastMaturityBalance(lender), "lender has balance in past maturity");
+        require(!hasPastMaturityBalance(borrower), "borrower has balance in past maturity");
 
         uint256 maturity = Storage.slot().maturity;
         Storage.slot().balanceMaturities[lender] = maturity;
@@ -137,7 +138,7 @@ contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable,
         Storage.slot().balances[lender] += int256(amount);
         Storage.slot().balances[borrower] -= int256(amount);
 
-        emit Transfer(address(0), lender, amount);
-        emit Mint(lender, borrower, amount);
+        emit Transfer(address(0), lender, int256(amount));
+        emit Transfer(address(0), borrower, -int256(amount));
     }
 }

@@ -16,6 +16,8 @@ interface ILendingMarketControllerV2 {
     event LendingMarketsPaused(bytes32 ccy);
     event LendingMarketsUnpaused(bytes32 ccy);
 
+    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+
     function getBorrowRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
 
     function getLendRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);

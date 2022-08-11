@@ -218,6 +218,8 @@ contract LendingMarketControllerV2 is
             ILendingMarketV2(nextMarketAddr).getMaturity(),
             ILendingMarketV2(nextMarketAddr).getMidRate()
         );
+
+        emit LendingMarketsRotated(_ccy, prevMaturity, newLastMaturity);
     }
 
     /**

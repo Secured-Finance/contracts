@@ -353,13 +353,11 @@ contract LendingMarketV2 is
         }
 
         // Convert FutureValueToken to GenesisValueToken if there is balance in the past maturity.
-        (int256 balance, uint256 maturity) = Storage.slot().fvToken.balanceInMaturityOf(lender);
-        if (maturity != Storage.slot().maturity && balance != 0) {
+        if (Storage.slot().fvToken.hasPastMaturityBalance(lender)) {
             Storage.slot().gvToken.mint(address(Storage.slot().fvToken), lender);
         }
 
-        (balance, maturity) = Storage.slot().fvToken.balanceInMaturityOf(borrower);
-        if (maturity != Storage.slot().maturity && balance != 0) {
+        if (Storage.slot().fvToken.hasPastMaturityBalance(borrower)) {
             Storage.slot().gvToken.mint(address(Storage.slot().fvToken), borrower);
         }
 

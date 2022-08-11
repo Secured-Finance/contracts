@@ -13,7 +13,8 @@ interface IGenesisValueToken {
      *
      * Note that `value` may be zero.
      */
-    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Transfer(address indexed from, address indexed to, int256 value);
+    event CompoundFactorUpdated(uint256 maturity, uint256 rate);
 
     function compoundFactor() external view returns (uint256);
 

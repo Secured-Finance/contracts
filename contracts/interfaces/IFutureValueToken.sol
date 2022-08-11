@@ -11,11 +11,23 @@ interface IFutureValueToken {
      *
      * Note that `value` may be zero.
      */
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Mint(address indexed lender, address indexed borrower, uint256 value);
-    event Offset(address indexed account, uint256 value);
+    event Transfer(address indexed from, address indexed to, int256 value);
+
+    function totalLendingSupply(uint256 _maturity) external view returns (uint256);
+
+    function totalBorrowingSupply(uint256 _maturity) external view returns (uint256);
+
+    function getMaturity(address _account) external view returns (uint256);
+
+    function getMaturity() external view returns (uint256);
+
+    function getCcy() external view returns (bytes32);
 
     function balanceInMaturityOf(address account) external view returns (int256, uint256);
+
+    function hasPastMaturityBalance(address account) external view returns (bool);
+
+    function updateMaturity(uint256 _maturity) external;
 
     function balanceOf(address account) external view returns (int256);
 
@@ -26,12 +38,4 @@ interface IFutureValueToken {
     ) external returns (bool);
 
     function burnFrom(address account) external returns (int256);
-
-    function getMaturity(address _account) external view returns (uint256);
-
-    function getMaturity() external view returns (uint256);
-
-    function getCcy() external view returns (bytes32);
-
-    function updateMaturity(uint256 _maturity) external;
 }

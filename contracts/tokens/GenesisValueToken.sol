@@ -78,6 +78,8 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
             prev: maturity,
             next: 0
         });
+
+        emit CompoundFactorUpdated(nextMaturity, rate);
     }
 
     // =========== ERC20 FUNCTIONS ===========
@@ -108,6 +110,8 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         }
 
         Storage.slot().balances[_account] += amount;
+
+        emit Transfer(address(0), _account, amount);
 
         return true;
     }
