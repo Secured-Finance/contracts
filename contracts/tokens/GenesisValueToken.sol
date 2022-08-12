@@ -43,13 +43,26 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         Storage.slot().fvTokens[_fvToken] = _isRegistered;
     }
 
-    function compoundFactor() external view override returns (uint256) {
+    function compoundFactor() public view override returns (uint256) {
         return Storage.slot().compoundFactor;
     }
 
-    function compoundFactorOf(uint256 maturity) external view override returns (uint256) {
+    function compoundFactorOf(uint256 maturity) public view override returns (uint256) {
         MaturityRate memory maturityRate = Storage.slot().maturityRates[maturity];
         return maturityRate.compoundFactor;
+    }
+
+    function presentValueOf(
+        uint256 maturity,
+        uint256 rate,
+        int256 futureValue
+    ) external view override returns (int256) {
+        // NOTE: The formula is:
+        // genesisValue = futureValueInMaturity / compoundFactorInMaturity
+        // presentValue = genesisValue * currentCompoundFactor / (1 + rate).
+        return
+            ((futureValue * int256(compoundFactor() * ProtocolTypes.BP))) /
+            int256(compoundFactorOf(maturity) * (ProtocolTypes.BP + rate));
     }
 
     function updateCompoundFactor(

@@ -173,15 +173,8 @@ contract LendingMarketV2 is
             // NOTE: The formula is: presentValue = futureValue * (1 + rate).
             return (futureValue * int256(ProtocolTypes.BP + rate)) / int256(ProtocolTypes.BP);
         } else {
-            uint256 compoundFactorInMaturity = Storage.slot().gvToken.compoundFactorOf(maturity);
-            uint256 currentCompoundFactor = Storage.slot().gvToken.compoundFactor();
-
-            // NOTE: The formula is:
-            // genesisValue = futureValueInMaturity / compoundFactorInMaturity
-            // presentValue = genesisValue * currentCompoundFactor / (1 + rate).
-            return
-                ((futureValue * int256(currentCompoundFactor * ProtocolTypes.BP))) /
-                int256(compoundFactorInMaturity * (ProtocolTypes.BP + rate));
+            // Calculate present value using genesis value if the maturity of balance is passed.
+            return Storage.slot().gvToken.presentValueOf(maturity, rate, futureValue);
         }
     }
 
