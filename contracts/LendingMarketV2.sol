@@ -50,7 +50,7 @@ contract LendingMarketV2 is
         uint256 _basisDate,
         address _fvToken,
         address _gvToken
-    ) public initializer onlyProxy {
+    ) public initializer onlyBeacon {
         registerAddressResolver(_resolver);
 
         Storage.slot().ccy = _ccy;

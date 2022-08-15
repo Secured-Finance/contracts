@@ -28,7 +28,7 @@ contract UpgradeabilityBeaconProxy is BeaconProxy {
         return _getAdmin();
     }
 
-    function implementation() external ifAdmin returns (address) {
+    function implementation() external view returns (address) {
         return BeaconProxy._implementation();
     }
 }

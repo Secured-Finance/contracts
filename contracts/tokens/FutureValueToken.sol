@@ -22,13 +22,15 @@ contract FutureValueToken is MixinAddressResolverV2, IFutureValueToken, Ownable,
         bytes32 _ccy,
         uint256 _marketNo,
         uint256 _maturity
-    ) public initializer onlyProxy {
+    ) public initializer onlyBeacon {
         Storage.slot().ccy = _ccy;
         Storage.slot().marketNo = _marketNo;
         Storage.slot().maturity = _maturity;
 
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
+
+        buildCache();
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {

@@ -19,12 +19,14 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         address _resolver,
         bytes32 _ccy,
         uint256 _compoundFactor
-    ) public initializer onlyProxy {
+    ) public initializer onlyBeacon {
         Storage.slot().ccy = _ccy;
         Storage.slot().compoundFactor = _compoundFactor;
 
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
+
+        buildCache();
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {

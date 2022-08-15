@@ -43,17 +43,13 @@ contract LendingMarketControllerV2 is
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
     function initialize(
-        address owner,
-        address resolver,
-        uint256 basisDate,
-        uint256 basisTerm,
-        address gvToken
+        address _owner,
+        address _resolver,
+        uint256 _basisDate
     ) public initializer onlyProxy {
-        _transferOwnership(owner);
-        registerAddressResolver(resolver);
-        Storage.slot().basisDate = basisDate;
-        Storage.slot().basisTerm = basisTerm;
-        Storage.slot().gvToken = IGenesisValueToken(gvToken);
+        _transferOwnership(_owner);
+        registerAddressResolver(_resolver);
+        Storage.slot().basisDate = _basisDate;
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
@@ -62,6 +58,14 @@ contract LendingMarketControllerV2 is
     }
 
     // =========== YIELD CURVE FUNCTIONS ===========
+
+    function basisDate() external view returns (uint256) {
+        return Storage.slot().basisDate;
+    }
+
+    function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory) {
+        return Storage.slot().lendingMarkets[_ccy];
+    }
 
     /**
      * @dev Triggers to get borrow rates for selected currency.
@@ -135,20 +139,58 @@ contract LendingMarketControllerV2 is
     }
 
     // =========== MARKET DEPLOYMENT FUNCTIONS ===========
+    function getLendingMarketImpl() external view returns (address) {
+        return Storage.slot().lendingMarketProxy;
+    }
+
+    function getGenesisValueTokenImpl() external view returns (address) {
+        return Storage.slot().genesisValueTokenProxy;
+    }
+
+    function getFutureValueTokenImpl() external view returns (address) {
+        return Storage.slot().futureValueTokenProxy;
+    }
+
+    /**
+     * @dev Sets the implementation contract of LendingMarket
+     * @param newImpl The address of implementation contract
+     */
     function setLendingMarketImpl(address newImpl) external onlyOwner {
         Storage.slot().lendingMarketProxy = _updateBeaconImpl(
             BeaconContracts.LENDING_MARKET,
-            newImpl,
-            ""
+            newImpl
         );
     }
 
-    function setFutureValueTokenImpl(address newImpl) external onlyOwner {
-        Storage.slot().sfLoanTokenProxy = _updateBeaconImpl(
-            BeaconContracts.FUTURE_VALUE_TOKEN,
-            newImpl,
-            ""
+    /**
+     * @dev Sets the implementation contract of GenesisValueToken
+     * @param newImpl The address of implementation contract
+     */
+    function setGenesisValueTokenImpl(address newImpl) external onlyOwner {
+        Storage.slot().genesisValueTokenProxy = _updateBeaconImpl(
+            BeaconContracts.GENESIS_VALUE_TOKEN,
+            newImpl
         );
+    }
+
+    /**
+     * @dev Sets the implementation contract of FutureValueToken
+     * @param newImpl The address of implementation contract
+     */
+    function setFutureValueTokenImpl(address newImpl) external onlyOwner {
+        Storage.slot().futureValueTokenProxy = _updateBeaconImpl(
+            BeaconContracts.FUTURE_VALUE_TOKEN,
+            newImpl
+        );
+    }
+
+    function deployGenesisValueToken(bytes32 _ccy, uint256 _compoundFactor) external {
+        require(
+            Storage.slot().genesisValueTokens[_ccy] == address(0),
+            "Genesis value token has been already deployed in the currency"
+        );
+
+        Storage.slot().genesisValueTokens[_ccy] = _deployGenesisValueToken(_ccy, _compoundFactor);
     }
 
     /**
@@ -163,29 +205,32 @@ contract LendingMarketControllerV2 is
         onlyOwner
         returns (address market)
     {
+        require(
+            Storage.slot().genesisValueTokens[_ccy] != address(0),
+            "Genesis value token hasn't been deployed in the currency"
+        );
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 
-        uint256 lastMaturity = ILendingMarketV2(
-            Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
-        ).getMaturity();
-        uint256 nextMaturity = TimeLibrary.addMonths(lastMaturity, BASIS_TERM);
+        uint256 basisMaturity = Storage.slot().basisDate;
+
+        if (Storage.slot().lendingMarkets[_ccy].length > 0) {
+            basisMaturity = ILendingMarketV2(
+                Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
+            ).getMaturity();
+        }
+
+        uint256 nextMaturity = TimeLibrary.addMonths(basisMaturity, BASIS_TERM);
         uint256 marketNo = Storage.slot().lendingMarkets[_ccy].length + 1;
 
-        address fvTokenAddr = deployFutureValueToken(
-            address(resolver),
-            _ccy,
-            marketNo,
-            nextMaturity
-        );
+        address fvTokenAddr = _deployFutureValueToken(_ccy, marketNo, nextMaturity);
         market = address(
-            deployLendingMarket(
-                address(resolver),
+            _deployLendingMarket(
                 _ccy,
                 marketNo,
                 nextMaturity,
                 Storage.slot().basisDate,
                 fvTokenAddr,
-                address(Storage.slot().gvToken)
+                Storage.slot().genesisValueTokens[_ccy]
             )
         );
 
@@ -198,6 +243,11 @@ contract LendingMarketControllerV2 is
     // =========== LENDING MARKETS MANAGEMENT FUNCTIONS ===========
 
     function rotateLendingMarkets(bytes32 _ccy) external {
+        require(
+            Storage.slot().lendingMarkets[_ccy].length > 0,
+            "No lending markets exist for a specific currency"
+        );
+
         address[] storage markets = Storage.slot().lendingMarkets[_ccy];
         address currentMarketAddr = markets[0];
         address nextMarketAddr = markets[1];
@@ -213,7 +263,9 @@ contract LendingMarketControllerV2 is
             BASIS_TERM
         );
         uint256 prevMaturity = ILendingMarketV2(currentMarketAddr).openMarket(newLastMaturity);
-        Storage.slot().gvToken.updateCompoundFactor(
+
+        IGenesisValueToken gvToken = IGenesisValueToken(Storage.slot().genesisValueTokens[_ccy]);
+        gvToken.updateCompoundFactor(
             prevMaturity,
             ILendingMarketV2(nextMarketAddr).getMaturity(),
             ILendingMarketV2(nextMarketAddr).getMidRate()
@@ -269,25 +321,7 @@ contract LendingMarketControllerV2 is
         return true;
     }
 
-    function deployFutureValueToken(
-        address _resolver,
-        bytes32 _ccy,
-        uint256 _marketNo,
-        uint256 _maturity
-    ) private returns (address) {
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,bytes32,uint256,uint256,string,string)",
-            msg.sender,
-            _resolver,
-            _ccy,
-            _marketNo,
-            _maturity
-        );
-        return _createProxy(BeaconContracts.FUTURE_VALUE_TOKEN, data);
-    }
-
-    function deployLendingMarket(
-        address _resolver,
+    function _deployLendingMarket(
         bytes32 _ccy,
         uint256 _marketNo,
         uint256 _maturity,
@@ -296,9 +330,8 @@ contract LendingMarketControllerV2 is
         address _gvToken
     ) private returns (address) {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,bytes32,uint256,uint256,uint256,address,address)",
-            msg.sender,
-            _resolver,
+            "initialize(address,bytes32,uint256,uint256,uint256,address,address)",
+            address(resolver),
             _ccy,
             _marketNo,
             _maturity,
@@ -307,5 +340,35 @@ contract LendingMarketControllerV2 is
             _gvToken
         );
         return _createProxy(BeaconContracts.LENDING_MARKET, data);
+    }
+
+    function _deployGenesisValueToken(bytes32 _ccy, uint256 _compoundFactor)
+        private
+        returns (address)
+    {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address,bytes32,uint256)",
+            msg.sender,
+            address(resolver),
+            _ccy,
+            _compoundFactor
+        );
+        return _createProxy(BeaconContracts.GENESIS_VALUE_TOKEN, data);
+    }
+
+    function _deployFutureValueToken(
+        bytes32 _ccy,
+        uint256 _marketNo,
+        uint256 _maturity
+    ) private returns (address) {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address,bytes32,uint256,uint256)",
+            msg.sender,
+            address(resolver),
+            _ccy,
+            _marketNo,
+            _maturity
+        );
+        return _createProxy(BeaconContracts.FUTURE_VALUE_TOKEN, data);
     }
 }

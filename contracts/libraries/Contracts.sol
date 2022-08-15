@@ -18,5 +18,6 @@ library Contracts {
 
 library BeaconContracts {
     bytes32 internal constant LENDING_MARKET = "LendingMarket";
+    bytes32 internal constant GENESIS_VALUE_TOKEN = "GenesisValueToken";
     bytes32 internal constant FUTURE_VALUE_TOKEN = "FutureValueToken";
 }
