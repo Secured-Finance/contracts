@@ -82,6 +82,9 @@ contract LendingMarketV2 is
         _;
     }
 
+    /**
+     * @dev Modifier to check if the market is not closed.
+     */
     modifier ifNotClosed() {
         require(
             !isMatured() && block.timestamp >= Storage.slot().basisDate,
@@ -90,6 +93,9 @@ contract LendingMarketV2 is
         _;
     }
 
+    /**
+     * @dev Modifier to check if the market is matured.
+     */
     modifier ifMatured() {
         require(isMatured(), "Market is not matured");
         _;
@@ -101,6 +107,21 @@ contract LendingMarketV2 is
      */
     function getMaker(uint256 _orderId) public view override returns (address maker) {
         return Storage.slot().orders[_orderId].maker;
+    }
+
+    /**
+     * @dev Gets the market data.
+     */
+    function getMarket() public view override returns (Market memory) {
+        return
+            Market({
+                ccy: Storage.slot().ccy,
+                maturity: Storage.slot().maturity,
+                basisDate: Storage.slot().basisDate,
+                borrowRate: getBorrowRate(),
+                lendRate: getLendRate(),
+                midRate: getMidRate()
+            });
     }
 
     /**
@@ -129,8 +150,25 @@ contract LendingMarketV2 is
         return combinedRate / 2;
     }
 
+    /**
+     * @dev Gets the market maturity.
+     */
     function getMaturity() public view override returns (uint256) {
         return Storage.slot().maturity;
+    }
+
+    /**
+     * @dev Gets the market currency.
+     */
+    function getCurrency() public view override returns (bytes32) {
+        return Storage.slot().ccy;
+    }
+
+    /**
+     * @dev Gets if the market is matured.
+     */
+    function isMatured() public view returns (bool) {
+        return block.timestamp >= Storage.slot().maturity;
     }
 
     /**
@@ -172,7 +210,7 @@ contract LendingMarketV2 is
                 futureValue = Storage.slot().gvToken.futureValueOf(maturity, futureValue);
             }
 
-            // NOTE: The formula is: presentValue = futureValue / (1 + rate * (now - maturity) / 360 days).
+            // NOTE: The formula is: presentValue = futureValue / (1 + rate * (maturity - now) / 360 days).
             uint256 rate = getMidRate();
             uint256 dt = maturity >= block.timestamp ? maturity - block.timestamp : 0;
             return ((futureValue * int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR)) /
@@ -350,7 +388,7 @@ contract LendingMarketV2 is
         mintGenesisValueToken(lender);
         mintGenesisValueToken(borrower);
 
-        // NOTE: The formula is: tokenAmount = amount * (1 + rate).
+        // NOTE: The formula is: tokenAmount = amount * (1 + rate * (maturity - now) / 360 days).
         uint256 currentRate = (marketOrder.rate * (Storage.slot().maturity - block.timestamp)) /
             ProtocolTypes.SECONDS_IN_YEAR;
         uint256 tokenAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
@@ -453,10 +491,6 @@ contract LendingMarketV2 is
      */
     function unpauseMarket() public override onlyAcceptedContracts {
         _unpause();
-    }
-
-    function isMatured() public view returns (bool) {
-        return block.timestamp >= Storage.slot().maturity;
     }
 
     /**

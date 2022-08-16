@@ -136,12 +136,11 @@ contract ProxyControllerV2 is IProxyController, Ownable {
      * @dev Sets the implementation contract of LendingMarketController
      * @param newImpl The address of implementation contract
      */
-    function setLendingMarketControllerImpl(address newImpl, uint256 basisDate) external onlyOwner {
+    function setLendingMarketControllerImpl(address newImpl) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,uint256)",
+            "initialize(address,address)",
             msg.sender,
-            resolver,
-            basisDate
+            resolver
         );
         _updateImpl(Contracts.LENDING_MARKET_CONTROLLER, newImpl, data);
     }

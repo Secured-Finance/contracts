@@ -20,7 +20,10 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         bytes32 _ccy,
         uint256 _compoundFactor
     ) public initializer onlyBeacon {
+        require(_compoundFactor != 0, "compound factor is zero");
+
         Storage.slot().ccy = _ccy;
+        Storage.slot().initialCompoundFactor = _compoundFactor;
         Storage.slot().compoundFactor = _compoundFactor;
 
         _transferOwnership(_owner);
@@ -67,28 +70,41 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         uint256 rate
     ) external onlyAcceptedContracts {
         require(rate != 0, "rate is zero");
-        require(
-            Storage.slot().maturityRates[maturity].compoundFactor != 0 &&
-                Storage.slot().maturityRates[maturity].next == 0,
-            "invalid maturity"
-        );
+        require(Storage.slot().maturityRates[maturity].next == 0, "invalid maturity");
         require(Storage.slot().maturityRates[nextMaturity].compoundFactor == 0, "existed maturity");
 
-        // Save actual compound factor here due to calculating the genesis value from future value.
-        // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 + rate).
-        Storage.slot().compoundFactor =
-            (Storage.slot().compoundFactor * (ProtocolTypes.BP + rate)) /
-            ProtocolTypes.BP;
+        if (Storage.slot().initialCompoundFactor == Storage.slot().compoundFactor) {
+            Storage.slot().maturityRates[maturity] = MaturityRate({
+                rate: 0,
+                compoundFactor: Storage.slot().compoundFactor,
+                prev: 0,
+                next: nextMaturity
+            });
+        } else {
+            require(
+                Storage.slot().maturityRates[maturity].compoundFactor != 0,
+                "invalid compound factor"
+            );
+            Storage.slot().maturityRates[maturity].next = nextMaturity;
+        }
 
-        Storage.slot().maturityRates[maturity].next = nextMaturity;
+        // Save actual compound factor here due to calculating the genesis value from future value.
+        // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 + rate * (maturity - now) / 360 days).
+        uint256 dt = maturity >= block.timestamp ? nextMaturity - block.timestamp : 0;
+        Storage.slot().compoundFactor = ((
+            (Storage.slot().compoundFactor *
+                (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * dt))
+        ) / (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR));
+
+        uint256 actualRate = (rate * dt) / ProtocolTypes.SECONDS_IN_YEAR;
         Storage.slot().maturityRates[nextMaturity] = MaturityRate({
-            rate: rate,
+            rate: actualRate,
             compoundFactor: Storage.slot().compoundFactor,
             prev: maturity,
             next: 0
         });
 
-        emit CompoundFactorUpdated(nextMaturity, rate);
+        emit CompoundFactorUpdated(nextMaturity, actualRate);
     }
 
     // =========== ERC20 FUNCTIONS ===========

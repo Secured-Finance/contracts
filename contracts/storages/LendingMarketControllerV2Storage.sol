@@ -10,7 +10,7 @@ library LendingMarketControllerV2Storage {
         address futureValueTokenProxy;
         mapping(bytes32 => address[]) lendingMarkets;
         mapping(bytes32 => address) genesisValueTokens;
-        uint256 basisDate;
+        mapping(bytes32 => uint256) basisDates;
     }
 
     function slot() internal pure returns (Storage storage r) {

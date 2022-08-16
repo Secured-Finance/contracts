@@ -42,14 +42,9 @@ contract LendingMarketControllerV2 is
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function initialize(
-        address _owner,
-        address _resolver,
-        uint256 _basisDate
-    ) public initializer onlyProxy {
+    function initialize(address _owner, address _resolver) public initializer onlyProxy {
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
-        Storage.slot().basisDate = _basisDate;
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
@@ -57,21 +52,27 @@ contract LendingMarketControllerV2 is
         contracts[0] = Contracts.CURRENCY_CONTROLLER;
     }
 
-    // =========== YIELD CURVE FUNCTIONS ===========
-
-    function basisDate() external view returns (uint256) {
-        return Storage.slot().basisDate;
+    /**
+     * @dev Gets the basis data for selected currency.
+     * @param _ccy Currency
+     */
+    function getBasisDate(bytes32 _ccy) external view returns (uint256) {
+        return Storage.slot().basisDates[_ccy];
     }
 
+    /**
+     * @dev Gets lending market contract addresses for selected currency.
+     * @param _ccy Currency
+     */
     function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory) {
         return Storage.slot().lendingMarkets[_ccy];
     }
 
     /**
-     * @dev Triggers to get borrow rates for selected currency.
+     * @dev Gets borrow rates for selected currency.
      * @param _ccy Currency
      */
-    function getBorrowRatesForCcy(bytes32 _ccy) external view override returns (uint256[] memory) {
+    function getBorrowRates(bytes32 _ccy) external view override returns (uint256[] memory) {
         uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
 
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
@@ -83,10 +84,10 @@ contract LendingMarketControllerV2 is
     }
 
     /**
-     * @dev Triggers to get lend rates for selected currency.
+     * @dev Gets lend rates for selected currency.
      * @param _ccy Currency
      */
-    function getLendRatesForCcy(bytes32 _ccy) external view override returns (uint256[] memory) {
+    function getLendRates(bytes32 _ccy) external view override returns (uint256[] memory) {
         uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
 
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
@@ -98,10 +99,10 @@ contract LendingMarketControllerV2 is
     }
 
     /**
-     * @dev Triggers to get mid rates for selected currency.
+     * @dev Gets mid rates for selected currency.
      * @param _ccy Currency
      */
-    function getMidRatesForCcy(bytes32 _ccy) external view override returns (uint256[] memory) {
+    function getMidRates(bytes32 _ccy) external view override returns (uint256[] memory) {
         uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
 
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
@@ -113,7 +114,22 @@ contract LendingMarketControllerV2 is
     }
 
     /**
-     * @dev Triggers to get lending market.
+     * @dev Gets maturities for selected currency.
+     * @param _ccy Currency
+     */
+    function getMaturities(bytes32 _ccy) external view override returns (uint256[] memory) {
+        uint256[] memory maturities = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
+
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            ILendingMarketV2 market = ILendingMarketV2(Storage.slot().lendingMarkets[_ccy][i]);
+            maturities[i] = market.getMaturity();
+        }
+
+        return maturities;
+    }
+
+    /**
+     * @dev Gets lending market.
      * @param _ccy Currency for Lending Market
      * @param _marketNo The market number
      */
@@ -126,15 +142,20 @@ contract LendingMarketControllerV2 is
         return Storage.slot().lendingMarkets[_ccy][_marketNo];
     }
 
-    function getTotalPresentValue(bytes32 ccy, address account)
+    /**
+     * @dev Gets the total present value of the account for selected currency
+     * @param _ccy Currency for Lending Market
+     * @param _account Target address
+     */
+    function getTotalPresentValue(bytes32 _ccy, address _account)
         public
         view
         override
         returns (int256 totalPresentValue)
     {
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[ccy].length; i++) {
-            totalPresentValue += ILendingMarketV2(Storage.slot().lendingMarkets[ccy][i])
-                .presentValueOf(account);
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            totalPresentValue += ILendingMarketV2(Storage.slot().lendingMarkets[_ccy][i])
+                .presentValueOf(_account);
         }
     }
 
@@ -173,13 +194,16 @@ contract LendingMarketControllerV2 is
         );
     }
 
-    function deployGenesisValueToken(bytes32 _ccy, uint256 _compoundFactor) external {
-        require(
-            Storage.slot().genesisValueTokens[_ccy] == address(0),
-            "Genesis value token has been already deployed in the currency"
-        );
+    function initializeLendingMarket(
+        bytes32 _ccy,
+        uint256 _basisDate,
+        uint256 _compoundFactor
+    ) external onlyOwner {
+        require(_compoundFactor > 0, "Invalid compound factor");
+        require(Storage.slot().basisDates[_ccy] == 0, "Already initialized");
 
         Storage.slot().genesisValueTokens[_ccy] = _deployGenesisValueToken(_ccy, _compoundFactor);
+        Storage.slot().basisDates[_ccy] = _basisDate;
     }
 
     /**
@@ -200,15 +224,15 @@ contract LendingMarketControllerV2 is
         );
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 
-        uint256 basisMaturity = Storage.slot().basisDate;
+        uint256 basisDate = Storage.slot().basisDates[_ccy];
 
         if (Storage.slot().lendingMarkets[_ccy].length > 0) {
-            basisMaturity = ILendingMarketV2(
+            basisDate = ILendingMarketV2(
                 Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
             ).getMaturity();
         }
 
-        uint256 nextMaturity = TimeLibrary.addMonths(basisMaturity, BASIS_TERM);
+        uint256 nextMaturity = TimeLibrary.addMonths(basisDate, BASIS_TERM);
         uint256 marketNo = Storage.slot().lendingMarkets[_ccy].length + 1;
 
         market = address(
@@ -216,7 +240,7 @@ contract LendingMarketControllerV2 is
                 _ccy,
                 marketNo,
                 nextMaturity,
-                Storage.slot().basisDate,
+                Storage.slot().basisDates[_ccy],
                 Storage.slot().genesisValueTokens[_ccy]
             )
         );

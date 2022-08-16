@@ -13,6 +13,7 @@ library GenesisValueTokenStorage {
 
     struct Storage {
         bytes32 ccy;
+        uint256 initialCompoundFactor;
         uint256 compoundFactor;
         mapping(address => int256) balances;
         uint256 totalLendingSupply;

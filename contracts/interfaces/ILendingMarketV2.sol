@@ -28,7 +28,17 @@ interface ILendingMarketV2 {
         uint256 amount,
         uint256 rate
     );
+
     event OpenMarket(uint256 maturity, uint256 prevMaturity);
+
+    struct Market {
+        bytes32 ccy;
+        uint256 maturity;
+        uint256 basisDate;
+        uint256 borrowRate;
+        uint256 lendRate;
+        uint256 midRate;
+    }
 
     function getBorrowRate() external view returns (uint256 rate);
 
@@ -36,9 +46,13 @@ interface ILendingMarketV2 {
 
     function getMaker(uint256 orderId) external view returns (address maker);
 
+    function getMarket() external view returns (Market memory);
+
     function getMidRate() external view returns (uint256 rate);
 
     function getMaturity() external view returns (uint256);
+
+    function getCurrency() external view returns (bytes32);
 
     function getOrder(uint256 orderId) external view returns (MarketOrder memory);
 
