@@ -5,10 +5,10 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 // interfaces
 import {ILendingMarketV2} from "./interfaces/ILendingMarketV2.sol";
-import {IFutureValueToken} from "./interfaces/IFutureValueToken.sol";
 import {IGenesisValueToken} from "./interfaces/IGenesisValueToken.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
+import {FutureValueHandler} from "./libraries/FutureValueHandler.sol";
 import {HitchensOrderStatisticsTreeLib} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
 import {ProductPrefixes} from "./libraries/ProductPrefixes.sol";
 // mixins
@@ -48,7 +48,6 @@ contract LendingMarketV2 is
         uint256 _marketNo,
         uint256 _maturity,
         uint256 _basisDate,
-        address _fvToken,
         address _gvToken
     ) public initializer onlyBeacon {
         registerAddressResolver(_resolver);
@@ -57,8 +56,8 @@ contract LendingMarketV2 is
         Storage.slot().marketNo = _marketNo;
         Storage.slot().maturity = _maturity;
         Storage.slot().basisDate = _basisDate;
-        Storage.slot().fvToken = IFutureValueToken(_fvToken);
         Storage.slot().gvToken = IGenesisValueToken(_gvToken);
+        FutureValueHandler.updateMaturity(_maturity);
 
         buildCache();
     }
@@ -79,7 +78,7 @@ contract LendingMarketV2 is
      * @param _orderId Market order id
      */
     modifier onlyMaker(uint256 _orderId) {
-        require(msg.sender == getMaker(_orderId), "No access to cancel order");
+        require(msg.sender == getMaker(_orderId), "caller is not the maker");
         _;
     }
 
@@ -164,17 +163,20 @@ contract LendingMarketV2 is
     }
 
     function presentValueOf(address account) external view returns (int256) {
-        (int256 futureValue, uint256 maturity) = Storage.slot().fvToken.balanceInMaturityOf(
-            account
-        );
-        uint256 rate = getMidRate();
+        (int256 futureValue, uint256 maturity) = FutureValueHandler.getBalanceInMaturity(account);
 
-        if (Storage.slot().maturity == maturity) {
-            // NOTE: The formula is: presentValue = futureValue * (1 + rate).
-            return (futureValue * int256(ProtocolTypes.BP + rate)) / int256(ProtocolTypes.BP);
+        if (maturity == 0) {
+            return 0;
         } else {
-            // Calculate present value using genesis value if the maturity of balance is passed.
-            return Storage.slot().gvToken.presentValueOf(maturity, rate, futureValue);
+            if (Storage.slot().maturity != maturity) {
+                futureValue = Storage.slot().gvToken.futureValueOf(maturity, futureValue);
+            }
+
+            // NOTE: The formula is: presentValue = futureValue / (1 + rate * (now - maturity) / 360 days).
+            uint256 rate = getMidRate();
+            uint256 dt = maturity >= block.timestamp ? maturity - block.timestamp : 0;
+            return ((futureValue * int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR)) /
+                int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * dt));
         }
     }
 
@@ -194,7 +196,7 @@ contract LendingMarketV2 is
         returns (uint256 prevMaturity)
     {
         prevMaturity = Storage.slot().maturity;
-        Storage.slot().fvToken.updateMaturity(_maturity);
+        FutureValueHandler.updateMaturity(_maturity);
         Storage.slot().maturity = _maturity;
 
         emit OpenMarket(_maturity, prevMaturity);
@@ -345,19 +347,15 @@ contract LendingMarketV2 is
             borrower = marketOrder.maker;
         }
 
-        // Convert FutureValueToken to GenesisValueToken if there is balance in the past maturity.
-        if (Storage.slot().fvToken.hasPastMaturityBalance(lender)) {
-            Storage.slot().gvToken.mint(address(Storage.slot().fvToken), lender);
-        }
-
-        if (Storage.slot().fvToken.hasPastMaturityBalance(borrower)) {
-            Storage.slot().gvToken.mint(address(Storage.slot().fvToken), borrower);
-        }
+        mintGenesisValueToken(lender);
+        mintGenesisValueToken(borrower);
 
         // NOTE: The formula is: tokenAmount = amount * (1 + rate).
-        uint256 tokenAmount = (_amount * (ProtocolTypes.BP + marketOrder.rate)) / ProtocolTypes.BP;
+        uint256 currentRate = (marketOrder.rate * (Storage.slot().maturity - block.timestamp)) /
+            ProtocolTypes.SECONDS_IN_YEAR;
+        uint256 tokenAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
 
-        Storage.slot().fvToken.mint(lender, borrower, tokenAmount);
+        FutureValueHandler.add(lender, borrower, tokenAmount);
 
         collateralAggregator().releaseUnsettledCollateral(
             lender,
@@ -459,5 +457,17 @@ contract LendingMarketV2 is
 
     function isMatured() public view returns (bool) {
         return block.timestamp >= Storage.slot().maturity;
+    }
+
+    /**
+     * @dev Convert FutureValue to GenesisValue if there is balance in the past maturity.
+     * @param account Target address to mint token
+     */
+    function mintGenesisValueToken(address account) private {
+        if (FutureValueHandler.hasPastMaturityBalance(account)) {
+            uint256 basisMaturity = FutureValueHandler.getMaturity(account);
+            int256 removedFutureValue = FutureValueHandler.remove(account);
+            Storage.slot().gvToken.mint(account, basisMaturity, removedFutureValue);
+        }
     }
 }

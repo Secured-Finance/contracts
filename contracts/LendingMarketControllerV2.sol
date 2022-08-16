@@ -173,17 +173,6 @@ contract LendingMarketControllerV2 is
         );
     }
 
-    /**
-     * @dev Sets the implementation contract of FutureValueToken
-     * @param newImpl The address of implementation contract
-     */
-    function setFutureValueTokenImpl(address newImpl) external onlyOwner {
-        Storage.slot().futureValueTokenProxy = _updateBeaconImpl(
-            BeaconContracts.FUTURE_VALUE_TOKEN,
-            newImpl
-        );
-    }
-
     function deployGenesisValueToken(bytes32 _ccy, uint256 _compoundFactor) external {
         require(
             Storage.slot().genesisValueTokens[_ccy] == address(0),
@@ -222,14 +211,12 @@ contract LendingMarketControllerV2 is
         uint256 nextMaturity = TimeLibrary.addMonths(basisMaturity, BASIS_TERM);
         uint256 marketNo = Storage.slot().lendingMarkets[_ccy].length + 1;
 
-        address fvTokenAddr = _deployFutureValueToken(_ccy, marketNo, nextMaturity);
         market = address(
             _deployLendingMarket(
                 _ccy,
                 marketNo,
                 nextMaturity,
                 Storage.slot().basisDate,
-                fvTokenAddr,
                 Storage.slot().genesisValueTokens[_ccy]
             )
         );
@@ -326,17 +313,15 @@ contract LendingMarketControllerV2 is
         uint256 _marketNo,
         uint256 _maturity,
         uint256 _basisDate,
-        address _fvToken,
         address _gvToken
     ) private returns (address) {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,bytes32,uint256,uint256,uint256,address,address)",
+            "initialize(address,bytes32,uint256,uint256,uint256,address)",
             address(resolver),
             _ccy,
             _marketNo,
             _maturity,
             _basisDate,
-            _fvToken,
             _gvToken
         );
         return _createProxy(BeaconContracts.LENDING_MARKET, data);
@@ -354,21 +339,5 @@ contract LendingMarketControllerV2 is
             _compoundFactor
         );
         return _createProxy(BeaconContracts.GENESIS_VALUE_TOKEN, data);
-    }
-
-    function _deployFutureValueToken(
-        bytes32 _ccy,
-        uint256 _marketNo,
-        uint256 _maturity
-    ) private returns (address) {
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,bytes32,uint256,uint256)",
-            msg.sender,
-            address(resolver),
-            _ccy,
-            _marketNo,
-            _maturity
-        );
-        return _createProxy(BeaconContracts.FUTURE_VALUE_TOKEN, data);
     }
 }

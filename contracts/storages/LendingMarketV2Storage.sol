@@ -25,7 +25,7 @@ library LendingMarketV2Storage {
         uint256 marketNo;
         uint256 basisDate;
         uint256 maturity;
-        IFutureValueToken fvToken;
+        // IFutureValueToken fvToken;
         IGenesisValueToken gvToken;
         // Mapping from maturity to rate
         mapping(uint256 => MarketOrder) orders;

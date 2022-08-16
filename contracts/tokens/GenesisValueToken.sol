@@ -39,12 +39,6 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    function addFvToken(address _fvToken, bool _isRegistered) external onlyAcceptedContracts {
-        IFutureValueToken fvToken = IFutureValueToken(_fvToken);
-        require(fvToken.getCcy() == Storage.slot().ccy, "unsupported currency");
-        Storage.slot().fvTokens[_fvToken] = _isRegistered;
-    }
-
     function compoundFactor() public view override returns (uint256) {
         return Storage.slot().compoundFactor;
     }
@@ -54,17 +48,17 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         return maturityRate.compoundFactor;
     }
 
-    function presentValueOf(
-        uint256 maturity,
-        uint256 rate,
-        int256 futureValue
-    ) external view override returns (int256) {
+    function futureValueOf(uint256 maturity, int256 futureValueInMaturity)
+        external
+        view
+        override
+        returns (int256)
+    {
         // NOTE: The formula is:
         // genesisValue = futureValueInMaturity / compoundFactorInMaturity
-        // presentValue = genesisValue * currentCompoundFactor / (1 + rate).
+        // futureValue = genesisValue * currentCompoundFactor.
         return
-            ((futureValue * int256(compoundFactor() * ProtocolTypes.BP))) /
-            int256(compoundFactorOf(maturity) * (ProtocolTypes.BP + rate));
+            (futureValueInMaturity * int256(compoundFactor())) / int256(compoundFactorOf(maturity));
     }
 
     function updateCompoundFactor(
@@ -107,16 +101,14 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         return Storage.slot().balances[account];
     }
 
-    function mint(address _fvToken, address _account) public onlyAcceptedContracts returns (bool) {
-        require(Storage.slot().fvTokens[_fvToken], "unsupported token");
-
-        IFutureValueToken fvToken = IFutureValueToken(_fvToken);
-        uint256 accountMaturity = fvToken.getMaturity(_account);
-        int256 fvTokenAmount = fvToken.burnFrom(_account);
-
+    function mint(
+        address _account,
+        uint256 _basisMaturity,
+        int256 _futureValue
+    ) public onlyAcceptedContracts returns (bool) {
         // NOTE: The formula is: tokenAmount = featureValue / compoundFactor.
-        int256 amount = ((fvTokenAmount * int256(ProtocolTypes.BP)) /
-            int256(Storage.slot().maturityRates[accountMaturity].compoundFactor));
+        int256 amount = ((_futureValue * int256(ProtocolTypes.BP)) /
+            int256(Storage.slot().maturityRates[_basisMaturity].compoundFactor));
 
         if (amount >= 0) {
             Storage.slot().totalLendingSupply += uint256(amount);

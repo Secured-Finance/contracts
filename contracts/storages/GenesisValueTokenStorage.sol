@@ -19,8 +19,6 @@ library GenesisValueTokenStorage {
         uint256 totalBorrowingSupply;
         // Mapping from maturity to rate
         mapping(uint256 => MaturityRate) maturityRates;
-        // Mapping of fvToken address existence
-        mapping(address => bool) fvTokens;
     }
 
     function slot() internal pure returns (Storage storage r) {

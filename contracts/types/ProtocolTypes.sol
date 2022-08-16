@@ -12,6 +12,14 @@ library ProtocolTypes {
     uint256 public constant PENALTYLEVEL = 1000; // 10% settlement failure penalty
     uint256 public constant MKTMAKELEVEL = 2000; // 20% for market making
 
+    uint256 internal constant DAYS_IN_MONTH = 30;
+    uint256 internal constant DAYS_IN_QUARTER = 90;
+    uint256 internal constant DAYS_IN_YEAR = 360;
+
+    uint256 internal constant SECONDS_IN_MONTH = 2592000;
+    uint256 internal constant SECONDS_IN_QUARTER = 7776000;
+    uint256 internal constant SECONDS_IN_YEAR = 31104000;
+
     // Lending market common types
     enum Side {
         LEND,

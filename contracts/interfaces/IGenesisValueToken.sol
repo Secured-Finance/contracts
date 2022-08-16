@@ -20,13 +20,10 @@ interface IGenesisValueToken {
 
     function compoundFactorOf(uint256 maturity) external view returns (uint256);
 
-    function presentValueOf(
-        uint256 maturity,
-        uint256 rate,
-        int256 futureValue
-    ) external view returns (int256);
-
-    function addFvToken(address _fvToken, bool _isRegistered) external;
+    function futureValueOf(uint256 maturity, int256 futureValueInMaturity)
+        external
+        view
+        returns (int256);
 
     function updateCompoundFactor(
         uint256 maturity,
@@ -36,5 +33,9 @@ interface IGenesisValueToken {
 
     function balanceOf(address account) external view returns (int256);
 
-    function mint(address fvToken, address account) external returns (bool);
+    function mint(
+        address _account,
+        uint256 _basisMaturity,
+        int256 _futureValue
+    ) external returns (bool);
 }

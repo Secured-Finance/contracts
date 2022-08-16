@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-library FutureValueTokenStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.futureValueToken");
+library FutureValueStorage {
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.futureValue");
 
     struct Storage {
         bytes32 ccy;
