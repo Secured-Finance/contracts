@@ -5,9 +5,6 @@ library LendingMarketControllerV2Storage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketControllerV2");
 
     struct Storage {
-        address lendingMarketProxy;
-        address genesisValueTokenProxy;
-        address futureValueTokenProxy;
         mapping(bytes32 => address[]) lendingMarkets;
         mapping(bytes32 => address) genesisValueTokens;
         mapping(bytes32 => uint256) basisDates;

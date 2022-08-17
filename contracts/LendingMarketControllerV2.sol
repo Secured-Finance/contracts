@@ -56,7 +56,7 @@ contract LendingMarketControllerV2 is
      * @dev Gets the basis data for selected currency.
      * @param _ccy Currency
      */
-    function getBasisDate(bytes32 _ccy) external view returns (uint256) {
+    function getBasisDate(bytes32 _ccy) external view override returns (uint256) {
         return Storage.slot().basisDates[_ccy];
     }
 
@@ -64,7 +64,7 @@ contract LendingMarketControllerV2 is
      * @dev Gets lending market contract addresses for selected currency.
      * @param _ccy Currency
      */
-    function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory) {
+    function getLendingMarkets(bytes32 _ccy) external view override returns (address[] memory) {
         return Storage.slot().lendingMarkets[_ccy];
     }
 
@@ -129,20 +129,6 @@ contract LendingMarketControllerV2 is
     }
 
     /**
-     * @dev Gets lending market.
-     * @param _ccy Currency for Lending Market
-     * @param _marketNo The market number
-     */
-    function getLendingMarket(bytes32 _ccy, uint256 _marketNo)
-        external
-        view
-        override
-        returns (address)
-    {
-        return Storage.slot().lendingMarkets[_ccy][_marketNo];
-    }
-
-    /**
      * @dev Gets the total present value of the account for selected currency
      * @param _ccy Currency for Lending Market
      * @param _account Target address
@@ -159,46 +145,44 @@ contract LendingMarketControllerV2 is
         }
     }
 
-    // =========== MARKET DEPLOYMENT FUNCTIONS ===========
-    function getLendingMarketImpl() external view returns (address) {
-        return Storage.slot().lendingMarketProxy;
+    function getGenesisValue(bytes32 _ccy, address _account) external view returns (int256) {
+        IGenesisValueToken gvToken = IGenesisValueToken(Storage.slot().genesisValueTokens[_ccy]);
+        return gvToken.balanceOf(_account);
     }
 
-    function getGenesisValueTokenImpl() external view returns (address) {
-        return Storage.slot().genesisValueTokenProxy;
+    function getGenesisValueToken(bytes32 _ccy) external view returns (address) {
+        return Storage.slot().genesisValueTokens[_ccy];
     }
 
-    function getFutureValueTokenImpl() external view returns (address) {
-        return Storage.slot().futureValueTokenProxy;
+    /**
+     * @dev Gets the beacon proxy address to specified name
+     * @param beaconName The cache name of the beacon proxy
+     */
+    function getBeaconProxyAddress(bytes32 beaconName) external view override returns (address) {
+        return _getAddress(beaconName);
     }
 
     /**
      * @dev Sets the implementation contract of LendingMarket
      * @param newImpl The address of implementation contract
      */
-    function setLendingMarketImpl(address newImpl) external onlyOwner {
-        Storage.slot().lendingMarketProxy = _updateBeaconImpl(
-            BeaconContracts.LENDING_MARKET,
-            newImpl
-        );
+    function setLendingMarketImpl(address newImpl) external override onlyOwner {
+        _updateBeaconImpl(BeaconContracts.LENDING_MARKET, newImpl);
     }
 
     /**
      * @dev Sets the implementation contract of GenesisValueToken
      * @param newImpl The address of implementation contract
      */
-    function setGenesisValueTokenImpl(address newImpl) external onlyOwner {
-        Storage.slot().genesisValueTokenProxy = _updateBeaconImpl(
-            BeaconContracts.GENESIS_VALUE_TOKEN,
-            newImpl
-        );
+    function setGenesisValueTokenImpl(address newImpl) external override onlyOwner {
+        _updateBeaconImpl(BeaconContracts.GENESIS_VALUE_TOKEN, newImpl);
     }
 
     function initializeLendingMarket(
         bytes32 _ccy,
         uint256 _basisDate,
         uint256 _compoundFactor
-    ) external onlyOwner {
+    ) external override onlyOwner {
         require(_compoundFactor > 0, "Invalid compound factor");
         require(Storage.slot().basisDates[_ccy] == 0, "Already initialized");
 
@@ -253,7 +237,7 @@ contract LendingMarketControllerV2 is
 
     // =========== LENDING MARKETS MANAGEMENT FUNCTIONS ===========
 
-    function rotateLendingMarkets(bytes32 _ccy) external {
+    function rotateLendingMarkets(bytes32 _ccy) external override {
         require(
             Storage.slot().lendingMarkets[_ccy].length > 0,
             "No lending markets exist for a specific currency"
@@ -310,25 +294,6 @@ contract LendingMarketControllerV2 is
         }
 
         emit LendingMarketsUnpaused(_ccy);
-        return true;
-    }
-
-    // =========== BULK TRADE FUNCTIONS ===========
-
-    /**
-     * @dev Places orders in multiple Lending Markets.
-     * @param orders Lending Market orders array with ccy and terms to identify right market
-     */
-    function placeBulkOrders(Order[] memory orders) external override returns (bool) {
-        for (uint8 i = 0; i < orders.length; i++) {
-            Order memory order = orders[i];
-
-            ILendingMarketV2 market = ILendingMarketV2(
-                Storage.slot().lendingMarkets[order.ccy][order.term]
-            );
-            market.order(order.side, order.amount, order.rate);
-        }
-
         return true;
     }
 

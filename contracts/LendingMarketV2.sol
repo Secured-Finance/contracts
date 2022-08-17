@@ -36,6 +36,34 @@ contract LendingMarketV2 is
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     /**
+     * @dev Modifier to make a function callable only by order maker.
+     * @param _orderId Market order id
+     */
+    modifier onlyMaker(uint256 _orderId) {
+        require(msg.sender == getMaker(_orderId), "caller is not the maker");
+        _;
+    }
+
+    /**
+     * @dev Modifier to check if the market is not closed.
+     */
+    modifier ifNotClosed() {
+        require(
+            !isMatured() && block.timestamp >= Storage.slot().basisDate,
+            "Market is not opened"
+        );
+        _;
+    }
+
+    /**
+     * @dev Modifier to check if the market is matured.
+     */
+    modifier ifMatured() {
+        require(isMatured(), "Market is not matured");
+        _;
+    }
+
+    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      * @param _resolver The address of the Address Resolver contract
@@ -71,34 +99,6 @@ contract LendingMarketV2 is
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
-    /**
-     * @dev Modifier to make a function callable only by order maker.
-     * @param _orderId Market order id
-     */
-    modifier onlyMaker(uint256 _orderId) {
-        require(msg.sender == getMaker(_orderId), "caller is not the maker");
-        _;
-    }
-
-    /**
-     * @dev Modifier to check if the market is not closed.
-     */
-    modifier ifNotClosed() {
-        require(
-            !isMatured() && block.timestamp >= Storage.slot().basisDate,
-            "Market is not opened"
-        );
-        _;
-    }
-
-    /**
-     * @dev Modifier to check if the market is matured.
-     */
-    modifier ifMatured() {
-        require(isMatured(), "Market is not matured");
-        _;
     }
 
     /**

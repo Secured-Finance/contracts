@@ -9,6 +9,15 @@ contract MixinBeaconProxyController is IProxyController {
     // Map of registered addresses (name => registeredAddresses)
     mapping(bytes32 => address) private _registeredBeaconProxies;
 
+    function _getAddress(bytes32 beaconName) internal view returns (address beaconProxyAddress) {
+        beaconProxyAddress = _registeredBeaconProxies[beaconName];
+        UpgradeabilityBeaconProxy beaconProxy = UpgradeabilityBeaconProxy(
+            payable(beaconProxyAddress)
+        );
+
+        require(beaconProxy.implementation() != address(0), "Beacon proxy address not found");
+    }
+
     function _createProxy(bytes32 beaconName, bytes memory data) internal returns (address) {
         address beaconProxyAddress = _registeredBeaconProxies[beaconName];
         require(beaconProxyAddress != address(0), "Beacon proxy is empty");

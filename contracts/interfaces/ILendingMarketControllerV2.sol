@@ -18,6 +18,10 @@ interface ILendingMarketControllerV2 {
 
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
 
+    function getBasisDate(bytes32 _ccy) external view returns (uint256);
+
+    function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory);
+
     function getBorrowRates(bytes32 _ccy) external view returns (uint256[] memory rates);
 
     function getLendRates(bytes32 _ccy) external view returns (uint256[] memory rates);
@@ -26,15 +30,25 @@ interface ILendingMarketControllerV2 {
 
     function getMaturities(bytes32 _ccy) external view returns (uint256[] memory);
 
-    function getLendingMarket(bytes32, uint256) external view returns (address);
-
     function getTotalPresentValue(bytes32 ccy, address account) external view returns (int256);
+
+    function getBeaconProxyAddress(bytes32 beaconName) external view returns (address);
+
+    function setLendingMarketImpl(address newImpl) external;
+
+    function setGenesisValueTokenImpl(address newImpl) external;
+
+    function initializeLendingMarket(
+        bytes32 _ccy,
+        uint256 _basisDate,
+        uint256 _compoundFactor
+    ) external;
 
     function createLendingMarket(bytes32 _ccy) external returns (address market);
 
-    function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
+    function rotateLendingMarkets(bytes32 _ccy) external;
 
-    function placeBulkOrders(Order[] memory orders) external returns (bool);
+    function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
 
     function unpauseLendingMarkets(bytes32 _ccy) external returns (bool);
 }
