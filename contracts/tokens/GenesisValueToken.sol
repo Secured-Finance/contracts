@@ -14,6 +14,14 @@ import {GenesisValueTokenStorage as Storage, MaturityRate} from "../storages/Gen
  * @title GenesisValueToken contract is used to store the genesis value as a token for Lending deals.
  */
 contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownable, Proxyable {
+    /**
+     * @dev Modifier to check if the market is matured.
+     */
+    modifier onlyLendingMarket() {
+        require(isLendingMarket(msg.sender), "Market is not matured");
+        _;
+    }
+
     function initialize(
         address _owner,
         address _resolver,
@@ -121,7 +129,7 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         address _account,
         uint256 _basisMaturity,
         int256 _futureValue
-    ) public onlyAcceptedContracts returns (bool) {
+    ) public onlyLendingMarket returns (bool) {
         // NOTE: The formula is: tokenAmount = featureValue / compoundFactor.
         int256 amount = ((_futureValue * int256(ProtocolTypes.BP)) /
             int256(Storage.slot().maturityRates[_basisMaturity].compoundFactor));
@@ -137,5 +145,18 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         emit Transfer(address(0), _account, amount);
 
         return true;
+    }
+
+    function isLendingMarket(address account) internal view virtual returns (bool) {
+        address[] memory lendingMarkets = lendingMarketController().getLendingMarkets(
+            Storage.slot().ccy
+        );
+        for (uint256 i = 0; i < lendingMarkets.length; i++) {
+            if (account == lendingMarkets[i]) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
