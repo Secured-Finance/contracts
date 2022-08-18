@@ -19,6 +19,8 @@ const Side = {
 };
 
 const COMPOUND_FACTOR = '1010000000000000000';
+const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');
+const BP = ethers.BigNumber.from('10000');
 
 should();
 
@@ -505,6 +507,92 @@ contract('LendingMarketController', () => {
       expect(aliceGVAfter.toString()).to.equal(totalSupplyAfter.toString());
       expect(aliceGVBefore.toString()).to.equal(aliceGVAfter.toString());
       expect(aliceGVBefore.toString()).to.equal(aliceExpectedGV.toString());
+    });
+
+    it('Rotate markets multiple times', async () => {
+      const lendingMarket1 = lendingMarketProxies[0];
+      const lendingMarket2 = lendingMarketProxies[1];
+      const lendingMarket3 = lendingMarketProxies[2];
+      const genesisValueTokenProxy = await lendingMarketControllerProxy
+        .getGenesisValueToken(targetCurrency)
+        .then((address) => ethers.getContractAt('GenesisValueToken', address));
+
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      await lendingMarket1
+        .connect(alice)
+        .order(Side.LEND, '100000000000000000', '820');
+      await lendingMarket1
+        .connect(bob)
+        .order(Side.BORROW, '100000000000000000', '780');
+
+      await lendingMarket2
+        .connect(alice)
+        .order(Side.LEND, '100000000000000000', '920');
+      await lendingMarket2
+        .connect(bob)
+        .order(Side.BORROW, '100000000000000000', '880');
+
+      await lendingMarket3
+        .connect(alice)
+        .order(Side.LEND, '100000000000000000', '1020');
+      await lendingMarket3
+        .connect(bob)
+        .order(Side.BORROW, '100000000000000000', '980');
+
+      await time.increase(time.duration.days(92));
+      await expect(
+        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
+      ).to.emit(lendingMarketControllerProxy, 'LendingMarketsRotated');
+
+      await time.increase(time.duration.days(92));
+      await expect(
+        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
+      ).to.emit(lendingMarketControllerProxy, 'LendingMarketsRotated');
+
+      const maturityRates = await Promise.all([
+        genesisValueTokenProxy.getMaturityRate(maturities[0]),
+        genesisValueTokenProxy.getMaturityRate(maturities[1]),
+        genesisValueTokenProxy.getMaturityRate(maturities[2]),
+      ]);
+
+      expect(maturityRates[0].prev.toString()).to.equal('0');
+      expect(maturityRates[0].next.toString()).to.equal(maturities[1]);
+      expect(maturityRates[0].compoundFactor.toString()).to.equal(
+        COMPOUND_FACTOR,
+      );
+
+      const expectedCompoundFactorInMarket1 = maturityRates[0].compoundFactor
+        .mul(
+          maturityRates[1].rate
+            .mul(maturityRates[1].tenor)
+            .add(BP.mul(SECONDS_IN_YEAR)),
+        )
+        .div(SECONDS_IN_YEAR.mul(BP))
+        .toString();
+
+      expect(maturityRates[1].prev.toString()).to.equal(maturities[0]);
+      expect(maturityRates[1].next.toString()).to.equal(maturities[2]);
+      expect(maturityRates[1].compoundFactor.toString()).to.equal(
+        expectedCompoundFactorInMarket1,
+      );
+
+      const expectedCompoundFactorInMarket2 = maturityRates[1].compoundFactor
+        .mul(
+          maturityRates[2].rate
+            .mul(maturityRates[2].tenor)
+            .add(BP.mul(SECONDS_IN_YEAR)),
+        )
+        .div(SECONDS_IN_YEAR.mul(BP))
+        .toString();
+
+      expect(maturityRates[2].prev.toString()).to.equal(maturities[1]);
+      expect(maturityRates[2].next.toString()).to.equal('0');
+      expect(maturityRates[2].compoundFactor.toString()).to.equal(
+        expectedCompoundFactorInMarket2,
+      );
     });
   });
 });

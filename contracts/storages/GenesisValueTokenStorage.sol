@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 struct MaturityRate {
     uint256 rate;
+    uint256 tenor;
     uint256 compoundFactor;
     uint256 next;
     uint256 prev;

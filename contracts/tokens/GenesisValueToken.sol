@@ -106,21 +106,21 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
 
         // Save actual compound factor here due to calculating the genesis value from future value.
         // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 + rate * (nextMaturity - maturity) / 360 days).
-        uint256 dt = nextMaturity - maturity;
+        uint256 tenor = nextMaturity - maturity;
         Storage.slot().compoundFactor = ((
             (Storage.slot().compoundFactor *
-                (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * dt))
+                (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * tenor))
         ) / (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR));
-        uint256 actualRate = (rate * dt) / ProtocolTypes.SECONDS_IN_YEAR;
 
         Storage.slot().maturityRates[nextMaturity] = MaturityRate({
-            rate: actualRate,
+            rate: rate,
+            tenor: tenor,
             compoundFactor: Storage.slot().compoundFactor,
             prev: maturity,
             next: 0
         });
 
-        emit CompoundFactorUpdated(nextMaturity, actualRate);
+        emit CompoundFactorUpdated(nextMaturity, rate, tenor);
     }
 
     // =========== ERC20 FUNCTIONS ===========
