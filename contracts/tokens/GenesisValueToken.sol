@@ -56,12 +56,12 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         return Storage.slot().compoundFactor;
     }
 
-    function compoundFactorOf(uint256 maturity) public view override returns (uint256) {
-        MaturityRate memory maturityRate = Storage.slot().maturityRates[maturity];
+    function compoundFactorOf(uint256 _maturity) public view override returns (uint256) {
+        MaturityRate memory maturityRate = Storage.slot().maturityRates[_maturity];
         return maturityRate.compoundFactor;
     }
 
-    function futureValueOf(uint256 maturity, int256 futureValueInMaturity)
+    function futureValueOf(uint256 _maturity, int256 _futureValueInMaturity)
         external
         view
         override
@@ -71,56 +71,60 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         // genesisValue = futureValueInMaturity / compoundFactorInMaturity
         // futureValue = genesisValue * currentCompoundFactor.
         return
-            (futureValueInMaturity * int256(compoundFactor())) / int256(compoundFactorOf(maturity));
+            (_futureValueInMaturity * int256(compoundFactor())) /
+            int256(compoundFactorOf(_maturity));
     }
 
-    function getMaturityRate(uint256 maturity)
+    function getMaturityRate(uint256 _maturity)
         external
         view
         override
         returns (MaturityRate memory)
     {
-        return Storage.slot().maturityRates[maturity];
+        return Storage.slot().maturityRates[_maturity];
     }
 
     function updateCompoundFactor(
-        uint256 maturity,
-        uint256 nextMaturity,
-        uint256 rate
+        uint256 _maturity,
+        uint256 _nextMaturity,
+        uint256 _rate
     ) external onlyAcceptedContracts {
-        require(rate != 0, "rate is zero");
-        require(Storage.slot().maturityRates[maturity].next == 0, "already updated maturity");
-        require(nextMaturity > maturity, "invalid maturity");
-        require(Storage.slot().maturityRates[nextMaturity].compoundFactor == 0, "existed maturity");
+        require(_rate != 0, "rate is zero");
+        require(Storage.slot().maturityRates[_maturity].next == 0, "already updated maturity");
+        require(_nextMaturity > _maturity, "invalid maturity");
+        require(
+            Storage.slot().maturityRates[_nextMaturity].compoundFactor == 0,
+            "existed maturity"
+        );
 
         if (Storage.slot().initialCompoundFactor == Storage.slot().compoundFactor) {
-            Storage.slot().maturityRates[maturity].compoundFactor = Storage.slot().compoundFactor;
+            Storage.slot().maturityRates[_maturity].compoundFactor = Storage.slot().compoundFactor;
         } else {
             require(
-                Storage.slot().maturityRates[maturity].compoundFactor != 0,
+                Storage.slot().maturityRates[_maturity].compoundFactor != 0,
                 "invalid compound factor"
             );
         }
 
-        Storage.slot().maturityRates[maturity].next = nextMaturity;
+        Storage.slot().maturityRates[_maturity].next = _nextMaturity;
 
         // Save actual compound factor here due to calculating the genesis value from future value.
         // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 + rate * (nextMaturity - maturity) / 360 days).
-        uint256 tenor = nextMaturity - maturity;
+        uint256 tenor = _nextMaturity - _maturity;
         Storage.slot().compoundFactor = ((
             (Storage.slot().compoundFactor *
-                (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * tenor))
+                (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + _rate * tenor))
         ) / (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR));
 
-        Storage.slot().maturityRates[nextMaturity] = MaturityRate({
-            rate: rate,
+        Storage.slot().maturityRates[_nextMaturity] = MaturityRate({
+            rate: _rate,
             tenor: tenor,
             compoundFactor: Storage.slot().compoundFactor,
-            prev: maturity,
+            prev: _maturity,
             next: 0
         });
 
-        emit CompoundFactorUpdated(nextMaturity, rate, tenor);
+        emit CompoundFactorUpdated(_nextMaturity, _rate, tenor);
     }
 
     // =========== ERC20 FUNCTIONS ===========
@@ -133,8 +137,8 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         return Storage.slot().decimals;
     }
 
-    function balanceOf(address account) public view virtual returns (int256) {
-        return Storage.slot().balances[account];
+    function balanceOf(address _account) public view virtual returns (int256) {
+        return Storage.slot().balances[_account];
     }
 
     function mint(
@@ -159,12 +163,12 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         return true;
     }
 
-    function isLendingMarket(address account) internal view virtual returns (bool) {
+    function isLendingMarket(address _account) internal view virtual returns (bool) {
         address[] memory lendingMarkets = lendingMarketController().getLendingMarkets(
             Storage.slot().ccy
         );
         for (uint256 i = 0; i < lendingMarkets.length; i++) {
-            if (account == lendingMarkets[i]) {
+            if (_account == lendingMarkets[i]) {
                 return true;
             }
         }
