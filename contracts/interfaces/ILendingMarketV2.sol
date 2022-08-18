@@ -67,6 +67,8 @@ interface ILendingMarketV2 {
             uint256
         );
 
+    function futureValueOf(address account) external view returns (int256);
+
     function presentValueOf(address account) external view returns (int256);
 
     function openMarket(uint256 maturity) external returns (uint256);

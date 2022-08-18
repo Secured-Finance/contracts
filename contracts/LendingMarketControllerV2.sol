@@ -321,9 +321,10 @@ contract LendingMarketControllerV2 is
         returns (address)
     {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,bytes32,uint256)",
+            "initialize(address,address,uint8,bytes32,uint256)",
             msg.sender,
             address(resolver),
+            18,
             _ccy,
             _compoundFactor
         );

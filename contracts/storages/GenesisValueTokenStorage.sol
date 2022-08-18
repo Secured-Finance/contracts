@@ -15,6 +15,7 @@ library GenesisValueTokenStorage {
         bytes32 ccy;
         uint256 initialCompoundFactor;
         uint256 compoundFactor;
+        uint8 decimals;
         mapping(address => int256) balances;
         uint256 totalLendingSupply;
         uint256 totalBorrowingSupply;

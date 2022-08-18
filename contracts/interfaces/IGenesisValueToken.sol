@@ -25,11 +25,17 @@ interface IGenesisValueToken {
         view
         returns (int256);
 
+    function getMaturityRate(uint256 maturity) external view returns (MaturityRate memory);
+
     function updateCompoundFactor(
         uint256 maturity,
         uint256 nextMaturity,
         uint256 rate
     ) external;
+
+    function totalSupply() external view returns (uint256);
+
+    function decimals() external view returns (uint8);
 
     function balanceOf(address account) external view returns (int256);
 

@@ -200,22 +200,28 @@ contract LendingMarketV2 is
         }
     }
 
-    function presentValueOf(address account) external view returns (int256) {
+    function futureValueOf(address account) public view override returns (int256) {
         (int256 futureValue, uint256 maturity) = FutureValueHandler.getBalanceInMaturity(account);
 
         if (maturity == 0) {
             return 0;
-        } else {
-            if (Storage.slot().maturity != maturity) {
-                futureValue = Storage.slot().gvToken.futureValueOf(maturity, futureValue);
-            }
-
-            // NOTE: The formula is: presentValue = futureValue / (1 + rate * (maturity - now) / 360 days).
-            uint256 rate = getMidRate();
-            uint256 dt = maturity >= block.timestamp ? maturity - block.timestamp : 0;
-            return ((futureValue * int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR)) /
-                int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * dt));
+        } else if (Storage.slot().maturity != maturity) {
+            futureValue = Storage.slot().gvToken.futureValueOf(maturity, futureValue);
         }
+
+        return futureValue;
+    }
+
+    function presentValueOf(address account) external view override returns (int256) {
+        int256 futureValue = futureValueOf(account);
+
+        // NOTE: The formula is: presentValue = futureValue / (1 + rate * (maturity - now) / 360 days).
+        uint256 rate = getMidRate();
+        uint256 dt = Storage.slot().maturity >= block.timestamp
+            ? Storage.slot().maturity - block.timestamp
+            : 0;
+        return ((futureValue * int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR)) /
+            int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * dt));
     }
 
     /**
@@ -388,12 +394,12 @@ contract LendingMarketV2 is
         mintGenesisValueToken(lender);
         mintGenesisValueToken(borrower);
 
-        // NOTE: The formula is: tokenAmount = amount * (1 + rate * (maturity - now) / 360 days).
+        // NOTE: The formula is: featureValue = amount * (1 + rate * (maturity - now) / 360 days).
         uint256 currentRate = (marketOrder.rate * (Storage.slot().maturity - block.timestamp)) /
             ProtocolTypes.SECONDS_IN_YEAR;
-        uint256 tokenAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
+        uint256 fvAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
 
-        FutureValueHandler.add(lender, borrower, tokenAmount);
+        FutureValueHandler.add(lender, borrower, fvAmount);
 
         collateralAggregator().releaseUnsettledCollateral(
             lender,

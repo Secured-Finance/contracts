@@ -25,11 +25,13 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
     function initialize(
         address _owner,
         address _resolver,
+        uint8 _decimals,
         bytes32 _ccy,
         uint256 _compoundFactor
     ) public initializer onlyBeacon {
         require(_compoundFactor != 0, "compound factor is zero");
 
+        Storage.slot().decimals = _decimals;
         Storage.slot().ccy = _ccy;
         Storage.slot().initialCompoundFactor = _compoundFactor;
         Storage.slot().compoundFactor = _compoundFactor;
@@ -72,39 +74,45 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
             (futureValueInMaturity * int256(compoundFactor())) / int256(compoundFactorOf(maturity));
     }
 
+    function getMaturityRate(uint256 maturity)
+        external
+        view
+        override
+        returns (MaturityRate memory)
+    {
+        return Storage.slot().maturityRates[maturity];
+    }
+
     function updateCompoundFactor(
         uint256 maturity,
         uint256 nextMaturity,
         uint256 rate
     ) external onlyAcceptedContracts {
         require(rate != 0, "rate is zero");
-        require(Storage.slot().maturityRates[maturity].next == 0, "invalid maturity");
+        require(Storage.slot().maturityRates[maturity].next == 0, "already updated maturity");
+        require(nextMaturity > maturity, "invalid maturity");
         require(Storage.slot().maturityRates[nextMaturity].compoundFactor == 0, "existed maturity");
 
         if (Storage.slot().initialCompoundFactor == Storage.slot().compoundFactor) {
-            Storage.slot().maturityRates[maturity] = MaturityRate({
-                rate: 0,
-                compoundFactor: Storage.slot().compoundFactor,
-                prev: 0,
-                next: nextMaturity
-            });
+            Storage.slot().maturityRates[maturity].compoundFactor = Storage.slot().compoundFactor;
         } else {
             require(
                 Storage.slot().maturityRates[maturity].compoundFactor != 0,
                 "invalid compound factor"
             );
-            Storage.slot().maturityRates[maturity].next = nextMaturity;
         }
 
+        Storage.slot().maturityRates[maturity].next = nextMaturity;
+
         // Save actual compound factor here due to calculating the genesis value from future value.
-        // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 + rate * (maturity - now) / 360 days).
-        uint256 dt = maturity >= block.timestamp ? nextMaturity - block.timestamp : 0;
+        // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 + rate * (nextMaturity - maturity) / 360 days).
+        uint256 dt = nextMaturity - maturity;
         Storage.slot().compoundFactor = ((
             (Storage.slot().compoundFactor *
                 (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * dt))
         ) / (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR));
-
         uint256 actualRate = (rate * dt) / ProtocolTypes.SECONDS_IN_YEAR;
+
         Storage.slot().maturityRates[nextMaturity] = MaturityRate({
             rate: actualRate,
             compoundFactor: Storage.slot().compoundFactor,
@@ -117,8 +125,12 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
 
     // =========== ERC20 FUNCTIONS ===========
 
-    function totalSupply() external view returns (uint256) {
+    function totalSupply() external view override returns (uint256) {
         return Storage.slot().totalLendingSupply;
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return Storage.slot().decimals;
     }
 
     function balanceOf(address account) public view virtual returns (int256) {
@@ -131,7 +143,7 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
         int256 _futureValue
     ) public onlyLendingMarket returns (bool) {
         // NOTE: The formula is: tokenAmount = featureValue / compoundFactor.
-        int256 amount = ((_futureValue * int256(ProtocolTypes.BP)) /
+        int256 amount = ((_futureValue * int256(10**decimals())) /
             int256(Storage.slot().maturityRates[_basisMaturity].compoundFactor));
 
         if (amount >= 0) {
