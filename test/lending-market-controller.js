@@ -1,13 +1,13 @@
-const ProxyController = artifacts.require('ProxyControllerV2');
-const LendingMarketController = artifacts.require('LendingMarketControllerV2');
 const AddressResolver = artifacts.require('AddressResolver');
-const CurrencyController = artifacts.require('CurrencyController');
 const CollateralAggregator = artifacts.require('CollateralAggregatorV3');
-const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
+const CurrencyController = artifacts.require('CurrencyController');
 const GenesisValueToken = artifacts.require('GenesisValueToken');
 const LendingMarket = artifacts.require('LendingMarketV2');
+const LendingMarketController = artifacts.require('LendingMarketControllerV2');
+const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
+const ProxyController = artifacts.require('ProxyControllerV2');
 
-const { should, expect } = require('chai');
+const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
 const moment = require('moment');
 const { time } = require('@openzeppelin/test-helpers');
@@ -21,8 +21,6 @@ const Side = {
 const COMPOUND_FACTOR = '1010000000000000000';
 const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');
 const BP = ethers.BigNumber.from('10000');
-
-should();
 
 contract('LendingMarketController', () => {
   let mockCurrencyController;

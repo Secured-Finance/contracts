@@ -86,15 +86,21 @@ contract ProxyControllerV2 is IProxyController, Ownable {
      * @dev  Sets the implementation contract of CollateralAggregator
      * @param newImpl The address of implementation contract
      */
-    function setCollateralAggregatorImpl(address newImpl) external onlyOwner {
+    function setCollateralAggregatorImpl(
+        address newImpl,
+        uint256 marginCallThresholdRate,
+        uint256 autoLiquidationThresholdRate,
+        uint256 liquidationPriceRate,
+        uint256 minCollateralRate
+    ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,uint256,uint256,uint256,uint256)",
             msg.sender,
             resolver,
-            15000,
-            12500,
-            12000,
-            2500
+            marginCallThresholdRate,
+            autoLiquidationThresholdRate,
+            liquidationPriceRate,
+            minCollateralRate
         );
         _updateImpl(Contracts.COLLATERAL_AGGREGATOR, newImpl, data);
     }

@@ -1,101 +1,84 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./libraries/AddressPacking.sol";
-// import "./libraries/NetPV.sol";
-import "./interfaces/ICollateralAggregatorV3.sol";
-import "./mixins/MixinCollateralManagementV2.sol";
-import "./types/ProtocolTypes.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// libraries
+import {Contracts} from "./libraries/Contracts.sol";
+import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
+// interfaces
+import {ICollateralAggregatorV3} from "./interfaces/ICollateralAggregatorV3.sol";
+// mixins
+import {MixinAddressResolverV2} from "./mixins/MixinAddressResolverV2.sol";
+// types
+import {ProtocolTypes} from "./types/ProtocolTypes.sol";
+// utils
+import {Ownable} from "./utils/Ownable.sol";
+import {Proxyable} from "./utils/Proxyable.sol";
+// storages
+import {CollateralAggregatorV3Storage as Storage} from "./storages/CollateralAggregatorV3Storage.sol";
 
 /**
  * @title Collateral Aggregator contract is used to manage Secured Finance
  * protocol collateral obligations and movements of collateral across collateral vaults.
  *
- * This contract handle the calculations of aggregated collateral obligations between users
- * in a bilateral relations, calculations of required rebalancing to stabilize
- * the bilateral position, liquidations using FX rates for all protocol currency pairs to ETH
- *
- * Liquidations and rebalancing operations are handled across all collateral vaults where
- * users have deposited their funds in FIFO order.
- *
- * Contract linked to Product based contracts (like Loan, Swap, etc),
- * LendingMarkets, CurrencyController contracts and Liquidation Engine.
+ * This contract handle the calculations of aggregated collateral obligations of user.
  */
-contract CollateralAggregatorV3 is ICollateralAggregatorV3, MixinCollateralManagementV2 {
+contract CollateralAggregatorV3 is
+    ICollateralAggregatorV3,
+    MixinAddressResolverV2,
+    Ownable,
+    Proxyable
+{
     using EnumerableSet for EnumerableSet.Bytes32Set;
-    // using NetPV for NetPV.CcyNetting;
-
-    /**
-     * @dev Modifier to check if user registered already
-     */
-    modifier registeredUser(address _user) {
-        require(Storage.slot().isRegistered[_user], "NOT_REGISTERED");
-        _;
-    }
 
     /**
      * @dev Modifier to check if user hasn't been registered yet
      */
     modifier nonRegisteredUser(address _user) {
-        require(!Storage.slot().isRegistered[_user], "REGISTERED_ALREADY");
+        require(!Storage.slot().isRegistered[_user], "User exists");
         _;
     }
 
-    // =========== COLLATERAL BOOK SECTION ===========
-
     /**
-     * @dev Register user and store collateral book
+     * @dev Modifier to check if the market is matured.
      */
-    function register() public override nonRegisteredUser(msg.sender) {
-        string[] memory _addresses = new string[](0);
-        uint256[] memory _chainIds = new uint256[](0);
-
-        _register(_addresses, _chainIds);
+    modifier onlyLendingMarket(bytes32 _ccy) {
+        require(_isLendingMarket(_ccy, msg.sender), "Caller is not the lending market");
+        _;
     }
 
     /**
-     * @dev Register user and store collateral book
-     * @param _addresses Array of other blockchain addresses
-     * @param _chainIds Array of chain ids for other blockchains
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
-    function register(string[] memory _addresses, uint256[] memory _chainIds)
-        public
-        override
-        nonRegisteredUser(msg.sender)
-    {
-        _register(_addresses, _chainIds);
+    function initialize(
+        address _owner,
+        address _resolver,
+        uint256 _marginCallThresholdRate,
+        uint256 _autoLiquidationThresholdRate,
+        uint256 _liquidationPriceRate,
+        uint256 _minCollateralRate
+    ) public initializer onlyProxy {
+        _transferOwnership(_owner);
+        registerAddressResolver(_resolver);
+
+        CollateralParametersHandler.setCollateralParameters(
+            _marginCallThresholdRate,
+            _autoLiquidationThresholdRate,
+            _liquidationPriceRate,
+            _minCollateralRate
+        );
+    }
+
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](3);
+        contracts[0] = Contracts.COLLATERAL_VAULT;
+        contracts[1] = Contracts.CURRENCY_CONTROLLER;
+        contracts[2] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     /**
-     * @dev Triggers to lock unsettled collateral on a global book for selected currency.
-     * @param user User's address
-     * @param ccy Specified currency of the deal
-     * @param amount Amount of funds to be locked in Ccy for user
-     */
-    function useUnsettledCollateral(
-        address user,
-        bytes32 ccy,
-        uint256 amount
-    ) external override onlyAcceptedContracts {
-        Storage.slot().exposedUnsettledCurrencies[user].add(ccy);
-        require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
-
-        Storage.slot().unsettledCollateral[user][ccy] += amount;
-
-        emit UseUnsettledCollateral(user, ccy, amount);
-    }
-
-    /**
-     * @dev Triggers to calculate total unsettled exposure across all currencies
-     * @param _user User's address
-     */
-    function getTotalUnsettledExp(address _user) public view override returns (uint256 exp) {
-        (exp, ) = _netTotalUnsettledAndHypotheticalPV(_user, "", 0);
-    }
-
-    /**
-     * @dev Triggers to check if unsettled collateral exposure covered more that 150% from a global collateral book of `_user`.
+     * @dev Checks if unsettled collateral exposure covered more that 150% from a global collateral book of `_user`.
      * @param _user User's ethereum address
      * @param _ccy Currency to calculate additional PV for
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
@@ -106,33 +89,89 @@ contract CollateralAggregatorV3 is ICollateralAggregatorV3, MixinCollateralManag
         uint256 _unsettledExp
     ) public view override returns (bool) {
         (uint256 coverage, , ) = _calculateUnsettledCoverage(_user, _ccy, _unsettledExp);
-        return coverage >= Storage.slot().marginCallThresholdRate;
+        return coverage >= CollateralParametersHandler.marginCallThresholdRate();
+    }
+
+    function isRegisteredUser(address addr) external view override returns (bool) {
+        return Storage.slot().isRegistered[addr];
     }
 
     /**
-     * @dev Triggers to get maximum amount of ETH available to widthdraw from `_user` collateral book.
+     * @dev Gets maximum amount of ETH available to withdraw from `_user` collateral book.
      * @param _user User's address
      */
-    function getMaxCollateralBookWidthdraw(address _user)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function getMaxCollateralBookWithdraw(address _user) external view virtual returns (uint256) {
         return _calcMaxCollateral(_user);
     }
 
     /**
-     * @dev Triggers to get coverage of the global collateral book against all unsettled exposure.
+     * @dev Gets coverage of the global collateral book against all unsettled exposure.
      * @param _user User's address
      */
-    function getUnsettledCoverage(address _user) public view override returns (uint256 coverage) {
+    function getUnsettledCoverage(address _user) external view override returns (uint256 coverage) {
         (coverage, , ) = _calculateUnsettledCoverage(_user, "", 0);
     }
 
+    function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256) {
+        return Storage.slot().unsettledCollateral[user][ccy];
+    }
+
     /**
-     * @dev Triggers to reduce the amount of unsettled exposure in specific `ccy` from a global collateral book of `user`
+     * @dev Calculates total unsettled exposure across all currencies
+     * @param _user User's address
+     */
+    function getTotalUnsettledExp(address _user) external view override returns (uint256 exp) {
+        (exp, ) = _netTotalUnsettledAndHypotheticalPV(_user, "", 0);
+    }
+
+    /**
+     * @dev Gets collateral parameters
+     */
+    function getCollateralParameters()
+        external
+        view
+        override
+        onlyOwner
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return CollateralParametersHandler.getCollateralParameters();
+    }
+
+    /**
+     * @dev Register user and store collateral book
+     */
+    function register() external override nonRegisteredUser(msg.sender) {
+        Storage.slot().isRegistered[msg.sender] = true;
+
+        emit Register(msg.sender);
+    }
+
+    /**
+     * @dev Locks unsettled collateral on a global book for selected currency.
+     * @param user User's address
+     * @param ccy Specified currency of the deal
+     * @param amount Amount of funds to be locked in Ccy for user
+     */
+    function useUnsettledCollateral(
+        address user,
+        bytes32 ccy,
+        uint256 amount
+    ) external override onlyLendingMarket(ccy) {
+        Storage.slot().exposedUnsettledCurrencies[user].add(ccy);
+        require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
+
+        Storage.slot().unsettledCollateral[user][ccy] += amount;
+
+        emit UseUnsettledCollateral(user, ccy, amount);
+    }
+
+    /**
+     * @dev Reduces the amount of unsettled exposure in specific `ccy` from a global collateral book of `user`
      * @param user User's ETH address
      * @param ccy Specified currency of the deal
      * @param amount Amount of funds to be unlocked from unsettled exposure in specified ccy
@@ -141,7 +180,7 @@ contract CollateralAggregatorV3 is ICollateralAggregatorV3, MixinCollateralManag
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external override onlyAcceptedContracts {
+    ) external override onlyLendingMarket(ccy) {
         Storage.slot().unsettledCollateral[user][ccy] -= amount;
 
         if (Storage.slot().unsettledCollateral[user][ccy] == 0) {
@@ -151,46 +190,28 @@ contract CollateralAggregatorV3 is ICollateralAggregatorV3, MixinCollateralManag
         emit ReleaseUnsettled(user, ccy, amount);
     }
 
-    function checkRegisteredUser(address addr) public view override returns (bool) {
-        return Storage.slot().isRegistered[addr];
-    }
-
-    function getExposedCurrencies(address partyA, address partyB)
-        public
-        view
-        override
-        returns (bytes32[] memory)
-    {
-        (bytes32 packedAddrs, ) = AddressPacking.pack(partyA, partyB);
-        EnumerableSet.Bytes32Set storage expCcy = Storage.slot().exposedCurrencies[packedAddrs];
-
-        uint256 numCcy = expCcy.length();
-        bytes32[] memory currencies = new bytes32[](numCcy);
-
-        for (uint256 i = 0; i < numCcy; i++) {
-            bytes32 ccy = expCcy.at(i);
-            currencies[i] = ccy;
-        }
-
-        return currencies;
-    }
-
-    function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256) {
-        return Storage.slot().unsettledCollateral[user][ccy];
-    }
-
-    // =========== INTERNAL FUNCTIONS ===========
-
     /**
-     * @dev Triggers internaly to store new collateral book
+     * @dev Sets main collateral parameters this function
+     * solves the issue of frontrunning during parameters tuning
+     *
+     * @param _marginCallThresholdRate Margin call threshold ratio
+     * @param _autoLiquidationThresholdRate Auto liquidation threshold rate
+     * @param _liquidationPriceRate Liquidation price rate
+     * @param _minCollateralRate Minimal collateral rate
+     * @notice Triggers only be contract owner
      */
-    function _register(string[] memory _addresses, uint256[] memory _chainIds) internal {
-        Storage.slot().isRegistered[msg.sender] = true;
-        // perform onboarding steps here
-
-        crosschainAddressResolver().updateAddresses(msg.sender, _chainIds, _addresses);
-
-        emit Register(msg.sender);
+    function setCollateralParameters(
+        uint256 _marginCallThresholdRate,
+        uint256 _autoLiquidationThresholdRate,
+        uint256 _liquidationPriceRate,
+        uint256 _minCollateralRate
+    ) external onlyOwner {
+        CollateralParametersHandler.setCollateralParameters(
+            _marginCallThresholdRate,
+            _autoLiquidationThresholdRate,
+            _liquidationPriceRate,
+            _minCollateralRate
+        );
     }
 
     function _determineCollateralAdjustment(uint256 _lockedCollateral, uint256 _targetReq)
@@ -227,7 +248,7 @@ contract CollateralAggregatorV3 is ICollateralAggregatorV3, MixinCollateralManag
     }
 
     /**
-     * @dev Triggers to calculate total unsettled exposure across all currencies against all global collateral books.
+     * @dev Calculates total unsettled exposure across all currencies against all global collateral books.
      * Also used to calculate hypothetical Net PV with additional exposure in specific `_ccy`
      * @param _user User's ethereum address
      * @param _ccy Currency to calculate additional PV for
@@ -308,22 +329,22 @@ contract CollateralAggregatorV3 is ICollateralAggregatorV3, MixinCollateralManag
         return (vars.coverage, vars.totalExpInETH, vars.totalCollateral);
     }
 
-    struct MaxCollateralBookWidthdrawLocalVars {
+    struct MaxCollateralBookWithdrawLocalVars {
         uint256 totalExpInETH;
         uint256 coverage;
         uint256 delta;
-        uint256 maxWidthdraw;
+        uint256 maxWithdraw;
         uint256 totalCollateral;
     }
 
     /**
-     * @dev Triggers to calculate maximum amount of ETH available to widthdraw from `_user` collateral book
+     * @dev Calculates maximum amount of ETH available to withdraw from `_user` collateral book
      * @param _user User's ethereum address
      *
-     * @return `maxWidthdraw` max widthdrawable amount of ETH
+     * @return `maxWithdraw` max withdrawable amount of ETH
      */
     function _calcMaxCollateral(address _user) internal view returns (uint256) {
-        MaxCollateralBookWidthdrawLocalVars memory vars;
+        MaxCollateralBookWithdrawLocalVars memory vars;
 
         (vars.coverage, vars.totalExpInETH, vars.totalCollateral) = _calculateUnsettledCoverage(
             _user,
@@ -333,15 +354,34 @@ contract CollateralAggregatorV3 is ICollateralAggregatorV3, MixinCollateralManag
 
         if (vars.coverage == 0) {
             return vars.totalCollateral;
-        } else if (vars.totalCollateral > vars.totalExpInETH * getMarginCallThresholdRate()) {
-            vars.maxWidthdraw =
-                vars.totalCollateral -
-                vars.totalExpInETH *
-                getMarginCallThresholdRate();
+        } else if (
+            vars.totalCollateral >
+            (vars.totalExpInETH * CollateralParametersHandler.marginCallThresholdRate()) /
+                ProtocolTypes.BP
+        ) {
+            // NOTE: The formula is:
+            // maxWithdraw = totalCollateral - (totalExposure * marginCallThresholdRate).
+            vars.maxWithdraw =
+                (vars.totalCollateral *
+                    ProtocolTypes.BP -
+                    vars.totalExpInETH *
+                    CollateralParametersHandler.marginCallThresholdRate()) /
+                ProtocolTypes.BP;
         } else {
             return 0;
         }
 
-        return vars.maxWidthdraw;
+        return vars.maxWithdraw;
+    }
+
+    function _isLendingMarket(bytes32 _ccy, address _account) internal view virtual returns (bool) {
+        address[] memory lendingMarkets = lendingMarketController().getLendingMarkets(_ccy);
+        for (uint256 i = 0; i < lendingMarkets.length; i++) {
+            if (_account == lendingMarkets[i]) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

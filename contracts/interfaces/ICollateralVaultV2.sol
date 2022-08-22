@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 interface ICollateralVaultV2 {
     event Deposit(address user, bytes32 ccy, uint256 amount);
     event Withdraw(address from, bytes32 ccy, uint256 amount);
+    event CurrencyRegistered(bytes32 ccy, address tokenAddress);
 
     function deposit(bytes32 _ccy, uint256 _amount) external payable;
 

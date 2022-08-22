@@ -18,7 +18,7 @@ contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownabl
      * @dev Modifier to check if the market is matured.
      */
     modifier onlyLendingMarket() {
-        require(isLendingMarket(msg.sender), "Market is not matured");
+        require(isLendingMarket(msg.sender), "Caller is not the lending market");
         _;
     }
 

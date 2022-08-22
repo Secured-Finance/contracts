@@ -36,7 +36,7 @@ contract CollateralVaultV2 is
      * @dev Modifier to check if user registered on collateral aggregator
      */
     modifier onlyRegisteredUser() {
-        require(collateralAggregator().checkRegisteredUser(msg.sender), "User not registered");
+        require(collateralAggregator().isRegisteredUser(msg.sender), "User not registered");
         _;
     }
 
@@ -60,14 +60,11 @@ contract CollateralVaultV2 is
         contracts[1] = Contracts.CURRENCY_CONTROLLER;
     }
 
-    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
-    }
-
     function registerCurrency(bytes32 _ccy, address _tokenAddress) external onlyOwner {
         require(currencyController().isCollateral(_ccy), "Invalid currency");
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
+
+        emit CurrencyRegistered(_ccy, _tokenAddress);
     }
 
     /**
@@ -98,7 +95,7 @@ contract CollateralVaultV2 is
         require(_amount > 0, "INVALID_AMOUNT");
 
         address user = msg.sender;
-        uint256 maxWidthdrawETH = collateralAggregator().getMaxCollateralBookWidthdraw(user);
+        uint256 maxWidthdrawETH = collateralAggregator().getMaxCollateralBookWithdraw(user);
         uint256 maxWidthdraw = currencyController().convertFromETH(_ccy, maxWidthdrawETH);
         uint256 withdrawAmt = _amount > maxWidthdraw ? maxWidthdraw : _amount;
 
