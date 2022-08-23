@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {CollateralParametersStorage as Storage} from "../storages/CollateralParametersStorage.sol";
 
 /**
- * @title MixinCollateralManagement is an internal component of CollateralAggregator contract
+ * @title CollateralParametersHandler is an internal component of CollateralAggregator contract
  *
  * This contract allows Secured Finance manage the collateral system such as:
  *

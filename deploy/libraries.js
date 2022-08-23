@@ -12,10 +12,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   await deploy('QuickSort', {
     from: deployer,
   }).then((result) => executeIfNewlyDeployment('QuickSort', result));
-
-  await deploy('DiscountFactor', {
-    from: deployer,
-  }).then((result) => executeIfNewlyDeployment('DiscountFactor', result));
 };
 
 module.exports.tags = ['Libraries'];

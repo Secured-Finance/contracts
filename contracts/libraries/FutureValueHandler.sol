@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {IFutureValueToken} from "../interfaces/IFutureValueToken.sol";
-import {MixinAddressResolverV2} from "../mixins/MixinAddressResolverV2.sol";
+import {MixinAddressResolver} from "../mixins/MixinAddressResolver.sol";
 import {Contracts} from "../libraries/Contracts.sol";
 import {Ownable} from "../utils/Ownable.sol";
 import {Proxyable} from "../utils/Proxyable.sol";
@@ -18,7 +18,7 @@ library FutureValueHandler {
         return Storage.slot().totalLendingSupply[_maturity];
     }
 
-    function getTotalBorrowingSupply(uint256 _maturity) internal view returns (uint256) {
+    function getotalBorrowingSupply(uint256 _maturity) internal view returns (uint256) {
         return Storage.slot().totalBorrowingSupply[_maturity];
     }
 

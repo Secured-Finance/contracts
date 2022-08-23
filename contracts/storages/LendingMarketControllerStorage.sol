@@ -5,8 +5,9 @@ library LendingMarketControllerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketController");
 
     struct Storage {
-        mapping(bytes32 => mapping(uint256 => address)) lendingMarkets;
-        mapping(bytes32 => uint256[]) supportedTerms;
+        mapping(bytes32 => address[]) lendingMarkets;
+        mapping(bytes32 => address) genesisValueTokens;
+        mapping(bytes32 => uint256) basisDates;
     }
 
     function slot() internal pure returns (Storage storage r) {

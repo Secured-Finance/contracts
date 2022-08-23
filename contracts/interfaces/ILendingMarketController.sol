@@ -12,30 +12,43 @@ struct Order {
 }
 
 interface ILendingMarketController {
-    event LendingMarketCreated(bytes32 ccy, uint256 term, address indexed marketAddr);
+    event LendingMarketCreated(bytes32 ccy, address indexed marketAddr, uint256 index);
     event LendingMarketsPaused(bytes32 ccy);
     event LendingMarketsUnpaused(bytes32 ccy);
 
-    function deployLendingMarket(bytes32 _ccy, uint256 _term) external returns (address market);
+    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
 
-    function getBorrowRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getBasisDate(bytes32 _ccy) external view returns (uint256);
 
-    function getDiscountFactorsForCcy(bytes32 _ccy)
-        external
-        view
-        returns (uint256[] memory, uint256[] memory);
+    function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory);
 
-    function getLendRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getBorrowRates(bytes32 _ccy) external view returns (uint256[] memory rates);
 
-    function getMidRatesForCcy(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getLendRates(bytes32 _ccy) external view returns (uint256[] memory rates);
 
-    function getLendingMarket(bytes32, uint256) external view returns (address);
+    function getMidRates(bytes32 _ccy) external view returns (uint256[] memory rates);
+
+    function getMaturities(bytes32 _ccy) external view returns (uint256[] memory);
+
+    function getTotalPresentValue(bytes32 ccy, address account) external view returns (int256);
+
+    function getBeaconProxyAddress(bytes32 beaconName) external view returns (address);
+
+    function setLendingMarketImpl(address newImpl) external;
+
+    function setGenesisValueTokenImpl(address newImpl) external;
+
+    function initializeLendingMarket(
+        bytes32 _ccy,
+        uint256 _basisDate,
+        uint256 _compoundFactor
+    ) external;
+
+    function createLendingMarket(bytes32 _ccy) external returns (address market);
+
+    function rotateLendingMarkets(bytes32 _ccy) external;
 
     function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
 
-    function placeBulkOrders(Order[] memory orders) external returns (bool);
-
     function unpauseLendingMarkets(bytes32 _ccy) external returns (bool);
-
-    function getSupportedTerms(bytes32 _ccy) external view returns (uint256[] memory);
 }

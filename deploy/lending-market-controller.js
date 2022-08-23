@@ -4,14 +4,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const discountFactorLibrary = await deployments.get('DiscountFactor');
   const quickSortLibrary = await deployments.get('QuickSort');
 
   const deployResult = await deploy('LendingMarketController', {
     from: deployer,
     libraries: {
       QuickSort: quickSortLibrary.address,
-      DiscountFactor: discountFactorLibrary.address,
     },
   });
 

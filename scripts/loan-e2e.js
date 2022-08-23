@@ -34,9 +34,6 @@ contract('Loan E2E Test', async () => {
   let collateralAggregator;
   let collateralVault;
   let lendingMarketController;
-  let loan;
-  let settlementEngine;
-  let termStructure;
 
   let loanId;
 
@@ -100,26 +97,15 @@ contract('Loan E2E Test', async () => {
     );
 
     // Get proxy contracts
-    collateralAggregator = await getProxy(
-      'CollateralAggregator',
-      'CollateralAggregatorV2',
-    );
+    collateralAggregator = await getProxy('CollateralAggregator');
     collateralVault = await getProxy('CollateralVault');
     lendingMarketController = await getProxy('LendingMarketController');
-    settlementEngine = await getProxy('SettlementEngine');
-    termStructure = await getProxy('TermStructure');
-    loan = await proxyController
-      .getProductAddress(loanPrefix)
-      .then((address) => ethers.getContractAt('LoanV2', address));
 
     console.table(
       {
         collateralAggregator,
         collateralVault,
         lendingMarketController,
-        settlementEngine,
-        termStructure,
-        loan,
       },
       ['address'],
     );
@@ -175,18 +161,12 @@ contract('Loan E2E Test', async () => {
 
   it('Take order', async () => {
     // Get FIL markets
-    const terms = await termStructure.getTermsForProductAndCcy(
-      loanPrefix,
-      targetCurrency,
-      true,
-    );
+    // const market3m = await lendingMarketController
+    //   .getLendingMarket(targetCurrency, terms[0])
+    //   .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    const market3m = await lendingMarketController
-      .getLendingMarket(targetCurrency, terms[0])
-      .then((address) => ethers.getContractAt('LendingMarket', address));
-
-    // Make lend orders
-    await market3m.connect(aliceSigner).order(0, orderAmountInFIL, orderRate);
+    // // Make lend orders
+    // await market3m.connect(aliceSigner).order(0, orderAmountInFIL, orderRate);
 
     // Make borrow orders
     const receipt = await market3m
@@ -211,7 +191,7 @@ contract('Loan E2E Test', async () => {
     expect(deal.lender).to.equal(aliceSigner.address);
     expect(deal.borrower).to.equal(bobSigner.address);
     expect(deal.ccy).to.equal(hexFILString);
-    expect(deal.term.toString()).to.equal('90');
+    // expect(deal.term.toString()).to.equal('90');
     expect(deal.notional.toString()).to.equal(orderAmountInFIL);
     expect(deal.rate.toString()).to.equal(orderRate);
 
@@ -237,88 +217,5 @@ contract('Loan E2E Test', async () => {
     expect(
       independentCollateralBob.add(lockedCollaterals[1]).toString(),
     ).to.equal(depositAmountInETH);
-  });
-
-  it('Verify payment', async () => {
-    const settledPayment = await loan.getLastSettledPayment(loanId);
-    expect(settledPayment.toString()).to.equal('0');
-
-    const { timestamp } = await ethers.provider.getBlock();
-
-    slotTime = moment(timestamp * 1000)
-      .add(2, 'd')
-      .unix()
-      .toString();
-
-    const verifyPaymentReceipt = await settlementEngine
-      .connect(aliceSigner)
-      .verifyPayment(
-        bobSigner.address,
-        targetCurrency,
-        orderAmountInFIL,
-        slotTime,
-        txHashSample,
-      )
-      .then((tx) => tx.wait());
-
-    const { requestId } = verifyPaymentReceipt.events.find(
-      ({ event }) => event === 'CrosschainSettlementRequested',
-    ).args;
-
-    const operatorFilter = operator.filters.OracleRequest();
-    const { payment, callbackAddr, callbackFunctionId, cancelExpiration } =
-      await operator
-        .queryFilter(operatorFilter, verifyPaymentReceipt.blockHash)
-        .then(
-          (events) =>
-            events.find(({ args }) => args.requestId === requestId).args,
-        );
-
-    // Create encoded data to call fulfill method of ChainlinkSettlementAdapter contract
-    const abiCoder = new ethers.utils.AbiCoder();
-    const data = abiCoder.encode(
-      ['bytes32', 'string', 'string', 'uint256', 'uint256', 'string'],
-      [
-        requestId,
-        aliceFILAddress,
-        bobFILAddress,
-        orderAmountInFIL,
-        slotTime,
-        txHashSample,
-      ],
-    );
-
-    // NOTE: Impersonate the Chainlink node account to call fulfillOracleRequest2 directly
-    await operator
-      .connect(ownerSigner)
-      .setAuthorizedSenders([ownerSigner.address]);
-
-    const fulfillReceipt = await operator
-      .connect(ownerSigner)
-      .fulfillOracleRequest2(
-        requestId,
-        payment.toString(),
-        callbackAddr,
-        callbackFunctionId,
-        cancelExpiration.toString(),
-        data,
-      )
-      .then((tx) => tx.wait());
-
-    const settlementEngineFilter =
-      settlementEngine.filters.CrosschainSettlementRequestFulfilled();
-    const event = await settlementEngine
-      .queryFilter(settlementEngineFilter, fulfillReceipt.blockHash)
-      .then((events) =>
-        events.find(
-          ({ event }) => event === 'CrosschainSettlementRequestFulfilled',
-        ),
-      );
-
-    expect(event.args.payer).to.equal(aliceFILAddress);
-    expect(event.args.receiver).to.equal(bobFILAddress);
-    expect(event.args.amount.toString()).to.equal(orderAmountInFIL);
-    expect(event.args.timestamp.toString()).to.equal(slotTime);
-    expect(event.args.txHash).to.equal(txHashSample);
   });
 });

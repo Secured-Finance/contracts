@@ -14,10 +14,10 @@ struct MarketOrder {
     uint256 maturity;
 }
 
-library LendingMarketV2Storage {
+library LendingMarketStorage {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketV2Storage");
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarket");
 
     struct Storage {
         uint256 lastOrderId;

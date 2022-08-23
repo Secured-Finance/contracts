@@ -3,18 +3,11 @@ pragma solidity ^0.8.9;
 
 import "../libraries/Contracts.sol";
 import "../interfaces/IAddressResolver.sol";
-import "../interfaces/ICloseOutNetting.sol";
-import "../interfaces/ICollateralAggregatorV2.sol";
+import "../interfaces/ICollateralAggregator.sol";
 import "../interfaces/ICollateralVault.sol";
 import "../interfaces/ICrosschainAddressResolver.sol";
 import "../interfaces/ICurrencyController.sol";
-import "../interfaces/IMarkToMarket.sol";
 import "../interfaces/ILendingMarketController.sol";
-import "../interfaces/ILiquidations.sol";
-import "../interfaces/IPaymentAggregator.sol";
-import "../interfaces/IProductAddressResolver.sol";
-import "../interfaces/ISettlementEngine.sol";
-import "../interfaces/ITermStructure.sol";
 
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
@@ -94,10 +87,6 @@ contract MixinAddressResolver {
         return false;
     }
 
-    function closeOutNetting() internal view returns (ICloseOutNetting) {
-        return ICloseOutNetting(getAddress(Contracts.CLOSE_OUT_NETTING));
-    }
-
     function collateralAggregator() internal view returns (ICollateralAggregator) {
         return ICollateralAggregator(getAddress(Contracts.COLLATERAL_AGGREGATOR));
     }
@@ -114,31 +103,7 @@ contract MixinAddressResolver {
         return ICurrencyController(getAddress(Contracts.CURRENCY_CONTROLLER));
     }
 
-    function markToMarket() internal view returns (IMarkToMarket) {
-        return IMarkToMarket(getAddress(Contracts.MARK_TO_MARKET));
-    }
-
     function lendingMarketController() internal view returns (ILendingMarketController) {
         return ILendingMarketController(getAddress(Contracts.LENDING_MARKET_CONTROLLER));
-    }
-
-    function liquidations() internal view returns (ILiquidations) {
-        return ILiquidations(getAddress(Contracts.LIQUIDATIONS));
-    }
-
-    function paymentAggregator() internal view returns (IPaymentAggregator) {
-        return IPaymentAggregator(getAddress(Contracts.PAYMENT_AGGREGATOR));
-    }
-
-    function productAddressResolver() internal view returns (IProductAddressResolver) {
-        return IProductAddressResolver(getAddress(Contracts.PRODUCT_ADDRESS_RESOLVER));
-    }
-
-    function settlementEngine() internal view returns (ISettlementEngine) {
-        return ISettlementEngine(getAddress(Contracts.SETTLEMENT_ENGINE));
-    }
-
-    function termStructure() internal view returns (ITermStructure) {
-        return ITermStructure(getAddress(Contracts.TERM_STRUCTURE));
     }
 }

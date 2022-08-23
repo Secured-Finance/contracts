@@ -4,12 +4,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const deployResult = await deploy('CollateralAggregatorV2', {
+  const deployResult = await deploy('CollateralAggregator', {
     from: deployer,
   });
 
   await executeIfNewlyDeployment(
-    'CollateralAggregatorV2',
+    'CollateralAggregator',
     deployResult,
     async () => {
       const proxyController = await deployments

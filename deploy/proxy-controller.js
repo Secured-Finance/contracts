@@ -1,5 +1,4 @@
 const { ethers } = require('hardhat');
-const { toBytes32 } = require('../test-utils').strings;
 const { executeIfNewlyDeployment } = require('../test-utils').deployment;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
@@ -54,13 +53,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       const addresses = await ethers
         .getContractAt('AddressResolver', prevAddressResolverAddress)
         .then((contract) => contract.getAddresses());
-
-      const productAddresses = await prevProxyController
-        .getAddress(toBytes32('ProductAddressResolver'))
-        .then((address) =>
-          ethers.getContractAt('ProductAddressResolver', address),
-        )
-        .then((contract) => contract.getProductContracts());
 
       // Change admin address of all proxy contracts from the old ProxyController to the new one.
       await prevProxyController

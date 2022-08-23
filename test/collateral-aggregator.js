@@ -1,10 +1,10 @@
 const AddressResolver = artifacts.require('AddressResolver');
-const CollateralAggregator = artifacts.require('CollateralAggregatorV3');
-const CollateralVault = artifacts.require('CollateralVaultV2');
+const CollateralAggregator = artifacts.require('CollateralAggregator');
+const CollateralVault = artifacts.require('CollateralVault');
 const CurrencyController = artifacts.require('CurrencyController');
-const LendingMarketController = artifacts.require('LendingMarketControllerV2');
+const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
-const ProxyController = artifacts.require('ProxyControllerV2');
+const ProxyController = artifacts.require('ProxyController');
 const WETH9 = artifacts.require('WETH9Mock');
 const ERC20Mock = artifacts.require('ERC20Mock');
 
@@ -91,11 +91,11 @@ contract('CollateralAggregator', () => {
       addressResolverProxyAddress,
     );
     collateralAggregatorProxy = await ethers.getContractAt(
-      'CollateralAggregatorV3',
+      'CollateralAggregator',
       collateralAggregatorAddress,
     );
     collateralVaultProxy = await ethers.getContractAt(
-      'CollateralVaultV2',
+      'CollateralVault',
       collateralVaultAddress,
     );
 

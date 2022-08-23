@@ -1,20 +1,17 @@
 const { should } = require('chai');
-const { toBytes32, hexBTCString, zeroAddress, loanPrefix } =
+const { toBytes32, hexBTCString, zeroAddress } =
   require('../test-utils').strings;
 const { btcToETHRate } = require('../test-utils').numbers;
 
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
-const { Deployment } = require('../test-utils').deployment;
 
 should();
 
 const AddressResolver = artifacts.require('AddressResolver');
-const CloseOutNetting = artifacts.require('CloseOutNetting');
 const CurrencyController = artifacts.require('CurrencyController');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
 const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');
-const WETH9Mock = artifacts.require('WETH9Mock');
 
 const getNewProxyAddress = ({ logs }) =>
   logs.find(({ event }) => event === 'ProxyCreated').args.proxyAddress;
@@ -141,42 +138,6 @@ contract('ProxyController', (accounts) => {
     });
   });
 
-  describe('Get product contract address', async () => {
-    it('Successfully get a proxy address', async () => {
-      const { loan, proxyController } = await new Deployment().execute();
-
-      const registeredProxyAddress = await proxyController.getProductAddress(
-        loanPrefix,
-      );
-
-      registeredProxyAddress.should.be.equal(loan.address);
-    });
-
-    it('Fail to get a product proxy address due to empty data', async () => {
-      expectRevert(
-        proxyController.getProductAddress(loanPrefix),
-        'Address not found',
-      );
-    });
-
-    it('Fail to get a product proxy address due to non-proxy contract', async () => {
-      const loanDummy = await WETH9Mock.new();
-      const { productAddressResolver, proxyController } =
-        await new Deployment().execute();
-
-      await productAddressResolver.registerProduct(
-        loanPrefix,
-        loanDummy.address,
-        loanDummy.address,
-      );
-
-      expectRevert(
-        proxyController.getProductAddress(loanPrefix),
-        'Proxy address not found',
-      );
-    });
-  });
-
   describe('Use contracts through the Proxy', async () => {
     it('Successfully call a CurrencyController contract', async () => {
       const HAIRCUT = 7500;
@@ -247,39 +208,27 @@ contract('ProxyController', (accounts) => {
       const currencyController = await CurrencyController.new(
         addressResolver.address,
       );
-      const closeOutNetting = await CloseOutNetting.new(
-        addressResolver.address,
-      );
 
       const currencyControllerProxyAddress = await proxyController
         .setCurrencyControllerImpl(currencyController.address)
         .then(getNewProxyAddress);
-      const closeOutNettingProxyAddress = await proxyController
-        .setCloseOutNettingImpl(closeOutNetting.address)
-        .then(getNewProxyAddress);
 
       await addressResolver.importAddresses(
-        ['CurrencyController', 'CloseOutNetting'].map(toBytes32),
-        [currencyControllerProxyAddress, closeOutNettingProxyAddress],
+        ['CurrencyController'].map(toBytes32),
+        [currencyControllerProxyAddress],
       );
 
       await proxyController.changeProxyAdmins(alice, [
         currencyControllerProxyAddress,
-        closeOutNettingProxyAddress,
       ]);
 
       const currencyControllerProxy = await UpgradeabilityProxy.at(
         currencyControllerProxyAddress,
       );
-      const closeOutNettingProxy = await UpgradeabilityProxy.at(
-        closeOutNettingProxyAddress,
-      );
 
       const currencyControllerAdmin = await currencyControllerProxy.admin();
-      const closeOutNettingAdmin = await closeOutNettingProxy.admin();
 
       currencyControllerAdmin.toString().should.be.equal(alice);
-      closeOutNettingAdmin.toString().should.be.equal(alice);
     });
   });
 });

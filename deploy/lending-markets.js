@@ -1,5 +1,4 @@
-const { loanPrefix, hexFILString, toBytes32 } =
-  require('../test-utils').strings;
+const { hexFILString, toBytes32 } = require('../test-utils').strings;
 const { sortedTermDays } = require('../test-utils').terms;
 
 module.exports = async function ({ deployments }) {
@@ -8,13 +7,9 @@ module.exports = async function ({ deployments }) {
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
   // Get contracts from proxyController
-  const loan = await proxyController
-    .getProductAddress(loanPrefix)
-    .then((address) => ethers.getContractAt('LoanV2', address));
-
   const collateralAggregator = await proxyController
     .getAddress(toBytes32('CollateralAggregator'))
-    .then((address) => ethers.getContractAt('CollateralAggregatorV2', address));
+    .then((address) => ethers.getContractAt('CollateralAggregator', address));
 
   const lendingMarketController = await proxyController
     .getAddress(toBytes32('LendingMarketController'))
@@ -57,14 +52,6 @@ module.exports = async function ({ deployments }) {
       marketAddr,
     );
 
-    await loan
-      .addLendingMarket(
-        hexFILString,
-        sortedTermDays[i],
-        lendingMarketContract.address,
-      )
-      .then((tx) => tx.wait());
-
     await collateralAggregator
       .addCollateralUser(lendingMarketContract.address)
       .then((tx) => tx.wait());
@@ -76,6 +63,5 @@ module.exports.dependencies = [
   'AddressResolver',
   'CollateralAggregator',
   'LendingMarketController',
-  'Loan',
   'Migration',
 ];

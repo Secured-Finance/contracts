@@ -1,11 +1,11 @@
 const AddressResolver = artifacts.require('AddressResolver');
-const CollateralAggregator = artifacts.require('CollateralAggregatorV3');
+const CollateralAggregator = artifacts.require('CollateralAggregator');
 const CurrencyController = artifacts.require('CurrencyController');
 const GenesisValueToken = artifacts.require('GenesisValueToken');
-const LendingMarket = artifacts.require('LendingMarketV2');
-const LendingMarketController = artifacts.require('LendingMarketControllerV2');
+const LendingMarket = artifacts.require('LendingMarket');
+const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
-const ProxyController = artifacts.require('ProxyControllerV2');
+const ProxyController = artifacts.require('ProxyController');
 
 const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
@@ -87,7 +87,7 @@ contract('LendingMarketController', () => {
       addressResolverProxyAddress,
     );
     lendingMarketControllerProxy = await ethers.getContractAt(
-      'LendingMarketControllerV2',
+      'LendingMarketController',
       lendingMarketControllerAddress,
     );
 
@@ -224,7 +224,7 @@ contract('LendingMarketController', () => {
 
       lendingMarketProxies = await Promise.all(
         marketAddresses.map((address) =>
-          ethers.getContractAt('LendingMarketV2', address),
+          ethers.getContractAt('LendingMarket', address),
         ),
       );
     });

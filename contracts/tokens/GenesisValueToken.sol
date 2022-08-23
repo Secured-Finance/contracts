@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import {IGenesisValueToken} from "../interfaces/IGenesisValueToken.sol";
 import {IFutureValueToken} from "../interfaces/IFutureValueToken.sol";
-import {MixinAddressResolverV2} from "../mixins/MixinAddressResolverV2.sol";
+import {MixinAddressResolver} from "../mixins/MixinAddressResolver.sol";
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {Contracts} from "../libraries/Contracts.sol";
 import {Ownable} from "../utils/Ownable.sol";
@@ -13,7 +13,7 @@ import {GenesisValueTokenStorage as Storage, MaturityRate} from "../storages/Gen
 /**
  * @title GenesisValueToken contract is used to store the genesis value as a token for Lending deals.
  */
-contract GenesisValueToken is MixinAddressResolverV2, IGenesisValueToken, Ownable, Proxyable {
+contract GenesisValueToken is MixinAddressResolver, IGenesisValueToken, Ownable, Proxyable {
     /**
      * @dev Modifier to check if the market is matured.
      */

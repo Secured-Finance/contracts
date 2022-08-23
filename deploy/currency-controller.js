@@ -109,4 +109,4 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 };
 
 module.exports.tags = ['CurrencyController'];
-module.exports.dependencies = ['CloseOutNetting', 'ProxyController'];
+module.exports.dependencies = ['ProxyController'];
