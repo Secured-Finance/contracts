@@ -2,10 +2,8 @@
 pragma solidity ^0.8.9;
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 // interfaces
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
-import {IGenesisValueToken} from "./interfaces/IGenesisValueToken.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {FutureValueHandler} from "./libraries/FutureValueHandler.sol";
@@ -25,21 +23,15 @@ import {LendingMarketStorage as Storage, MarketOrder} from "./storages/LendingMa
  *
  * It will store market orders in structured red-black tree and doubly linked list in each node.
  */
-contract LendingMarket is
-    ILendingMarket,
-    MixinAddressResolver,
-    ReentrancyGuard,
-    Pausable,
-    Proxyable
-{
+contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     /**
      * @dev Modifier to make a function callable only by order maker.
      * @param _orderId Market order id
      */
-    modifier onlyMaker(uint256 _orderId) {
-        require(msg.sender == getMaker(_orderId), "caller is not the maker");
+    modifier onlyMaker(address account, uint256 _orderId) {
+        require(account == getMaker(_orderId), "caller is not the maker");
         _;
     }
 
@@ -72,27 +64,22 @@ contract LendingMarket is
     function initialize(
         address _resolver,
         bytes32 _ccy,
-        uint256 _marketNo,
         uint256 _maturity,
-        uint256 _basisDate,
-        address _gvToken
+        uint256 _basisDate
     ) public initializer onlyBeacon {
         registerAddressResolver(_resolver);
 
         Storage.slot().ccy = _ccy;
-        Storage.slot().marketNo = _marketNo;
         Storage.slot().maturity = _maturity;
         Storage.slot().basisDate = _basisDate;
-        Storage.slot().gvToken = IGenesisValueToken(_gvToken);
         FutureValueHandler.updateMaturity(_maturity);
 
         buildCache();
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
-        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
-        contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
@@ -111,7 +98,7 @@ contract LendingMarket is
     /**
      * @dev Gets the market data.
      */
-    function getMarket() public view override returns (Market memory) {
+    function getMarket() external view override returns (Market memory) {
         return
             Market({
                 ccy: Storage.slot().ccy,
@@ -174,12 +161,12 @@ contract LendingMarket is
      * @dev Gets the market order information.
      * @param _orderId Market order id
      */
-    function getOrder(uint256 _orderId) public view override returns (MarketOrder memory) {
+    function getOrder(uint256 _orderId) external view override returns (MarketOrder memory) {
         return Storage.slot().orders[_orderId];
     }
 
     function getOrderFromTree(uint256 _maturity, uint256 _orderId)
-        public
+        external
         view
         override
         returns (
@@ -202,13 +189,11 @@ contract LendingMarket is
     function futureValueOf(address account) public view override returns (int256) {
         (int256 futureValue, uint256 maturity) = FutureValueHandler.getBalanceInMaturity(account);
 
-        if (maturity == 0) {
+        if (Storage.slot().maturity == maturity) {
+            return futureValue;
+        } else {
             return 0;
-        } else if (Storage.slot().maturity != maturity) {
-            futureValue = Storage.slot().gvToken.futureValueOf(maturity, futureValue);
         }
-
-        return futureValue;
     }
 
     function presentValueOf(address account) external view override returns (int256) {
@@ -233,7 +218,7 @@ contract LendingMarket is
     }
 
     function openMarket(uint256 _maturity)
-        public
+        external
         override
         ifMatured
         onlyAcceptedContracts
@@ -248,17 +233,18 @@ contract LendingMarket is
 
     /**
      * @dev Cancels the market order.
+     * @param _account Target address
      * @param _orderId Market order id
      *
      * Requirements:
      * - Order has to be cancelable by market maker
      */
-    function cancelOrder(uint256 _orderId)
+    function cancelOrder(address _account, uint256 _orderId)
         public
         override
-        onlyMaker(_orderId)
+        onlyMaker(_account, _orderId)
         whenNotPaused
-        returns (bool success)
+        returns (uint256)
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
@@ -276,11 +262,6 @@ contract LendingMarket is
         }
         delete Storage.slot().orders[_orderId];
 
-        collateralAggregator().releaseUnsettledCollateral(
-            marketOrder.maker,
-            Storage.slot().ccy,
-            (marketOrder.amount * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
-        );
         emit CancelOrder(
             _orderId,
             marketOrder.maker,
@@ -289,38 +270,33 @@ contract LendingMarket is
             marketOrder.rate
         );
 
-        success = true;
+        return marketOrder.amount;
     }
 
     /**
      * @dev Makes new market order.
      * @param _side Borrow or Lend order position
+     * @param _account Target address
      * @param _amount Amount of funds maker wish to borrow/lend
      * @param _rate Preferable interest rate
      */
     function makeOrder(
         ProtocolTypes.Side _side,
+        address _account,
         uint256 _amount,
         uint256 _rate
-    ) internal whenNotPaused returns (uint256 orderId) {
+    ) internal returns (uint256 orderId) {
         MarketOrder memory marketOrder;
-
-        require(_amount > 0, "Can't place empty amount");
-        require(_rate > 0, "Can't place empty rate");
 
         marketOrder.side = _side;
         marketOrder.amount = _amount;
         marketOrder.rate = _rate;
-        marketOrder.maker = msg.sender;
+        marketOrder.maker = _account;
         marketOrder.maturity = Storage.slot().maturity;
         orderId = nextOrderId();
 
         Storage.slot().orders[orderId] = marketOrder;
-        collateralAggregator().useUnsettledCollateral(
-            msg.sender,
-            Storage.slot().ccy,
-            (_amount * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
-        );
+
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
             Storage.slot().lendOrders[Storage.slot().maturity].insert(
                 marketOrder.amount,
@@ -348,7 +324,8 @@ contract LendingMarket is
 
     /**
      * @dev Takes the market order.
-     * @param orderId Market Order id in Order Book
+     * @param _account Target address
+     * @param _orderId Market Order id in Order Book
      * @param _amount Amount of funds taker wish to borrow/lend
      *
      * Requirements:
@@ -356,43 +333,41 @@ contract LendingMarket is
      */
     function takeOrder(
         ProtocolTypes.Side side,
-        uint256 orderId,
+        address _account,
+        uint256 _orderId,
         uint256 _amount
-    ) internal whenNotPaused returns (bool) {
-        MarketOrder memory marketOrder = Storage.slot().orders[orderId];
+    ) internal returns (address) {
+        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
         require(_amount <= marketOrder.amount, "Insufficient amount");
-        require(marketOrder.maker != msg.sender, "Maker couldn't take its order");
+        require(marketOrder.maker != _account, "Maker couldn't take its order");
 
         address lender;
         address borrower;
-        Storage.slot().orders[orderId].amount = marketOrder.amount - _amount;
+        Storage.slot().orders[_orderId].amount = marketOrder.amount - _amount;
 
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
             require(
                 Storage.slot().lendOrders[Storage.slot().maturity].fillOrder(
                     marketOrder.rate,
-                    orderId,
+                    _orderId,
                     _amount
                 ),
                 "Couldn't fill order"
             );
             lender = marketOrder.maker;
-            borrower = msg.sender;
+            borrower = _account;
         } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
             require(
                 Storage.slot().borrowOrders[Storage.slot().maturity].fillOrder(
                     marketOrder.rate,
-                    orderId,
+                    _orderId,
                     _amount
                 ),
                 "Couldn't fill order"
             );
-            lender = msg.sender;
+            lender = _account;
             borrower = marketOrder.maker;
         }
-
-        mintGenesisValueToken(lender);
-        mintGenesisValueToken(borrower);
 
         // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
         uint256 currentRate = (marketOrder.rate * (Storage.slot().maturity - block.timestamp)) /
@@ -401,19 +376,13 @@ contract LendingMarket is
 
         FutureValueHandler.add(lender, borrower, fvAmount);
 
-        collateralAggregator().releaseUnsettledCollateral(
-            marketOrder.maker,
-            Storage.slot().ccy,
-            (_amount * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
-        );
-
-        emit TakeOrder(orderId, msg.sender, side, _amount, marketOrder.rate);
+        emit TakeOrder(_orderId, _account, side, _amount, marketOrder.rate);
 
         if (marketOrder.amount == 0) {
-            delete Storage.slot().orders[orderId];
+            delete Storage.slot().orders[_orderId];
         }
 
-        return true;
+        return marketOrder.maker;
     }
 
     /**
@@ -454,60 +423,69 @@ contract LendingMarket is
 
     /**
      * @dev Executes the market order, if order matched it takes order, if not matched places new order.
-     * @param side Market order side it can be borrow or lend
-     * @param amount Amount of funds maker/taker wish to borrow/lend
-     * @param rate Amount of interest rate maker/taker wish to borrow/lend
+     * @param _side Market order side it can be borrow or lend
+     * @param _account Target address
+     * @param _amount Amount of funds maker/taker wish to borrow/lend
+     * @param _rate Amount of interest rate maker/taker wish to borrow/lend
      *
      * Returns true after successful execution
      */
-    function order(
-        ProtocolTypes.Side side,
-        uint256 amount,
-        uint256 rate
-    ) external override nonReentrant ifNotClosed returns (bool) {
+    function createOrder(
+        ProtocolTypes.Side _side,
+        address _account,
+        uint256 _amount,
+        uint256 _rate
+    ) external override whenNotPaused onlyAcceptedContracts ifNotClosed returns (address, uint256) {
+        require(_amount > 0, "Can't place empty amount");
+        require(_rate > 0, "Can't place empty rate");
         uint256 orderId;
 
-        if (side == ProtocolTypes.Side.LEND) {
+        if (_side == ProtocolTypes.Side.LEND) {
             orderId = Storage.slot().borrowOrders[Storage.slot().maturity].findOrderIdForAmount(
-                rate,
-                amount
+                _rate,
+                _amount
             );
-            if (orderId != 0) return takeOrder(ProtocolTypes.Side.BORROW, orderId, amount);
         } else {
             orderId = Storage.slot().lendOrders[Storage.slot().maturity].findOrderIdForAmount(
-                rate,
-                amount
+                _rate,
+                _amount
             );
-            if (orderId != 0) return takeOrder(ProtocolTypes.Side.LEND, orderId, amount);
         }
 
-        makeOrder(side, amount, rate);
-        return true;
+        if (orderId == 0) {
+            makeOrder(_side, _account, _amount, _rate);
+            return (_account, 0);
+        } else {
+            address maker = takeOrder(_side, _account, orderId, _amount);
+            return (maker, _amount);
+        }
     }
 
     /**
      * @dev Pauses the lending market.
      */
-    function pauseMarket() public override onlyAcceptedContracts {
+    function pauseMarket() external override onlyAcceptedContracts {
         _pause();
     }
 
     /**
      * @dev Pauses the lending market.
      */
-    function unpauseMarket() public override onlyAcceptedContracts {
+    function unpauseMarket() external override onlyAcceptedContracts {
         _unpause();
     }
 
     /**
-     * @dev Convert FutureValue to GenesisValue if there is balance in the past maturity.
-     * @param account Target address to mint token
+     * @dev Remove future value if there is balance in the past maturity.
+     * @param _account Target address to mint token
      */
-    function mintGenesisValueToken(address account) private {
-        if (FutureValueHandler.hasPastMaturityBalance(account)) {
-            uint256 basisMaturity = FutureValueHandler.getMaturity(account);
-            int256 removedFutureValue = FutureValueHandler.remove(account);
-            Storage.slot().gvToken.mint(account, basisMaturity, removedFutureValue);
+    function removeFutureValueInPastMaturity(address _account)
+        external
+        returns (int256 removedAmount, uint256 basisMaturity)
+    {
+        if (FutureValueHandler.hasPastMaturityBalance(_account)) {
+            basisMaturity = FutureValueHandler.getMaturity(_account);
+            removedAmount = FutureValueHandler.remove(_account);
         }
     }
 }

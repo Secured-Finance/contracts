@@ -1,7 +1,6 @@
 const AddressResolver = artifacts.require('AddressResolver');
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const CurrencyController = artifacts.require('CurrencyController');
-const GenesisValueToken = artifacts.require('GenesisValueToken');
 const LendingMarket = artifacts.require('LendingMarket');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
@@ -120,14 +119,10 @@ contract('LendingMarketController', () => {
 
     // Set up for LendingMarketController
     const lendingMarket = await deployContract(owner, LendingMarket);
-    const genesisValueToken = await deployContract(owner, GenesisValueToken);
 
-    await Promise.all([
-      lendingMarketControllerProxy.setLendingMarketImpl(lendingMarket.address),
-      lendingMarketControllerProxy.setGenesisValueTokenImpl(
-        genesisValueToken.address,
-      ),
-    ]);
+    await lendingMarketControllerProxy.setLendingMarketImpl(
+      lendingMarket.address,
+    );
   });
 
   describe('Deployment', async () => {
@@ -145,19 +140,12 @@ contract('LendingMarketController', () => {
     });
 
     it('Get beacon proxy implementations', async () => {
-      const proxies = await Promise.all([
-        lendingMarketControllerProxy.getBeaconProxyAddress(
-          ethers.utils.formatBytes32String('LendingMarket'),
-        ),
-        lendingMarketControllerProxy.getBeaconProxyAddress(
-          ethers.utils.formatBytes32String('GenesisValueToken'),
-        ),
-      ]);
+      const proxy = await lendingMarketControllerProxy.getBeaconProxyAddress(
+        ethers.utils.formatBytes32String('LendingMarket'),
+      );
 
-      proxies.forEach((proxy) => {
-        expect(proxy).to.exist;
-        expect(proxy).to.not.equal(ethers.constants.AddressZero);
-      });
+      expect(proxy).to.exist;
+      expect(proxy).to.not.equal(ethers.constants.AddressZero);
     });
 
     it('Fail to get beacon proxy implementations', async () => {
@@ -232,26 +220,53 @@ contract('LendingMarketController', () => {
     it('Add orders and rotate markets', async () => {
       const lendingMarket1 = lendingMarketProxies[0];
       const lendingMarket2 = lendingMarketProxies[1];
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
 
       await expect(
-        lendingMarket1
+        lendingMarketControllerProxy
           .connect(alice)
-          .order(Side.LEND, '100000000000000000', '800'),
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            '800',
+          ),
       ).to.emit(lendingMarket1, 'MakeOrder');
       await expect(
-        lendingMarket1
+        lendingMarketControllerProxy
           .connect(bob)
-          .order(Side.LEND, '50000000000000000', '880'),
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '50000000000000000',
+            '880',
+          ),
       ).to.emit(lendingMarket1, 'MakeOrder');
       await expect(
-        lendingMarket1
+        lendingMarketControllerProxy
           .connect(bob)
-          .order(Side.BORROW, '100000000000000000', '720'),
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '720',
+          ),
       ).to.emit(lendingMarket1, 'MakeOrder');
       await expect(
-        lendingMarket1
+        lendingMarketControllerProxy
           .connect(carol)
-          .order(Side.BORROW, '100000000000000000', '800'),
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '800',
+          ),
       ).to.emit(lendingMarket1, 'TakeOrder');
 
       const maturity = await lendingMarket1.getMaturity();
@@ -285,15 +300,33 @@ contract('LendingMarketController', () => {
       await time.increase(time.duration.days(92));
       await showPV();
 
-      await lendingMarket2
+      await lendingMarketControllerProxy
         .connect(alice)
-        .order(Side.LEND, '100000000000000000', '880');
-      await lendingMarket2
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '880',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '50000000000000000', '880');
-      await lendingMarket2
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '50000000000000000',
+          '880',
+        );
+      await lendingMarketControllerProxy
         .connect(carol)
-        .order(Side.BORROW, '50000000000000000', '800');
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '50000000000000000',
+          '800',
+        );
 
       const borrowRates = await lendingMarketControllerProxy.getBorrowRates(
         targetCurrency,
@@ -302,9 +335,6 @@ contract('LendingMarketController', () => {
         targetCurrency,
       );
       const midRates = await lendingMarketControllerProxy.getMidRates(
-        targetCurrency,
-      );
-      const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
       const market = await lendingMarket1.getMarket();
@@ -400,54 +430,123 @@ contract('LendingMarketController', () => {
     });
 
     it('Pause lending markets', async () => {
-      const lendingMarket = lendingMarketProxies[0];
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
 
       await lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency);
 
       await expect(
-        lendingMarket.connect(alice).order(0, '100000000000000000', '800'),
+        lendingMarketControllerProxy
+          .connect(alice)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            0,
+            '100000000000000000',
+            '800',
+          ),
       ).to.be.revertedWith('Pausable: paused');
 
       await lendingMarketControllerProxy.unpauseLendingMarkets(targetCurrency);
 
-      await lendingMarket.connect(alice).order(0, '100000000000000000', '800');
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          0,
+          '100000000000000000',
+          '800',
+        );
     });
 
     it('Update beacon proxy implementations and calculate Genesis value', async () => {
       const lendingMarket1 = lendingMarketProxies[0];
-      const lendingMarket2 = lendingMarketProxies[1];
-      const genesisValueTokenProxy = await lendingMarketControllerProxy
-        .getGenesisValueToken(targetCurrency)
-        .then((address) => ethers.getContractAt('GenesisValueToken', address));
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
 
-      await lendingMarket1
+      await lendingMarketControllerProxy
         .connect(alice)
-        .order(Side.LEND, '50000000000000000', '800');
-      await lendingMarket1
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
         .connect(carol)
-        .order(Side.LEND, '100000000000000000', '880');
-      await lendingMarket1
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '880',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '50000000000000000', '800');
-      await lendingMarket1
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '50000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '100000000000000000', '720');
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '720',
+        );
 
-      await lendingMarket2
+      await lendingMarketControllerProxy
         .connect(alice)
-        .order(Side.LEND, '50000000000000000', '800');
-      await lendingMarket2
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '50000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
         .connect(carol)
-        .order(Side.LEND, '100000000000000000', '880');
-      await lendingMarket2
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '880',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '50000000000000000', '800');
-      await lendingMarket2
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '50000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '100000000000000000', '720');
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '720',
+        );
 
-      const initialCF = await genesisValueTokenProxy.compoundFactor();
-      const gvDecimals = await genesisValueTokenProxy.decimals();
+      const initialCF = await lendingMarketControllerProxy.getCompoundFactor(
+        targetCurrency,
+      );
+      const gvDecimals = await lendingMarketControllerProxy.decimals(
+        targetCurrency,
+      );
       const aliceInitialFV = await lendingMarket1.futureValueOf(alice.address);
       const aliceExpectedGV = aliceInitialFV
         .mul(ethers.BigNumber.from('10').pow(gvDecimals))
@@ -455,13 +554,40 @@ contract('LendingMarketController', () => {
 
       await time.increase(time.duration.days(92));
       await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      const newMaturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
 
-      await lendingMarket1
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            '800',
+          ),
+      ).to.be.revertedWith('Invalid maturity');
+
+      await lendingMarketControllerProxy
         .connect(alice)
-        .order(Side.LEND, '100000000000000000', '800');
-      await lendingMarket1
+        .createOrder(
+          targetCurrency,
+          newMaturities[newMaturities.length - 1],
+          Side.LEND,
+          '100000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
         .connect(carol)
-        .order(Side.BORROW, '100000000000000000', '800');
+        .createOrder(
+          targetCurrency,
+          newMaturities[newMaturities.length - 1],
+          Side.BORROW,
+          '100000000000000000',
+          '800',
+        );
 
       const maturitiesBefore = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
@@ -474,15 +600,9 @@ contract('LendingMarketController', () => {
 
       // Update implementations
       const lendingMarket = await deployContract(owner, LendingMarket);
-      const genesisValueToken = await deployContract(owner, GenesisValueToken);
-      await Promise.all([
-        lendingMarketControllerProxy.setLendingMarketImpl(
-          lendingMarket.address,
-        ),
-        lendingMarketControllerProxy.setGenesisValueTokenImpl(
-          genesisValueToken.address,
-        ),
-      ]);
+      await lendingMarketControllerProxy.setLendingMarketImpl(
+        lendingMarket.address,
+      );
 
       const maturitiesAfter = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
@@ -493,8 +613,6 @@ contract('LendingMarketController', () => {
         alice.address,
       );
 
-      const totalSupplyAfter = await genesisValueTokenProxy.totalSupply();
-
       for (let i = 0; i < maturitiesBefore.length; i++) {
         expect(maturitiesBefore[i].toString()).to.equal(
           maturitiesAfter[i].toString(),
@@ -502,43 +620,71 @@ contract('LendingMarketController', () => {
       }
 
       expect(aliceGVBefore.toString()).to.equal(aliceGVAfter.toString());
-      expect(aliceGVAfter.toString()).to.equal(totalSupplyAfter.toString());
       expect(aliceGVBefore.toString()).to.equal(aliceGVAfter.toString());
       expect(aliceGVBefore.toString()).to.equal(aliceExpectedGV.toString());
     });
 
     it('Rotate markets multiple times', async () => {
-      const lendingMarket1 = lendingMarketProxies[0];
-      const lendingMarket2 = lendingMarketProxies[1];
-      const lendingMarket3 = lendingMarketProxies[2];
-      const genesisValueTokenProxy = await lendingMarketControllerProxy
-        .getGenesisValueToken(targetCurrency)
-        .then((address) => ethers.getContractAt('GenesisValueToken', address));
-
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
 
-      await lendingMarket1
+      await lendingMarketControllerProxy
         .connect(alice)
-        .order(Side.LEND, '100000000000000000', '820');
-      await lendingMarket1
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '820',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '100000000000000000', '780');
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '780',
+        );
 
-      await lendingMarket2
+      await lendingMarketControllerProxy
         .connect(alice)
-        .order(Side.LEND, '100000000000000000', '920');
-      await lendingMarket2
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '920',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '100000000000000000', '880');
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '880',
+        );
 
-      await lendingMarket3
+      await lendingMarketControllerProxy
         .connect(alice)
-        .order(Side.LEND, '100000000000000000', '1020');
-      await lendingMarket3
+        .createOrder(
+          targetCurrency,
+          maturities[2],
+          Side.LEND,
+          '100000000000000000',
+          '1020',
+        );
+      await lendingMarketControllerProxy
         .connect(bob)
-        .order(Side.BORROW, '100000000000000000', '980');
+        .createOrder(
+          targetCurrency,
+          maturities[2],
+          Side.BORROW,
+          '100000000000000000',
+          '980',
+        );
 
       await time.increase(time.duration.days(92));
       await expect(
@@ -551,9 +697,18 @@ contract('LendingMarketController', () => {
       ).to.emit(lendingMarketControllerProxy, 'LendingMarketsRotated');
 
       const maturityRates = await Promise.all([
-        genesisValueTokenProxy.getMaturityRate(maturities[0]),
-        genesisValueTokenProxy.getMaturityRate(maturities[1]),
-        genesisValueTokenProxy.getMaturityRate(maturities[2]),
+        lendingMarketControllerProxy.getMaturityRate(
+          targetCurrency,
+          maturities[0],
+        ),
+        lendingMarketControllerProxy.getMaturityRate(
+          targetCurrency,
+          maturities[1],
+        ),
+        lendingMarketControllerProxy.getMaturityRate(
+          targetCurrency,
+          maturities[2],
+        ),
       ]);
 
       expect(maturityRates[0].prev.toString()).to.equal('0');

@@ -7,6 +7,9 @@ const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 const WETH9 = artifacts.require('WETH9Mock');
 const ERC20Mock = artifacts.require('ERC20Mock');
+const CollateralAggregatorCallerMock = artifacts.require(
+  'CollateralAggregatorCallerMock',
+);
 
 const { expect } = require('chai');
 const { ethers, waffle } = require('hardhat');
@@ -20,6 +23,7 @@ contract('CollateralAggregator', () => {
 
   let collateralAggregatorProxy;
   let collateralVaultProxy;
+  let collateralAggregatorCaller;
 
   let owner, alice, bob, carol;
 
@@ -42,9 +46,6 @@ contract('CollateralAggregator', () => {
     );
     mockWETH9 = await deployMockContract(owner, WETH9.abi);
     mockERC20 = await deployMockContract(owner, ERC20Mock.abi);
-    await mockLendingMarketController.mock.getLendingMarkets.returns([
-      owner.address,
-    ]);
 
     // Deploy
     const addressResolver = await deployContract(owner, AddressResolver);
@@ -70,6 +71,7 @@ contract('CollateralAggregator', () => {
           events.find(({ event }) => event === 'ProxyCreated').args
             .proxyAddress,
       );
+
     const collateralAggregatorAddress = await proxyController
       .setCollateralAggregatorImpl(
         collateralAggregator.address,
@@ -99,6 +101,13 @@ contract('CollateralAggregator', () => {
       collateralVaultAddress,
     );
 
+    // Deploy CollateralAggregatorCaller
+    collateralAggregatorCaller = await deployContract(
+      owner,
+      CollateralAggregatorCallerMock,
+      [collateralAggregatorProxy.address, mockLendingMarketController.address],
+    );
+
     // Deploy MigrationAddressResolver
     const migrationAddressResolver = await MigrationAddressResolver.new(
       addressResolverProxyAddress,
@@ -109,7 +118,7 @@ contract('CollateralAggregator', () => {
       ['CurrencyController', mockCurrencyController],
       ['CollateralAggregator', collateralAggregatorProxy],
       ['CollateralVault', collateralVaultProxy],
-      ['LendingMarketController', mockLendingMarketController],
+      ['LendingMarketController', collateralAggregatorCaller],
     ];
 
     const importAddressesArgs = {
@@ -282,7 +291,7 @@ contract('CollateralAggregator', () => {
       await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
         valueInETH,
       );
-      await mockLendingMarketController.mock.getTotalPresentValue.returns(
+      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
 
@@ -305,7 +314,7 @@ contract('CollateralAggregator', () => {
       await collateralVaultProxy.connect(bob).deposit(previousCurrency, value);
 
       await expect(
-        collateralAggregatorProxy.useUnsettledCollateral(
+        collateralAggregatorCaller.useUnsettledCollateral(
           bob.address,
           targetCurrency,
           value.div('2'),
@@ -372,7 +381,7 @@ contract('CollateralAggregator', () => {
       ).to.equal('0');
 
       await expect(
-        collateralAggregatorProxy.useUnsettledCollateral(
+        collateralAggregatorCaller.useUnsettledCollateral(
           carol.address,
           targetCurrency,
           '1',
@@ -380,7 +389,7 @@ contract('CollateralAggregator', () => {
       ).to.be.revertedWith('Not enough collateral');
 
       await expect(
-        collateralAggregatorProxy.useUnsettledCollateral(
+        collateralAggregatorCaller.useUnsettledCollateral(
           carol.address,
           targetCurrency,
           '0',
@@ -405,7 +414,7 @@ contract('CollateralAggregator', () => {
         collateralAggregatorProxy
           .connect(alice)
           .useUnsettledCollateral(carol.address, targetCurrency, '1'),
-      ).to.be.revertedWith('Caller is not the lending market');
+      ).to.be.revertedWith('Only Accepted Contracts');
     });
 
     it('Fail to call releaseUnsettledCollateral due to invalid caller', async () => {
@@ -413,7 +422,7 @@ contract('CollateralAggregator', () => {
         collateralAggregatorProxy
           .connect(alice)
           .releaseUnsettledCollateral(carol.address, targetCurrency, '1'),
-      ).to.be.revertedWith('Caller is not the lending market');
+      ).to.be.revertedWith('Only Accepted Contracts');
     });
   });
 });

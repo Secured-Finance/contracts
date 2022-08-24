@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
 import "../interfaces/IFutureValueToken.sol";
-import "../interfaces/IGenesisValueToken.sol";
 import "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 struct MarketOrder {
@@ -22,11 +21,8 @@ library LendingMarketStorage {
     struct Storage {
         uint256 lastOrderId;
         bytes32 ccy;
-        uint256 marketNo;
         uint256 basisDate;
         uint256 maturity;
-        // IFutureValueToken fvToken;
-        IGenesisValueToken gvToken;
         // Mapping from maturity to rate
         mapping(uint256 => MarketOrder) orders;
         mapping(uint256 => HitchensOrderStatisticsTreeLib.Tree) lendOrders;

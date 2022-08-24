@@ -32,11 +32,14 @@ interface ILendingMarketController {
 
     function getTotalPresentValue(bytes32 ccy, address account) external view returns (int256);
 
+    function getTotalPresentValueInETH(address account)
+        external
+        view
+        returns (int256 totalPresentValue);
+
     function getBeaconProxyAddress(bytes32 beaconName) external view returns (address);
 
     function setLendingMarketImpl(address newImpl) external;
-
-    function setGenesisValueTokenImpl(address newImpl) external;
 
     function initializeLendingMarket(
         bytes32 _ccy,

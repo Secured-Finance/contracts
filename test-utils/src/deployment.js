@@ -5,7 +5,6 @@ const CrosschainAddressResolver = artifacts.require(
   'CrosschainAddressResolver',
 );
 const CurrencyController = artifacts.require('CurrencyController');
-const GenesisValueToken = artifacts.require('GenesisValueToken');
 const LendingMarket = artifacts.require('LendingMarket');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
@@ -218,16 +217,11 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
 
   // Set up for LendingMarketController
   // const lendingMarket = await deployContract(owner, LendingMarket);
-  // const genesisValueToken = await deployContract(owner, GenesisValueToken);
   const lendingMarket = await LendingMarket.new();
-  const genesisValueToken = await GenesisValueToken.new();
 
-  await Promise.all([
-    lendingMarketControllerProxy.setLendingMarketImpl(lendingMarket.address),
-    lendingMarketControllerProxy.setGenesisValueTokenImpl(
-      genesisValueToken.address,
-    ),
-  ]);
+  await lendingMarketControllerProxy.setLendingMarketImpl(
+    lendingMarket.address,
+  );
 
   const { timestamp } = await ethers.provider.getBlock();
   const basisDate = moment(timestamp * 1000).unix();

@@ -15,8 +15,6 @@ library CollateralVaultStorage {
 
     struct Storage {
         mapping(bytes32 => address) tokenAddresses;
-        // Mapping for used currency vaults in bilateral position.
-        mapping(bytes32 => EnumerableSet.Bytes32Set) usedCurrenciesInPosition;
         // Mapping for used currency vaults per user.
         mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
         // Mapping for all deposits of currency per users collateral

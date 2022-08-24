@@ -2,10 +2,11 @@
 pragma solidity ^0.8.9;
 
 import {LendingMarket} from "./LendingMarket.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // interfaces
 import {ILendingMarketController, Order} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
-import {IGenesisValueToken} from "./interfaces/IGenesisValueToken.sol";
 // libraries
 import {QuickSort} from "./libraries/QuickSort.sol";
 import {BeaconContracts, Contracts} from "./libraries/Contracts.sol";
@@ -13,6 +14,9 @@ import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBa
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinBeaconProxyController} from "./mixins/MixinBeaconProxyController.sol";
+import {MixinGenesisValue} from "./mixins/MixinGenesisValue.sol";
+// types
+import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
@@ -30,11 +34,36 @@ contract LendingMarketController is
     ILendingMarketController,
     MixinAddressResolver,
     MixinBeaconProxyController,
+    MixinGenesisValue,
+    ReentrancyGuard,
     Ownable,
     Proxyable
 {
     using QuickSort for uint256[];
+    using EnumerableSet for EnumerableSet.Bytes32Set;
     uint256 private constant BASIS_TERM = 3;
+
+    /**
+     * @dev Modifier to check if the currency has a lending market.
+     */
+    modifier hasLendingMarket(bytes32 _ccy) {
+        require(
+            Storage.slot().lendingMarkets[_ccy].length > 0,
+            "No lending markets exist for a specific currency"
+        );
+        _;
+    }
+
+    /**
+     * @dev Modifier to check if the maturity is valid.
+     */
+    modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity) {
+        require(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity] != address(0),
+            "Invalid maturity"
+        );
+        _;
+    }
 
     /**
      * @notice Initializes the contract.
@@ -46,8 +75,9 @@ contract LendingMarketController is
     }
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.CURRENCY_CONTROLLER;
+        contracts = new bytes32[](2);
+        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
+        contracts[1] = Contracts.CURRENCY_CONTROLLER;
     }
 
     /**
@@ -115,7 +145,7 @@ contract LendingMarketController is
      * @dev Gets maturities for selected currency.
      * @param _ccy Currency
      */
-    function getMaturities(bytes32 _ccy) external view override returns (uint256[] memory) {
+    function getMaturities(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory maturities = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
 
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
@@ -129,7 +159,7 @@ contract LendingMarketController is
     /**
      * @dev Gets the total present value of the account for selected currency
      * @param _ccy Currency for Lending Market
-     * @param _account Target address
+     * @param _account Target account address
      */
     function getTotalPresentValue(bytes32 _ccy, address _account)
         public
@@ -138,18 +168,28 @@ contract LendingMarketController is
         returns (int256 totalPresentValue)
     {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            totalPresentValue += ILendingMarket(Storage.slot().lendingMarkets[_ccy][i])
-                .presentValueOf(_account);
+            address marketAddr = Storage.slot().lendingMarkets[_ccy][i];
+            totalPresentValue += ILendingMarket(marketAddr).presentValueOf(_account);
         }
     }
 
-    function getGenesisValue(bytes32 _ccy, address _account) external view returns (int256) {
-        IGenesisValueToken gvToken = IGenesisValueToken(Storage.slot().genesisValueTokens[_ccy]);
-        return gvToken.balanceOf(_account);
-    }
+    /**
+     * @dev Gets the total present value of the account converted to ETH
+     * @param _account Target account address
+     */
+    function getTotalPresentValueInETH(address _account)
+        public
+        view
+        override
+        returns (int256 totalPresentValue)
+    {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_account];
 
-    function getGenesisValueToken(bytes32 _ccy) external view returns (address) {
-        return Storage.slot().genesisValueTokens[_ccy];
+        for (uint256 i = 0; i < currencySet.length(); i++) {
+            bytes32 ccy = currencySet.at(i);
+            int256 amount = getTotalPresentValue(ccy, _account);
+            totalPresentValue += currencyController().convertToETH(ccy, amount);
+        }
     }
 
     /**
@@ -168,14 +208,6 @@ contract LendingMarketController is
         _updateBeaconImpl(BeaconContracts.LENDING_MARKET, newImpl);
     }
 
-    /**
-     * @dev Sets the implementation contract of GenesisValueToken
-     * @param newImpl The address of implementation contract
-     */
-    function setGenesisValueTokenImpl(address newImpl) external override onlyOwner {
-        _updateBeaconImpl(BeaconContracts.GENESIS_VALUE_TOKEN, newImpl);
-    }
-
     function initializeLendingMarket(
         bytes32 _ccy,
         uint256 _basisDate,
@@ -184,7 +216,7 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(Storage.slot().basisDates[_ccy] == 0, "Already initialized");
 
-        Storage.slot().genesisValueTokens[_ccy] = _deployGenesisValueToken(_ccy, _compoundFactor);
+        registerCurrency(_ccy, 18, _compoundFactor);
         Storage.slot().basisDates[_ccy] = _basisDate;
     }
 
@@ -201,8 +233,8 @@ contract LendingMarketController is
         returns (address market)
     {
         require(
-            Storage.slot().genesisValueTokens[_ccy] != address(0),
-            "Genesis value token hasn't been deployed in the currency"
+            isRegisteredCurrency(_ccy),
+            "Lending market hasn't been initialized in the currency"
         );
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 
@@ -215,19 +247,11 @@ contract LendingMarketController is
         }
 
         uint256 nextMaturity = TimeLibrary.addMonths(basisDate, BASIS_TERM);
-        uint256 marketNo = Storage.slot().lendingMarkets[_ccy].length + 1;
 
-        market = address(
-            _deployLendingMarket(
-                _ccy,
-                marketNo,
-                nextMaturity,
-                Storage.slot().basisDates[_ccy],
-                Storage.slot().genesisValueTokens[_ccy]
-            )
-        );
+        market = address(_deployLendingMarket(_ccy, nextMaturity, Storage.slot().basisDates[_ccy]));
 
         Storage.slot().lendingMarkets[_ccy].push(market);
+        Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
 
         emit LendingMarketCreated(_ccy, market, Storage.slot().lendingMarkets[_ccy].length);
         return market;
@@ -235,12 +259,75 @@ contract LendingMarketController is
 
     // =========== LENDING MARKETS MANAGEMENT FUNCTIONS ===========
 
-    function rotateLendingMarkets(bytes32 _ccy) external override {
-        require(
-            Storage.slot().lendingMarkets[_ccy].length > 0,
-            "No lending markets exist for a specific currency"
+    function createOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) external nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+
+        _convertFutureValueToGenesisValue(_ccy, marketAddr, msg.sender);
+
+        // Create a order
+        (address maker, uint256 matchedAmount) = ILendingMarket(marketAddr).createOrder(
+            _side,
+            msg.sender,
+            _amount,
+            _rate
         );
 
+        // Update the unsettled collateral in CollateralAggregator
+        uint256 settledCollateralAmount = (_amount * ProtocolTypes.MKTMAKELEVEL) /
+            ProtocolTypes.PCT;
+        if (matchedAmount == 0) {
+            collateralAggregator().useUnsettledCollateral(maker, _ccy, settledCollateralAmount);
+        } else {
+            collateralAggregator().releaseUnsettledCollateral(maker, _ccy, settledCollateralAmount);
+            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+            Storage.slot().usedCurrencies[maker].add(_ccy);
+        }
+
+        return true;
+    }
+
+    function matchOrders(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) external view ifValidMaturity(_ccy, _maturity) returns (bool) {
+        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        ILendingMarket(marketAddr).matchOrders(_side, _amount, _rate);
+
+        return true;
+    }
+
+    function cancelOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _orderId
+    ) external nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        uint256 amount = ILendingMarket(marketAddr).cancelOrder(msg.sender, _orderId);
+
+        collateralAggregator().releaseUnsettledCollateral(
+            msg.sender,
+            _ccy,
+            (amount * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
+        );
+
+        return true;
+    }
+
+    function rotateLendingMarkets(bytes32 _ccy)
+        external
+        override
+        nonReentrant
+        hasLendingMarket(_ccy)
+    {
         address[] storage markets = Storage.slot().lendingMarkets[_ccy];
         address currentMarketAddr = markets[0];
         address nextMarketAddr = markets[1];
@@ -257,12 +344,15 @@ contract LendingMarketController is
         );
         uint256 prevMaturity = ILendingMarket(currentMarketAddr).openMarket(newLastMaturity);
 
-        IGenesisValueToken gvToken = IGenesisValueToken(Storage.slot().genesisValueTokens[_ccy]);
-        gvToken.updateCompoundFactor(
+        updateCompoundFactor(
+            _ccy,
             prevMaturity,
             ILendingMarket(nextMarketAddr).getMaturity(),
             ILendingMarket(nextMarketAddr).getMidRate()
         );
+
+        Storage.slot().maturityLendingMarkets[_ccy][newLastMaturity] = currentMarketAddr;
+        delete Storage.slot().maturityLendingMarkets[_ccy][prevMaturity];
 
         emit LendingMarketsRotated(_ccy, prevMaturity, newLastMaturity);
     }
@@ -295,37 +385,58 @@ contract LendingMarketController is
         return true;
     }
 
-    function _deployLendingMarket(
-        bytes32 _ccy,
-        uint256 _marketNo,
-        uint256 _maturity,
-        uint256 _basisDate,
-        address _gvToken
-    ) private returns (address) {
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,bytes32,uint256,uint256,uint256,address)",
-            address(resolver),
-            _ccy,
-            _marketNo,
-            _maturity,
-            _basisDate,
-            _gvToken
-        );
-        return _createProxy(BeaconContracts.LENDING_MARKET, data);
+    /**
+     * @dev Convert FutureValue to GenesisValue if there is balance in the past maturity.
+     * @param _account Target account address
+     */
+    function convertFutureValueToGenesisValue(address _account) external nonReentrant {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_account];
+
+        for (uint256 i = 0; i < currencySet.length(); i++) {
+            bytes32 ccy = currencySet.at(i);
+            uint256[] memory maturities = getMaturities(ccy);
+
+            for (uint256 j = 0; j < maturities.length; j++) {
+                address marketAddr = Storage.slot().maturityLendingMarkets[ccy][maturities[j]];
+                _convertFutureValueToGenesisValue(ccy, marketAddr, _account);
+            }
+            if (getGenesisValue(ccy, _account) == 0) {
+                Storage.slot().usedCurrencies[_account].remove(ccy);
+            }
+        }
     }
 
-    function _deployGenesisValueToken(bytes32 _ccy, uint256 _compoundFactor)
-        private
-        returns (address)
-    {
+    /**
+     * @dev Convert FutureValue to GenesisValue if there is balance in the past maturity.
+     * @param _ccy Currency for pausing all lending markets
+     * @param _marketAddr Market contract address
+     * @param _account Target account address
+     */
+    function _convertFutureValueToGenesisValue(
+        bytes32 _ccy,
+        address _marketAddr,
+        address _account
+    ) private {
+        (int256 removedAmount, uint256 basisMaturity) = ILendingMarket(_marketAddr)
+            .removeFutureValueInPastMaturity(_account);
+
+        if (removedAmount > 0) {
+            addGenesisValue(_ccy, _account, basisMaturity, removedAmount);
+        }
+    }
+
+    function _deployLendingMarket(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _basisDate
+    ) private returns (address) {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,uint8,bytes32,uint256)",
-            msg.sender,
+            "initialize(address,bytes32,uint256,uint256)",
             address(resolver),
-            18,
             _ccy,
-            _compoundFactor
+            _maturity,
+            _basisDate
         );
-        return _createProxy(BeaconContracts.GENESIS_VALUE_TOKEN, data);
+        return _createProxy(BeaconContracts.LENDING_MARKET, data);
     }
 }

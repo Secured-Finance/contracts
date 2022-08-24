@@ -30,10 +30,6 @@ library FutureValueHandler {
         return Storage.slot().maturity;
     }
 
-    function getCcy() internal view returns (bytes32) {
-        return Storage.slot().ccy;
-    }
-
     function getBalanceInMaturity(address account) internal view returns (int256, uint256) {
         return (Storage.slot().balances[account], Storage.slot().balanceMaturities[account]);
     }

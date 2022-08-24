@@ -35,14 +35,6 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Modifier to check if the market is matured.
-     */
-    modifier onlyLendingMarket(bytes32 _ccy) {
-        require(_isLendingMarket(_ccy, msg.sender), "Caller is not the lending market");
-        _;
-    }
-
-    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
      */
@@ -72,6 +64,11 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         contracts[2] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
     /**
      * @dev Checks if unsettled collateral exposure covered more that 150% from a global collateral book of `_user`.
      * @param _user User's ethereum address
@@ -83,7 +80,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         bytes32 _ccy,
         uint256 _unsettledExp
     ) public view override returns (bool) {
-        (uint256 coverage, , ) = _calculateUnsettledCoverage(_user, _ccy, _unsettledExp);
+        (uint256 coverage, ) = _getUnsettledCoverage(_user, _ccy, _unsettledExp);
         return coverage >= CollateralParametersHandler.marginCallThresholdRate();
     }
 
@@ -104,7 +101,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      * @param _user User's address
      */
     function getUnsettledCoverage(address _user) external view override returns (uint256 coverage) {
-        (coverage, , ) = _calculateUnsettledCoverage(_user, "", 0);
+        (coverage, ) = _getUnsettledCoverage(_user, "", 0);
     }
 
     function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256) {
@@ -115,8 +112,8 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      * @dev Calculates total unsettled exposure across all currencies
      * @param _user User's address
      */
-    function getTotalUnsettledExp(address _user) external view override returns (uint256 exp) {
-        (exp, ) = _netTotalUnsettledAndHypotheticalPV(_user, "", 0);
+    function getTotalUnsettledExp(address _user) external view override returns (uint256) {
+        return _getTotalUnsettledExposure(_user, "", 0);
     }
 
     /**
@@ -155,7 +152,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external override onlyLendingMarket(ccy) {
+    ) external override onlyAcceptedContracts {
         Storage.slot().exposedUnsettledCurrencies[user].add(ccy);
         require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
 
@@ -174,7 +171,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external override onlyLendingMarket(ccy) {
+    ) external override onlyAcceptedContracts {
         Storage.slot().unsettledCollateral[user][ccy] -= amount;
 
         if (Storage.slot().unsettledCollateral[user][ccy] == 0) {
@@ -208,101 +205,54 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         );
     }
 
-    struct NetUnsettledExpLocalVars {
-        uint256 totalExp;
-        int256 totalPV;
-        uint256 ccyExp;
-        uint256 ccyExpInETH;
-        int256 ccyPV;
-        uint256 maxCcy;
-    }
-
     /**
      * @dev Calculates total unsettled exposure across all currencies against all global collateral books.
-     * Also used to calculate hypothetical Net PV with additional exposure in specific `_ccy`
      * @param _user User's ethereum address
      * @param _ccy Currency to calculate additional PV for
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
      */
-    function _netTotalUnsettledAndHypotheticalPV(
+    function _getTotalUnsettledExposure(
         address _user,
         bytes32 _ccy,
         uint256 _unsettledExp
-    ) internal view returns (uint256, int256) {
+    ) internal view returns (uint256 totalExp) {
         EnumerableSet.Bytes32Set storage expCcy = Storage.slot().exposedUnsettledCurrencies[_user];
+        uint256 ccyExp;
 
-        NetUnsettledExpLocalVars memory vars;
-
-        vars.maxCcy = expCcy.length();
-
-        for (uint256 i = 0; i < vars.maxCcy; i++) {
+        for (uint256 i = 0; i < expCcy.length(); i++) {
             bytes32 ccy = expCcy.at(i);
-            vars.ccyExp = Storage.slot().unsettledCollateral[_user][ccy];
-            vars.ccyPV = lendingMarketController().getTotalPresentValue(ccy, _user);
+            ccyExp = Storage.slot().unsettledCollateral[_user][ccy];
 
             if (_ccy == ccy) {
-                vars.ccyExp = vars.ccyExp + _unsettledExp;
+                ccyExp += _unsettledExp;
             }
 
-            vars.ccyExpInETH = vars.ccyExp > 0
-                ? currencyController().convertToETH(ccy, vars.ccyExp)
-                : 0;
-            vars.totalExp += vars.ccyExpInETH;
-            vars.totalPV += vars.ccyPV > int256(0)
-                ? currencyController().convertToETH(ccy, vars.ccyPV)
-                : int256(0);
+            totalExp += ccyExp > 0 ? currencyController().convertToETH(ccy, ccyExp) : 0;
         }
-
-        return (vars.totalExp, vars.totalPV);
     }
 
-    struct UnsettledCoverageLocalVars {
-        uint256 totalExpInETH;
-        int256 totalPVInETH;
-        uint256 totalNegativePV;
-        uint256 totalCollateral;
-        uint256 coverage;
-        uint256 independentAmount;
-    }
-
-    function _calculateUnsettledCoverage(
+    function _getUnsettledCoverage(
         address _user,
         bytes32 _ccy,
         uint256 _unsettledExp
-    )
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        UnsettledCoverageLocalVars memory vars;
+    ) internal view returns (uint256 coverage, uint256 totalExpInETH) {
+        totalExpInETH = _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
+        uint256 independentAmount = collateralVault().getTotalIndependentCollateralInETH(_user);
 
-        (vars.totalExpInETH, vars.totalPVInETH) = _netTotalUnsettledAndHypotheticalPV(
-            _user,
-            _ccy,
-            _unsettledExp
-        );
-        vars.totalNegativePV = vars.totalPVInETH > 0 ? 0 : uint256(-vars.totalPVInETH);
-        vars.independentAmount = collateralVault().getTotalIndependentCollateralInETH(_user);
+        coverage = totalExpInETH == 0 ? 0 : (ProtocolTypes.PCT * independentAmount) / totalExpInETH;
+    }
 
-        vars.totalCollateral = vars.independentAmount > vars.totalNegativePV
-            ? vars.independentAmount - vars.totalNegativePV
-            : 0;
+    function _getTotalCollateral(address _user) internal view returns (uint256) {
+        int256 totalPVInETH = lendingMarketController().getTotalPresentValueInETH(_user);
+        uint256 totalNegativePV = totalPVInETH > 0 ? 0 : uint256(-totalPVInETH);
+        uint256 independentAmount = collateralVault().getTotalIndependentCollateralInETH(_user);
 
-        vars.coverage = vars.totalExpInETH == 0
-            ? 0
-            : (ProtocolTypes.PCT * vars.independentAmount) / vars.totalExpInETH;
-
-        return (vars.coverage, vars.totalExpInETH, vars.totalCollateral);
+        return independentAmount > totalNegativePV ? independentAmount - totalNegativePV : 0;
     }
 
     struct MaxCollateralBookWithdrawLocalVars {
         uint256 totalExpInETH;
         uint256 coverage;
-        uint256 delta;
         uint256 maxWithdraw;
         uint256 totalCollateral;
     }
@@ -316,11 +266,8 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     function _calcMaxCollateral(address _user) internal view returns (uint256) {
         MaxCollateralBookWithdrawLocalVars memory vars;
 
-        (vars.coverage, vars.totalExpInETH, vars.totalCollateral) = _calculateUnsettledCoverage(
-            _user,
-            "",
-            0
-        );
+        (vars.coverage, vars.totalExpInETH) = _getUnsettledCoverage(_user, "", 0);
+        vars.totalCollateral = _getTotalCollateral(_user);
 
         if (vars.coverage == 0) {
             return vars.totalCollateral;
@@ -342,16 +289,5 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         }
 
         return vars.maxWithdraw;
-    }
-
-    function _isLendingMarket(bytes32 _ccy, address _account) internal view virtual returns (bool) {
-        address[] memory lendingMarkets = lendingMarketController().getLendingMarkets(_ccy);
-        for (uint256 i = 0; i < lendingMarkets.length; i++) {
-            if (_account == lendingMarkets[i]) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
