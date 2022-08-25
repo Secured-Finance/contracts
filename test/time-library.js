@@ -3,7 +3,6 @@ const BokkyPooBahsDateTimeContract = artifacts.require(
 );
 
 const { should } = require('chai');
-const { getLatestTimestamp } = require('../test-utils').time;
 const moment = require('moment');
 
 should();
@@ -19,7 +18,7 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
   });
 
   beforeEach(async () => {
-    now = await getLatestTimestamp();
+    ({ timestamp: now } = await ethers.provider.getBlock());
     date = moment(now * 1000);
     time = await timeLibrary._now();
   });

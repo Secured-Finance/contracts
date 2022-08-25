@@ -9,9 +9,8 @@ const { checkTokenBalances } = require('../test-utils').balances;
 
 const { toBN, filToETHRate } = require('../test-utils').numbers;
 const { should, expect } = require('chai');
-const { expectEvent } = require('@openzeppelin/test-helpers');
+const { expectEvent, time } = require('@openzeppelin/test-helpers');
 
-const { ONE_DAY, advanceTimeAndBlock } = require('../test-utils').time;
 const { Deployment } = require('../test-utils').deployment;
 
 should();
@@ -41,7 +40,7 @@ contract('Integration test', async (accounts) => {
   let aliceIndependentAmount = ZERO_BN;
   let carolInitialCollateral = web3.utils.toBN('90000000000000000000');
 
-  before('deploy Collateral, Loan, LendingMarket smart contracts', async () => {
+  before('Deploy Contracts', async () => {
     ({
       quickSortLibrary,
       addressResolver,
@@ -58,55 +57,52 @@ contract('Integration test', async (accounts) => {
     oracleOperator = await Operator.new(linkToken.address, owner);
 
     await collateralVault.registerCurrency(targetCurrency, wETHToken.address);
+
+    // Deploy Lending Markets for FIL market
+    for (i = 0; i < 4; i++) {
+      const receipt = await lendingMarketController
+        .createLendingMarket(hexFILString)
+        .then((tx) => tx.wait());
+
+      const { marketAddr } = receipt.events.find(
+        ({ event }) => event === 'LendingMarketCreated',
+      ).args;
+    }
+
+    lendingMarkets = await lendingMarketController
+      .getLendingMarkets(hexFILString)
+      .then((addresses) =>
+        Promise.all(
+          addresses.map((address) =>
+            ethers.getContractAt('LendingMarket', address),
+          ),
+        ),
+      );
+
+    // Deploy Lending Markets for BTC market
+    for (i = 0; i < 4; i++) {
+      const receipt = await lendingMarketController
+        .createLendingMarket(hexBTCString)
+        .then((tx) => tx.wait());
+
+      const { marketAddr } = receipt.events.find(
+        ({ event }) => event === 'LendingMarketCreated',
+      ).args;
+
+      // btcLendingMarkets.push(marketAddr);
+    }
+    btcLendingMarkets = await lendingMarketController
+      .getLendingMarkets(hexBTCString)
+      .then((addresses) =>
+        Promise.all(
+          addresses.map((address) =>
+            ethers.getContractAt('LendingMarket', address),
+          ),
+        ),
+      );
   });
 
   describe('Prepare markets and users for lending deals', async () => {
-    it('Deploy Lending Markets with each Term for FIL market', async () => {
-      for (i = 0; i < 4; i++) {
-        const receipt = await lendingMarketController
-          .createLendingMarket(hexFILString)
-          .then((tx) => tx.wait());
-
-        const { marketAddr } = receipt.events.find(
-          ({ event }) => event === 'LendingMarketCreated',
-        ).args;
-
-        // lendingMarkets.push(marketAddr);
-      }
-      lendingMarkets = await lendingMarketController
-        .getLendingMarkets(hexFILString)
-        .then((addresses) =>
-          Promise.all(
-            addresses.map((address) =>
-              ethers.getContractAt('LendingMarket', address),
-            ),
-          ),
-        );
-    });
-
-    it('Deploy Lending Markets with each Term for BTC market', async () => {
-      for (i = 0; i < 4; i++) {
-        const receipt = await lendingMarketController
-          .createLendingMarket(hexBTCString)
-          .then((tx) => tx.wait());
-
-        const { marketAddr } = receipt.events.find(
-          ({ event }) => event === 'LendingMarketCreated',
-        ).args;
-
-        // btcLendingMarkets.push(marketAddr);
-      }
-      btcLendingMarkets = await lendingMarketController
-        .getLendingMarkets(hexBTCString)
-        .then((addresses) =>
-          Promise.all(
-            addresses.map((address) =>
-              ethers.getContractAt('LendingMarket', address),
-            ),
-          ),
-        );
-    });
-
     it('Register collateral book for Carol with 90 ETH and check Carol collateral book', async () => {
       const [, , , carolSigner] = await ethers.getSigners();
       await collateralAggregator.register({ from: carol });
@@ -954,7 +950,7 @@ contract('Integration test', async (accounts) => {
         'Shift time by 6 month, perform mark-to-market for BTC lending deal',
       );
 
-      await advanceTimeAndBlock(180 * ONE_DAY);
+      await time.increase(time.duration.days(180));
 
       // tx = await collateralAggregator.getCoverage(alice, bob);
       const tx1 = await collateralAggregator.getUnsettledCoverage(alice);
