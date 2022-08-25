@@ -13,9 +13,6 @@ struct Order {
 
 interface ILendingMarketController {
     event LendingMarketCreated(bytes32 ccy, address indexed marketAddr, uint256 index);
-    event LendingMarketsPaused(bytes32 ccy);
-    event LendingMarketsUnpaused(bytes32 ccy);
-
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
 
     function getBasisDate(bytes32 _ccy) external view returns (uint256);

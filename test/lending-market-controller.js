@@ -17,7 +17,7 @@ const Side = {
   BORROW: 1,
 };
 
-const COMPOUND_FACTOR = '1010000000000000000';
+const COMPOUND_FACTOR = '1020100000000000000';
 const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');
 const BP = ethers.BigNumber.from('10000');
 
@@ -289,9 +289,11 @@ contract('LendingMarketController', () => {
         const carolPV = await lendingMarket1.presentValueOf(carol.address);
 
         const presentValues = {
-          alice: { PresentValue: alicePV.toString() },
-          bob: { PresentValue: bobPV.toString() },
-          carol: { PresentValue: carolPV.toString() },
+          PresentValue: {
+            Alice: alicePV.toString(),
+            Bob: bobPV.toString(),
+            Carol: carolPV.toString(),
+          },
         };
         console.table(presentValues);
       };
@@ -746,6 +748,202 @@ contract('LendingMarketController', () => {
       expect(maturityRates[2].compoundFactor.toString()).to.equal(
         expectedCompoundFactorInMarket2,
       );
+    });
+
+    it('Calculate the genesis value per maturity', async () => {
+      let maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      const rotateLendingMarkets = async () => {
+        await time.increase(time.duration.days(92));
+        await expect(
+          lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
+        ).to.emit(lendingMarketControllerProxy, 'LendingMarketsRotated');
+
+        maturities = await lendingMarketControllerProxy.getMaturities(
+          targetCurrency,
+        );
+      };
+
+      const convertAllFutureValueToGenesisValue = async () => {
+        await lendingMarketControllerProxy.convertFutureValueToGenesisValue(
+          alice.address,
+        );
+        await lendingMarketControllerProxy.convertFutureValueToGenesisValue(
+          bob.address,
+        );
+        await lendingMarketControllerProxy.convertFutureValueToGenesisValue(
+          carol.address,
+        );
+      };
+
+      const checkGenesisValue = async () => {
+        const accounts = [alice, bob, carol];
+
+        const genesisValues = await Promise.all(
+          accounts.map((account) =>
+            lendingMarketControllerProxy.getGenesisValue(
+              targetCurrency,
+              account.address,
+            ),
+          ),
+        );
+
+        const totalSupplies = await Promise.all([
+          lendingMarketControllerProxy.getTotalLendingSupply(targetCurrency),
+          lendingMarketControllerProxy.getTotalBorrowingSupply(targetCurrency),
+        ]);
+
+        console.table({
+          GenesisValue: {
+            Alice: genesisValues[0].toString(),
+            Bob: genesisValues[1].toString(),
+            Carol: genesisValues[2].toString(),
+            TotalLendingSupply: totalSupplies[0].toString(),
+            TotalBorrowingSupply: totalSupplies[1].toString(),
+          },
+        });
+
+        expect(
+          totalSupplies
+            .reduce((v, total) => total.add(v), ethers.BigNumber.from(0))
+            .toString(),
+        ).to.equal(
+          genesisValues
+            .reduce((v, total) => total.abs().add(v), ethers.BigNumber.from(0))
+            .toString(),
+        );
+      };
+
+      await convertAllFutureValueToGenesisValue();
+      await checkGenesisValue();
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '810',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '790',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '800',
+        );
+
+      await rotateLendingMarkets();
+      await convertAllFutureValueToGenesisValue();
+      await checkGenesisValue();
+
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '810',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '790',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '800',
+        );
+
+      await rotateLendingMarkets();
+      await convertAllFutureValueToGenesisValue();
+      await checkGenesisValue();
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '200000000000000000',
+          '810',
+        );
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '200000000000000000',
+          '790',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '200000000000000000',
+          '800',
+        );
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '200000000000000000',
+          '800',
+        );
+
+      await rotateLendingMarkets();
+      await convertAllFutureValueToGenesisValue();
+      await checkGenesisValue();
     });
   });
 });

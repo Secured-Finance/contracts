@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
-import "../interfaces/IFutureValueToken.sol";
 import "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 struct MarketOrder {

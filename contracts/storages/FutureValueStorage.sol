@@ -7,7 +7,7 @@ library FutureValueStorage {
     struct Storage {
         uint256 maturity;
         mapping(address => int256) balances;
-        mapping(address => uint256) balanceMaturities;
+        mapping(address => uint256) futureValueMaturities;
         mapping(uint256 => uint256) totalLendingSupply;
         mapping(uint256 => uint256) totalBorrowingSupply;
     }

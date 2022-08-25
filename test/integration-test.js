@@ -1,9 +1,6 @@
 const LendingMarket = artifacts.require('LendingMarket');
 const Operator = artifacts.require('Operator');
 const LinkToken = artifacts.require('LinkToken');
-const BokkyPooBahsDateTimeContract = artifacts.require(
-  'BokkyPooBahsDateTimeContract',
-);
 
 const { hexFILString, hexBTCString, hexETHString } =
   require('../test-utils').strings;
@@ -57,7 +54,6 @@ contract('Integration test', async (accounts) => {
       filToETHPriceFeed,
     } = await new Deployment().execute());
 
-    timeLibrary = await BokkyPooBahsDateTimeContract.new();
     linkToken = await LinkToken.new();
     oracleOperator = await Operator.new(linkToken.address, owner);
 

@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {LendingMarket} from "./LendingMarket.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // interfaces
 import {ILendingMarketController, Order} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
-import {QuickSort} from "./libraries/QuickSort.sol";
 import {BeaconContracts, Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 // mixins
@@ -39,7 +37,6 @@ contract LendingMarketController is
     Ownable,
     Proxyable
 {
-    using QuickSort for uint256[];
     using EnumerableSet for EnumerableSet.Bytes32Set;
     uint256 private constant BASIS_TERM = 3;
 
@@ -216,7 +213,7 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(Storage.slot().basisDates[_ccy] == 0, "Already initialized");
 
-        registerCurrency(_ccy, 18, _compoundFactor);
+        _registerCurrency(_ccy, 18, _compoundFactor);
         Storage.slot().basisDates[_ccy] = _basisDate;
     }
 
@@ -332,19 +329,20 @@ contract LendingMarketController is
         address currentMarketAddr = markets[0];
         address nextMarketAddr = markets[1];
 
-        // Rotate the order of the market
-        for (uint256 i = 0; i < markets.length; i++) {
-            address marketAddr = (markets.length - 1) == i ? currentMarketAddr : markets[i + 1];
-            markets[i] = marketAddr;
-        }
-
+        // Reopen the market matured with new maturity
         uint256 newLastMaturity = TimeLibrary.addMonths(
             ILendingMarket(markets[markets.length - 1]).getMaturity(),
             BASIS_TERM
         );
         uint256 prevMaturity = ILendingMarket(currentMarketAddr).openMarket(newLastMaturity);
 
-        updateCompoundFactor(
+        // Rotate the order of the market
+        for (uint256 i = 0; i < markets.length; i++) {
+            address marketAddr = (markets.length - 1) == i ? currentMarketAddr : markets[i + 1];
+            markets[i] = marketAddr;
+        }
+
+        _updateCompoundFactor(
             _ccy,
             prevMaturity,
             ILendingMarket(nextMarketAddr).getMaturity(),
@@ -367,7 +365,6 @@ contract LendingMarketController is
             market.pauseMarket();
         }
 
-        emit LendingMarketsPaused(_ccy);
         return true;
     }
 
@@ -381,7 +378,6 @@ contract LendingMarketController is
             market.unpauseMarket();
         }
 
-        emit LendingMarketsUnpaused(_ccy);
         return true;
     }
 
@@ -420,8 +416,8 @@ contract LendingMarketController is
         (int256 removedAmount, uint256 basisMaturity) = ILendingMarket(_marketAddr)
             .removeFutureValueInPastMaturity(_account);
 
-        if (removedAmount > 0) {
-            addGenesisValue(_ccy, _account, basisMaturity, removedAmount);
+        if (removedAmount != 0) {
+            _addGenesisValue(_ccy, _account, basisMaturity, removedAmount);
         }
     }
 

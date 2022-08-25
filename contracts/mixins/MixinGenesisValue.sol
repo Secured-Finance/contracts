@@ -19,6 +19,14 @@ contract MixinGenesisValue {
         return Storage.slot().decimals[_ccy];
     }
 
+    function getTotalLendingSupply(bytes32 _ccy) public view returns (uint256) {
+        return Storage.slot().totalLendingSupplies[_ccy];
+    }
+
+    function getTotalBorrowingSupply(bytes32 _ccy) public view returns (uint256) {
+        return Storage.slot().totalBorrowingSupplies[_ccy];
+    }
+
     function getGenesisValue(bytes32 _ccy, address _account) public view returns (int256) {
         return Storage.slot().balances[_ccy][_account];
     }
@@ -57,7 +65,7 @@ contract MixinGenesisValue {
             int256(getCompoundFactorInMaturity(_ccy, _maturity));
     }
 
-    function registerCurrency(
+    function _registerCurrency(
         bytes32 _ccy,
         uint8 _decimals,
         uint256 _compoundFactor
@@ -71,7 +79,7 @@ contract MixinGenesisValue {
         Storage.slot().compoundFactors[_ccy] = _compoundFactor;
     }
 
-    function updateCompoundFactor(
+    function _updateCompoundFactor(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _nextMaturity,
@@ -120,20 +128,50 @@ contract MixinGenesisValue {
         emit CompoundFactorUpdated(_ccy, _nextMaturity, _rate, tenor);
     }
 
-    function addGenesisValue(
+    function _addGenesisValue(
         bytes32 _ccy,
         address _account,
         uint256 _basisMaturity,
         int256 _futureValue
     ) internal returns (bool) {
+        require(
+            Storage.slot().maturityRates[_ccy][_basisMaturity].compoundFactor > 0,
+            "Compound factor is not fixed yet"
+        );
+
+        uint256 compoundFactor = Storage.slot().initialCompoundFactors[_ccy] ==
+            Storage.slot().compoundFactors[_ccy]
+            ? Storage.slot().initialCompoundFactors[_ccy]
+            : Storage.slot().maturityRates[_ccy][_basisMaturity].compoundFactor;
+
         // NOTE: The formula is: tokenAmount = featureValue / compoundFactor.
-        int256 amount = ((_futureValue * int256(10**decimals(_ccy))) /
-            int256(Storage.slot().maturityRates[_ccy][_basisMaturity].compoundFactor));
+        int256 amount = ((_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor));
+        int256 balance = Storage.slot().balances[_ccy][_account];
 
         if (amount >= 0) {
-            Storage.slot().totalLendingSupplies[_ccy] += uint256(amount);
+            if (balance >= 0) {
+                Storage.slot().totalLendingSupplies[_ccy] += uint256(amount);
+            } else {
+                int256 diff = amount + balance;
+                if (diff >= 0) {
+                    Storage.slot().totalLendingSupplies[_ccy] += uint256(diff);
+                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(amount - diff);
+                } else {
+                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(amount);
+                }
+            }
         } else {
-            Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-amount);
+            if (balance <= 0) {
+                Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-amount);
+            } else {
+                int256 diff = amount + balance;
+                if (diff <= 0) {
+                    Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-diff);
+                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-amount + diff);
+                } else {
+                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-amount);
+                }
+            }
         }
 
         Storage.slot().balances[_ccy][_account] += amount;

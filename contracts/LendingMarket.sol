@@ -6,10 +6,10 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {FutureValueHandler} from "./libraries/FutureValueHandler.sol";
 import {HitchensOrderStatisticsTreeLib} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
+import {MixinFutureValue} from "./mixins/MixinFutureValue.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
@@ -23,7 +23,13 @@ import {LendingMarketStorage as Storage, MarketOrder} from "./storages/LendingMa
  *
  * It will store market orders in structured red-black tree and doubly linked list in each node.
  */
-contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
+contract LendingMarket is
+    ILendingMarket,
+    MixinAddressResolver,
+    MixinFutureValue,
+    Pausable,
+    Proxyable
+{
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     /**
@@ -72,7 +78,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         Storage.slot().ccy = _ccy;
         Storage.slot().maturity = _maturity;
         Storage.slot().basisDate = _basisDate;
-        FutureValueHandler.updateMaturity(_maturity);
 
         buildCache();
     }
@@ -187,7 +192,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     function futureValueOf(address account) public view override returns (int256) {
-        (int256 futureValue, uint256 maturity) = FutureValueHandler.getBalanceInMaturity(account);
+        (int256 futureValue, uint256 maturity) = getFutureValue(account);
 
         if (Storage.slot().maturity == maturity) {
             return futureValue;
@@ -225,7 +230,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (uint256 prevMaturity)
     {
         prevMaturity = Storage.slot().maturity;
-        FutureValueHandler.updateMaturity(_maturity);
         Storage.slot().maturity = _maturity;
 
         emit OpenMarket(_maturity, prevMaturity);
@@ -374,7 +378,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             ProtocolTypes.SECONDS_IN_YEAR;
         uint256 fvAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
 
-        FutureValueHandler.add(lender, borrower, fvAmount);
+        _addFutureValue(lender, borrower, fvAmount, Storage.slot().maturity);
 
         emit TakeOrder(_orderId, _account, side, _amount, marketOrder.rate);
 
@@ -481,11 +485,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      */
     function removeFutureValueInPastMaturity(address _account)
         external
+        onlyAcceptedContracts
         returns (int256 removedAmount, uint256 basisMaturity)
     {
-        if (FutureValueHandler.hasPastMaturityBalance(_account)) {
-            basisMaturity = FutureValueHandler.getMaturity(_account);
-            removedAmount = FutureValueHandler.remove(_account);
+        if (hasFutureValueInPastMaturity(_account, Storage.slot().maturity)) {
+            (removedAmount, basisMaturity) = _removeFutureValue(_account);
         }
     }
 }
