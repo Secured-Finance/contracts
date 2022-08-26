@@ -60,10 +60,6 @@ contract('Integration test', async (accounts) => {
       const receipt = await lendingMarketController
         .createLendingMarket(hexFILString)
         .then((tx) => tx.wait());
-
-      const { marketAddr } = receipt.events.find(
-        ({ event }) => event === 'LendingMarketCreated',
-      ).args;
     }
 
     lendingMarkets = await lendingMarketController
@@ -81,13 +77,8 @@ contract('Integration test', async (accounts) => {
       const receipt = await lendingMarketController
         .createLendingMarket(hexBTCString)
         .then((tx) => tx.wait());
-
-      const { marketAddr } = receipt.events.find(
-        ({ event }) => event === 'LendingMarketCreated',
-      ).args;
-
-      // btcLendingMarkets.push(marketAddr);
     }
+
     btcLendingMarkets = await lendingMarketController
       .getLendingMarkets(hexBTCString)
       .then((addresses) =>

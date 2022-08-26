@@ -1,5 +1,10 @@
 const { executeIfNewlyDeployment } = require('../test-utils').deployment;
 
+const MARGIN_CALL_THRESHOLD_RATE = 15000;
+const AUTO_LIQUIDATION_THRESHOLD_RATE = 12500;
+const LIQUIDATION_PRICE_RATE = 12000;
+const MIN_COLLATERAL_RATE = 2500;
+
 module.exports = async function ({ getNamedAccounts, deployments }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -19,7 +24,13 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         );
 
       await proxyController
-        .setCollateralAggregatorImpl(deployResult.address)
+        .setCollateralAggregatorImpl(
+          deployResult.address,
+          MARGIN_CALL_THRESHOLD_RATE,
+          AUTO_LIQUIDATION_THRESHOLD_RATE,
+          LIQUIDATION_PRICE_RATE,
+          MIN_COLLATERAL_RATE,
+        )
         .then((tx) => tx.wait());
     },
   );

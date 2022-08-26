@@ -1,6 +1,6 @@
 const { executeIfNewlyDeployment } = require('../test-utils').deployment;
 
-module.exports = async function ({ deployments }) {
+module.exports = async function ({ deployments, getNamedAccounts }) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 

@@ -12,7 +12,12 @@ struct Order {
 }
 
 interface ILendingMarketController {
-    event LendingMarketCreated(bytes32 ccy, address indexed marketAddr, uint256 index);
+    event LendingMarketCreated(
+        bytes32 ccy,
+        address indexed marketAddr,
+        uint256 index,
+        uint256 maturity
+    );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
 
     function getBasisDate(bytes32 _ccy) external view returns (uint256);
@@ -36,13 +41,15 @@ interface ILendingMarketController {
 
     function getBeaconProxyAddress(bytes32 beaconName) external view returns (address);
 
-    function setLendingMarketImpl(address newImpl) external;
+    function isInitializedLendingMarket(bytes32 _ccy) external view returns (bool);
 
     function initializeLendingMarket(
         bytes32 _ccy,
         uint256 _basisDate,
         uint256 _compoundFactor
     ) external;
+
+    function setLendingMarketImpl(address newImpl) external;
 
     function createLendingMarket(bytes32 _ccy) external returns (address market);
 

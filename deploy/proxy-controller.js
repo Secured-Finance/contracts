@@ -59,7 +59,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         .changeProxyAdmins(deployResult.address, [
           prevAddressResolverAddress,
           ...addresses,
-          ...productAddresses,
         ])
         .then((tx) => tx.wait());
     }

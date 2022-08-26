@@ -1,5 +1,5 @@
-const btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
-const filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
+// const btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
+// const filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
 
 const { toBytes32, hexETHString } = require('../test-utils').strings;
 
@@ -48,23 +48,18 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     }
   };
 
-  const getProxy = async (key, contract) => {
+  const getProxy = async (key) => {
     let address = proxyObj[toBytes32(key)];
     // NOTE: When ProxyController is updated, proxyObj is empty because new contract doesn't have old events.
     // So in that case, the registered contract address is got from AddressResolver through ProxyController.
     if (!address) {
       address = await proxyController.getAddress(toBytes32(key));
     }
-
-    const contractName = contract || key;
-    await saveProxyAddress(contractName, address);
-    return ethers.getContractAt(contractName, address);
+    await saveProxyAddress(key, address);
+    return ethers.getContractAt(key, address);
   };
 
-  const collateralAggregator = await getProxy(
-    'CollateralAggregator',
-    'CollateralAggregatorV2',
-  );
+  const collateralAggregator = await getProxy('CollateralAggregator');
   const collateralVault = await getProxy('CollateralVault');
   const crosschainAddressResolver = await getProxy('CrosschainAddressResolver');
   const currencyController = await getProxy('CurrencyController');
@@ -133,12 +128,12 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .then((tx) => tx.wait());
   console.log('Successfully built address caches');
 
-  // Set up for CollateralAggregator
-  await collateralAggregator.functions['register(string[],uint256[])'](
-    [btcAddress, filAddress],
-    [0, 461],
-  ).then((tx) => tx.wait());
-  console.log('Successfully registered the currency data');
+  // // Set up for CollateralAggregator
+  // await collateralAggregator.functions['register(string[],uint256[])'](
+  //   [btcAddress, filAddress],
+  //   [0, 461],
+  // ).then((tx) => tx.wait());
+  // console.log('Successfully registered the currency data');
 
   // Set up for CollateralVault
   await collateralVault.registerCurrency(hexETHString, wETHToken.address);

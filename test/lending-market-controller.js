@@ -127,6 +127,13 @@ contract('LendingMarketController', () => {
 
   describe('Deployment', async () => {
     it('Get basisDate', async () => {
+      expect(
+        await lendingMarketControllerProxy.isInitializedLendingMarket(
+          targetCurrency,
+        ),
+        false,
+      );
+
       await lendingMarketControllerProxy.initializeLendingMarket(
         targetCurrency,
         basisDate,
@@ -137,6 +144,12 @@ contract('LendingMarketController', () => {
       );
 
       expect(res).to.equal(basisDate);
+      expect(
+        await lendingMarketControllerProxy.isInitializedLendingMarket(
+          targetCurrency,
+        ),
+        true,
+      );
     });
 
     it('Get beacon proxy implementations', async () => {

@@ -198,23 +198,38 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Sets the implementation contract of LendingMarket
-     * @param newImpl The address of implementation contract
+     * @dev Get is the lending market is initialized
+     * @param _ccy Currency
      */
-    function setLendingMarketImpl(address newImpl) external override onlyOwner {
-        _updateBeaconImpl(BeaconContracts.LENDING_MARKET, newImpl);
+
+    function isInitializedLendingMarket(bytes32 _ccy) public view override returns (bool) {
+        return Storage.slot().basisDates[_ccy] != 0;
     }
 
+    /**
+     * @dev Initialize the lending market to set a basis data and compound factor
+     * @param _ccy Currency
+     * @param _basisDate The basis date when the initial market is opened
+     * @param _compoundFactor The initial compound factor when the initial market is opened
+     */
     function initializeLendingMarket(
         bytes32 _ccy,
         uint256 _basisDate,
         uint256 _compoundFactor
     ) external override onlyOwner {
         require(_compoundFactor > 0, "Invalid compound factor");
-        require(Storage.slot().basisDates[_ccy] == 0, "Already initialized");
+        require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
         _registerCurrency(_ccy, 18, _compoundFactor);
         Storage.slot().basisDates[_ccy] = _basisDate;
+    }
+
+    /**
+     * @dev Sets the implementation contract of LendingMarket
+     * @param newImpl The address of implementation contract
+     */
+    function setLendingMarketImpl(address newImpl) external override onlyOwner {
+        _updateBeaconImpl(BeaconContracts.LENDING_MARKET, newImpl);
     }
 
     /**
@@ -250,7 +265,12 @@ contract LendingMarketController is
         Storage.slot().lendingMarkets[_ccy].push(market);
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
 
-        emit LendingMarketCreated(_ccy, market, Storage.slot().lendingMarkets[_ccy].length);
+        emit LendingMarketCreated(
+            _ccy,
+            market,
+            Storage.slot().lendingMarkets[_ccy].length,
+            nextMaturity
+        );
         return market;
     }
 

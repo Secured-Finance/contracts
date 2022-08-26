@@ -33,10 +33,6 @@ const COMPOUND_FACTOR = '1010000000000000000';
 
 const deployContracts = async (mockCallbacks, mockContractNames) => {
   // Deploy libraries
-  const DealId = await ethers.getContractFactory('DealId');
-  const dealIdLibrary = await DealId.deploy();
-  await dealIdLibrary.deployed();
-
   const QuickSort = await ethers.getContractFactory('QuickSort');
   const quickSortLibrary = await QuickSort.deploy();
   await quickSortLibrary.deployed();
@@ -44,10 +40,7 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   // Call callback functions for mocking
   const instances = {};
   for (const [name, callback] of Object.entries(mockCallbacks)) {
-    instances[name] = await callback({
-      dealIdLibrary,
-      quickSortLibrary,
-    });
+    instances[name] = await callback({ quickSortLibrary });
   }
 
   // Deploy contracts
@@ -245,7 +238,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
 
   return {
     // libraries
-    dealIdLibrary,
     quickSortLibrary,
     // contracts
     addressResolver: addressResolverProxy,
