@@ -23,8 +23,6 @@ const ethToUSDRate = web3.utils.toBN('232612637168');
 const btcToETHRate = web3.utils.toBN('23889912590000000000');
 const usdcToUSDRate = web3.utils.toBN('100000000000');
 
-const oracleRequestFee = toBN('100000000000000000');
-
 module.exports = {
   toEther,
   toBN,
@@ -37,5 +35,4 @@ module.exports = {
   ethToUSDRate,
   btcToETHRate,
   usdcToUSDRate,
-  oracleRequestFee,
 };

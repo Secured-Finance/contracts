@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "./interfaces/ICurrencyController.sol";
-import "./utils/Ownable.sol";
-import "./utils/Proxyable.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
+import {ProtocolTypes} from "./types/ProtocolTypes.sol";
+import {Ownable} from "./utils/Ownable.sol";
+import {Proxyable} from "./utils/Proxyable.sol";
 import {CurrencyControllerStorage as Storage} from "./storages/CurrencyControllerStorage.sol";
 
 /**

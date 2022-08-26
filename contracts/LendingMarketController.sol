@@ -22,11 +22,8 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
- * @dev Lending Market Controller contract is managing separated lending
- * order-book markets (per term) and responsible to calculate Discount Factors per currency
- * and construct yield curve
- *
- * It will store lending market addresses by ccy and term in lendingMarkets mapping.
+ * @dev LendingMarketController contract is managing separated lending order-book markets
+ * and is responsible to calculate the Genesis value per currency.
  */
 contract LendingMarketController is
     ILendingMarketController,

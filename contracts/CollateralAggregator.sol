@@ -18,10 +18,8 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {CollateralAggregatorStorage as Storage} from "./storages/CollateralAggregatorStorage.sol";
 
 /**
- * @title Collateral Aggregator contract is used to manage Secured Finance
- * protocol collateral obligations and movements of collateral across collateral vaults.
- *
- * This contract handle the calculations of aggregated collateral obligations of user.
+ * @title Collateral Aggregator contract is used to manage collateral obligations
+ * and calculation of collateral across collateral vaults.
  */
 contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -69,6 +67,12 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
+    /**
+     * @dev Gets if the collateral has enough coverage.
+     * @param _user User's address
+     * @param _ccy Currency
+     * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     */
     function isCovered(
         address _user,
         bytes32 _ccy,
@@ -163,7 +167,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      * @dev Locks unsettled collateral on a global book for selected currency.
      * @param user User's address
      * @param ccy Specified currency of the deal
-     * @param amount Amount of funds to be locked in Ccy for user
+     * @param amount Amount of funds to be locked in specified currency
      */
     function useUnsettledCollateral(
         address user,
@@ -179,10 +183,10 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Reduces the amount of unsettled exposure in specific `ccy` from a global collateral book of `user`
-     * @param user User's ETH address
+     * @dev Releases the amount of unsettled exposure in specific currency
+     * @param user User's address
      * @param ccy Specified currency of the deal
-     * @param amount Amount of funds to be unlocked from unsettled exposure in specified ccy
+     * @param amount Amount of funds to be unlocked from unsettled exposure in specified currency
      */
     function releaseUnsettledCollateral(
         address user,
@@ -222,6 +226,12 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         );
     }
 
+    /**
+     * @dev Gets the collateral coverage.
+     * @param _user User's address
+     * @param _ccy Currency
+     * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     */
     function _getCoverage(
         address _user,
         bytes32 _ccy,
@@ -237,7 +247,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Calculates total unsettled exposure across all currencies against all global collateral books.
+     * @dev Gets total unsettled exposure across all currencies.
      * @param _user User's ethereum address
      * @param _ccy Currency
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
@@ -262,20 +272,27 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         }
     }
 
+    /**
+     * @dev Gets the total collateral in all currencies.
+     * @param _user User's ethereum address
+     */
     function _getTotalCollateral(address _user) internal view returns (uint256) {
         return collateralVault().getTotalIndependentCollateralInETH(_user);
     }
 
+    /**
+     * @dev Gets the total collateral used in all currencies.
+     * The collateral used is defined as the negative future value in the lending market contract.
+     * @param _user User's ethereum address
+     */
     function _getUsedCollateral(address _user) internal view returns (uint256) {
         int256 totalPVInETH = lendingMarketController().getTotalPresentValueInETH(_user);
         return totalPVInETH > 0 ? 0 : uint256(-totalPVInETH);
     }
 
     /**
-     * @dev Calculates maximum amount of ETH available to withdraw from `_user` collateral book
+     * @dev Calculates maximum amount of ETH available to withdraw
      * @param _user User's ethereum address
-     *
-     * @return `maxWithdraw` max withdrawable amount of ETH
      */
     function _getWithdrawableCollateral(address _user) internal view returns (uint256) {
         uint256 totalCollateral = _getTotalCollateral(_user);

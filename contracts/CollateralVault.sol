@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./interfaces/ICollateralVault.sol";
-import "./libraries/SafeTransfer.sol";
-import "./mixins/MixinAddressResolver.sol";
-import "./utils/Ownable.sol";
-import "./utils/Proxyable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// libraries
+import {Contracts} from "./libraries/Contracts.sol";
+// interfaces
+import {ICollateralVault} from "./interfaces/ICollateralVault.sol";
+import {SafeTransfer} from "./libraries/SafeTransfer.sol";
+// mixins
+import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
+// utils
+import {Ownable} from "./utils/Ownable.sol";
+import {Proxyable} from "./utils/Proxyable.sol";
+// storages
 import {CollateralVaultStorage as Storage} from "./storages/CollateralVaultStorage.sol";
 
 /**
@@ -16,11 +22,6 @@ import {CollateralVaultStorage as Storage} from "./storages/CollateralVaultStora
  * their collateral obligations against different trades.
  *
  * CollateralVault is working with ETH or ERC20 token with specified on deployment `tokenAddress`.
- *
- * CollateralAggregator uses independent Collateral vaults for rebalancing collateral
- * between global books and bilateral positions, and liquidating collateral while performing
- * single or multi-deal liquidation.
- *
  */
 contract CollateralVault is
     ICollateralVault,
