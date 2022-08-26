@@ -1,7 +1,3 @@
-const LendingMarket = artifacts.require('LendingMarket');
-const Operator = artifacts.require('Operator');
-const LinkToken = artifacts.require('LinkToken');
-
 const { hexFILString, hexBTCString, hexETHString } =
   require('../test-utils').strings;
 
@@ -49,9 +45,6 @@ contract('Integration test', async (accounts) => {
       liquidations,
       filToETHPriceFeed,
     } = await new Deployment().execute());
-
-    linkToken = await LinkToken.new();
-    oracleOperator = await Operator.new(linkToken.address, owner);
 
     await collateralVault.registerCurrency(targetCurrency, wETHToken.address);
 
