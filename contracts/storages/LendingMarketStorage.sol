@@ -24,7 +24,9 @@ library LendingMarketStorage {
         uint256 maturity;
         // Mapping from maturity to rate
         mapping(uint256 => MarketOrder) orders;
+        // Mapping from maturity to lending orders
         mapping(uint256 => HitchensOrderStatisticsTreeLib.Tree) lendOrders;
+        // Mapping from maturity to borrowing orders
         mapping(uint256 => HitchensOrderStatisticsTreeLib.Tree) borrowOrders;
     }
 

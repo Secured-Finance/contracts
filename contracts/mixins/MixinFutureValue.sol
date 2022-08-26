@@ -51,7 +51,6 @@ contract MixinFutureValue {
             "borrower has the future value in past maturity"
         );
 
-        // uint256 maturity = Storage.slot().maturity;
         Storage.slot().futureValueMaturities[lender] = maturity;
         Storage.slot().futureValueMaturities[borrower] = maturity;
 
