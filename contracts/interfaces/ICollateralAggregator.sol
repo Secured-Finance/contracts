@@ -6,7 +6,7 @@ interface ICollateralAggregator {
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
 
-    function isCoveredUnsettled(
+    function isCovered(
         address _user,
         bytes32 _ccy,
         uint256 _unsettledExp
@@ -14,16 +14,15 @@ interface ICollateralAggregator {
 
     function isRegisteredUser(address addr) external view returns (bool);
 
-    function getMaxCollateralBookWithdraw(address _user)
-        external
-        view
-        returns (uint256 maxWithdraw);
+    function getWithdrawableCollateral(address _user) external view returns (uint256 maxWithdraw);
 
-    function getUnsettledCoverage(address _user) external view returns (uint256 coverage);
+    function getCoverage(address _user) external view returns (uint256 coverage);
 
     function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256);
 
-    function getTotalUnsettledExp(address _user) external view returns (uint256);
+    function getUnusedCollateral(address _user) external view returns (uint256);
+
+    function getTotalUnsettledExposure(address _user) external view returns (uint256);
 
     function getCollateralParameters()
         external

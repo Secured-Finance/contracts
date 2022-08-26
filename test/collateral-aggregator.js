@@ -300,18 +300,29 @@ contract('CollateralAggregator', () => {
         mockERC20.address,
       );
 
+      expect(await collateralAggregatorProxy.getCoverage(bob.address)).to.equal(
+        '0',
+      );
       expect(
-        await collateralAggregatorProxy.isCoveredUnsettled(
+        await collateralAggregatorProxy.isCovered(
           bob.address,
           targetCurrency,
           0,
         ),
-      ).to.equal(false);
+      ).to.equal(true);
 
       // NOTE: Deposit in two currencies to double the collateral
       // since the mock always returns the same value with "convertToETH".
       await collateralVaultProxy.connect(bob).deposit(targetCurrency, value);
       await collateralVaultProxy.connect(bob).deposit(previousCurrency, value);
+
+      expect(
+        await collateralAggregatorProxy.isCovered(
+          bob.address,
+          targetCurrency,
+          0,
+        ),
+      ).to.equal(true);
 
       await expect(
         collateralAggregatorCaller.useUnsettledCollateral(
@@ -322,7 +333,7 @@ contract('CollateralAggregator', () => {
       ).to.emit(collateralAggregatorProxy, 'UseUnsettledCollateral');
 
       expect(
-        await collateralAggregatorProxy.isCoveredUnsettled(
+        await collateralAggregatorProxy.isCovered(
           bob.address,
           targetCurrency,
           0,
@@ -330,9 +341,7 @@ contract('CollateralAggregator', () => {
       ).to.equal(true);
 
       expect(
-        await collateralAggregatorProxy.getMaxCollateralBookWithdraw(
-          bob.address,
-        ),
+        await collateralAggregatorProxy.getWithdrawableCollateral(bob.address),
       ).to.equal(
         valueInETH
           .mul('2')
@@ -341,9 +350,9 @@ contract('CollateralAggregator', () => {
           .div('10000'),
       );
 
-      expect(
-        await collateralAggregatorProxy.getUnsettledCoverage(bob.address),
-      ).to.equal('20000');
+      expect(await collateralAggregatorProxy.getCoverage(bob.address)).to.equal(
+        '5000',
+      );
 
       expect(
         await collateralAggregatorProxy.getUnsettledCollateral(
@@ -353,7 +362,7 @@ contract('CollateralAggregator', () => {
       ).to.equal(value.div('2').toString());
 
       expect(
-        await collateralAggregatorProxy.getTotalUnsettledExp(bob.address),
+        await collateralAggregatorProxy.getTotalUnsettledExposure(bob.address),
       ).to.equal(valueInETH);
 
       await expect(
@@ -366,18 +375,18 @@ contract('CollateralAggregator', () => {
     it('Fail to lock the unsettled collateral due to no enough collateral', async () => {
       await mockCurrencyController.mock[
         'convertToETH(bytes32,uint256)'
-      ].returns('0');
+      ].returns('10000000000000');
       await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
         '0',
       );
 
       expect(
-        await collateralAggregatorProxy.getMaxCollateralBookWithdraw(
+        await collateralAggregatorProxy.getWithdrawableCollateral(
           carol.address,
         ),
       ).to.equal('0');
       expect(
-        await collateralAggregatorProxy.getUnsettledCoverage(carol.address),
+        await collateralAggregatorProxy.getCoverage(carol.address),
       ).to.equal('0');
 
       await expect(
@@ -385,14 +394,6 @@ contract('CollateralAggregator', () => {
           carol.address,
           targetCurrency,
           '1',
-        ),
-      ).to.be.revertedWith('Not enough collateral');
-
-      await expect(
-        collateralAggregatorCaller.useUnsettledCollateral(
-          carol.address,
-          targetCurrency,
-          '0',
         ),
       ).to.be.revertedWith('Not enough collateral');
     });

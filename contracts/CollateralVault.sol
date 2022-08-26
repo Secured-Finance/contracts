@@ -94,9 +94,9 @@ contract CollateralVault is
         require(_amount > 0, "INVALID_AMOUNT");
 
         address user = msg.sender;
-        uint256 maxWidthdrawETH = collateralAggregator().getMaxCollateralBookWithdraw(user);
-        uint256 maxWidthdraw = currencyController().convertFromETH(_ccy, maxWidthdrawETH);
-        uint256 withdrawAmt = _amount > maxWidthdraw ? maxWidthdraw : _amount;
+        uint256 maxWithdrawETH = collateralAggregator().getWithdrawableCollateral(user);
+        uint256 maxWithdraw = currencyController().convertFromETH(_ccy, maxWithdrawETH);
+        uint256 withdrawAmt = _amount > maxWithdraw ? maxWithdraw : _amount;
 
         Storage.Book storage book = Storage.slot().books[user][_ccy];
         book.independentAmount = book.independentAmount - withdrawAmt;

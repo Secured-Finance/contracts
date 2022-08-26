@@ -257,6 +257,17 @@ contract('LendingMarketController', () => {
             '720',
           ),
       ).to.emit(lendingMarket1, 'MakeOrder');
+      expect(
+        await lendingMarketControllerProxy
+          .connect(carol)
+          .matchOrders(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '800',
+          ),
+      ).to.equal(true);
       await expect(
         lendingMarketControllerProxy
           .connect(carol)
@@ -423,6 +434,30 @@ contract('LendingMarketController', () => {
       expect(aliceTotalPV.toString()).to.equal(
         alicePV1.add(alicePV2).toString(),
       );
+    });
+
+    it('Fail to check if the lending order is matching', async () => {
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(carol)
+          .matchOrders(targetCurrency, maturities[0], Side.LEND, '99', '999'),
+      ).to.be.revertedWith('No orders exists for selected interest rate');
+    });
+
+    it('Fail to check if the borrowing order is matching', async () => {
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(carol)
+          .matchOrders(targetCurrency, maturities[0], Side.BORROW, '99', '999'),
+      ).to.be.revertedWith('No orders exists for selected interest rate');
     });
 
     it('Fail to rote lending markets due to pre-maturity', async () => {

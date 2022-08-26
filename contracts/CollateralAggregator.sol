@@ -69,19 +69,19 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    /**
-     * @dev Checks if unsettled collateral exposure covered more that 150% from a global collateral book of `_user`.
-     * @param _user User's ethereum address
-     * @param _ccy Currency to calculate additional PV for
-     * @param _unsettledExp Additional exposure to lock into unsettled exposure
-     */
-    function isCoveredUnsettled(
+    function isCovered(
         address _user,
         bytes32 _ccy,
         uint256 _unsettledExp
     ) public view override returns (bool) {
-        (uint256 coverage, ) = _getUnsettledCoverage(_user, _ccy, _unsettledExp);
-        return coverage >= CollateralParametersHandler.marginCallThresholdRate();
+        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalUsedCollateral = _getUsedCollateral(_user) +
+            _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
+
+        return
+            totalUsedCollateral == 0 ||
+            (totalCollateral * ProtocolTypes.PCT >=
+                totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate());
     }
 
     function isRegisteredUser(address addr) external view override returns (bool) {
@@ -89,30 +89,47 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Gets maximum amount of ETH available to withdraw from `_user` collateral book.
+     * @dev Gets maximum amount of ETH available to withdraw from `_user` collateral.
      * @param _user User's address
      */
-    function getMaxCollateralBookWithdraw(address _user) external view virtual returns (uint256) {
-        return _calcMaxCollateral(_user);
+    function getWithdrawableCollateral(address _user) external view virtual returns (uint256) {
+        return _getWithdrawableCollateral(_user);
     }
 
     /**
-     * @dev Gets coverage of the global collateral book against all unsettled exposure.
+     * @dev Gets the collateral coverage.
      * @param _user User's address
      */
-    function getUnsettledCoverage(address _user) external view override returns (uint256 coverage) {
-        (coverage, ) = _getUnsettledCoverage(_user, "", 0);
-    }
-
-    function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256) {
-        return Storage.slot().unsettledCollateral[user][ccy];
+    function getCoverage(address _user) public view override returns (uint256 coverage) {
+        return _getCoverage(_user, "", 0);
     }
 
     /**
-     * @dev Calculates total unsettled exposure across all currencies
+     * @dev Gets unsettled exposure for selected currency
+     * @param _user User's address
+     * @param _ccy Currency
+     */
+    function getUnsettledCollateral(address _user, bytes32 _ccy) external view returns (uint256) {
+        return Storage.slot().unsettledCollateral[_user][_ccy];
+    }
+
+    /**
+     * @dev Gets the total collateral amount
      * @param _user User's address
      */
-    function getTotalUnsettledExp(address _user) external view override returns (uint256) {
+    function getUnusedCollateral(address _user) external view returns (uint256) {
+        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalUsedCollateral = _getUsedCollateral(_user) +
+            _getTotalUnsettledExposure(_user, "", 0);
+
+        return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
+    }
+
+    /**
+     * @dev Gets total unsettled exposure across all currencies
+     * @param _user User's address
+     */
+    function getTotalUnsettledExposure(address _user) external view override returns (uint256) {
         return _getTotalUnsettledExposure(_user, "", 0);
     }
 
@@ -154,7 +171,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         uint256 amount
     ) external override onlyAcceptedContracts {
         Storage.slot().exposedUnsettledCurrencies[user].add(ccy);
-        require(isCoveredUnsettled(user, ccy, amount), "Not enough collateral");
+        require(isCovered(user, ccy, amount), "Not enough collateral");
 
         Storage.slot().unsettledCollateral[user][ccy] += amount;
 
@@ -205,10 +222,24 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         );
     }
 
+    function _getCoverage(
+        address _user,
+        bytes32 _ccy,
+        uint256 _unsettledExp
+    ) internal view returns (uint256 coverage) {
+        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalUsedCollateral = _getUsedCollateral(_user) +
+            _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
+
+        if (totalCollateral > 0) {
+            coverage = (((totalUsedCollateral) * ProtocolTypes.PCT) / totalCollateral);
+        }
+    }
+
     /**
      * @dev Calculates total unsettled exposure across all currencies against all global collateral books.
      * @param _user User's ethereum address
-     * @param _ccy Currency to calculate additional PV for
+     * @param _ccy Currency
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
      */
     function _getTotalUnsettledExposure(
@@ -231,30 +262,13 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         }
     }
 
-    function _getUnsettledCoverage(
-        address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
-    ) internal view returns (uint256 coverage, uint256 totalExpInETH) {
-        totalExpInETH = _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
-        uint256 independentAmount = collateralVault().getTotalIndependentCollateralInETH(_user);
-
-        coverage = totalExpInETH == 0 ? 0 : (ProtocolTypes.PCT * independentAmount) / totalExpInETH;
-    }
-
     function _getTotalCollateral(address _user) internal view returns (uint256) {
-        int256 totalPVInETH = lendingMarketController().getTotalPresentValueInETH(_user);
-        uint256 totalNegativePV = totalPVInETH > 0 ? 0 : uint256(-totalPVInETH);
-        uint256 independentAmount = collateralVault().getTotalIndependentCollateralInETH(_user);
-
-        return independentAmount > totalNegativePV ? independentAmount - totalNegativePV : 0;
+        return collateralVault().getTotalIndependentCollateralInETH(_user);
     }
 
-    struct MaxCollateralBookWithdrawLocalVars {
-        uint256 totalExpInETH;
-        uint256 coverage;
-        uint256 maxWithdraw;
-        uint256 totalCollateral;
+    function _getUsedCollateral(address _user) internal view returns (uint256) {
+        int256 totalPVInETH = lendingMarketController().getTotalPresentValueInETH(_user);
+        return totalPVInETH > 0 ? 0 : uint256(-totalPVInETH);
     }
 
     /**
@@ -263,31 +277,27 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      *
      * @return `maxWithdraw` max withdrawable amount of ETH
      */
-    function _calcMaxCollateral(address _user) internal view returns (uint256) {
-        MaxCollateralBookWithdrawLocalVars memory vars;
+    function _getWithdrawableCollateral(address _user) internal view returns (uint256) {
+        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalUsedCollateral = _getUsedCollateral(_user) +
+            _getTotalUnsettledExposure(_user, "", 0);
 
-        (vars.coverage, vars.totalExpInETH) = _getUnsettledCoverage(_user, "", 0);
-        vars.totalCollateral = _getTotalCollateral(_user);
-
-        if (vars.coverage == 0) {
-            return vars.totalCollateral;
+        if (totalUsedCollateral == 0) {
+            return totalCollateral;
         } else if (
-            vars.totalCollateral >
-            (vars.totalExpInETH * CollateralParametersHandler.marginCallThresholdRate()) /
+            totalCollateral >
+            ((totalUsedCollateral) * CollateralParametersHandler.marginCallThresholdRate()) /
                 ProtocolTypes.BP
         ) {
             // NOTE: The formula is:
-            // maxWithdraw = totalCollateral - (totalExposure * marginCallThresholdRate).
-            vars.maxWithdraw =
-                (vars.totalCollateral *
+            // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
+            return
+                (totalCollateral *
                     ProtocolTypes.BP -
-                    vars.totalExpInETH *
-                    CollateralParametersHandler.marginCallThresholdRate()) /
-                ProtocolTypes.BP;
+                    (totalUsedCollateral) *
+                    CollateralParametersHandler.marginCallThresholdRate()) / ProtocolTypes.BP;
         } else {
             return 0;
         }
-
-        return vars.maxWithdraw;
     }
 }
