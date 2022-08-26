@@ -1,23 +1,15 @@
 const { ethers, deployments, run } = require('hardhat');
-const {
-  toBytes32,
-  hexETHString,
-  hexFILString,
-  loanPrefix,
-  aliceFILAddress,
-  bobFILAddress,
-} = require('../test-utils').strings;
+const { toBytes32, hexETHString, hexFILString } =
+  require('../test-utils').strings;
 
 const { expect } = require('chai');
-const moment = require('moment');
 
-contract('Loan E2E Test', async () => {
+contract('ZC e2e test', async () => {
   const targetCurrency = hexFILString;
   const BP = 0.01;
   const depositAmountInETH = '10000000000000000000';
   const orderAmountInFIL = '50000000000000000000';
   const orderRate = String(3 / BP);
-  const txHashSample = 'txHashSample';
 
   // Accounts
   let ownerSigner;
@@ -27,15 +19,9 @@ contract('Loan E2E Test', async () => {
 
   // Contracts
   let proxyController;
-  let chainlinkSettlementAdapter;
-  let operator;
-
-  // Proxy Contracts
   let collateralAggregator;
   let collateralVault;
   let lendingMarketController;
-
-  let loanId;
 
   before('Set up for testing', async () => {
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -77,25 +63,6 @@ contract('Loan E2E Test', async () => {
       .get('ProxyController')
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-    chainlinkSettlementAdapter = await deployments
-      .get('ChainlinkSettlementAdapter')
-      .then(({ address }) =>
-        ethers.getContractAt('ChainlinkSettlementAdapter', address),
-      );
-
-    operator = await deployments
-      .get('Operator')
-      .then(({ address }) => ethers.getContractAt('Operator', address));
-
-    console.table(
-      {
-        proxyController,
-        chainlinkSettlementAdapter,
-        operator,
-      },
-      ['address'],
-    );
-
     // Get proxy contracts
     collateralAggregator = await getProxy('CollateralAggregator');
     collateralVault = await getProxy('CollateralVault');
@@ -103,6 +70,7 @@ contract('Loan E2E Test', async () => {
 
     console.table(
       {
+        proxyController,
         collateralAggregator,
         collateralVault,
         lendingMarketController,
@@ -113,34 +81,30 @@ contract('Loan E2E Test', async () => {
 
   it('Deposit ETH', async () => {
     // Deposit ETH by Alice
-    const isRegisteredAlice = await collateralAggregator.checkRegisteredUser(
+    const isRegisteredAlice = await collateralAggregator.isRegisteredUser(
       aliceSigner.address,
     );
 
     if (!isRegisteredAlice) {
-      await collateralAggregator
-        .connect(aliceSigner)
-        ['register(string[],uint256[])']([aliceFILAddress], [461]);
+      await collateralAggregator.connect(aliceSigner).register();
       await collateralVault
         .connect(aliceSigner)
-        ['deposit(bytes32,uint256)'](hexETHString, depositAmountInETH, {
+        .deposit(hexETHString, depositAmountInETH, {
           value: depositAmountInETH,
         });
     }
 
     // Deposit ETH by BoB
-    const isRegisteredBob = await collateralAggregator.checkRegisteredUser(
+    const isRegisteredBob = await collateralAggregator.isRegisteredUser(
       bobSigner.address,
     );
 
     if (!isRegisteredBob) {
-      await collateralAggregator
-        .connect(bobSigner)
-        ['register(string[],uint256[])']([bobFILAddress], [461]);
+      await collateralAggregator.connect(bobSigner).register();
 
       await collateralVault
         .connect(bobSigner)
-        ['deposit(bytes32,uint256)'](hexETHString, depositAmountInETH, {
+        .deposit(hexETHString, depositAmountInETH, {
           value: depositAmountInETH,
         });
     }
@@ -151,71 +115,72 @@ contract('Loan E2E Test', async () => {
       hexETHString,
     );
 
-    let lockedCollateral = await collateralVault[
-      'getLockedCollateral(address,bytes32)'
-    ](aliceSigner.address, hexETHString);
+    let totalPresentValue = await lendingMarketController.getTotalPresentValue(
+      hexETHString,
+      aliceSigner.address,
+    );
 
     expect(independentCollateral.toString()).to.equal(depositAmountInETH);
-    expect(lockedCollateral.toString()).to.equal('0');
+    expect(totalPresentValue.toString()).to.equal('0');
   });
 
   it('Take order', async () => {
-    // Get FIL markets
-    // const market3m = await lendingMarketController
-    //   .getLendingMarket(targetCurrency, terms[0])
-    //   .then((address) => ethers.getContractAt('LendingMarket', address));
+    // Get FIL market maturities
+    const maturities = await lendingMarketController.getMaturities(
+      targetCurrency,
+    );
 
-    // // Make lend orders
-    // await market3m.connect(aliceSigner).order(0, orderAmountInFIL, orderRate);
+    // Make lend orders
+    await lendingMarketController
+      .connect(aliceSigner)
+      .createOrder(
+        targetCurrency,
+        maturities[0],
+        '0',
+        orderAmountInFIL,
+        orderRate,
+      );
 
     // Make borrow orders
-    const receipt = await market3m
+    await lendingMarketController
       .connect(bobSigner)
-      .order(1, orderAmountInFIL, orderRate)
-      .then((tx) => tx.wait());
-
-    const { dealId } = await loan
-      .queryFilter(loan.filters.Register(), receipt.blockHash)
-      .then(
-        (events) =>
-          events.find(
-            ({ transactionHash }) =>
-              transactionHash === receipt.transactionHash,
-          ).args,
+      .createOrder(
+        targetCurrency,
+        maturities[0],
+        '1',
+        orderAmountInFIL,
+        orderRate,
       );
-    loanId = dealId;
 
-    // Check loan deal
-    const deal = await loan.getLoanDeal(loanId);
-
-    expect(deal.lender).to.equal(aliceSigner.address);
-    expect(deal.borrower).to.equal(bobSigner.address);
-    expect(deal.ccy).to.equal(hexFILString);
-    // expect(deal.term.toString()).to.equal('90');
-    expect(deal.notional.toString()).to.equal(orderAmountInFIL);
-    expect(deal.rate.toString()).to.equal(orderRate);
-
-    // Check collateral of Bob
+    // Check collateral of Alice
     const independentCollateralAlice =
       await collateralVault.getIndependentCollateral(
         aliceSigner.address,
         hexETHString,
       );
+    const unusedCollateralAlice =
+      await collateralAggregator.getUnusedCollateral(aliceSigner.address);
+
+    expect(independentCollateralAlice.toString()).to.equal(
+      unusedCollateralAlice.toString(),
+    );
+
+    // Check collateral of Bob
     const independentCollateralBob =
       await collateralVault.getIndependentCollateral(
         bobSigner.address,
         hexETHString,
       );
+    const unusedCollateralBob = await collateralAggregator.getUnusedCollateral(
+      bobSigner.address,
+    );
+    const totalPresentValueBob =
+      await lendingMarketController.getTotalPresentValueInETH(
+        bobSigner.address,
+      );
 
-    const lockedCollaterals = await collateralVault[
-      'getLockedCollateral(address,address,bytes32)'
-    ](aliceSigner.address, bobSigner.address, hexETHString);
-
-    expect(
-      independentCollateralAlice.add(lockedCollaterals[0]).toString(),
-    ).to.equal(depositAmountInETH);
-    expect(
-      independentCollateralBob.add(lockedCollaterals[1]).toString(),
-    ).to.equal(depositAmountInETH);
+    expect(independentCollateralBob.toString()).to.equal(
+      unusedCollateralBob.add(totalPresentValueBob.abs()).toString(),
+    );
   });
 });
