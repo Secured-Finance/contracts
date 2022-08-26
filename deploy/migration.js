@@ -61,7 +61,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 
   const collateralAggregator = await getProxy('CollateralAggregator');
   const collateralVault = await getProxy('CollateralVault');
-  const crosschainAddressResolver = await getProxy('CrosschainAddressResolver');
   const currencyController = await getProxy('CurrencyController');
   const lendingMarketController = await getProxy('LendingMarketController');
 
@@ -75,7 +74,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const contractNames = [
     'CollateralAggregator',
     'CollateralVault',
-    'CrosschainAddressResolver',
     'CurrencyController',
     'LendingMarketController',
   ];
@@ -84,7 +82,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const contractAddresses = [
     collateralAggregator.address,
     collateralVault.address,
-    crosschainAddressResolver.address,
     currencyController.address,
     lendingMarketController.address,
   ];
@@ -93,7 +90,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const buildCachesAddresses = [
     collateralAggregator.address,
     collateralVault.address,
-    crosschainAddressResolver.address,
     lendingMarketController.address,
   ];
 
@@ -144,7 +140,6 @@ module.exports.tags = ['Migration'];
 module.exports.dependencies = [
   'CollateralAggregator',
   'CollateralVault',
-  'CrosschainAddressResolver',
   'CurrencyController',
   'LendingMarketController',
   'WETH',

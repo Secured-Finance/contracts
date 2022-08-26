@@ -1,9 +1,6 @@
 const AddressResolver = artifacts.require('AddressResolver');
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const CollateralVault = artifacts.require('CollateralVault');
-const CrosschainAddressResolver = artifacts.require(
-  'CrosschainAddressResolver',
-);
 const CurrencyController = artifacts.require('CurrencyController');
 const LendingMarket = artifacts.require('LendingMarket');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
@@ -50,9 +47,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     instances['CollateralAggregator'] || (await CollateralAggregator.new());
   const collateralVault =
     instances['CollateralVault'] || (await CollateralVault.new());
-  const crosschainAddressResolver =
-    instances['CrosschainAddressResolver'] ||
-    (await CrosschainAddressResolver.new());
   const currencyController =
     instances['CurrencyController'] || (await CurrencyController.new());
 
@@ -82,7 +76,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   const [
     collateralAggregatorAddress,
     collateralVaultAddress,
-    crosschainAddressResolverAddress,
     currencyControllerAddress,
     lendingMarketControllerAddress,
   ] = await Promise.all([
@@ -96,9 +89,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     proxyController.setCollateralVaultImpl(
       collateralVault.address,
       wETHToken.address,
-    ),
-    proxyController.setCrosschainAddressResolverImpl(
-      crosschainAddressResolver.address,
     ),
     proxyController.setCurrencyControllerImpl(currencyController.address),
     proxyController.setLendingMarketControllerImpl(
@@ -121,9 +111,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   const collateralVaultProxy = await ethers.getContractAt(
     mockContractNames['CollateralVault'] || 'CollateralVault',
     collateralVaultAddress,
-  );
-  const crosschainAddressResolverProxy = await CrosschainAddressResolver.at(
-    crosschainAddressResolverAddress,
   );
   const currencyControllerProxy = await CurrencyController.at(
     currencyControllerAddress,
@@ -183,7 +170,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   const migrationTargets = [
     ['CollateralAggregator', collateralAggregatorProxy],
     ['CollateralVault', collateralVaultProxy],
-    ['CrosschainAddressResolver', crosschainAddressResolverProxy],
     ['CurrencyController', currencyControllerProxy],
     ['LendingMarketController', lendingMarketControllerProxy],
   ];
@@ -196,7 +182,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   const buildCachesAddresses = [
     collateralAggregatorProxy,
     collateralVaultProxy,
-    crosschainAddressResolverProxy,
     lendingMarketControllerProxy,
   ]
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
@@ -243,7 +228,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     addressResolver: addressResolverProxy,
     collateralAggregator: collateralAggregatorProxy,
     collateralVault: collateralVaultProxy,
-    crosschainAddressResolver: crosschainAddressResolverProxy,
     currencyController: currencyControllerProxy,
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,

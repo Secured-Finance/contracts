@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IAddressResolver.sol";
-import "./interfaces/IProxyController.sol";
-import "./libraries/Contracts.sol";
-import "./utils/UpgradeabilityProxy.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
+import {IProxyController} from "./interfaces/IProxyController.sol";
+import {Contracts} from "./libraries/Contracts.sol";
+import {UpgradeabilityProxy} from "./utils/UpgradeabilityProxy.sol";
 
 contract ProxyController is IProxyController, Ownable {
     IAddressResolver private resolver;
@@ -91,15 +91,6 @@ contract ProxyController is IProxyController, Ownable {
             _WETH9
         );
         _updateImpl(Contracts.COLLATERAL_VAULT, newImpl, data);
-    }
-
-    /**
-     * @dev Sets the implementation contract of CrosschainAddressResolver
-     * @param newImpl The address of implementation contract
-     */
-    function setCrosschainAddressResolverImpl(address newImpl) external onlyOwner {
-        bytes memory data = abi.encodeWithSignature("initialize(address)", resolver);
-        _updateImpl(Contracts.CROSSCHAIN_ADDRESS_RESOLVER, newImpl, data);
     }
 
     /**
