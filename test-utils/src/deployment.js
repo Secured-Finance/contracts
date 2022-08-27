@@ -1,14 +1,3 @@
-const AddressResolver = artifacts.require('AddressResolver');
-const CollateralAggregator = artifacts.require('CollateralAggregator');
-const CollateralVault = artifacts.require('CollateralVault');
-const CurrencyController = artifacts.require('CurrencyController');
-const LendingMarket = artifacts.require('LendingMarket');
-const MockV3Aggregator = artifacts.require('MockV3Aggregator');
-const ProxyController = artifacts.require('ProxyController');
-const WETH9Mock = artifacts.require('WETH9Mock');
-const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
-// const { deployContract } = waffle;
-
 const { ethers } = require('hardhat');
 const moment = require('moment');
 
@@ -28,39 +17,39 @@ const minCollateralRate = 2500;
 
 const COMPOUND_FACTOR = '1010000000000000000';
 
-const deployContracts = async (mockCallbacks, mockContractNames) => {
+const deployContracts = async () => {
   // Deploy libraries
-  const QuickSort = await ethers.getContractFactory('QuickSort');
-  const quickSortLibrary = await QuickSort.deploy();
+  const quickSortLibrary = await ethers
+    .getContractFactory('QuickSort')
+    .then((factory) => factory.deploy());
   await quickSortLibrary.deployed();
 
-  // Call callback functions for mocking
-  const instances = {};
-  for (const [name, callback] of Object.entries(mockCallbacks)) {
-    instances[name] = await callback({ quickSortLibrary });
-  }
-
   // Deploy contracts
-  const addressResolver =
-    instances['AddressResolver'] || (await AddressResolver.new());
-  const collateralAggregator =
-    instances['CollateralAggregator'] || (await CollateralAggregator.new());
-  const collateralVault =
-    instances['CollateralVault'] || (await CollateralVault.new());
-  const currencyController =
-    instances['CurrencyController'] || (await CurrencyController.new());
+  const contracts = [
+    'AddressResolver',
+    'CollateralAggregator',
+    'CollateralVault',
+    'CurrencyController',
+    'WETH9Mock',
+    'LendingMarketController',
+  ];
 
-  const wETHToken = await WETH9Mock.new();
+  const [
+    addressResolver,
+    collateralAggregator,
+    collateralVault,
+    currencyController,
+    wETHToken,
+    lendingMarketController,
+  ] = await Promise.all(
+    contracts.map((contract) =>
+      ethers.getContractFactory(contract).then((factory) => factory.deploy()),
+    ),
+  );
 
-  const lendingMarketController =
-    instances['LendingMarketController'] ||
-    (await ethers
-      .getContractFactory('LendingMarketController')
-      .then((factory) => factory.deploy()));
-
-  const proxyController =
-    instances['ProxyController'] ||
-    (await ProxyController.new(ethers.constants.AddressZero));
+  const proxyController = await ethers
+    .getContractFactory('ProxyController')
+    .then((factory) => factory.deploy(ethers.constants.AddressZero));
 
   // Get the Proxy contract address of AddressResolver
   await proxyController.setAddressResolverImpl(addressResolver.address);
@@ -68,9 +57,9 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     await proxyController.getAddressResolverAddress();
 
   // Deploy MigrationAddressResolver
-  const migrationAddressResolver = await MigrationAddressResolver.new(
-    addressResolverProxyAddress,
-  );
+  const migrationAddressResolver = await ethers
+    .getContractFactory('MigrationAddressResolver')
+    .then((factory) => factory.deploy());
 
   // Set contract addresses to the Proxy contract
   const [
@@ -94,44 +83,51 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
     ),
-  ]).then((txs) =>
-    txs.map(
-      ({ logs }) =>
-        logs.find(({ event }) => event === 'ProxyCreated').args.proxyAddress,
-    ),
-  );
+  ])
+    .then((txs) => Promise.all(txs.map((tx) => tx.wait())))
+    .then((txs) =>
+      txs.map(
+        ({ events }) =>
+          events.find(({ event }) => event === 'ProxyCreated').args
+            .proxyAddress,
+      ),
+    );
 
   // Get the Proxy contract addresses
-  const addressResolverProxy = await AddressResolver.at(
+  const addressResolverProxy = await ethers.getContractAt(
+    'AddressResolver',
     addressResolverProxyAddress,
   );
-  const collateralAggregatorProxy = await CollateralAggregator.at(
+  const collateralAggregatorProxy = await ethers.getContractAt(
+    'CollateralAggregator',
     collateralAggregatorAddress,
   );
   const collateralVaultProxy = await ethers.getContractAt(
-    mockContractNames['CollateralVault'] || 'CollateralVault',
+    'CollateralVault',
     collateralVaultAddress,
   );
-  const currencyControllerProxy = await CurrencyController.at(
+  const currencyControllerProxy = await ethers.getContractAt(
+    'CurrencyController',
     currencyControllerAddress,
   );
   const lendingMarketControllerProxy = await ethers.getContractAt(
-    mockContractNames['LendingMarketController'] || 'LendingMarketController',
+    'LendingMarketController',
     lendingMarketControllerAddress,
   );
 
   // Set up for CurrencyController
-  const btcToETHPriceFeed = await MockV3Aggregator.new(
+  const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
+  const btcToETHPriceFeed = await MockV3Aggregator.deploy(
     18,
     hexBTCString,
     btcToETHRate,
   );
-  const ethToUSDPriceFeed = await MockV3Aggregator.new(
+  const ethToUSDPriceFeed = await MockV3Aggregator.deploy(
     8,
     hexETHString,
     ethToUSDRate,
   );
-  const filToETHPriceFeed = await MockV3Aggregator.new(
+  const filToETHPriceFeed = await MockV3Aggregator.deploy(
     18,
     hexFILString,
     filToETHRate,
@@ -195,7 +191,9 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
 
   // Set up for LendingMarketController
   // const lendingMarket = await deployContract(owner, LendingMarket);
-  const lendingMarket = await LendingMarket.new();
+  const lendingMarket = await ethers
+    .getContractFactory('LendingMarket')
+    .then((factory) => factory.deploy());
 
   await lendingMarketControllerProxy.setLendingMarketImpl(
     lendingMarket.address,
@@ -239,42 +237,6 @@ const deployContracts = async (mockCallbacks, mockContractNames) => {
   };
 };
 
-class Deployment {
-  #mockCallbacks = {};
-  #mockContractNames = {};
-
-  mock(name) {
-    return {
-      useValue: this._useValue(name),
-      useFactory: this._useFactory(name),
-    };
-  }
-
-  _useValue(name) {
-    return (value) => (this.#mockCallbacks[name] = () => value);
-  }
-
-  _useFactory(name) {
-    return (key, callback) => {
-      const deploy = (...args) => {
-        const newCallback = async (libraries) => {
-          const newLibraries = callback(libraries);
-          return ethers
-            .getContractFactory(key, { libraries: newLibraries })
-            .then((factory) => factory.deploy(...args));
-        };
-        this.#mockCallbacks[name] = newCallback;
-        this.#mockContractNames[name] = key;
-      };
-      return { deploy };
-    };
-  }
-
-  execute() {
-    return deployContracts(this.#mockCallbacks, this.#mockContractNames);
-  }
-}
-
 const executeIfNewlyDeployment = async (name, deployResult, callback) => {
   if (deployResult.newlyDeployed) {
     console.log(`Deployed ${name} at ${deployResult.address}`);
@@ -285,4 +247,4 @@ const executeIfNewlyDeployment = async (name, deployResult, callback) => {
   }
 };
 
-module.exports = { Deployment, executeIfNewlyDeployment };
+module.exports = { deployContracts, executeIfNewlyDeployment };

@@ -4,15 +4,13 @@ const { hexFILString, hexBTCString, hexETHString } =
 const { checkTokenBalances } = require('../test-utils').balances;
 const { toBN, filToETHRate } = require('../test-utils').numbers;
 const { expect } = require('chai');
-const { expectEvent, time } = require('@openzeppelin/test-helpers');
+const { time } = require('@openzeppelin/test-helpers');
 
-const { Deployment } = require('../test-utils').deployment;
+const { deployContracts } = require('../test-utils').deployment;
 
 const toWei = (eth) => {
   return ethers.utils.parseEther(eth);
 };
-
-const ZERO_BN = toBN('0');
 
 contract('Integration test', async (accounts) => {
   const [owner, alice, bob, carol] = accounts;
@@ -30,8 +28,8 @@ contract('Integration test', async (accounts) => {
   let lendingMarkets = [];
   let btcLendingMarkets = [];
 
-  let aliceIndependentAmount = ZERO_BN;
-  let carolInitialCollateral = web3.utils.toBN('90000000000000000000');
+  let aliceIndependentAmount = toBN('0');
+  let carolInitialCollateral = toBN('90000000000000000000');
 
   before('Deploy Contracts', async () => {
     ({
@@ -44,7 +42,7 @@ contract('Integration test', async (accounts) => {
       wETHToken,
       liquidations,
       filToETHPriceFeed,
-    } = await new Deployment().execute());
+    } = await deployContracts());
 
     await collateralVault.registerCurrency(targetCurrency, wETHToken.address);
 
@@ -86,10 +84,10 @@ contract('Integration test', async (accounts) => {
   describe('Prepare markets and users for lending deals', async () => {
     it('Register collateral book for Carol with 90 ETH and check Carol collateral book', async () => {
       const [, , , carolSigner] = await ethers.getSigners();
-      await collateralAggregator.register({ from: carol });
+      await collateralAggregator.connect(carolSigner).register();
 
       let actualBalance = await wETHToken.balanceOf(collateralVault.address);
-      expect(actualBalance.toString()).to.equal(ZERO_BN.toString());
+      expect(actualBalance.toString()).to.equal('0');
 
       await collateralVault
         .connect(carolSigner)
@@ -167,9 +165,7 @@ contract('Integration test', async (accounts) => {
       await expect(
         lendingMarketController
           .connect(carolSigner)
-          .createOrder(hexBTCString, _9mBtcMaturity, '0', '1000000000', '320', {
-            from: carol,
-          }),
+          .createOrder(hexBTCString, _9mBtcMaturity, '0', '1000000000', '320'),
       ).to.emit(btcLendingMarkets[2], 'MakeOrder');
 
       await expect(
@@ -257,26 +253,24 @@ contract('Integration test', async (accounts) => {
       await expect(
         lendingMarketController
           .connect(carolSigner)
-          .createOrder(hexBTCString, _1yBtcMaturity, '1', '1000000000', '300', {
-            from: carol,
-          }),
+          .createOrder(hexBTCString, _1yBtcMaturity, '1', '1000000000', '300'),
       ).to.emit(btcLendingMarkets[3], 'MakeOrder');
     });
   });
 
   describe('Test Deposit and Withdraw collateral by Alice', async () => {
     it('Register collateral book without payment', async () => {
-      let result = await collateralAggregator.register({ from: alice });
-      expectEvent(result, 'Register');
+      const [, aliceSigner] = await ethers.getSigners();
+      await expect(
+        collateralAggregator.connect(aliceSigner).register(),
+      ).to.emit(collateralAggregator, 'Register');
     });
 
     it('Deposit 10 ETH by Alice in Collateral contract', async () => {
       const [, aliceSigner] = await ethers.getSigners();
 
-      await web3.eth
-        .getBalance(alice)
-        .then((res) => (balance = web3.utils.toBN(res)));
-      let depositAmt = web3.utils.toBN('10000000000000000000');
+      await web3.eth.getBalance(alice).then((res) => (balance = toBN(res)));
+      let depositAmt = toBN('10000000000000000000');
 
       await collateralVault
         .connect(aliceSigner)
@@ -303,7 +297,7 @@ contract('Integration test', async (accounts) => {
 
     it('Deposit 13.5252524 ETH by Alice in Collateral contract', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      let depositAmt = web3.utils.toBN('13525252400000000000');
+      let depositAmt = toBN('13525252400000000000');
 
       await collateralVault
         .connect(aliceSigner)
@@ -324,7 +318,7 @@ contract('Integration test', async (accounts) => {
 
     it('Try to Withdraw 30 ETH from Collateral by Alice but withdraw maximum amount of independent collateral, ', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      let withdrawal = web3.utils.toBN('30000000000000000000');
+      let withdrawal = toBN('30000000000000000000');
       await collateralVault
         .connect(aliceSigner)
         .withdraw(targetCurrency, withdrawal.toString())
@@ -341,11 +335,13 @@ contract('Integration test', async (accounts) => {
     });
 
     it('Register collateral book by Bob with 1 ETH deposit', async () => {
-      let result = await collateralAggregator.register({ from: bob });
-      expectEvent(result, 'Register');
-
       const [, , bobSigner] = await ethers.getSigners();
-      let depositAmt = web3.utils.toBN('1000000000000000000');
+      await expect(collateralAggregator.connect(bobSigner).register()).to.emit(
+        collateralAggregator,
+        'Register',
+      );
+
+      let depositAmt = toBN('1000000000000000000');
 
       await collateralVault
         .connect(bobSigner)
@@ -365,7 +361,7 @@ contract('Integration test', async (accounts) => {
     it('Deposit 2 ETH by Bob in Collateral contract', async () => {
       const [, , bobSigner] = await ethers.getSigners();
 
-      let depositAmt = web3.utils.toBN('2000000000000000000');
+      let depositAmt = toBN('2000000000000000000');
       await collateralVault
         .connect(bobSigner)
         .deposit(targetCurrency, depositAmt.toString(), {
@@ -381,7 +377,7 @@ contract('Integration test', async (accounts) => {
 
     it('Try to withdraw 1 ETH from empty collateral book by Alice, expect no change in Alice balance', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      let withdrawal = web3.utils.toBN('1000000000000000000');
+      let withdrawal = toBN('1000000000000000000');
 
       await collateralVault
         .connect(aliceSigner)
@@ -393,7 +389,7 @@ contract('Integration test', async (accounts) => {
   describe('Test making new orders on FIL LendingMarket, and check collateral usage', async () => {
     it('Deposit 1 ETH by Alice in Collateral contract', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      let depositAmt = web3.utils.toBN('1000000000000000000');
+      let depositAmt = toBN('1000000000000000000');
 
       await collateralVault
         .connect(aliceSigner)
@@ -450,15 +446,14 @@ contract('Integration test', async (accounts) => {
     });
 
     it('Check Alice collateral book usage, and total unsettled exposure calculations', async () => {
-      let filUsed = web3.utils
-        .toBN('10000000000000000000')
-        .mul(web3.utils.toBN(2000))
-        .div(web3.utils.toBN(10000));
-      let filInETH = await currencyController.convertToETH(
-        hexFILString,
-        filUsed,
-        { from: alice },
-      );
+      const [, aliceSigner] = await ethers.getSigners();
+      let filUsed = toBN('10000000000000000000')
+        .mul(toBN(2000))
+        .div(toBN(10000));
+
+      let filInETH = await currencyController
+        .connect(aliceSigner)
+        ['convertToETH(bytes32,uint256)'](hexFILString, filUsed);
 
       let exp = await collateralAggregator.getTotalUnsettledExposure(alice);
       expect(exp.toString()).to.equal(filInETH.toString());
@@ -491,7 +486,7 @@ contract('Integration test', async (accounts) => {
 
     it('Expect withdrawing maximum available amount instead of withdrawing 0.9 ETH by Alice', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      let withdrawal = web3.utils.toBN('900000000000000000');
+      let withdrawal = toBN('900000000000000000');
       let maxWithdrawal = await collateralAggregator.getWithdrawableCollateral(
         alice,
       );
@@ -515,7 +510,7 @@ contract('Integration test', async (accounts) => {
       let maxWithdrawal = await collateralAggregator.getWithdrawableCollateral(
         alice,
       );
-      let withdrawal = web3.utils.toBN('100000000000000000');
+      let withdrawal = toBN('100000000000000000');
 
       (
         await collateralVault
@@ -544,12 +539,8 @@ contract('Integration test', async (accounts) => {
         hexFILString,
       );
 
-      await web3.eth
-        .getGasPrice()
-        .then((res) => (gasPrice = web3.utils.toBN(res)));
-      await web3.eth
-        .getBalance(alice)
-        .then((res) => (balance = web3.utils.toBN(res)));
+      await web3.eth.getGasPrice().then((res) => (gasPrice = toBN(res)));
+      await web3.eth.getBalance(alice).then((res) => (balance = toBN(res)));
 
       let tx = await lendingMarketController
         .connect(aliceSigner)
@@ -559,9 +550,7 @@ contract('Integration test', async (accounts) => {
 
       const receipt = await tx.wait();
       if (receipt.gasUsed != null) {
-        balance = await balance.sub(
-          web3.utils.toBN(receipt.gasUsed).mul(gasPrice),
-        );
+        balance = await balance.sub(toBN(receipt.gasUsed).mul(gasPrice));
       }
 
       const totalUnsettledExp =
@@ -582,7 +571,7 @@ contract('Integration test', async (accounts) => {
       let maxWithdrawal = await collateralAggregator.getWithdrawableCollateral(
         alice,
       );
-      let withdrawal = web3.utils.toBN('1000000000000000000');
+      let withdrawal = toBN('1000000000000000000');
 
       aliceIndependentAmount = aliceIndependentAmount.sub(maxWithdrawal);
 
@@ -604,7 +593,7 @@ contract('Integration test', async (accounts) => {
 
     it('Deposit 1 ETH by Alice in Collateral contract', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      let depositAmt = web3.utils.toBN('1000000000000000000');
+      let depositAmt = toBN('1000000000000000000');
 
       await collateralVault
         .connect(aliceSigner)
@@ -629,7 +618,7 @@ contract('Integration test', async (accounts) => {
         hexFILString,
       );
 
-      let depositAmt = web3.utils.toBN('1000000000000000000');
+      let depositAmt = toBN('1000000000000000000');
       await expect(
         lendingMarketController
           .connect(aliceSigner)
@@ -643,11 +632,9 @@ contract('Integration test', async (accounts) => {
         })
         .then((tx) => tx.wait());
 
-      let filInETH = await currencyController.convertToETH(
-        hexFILString,
-        filAmount,
-        { from: alice },
-      );
+      let filInETH = await currencyController
+        .connect(aliceSigner)
+        ['convertToETH(bytes32,uint256)'](hexFILString, filAmount);
       console.log('FIL in ETH is: ' + filInETH);
       console.log('Taking order for 30 FIL, and using collateral');
 
@@ -695,7 +682,7 @@ contract('Integration test', async (accounts) => {
 
     it('Deposit 45 ETH by Alice in Collateral contract', async () => {
       const [, aliceSigner] = await ethers.getSigners();
-      const depositAmt = web3.utils.toBN('45000000000000000000');
+      const depositAmt = toBN('45000000000000000000');
 
       await collateralVault
         .connect(aliceSigner)
@@ -723,7 +710,7 @@ contract('Integration test', async (accounts) => {
 
     it('Successfully make order for 1 BTC by Bob, deposit 15 ETH by Bob, take this order by Alice', async () => {
       const [, aliceSigner, bobSigner] = await ethers.getSigners();
-      let depositAmt = web3.utils.toBN('15000000000000000000');
+      let depositAmt = toBN('15000000000000000000');
       const maturities = await lendingMarketController.getMaturities(
         hexBTCString,
       );
@@ -753,11 +740,9 @@ contract('Integration test', async (accounts) => {
           .createOrder(hexBTCString, maturities[0], '1', btcAmount, rate),
       ).to.emit(btcLendingMarkets[0], 'TakeOrder');
 
-      let btcInETH = await currencyController.convertToETH(
-        hexBTCString,
-        btcAmount,
-        { from: alice },
-      );
+      let btcInETH = await currencyController
+        .connect(aliceSigner)
+        ['convertToETH(bytes32,uint256)'](hexBTCString, btcAmount);
 
       const totalPresentValue =
         await lendingMarketController.getTotalPresentValue(
@@ -800,9 +785,7 @@ contract('Integration test', async (accounts) => {
 
     describe('Test Liquidations for registered loans', async () => {
       it('Increase FIL exchange rate by 25%, check collateral coverage', async () => {
-        const newPrice = filToETHRate
-          .mul(web3.utils.toBN('125'))
-          .div(web3.utils.toBN('100'));
+        const newPrice = filToETHRate.mul('125').div('100');
         await filToETHPriceFeed.updateAnswer(newPrice);
 
         const bobCoverage = await collateralAggregator.getCoverage(bob);
