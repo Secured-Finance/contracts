@@ -70,22 +70,9 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     /**
      * @dev Gets if the collateral has enough coverage.
      * @param _user User's address
-     * @param _ccy Currency
-     * @param _unsettledExp Additional exposure to lock into unsettled exposure
      */
-    function isCovered(
-        address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
-    ) public view override returns (bool) {
-        uint256 totalCollateral = _getTotalCollateral(_user);
-        uint256 totalUsedCollateral = _getUsedCollateral(_user) +
-            _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
-
-        return
-            totalUsedCollateral == 0 ||
-            (totalCollateral * ProtocolTypes.PCT >=
-                totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate());
+    function isCovered(address _user) public view override returns (bool) {
+        return _isCovered(_user, "", 0);
     }
 
     function isRegisteredUser(address addr) external view override returns (bool) {
@@ -175,7 +162,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         uint256 amount
     ) external override onlyAcceptedContracts {
         Storage.slot().exposedUnsettledCurrencies[user].add(ccy);
-        require(isCovered(user, ccy, amount), "Not enough collateral");
+        require(_isCovered(user, ccy, amount), "Not enough collateral");
 
         Storage.slot().unsettledCollateral[user][ccy] += amount;
 
@@ -224,6 +211,27 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
             _liquidationPriceRate,
             _minCollateralRate
         );
+    }
+
+    /**
+     * @dev Gets if the collateral has enough coverage.
+     * @param _user User's address
+     * @param _ccy Currency
+     * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     */
+    function _isCovered(
+        address _user,
+        bytes32 _ccy,
+        uint256 _unsettledExp
+    ) internal view returns (bool) {
+        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalUsedCollateral = _getUsedCollateral(_user) +
+            _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
+
+        return
+            totalUsedCollateral == 0 ||
+            (totalCollateral * ProtocolTypes.PCT >=
+                totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate());
     }
 
     /**

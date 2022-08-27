@@ -489,7 +489,7 @@ contract('Integration test', async (accounts) => {
       expect(coverage.toNumber()).to.equal(manualCoverage.toNumber());
     });
 
-    it('Expect withdrawing maximum available amount instead of widthdrawing 0.9 ETH by Alice', async () => {
+    it('Expect withdrawing maximum available amount instead of withdrawing 0.9 ETH by Alice', async () => {
       const [, aliceSigner] = await ethers.getSigners();
       let withdrawal = web3.utils.toBN('900000000000000000');
       let maxWithdrawal = await collateralAggregator.getWithdrawableCollateral(
@@ -510,7 +510,7 @@ contract('Integration test', async (accounts) => {
       );
     });
 
-    it('Expect withdrawing 0 instead of widthdrawing 0.1 ETH by Alice', async () => {
+    it('Expect withdrawing 0 instead of withdrawing 0.1 ETH by Alice', async () => {
       const [, aliceSigner] = await ethers.getSigners();
       let maxWithdrawal = await collateralAggregator.getWithdrawableCollateral(
         alice,

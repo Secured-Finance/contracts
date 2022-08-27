@@ -6,11 +6,7 @@ interface ICollateralAggregator {
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
 
-    function isCovered(
-        address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
-    ) external view returns (bool);
+    function isCovered(address _user) external view returns (bool);
 
     function isRegisteredUser(address addr) external view returns (bool);
 
