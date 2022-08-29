@@ -29,11 +29,13 @@ module.exports = async function ({ deployments, getNamedAccounts }) {
     await lendingMarketController.isInitializedLendingMarket(hexFILString);
 
   if (!isInitialized) {
-    await lendingMarketController.initializeLendingMarket(
-      hexFILString,
-      process.env.MARKET_BASIS_DATE,
-      process.env.INITIAL_COMPOUND_FACTOR,
-    );
+    await lendingMarketController
+      .initializeLendingMarket(
+        hexFILString,
+        process.env.MARKET_BASIS_DATE,
+        process.env.INITIAL_COMPOUND_FACTOR,
+      )
+      .then((tx) => tx.wait());
   }
 
   const MARKET_COUNT = 4;
@@ -80,9 +82,4 @@ module.exports = async function ({ deployments, getNamedAccounts }) {
 };
 
 module.exports.tags = ['LendingMarkets'];
-module.exports.dependencies = [
-  'AddressResolver',
-  'CollateralAggregator',
-  'LendingMarketController',
-  'Migration',
-];
+module.exports.dependencies = ['LendingMarketController', 'Migration'];
