@@ -136,7 +136,6 @@ const deployContracts = async () => {
   await currencyControllerProxy.supportCurrency(
     hexBTCString,
     'Bitcoin',
-    0,
     btcToETHPriceFeed.address,
     7500,
     zeroAddress,
@@ -144,7 +143,6 @@ const deployContracts = async () => {
   await currencyControllerProxy.supportCurrency(
     hexETHString,
     'Ethereum',
-    60,
     ethToUSDPriceFeed.address,
     7500,
     zeroAddress,
@@ -152,7 +150,6 @@ const deployContracts = async () => {
   await currencyControllerProxy.supportCurrency(
     hexFILString,
     'Filecoin',
-    461,
     filToETHPriceFeed.address,
     7500,
     zeroAddress,

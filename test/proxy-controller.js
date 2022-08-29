@@ -167,7 +167,6 @@ contract('ProxyController', (accounts) => {
       await currencyControllerProxy1.supportCurrency(
         hexBTCString,
         'Bitcoin',
-        0,
         btcToETHPriceFeed.address,
         HAIRCUT,
         zeroAddress,

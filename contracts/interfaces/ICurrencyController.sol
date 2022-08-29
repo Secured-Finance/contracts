@@ -11,7 +11,7 @@ import "../types/ProtocolTypes.sol";
  * contract owner is not able to add a new currency into the protocol
  */
 interface ICurrencyController {
-    event CcyAdded(bytes32 indexed ccy, string name, uint16 chainId, uint256 haircut);
+    event CcyAdded(bytes32 indexed ccy, string name, uint256 haircut);
     event CcyCollateralUpdate(bytes32 indexed ccy, bool isCollateral);
     event CcySupportUpdate(bytes32 indexed ccy, bool isSupported);
     event HaircutUpdated(bytes32 indexed ccy, uint256 haircut);
@@ -65,7 +65,6 @@ interface ICurrencyController {
     function supportCurrency(
         bytes32 _ccy,
         string memory _name,
-        uint16 _chainId,
         address _ethPriceFeed,
         uint256 _haircut,
         address _tokenAddress

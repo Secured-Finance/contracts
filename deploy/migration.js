@@ -1,6 +1,3 @@
-// const btcAddress = '3QTN7wR2EpVeGbjBcHwQdAjJ1QyAqws5Qt';
-// const filAddress = 'f2ujkdpilen762ktpwksq3vfmre4dpekpgaplcvty';
-
 const { toBytes32, hexETHString } = require('../test-utils').strings;
 
 module.exports = async function ({ getNamedAccounts, deployments }) {
@@ -123,13 +120,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     .buildCaches(buildCachesAddresses)
     .then((tx) => tx.wait());
   console.log('Successfully built address caches');
-
-  // // Set up for CollateralAggregator
-  // await collateralAggregator.functions['register(string[],uint256[])'](
-  //   [btcAddress, filAddress],
-  //   [0, 461],
-  // ).then((tx) => tx.wait());
-  // console.log('Successfully registered the currency data');
 
   // Set up for CollateralVault
   await collateralVault.registerCurrency(hexETHString, wETHToken.address);
