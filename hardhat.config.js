@@ -6,6 +6,7 @@ require('hardhat-contract-sizer');
 require('hardhat-deploy');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-ganache');
+require('@nomiclabs/hardhat-waffle');
 
 require('./tasks');
 

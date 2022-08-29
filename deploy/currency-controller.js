@@ -68,7 +68,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         .supportCurrency(
           hexETHString,
           'Ethereum',
-          60,
           ethToUSDPriceFeed.address,
           7500,
           zeroAddress,
@@ -79,7 +78,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         .supportCurrency(
           hexFILString,
           'Filecoin',
-          461,
           filToETHPriceFeed.address,
           7500,
           zeroAddress,
@@ -90,7 +88,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         .supportCurrency(
           hexBTCString,
           'Bitcoin',
-          0,
           btcToETHPriceFeed.address,
           7500,
           zeroAddress,
@@ -109,4 +106,4 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
 };
 
 module.exports.tags = ['CurrencyController'];
-module.exports.dependencies = ['CloseOutNetting', 'ProxyController'];
+module.exports.dependencies = ['ProxyController'];

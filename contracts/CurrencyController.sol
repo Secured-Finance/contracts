@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "./interfaces/ICurrencyController.sol";
-import "./utils/Ownable.sol";
-import "./utils/Proxyable.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
+import {ProtocolTypes} from "./types/ProtocolTypes.sol";
+import {Ownable} from "./utils/Ownable.sol";
+import {Proxyable} from "./utils/Proxyable.sol";
 import {CurrencyControllerStorage as Storage} from "./storages/CurrencyControllerStorage.sol";
 
 /**
@@ -34,22 +35,17 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @dev Triggers to add new currency into the protocol. Links with existing ETH chainlink pricefeed
      * @param _ccy Currency short ticket
      * @param _name Currency full name
-     * @param _chainId Chain ID for conversion from bytes32 to bytes
      * @param _ethPriceFeed Address for ETH price feed
      */
     function supportCurrency(
         bytes32 _ccy,
         string memory _name,
-        uint16 _chainId,
         address _ethPriceFeed,
         uint256 _haircut,
         address _tokenAddress
     ) public override onlyOwner {
         ProtocolTypes.Currency memory currency;
         currency.name = _name;
-        if (_chainId != 0) {
-            currency.chainId = _chainId;
-        }
 
         if (_tokenAddress != address(0)) {
             Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
@@ -65,7 +61,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         } else {
             require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
         }
-        emit CcyAdded(_ccy, _name, _chainId, _haircut);
+        emit CcyAdded(_ccy, _name, _haircut);
     }
 
     /**
@@ -351,13 +347,27 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency that has to be convered to ETH
      * @param _amount Amount of funds to be converted
      */
-    function convertToETH(bytes32 _ccy, uint256 _amount) public view override returns (uint256) {
+    function convertToETH(bytes32 _ccy, uint256 _amount) external view override returns (uint256) {
         if (_isETH(_ccy)) return _amount;
 
         AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
         return (_amount * uint256(price)) / 1e18;
+    }
+
+    /**
+     * @dev Triggers to get converted amount of currency in ETH.
+     * @param _ccy Currency that has to be convered to ETH
+     * @param _amount Amount of funds to be converted
+     */
+    function convertToETH(bytes32 _ccy, int256 _amount) external view override returns (int256) {
+        if (_isETH(_ccy)) return _amount;
+
+        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
+        (, int256 price, , , ) = priceFeed.latestRoundData();
+
+        return (_amount * price) / 1e18;
     }
 
     /**

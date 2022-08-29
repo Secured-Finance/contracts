@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./interfaces/IAddressResolver.sol";
-import "./utils/Ownable.sol";
-import "./utils/Proxyable.sol";
+import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
+import {Ownable} from "./utils/Ownable.sol";
+import {Proxyable} from "./utils/Proxyable.sol";
 import {AddressResolverStorage as Storage} from "./storages/AddressResolverStorage.sol";
 
 contract AddressResolver is IAddressResolver, Ownable, Proxyable {

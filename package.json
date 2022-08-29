@@ -2,16 +2,13 @@
   "name": "@secured-finance/smart-contracts",
   "version": "0.0.2-beta.3",
   "description": "Secured Finance protocol smart contracts",
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
     "test": "hardhat test",
     "test:cov": "hardhat coverage",
     "compile": "hardhat compile",
+    "compile:force": "hardhat compile --force",
     "fork": "hardhat fork --network",
     "unfork": "hardhat unfork --forkid",
-    "compile:force": "hardhat compile --force",
     "deploy": "hardhat deploy --report-gas --no-compile --network",
     "deploy:force": "hardhat deploy --report-gas --no-compile --reset --network",
     "lint:check": "eslint .",
@@ -32,11 +29,7 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.4.0",
-    "@openzeppelin/contracts": "^4.6.0",
-    "abi-to-sol": "^0.2.1",
-    "bignumber.js": "^9.0.1",
-    "bn.js": "^5.2.0",
-    "moment": "^2.29.1"
+    "@openzeppelin/contracts": "^4.7.3"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
@@ -62,6 +55,7 @@
     "hardhat-deploy": "^0.11.2",
     "hardhat-gas-reporter": "^1.0.4",
     "husky": "^7.0.4",
+    "moment": "^2.29.4",
     "prettier": "^2.5.0",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.7",
