@@ -122,7 +122,9 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   console.log('Successfully built address caches');
 
   // Set up for CollateralVault
-  await collateralVault.registerCurrency(hexETHString, wETHToken.address);
+  await collateralVault
+    .registerCurrency(hexETHString, wETHToken.address)
+    .then((tx) => tx.wait());
   console.log('Successfully registered the currency as supported collateral');
 };
 

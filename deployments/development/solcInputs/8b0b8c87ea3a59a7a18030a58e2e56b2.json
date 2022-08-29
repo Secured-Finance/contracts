@@ -1,0 +1,35 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/libraries/QuickSort.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.9;\n\nlibrary QuickSort {\n    function sort(uint256[] memory data) public pure returns (uint256[] memory) {\n        quickSort(data, int256(0), int256(data.length - 1));\n        return data;\n    }\n\n    function quickSort(\n        uint256[] memory arr,\n        int256 left,\n        int256 right\n    ) internal pure {\n        int256 i = left;\n        int256 j = right;\n        if (i == j) return;\n        uint256 pivot = arr[uint256(left + (right - left) / 2)];\n        while (i <= j) {\n            while (arr[uint256(i)] < pivot) i++;\n            while (pivot < arr[uint256(j)]) j--;\n            if (i <= j) {\n                (arr[uint256(i)], arr[uint256(j)]) = (arr[uint256(j)], arr[uint256(i)]);\n                i++;\n                j--;\n            }\n        }\n        if (left < j) quickSort(arr, left, j);\n        if (i < right) quickSort(arr, i, right);\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
