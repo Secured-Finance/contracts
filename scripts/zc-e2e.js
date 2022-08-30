@@ -86,12 +86,17 @@ contract('ZC e2e test', async () => {
     );
 
     if (!isRegisteredAlice) {
-      await collateralAggregator.connect(aliceSigner).register();
+      await collateralAggregator
+        .connect(aliceSigner)
+        .register()
+        .then((tx) => tx.wait());
+
       await collateralVault
         .connect(aliceSigner)
         .deposit(hexETHString, depositAmountInETH, {
           value: depositAmountInETH,
-        });
+        })
+        .then((tx) => tx.wait());
     }
 
     // Deposit ETH by BoB
@@ -100,13 +105,17 @@ contract('ZC e2e test', async () => {
     );
 
     if (!isRegisteredBob) {
-      await collateralAggregator.connect(bobSigner).register();
+      await collateralAggregator
+        .connect(bobSigner)
+        .register()
+        .then((tx) => tx.wait());
 
       await collateralVault
         .connect(bobSigner)
         .deposit(hexETHString, depositAmountInETH, {
           value: depositAmountInETH,
-        });
+        })
+        .then((tx) => tx.wait());
     }
 
     // Check collateral of Alice
@@ -124,11 +133,24 @@ contract('ZC e2e test', async () => {
     expect(totalPresentValue.toString()).to.equal('0');
   });
 
-  it('Take order', async () => {
-    // Get FIL market maturities
+  it('Take order', async function () {
+    // Get FIL market maturities & contract addresses
     const maturities = await lendingMarketController.getMaturities(
       targetCurrency,
     );
+    const marketAddresses = await lendingMarketController.getLendingMarkets(
+      targetCurrency,
+    );
+    const lendingMarket = await ethers.getContractAt(
+      'LendingMarket',
+      marketAddresses[0],
+    );
+
+    const isMarketOpened = await lendingMarket.isOpened();
+    if (!isMarketOpened) {
+      console.log('Skip the order step since the market not open');
+      this.skip();
+    }
 
     // Make lend orders
     await lendingMarketController
@@ -139,7 +161,8 @@ contract('ZC e2e test', async () => {
         '0',
         orderAmountInFIL,
         orderRate,
-      );
+      )
+      .then((tx) => tx.wait());
 
     // Make borrow orders
     await lendingMarketController
@@ -150,7 +173,8 @@ contract('ZC e2e test', async () => {
         '1',
         orderAmountInFIL,
         orderRate,
-      );
+      )
+      .then((tx) => tx.wait());
 
     // Check collateral of Alice
     const independentCollateralAlice =

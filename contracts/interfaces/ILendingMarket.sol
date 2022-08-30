@@ -54,6 +54,10 @@ interface ILendingMarket {
 
     function getCurrency() external view returns (bytes32);
 
+    function isMatured() external view returns (bool);
+
+    function isOpened() external view returns (bool);
+
     function getOrder(uint256 orderId) external view returns (MarketOrder memory);
 
     function getOrderFromTree(uint256 _maturity, uint256 _orderId)
