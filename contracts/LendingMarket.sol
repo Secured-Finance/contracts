@@ -42,13 +42,10 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Modifier to check if the market is not closed.
+     * @dev Modifier to check if the market is opened.
      */
-    modifier ifNotClosed() {
-        require(
-            !isMatured() && block.timestamp >= Storage.slot().basisDate,
-            "Market is not opened"
-        );
+    modifier ifOpened() {
+        require(isOpened(), "Market is not opened");
         _;
     }
 
@@ -144,22 +141,29 @@ contract LendingMarket is
     /**
      * @dev Gets the market maturity.
      */
-    function getMaturity() public view override returns (uint256) {
+    function getMaturity() external view override returns (uint256) {
         return Storage.slot().maturity;
     }
 
     /**
      * @dev Gets the market currency.
      */
-    function getCurrency() public view override returns (bytes32) {
+    function getCurrency() external view override returns (bytes32) {
         return Storage.slot().ccy;
     }
 
     /**
      * @dev Gets if the market is matured.
      */
-    function isMatured() public view returns (bool) {
+    function isMatured() public view override returns (bool) {
         return block.timestamp >= Storage.slot().maturity;
+    }
+
+    /**
+     * @dev Gets if the market is opened.
+     */
+    function isOpened() public view override returns (bool) {
+        return !isMatured() && block.timestamp >= Storage.slot().basisDate;
     }
 
     /**
@@ -411,7 +415,7 @@ contract LendingMarket is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _rate
-    ) external view override ifNotClosed returns (uint256) {
+    ) external view override ifOpened returns (uint256) {
         if (_side == ProtocolTypes.Side.LEND) {
             require(
                 Storage.slot().borrowOrders[Storage.slot().maturity].exists(_rate),
@@ -449,7 +453,7 @@ contract LendingMarket is
         address _user,
         uint256 _amount,
         uint256 _rate
-    ) external override whenNotPaused onlyAcceptedContracts ifNotClosed returns (address, uint256) {
+    ) external override whenNotPaused onlyAcceptedContracts ifOpened returns (address, uint256) {
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
         uint256 orderId;

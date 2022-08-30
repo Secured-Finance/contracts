@@ -322,9 +322,13 @@ contract('LendingMarketController', () => {
         console.table(presentValues);
       };
 
+      expect(await lendingMarket1.isOpened()).to.equal(true);
+
       await showPV();
       await time.increase(time.duration.days(92));
       await showPV();
+
+      expect(await lendingMarket1.isOpened()).to.equal(false);
 
       await lendingMarketControllerProxy
         .connect(alice)
