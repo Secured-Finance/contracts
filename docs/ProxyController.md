@@ -20,11 +20,11 @@ bytes32 ADDRESS_RESOLVER
 constructor(address _resolver) public
 ```
 
-Set a proxy contract address of AddressResolver if it already exists.
-If not, set zero address here and call `setAddressResolverImpl` using the implementation
-address of AddressResolver to create a proxy contract.
+Contract constructor function.
 
-_Contract constructor function._
+_Set a proxy contract address of AddressResolver if it already exists.
+If not, set zero address here and call `setAddressResolverImpl` using the implementation
+address of AddressResolver to create a proxy contract._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -36,7 +36,7 @@ _Contract constructor function._
 function getAddressResolverAddress() public view returns (address)
 ```
 
-_Gets the proxy address of AddressResolver_
+Gets the proxy address of AddressResolver
 
 ### getAddress
 
@@ -44,7 +44,7 @@ _Gets the proxy address of AddressResolver_
 function getAddress(bytes32 name) public view returns (address proxyAddress)
 ```
 
-_Gets the proxy address to specified name_
+Gets the proxy address to specified name
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -56,7 +56,7 @@ _Gets the proxy address to specified name_
 function setAddressResolverImpl(address newImpl) external
 ```
 
-_Sets the implementation contract of AddressResolver_
+Sets the implementation contract of AddressResolver
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -68,7 +68,7 @@ _Sets the implementation contract of AddressResolver_
 function setCollateralAggregatorImpl(address newImpl, uint256 marginCallThresholdRate, uint256 autoLiquidationThresholdRate, uint256 liquidationPriceRate, uint256 minCollateralRate) external
 ```
 
-_Sets the implementation contract of CollateralAggregator_
+Sets the implementation contract of CollateralAggregator
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -84,7 +84,7 @@ _Sets the implementation contract of CollateralAggregator_
 function setCollateralVaultImpl(address newImpl, address _WETH9) external
 ```
 
-_Sets the implementation contract of CollateralVault_
+Sets the implementation contract of CollateralVault
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -97,7 +97,7 @@ _Sets the implementation contract of CollateralVault_
 function setCurrencyControllerImpl(address newImpl) external
 ```
 
-_Sets the implementation contract of CurrencyController_
+Sets the implementation contract of CurrencyController
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -109,7 +109,7 @@ _Sets the implementation contract of CurrencyController_
 function setLendingMarketControllerImpl(address newImpl) external
 ```
 
-_Sets the implementation contract of LendingMarketController_
+Sets the implementation contract of LendingMarketController
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -121,7 +121,7 @@ _Sets the implementation contract of LendingMarketController_
 function changeProxyAdmins(address newAdmin, address[] destinations) external
 ```
 
-_Updates admin addresses of proxy contract_
+Updates admin addresses of proxy contract
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -134,10 +134,10 @@ _Updates admin addresses of proxy contract_
 function _updateImpl(bytes32 name, address newAddress, bytes data) internal returns (address proxyAddress)
 ```
 
-_Sets the implementation contract of specified contract
+Updates the implementation contract of specified contract
 The first time the contract address is set, `UpgradeabilityProxy` is created.
 From the second time, the contract address set in the created `UpgradeabilityProxy`
-will be updated._
+will be updated.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

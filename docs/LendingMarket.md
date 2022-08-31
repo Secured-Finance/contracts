@@ -4,6 +4,7 @@
 
 Implements the module that allows lending market participants to create/cancel market orders,
 and provides the calculation module of future value by inheriting `MixinFutureValue.sol`.
+
 For updating, this contract is basically called from the `LendingMarketController.sol`,
 not called directly from users.
 
@@ -387,7 +388,7 @@ Unpauses the lending market.
 function removeFutureValueInPastMaturity(address _user) external returns (int256 removedAmount, uint256 maturity)
 ```
 
-Remove the all future value if there is balance in the past maturity.
+Remove all future values if there is an amount in the past maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

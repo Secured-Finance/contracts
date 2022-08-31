@@ -532,7 +532,7 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Remove the all future value if there is balance in the past maturity.
+     * @notice Remove all future values if there is an amount in the past maturity.
      * @param _user User's address
      * @return removedAmount Removed future value amount
      * @return maturity Maturity of future value

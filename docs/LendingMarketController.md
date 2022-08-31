@@ -4,6 +4,7 @@
 
 Implements the module to manage separated lending order-book markets per maturity
 and provides the calculation module of the Genesis value per currency  by inheriting `MixinGenesisValue.sol`.
+
 This is the main contract called by users creating orders to lend or borrow funds.
 
 ### BASIS_TERM

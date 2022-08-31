@@ -10,12 +10,16 @@ need to be imported into this contract are managed in `./libraries/Contracts.sol
 ### initialize
 
 ```solidity
-function initialize(address owner) public
+function initialize(address _owner) public
 ```
 
 Initializes the contract.
 
-_Function is invoked by the proxy contract when the contract is added to the ProxyController_
+_Function is invoked by the proxy contract when the contract is added to the ProxyController._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _owner | address | The address of the contract owner |
 
 ### importAddresses
 
@@ -23,9 +27,9 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 function importAddresses(bytes32[] _names, address[] _addresses) public
 ```
 
-Imports addresses.
+Imports contract addresses.
 
-_All addresses are overridden by `_addresses` in the argument._
+_All addresses in the contract are overridden by `_addresses` in the argument._
 
 ### areAddressesImported
 
@@ -45,10 +49,14 @@ Gets if the addresses are imported.
 function getAddress(bytes32 _name, string _reason) external view returns (address)
 ```
 
-Returns the imported addresses for the name with error.
+Gets the imported contract addresses for the name with error.
 
 _This method is used when the caller need to get an error if the address in the name
 is not imported._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The contract address |
 
 ### getAddress
 
@@ -56,10 +64,14 @@ is not imported._
 function getAddress(bytes32 _name) external view returns (address)
 ```
 
-Returns the imported addresses for the name.
+Gets the imported contract addresses for the name.
 
 _This method is used when the caller doesn't need to get an error if the address in the name
 is not imported._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The contract address |
 
 ### getAddresses
 
@@ -67,5 +79,9 @@ is not imported._
 function getAddresses() external view returns (address[])
 ```
 
-Returns the all imported addresses.
+Gets the all imported contract addresses.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address[] | Array with the contract address |
 
