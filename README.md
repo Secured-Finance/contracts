@@ -70,3 +70,15 @@ In case that current version is 0.0.1-beta.0
 ```
 
 If you want to update the major version or minor version, you need to update it manually.
+
+## Documents
+
+| Contract Name                                                    |
+| ---------------------------------------------------------------- |
+| [AddressResolver.sol](./docs/AddressResolver.md)                 |
+| [CollateralAggregator.sol](./docs/CollateralAggregator.md)       |
+| [CollateralVault.sol](./docs/CollateralVault.md)                 |
+| [CurrencyController.sol](./docs/CurrencyController.md)           |
+| [LendingMarket.sol](./docs/LendingMarket.md)                     |
+| [LendingMarketController.sol](./docs/LendingMarketController.md) |
+| [ProxyController.sol](./docs/ProxyController.md)                 |
