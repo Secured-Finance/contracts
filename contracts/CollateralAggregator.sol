@@ -18,14 +18,26 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {CollateralAggregatorStorage as Storage} from "./storages/CollateralAggregatorStorage.sol";
 
 /**
- * @title Collateral Aggregator contract is used to manage collateral obligations
- * and calculation of collateral across collateral vaults.
+ * @notice Implements the management of the collateral in each currency for users.
+ *
+ * This contract manages the following data related to the collateral.
+ * - Deposited amount as the collateral
+ * - Unsettled collateral amount used by order
+ * - Parameters related to the collateral
+ *   - Margin Call Threshold Rate
+ *   - Auto Liquidation Threshold Rate
+ *   - Liquidation Price Rate
+ *   - Min Collateral Rate
+ *
+ * @dev The deposited amount is managed in the CollateralVault contract now. It will be merged to this contract
+ * in the future.
  */
 contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**
-     * @dev Modifier to check if user hasn't been registered yet
+     * @notice Modifier to check if user hasn't been registered yet
+     * @param _user User's address
      */
     modifier nonRegisteredUser(address _user) {
         require(!Storage.slot().isRegistered[_user], "User exists");
@@ -34,7 +46,13 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
 
     /**
      * @notice Initializes the contract.
-     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
+     * @param _owner The address of the contract owner
+     * @param _resolver The address of the Address Resolver contract
+     * @param _marginCallThresholdRate The rate used as the margin call threshold
+     * @param _autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
+     * @param _liquidationPriceRate The rate used as the liquidation price
+     * @param _minCollateralRate The rate used minima collateral
      */
     function initialize(
         address _owner,
@@ -55,6 +73,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         );
     }
 
+    // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
         contracts[0] = Contracts.COLLATERAL_VAULT;
@@ -62,51 +81,62 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         contracts[2] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
+    // @inheritdoc MixinAddressResolver
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     /**
-     * @dev Gets if the collateral has enough coverage.
+     * @notice Gets if the collateral has enough coverage.
      * @param _user User's address
+     * @return The boolean if the collateral has sufficient coverage or not
      */
     function isCovered(address _user) public view override returns (bool) {
         return _isCovered(_user, "", 0);
     }
 
-    function isRegisteredUser(address addr) external view override returns (bool) {
-        return Storage.slot().isRegistered[addr];
+    /**
+     * @notice Gets if the user is registered.
+     * @param _user User's address
+     * @return The boolean if the user is registered or not
+     */
+    function isRegisteredUser(address _user) external view override returns (bool) {
+        return Storage.slot().isRegistered[_user];
     }
 
     /**
-     * @dev Gets maximum amount of ETH available to withdraw from `_user` collateral.
+     * @notice Gets the maximum amount of ETH that can be withdrawn from user collateral.
      * @param _user User's address
+     * @return Maximum amount of ETH that can be withdrawn
      */
     function getWithdrawableCollateral(address _user) external view virtual returns (uint256) {
         return _getWithdrawableCollateral(_user);
     }
 
     /**
-     * @dev Gets the collateral coverage.
+     * @notice Gets the rate of collateral used.
      * @param _user User's address
+     * @return The rate of collateral used
      */
-    function getCoverage(address _user) public view override returns (uint256 coverage) {
+    function getCoverage(address _user) public view override returns (uint256) {
         return _getCoverage(_user, "", 0);
     }
 
     /**
-     * @dev Gets unsettled exposure for selected currency
+     * @notice Gets unsettled exposure for the selected currency
      * @param _user User's address
-     * @param _ccy Currency
+     * @param _ccy Currency name in bytes32
+     * @return Unsettled exposure
      */
     function getUnsettledCollateral(address _user, bytes32 _ccy) external view returns (uint256) {
         return Storage.slot().unsettledCollateral[_user][_ccy];
     }
 
     /**
-     * @dev Gets the total collateral amount
+     * @notice Gets the total amount of unused collateral
      * @param _user User's address
+     * @return The total amount of unused collateral
      */
     function getUnusedCollateral(address _user) external view returns (uint256) {
         uint256 totalCollateral = _getTotalCollateral(_user);
@@ -117,32 +147,37 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Gets total unsettled exposure across all currencies
+     * @notice Gets total unsettled exposure in all currencies.
      * @param _user User's address
+     * @return Total unsettled exposure
      */
     function getTotalUnsettledExposure(address _user) external view override returns (uint256) {
         return _getTotalUnsettledExposure(_user, "", 0);
     }
 
     /**
-     * @dev Gets collateral parameters
+     * @notice Gets parameters related to collateral.
+     * @return marginCallThresholdRate The rate used as the margin call threshold
+     * @return autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
+     * @return liquidationPriceRate The rate used as the liquidation price
+     * @return minCollateralRate The rate used minima collateral
      */
     function getCollateralParameters()
         external
         view
         override
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 marginCallThresholdRate,
+            uint256 autoLiquidationThresholdRate,
+            uint256 liquidationPriceRate,
+            uint256 minCollateralRate
         )
     {
         return CollateralParametersHandler.getCollateralParameters();
     }
 
     /**
-     * @dev Register user and store collateral book
+     * @notice Register user.
      */
     function register() external override nonRegisteredUser(msg.sender) {
         Storage.slot().isRegistered[msg.sender] = true;
@@ -151,47 +186,47 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Locks unsettled collateral on a global book for selected currency.
-     * @param user User's address
-     * @param ccy Specified currency of the deal
-     * @param amount Amount of funds to be locked in specified currency
+     * @notice Locks unsettled collateral for the selected currency.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to be locked in a specified currency
      */
     function useUnsettledCollateral(
-        address user,
-        bytes32 ccy,
-        uint256 amount
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
     ) external override onlyAcceptedContracts {
-        Storage.slot().exposedUnsettledCurrencies[user].add(ccy);
-        require(_isCovered(user, ccy, amount), "Not enough collateral");
+        Storage.slot().exposedUnsettledCurrencies[_user].add(_ccy);
+        require(_isCovered(_user, _ccy, _amount), "Not enough collateral");
 
-        Storage.slot().unsettledCollateral[user][ccy] += amount;
+        Storage.slot().unsettledCollateral[_user][_ccy] += _amount;
 
-        emit UseUnsettledCollateral(user, ccy, amount);
+        emit UseUnsettledCollateral(_user, _ccy, _amount);
     }
 
     /**
-     * @dev Releases the amount of unsettled exposure in specific currency
-     * @param user User's address
-     * @param ccy Specified currency of the deal
-     * @param amount Amount of funds to be unlocked from unsettled exposure in specified currency
+     * @notice Releases the amount of unsettled exposure for the selected currency.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to be unlocked from unsettled exposure in a specified currency
      */
     function releaseUnsettledCollateral(
-        address user,
-        bytes32 ccy,
-        uint256 amount
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
     ) external override onlyAcceptedContracts {
-        Storage.slot().unsettledCollateral[user][ccy] -= amount;
+        Storage.slot().unsettledCollateral[_user][_ccy] -= _amount;
 
-        if (Storage.slot().unsettledCollateral[user][ccy] == 0) {
-            Storage.slot().exposedUnsettledCurrencies[user].remove(ccy);
+        if (Storage.slot().unsettledCollateral[_user][_ccy] == 0) {
+            Storage.slot().exposedUnsettledCurrencies[_user].remove(_ccy);
         }
 
-        emit ReleaseUnsettled(user, ccy, amount);
+        emit ReleaseUnsettled(_user, _ccy, _amount);
     }
 
     /**
-     * @dev Sets main collateral parameters this function
-     * solves the issue of frontrunning during parameters tuning
+     * @notice Sets main collateral parameters this function
+     * solves the issue of frontrunning during parameters tuning.
      *
      * @param _marginCallThresholdRate Margin call threshold ratio
      * @param _autoLiquidationThresholdRate Auto liquidation threshold rate
@@ -214,10 +249,11 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Gets if the collateral has enough coverage.
+     * @notice Gets if the collateral has enough coverage.
      * @param _user User's address
-     * @param _ccy Currency
+     * @param _ccy Currency name in bytes32
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     * @return The boolean if the collateral has enough coverage or not
      */
     function _isCovered(
         address _user,
@@ -235,10 +271,11 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Gets the collateral coverage.
+     * @notice Gets the collateral coverage.
      * @param _user User's address
-     * @param _ccy Currency
+     * @param _ccy Currency name in bytes32
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     * @return coverage The rate of collateral used
      */
     function _getCoverage(
         address _user,
@@ -255,10 +292,11 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Gets total unsettled exposure across all currencies.
+     * @notice Gets total unsettled exposure in all currencies.
      * @param _user User's ethereum address
-     * @param _ccy Currency
+     * @param _ccy Currency name in bytes32
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     * @return totalExp The total collateral amount
      */
     function _getTotalUnsettledExposure(
         address _user,
@@ -281,17 +319,19 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Gets the total collateral in all currencies.
-     * @param _user User's ethereum address
+     * @notice Gets the total collateral in all currencies.
+     * @param _user User's address
+     * @return The total amount of collateral
      */
     function _getTotalCollateral(address _user) internal view returns (uint256) {
         return collateralVault().getTotalIndependentCollateralInETH(_user);
     }
 
     /**
-     * @dev Gets the total collateral used in all currencies.
+     * @notice Gets the total collateral used in all currencies.
      * The collateral used is defined as the negative future value in the lending market contract.
-     * @param _user User's ethereum address
+     * @param _user User's address
+     * @return The total amount of used collateral
      */
     function _getUsedCollateral(address _user) internal view returns (uint256) {
         int256 totalPVInETH = lendingMarketController().getTotalPresentValueInETH(_user);
@@ -299,8 +339,9 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @dev Calculates maximum amount of ETH available to withdraw
-     * @param _user User's ethereum address
+     * @notice Calculates maximum amount of ETH that can be withdrawn.
+     * @param _user User's address
+     * @return Maximum amount of ETH that can be withdrawn
      */
     function _getWithdrawableCollateral(address _user) internal view returns (uint256) {
         uint256 totalCollateral = _getTotalCollateral(_user);

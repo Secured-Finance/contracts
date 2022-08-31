@@ -18,10 +18,13 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {LendingMarketStorage as Storage, MarketOrder} from "./storages/LendingMarketStorage.sol";
 
 /**
- * @dev LendingMarket contract is the module that allows lending market participants
- * to create/cancel market orders.
+ * @notice Implements the module that allows lending market participants to create/cancel market orders,
+ * and provides the calculation module of future value by inheriting `MixinFutureValue.sol`.
  *
- * It will store market orders in structured red-black tree and doubly linked list in each node.
+ * For updating, this contract is basically called from the `LendingMarketController.sol`,
+ * not called directly from users.
+ *
+ * @dev The market orders is stored in structured red-black trees and doubly linked lists in each node.
  */
 contract LendingMarket is
     ILendingMarket,
@@ -33,7 +36,7 @@ contract LendingMarket is
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     /**
-     * @dev Modifier to make a function callable only by order maker.
+     * @notice Modifier to make a function callable only by order maker.
      * @param _orderId Market order id
      */
     modifier onlyMaker(address account, uint256 _orderId) {
@@ -42,7 +45,7 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Modifier to check if the market is opened.
+     * @notice Modifier to check if the market is opened.
      */
     modifier ifOpened() {
         require(isOpened(), "Market is not opened");
@@ -50,7 +53,7 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Modifier to check if the market is matured.
+     * @notice Modifier to check if the market is matured.
      */
     modifier ifMatured() {
         require(isMatured(), "Market is not matured");
@@ -59,10 +62,11 @@ contract LendingMarket is
 
     /**
      * @notice Initializes the contract.
-     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _resolver The address of the Address Resolver contract
-     * @param _ccy The main currency for order book lending deals
+     * @param _ccy The main currency for the order book
      * @param _maturity The initial maturity of the market
+     * @param _basisDate The basis date when the first market open
      */
     function initialize(
         address _resolver,
@@ -79,28 +83,32 @@ contract LendingMarket is
         buildCache();
     }
 
+    // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
+    // @inheritdoc MixinAddressResolver
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     /**
-     * @dev Gets the order maker address.
-     * @param _orderId Market order id
+     * @notice Gets the order maker address.
+     * @param _orderId The market order id
+     * @return maker The order maker address
      */
     function getMaker(uint256 _orderId) public view override returns (address maker) {
         return Storage.slot().orders[_orderId].maker;
     }
 
     /**
-     * @dev Gets the market data.
+     * @notice Gets the market data.
+     * @return market The market data
      */
-    function getMarket() external view override returns (Market memory) {
+    function getMarket() external view override returns (Market memory market) {
         return
             Market({
                 ccy: Storage.slot().ccy,
@@ -113,7 +121,8 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Gets the highest borrow rate.
+     * @notice Gets the highest borrow rate.
+     * @return rate The highest borrow rate
      */
     function getBorrowRate() public view override returns (uint256 rate) {
         uint256 maturity = Storage.slot().maturity;
@@ -121,14 +130,16 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Gets the highest lend rate.
+     * @notice Gets the highest lend rate.
+     * @return rate The highest lend rate
      */
     function getLendRate() public view override returns (uint256 rate) {
         return Storage.slot().lendOrders[Storage.slot().maturity].last();
     }
 
     /**
-     * @dev Gets mid rate.
+     * @notice Gets mid rate.
+     * @return rate The mid rate
      */
     function getMidRate() public view override returns (uint256 rate) {
         uint256 borrowRate = getBorrowRate();
@@ -139,41 +150,52 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Gets the market maturity.
+     * @notice Gets the current market maturity.
+     * @return maturity The market maturity
      */
-    function getMaturity() external view override returns (uint256) {
+    function getMaturity() external view override returns (uint256 maturity) {
         return Storage.slot().maturity;
     }
 
     /**
-     * @dev Gets the market currency.
+     * @notice Gets the market currency.
+     * @return currency The market currency
      */
-    function getCurrency() external view override returns (bytes32) {
+    function getCurrency() external view override returns (bytes32 currency) {
         return Storage.slot().ccy;
     }
 
     /**
-     * @dev Gets if the market is matured.
+     * @notice Gets if the market is matured.
+     * @return The boolean if the market is matured or not
      */
     function isMatured() public view override returns (bool) {
         return block.timestamp >= Storage.slot().maturity;
     }
 
     /**
-     * @dev Gets if the market is opened.
+     * @notice Gets if the market is opened.
+     * @return The boolean if the market is opened or not
      */
     function isOpened() public view override returns (bool) {
         return !isMatured() && block.timestamp >= Storage.slot().basisDate;
     }
 
     /**
-     * @dev Gets the market order information.
-     * @param _orderId Market order id
+     * @notice Gets the market order information.
+     * @param _orderId The market order id
+     * @return order The market order information
      */
-    function getOrder(uint256 _orderId) external view override returns (MarketOrder memory) {
+    function getOrder(uint256 _orderId) external view override returns (MarketOrder memory order) {
         return Storage.slot().orders[_orderId];
     }
 
+    /**
+     * @notice Gets the market order from the order book in the maturity.
+     * @param _maturity The maturity of the order book
+     * @param _orderId The market order id
+     * @return order The market order information
+     */
     function getOrderFromTree(uint256 _maturity, uint256 _orderId)
         external
         view
@@ -196,10 +218,14 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Gets the future value in the latest maturity the user has.
-     * If the market is rotated, the future value maturity is addressed as the old one
-     * and return 0 here.
+     * @notice Gets the future value in the latest maturity the user has.
+     *
+     * If the market is rotated, the maturity in the market is updated, so the existing future value
+     * is addressed as an old future value in old maturity.
+     * This method doesn't return those old future values.
+     *
      * @param _user User address
+     * @return The future value in latest maturity
      */
     function futureValueOf(address _user) public view override returns (int256) {
         (int256 futureValue, uint256 maturity) = getFutureValue(_user);
@@ -212,8 +238,9 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Gets the future value calculated from the future value & market rate.
+     * @notice Gets the present value calculated from the future value & market rate.
      * @param _user User address
+     * @return The present value
      */
     function presentValueOf(address _user) external view override returns (int256) {
         int256 futureValue = futureValueOf(_user);
@@ -229,13 +256,18 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Internally triggered to increase and return id of last order in order book.
+     * @notice Increases and returns id of last order in order book.
+     * @return The new order id
      */
     function nextOrderId() internal returns (uint256) {
         Storage.slot().lastOrderId++;
         return Storage.slot().lastOrderId;
     }
 
+    /**
+     * @notice Opens market
+     * @param _maturity The new maturity
+     */
     function openMarket(uint256 _maturity)
         external
         override
@@ -250,12 +282,9 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Cancels the market order.
+     * @notice Cancels the order.
      * @param _user User address
      * @param _orderId Market order id
-     *
-     * Requirements:
-     * - Order has to be cancelable by market maker
      */
     function cancelOrder(address _user, uint256 _orderId)
         public
@@ -292,10 +321,10 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Makes new market order.
-     * @param _side Borrow or Lend order position
-     * @param _user Target address
-     * @param _amount Amount of funds maker wish to borrow/lend
+     * @notice Makes new market order.
+     * @param _side Order position type, Borrow or Lend
+     * @param _user User's address
+     * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _rate Preferable interest rate
      */
     function makeOrder(
@@ -341,16 +370,14 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Takes the market order.
-     * @param _user User address
+     * @notice Takes the market order.
+     * @param _side Order position type, Borrow or Lend
+     * @param _user User's address
      * @param _orderId Market order id in the order book
-     * @param _amount Amount of funds taker wish to borrow/lend
-     *
-     * Requirements:
-     * - Market order has to be active
+     * @param _amount Amount of funds the maker wants to borrow/lend
      */
     function takeOrder(
-        ProtocolTypes.Side side,
+        ProtocolTypes.Side _side,
         address _user,
         uint256 _orderId,
         uint256 _amount
@@ -394,7 +421,7 @@ contract LendingMarket is
 
         _addFutureValue(lender, borrower, fvAmount, Storage.slot().maturity);
 
-        emit TakeOrder(_orderId, _user, side, _amount, marketOrder.rate);
+        emit TakeOrder(_orderId, _user, _side, _amount, marketOrder.rate);
 
         if (marketOrder.amount == 0) {
             delete Storage.slot().orders[_orderId];
@@ -404,12 +431,14 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Gets the matching market order.
-     * @param _side Market order side it can be borrow or lend
-     * @param _amount Amount of funds taker wish to borrow/lend
-     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @notice Gets if the market order will be matched or not.
      *
-     * Returns zero if didn't find a matched order, reverts if no orders for specified interest rate
+     * Returns zero if there is not a matched order.
+     * Reverts if no orders for specified interest rate.
+     *
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _rate Amount of interest rate taker wish to borrow/lend
      */
     function matchOrders(
         ProtocolTypes.Side _side,
@@ -440,20 +469,28 @@ contract LendingMarket is
     }
 
     /**
-     * @dev Executes the market order, if order matched it takes order, if not matched places new order.
-     * @param _side Market order side it can be borrow or lend
-     * @param _user User address
-     * @param _amount Amount of funds maker/taker wish to borrow/lend
-     * @param _rate Amount of interest rate maker/taker wish to borrow/lend
-     *
-     * Returns true after successful execution
+     * @notice Creates the order. Takes the order if the order is matched,
+     * and places new order if not match it.
+     * @param _side Order position type, Borrow or Lend
+     * @param _user User's address
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @return maker The maker address
+     * @return amount The taken amount
      */
     function createOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
         uint256 _rate
-    ) external override whenNotPaused onlyAcceptedContracts ifOpened returns (address, uint256) {
+    )
+        external
+        override
+        whenNotPaused
+        onlyAcceptedContracts
+        ifOpened
+        returns (address maker, uint256 amount)
+    {
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
         uint256 orderId;
@@ -472,38 +509,41 @@ contract LendingMarket is
 
         if (orderId == 0) {
             makeOrder(_side, _user, _amount, _rate);
-            return (_user, 0);
+            maker = _user;
+            amount = 0;
         } else {
-            address maker = takeOrder(_side, _user, orderId, _amount);
-            return (maker, _amount);
+            maker = takeOrder(_side, _user, orderId, _amount);
+            amount = _amount;
         }
     }
 
     /**
-     * @dev Pauses the lending market.
+     * @notice Pauses the lending market.
      */
     function pauseMarket() external override onlyAcceptedContracts {
         _pause();
     }
 
     /**
-     * @dev Pauses the lending market.
+     * @notice Unpauses the lending market.
      */
     function unpauseMarket() external override onlyAcceptedContracts {
         _unpause();
     }
 
     /**
-     * @dev Remove future value if there is balance in the past maturity.
-     * @param _user Target address to mint token
+     * @notice Remove the all future value if there is balance in the past maturity.
+     * @param _user User's address
+     * @return removedAmount Removed future value amount
+     * @return maturity Maturity of future value
      */
     function removeFutureValueInPastMaturity(address _user)
         external
         onlyAcceptedContracts
-        returns (int256 removedAmount, uint256 basisMaturity)
+        returns (int256 removedAmount, uint256 maturity)
     {
         if (hasFutureValueInPastMaturity(_user, Storage.slot().maturity)) {
-            (removedAmount, basisMaturity) = _removeFutureValue(_user);
+            (removedAmount, maturity) = _removeFutureValue(_user);
         }
     }
 }

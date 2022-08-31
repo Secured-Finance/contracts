@@ -40,6 +40,5 @@ library ProtocolTypes {
     struct Currency {
         bool isSupported;
         string name;
-        uint16 chainId; // chain id for address conversion
     }
 }

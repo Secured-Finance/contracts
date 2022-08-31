@@ -22,8 +22,10 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
- * @dev LendingMarketController contract is managing separated lending order-book markets
- * and is responsible to calculate the Genesis value per currency.
+ * @notice Implements the module to manage separated lending order-book markets per maturity
+ * and provides the calculation module of the Genesis value per currency  by inheriting `MixinGenesisValue.sol`.
+ *
+ * This is the main contract called by users creating orders to lend or borrow funds.
  */
 contract LendingMarketController is
     ILendingMarketController,
@@ -38,7 +40,8 @@ contract LendingMarketController is
     uint256 private constant BASIS_TERM = 3;
 
     /**
-     * @dev Modifier to check if the currency has a lending market.
+     * @notice Modifier to check if the currency has a lending market.
+     * @param _ccy Currency name in bytes32
      */
     modifier hasLendingMarket(bytes32 _ccy) {
         require(
@@ -49,7 +52,9 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Modifier to check if the maturity is valid.
+     * @notice Modifier to check if there is a market in the maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
      */
     modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity) {
         require(
@@ -61,13 +66,16 @@ contract LendingMarketController is
 
     /**
      * @notice Initializes the contract.
-     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
+     * @param _owner The address of the contract owner
+     * @param _resolver The address of the Address Resolver contract
      */
     function initialize(address _owner, address _resolver) public initializer onlyProxy {
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
     }
 
+    // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](2);
         contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
@@ -75,24 +83,27 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Gets the basis data for selected currency.
-     * @param _ccy Currency
+     * @notice Gets the basis date when the first market opens for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return The basis date
      */
     function getBasisDate(bytes32 _ccy) external view override returns (uint256) {
         return Storage.slot().basisDates[_ccy];
     }
 
     /**
-     * @dev Gets lending market contract addresses for selected currency.
-     * @param _ccy Currency
+     * @notice Gets the lending market contract addresses for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return Array with the lending market address
      */
     function getLendingMarkets(bytes32 _ccy) external view override returns (address[] memory) {
         return Storage.slot().lendingMarkets[_ccy];
     }
 
     /**
-     * @dev Gets borrow rates for selected currency.
-     * @param _ccy Currency
+     * @notice Gets borrow rates for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return Array with the borrowing rate of the lending market
      */
     function getBorrowRates(bytes32 _ccy) external view override returns (uint256[] memory) {
         uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
@@ -106,8 +117,9 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Gets lend rates for selected currency.
-     * @param _ccy Currency
+     * @notice Gets lend rates for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return Array with the lending rate of the lending market
      */
     function getLendRates(bytes32 _ccy) external view override returns (uint256[] memory) {
         uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
@@ -121,8 +133,9 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Gets mid rates for selected currency.
-     * @param _ccy Currency
+     * @notice Gets mid rates for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return Array with the mid rate of the lending market
      */
     function getMidRates(bytes32 _ccy) external view override returns (uint256[] memory) {
         uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
@@ -136,8 +149,9 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Gets maturities for selected currency.
-     * @param _ccy Currency
+     * @notice Gets maturities for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return Array with the lending market maturity
      */
     function getMaturities(bytes32 _ccy) public view override returns (uint256[] memory) {
         uint256[] memory maturities = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
@@ -151,9 +165,10 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Gets the total present value of the account for selected currency
-     * @param _ccy Currency for Lending Market
+     * @notice Gets the total present value of the account for selected currency.
+     * @param _ccy Currency name in bytes32 for Lending Market
      * @param _account Target account address
+     * @return totalPresentValue The total present value
      */
     function getTotalPresentValue(bytes32 _ccy, address _account)
         public
@@ -168,8 +183,9 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Gets the total present value of the account converted to ETH
+     * @notice Gets the total present value of the account converted to ETH.
      * @param _account Target account address
+     * @return totalPresentValue The total present value in ETH
      */
     function getTotalPresentValueInETH(address _account)
         public
@@ -187,25 +203,26 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Gets the beacon proxy address to specified name
+     * @notice Gets the beacon proxy address to the selected name.
      * @param beaconName The cache name of the beacon proxy
+     * @return totalPresentValue The beacon proxy address
      */
     function getBeaconProxyAddress(bytes32 beaconName) external view override returns (address) {
         return _getAddress(beaconName);
     }
 
     /**
-     * @dev Get is the lending market is initialized
-     * @param _ccy Currency
+     * @notice Gets if the lending market is initialized.
+     * @param _ccy Currency name in bytes32
+     * @return The boolean if the lending market is initialized or not
      */
-
     function isInitializedLendingMarket(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().basisDates[_ccy] != 0;
     }
 
     /**
-     * @dev Initialize the lending market to set a basis data and compound factor
-     * @param _ccy Currency
+     * @notice Initialize the lending market to set a basis date and compound factor
+     * @param _ccy Currency name in bytes32
      * @param _basisDate The basis date when the initial market is opened
      * @param _compoundFactor The initial compound factor when the initial market is opened
      */
@@ -222,7 +239,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Sets the implementation contract of LendingMarket
+     * @notice Sets the implementation contract of LendingMarket
      * @param newImpl The address of implementation contract
      */
     function setLendingMarketImpl(address newImpl) external override onlyOwner {
@@ -230,10 +247,10 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Deploys new Lending Market and save address at lendingMarkets mapping.
+     * @notice Deploys new Lending Market and save address at lendingMarkets mapping.
      * @param _ccy Main currency for new lending market
-     *
      * @notice Reverts on deployment market with existing currency and term
+     * @return market The proxy contract address of created lending market
      */
     function createLendingMarket(bytes32 _ccy)
         external
@@ -271,8 +288,20 @@ contract LendingMarketController is
         return market;
     }
 
-    // =========== LENDING MARKETS MANAGEMENT FUNCTIONS ===========
-
+    /**
+     * @notice Creates the order. Takes the order if the order is matched,
+     * and places new order if not match it.
+     *
+     * In addition, converts the future value to the genesis value if there is future value in past maturity
+     * before the execution of order creation.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
     function createOrder(
         bytes32 _ccy,
         uint256 _maturity,
@@ -306,6 +335,15 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Gets if the market order will be matched or not.
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
     function matchOrders(
         bytes32 _ccy,
         uint256 _maturity,
@@ -319,6 +357,12 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Cancels the own order.
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _orderId Market order id
+     */
     function cancelOrder(
         bytes32 _ccy,
         uint256 _maturity,
@@ -336,6 +380,14 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Rotate the lending markets. In this rotation, the following actions are happened.
+     * - Updates the maturity at the beginning of the market array.
+     * - Moves the beginning of the market array to the end of it.
+     * - Update the compound factor in this contract using the next market rate.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     */
     function rotateLendingMarkets(bytes32 _ccy)
         external
         override
@@ -373,8 +425,9 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Pauses previously deployed lending market by currency
+     * @notice Pauses previously deployed lending market by currency
      * @param _ccy Currency for pausing all lending markets
+     * @return True if the execution of the operation succeeds
      */
     function pauseLendingMarkets(bytes32 _ccy) external override onlyOwner returns (bool) {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
@@ -386,8 +439,9 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Unpauses previously deployed lending market by currency
+     * @notice Unpauses previously deployed lending market by currency
      * @param _ccy Currency for pausing all lending markets
+     * @return True if the execution of the operation succeeds
      */
     function unpauseLendingMarkets(bytes32 _ccy) external override onlyOwner returns (bool) {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
@@ -399,11 +453,11 @@ contract LendingMarketController is
     }
 
     /**
-     * @dev Convert FutureValue to GenesisValue if there is balance in the past maturity.
-     * @param _account Target account address
+     * @notice Converts FutureValue to GenesisValue if there is balance in the past maturity.
+     * @param _user User's address
      */
-    function convertFutureValueToGenesisValue(address _account) external nonReentrant {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_account];
+    function convertFutureValueToGenesisValue(address _user) external nonReentrant {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
@@ -411,33 +465,40 @@ contract LendingMarketController is
 
             for (uint256 j = 0; j < maturities.length; j++) {
                 address marketAddr = Storage.slot().maturityLendingMarkets[ccy][maturities[j]];
-                _convertFutureValueToGenesisValue(ccy, marketAddr, _account);
+                _convertFutureValueToGenesisValue(ccy, marketAddr, _user);
             }
-            if (getGenesisValue(ccy, _account) == 0) {
-                Storage.slot().usedCurrencies[_account].remove(ccy);
+            if (getGenesisValue(ccy, _user) == 0) {
+                Storage.slot().usedCurrencies[_user].remove(ccy);
             }
         }
     }
 
     /**
-     * @dev Convert FutureValue to GenesisValue if there is balance in the past maturity.
+     * @notice Converts the future value to the genesis value if there is balance in the past maturity.
      * @param _ccy Currency for pausing all lending markets
      * @param _marketAddr Market contract address
-     * @param _account Target account address
+     * @param _user User's address
      */
     function _convertFutureValueToGenesisValue(
         bytes32 _ccy,
         address _marketAddr,
-        address _account
+        address _user
     ) private {
         (int256 removedAmount, uint256 basisMaturity) = ILendingMarket(_marketAddr)
-            .removeFutureValueInPastMaturity(_account);
+            .removeFutureValueInPastMaturity(_user);
 
         if (removedAmount != 0) {
-            _addGenesisValue(_ccy, _account, basisMaturity, removedAmount);
+            _addGenesisValue(_ccy, _user, basisMaturity, removedAmount);
         }
     }
 
+    /**
+     * @notice Deploys the lending market contract.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @param _basisDate The basis date
+     * @return The proxy contract address of created lending market
+     */
     function _deployLendingMarket(
         bytes32 _ccy,
         uint256 _maturity,

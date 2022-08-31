@@ -19,11 +19,6 @@ interface ICurrencyController {
     event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
     event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
 
-    function convertBulkToETH(bytes32 _ccy, uint256[] memory _amounts)
-        external
-        view
-        returns (uint256[] memory);
-
     function convertFromETH(bytes32 _ccy, uint256 _amountETH) external view returns (uint256);
 
     function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256);
@@ -45,10 +40,6 @@ interface ICurrencyController {
     function getLastETHPrice(bytes32 _ccy) external view returns (int256);
 
     function getLastUSDPrice(bytes32 _ccy) external view returns (int256);
-
-    function getMinMargin(bytes32 _ccy) external view returns (uint256);
-
-    function getChainId(bytes32 _ccy) external view returns (uint16);
 
     function isCollateral(bytes32) external view returns (bool);
 
@@ -75,8 +66,6 @@ interface ICurrencyController {
     function updateCollateralSupport(bytes32 _ccy, bool _isSupported) external;
 
     function updateCurrencySupport(bytes32 _ccy, bool _isSupported) external;
-
-    function updateMinMargin(bytes32 _ccy, uint256 _minMargin) external;
 
     function getTokenAddresses(bytes32) external view returns (address);
 }

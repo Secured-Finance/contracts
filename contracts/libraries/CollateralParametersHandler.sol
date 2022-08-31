@@ -4,15 +4,10 @@ pragma solidity ^0.8.9;
 import {CollateralParametersStorage as Storage} from "../storages/CollateralParametersStorage.sol";
 
 /**
- * @title CollateralParametersHandler is an internal component of CollateralAggregator contract
+ * @notice CollateralParametersHandler is an library to handle the parameters fro CollateralAggregator contract.
  *
- * This contract allows Secured Finance manage the collateral system such as:
- *
- * 1. Update CurrencyController and LiquidationEngine addresses
- * 2. Add different products implementation contracts as collateral users
- * 3. Link deployed collateral vaults
- * 4. Update main collateral parameters like Margin Call ratio,
- *    Auto-Liquidation level, Liquidation price, and Minimal collateral ratio
+ * This manage the main collateral parameters like Margin Call ratio, Auto-Liquidation level,
+ * Liquidation price, and Minimal collateral ratio.
  *
  */
 library CollateralParametersHandler {
