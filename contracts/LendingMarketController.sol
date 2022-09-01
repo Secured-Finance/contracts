@@ -301,6 +301,12 @@ contract LendingMarketController is
             collateralAggregator().releaseUnsettledCollateral(maker, _ccy, settledCollateralAmount);
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
             Storage.slot().usedCurrencies[maker].add(_ccy);
+
+            if (_side == ProtocolTypes.Side.LEND) {
+                emit OrderFilled(msg.sender, maker, _ccy, _maturity, matchedAmount, _rate);
+            } else {
+                emit OrderFilled(maker, msg.sender, _ccy, _maturity, matchedAmount, _rate);
+            }
         }
 
         return true;

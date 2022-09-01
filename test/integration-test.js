@@ -662,7 +662,9 @@ contract('Integration test', async (accounts) => {
       );
       expect(maxWithdrawalBob.toString()).to.equal(
         independentCollateralBob
-          .add(totalPresentValueBob.mul('3').div('2'))
+          .mul('10')
+          .add(totalPresentValueBob.mul('15'))
+          .div('10')
           .toString(),
       );
 

@@ -19,6 +19,14 @@ interface ILendingMarketController {
         uint256 maturity
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event OrderFilled(
+        address lender,
+        address borrower,
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 amount,
+        uint256 rate
+    );
 
     function getBasisDate(bytes32 _ccy) external view returns (uint256);
 
