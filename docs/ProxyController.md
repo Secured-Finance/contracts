@@ -2,6 +2,11 @@
 
 ## ProxyController
 
+Implements the management of proxy contracts.
+
+All proxy contracts are deployed from this contract.
+This contract is also used to update the proxy implementation.
+
 ### resolver
 
 ```solidity
@@ -38,17 +43,25 @@ function getAddressResolverAddress() public view returns (address)
 
 Gets the proxy address of AddressResolver
 
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The contract address of AddressResolver |
+
 ### getAddress
 
 ```solidity
 function getAddress(bytes32 name) public view returns (address proxyAddress)
 ```
 
-Gets the proxy address to specified name
+Gets the proxy address fro selected name
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | name | bytes32 | The cache name of the contract |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| proxyAddress | address | The proxy address for selected name |
 
 ### setAddressResolverImpl
 
