@@ -21,12 +21,14 @@ contract MixinAddressResolver {
     }
 
     /**
-     * @dev Returns required contract names in this contract
+     * @notice Returns the contract names used in this contract.
+     * @dev The contract name list is in `./libraries/Contracts.sol`.
      */
     function requiredContracts() public pure virtual returns (bytes32[] memory contracts) {}
 
     /**
-     * @dev Returns contract names that can call this contract.
+     * @notice Returns contract names that can call this contract.
+     * @dev The contact name listed in this method is also needed to be listed `requiredContracts` method.
      */
     function acceptedContracts() public pure virtual returns (bytes32[] memory contracts) {}
 

@@ -7,6 +7,7 @@ require('hardhat-deploy');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-ganache');
 require('@nomiclabs/hardhat-waffle');
+require('solidity-docgen');
 
 require('./tasks');
 
@@ -92,5 +93,9 @@ module.exports = {
     alphaSort: false,
     runOnCompile: false,
     disambiguatePaths: false,
+  },
+  docgen: {
+    pages: 'files',
+    exclude: ['mocks', 'interfaces'],
   },
 };

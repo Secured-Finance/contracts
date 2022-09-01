@@ -97,10 +97,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       await currencyControllerContract
         .updateCollateralSupport(hexETHString, true)
         .then((tx) => tx.wait());
-
-      await currencyControllerContract
-        .updateMinMargin(hexETHString, 2500)
-        .then((tx) => tx.wait());
     },
   );
 };

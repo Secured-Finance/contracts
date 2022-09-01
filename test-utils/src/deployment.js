@@ -157,7 +157,6 @@ const deployContracts = async () => {
 
   await currencyControllerProxy.updateCollateralSupport(hexETHString, true);
   await currencyControllerProxy.updateCollateralSupport(hexFILString, true);
-  await currencyControllerProxy.updateMinMargin(hexETHString, 2500);
 
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets = [

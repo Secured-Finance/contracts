@@ -9,13 +9,16 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {CurrencyControllerStorage as Storage} from "./storages/CurrencyControllerStorage.sol";
 
 /**
- * @dev Currency Controller contract is responsible for managing supported
- * currencies in Secured Finance Protocol
+ * @notice Implements managing of the supported currencies in the protocol.
  *
- * Contract links new currencies to ETH Chainlink price feeds, without existing price feed
+ * This contract links new currencies to ETH Chainlink price feeds, without an existing price feed
  * contract owner is not able to add a new currency into the protocol
  */
 contract CurrencyController is ICurrencyController, Ownable, Proxyable {
+    /**
+     * @notice Modifier to check if the currency is supported.
+     * @param _ccy Currency name in bytes32
+     */
     modifier supportedCcyOnly(bytes32 _ccy) {
         require(isSupportedCcy(_ccy), "Unsupported asset");
         _;
@@ -23,19 +26,22 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
     /**
      * @notice Initializes the contract.
-     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
+     * @param _owner The address of the contract owner
      */
-    function initialize(address owner) public initializer onlyProxy {
-        _transferOwnership(owner);
+    function initialize(address _owner) public initializer onlyProxy {
+        _transferOwnership(_owner);
     }
 
     // =========== CURRENCY CONTROL SECTION ===========
 
     /**
-     * @dev Triggers to add new currency into the protocol. Links with existing ETH chainlink pricefeed
-     * @param _ccy Currency short ticket
+     * @notice Adds new currency into the protocol and links with existing ETH price feed of Chainlink.
+     * @param _ccy Currency name in bytes32
      * @param _name Currency full name
      * @param _ethPriceFeed Address for ETH price feed
+     * @param _haircut Haircut ratio used to calculate in collateral calculations
+     * @param _tokenAddress Token contract address of the currency
      */
     function supportCurrency(
         bytes32 _ccy,
@@ -65,9 +71,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to update currency support
-     * @param _ccy Currency short ticket
-     * @param _isSupported Boolean whether currency supported as collateral or not
+     * @notice Updates the flag indicating if the currency is supported in the protocol.
+     * @param _ccy Currency name in bytes32
+     * @param _isSupported Boolean if currency is supported
      */
     function updateCurrencySupport(bytes32 _ccy, bool _isSupported) public override onlyOwner {
         ProtocolTypes.Currency storage currency = Storage.slot().currencies[_ccy];
@@ -77,9 +83,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to update if currency is accepted as collateral
-     * @param _ccy Currency short ticket
-     * @param _isSupported Boolean whether currency supported as collateral or not
+     * @notice Updates the flag indicating if the currency is accepted as collateral.
+     * @param _ccy Currency name in bytes32
+     * @param _isSupported Boolean if currency is accepted as collateral or not
      */
     function updateCollateralSupport(bytes32 _ccy, bool _isSupported)
         public
@@ -93,9 +99,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to update the haircut ratio for supported currency
-     * @param _ccy Currency short ticket
-     * @param _haircut Currency haircut ratio used to calculate in collateral calculations
+     * @notice Updates the haircut ratio for supported currency
+     * @param _ccy Currency name in bytes32
+     * @param _haircut Haircut ratio used to calculate in collateral calculations
      */
     function updateCcyHaircut(bytes32 _ccy, uint256 _haircut)
         public
@@ -111,115 +117,78 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         emit HaircutUpdated(_ccy, _haircut);
     }
 
-    /**
-     * @dev Triggers to update the minimal margin requirements for currency supported as collateral
-     * @param _ccy Currency short ticket
-     * @param _minMargin Currency minimal margin ratio used to calculate collateral coverage
-     */
-    function updateMinMargin(bytes32 _ccy, uint256 _minMargin)
-        public
-        override
-        onlyOwner
-        supportedCcyOnly(_ccy)
-    {
-        require(_minMargin > 0, "Incorrect MinMargin");
-        require(_minMargin <= 10000, "MinMargin overflow");
-        require(isCollateral(_ccy), "Unable to set MinMargin");
-
-        Storage.slot().minMargins[_ccy] = _minMargin;
-
-        emit MinMarginUpdated(_ccy, _minMargin);
-    }
-
     // =========== EXTERNAL GET FUNCTIONS ===========
 
     /**
-     * @dev Triggers to get specified currency.
-     * @param _ccy Currency short ticket
+     * @notice Gets the currency data.
+     * @param _ccy Currency name in bytes32
+     * @return The currency data
      */
-    function getCurrencies(bytes32 _ccy)
-        external
-        view
-        returns (ProtocolTypes.Currency memory currency)
-    {
-        currency = Storage.slot().currencies[_ccy];
+    function getCurrencies(bytes32 _ccy) external view returns (ProtocolTypes.Currency memory) {
+        return Storage.slot().currencies[_ccy];
     }
 
     /**
-     * @dev Triggers to get ETH decimal for specific currency.
-     * @param _ccy Currency short ticket
+     * @notice Get ETH decimal for the selected currency.
+     * @param _ccy Currency name in bytes32
      */
     function getEthDecimals(bytes32 _ccy) external view returns (uint8) {
         return Storage.slot().ethDecimals[_ccy];
     }
 
     /**
-     * @dev Triggers to get USD decimal for specific currency.
-     * @param _ccy Currency short ticket
+     * @notice Gets USD decimal for the selected currency.
+     * @param _ccy Currency name in bytes32
      */
     function getUsdDecimals(bytes32 _ccy) external view returns (uint8) {
         return Storage.slot().usdDecimals[_ccy];
     }
 
     /**
-     * @dev Triggers to get haircut ratio for specific currency.
+     * @notice Gets haircut ratio for the selected currency.
      * Haircut is used in bilateral netting cross-calculation.
-     * @param _ccy Currency short ticket
+     * @param _ccy Currency name in bytes32
      */
     function getHaircut(bytes32 _ccy) external view override returns (uint256) {
         return Storage.slot().haircuts[_ccy];
     }
 
     /**
-     * @dev Triggers to get minimal margin percentage for specific currency.
-     * @param _ccy Currency short ticket
-     */
-    function getMinMargin(bytes32 _ccy) external view override returns (uint256) {
-        require(isCollateral(_ccy), "Unable to get MinMargin");
-        return Storage.slot().minMargins[_ccy];
-    }
-
-    /**
-     * @dev Triggers to get token address for specific currency.
-     * @param _ccy Currency short ticket
+     * @notice Gets token address for the selected currency.
+     * @param _ccy Currency name in bytes32
      */
     function getTokenAddresses(bytes32 _ccy) external view returns (address) {
         return Storage.slot().tokenAddresses[_ccy];
     }
 
     /**
-     * @dev Triggers to get if specified currency is supported.
-     * @param _ccy Currency short ticket
+     * @notice Gets if the selected currency is supported.
+     * @param _ccy Currency name in bytes32
+     * @return The boolean if the selected currency is supported or not
      */
     function isSupportedCcy(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().currencies[_ccy].isSupported;
     }
 
     /**
-     * @dev Triggers to get if specified currency is collateral.
-     * @param _ccy Currency short ticket
+     * @notice Gets if the selected currency is accepted as collateral.
+     * @param _ccy Currency name in bytes32
+     * @return The boolean if the selected currency is accepted as collateral or not
      */
     function isCollateral(bytes32 _ccy) public view returns (bool) {
         return Storage.slot().isCollateral[_ccy];
     }
 
-    /**
-     * @dev Triggers to get chainId for a specific currency.
-     * Chain ID is a unique identifier of another chain like Bitcoin, Filecoin, etc.
-     * @param _ccy Currency short ticket
-     */
-    function getChainId(bytes32 _ccy) external view override returns (uint16) {
-        return Storage.slot().currencies[_ccy].chainId;
-    }
-
     // =========== CHAINLINK PRICE FEED FUNCTIONS ===========
-    // TODO: add additional price feeds in case if chainlink is not reliable
+    // TODO: Add additional price feeds in case if Chainlink is not reliable
 
     /**
-     * @dev Links the contract to existing chainlink price feed.
-     * @param _ccy Specified currency short code
-     * @param _priceFeedAddr Chainlink price feed contract address
-     * @param _isEthPriceFeed Boolean for price feed with ETH price
+     * @notice Links the contract to existing Chainlink price feed.
+     * @dev This method can use only Chainlink.
+     * @param _ccy Currency name in bytes32
+     * @param _priceFeedAddr The contract address of Chainlink price feed
+     * @param _isEthPriceFeed Boolean if the price feed is in ETH or not
+     * @return True if the execution of the operation succeeds
      */
     function linkPriceFeed(
         bytes32 _ccy,
@@ -249,9 +218,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to remove existing chainlink price feed.
-     * @param _ccy Specified currency
-     * @param _isEthPriceFeed Boolean for price feed with ETH price
+     * @notice Removes existing Chainlink price feed.
+     * @param _ccy Currency name in bytes32
+     * @param _isEthPriceFeed Boolean if the price feed is in ETH or not
      */
     function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed)
         external
@@ -281,8 +250,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     // =========== GET PRICE FUNCTIONS ===========
 
     /**
-     * @dev Triggers to get last price in USD for selected currency.
-     * @param _ccy Currency
+     * @notice Gets the last price in USD for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return The last price in USD
      */
     function getLastUSDPrice(bytes32 _ccy) public view override returns (int256) {
         AggregatorV3Interface priceFeed = Storage.slot().usdPriceFeeds[_ccy];
@@ -292,9 +262,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to get historical price in USD for selected currency.
-     * @param _ccy Currency
+     * @notice Gets the historical price in USD for the selected currency.
+     * @param _ccy Currency name in bytes32
      * @param _roundId RoundId
+     * @return The historical price in USD
      */
     function getHistoricalUSDPrice(bytes32 _ccy, uint80 _roundId)
         public
@@ -310,8 +281,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to get last price in ETH for selected currency.
-     * @param _ccy Currency
+     * @notice Gets the last price in ETH for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return The last price in ETH
      */
     function getLastETHPrice(bytes32 _ccy) public view override returns (int256) {
         if (_isETH(_ccy)) return 1e18;
@@ -323,9 +295,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to get historical price in ETH for selected currency.
-     * @param _ccy Currency
+     * @notice Gets the historical price in ETH for the selected currency.
+     * @param _ccy Currency name in bytes32
      * @param _roundId RoundId
+     * @return The historical price in ETH
      */
     function getHistoricalETHPrice(bytes32 _ccy, uint80 _roundId)
         public
@@ -343,9 +316,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to get converted amount of currency in ETH.
-     * @param _ccy Currency that has to be convered to ETH
-     * @param _amount Amount of funds to be converted
+     * @notice Gets the converted amount of currency in ETH.
+     * @param _ccy Currency that has to be converted to ETH
+     * @param _amount Amount to be converted
+     * @return The converted amount
      */
     function convertToETH(bytes32 _ccy, uint256 _amount) external view override returns (uint256) {
         if (_isETH(_ccy)) return _amount;
@@ -357,9 +331,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to get converted amount of currency in ETH.
-     * @param _ccy Currency that has to be convered to ETH
-     * @param _amount Amount of funds to be converted
+     * @notice Gets the converted amount of currency in ETH.
+     * @param _ccy Currency that has to be converted to ETH
+     * @param _amount Amount to be converted
+     * @return The converted amount
      */
     function convertToETH(bytes32 _ccy, int256 _amount) external view override returns (int256) {
         if (_isETH(_ccy)) return _amount;
@@ -371,39 +346,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @dev Triggers to get converted amounts of currency to ETH.
-     * @param _ccy Currency that has to be convered to ETH
-     * @param _amounts Array with amounts of funds to be converted
-     */
-    function convertBulkToETH(bytes32 _ccy, uint256[] memory _amounts)
-        public
-        view
-        override
-        returns (uint256[] memory)
-    {
-        if (_isETH(_ccy)) return _amounts;
-
-        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-        uint256[] memory amounts = new uint256[](_amounts.length);
-
-        for (uint256 i = 0; i < _amounts.length; i++) {
-            uint256 amount = _amounts[i];
-
-            if (amount > 0) {
-                amounts[i] = (amount * uint256(price)) / 1e18;
-            } else {
-                amounts[i] = 0;
-            }
-        }
-
-        return amounts;
-    }
-
-    /**
-     * @dev Triggers to convert ETH amount of funds to specified currency.
-     * @param _ccy Currency that has to be convered from ETH
-     * @param _amountETH Amount of funds in ETH to be converted
+     * @notice Gets the converted amount to the selected currency from ETH.
+     * @param _ccy Currency that has to be converted from ETH
+     * @param _amountETH Amount in ETH to be converted
+     * @return The converted amount
      */
     function convertFromETH(bytes32 _ccy, uint256 _amountETH)
         public

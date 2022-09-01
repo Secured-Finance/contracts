@@ -7,15 +7,22 @@ import {IProxyController} from "./interfaces/IProxyController.sol";
 import {Contracts} from "./libraries/Contracts.sol";
 import {UpgradeabilityProxy} from "./utils/UpgradeabilityProxy.sol";
 
+/**
+ * @notice Implements the management of proxy contracts.
+ *
+ * All proxy contracts are deployed from this contract.
+ * This contract is also used to update the proxy implementation.
+ */
+
 contract ProxyController is IProxyController, Ownable {
     IAddressResolver private resolver;
     bytes32 private constant ADDRESS_RESOLVER = "AddressResolver";
 
     /**
-     * @dev Contract constructor function.
+     * @notice Contract constructor function.
      * @param _resolver The address of the Address Resolver contract
      *
-     * @notice Set a proxy contract address of AddressResolver if it already exists.
+     * @dev Set a proxy contract address of AddressResolver if it already exists.
      * If not, set zero address here and call `setAddressResolverImpl` using the implementation
      * address of AddressResolver to create a proxy contract.
      */
@@ -28,15 +35,17 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Gets the proxy address of AddressResolver
+     * @notice Gets the proxy address of AddressResolver
+     * @return The contract address of AddressResolver
      */
     function getAddressResolverAddress() public view returns (address) {
         return (address(resolver));
     }
 
     /**
-     * @dev Gets the proxy address to specified name
+     * @notice Gets the proxy address fro selected name
      * @param name The cache name of the contract
+     * @return proxyAddress The proxy address for selected name
      */
     function getAddress(bytes32 name) public view returns (address proxyAddress) {
         proxyAddress = resolver.getAddress(name, "Address not found");
@@ -46,7 +55,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Sets the implementation contract of AddressResolver
+     * @notice Sets the implementation contract of AddressResolver
      * @param newImpl The address of implementation contract
      */
     function setAddressResolverImpl(address newImpl) external onlyOwner {
@@ -56,7 +65,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev  Sets the implementation contract of CollateralAggregator
+     * @notice  Sets the implementation contract of CollateralAggregator
      * @param newImpl The address of implementation contract
      */
     function setCollateralAggregatorImpl(
@@ -79,7 +88,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev  Sets the implementation contract of CollateralVault
+     * @notice  Sets the implementation contract of CollateralVault
      * @param newImpl The address of implementation contract
      * @param _WETH9 The address of WETH
      */
@@ -94,7 +103,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Sets the implementation contract of CurrencyController
+     * @notice Sets the implementation contract of CurrencyController
      * @param newImpl The address of implementation contract
      */
     function setCurrencyControllerImpl(address newImpl) external onlyOwner {
@@ -103,7 +112,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Sets the implementation contract of LendingMarketController
+     * @notice Sets the implementation contract of LendingMarketController
      * @param newImpl The address of implementation contract
      */
     function setLendingMarketControllerImpl(address newImpl) external onlyOwner {
@@ -116,7 +125,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Updates admin addresses of proxy contract
+     * @notice Updates admin addresses of proxy contract
      * @param newAdmin The address of new admin
      * @param destinations The destination contract addresses
      */
@@ -131,7 +140,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @dev Sets the implementation contract of specified contract
+     * @notice Updates the implementation contract of specified contract
      * The first time the contract address is set, `UpgradeabilityProxy` is created.
      * From the second time, the contract address set in the created `UpgradeabilityProxy`
      * will be updated.

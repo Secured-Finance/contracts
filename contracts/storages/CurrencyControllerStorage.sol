@@ -11,7 +11,6 @@ library CurrencyControllerStorage {
         // Protocol currencies
         mapping(bytes32 => ProtocolTypes.Currency) currencies;
         mapping(bytes32 => uint256) haircuts;
-        mapping(bytes32 => uint256) minMargins;
         mapping(bytes32 => bool) isCollateral;
         mapping(bytes32 => address) tokenAddresses;
         // PriceFeed
