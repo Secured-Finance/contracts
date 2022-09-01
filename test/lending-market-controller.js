@@ -281,17 +281,27 @@ contract('LendingMarketController', () => {
             '800',
           ),
       ).to.equal(true);
-      await expect(
-        lendingMarketControllerProxy
-          .connect(carol)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '100000000000000000',
-            '800',
-          ),
-      ).to.emit(lendingMarket1, 'TakeOrder');
+      const tx = lendingMarketControllerProxy
+        .connect(carol)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '800',
+        );
+
+      await expect(tx).to.emit(lendingMarket1, 'TakeOrder');
+      await expect(tx)
+        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+        .withArgs(
+          alice.address,
+          carol.address,
+          targetCurrency,
+          maturities[0],
+          '100000000000000000',
+          '800',
+        );
 
       const maturity = await lendingMarket1.getMaturity();
       expect(maturity.toString()).to.equal(
