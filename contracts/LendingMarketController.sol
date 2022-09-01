@@ -22,10 +22,15 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
- * @notice Implements the module to manage separated lending order-book markets per maturity
- * and provides the calculation module of the Genesis value per currency  by inheriting `MixinGenesisValue.sol`.
+ * @notice Implements the module to manage separated lending order-book markets per maturity.
  *
- * This is the main contract called by users creating orders to lend or borrow funds.
+ * This contract also works as a factory contract that can deploy (start) a new lending market
+ * for selected currency and maturity and has the calculation logic for the Genesis value in addition.
+ *
+ * Deployed Lending Markets are rotated and reused as it reaches the maturity date. At the time of rotation,
+ * a new maturity date is set and the compound factor is updated.
+ *
+ * The users mainly call this contract to create orders to lend or borrow funds.
  */
 contract LendingMarketController is
     ILendingMarketController,

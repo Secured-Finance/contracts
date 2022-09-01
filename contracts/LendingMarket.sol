@@ -19,10 +19,10 @@ import {LendingMarketStorage as Storage, MarketOrder} from "./storages/LendingMa
 
 /**
  * @notice Implements the module that allows lending market participants to create/cancel market orders,
- * and provides the calculation module of future value by inheriting `MixinFutureValue.sol`.
+ * and also provides a future value calculation module.
  *
- * For updating, this contract is basically called from the `LendingMarketController.sol`,
- * not called directly from users.
+ * For updates, this contract is basically called from `LendingMarketController.sol`instead of being called \
+ * directly by the user.
  *
  * @dev The market orders is stored in structured red-black trees and doubly linked lists in each node.
  */

@@ -7,7 +7,13 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {AddressResolverStorage as Storage} from "./storages/AddressResolverStorage.sol";
 
 /**
- * @notice Implements the logic to manege the contract addresses.
+ * @notice Implements the logic to manage the contract addresses.
+ *
+ * This contract store the contract name and contract address. When the contract calls other contracts,
+ * the caller contract gets the contract address from this contract.
+ * However, the contract addresses are cashed into the caller contract through the `MixinAddressResolver.sol` at the deployment,
+ * so the caller doesn't need to call this contract each time it calls other contracts.
+ *
  * @dev This contract is used through the `./mixins/MixinAddressResolver.sol`. The names of the contracts that
  * need to be imported into this contract are managed in `./libraries/Contracts.sol`.
  */
