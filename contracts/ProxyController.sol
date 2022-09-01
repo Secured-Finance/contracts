@@ -7,6 +7,13 @@ import {IProxyController} from "./interfaces/IProxyController.sol";
 import {Contracts} from "./libraries/Contracts.sol";
 import {UpgradeabilityProxy} from "./utils/UpgradeabilityProxy.sol";
 
+/**
+ * @notice Implements the management of proxy contracts.
+ *
+ * All proxy contracts are deployed from this contract.
+ * This contract is also used to update the proxy implementation.
+ */
+
 contract ProxyController is IProxyController, Ownable {
     IAddressResolver private resolver;
     bytes32 private constant ADDRESS_RESOLVER = "AddressResolver";
@@ -29,14 +36,16 @@ contract ProxyController is IProxyController, Ownable {
 
     /**
      * @notice Gets the proxy address of AddressResolver
+     * @return The contract address of AddressResolver
      */
     function getAddressResolverAddress() public view returns (address) {
         return (address(resolver));
     }
 
     /**
-     * @notice Gets the proxy address to specified name
+     * @notice Gets the proxy address fro selected name
      * @param name The cache name of the contract
+     * @return proxyAddress The proxy address for selected name
      */
     function getAddress(bytes32 name) public view returns (address proxyAddress) {
         proxyAddress = resolver.getAddress(name, "Address not found");
