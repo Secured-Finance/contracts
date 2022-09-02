@@ -1,9 +1,10 @@
-const { ethers, deployments, run } = require('hardhat');
-const { toBytes32, hexETHString, hexFILString } = require('../utils').strings;
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { expect } from 'chai';
+import { Contract, Wallet } from 'ethers';
+import { deployments, ethers } from 'hardhat';
+import { hexETHString, hexFILString, toBytes32 } from '../utils/strings';
 
-const { expect } = require('chai');
-
-contract('ZC e2e test', async () => {
+describe('ZC e2e test', async () => {
   const targetCurrency = hexFILString;
   const BP = 0.01;
   const depositAmountInETH = '10000000000000000000';
@@ -11,16 +12,16 @@ contract('ZC e2e test', async () => {
   const orderRate = String(3 / BP);
 
   // Accounts
-  let ownerSigner;
-  let aliceSigner;
-  let bobSigner;
-  let carolSigner;
+  let ownerSigner: SignerWithAddress | Wallet;
+  let aliceSigner: SignerWithAddress;
+  let bobSigner: SignerWithAddress;
+  let carolSigner: SignerWithAddress;
 
   // Contracts
-  let proxyController;
-  let collateralAggregator;
-  let collateralVault;
-  let lendingMarketController;
+  let proxyController: Contract;
+  let collateralAggregator: Contract;
+  let collateralVault: Contract;
+  let lendingMarketController: Contract;
 
   before('Set up for testing', async () => {
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -29,11 +30,16 @@ contract('ZC e2e test', async () => {
     console.log('Block number is', blockNumber);
     console.log('Chain id is', network.chainId);
 
-    [ownerSigner, aliceSigner, bobSigner, carolSigner] =
-      await ethers.getSigners();
+    if (process.env.FORK_RPC_ENDPOINT && process.env.PRIVATE_KEY) {
+      ethers.provider = new ethers.providers.JsonRpcProvider(
+        process.env.FORK_RPC_ENDPOINT,
+      );
 
-    if (process.env.FORK_RPC_ENDPOINT) {
+      [aliceSigner, bobSigner, carolSigner] = await ethers.getSigners();
       ownerSigner = new ethers.Wallet(process.env.PRIVATE_KEY, ethers.provider);
+    } else {
+      [ownerSigner, aliceSigner, bobSigner, carolSigner] =
+        await ethers.getSigners();
     }
 
     console.table(
@@ -52,10 +58,10 @@ contract('ZC e2e test', async () => {
       await ethers.provider.send('tenderly_addBalance', params);
     }
 
-    const getProxy = (key, contract) =>
+    const getProxy = (key: string) =>
       proxyController
         .getAddress(toBytes32(key))
-        .then((address) => ethers.getContractAt(contract || key, address));
+        .then((address) => ethers.getContractAt(key, address));
 
     // Get contracts
     proxyController = await deployments

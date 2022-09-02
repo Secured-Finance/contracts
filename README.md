@@ -52,7 +52,7 @@ In case you want to reset and redeploy again, you can use the command `npm run d
 
 In order to run the specified script, execute `npx hardhat --network <NETWORK> test "<SCRIPT PATH>"`.
 
-For example `npx hardhat --network development test "scripts/zc-e2e.js"` will execute the `zc-e2e` script on the develop environment.
+For example `npx hardhat --network development test "scripts/zc-e2e.ts"` will execute the `zc-e2e` script on the develop environment.
 
 ## Publishing
 
