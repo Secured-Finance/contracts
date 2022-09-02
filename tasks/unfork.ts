@@ -1,5 +1,6 @@
-const axios = require('axios');
-const { HardhatPluginError } = require('hardhat/internal/core/errors');
+import axios from 'axios';
+import { task } from 'hardhat/config';
+import { HardhatPluginError } from 'hardhat/internal/core/errors';
 
 task('unfork', 'Delete a forked environment')
   .addParam('forkid', 'The forked environment id on Tenderly')
@@ -22,5 +23,3 @@ task('unfork', 'Delete a forked environment')
 
     console.log('Successfully deleted the forked environment!');
   });
-
-module.exports = {};

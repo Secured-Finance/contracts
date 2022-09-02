@@ -1,7 +1,8 @@
-const axios = require('axios');
-const { HardhatPluginError } = require('hardhat/internal/core/errors');
+import axios from 'axios';
+import { task } from 'hardhat/config';
+import { HardhatPluginError } from 'hardhat/internal/core/errors';
 
-task('fork', 'Create a forked environment').setAction(async () => {
+task('fork', 'Create a forked environment').setAction(async (_, { ethers }) => {
   const blockNumber = await ethers.provider.getBlockNumber();
   const network = await ethers.provider.getNetwork();
 
@@ -30,5 +31,3 @@ task('fork', 'Create a forked environment').setAction(async () => {
   );
   console.log(res.data.simulation_fork.id);
 });
-
-module.exports = {};
