@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { hexETHString, toBytes32 } from '../test-utils/strings';
+import { hexETHString, toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,

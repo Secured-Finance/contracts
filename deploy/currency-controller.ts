@@ -1,18 +1,14 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../test-utils/deployment';
+import { executeIfNewlyDeployment } from '../utils/deployment';
 
-import {
-  btcToETHRate,
-  ethToUSDRate,
-  filToETHRate,
-} from '../test-utils/numbers';
+import { btcToETHRate, ethToUSDRate, filToETHRate } from '../utils/numbers';
 import {
   hexBTCString,
   hexETHString,
   hexFILString,
   zeroAddress,
-} from '../test-utils/strings';
+} from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,

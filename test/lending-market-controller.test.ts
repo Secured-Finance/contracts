@@ -2,6 +2,7 @@ import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
+import { Side } from '../utils/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CollateralAggregator = artifacts.require('CollateralAggregator');
@@ -12,11 +13,6 @@ const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 
 const { deployContract, deployMockContract } = waffle;
-
-const Side = {
-  LEND: 0,
-  BORROW: 1,
-};
 
 const COMPOUND_FACTOR = '1020100000000000000';
 const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');

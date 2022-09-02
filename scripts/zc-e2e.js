@@ -1,6 +1,5 @@
 const { ethers, deployments, run } = require('hardhat');
-const { toBytes32, hexETHString, hexFILString } =
-  require('../test-utils').strings;
+const { toBytes32, hexETHString, hexFILString } = require('../utils').strings;
 
 const { expect } = require('chai');
 

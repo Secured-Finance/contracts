@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../test-utils/deployment';
+import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const MARGIN_CALL_THRESHOLD_RATE = 15000;
 const AUTO_LIQUIDATION_THRESHOLD_RATE = 12500;

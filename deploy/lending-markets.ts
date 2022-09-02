@@ -1,8 +1,8 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
-import { executeIfNewlyDeployment } from '../test-utils/deployment';
-import { hexFILString, toBytes32 } from '../test-utils/strings';
+import { executeIfNewlyDeployment } from '../utils/deployment';
+import { hexFILString, toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,

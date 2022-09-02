@@ -3,14 +3,9 @@ import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { ethers, web3 } from 'hardhat';
 
-import { checkTokenBalances } from '../test-utils/balances';
-import { deployContracts } from '../test-utils/deployment';
-import { filToETHRate, toBN } from '../test-utils/numbers';
-import {
-  hexBTCString,
-  hexETHString,
-  hexFILString,
-} from '../test-utils/strings';
+import { deployContracts } from '../utils/deployment';
+import { filToETHRate, toBN } from '../utils/numbers';
+import { hexBTCString, hexETHString, hexFILString } from '../utils/strings';
 
 const toWei = (eth) => {
   return ethers.utils.parseEther(eth);
@@ -101,10 +96,8 @@ describe('Integration test', async () => {
         })
         .then((tx) => tx.wait());
 
-      await checkTokenBalances(
-        [collateralVault.address],
-        [carolInitialCollateral],
-        wETHToken,
+      expect(await wETHToken.balanceOf(collateralVault.address)).to.equal(
+        carolInitialCollateral,
       );
 
       actualBalance = await wETHToken.balanceOf(collateralVault.address);
@@ -281,10 +274,8 @@ describe('Integration test', async () => {
         })
         .then((tx) => tx.wait());
 
-      await checkTokenBalances(
-        [collateralVault.address],
-        [carolInitialCollateral.add(depositAmt)],
-        wETHToken,
+      expect(await wETHToken.balanceOf(collateralVault.address)).to.equal(
+        carolInitialCollateral.add(depositAmt),
       );
 
       let currencies = await collateralVault.getUsedCurrencies(
