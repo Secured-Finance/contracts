@@ -1,10 +1,10 @@
-import * as utils from 'web3-utils';
+import { utils } from 'ethers';
 
 /**
  * Converts a string into a hex representation of bytes32, with right padding
  */
-const toBytes32 = (key) => utils.rightPad(utils.asciiToHex(key), 64);
-const fromBytes32 = (key) => utils.hexToAscii(key);
+const toBytes32 = (key) => utils.formatBytes32String(key);
+const fromBytes32 = (key) => utils.parseBytes32String(key);
 
 const hexFILString = toBytes32('FIL');
 const hexETHString = toBytes32('ETH');

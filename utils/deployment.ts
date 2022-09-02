@@ -3,14 +3,14 @@ import { ethers } from 'hardhat';
 import { DeployResult } from 'hardhat-deploy/types';
 import moment from 'moment';
 
-const {
+import { btcToETHRate, ethToUSDRate, filToETHRate } from './numbers';
+import {
   hexBTCString,
   hexETHString,
   hexFILString,
-  zeroAddress,
   toBytes32,
-} = require('./strings');
-const { btcToETHRate, ethToUSDRate, filToETHRate } = require('./numbers');
+  zeroAddress,
+} from './strings';
 
 const marginCallThresholdRate = 15000;
 const autoLiquidationThresholdRate = 12500;

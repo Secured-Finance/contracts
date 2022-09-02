@@ -1,5 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { MockContract } from 'ethereum-waffle';
+import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
 const AddressResolver = artifacts.require('AddressResolver');
@@ -18,14 +20,14 @@ const CollateralAggregatorCallerMock = artifacts.require(
 const { deployContract, deployMockContract } = waffle;
 
 describe('CollateralAggregator', () => {
-  let mockCurrencyController: any;
-  let mockLendingMarketController: any;
-  let mockWETH9: any;
-  let mockERC20: any;
+  let mockCurrencyController: MockContract;
+  let mockLendingMarketController: MockContract;
+  let mockWETH9: MockContract;
+  let mockERC20: MockContract;
 
-  let collateralAggregatorProxy: any;
-  let collateralVaultProxy: any;
-  let collateralAggregatorCaller: any;
+  let collateralAggregatorProxy: Contract;
+  let collateralVaultProxy: Contract;
+  let collateralAggregatorCaller: Contract;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -119,7 +121,7 @@ describe('CollateralAggregator', () => {
     );
 
     // Set up for AddressResolver and build caches using MigrationAddressResolver
-    const migrationTargets = [
+    const migrationTargets: [string, Contract][] = [
       ['CurrencyController', mockCurrencyController],
       ['CollateralAggregator', collateralAggregatorProxy],
       ['CollateralVault', collateralVaultProxy],

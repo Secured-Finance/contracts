@@ -1,5 +1,8 @@
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
+import { MockContract } from 'ethereum-waffle';
+import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
 import { Side } from '../utils/constants';
@@ -19,15 +22,18 @@ const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');
 const BP = ethers.BigNumber.from('10000');
 
 describe('LendingMarketController', () => {
-  let mockCurrencyController;
-  let mockCollateralAggregator;
-  let lendingMarketControllerProxy;
+  let mockCurrencyController: MockContract;
+  let mockCollateralAggregator: MockContract;
+  let lendingMarketControllerProxy: Contract;
 
-  let targetCurrency;
+  let targetCurrency: string;
   let currencyIdx = 0;
-  let basisDate;
+  let basisDate: number;
 
-  let owner, alice, bob, carol;
+  let owner: SignerWithAddress;
+  let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
+  let carol: SignerWithAddress;
 
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
@@ -93,7 +99,7 @@ describe('LendingMarketController', () => {
     );
 
     // Set up for AddressResolver and build caches using MigrationAddressResolver
-    const migrationTargets = [
+    const migrationTargets: [string, Contract][] = [
       ['CurrencyController', mockCurrencyController],
       ['CollateralAggregator', mockCollateralAggregator],
       ['LendingMarketController', lendingMarketControllerProxy],

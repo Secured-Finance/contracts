@@ -1,6 +1,6 @@
-const ethers = require('ethers');
+import { BigNumber } from 'ethers';
 
-const toBN = (number) => ethers.BigNumber.from(number);
+const toBN = (number: string) => BigNumber.from(number);
 
 const ETH = toBN('1000000000000000000');
 const filToETHRate = toBN('67175250000000000');

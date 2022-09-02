@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
+import { Contract } from 'ethers';
 import { ethers, web3 } from 'hardhat';
 
 import { deployContracts } from '../utils/deployment';
@@ -18,17 +19,17 @@ describe('Integration test', async () => {
 
   const targetCurrency = hexETHString;
 
-  let collateralAggregator: any;
-  let collateralVault: any;
-  let lendingMarketController: any;
+  let collateralAggregator: Contract;
+  let collateralVault: Contract;
+  let lendingMarketController: Contract;
 
-  let currencyController: any;
-  let wETHToken: any;
+  let currencyController: Contract;
+  let wETHToken: Contract;
 
-  let filToETHPriceFeed: any;
+  let filToETHPriceFeed: Contract;
 
-  let lendingMarkets = [];
-  let btcLendingMarkets = [];
+  let lendingMarkets: Contract[] = [];
+  let btcLendingMarkets: Contract[] = [];
 
   let aliceIndependentAmount = toBN('0');
   let carolInitialCollateral = toBN('90000000000000000000');
@@ -56,7 +57,7 @@ describe('Integration test', async () => {
 
     lendingMarkets = await lendingMarketController
       .getLendingMarkets(hexFILString)
-      .then((addresses) =>
+      .then((addresses: string[]) =>
         Promise.all(
           addresses.map((address) =>
             ethers.getContractAt('LendingMarket', address),
@@ -453,8 +454,8 @@ describe('Integration test', async () => {
 
     it('Check Alice collateral book usage, and total unsettled exposure calculations', async () => {
       let filUsed = toBN('10000000000000000000')
-        .mul(toBN(2000))
-        .div(toBN(10000));
+        .mul(toBN('2000'))
+        .div(toBN('10000'));
 
       let filInETH = await currencyController
         .connect(aliceSigner)

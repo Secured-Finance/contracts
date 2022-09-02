@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
+import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
 import { btcToETHRate } from '../utils/numbers';
 import { hexBTCString, toBytes32, zeroAddress } from '../utils/strings';
@@ -18,8 +19,8 @@ const getUpdatedProxyAddress = ({ logs }) =>
 describe('ProxyController', () => {
   let ownerSinger: SignerWithAddress;
   let aliceSigner: SignerWithAddress;
-  let addressResolver: any;
-  let proxyController: any;
+  let addressResolver: Contract;
+  let proxyController: Contract;
 
   beforeEach('deploy ProxyController', async () => {
     [ownerSinger, aliceSigner] = await ethers.getSigners();
