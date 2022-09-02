@@ -1,10 +1,24 @@
-const { filToETHRate, ethToUSDRate, btcToETHRate } =
-  require('../test-utils').numbers;
-const { hexFILString, hexBTCString, hexETHString, zeroAddress } =
-  require('../test-utils').strings;
-const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+import { DeployFunction } from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { executeIfNewlyDeployment } from '../test-utils/deployment';
 
-module.exports = async function ({ getNamedAccounts, deployments }) {
+import {
+  btcToETHRate,
+  ethToUSDRate,
+  filToETHRate,
+} from '../test-utils/numbers';
+import {
+  hexBTCString,
+  hexETHString,
+  hexFILString,
+  zeroAddress,
+} from '../test-utils/strings';
+
+const func: DeployFunction = async function ({
+  getNamedAccounts,
+  deployments,
+  ethers,
+}: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -101,5 +115,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   );
 };
 
-module.exports.tags = ['CurrencyController'];
-module.exports.dependencies = ['ProxyController'];
+func.tags = ['CurrencyController'];
+func.dependencies = ['ProxyController'];
+
+export default func;

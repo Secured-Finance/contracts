@@ -1,11 +1,17 @@
-const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+import { DeployFunction } from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { executeIfNewlyDeployment } from '../test-utils/deployment';
 
 const MARGIN_CALL_THRESHOLD_RATE = 15000;
 const AUTO_LIQUIDATION_THRESHOLD_RATE = 12500;
 const LIQUIDATION_PRICE_RATE = 12000;
 const MIN_COLLATERAL_RATE = 2500;
 
-module.exports = async function ({ getNamedAccounts, deployments }) {
+const func: DeployFunction = async function ({
+  getNamedAccounts,
+  deployments,
+  ethers,
+}: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -36,5 +42,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   );
 };
 
-module.exports.tags = ['CollateralAggregator'];
-module.exports.dependencies = ['ProxyController'];
+func.tags = ['CollateralAggregator'];
+func.dependencies = ['ProxyController'];
+
+export default func;

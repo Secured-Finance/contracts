@@ -1,6 +1,12 @@
-const { toBytes32, hexETHString } = require('../test-utils').strings;
+import { DeployFunction } from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { hexETHString, toBytes32 } from '../test-utils/strings';
 
-module.exports = async function ({ getNamedAccounts, deployments }) {
+const func: DeployFunction = async function ({
+  getNamedAccounts,
+  deployments,
+  ethers,
+}: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -30,7 +36,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     : await proxyController.queryFilter(filter);
 
   const proxyObj = proxyCreatedEvents.reduce((obj, event) => {
-    obj[event.args.id] = event.args.proxyAddress;
+    obj[event.args?.id] = event.args?.proxyAddress;
     return obj;
   }, {});
 
@@ -38,7 +44,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     // NOTE: Save a proxy address to deployment json.
     // This proxy address is used at the subgraph deployment at `secured-finance-subgraph`.
     const deployment = await deployments.get(name);
-    if (deployment.receipt.contractAddress === deployment.address) {
+    if (deployment.receipt?.contractAddress === deployment.address) {
       deployment.implementation = deployment.receipt.contractAddress;
       deployment.address = proxyAddress;
       await deployments.save(name, deployment);
@@ -128,11 +134,13 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   console.log('Successfully registered the currency as supported collateral');
 };
 
-module.exports.tags = ['Migration'];
-module.exports.dependencies = [
+func.tags = ['Migration'];
+func.dependencies = [
   'CollateralAggregator',
   'CollateralVault',
   'CurrencyController',
   'LendingMarketController',
   'WETH',
 ];
+
+export default func;

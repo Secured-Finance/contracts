@@ -1,6 +1,12 @@
-const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+import { DeployFunction } from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { executeIfNewlyDeployment } from '../test-utils/deployment';
 
-module.exports = async function ({ getNamedAccounts, deployments }) {
+const func: DeployFunction = async function ({
+  getNamedAccounts,
+  deployments,
+  ethers,
+}: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -29,4 +35,6 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   });
 };
 
-module.exports.tags = ['AddressResolver'];
+func.tags = ['AddressResolver'];
+
+export default func;

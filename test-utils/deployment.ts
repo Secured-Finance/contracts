@@ -1,5 +1,7 @@
-const { ethers } = require('hardhat');
-const moment = require('moment');
+import { Contract } from 'ethers';
+import { ethers } from 'hardhat';
+import { DeployResult } from 'hardhat-deploy/types';
+import moment from 'moment';
 
 const {
   hexBTCString,
@@ -159,7 +161,7 @@ const deployContracts = async () => {
   await currencyControllerProxy.updateCollateralSupport(hexFILString, true);
 
   // Set up for AddressResolver and build caches using MigrationAddressResolver
-  const migrationTargets = [
+  const migrationTargets: [string, Contract][] = [
     ['CollateralAggregator', collateralAggregatorProxy],
     ['CollateralVault', collateralVaultProxy],
     ['CurrencyController', currencyControllerProxy],
@@ -195,7 +197,7 @@ const deployContracts = async () => {
     lendingMarket.address,
   );
 
-  const { timestamp } = await ethers.provider.getBlock();
+  const { timestamp } = await ethers.provider.getBlock('latest');
   const basisDate = moment(timestamp * 1000).unix();
   await Promise.all([
     lendingMarketControllerProxy.initializeLendingMarket(
@@ -233,7 +235,11 @@ const deployContracts = async () => {
   };
 };
 
-const executeIfNewlyDeployment = async (name, deployResult, callback) => {
+const executeIfNewlyDeployment = async (
+  name: string,
+  deployResult: DeployResult,
+  callback?: Function,
+) => {
   if (deployResult.newlyDeployed) {
     console.log(`Deployed ${name} at ${deployResult.address}`);
 

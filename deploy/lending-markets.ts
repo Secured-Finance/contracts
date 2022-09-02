@@ -1,8 +1,14 @@
-const { executeIfNewlyDeployment } = require('../test-utils').deployment;
-const { hexFILString, toBytes32 } = require('../test-utils').strings;
-const moment = require('moment');
+import { DeployFunction } from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import moment from 'moment';
+import { executeIfNewlyDeployment } from '../test-utils/deployment';
+import { hexFILString, toBytes32 } from '../test-utils/strings';
 
-module.exports = async function ({ deployments, getNamedAccounts }) {
+const func: DeployFunction = async function ({
+  getNamedAccounts,
+  deployments,
+  ethers,
+}: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -49,7 +55,7 @@ module.exports = async function ({ deployments, getNamedAccounts }) {
       ),
     );
 
-  const market = [];
+  const market: Record<string, string>[] = [];
 
   if (lendingMarkets.length >= MARKET_COUNT) {
     console.log('Skipped deploying FIL lending markets');
@@ -62,7 +68,8 @@ module.exports = async function ({ deployments, getNamedAccounts }) {
     }
   } else {
     const count = MARKET_COUNT - lendingMarkets.length;
-    for (i = 0; i < count; i++) {
+
+    for (let i = 0; i < count; i++) {
       const receipt = await lendingMarketController
         .createLendingMarket(hexFILString)
         .then((tx) => tx.wait());
@@ -81,5 +88,7 @@ module.exports = async function ({ deployments, getNamedAccounts }) {
   console.table(market);
 };
 
-module.exports.tags = ['LendingMarkets'];
-module.exports.dependencies = ['LendingMarketController', 'Migration'];
+func.tags = ['LendingMarkets'];
+func.dependencies = ['LendingMarketController', 'Migration'];
+
+export default func;

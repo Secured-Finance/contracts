@@ -1,7 +1,12 @@
-const { ethers } = require('hardhat');
-const { executeIfNewlyDeployment } = require('../test-utils').deployment;
+import { DeployFunction } from 'hardhat-deploy/types';
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { executeIfNewlyDeployment } from '../test-utils/deployment';
 
-module.exports = async function ({ getNamedAccounts, deployments }) {
+const func: DeployFunction = async function ({
+  getNamedAccounts,
+  deployments,
+  ethers,
+}: HardhatRuntimeEnvironment) {
   const { deploy, fetchIfDifferent } = deployments;
   const { deployer } = await getNamedAccounts();
 
@@ -13,11 +18,10 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       from: deployer,
       args: [prevAddressResolverAddress],
     });
-  const isInitialDeployment = !prevProxyControllerAddress;
 
   // Set the previous proxy contract address of AddressResolver as an initial address
   // when the ProxyController is updated.
-  if (differences && !isInitialDeployment) {
+  if (differences && prevProxyControllerAddress) {
     prevProxyController = await ethers.getContractAt(
       'ProxyController',
       prevProxyControllerAddress,
@@ -34,7 +38,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   await executeIfNewlyDeployment('ProxyController', deployResult, async () => {
     // Set AddressResolver as an implementation of the proxy using `setAddressResolverImpl`
     // when the ProxyController is deployed the first time.
-    if (isInitialDeployment) {
+    if (!prevProxyControllerAddress) {
       const addressResolver = await deployments.get('AddressResolver');
       const proxyControllerContract = await ethers.getContractAt(
         'ProxyController',
@@ -65,5 +69,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   });
 };
 
-module.exports.tags = ['ProxyController'];
-module.exports.dependencies = ['AddressResolver'];
+func.tags = ['ProxyController'];
+func.dependencies = ['AddressResolver'];
+
+export default func;
