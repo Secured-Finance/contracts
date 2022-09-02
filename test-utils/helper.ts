@@ -1,6 +1,7 @@
 class PrintTable {
   #list = {};
-  #header;
+  #header: string;
+
   constructor(_header) {
     this.#header = _header;
   }
@@ -13,6 +14,4 @@ class PrintTable {
   }
 }
 
-module.exports = {
-  PrintTable,
-};
+export { PrintTable };

@@ -1,4 +1,4 @@
-const utils = require('web3-utils');
+import * as utils from 'web3-utils';
 
 /**
  * Converts a string into a hex representation of bytes32, with right padding
@@ -31,7 +31,7 @@ const thirdTxHash = toBytes32('0xThirdTxHash');
 const overflowErrorMsg =
   'VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)';
 
-module.exports = {
+export {
   toBytes32,
   fromBytes32,
   hexFILString,

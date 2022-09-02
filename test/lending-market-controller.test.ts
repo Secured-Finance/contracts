@@ -1,3 +1,8 @@
+import { time } from '@openzeppelin/test-helpers';
+import { expect } from 'chai';
+import { artifacts, ethers, waffle } from 'hardhat';
+import moment from 'moment';
+
 const AddressResolver = artifacts.require('AddressResolver');
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -6,10 +11,6 @@ const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 
-const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
-const moment = require('moment');
-const { time } = require('@openzeppelin/test-helpers');
 const { deployContract, deployMockContract } = waffle;
 
 const Side = {
@@ -21,7 +22,7 @@ const COMPOUND_FACTOR = '1020100000000000000';
 const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');
 const BP = ethers.BigNumber.from('10000');
 
-contract('LendingMarketController', () => {
+describe('LendingMarketController', () => {
   let mockCurrencyController;
   let mockCollateralAggregator;
   let lendingMarketControllerProxy;
@@ -36,7 +37,7 @@ contract('LendingMarketController', () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
-    const { timestamp } = await ethers.provider.getBlock();
+    const { timestamp } = await ethers.provider.getBlock('latest');
     basisDate = moment(timestamp * 1000).unix();
   });
 
@@ -131,8 +132,7 @@ contract('LendingMarketController', () => {
         await lendingMarketControllerProxy.isInitializedLendingMarket(
           targetCurrency,
         ),
-        false,
-      );
+      ).to.equal(false);
 
       await lendingMarketControllerProxy.initializeLendingMarket(
         targetCurrency,
@@ -148,8 +148,7 @@ contract('LendingMarketController', () => {
         await lendingMarketControllerProxy.isInitializedLendingMarket(
           targetCurrency,
         ),
-        true,
-      );
+      ).to.equal(true);
     });
 
     it('Get beacon proxy implementations', async () => {

@@ -1,9 +1,11 @@
+import { should } from 'chai';
+import { artifacts } from 'hardhat';
 const BytesConversion = artifacts.require('BytesConversion');
-const { should } = require('chai');
+
 should();
 
-contract('BytesConversion', () => {
-  let bytesConversion;
+describe('BytesConversion', () => {
+  let bytesConversion: any;
 
   let loan = '0xLoan';
 

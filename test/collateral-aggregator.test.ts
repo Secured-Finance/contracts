@@ -1,3 +1,7 @@
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { expect } from 'chai';
+import { artifacts, ethers, waffle } from 'hardhat';
+
 const AddressResolver = artifacts.require('AddressResolver');
 const CollateralAggregator = artifacts.require('CollateralAggregator');
 const CollateralVault = artifacts.require('CollateralVault');
@@ -11,21 +15,22 @@ const CollateralAggregatorCallerMock = artifacts.require(
   'CollateralAggregatorCallerMock',
 );
 
-const { expect } = require('chai');
-const { ethers, waffle } = require('hardhat');
 const { deployContract, deployMockContract } = waffle;
 
-contract('CollateralAggregator', () => {
-  let mockCurrencyController;
-  let mockLendingMarketController;
-  let mockWETH9;
-  let mockERC20;
+describe('CollateralAggregator', () => {
+  let mockCurrencyController: any;
+  let mockLendingMarketController: any;
+  let mockWETH9: any;
+  let mockERC20: any;
 
-  let collateralAggregatorProxy;
-  let collateralVaultProxy;
-  let collateralAggregatorCaller;
+  let collateralAggregatorProxy: any;
+  let collateralVaultProxy: any;
+  let collateralAggregatorCaller: any;
 
-  let owner, alice, bob, carol;
+  let owner: SignerWithAddress;
+  let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
+  let carol: SignerWithAddress;
 
   const marginCallThresholdRate = 15000;
   const autoLiquidationThresholdRate = 12500;
@@ -258,11 +263,14 @@ contract('CollateralAggregator', () => {
 
       await expect(
         collateralVaultProxy.connect(alice).deposit(targetCurrency, value),
-      ).to.emit(collateralVaultProxy, 'Deposit', { value });
+      )
+        .to.emit(collateralVaultProxy, 'Deposit')
+        .withArgs(alice.address, targetCurrency, value);
 
-      expect(await collateralVaultProxy.getUsedCurrencies(alice.address), [
-        targetCurrency,
-      ]);
+      const currencies = await collateralVaultProxy.getUsedCurrencies(
+        alice.address,
+      );
+      expect(currencies[0]).to.equal(targetCurrency);
 
       const independentCollateral =
         await collateralVaultProxy.getIndependentCollateral(

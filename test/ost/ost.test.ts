@@ -1,17 +1,15 @@
-//const BigNumber = require('big-number');
+import { artifacts, ethers } from 'hardhat';
+import { steps } from './steps';
 const OrderStatisticsTree = artifacts.require(
   'HitchensOrderStatisticsTree.sol',
 );
-const { steps } = require('./steps');
-let ost;
 
-contract('OrderStatisticsTree - sort and rank', (accounts) => {
+let ost: any;
+
+describe('OrderStatisticsTree - sort and rank', () => {
   beforeEach(async () => {
+    const [owner] = await ethers.getSigners();
     ost = await OrderStatisticsTree.new();
-  });
-
-  it('should be ready to test', async () => {
-    assert.strictEqual(true, true, 'something is wrong');
   });
 
   it('should insert all orders and delete after', async () => {
@@ -22,22 +20,22 @@ contract('OrderStatisticsTree - sort and rank', (accounts) => {
   });
 });
 
-async function printExists(s) {
+async function printExists(s: any) {
   console.log();
   console.log('See if values exists');
   console.group('value, exists');
-  for (i = 0; i < s.length; i++) {
-    element = s[i]['rate'];
+
+  for (let i = 0; i < s.length; i++) {
+    let element = s[i]['rate'];
     if (element > 0) {
-      exists = await ost.valueExists(element);
+      const exists = await ost.valueExists(element);
       console.log(element, exists);
     }
   }
   console.groupEnd();
 }
 
-async function printScenario(s) {
-  let count;
+async function printScenario(s: any) {
   let first;
   let last;
   let rootVal;
@@ -47,8 +45,8 @@ async function printScenario(s) {
 
   // enumerate the sorted list and stats
   console.group('element, orderCount');
-  for (i = 0; i < s.length; i++) {
-    element = s[i]['rate'];
+  for (let i = 0; i < s.length; i++) {
+    let element = s[i]['rate'];
     orderCount = await ost.getValueCount(element);
     console.log(element, orderCount.toString(10));
   }
@@ -56,7 +54,7 @@ async function printScenario(s) {
 
   // tree structure summary
   console.group('Tree Properties');
-  rootCount = await ost.getRootCount();
+  let rootCount = await ost.getRootCount();
   first = await ost.firstValue();
   last = await ost.lastValue();
   rootVal = await ost.treeRootNode();
@@ -95,13 +93,13 @@ async function printScenario(s) {
   }
 }
 
-async function loadScenario(steps) {
+async function loadScenario(steps: any[]) {
   let amount;
 
-  for (i = 0; i < steps.length; i++) {
+  for (let i = 0; i < steps.length; i++) {
     amount = steps[i]['amount'];
-    orderId = steps[i]['orderId'];
-    rate = steps[i]['rate'];
+    const orderId = steps[i]['orderId'];
+    const rate = steps[i]['rate'];
     if (steps[i]['action'] == 'insert') {
       await ost.insertAmountValue(amount, rate, orderId);
     } else if (steps[i]['action'] == 'delete') {

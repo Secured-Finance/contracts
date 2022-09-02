@@ -243,4 +243,4 @@ const executeIfNewlyDeployment = async (name, deployResult, callback) => {
   }
 };
 
-module.exports = { deployContracts, executeIfNewlyDeployment };
+export { deployContracts, executeIfNewlyDeployment };

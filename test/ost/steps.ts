@@ -1285,4 +1285,4 @@ const steps = [
   },
 ];
 
-module.exports = { steps };
+export { steps };

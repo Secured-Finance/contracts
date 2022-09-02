@@ -1,8 +1,8 @@
-const DoubleLinkedList = artifacts.require('DoubleLinkedList');
-const { should } = require('chai');
-should();
+import { should } from 'chai';
+import { artifacts } from 'hardhat';
 
-const emptyData = 0;
+const DoubleLinkedList = artifacts.require('DoubleLinkedList');
+should();
 
 const headAmount = 10;
 const headOrderId = 1;
@@ -23,7 +23,7 @@ const equalAmount3 = 10000;
 const equalOrderId3 = 6;
 
 /** @test {DoubleLinkedList} contract */
-contract('DoubleLinkedList - add', (accounts) => {
+describe('DoubleLinkedList - add', () => {
   let doubleLinkedList;
 
   beforeEach(async () => {
@@ -141,7 +141,7 @@ contract('DoubleLinkedList - add', (accounts) => {
   });
 });
 
-contract('DoubleLinkedList - find', (accounts) => {
+describe('DoubleLinkedList - find', () => {
   let doubleLinkedList;
   let headId;
   let middleId;
@@ -171,7 +171,7 @@ contract('DoubleLinkedList - find', (accounts) => {
 });
 
 /** @test {doubleLinkedList} contract */
-contract('DoubleLinkedList - remove', (accounts) => {
+describe('DoubleLinkedList - remove', () => {
   let doubleLinkedList;
   let headId;
   let middleId;
@@ -268,7 +268,7 @@ contract('DoubleLinkedList - remove', (accounts) => {
 });
 
 /** @test {doubleLinkedList} contract */
-contract('DoubleLinkedList - insert', (accounts) => {
+describe('DoubleLinkedList - insert', () => {
   const insertedAmount = 1000;
   const insertedOrderId = 4;
 
@@ -525,7 +525,7 @@ contract('DoubleLinkedList - insert', (accounts) => {
   });
 });
 
-contract('DoubleLinkedList - findLastIdForAmount', (accounts) => {
+describe('DoubleLinkedList - findLastIdForAmount', () => {
   let doubleLinkedList;
   let headId;
   let middleId;
@@ -654,7 +654,7 @@ contract('DoubleLinkedList - findLastIdForAmount', (accounts) => {
   });
 });
 
-contract('DoubleLinkedList - gas tests', (accounts) => {
+describe('DoubleLinkedList - gas tests', () => {
   let doubleLinkedList;
   const dummyData = '0x0000000000000000000000000000000000000001';
 

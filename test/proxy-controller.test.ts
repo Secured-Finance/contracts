@@ -1,11 +1,8 @@
-const { should } = require('chai');
-const { toBytes32, hexBTCString, zeroAddress } =
-  require('../test-utils').strings;
-const { btcToETHRate } = require('../test-utils').numbers;
-
-const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
-
-should();
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
+import { artifacts, ethers } from 'hardhat';
+import { btcToETHRate } from '../test-utils/numbers';
+import { hexBTCString, toBytes32, zeroAddress } from '../test-utils/strings';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -18,13 +15,14 @@ const getNewProxyAddress = ({ logs }) =>
 const getUpdatedProxyAddress = ({ logs }) =>
   logs.find(({ event }) => event === 'ProxyUpdated').args.proxyAddress;
 
-contract('ProxyController', (accounts) => {
-  const [owner, alice, bob, carol] = accounts;
-
-  let addressResolver;
-  let proxyController;
+describe('ProxyController', () => {
+  let ownerSinger: SignerWithAddress;
+  let aliceSigner: SignerWithAddress;
+  let addressResolver: any;
+  let proxyController: any;
 
   beforeEach('deploy ProxyController', async () => {
+    [ownerSinger, aliceSigner] = await ethers.getSigners();
     proxyController = await ProxyController.new(ethers.constants.AddressZero);
     addressResolver = await AddressResolver.new()
       .then(({ address }) => proxyController.setAddressResolverImpl(address))
@@ -56,7 +54,7 @@ contract('ProxyController', (accounts) => {
 
       expectRevert(
         proxyController.setCurrencyControllerImpl(currencyController.address, {
-          from: alice,
+          from: aliceSigner.address,
         }),
         'Ownable: caller is not the owner',
       );
@@ -196,7 +194,7 @@ contract('ProxyController', (accounts) => {
       );
 
       expectRevert(
-        currencyController.initialize(owner),
+        currencyController.initialize(ownerSinger.address),
         'Must be called from UpgradeabilityProxy',
       );
     });
@@ -217,7 +215,7 @@ contract('ProxyController', (accounts) => {
         [currencyControllerProxyAddress],
       );
 
-      await proxyController.changeProxyAdmins(alice, [
+      await proxyController.changeProxyAdmins(aliceSigner.address, [
         currencyControllerProxyAddress,
       ]);
 
@@ -227,7 +225,7 @@ contract('ProxyController', (accounts) => {
 
       const currencyControllerAdmin = await currencyControllerProxy.admin();
 
-      currencyControllerAdmin.toString().should.be.equal(alice);
+      currencyControllerAdmin.toString().should.be.equal(aliceSigner.address);
     });
   });
 });

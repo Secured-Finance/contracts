@@ -1,24 +1,23 @@
+import { expect } from 'chai';
+import { artifacts, ethers } from 'hardhat';
+import moment from 'moment';
+
 const BokkyPooBahsDateTimeContract = artifacts.require(
   'BokkyPooBahsDateTimeContract',
 );
 
-const { should } = require('chai');
-const moment = require('moment');
-
-should();
-
-contract('BokkyPooBahsDateTimeContract', async (accounts) => {
-  let timeLibrary;
-  let now;
-  let date;
-  let time;
+describe('BokkyPooBahsDateTimeContract', async () => {
+  let timeLibrary: any;
+  let now: number;
+  let date: moment.Moment;
+  let time: any;
 
   before('deploy Mock contract', async () => {
     timeLibrary = await BokkyPooBahsDateTimeContract.new();
   });
 
   beforeEach(async () => {
-    ({ timestamp: now } = await ethers.provider.getBlock());
+    ({ timestamp: now } = await ethers.provider.getBlock('latest'));
     date = moment(now * 1000);
     time = await timeLibrary._now();
   });
@@ -26,26 +25,24 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
   describe('Test functions library functions', async () => {
     describe('Test basic read time functions', async () => {
       it('timestampToDate', async () => {
-        time.toString().should.be.equal(now.toString());
+        expect(time.toString()).to.equal(now.toString());
 
         let dateTime = await timeLibrary.timestampToDate(now);
-        dateTime.year.toString().should.be.equal(date.utc().year().toString());
-        dateTime.month
-          .toString()
-          .should.be.equal((date.utc().month() + 1).toString());
-        dateTime.day.toString().should.be.equal(date.utc().date().toString());
+        expect(dateTime.year.toString()).to.equal(date.utc().year().toString());
+        expect(dateTime.month.toString()).to.equal(
+          (date.utc().month() + 1).toString(),
+        );
+        expect(dateTime.day.toString()).to.equal(date.utc().date().toString());
       });
 
       it('getDaysInMonth', async () => {
         let days = await timeLibrary.getDaysInMonth(now);
-        days.toString().should.be.equal(date.daysInMonth().toString());
+        expect(days.toString()).to.equal(date.daysInMonth().toString());
 
         days = await timeLibrary._getDaysInMonth('2016', '12');
-        days
-          .toString()
-          .should.be.equal(
-            moment('2016-12', 'YYYY-MM').daysInMonth().toString(),
-          );
+        expect(days.toString()).to.equal(
+          moment('2016-12', 'YYYY-MM').daysInMonth().toString(),
+        );
       });
 
       it('getDayOfWeek', async () => {
@@ -53,32 +50,32 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
         // moment and timeLibrary have different day of week numbers
         // moment: 0->6 (SUN->SAT)
         // timeLibrary: 1->7 (MON->SUN)
-        day.toString().should.be.equal((date.utc().days() || 7).toString());
+        expect(day.toString()).to.equal((date.utc().days() || 7).toString());
       });
 
       it('getYear', async () => {
         let year = await timeLibrary.getYear(now);
-        year.toString().should.be.equal(date.utc().year().toString());
+        expect(year.toString()).to.equal(date.utc().year().toString());
       });
 
       it('getMonth', async () => {
         let month = await timeLibrary.getMonth(now);
-        month.toString().should.be.equal((date.utc().month() + 1).toString());
+        expect(month.toString()).to.equal((date.utc().month() + 1).toString());
       });
 
       it('getDay', async () => {
         let day = await timeLibrary.getDay(now);
-        day.toString().should.be.equal(date.utc().date().toString());
+        expect(day.toString()).to.equal(date.utc().date().toString());
       });
 
       it('getHour', async () => {
         let hour = await timeLibrary.getHour(now);
-        hour.toString().should.be.equal(date.utc().hour().toString());
+        expect(hour.toString()).to.equal(date.utc().hour().toString());
       });
 
       it('getMinute', async () => {
         let minute = await timeLibrary.getMinute(now);
-        minute.toString().should.be.equal(date.utc().minute().toString());
+        expect(minute.toString()).to.equal(date.utc().minute().toString());
       });
     });
 
@@ -86,41 +83,41 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
       it('addedYears', async () => {
         let addedYears = await timeLibrary.addYears(time, 1);
         let year = await timeLibrary.getYear(addedYears);
-        year
-          .toString()
-          .should.be.equal(date.utc().add(1, 'y').year().toString());
+        expect(year.toString()).to.equal(
+          date.utc().add(1, 'y').year().toString(),
+        );
       });
 
       it('addMonths', async () => {
         let addedMonths = await timeLibrary.addMonths(time, 2);
         let months = await timeLibrary.getMonth(addedMonths);
-        months
-          .toString()
-          .should.be.equal((date.utc().add(2, 'M').month() + 1).toString());
+        expect(months.toString()).to.equal(
+          (date.utc().add(2, 'M').month() + 1).toString(),
+        );
       });
 
       it('addDays', async () => {
         let addedDays = await timeLibrary.addDays(time, 15);
         let days = await timeLibrary.getDay(addedDays);
-        days
-          .toString()
-          .should.be.equal(date.utc().add(15, 'd').date().toString());
+        expect(days.toString()).to.equal(
+          date.utc().add(15, 'd').date().toString(),
+        );
       });
 
       it('addHours', async () => {
         let addedHours = await timeLibrary.addHours(time, 6);
         let hours = await timeLibrary.getHour(addedHours);
-        hours
-          .toString()
-          .should.be.equal(date.utc().add(6, 'h').hour().toString());
+        expect(hours.toString()).to.equal(
+          date.utc().add(6, 'h').hour().toString(),
+        );
       });
 
       it('addMinutes', async () => {
         let addedMinutes = await timeLibrary.addMinutes(time, 37);
         let minutes = await timeLibrary.getMinute(addedMinutes);
-        minutes
-          .toString()
-          .should.be.equal(date.utc().add(37, 'm').minute().toString());
+        expect(minutes.toString()).to.equal(
+          date.utc().add(37, 'm').minute().toString(),
+        );
       });
     });
 
@@ -128,43 +125,41 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
       it('subYears', async () => {
         let subYears = await timeLibrary.subYears(time, 1);
         let year = await timeLibrary.getYear(subYears);
-        year
-          .toString()
-          .should.be.equal(date.utc().subtract(1, 'y').year().toString());
+        expect(year.toString()).to.equal(
+          date.utc().subtract(1, 'y').year().toString(),
+        );
       });
 
       it('subMonths', async () => {
         let subMonths = await timeLibrary.subMonths(time, 2);
         let months = await timeLibrary.getMonth(subMonths);
-        months
-          .toString()
-          .should.be.equal(
-            (date.utc().subtract(2, 'M').month() + 1).toString(),
-          );
+        expect(months.toString()).to.equal(
+          (date.utc().subtract(2, 'M').month() + 1).toString(),
+        );
       });
 
       it('subDays', async () => {
         let subDays = await timeLibrary.subDays(time, 15);
         let days = await timeLibrary.getDay(subDays);
-        days
-          .toString()
-          .should.be.equal(date.utc().subtract(15, 'd').date().toString());
+        expect(days.toString()).to.equal(
+          date.utc().subtract(15, 'd').date().toString(),
+        );
       });
 
       it('subHours', async () => {
         let subHours = await timeLibrary.subHours(time, 6);
         let hours = await timeLibrary.getHour(subHours);
-        hours
-          .toString()
-          .should.be.equal(date.utc().subtract(6, 'h').hour().toString());
+        expect(hours.toString()).to.equal(
+          date.utc().subtract(6, 'h').hour().toString(),
+        );
       });
 
       it('subMinutes', async () => {
         let subMinutes = await timeLibrary.subMinutes(time, 37);
         let minutes = await timeLibrary.getMinute(subMinutes);
-        minutes
-          .toString()
-          .should.be.equal(date.utc().subtract(37, 'm').minute().toString());
+        expect(minutes.toString()).to.equal(
+          date.utc().subtract(37, 'm').minute().toString(),
+        );
       });
     });
 
@@ -181,9 +176,9 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
           dateNow.format('X'),
           shiftedTime.format('X'),
         );
-        diffYears
-          .toString()
-          .should.be.equal(shiftedTime.diff(dateNow, 'years').toString());
+        expect(diffYears.toString()).to.equal(
+          shiftedTime.diff(dateNow, 'years').toString(),
+        );
       });
 
       it('diffMonths', async () => {
@@ -192,9 +187,9 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
           dateNow.format('X'),
           shiftedTime.format('X'),
         );
-        diffMonths
-          .toString()
-          .should.be.equal(shiftedTime.diff(dateNow, 'months').toString());
+        expect(diffMonths.toString()).to.equal(
+          shiftedTime.diff(dateNow, 'months').toString(),
+        );
       });
 
       it('diffDays', async () => {
@@ -203,9 +198,9 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
           dateNow.format('X'),
           shiftedTime.format('X'),
         );
-        diffDays
-          .toString()
-          .should.be.equal(shiftedTime.diff(dateNow, 'days').toString());
+        expect(diffDays.toString()).to.equal(
+          shiftedTime.diff(dateNow, 'days').toString(),
+        );
       });
 
       it('diffHours', async () => {
@@ -214,9 +209,9 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
           dateNow.format('X'),
           shiftedTime.format('X'),
         );
-        diffHours
-          .toString()
-          .should.be.equal(shiftedTime.diff(dateNow, 'hours', true).toString());
+        expect(diffHours.toString()).to.equal(
+          shiftedTime.diff(dateNow, 'hours', true).toString(),
+        );
       });
 
       it('diffMinutes', async () => {
@@ -225,9 +220,9 @@ contract('BokkyPooBahsDateTimeContract', async (accounts) => {
           dateNow.format('X'),
           shiftedTime.format('X'),
         );
-        diffMinutes
-          .toString()
-          .should.be.equal(shiftedTime.diff(dateNow, 'minutes').toString());
+        expect(diffMinutes.toString()).to.equal(
+          shiftedTime.diff(dateNow, 'minutes').toString(),
+        );
       });
     });
   });

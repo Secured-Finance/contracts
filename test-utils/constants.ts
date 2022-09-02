@@ -19,8 +19,4 @@ const ColState = {
   LIQUIDATION: 5,
 };
 
-module.exports = {
-  Side,
-  Ccy,
-  ColState,
-};
+export { Side, Ccy, ColState };

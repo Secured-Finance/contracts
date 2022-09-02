@@ -1,22 +1,23 @@
-require('dotenv/config');
-require('@nomiclabs/hardhat-truffle5');
-require('hardhat-gas-reporter');
-require('solidity-coverage');
-require('hardhat-contract-sizer');
-require('hardhat-deploy');
-require('@nomiclabs/hardhat-ethers');
-require('@nomiclabs/hardhat-ganache');
-require('@nomiclabs/hardhat-waffle');
-require('solidity-docgen');
+import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-ganache';
+import '@nomiclabs/hardhat-truffle5';
+import '@nomiclabs/hardhat-waffle';
+import 'dotenv/config';
+import 'hardhat-contract-sizer';
+import 'hardhat-deploy';
+import 'hardhat-gas-reporter';
+import { HardhatUserConfig } from 'hardhat/config';
+import 'solidity-coverage';
+import 'solidity-docgen';
 
-require('./tasks');
+import './tasks';
 
 const privateKey =
   process.env.USE_DEFAULT_ACCOUNTS === 'true' || !process.env.PRIVATE_KEY
     ? undefined
     : [process.env.PRIVATE_KEY];
 
-module.exports = {
+const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   namedAccounts: {
     deployer: 0,
@@ -27,7 +28,6 @@ module.exports = {
     localhost: {
       url: process.env.DEV_RPC_ENDPOINT || 'http://0.0.0.0:8545',
       chainId: 1337,
-      network_id: '*',
     },
     development: {
       url:
@@ -99,3 +99,5 @@ module.exports = {
     exclude: ['mocks', 'interfaces'],
   },
 };
+
+export default config;
