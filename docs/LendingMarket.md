@@ -122,11 +122,11 @@ Gets the highest borrow rate.
 function getLendRate() public view returns (uint256 rate)
 ```
 
-Gets the highest lend rate.
+Gets the lowest lend rate.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| rate | uint256 | The highest lend rate |
+| rate | uint256 | The lowest lend rate |
 
 ### getMidRate
 
@@ -134,11 +134,43 @@ Gets the highest lend rate.
 function getMidRate() public view returns (uint256 rate)
 ```
 
-Gets mid rate.
+Gets the mid rate.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | rate | uint256 | The mid rate |
+
+### getBorrowRates
+
+```solidity
+function getBorrowRates(uint256 _limit) external view returns (uint256[] rates)
+```
+
+Gets the borrow rates.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _limit | uint256 | Max limit to get rates |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| rates | uint256[] | The array of borrow rates |
+
+### getLendRates
+
+```solidity
+function getLendRates(uint256 _limit) external view returns (uint256[] rates)
+```
+
+Gets the lend rates.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _limit | uint256 | Max limit to get rates |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| rates | uint256[] | The array of lending rates |
 
 ### getMaturity
 
@@ -298,10 +330,10 @@ Cancels the order.
 | _user | address | User address |
 | _orderId | uint256 | Market order id |
 
-### makeOrder
+### _makeOrder
 
 ```solidity
-function makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) internal returns (uint256 orderId)
+function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) internal returns (uint256 orderId)
 ```
 
 Makes new market order.
@@ -313,10 +345,10 @@ Makes new market order.
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _rate | uint256 | Preferable interest rate |
 
-### takeOrder
+### _takeOrder
 
 ```solidity
-function takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _orderId, uint256 _amount) internal returns (address)
+function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _orderId, uint256 _amount) internal returns (address)
 ```
 
 Takes the market order.
