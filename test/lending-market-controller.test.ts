@@ -220,6 +220,7 @@ describe('LendingMarketController', () => {
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
+      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
 
       const marketAddresses =
         await lendingMarketControllerProxy.getLendingMarkets(targetCurrency);
@@ -229,6 +230,64 @@ describe('LendingMarketController', () => {
           ethers.getContractAt('LendingMarket', address),
         ),
       );
+    });
+
+    it('Add orders and check rates', async () => {
+      const lendingMarket3 = lendingMarketProxies[3];
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[3],
+          Side.LEND,
+          '100000000000000000',
+          '800',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[3],
+          Side.LEND,
+          '50000000000000000',
+          '880',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[3],
+          Side.BORROW,
+          '100000000000000000',
+          '720',
+        );
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .createOrder(
+          targetCurrency,
+          maturities[3],
+          Side.BORROW,
+          '100000000000000000',
+          '780',
+        );
+
+      const borrowRates = await lendingMarket3.getBorrowRates(10);
+      expect(borrowRates[0].toString()).to.equal('780');
+      expect(borrowRates[1].toString()).to.equal('720');
+      expect(borrowRates[2].toString()).to.equal('0');
+      expect(borrowRates.length).to.equal(10);
+
+      const lendRates = await lendingMarket3.getLendRates(10);
+      expect(lendRates[0].toString()).to.equal('800');
+      expect(lendRates[1].toString()).to.equal('880');
+      expect(lendRates[2].toString()).to.equal('0');
+      expect(lendRates.length).to.equal(10);
     });
 
     it('Add orders and rotate markets', async () => {
@@ -282,6 +341,7 @@ describe('LendingMarketController', () => {
             '800',
           ),
       ).to.equal(true);
+
       const tx = lendingMarketControllerProxy
         .connect(carol)
         .createOrder(
@@ -291,7 +351,6 @@ describe('LendingMarketController', () => {
           '100000000000000000',
           '800',
         );
-
       await expect(tx).to.emit(lendingMarket1, 'TakeOrder');
       await expect(tx)
         .to.emit(lendingMarketControllerProxy, 'OrderFilled')
@@ -429,7 +488,10 @@ describe('LendingMarketController', () => {
       expect(rotatedMaturities[1].toString()).to.equal(
         maturities[2].toString(),
       );
-      expect(rotatedMaturities[2].toString()).to.equal(newMaturity.toString());
+      expect(rotatedMaturities[2].toString()).to.equal(
+        maturities[3].toString(),
+      );
+      expect(rotatedMaturities[3].toString()).to.equal(newMaturity.toString());
 
       // Check market data
       expect(market.ccy).to.equal(targetCurrency);

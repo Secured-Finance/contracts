@@ -71,6 +71,16 @@ In case that current version is 0.0.1-beta.0
 
 If you want to update the major version or minor version, you need to update it manually.
 
+## Tasks
+
+Under the task folder, there are the scripts below which are run using the Hardhat task.
+
+| Task Name       | Description                                                           | Example of use                                                                                                                                         |
+| --------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| fork            | Create a fork chain using Tenderly's API                              | `npm run fork development`                                                                                                                             |
+| unfork          | Delete a forked chain                                                 | `npm run unfork b98423a5-431c-4fbc-a0cc-3c70fad0500c`                                                                                                  |
+| register-orders | Register order data into the selected market in the selected currency | `npx hardhat register-orders --network localhost --currency FIL --maturity 1669856400 --mid-rate 70000 --amount 10000000000000000000 --order-count 10` |
+
 ## Documents
 
 In order to generate documents, run `npm run docgen`.

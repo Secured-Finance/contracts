@@ -54,6 +54,6 @@ jobs:
         env:
           USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-        run: npx hardhat --network $NETWORK test "scripts/zc-e2e.js" --bail
+        run: npx hardhat --network $NETWORK test "scripts/zc-e2e.ts" --bail
       - name: Delete the fork environment
         run: npm run unfork --forkid $FORK_ID
