@@ -134,7 +134,7 @@ contract LendingMarket is
      * @return rate The highest lend rate
      */
     function getLendRate() public view override returns (uint256 rate) {
-        return Storage.slot().lendOrders[Storage.slot().maturity].last();
+        return Storage.slot().lendOrders[Storage.slot().maturity].first();
     }
 
     /**
@@ -147,6 +147,54 @@ contract LendingMarket is
         uint256 combinedRate = borrowRate + lendRate;
 
         return combinedRate / 2;
+    }
+
+    /**
+     * @notice Gets borrow rates.
+     * @param _limit Max limit to get rates
+     * @return rates Array of borrow rates
+     */
+    function getBorrowRates(uint256 _limit)
+        external
+        view
+        override
+        returns (uint256[] memory rates)
+    {
+        rates = new uint256[](_limit);
+
+        uint256 rate = Storage.slot().borrowOrders[Storage.slot().maturity].last();
+        rates[0] = rate;
+
+        for (uint256 i = 1; i < rates.length; i++) {
+            if (rate == 0) {
+                break;
+            }
+
+            rate = Storage.slot().borrowOrders[Storage.slot().maturity].prev(rate);
+            rates[i] = rate;
+        }
+    }
+
+    /**
+     * @notice Gets lend rates.
+     * @param _limit Max limit to get rates
+     * @return rates Array of lend rates
+     */
+
+    function getLendRates(uint256 _limit) external view override returns (uint256[] memory rates) {
+        rates = new uint256[](_limit);
+
+        uint256 rate = Storage.slot().lendOrders[Storage.slot().maturity].first();
+        rates[0] = rate;
+
+        for (uint256 i = 1; i < rates.length; i++) {
+            if (rate == 0) {
+                break;
+            }
+
+            rate = Storage.slot().lendOrders[Storage.slot().maturity].next(rate);
+            rates[i] = rate;
+        }
     }
 
     /**
@@ -327,7 +375,7 @@ contract LendingMarket is
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _rate Preferable interest rate
      */
-    function makeOrder(
+    function _makeOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -376,7 +424,7 @@ contract LendingMarket is
      * @param _orderId Market order id in the order book
      * @param _amount Amount of funds the maker wants to borrow/lend
      */
-    function takeOrder(
+    function _takeOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _orderId,
@@ -508,11 +556,11 @@ contract LendingMarket is
         }
 
         if (orderId == 0) {
-            makeOrder(_side, _user, _amount, _rate);
+            _makeOrder(_side, _user, _amount, _rate);
             maker = _user;
             amount = 0;
         } else {
-            maker = takeOrder(_side, _user, orderId, _amount);
+            maker = _takeOrder(_side, _user, orderId, _amount);
             amount = _amount;
         }
     }
