@@ -56,6 +56,8 @@ jobs:
         run: |
           echo "NETWORK=staging" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      - name: Build Smart Contracts
+        run: npm run compile
       - name: Run task
         shell: bash
         run: >
