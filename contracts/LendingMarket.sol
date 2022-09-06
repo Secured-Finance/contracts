@@ -130,15 +130,15 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Gets the highest lend rate.
-     * @return rate The highest lend rate
+     * @notice Gets the lowest lend rate.
+     * @return rate The lowest lend rate
      */
     function getLendRate() public view override returns (uint256 rate) {
         return Storage.slot().lendOrders[Storage.slot().maturity].first();
     }
 
     /**
-     * @notice Gets mid rate.
+     * @notice Gets the mid rate.
      * @return rate The mid rate
      */
     function getMidRate() public view override returns (uint256 rate) {
@@ -150,9 +150,9 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Gets borrow rates.
+     * @notice Gets the borrow rates.
      * @param _limit Max limit to get rates
-     * @return rates Array of borrow rates
+     * @return rates The array of borrow rates
      */
     function getBorrowRates(uint256 _limit)
         external
@@ -176,11 +176,10 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Gets lend rates.
+     * @notice Gets the lend rates.
      * @param _limit Max limit to get rates
-     * @return rates Array of lend rates
+     * @return rates The array of lending rates
      */
-
     function getLendRates(uint256 _limit) external view override returns (uint256[] memory rates) {
         rates = new uint256[](_limit);
 
