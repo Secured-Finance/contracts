@@ -1,0 +1,62 @@
+name: Register orders
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+      currency:
+        description: 'Currency'
+        required: true
+        default: 'FIL'
+        type: choice
+        options:
+          - FIL
+      maturity:
+        description: 'Maturity'
+        required: true
+        type: string
+      midRate:
+        description: 'MidRate'
+        required: true
+        type: string
+      orderAmount:
+        description: 'OrderAmount'
+        required: true
+        type: string
+      orderCount:
+        description: 'OrderCount'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Register orders
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set env for development environment
+        if: ${{ github.event.inputs.network == 'development' }}
+        run: |
+          echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.DEV_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      - name: Set env for staging environment
+        if: ${{ github.event.inputs.network == 'staging' }}
+        run: |
+          echo "NETWORK=staging" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      - name: Run task
+        shell: bash
+        run: >
+          npx hardhat register-orders
+            --network ${{ github.event.inputs.network }}
+            --currency ${{ github.event.inputs.currency }}
+            --maturity ${{ github.event.inputs.maturity }}
+            --mid-rate ${{ github.event.inputs.midRate }}
+            --amount ${{ github.event.inputs.orderAmount }}
+            --order-count ${{ github.event.inputs.orderCount }}
