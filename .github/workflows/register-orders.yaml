@@ -60,9 +60,9 @@ jobs:
         shell: bash
         run: >
           npx hardhat register-orders
-            --network ${{ github.event.inputs.network }}
-            --currency ${{ github.event.inputs.currency }}
-            --maturity ${{ github.event.inputs.maturity }}
-            --mid-rate ${{ github.event.inputs.midRate }}
-            --amount ${{ github.event.inputs.orderAmount }}
-            --order-count ${{ github.event.inputs.orderCount }}
+          --network ${{ github.event.inputs.network }}
+          --currency ${{ github.event.inputs.currency }}
+          --maturity ${{ github.event.inputs.maturity }}
+          --mid-rate ${{ github.event.inputs.midRate }}
+          --amount ${{ github.event.inputs.orderAmount }}
+          --order-count ${{ github.event.inputs.orderCount }}
