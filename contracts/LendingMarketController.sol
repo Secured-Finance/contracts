@@ -106,6 +106,21 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the lending market contract address for the selected currency and maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @return The lending market address
+     */
+    function getLendingMarket(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        override
+        returns (address)
+    {
+        return Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+    }
+
+    /**
      * @notice Gets borrow rates for the selected currency.
      * @param _ccy Currency name in bytes32
      * @return Array with the borrowing rate of the lending market
