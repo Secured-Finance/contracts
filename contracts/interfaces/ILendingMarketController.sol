@@ -32,6 +32,8 @@ interface ILendingMarketController {
 
     function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory);
 
+    function getLendingMarket(bytes32 _ccy, uint256 _maturity) external view returns (address);
+
     function getBorrowRates(bytes32 _ccy) external view returns (uint256[] memory rates);
 
     function getLendRates(bytes32 _ccy) external view returns (uint256[] memory rates);

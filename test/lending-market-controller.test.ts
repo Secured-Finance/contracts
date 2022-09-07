@@ -180,10 +180,22 @@ describe('LendingMarketController', () => {
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
         targetCurrency,
       );
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+      const market = await lendingMarketControllerProxy.getLendingMarket(
+        targetCurrency,
+        maturities[0],
+      );
 
       expect(markets.length).to.equal(1);
+      expect(maturities.length).to.equal(1);
       expect(markets[0]).to.exist;
       expect(markets[0]).to.not.equal(ethers.constants.AddressZero);
+      expect(markets[0]).to.equal(market);
+      expect(maturities[0].toString()).to.equal(
+        moment.unix(basisDate).add(3, 'M').unix().toString(),
+      );
     });
 
     it('Create multiple lending markets', async () => {
@@ -199,17 +211,30 @@ describe('LendingMarketController', () => {
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
         targetCurrency,
       );
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
 
       expect(markets.length).to.equal(3);
+      expect(maturities.length).to.equal(3);
       markets.forEach((market) => {
         expect(market).to.not.equal(ethers.constants.AddressZero);
         expect(market).to.exist;
+      });
+      maturities.forEach((maturity, i) => {
+        expect(maturity.toString()).to.equal(
+          moment
+            .unix(basisDate)
+            .add(3 * (i + 1), 'M')
+            .unix()
+            .toString(),
+        );
       });
     });
   });
 
   describe('Order', async () => {
-    let lendingMarketProxies;
+    let lendingMarketProxies: Contract[];
 
     beforeEach(async () => {
       await lendingMarketControllerProxy.initializeLendingMarket(
