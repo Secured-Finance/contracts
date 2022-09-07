@@ -103,28 +103,32 @@ task('register-orders', 'Registers order data into the selected lending market')
       );
 
       if (!isRegisteredUser) {
-        await collateralAggregator.register();
+        await collateralAggregator.register().then((tx) => tx.wait());
       }
 
       const depositValue = await currencyController[
         'convertToETH(bytes32,uint256)'
       ](currencyName, totalAmount.times(1.5).dp(0).toFixed());
 
-      await collateralVault.deposit(toBytes32('ETH'), depositValue, {
-        value: depositValue,
-      });
+      await collateralVault
+        .deposit(toBytes32('ETH'), depositValue, {
+          value: depositValue,
+        })
+        .then((tx) => tx.wait());
 
       console.log(`Successfully deposited ${depositValue} in ETH`);
 
       // Create orders
       for (const order of orders) {
-        await lendingMarketController.createOrder(
-          currencyName,
-          maturity,
-          order.side,
-          order.amount,
-          order.rate,
-        );
+        await lendingMarketController
+          .createOrder(
+            currencyName,
+            maturity,
+            order.side,
+            order.amount,
+            order.rate,
+          )
+          .then((tx) => tx.wait());
       }
 
       console.table(
