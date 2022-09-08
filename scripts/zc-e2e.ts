@@ -189,27 +189,26 @@ describe('ZC e2e test', async () => {
       );
     const unusedCollateralAlice =
       await collateralAggregator.getUnusedCollateral(aliceSigner.address);
+    const [futureValueAlice] = await lendingMarket.getFutureValue(
+      aliceSigner.address,
+    );
 
     expect(independentCollateralAlice.toString()).to.equal(
       unusedCollateralAlice.toString(),
     );
+    expect(futureValueAlice.gt(orderAmountInFIL)).to.be.true;
 
     // Check collateral of Bob
-    const independentCollateralBob =
-      await collateralVault.getIndependentCollateral(
+    const unsettledCollateralBob =
+      await collateralAggregator.getUnsettledCollateral(
         bobSigner.address,
-        hexETHString,
+        targetCurrency,
       );
-    const unusedCollateralBob = await collateralAggregator.getUnusedCollateral(
+    const [futureValueBob] = await lendingMarket.getFutureValue(
       bobSigner.address,
     );
-    const totalPresentValueBob =
-      await lendingMarketController.getTotalPresentValueInETH(
-        bobSigner.address,
-      );
 
-    expect(independentCollateralBob.toString()).to.equal(
-      unusedCollateralBob.add(totalPresentValueBob.abs()).toString(),
-    );
+    expect(unsettledCollateralBob.toString()).to.equal('0');
+    expect(futureValueBob.lt(`-${orderAmountInFIL}`)).to.be.true;
   });
 });
