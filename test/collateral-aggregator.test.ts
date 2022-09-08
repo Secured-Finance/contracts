@@ -198,7 +198,7 @@ describe('CollateralAggregator', () => {
     let currencyIdx = 0;
 
     before(async () => {
-      await mockCurrencyController.mock.isCollateral.returns(true);
+      await mockCurrencyController.mock.isSupportedCcy.returns(true);
       await mockERC20.mock.transferFrom.returns(true);
       await mockERC20.mock.transfer.returns(true);
     });

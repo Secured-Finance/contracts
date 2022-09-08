@@ -4,13 +4,7 @@ import { DeployResult } from 'hardhat-deploy/types';
 import moment from 'moment';
 
 import { btcToETHRate, ethToUSDRate, filToETHRate } from './numbers';
-import {
-  hexBTCString,
-  hexETHString,
-  hexFILString,
-  toBytes32,
-  zeroAddress,
-} from './strings';
+import { hexBTCString, hexETHString, hexFILString, toBytes32 } from './strings';
 
 const marginCallThresholdRate = 15000;
 const autoLiquidationThresholdRate = 12500;
@@ -138,25 +132,19 @@ const deployContracts = async () => {
     'Bitcoin',
     btcToETHPriceFeed.address,
     7500,
-    zeroAddress,
   );
   await currencyControllerProxy.supportCurrency(
     hexETHString,
     'Ethereum',
     ethToUSDPriceFeed.address,
     7500,
-    zeroAddress,
   );
   await currencyControllerProxy.supportCurrency(
     hexFILString,
     'Filecoin',
     filToETHPriceFeed.address,
     7500,
-    zeroAddress,
   );
-
-  await currencyControllerProxy.updateCollateralSupport(hexETHString, true);
-  await currencyControllerProxy.updateCollateralSupport(hexFILString, true);
 
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets: [string, Contract][] = [

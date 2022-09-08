@@ -215,7 +215,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     function registerCurrency(bytes32 _ccy, address _tokenAddress) external onlyOwner {
-        require(currencyController().isCollateral(_ccy), "Invalid currency");
+        require(currencyController().isSupportedCcy(_ccy), "Invalid currency");
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
 
         emit CurrencyRegistered(_ccy, _tokenAddress);
