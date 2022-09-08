@@ -6,10 +6,11 @@ import { hexETHString, hexFILString, toBytes32 } from '../utils/strings';
 
 describe('ZC e2e test', async () => {
   const targetCurrency = hexFILString;
-  const BP = 0.01;
+  const BP = 100;
   const depositAmountInETH = '10000000000000000000';
   const orderAmountInFIL = '50000000000000000000';
-  const orderRate = String(3 / BP);
+  const orderRate = String(3 * BP);
+  const SECONDS_IN_YEAR = 31557600;
 
   // Accounts
   let ownerSigner: SignerWithAddress | Wallet;
@@ -20,7 +21,6 @@ describe('ZC e2e test', async () => {
   // Contracts
   let proxyController: Contract;
   let collateralAggregator: Contract;
-  let collateralVault: Contract;
   let lendingMarketController: Contract;
 
   before('Set up for testing', async () => {
@@ -70,14 +70,12 @@ describe('ZC e2e test', async () => {
 
     // Get proxy contracts
     collateralAggregator = await getProxy('CollateralAggregator');
-    collateralVault = await getProxy('CollateralVault');
     lendingMarketController = await getProxy('LendingMarketController');
 
     console.table(
       {
         proxyController,
         collateralAggregator,
-        collateralVault,
         lendingMarketController,
       },
       ['address'],
@@ -85,37 +83,14 @@ describe('ZC e2e test', async () => {
   });
 
   it('Deposit ETH', async () => {
-    // Deposit ETH by Alice
-    const isRegisteredAlice = await collateralAggregator.isRegisteredUser(
-      aliceSigner.address,
-    );
-
-    if (!isRegisteredAlice) {
-      await collateralAggregator
-        .connect(aliceSigner)
-        .register()
-        .then((tx) => tx.wait());
-
-      await collateralVault
-        .connect(aliceSigner)
-        .deposit(hexETHString, depositAmountInETH, {
-          value: depositAmountInETH,
-        })
-        .then((tx) => tx.wait());
-    }
-
-    // Deposit ETH by BoB
-    const isRegisteredBob = await collateralAggregator.isRegisteredUser(
+    let collateralAmount = await collateralAggregator.getCollateralAmount(
       bobSigner.address,
+      hexETHString,
     );
 
-    if (!isRegisteredBob) {
+    if (collateralAmount.toString() === '0') {
+      // Deposit ETH by BoB
       await collateralAggregator
-        .connect(bobSigner)
-        .register()
-        .then((tx) => tx.wait());
-
-      await collateralVault
         .connect(bobSigner)
         .deposit(hexETHString, depositAmountInETH, {
           value: depositAmountInETH,
@@ -123,15 +98,14 @@ describe('ZC e2e test', async () => {
         .then((tx) => tx.wait());
     }
 
-    // Check collateral of Alice
-    let collateralAmount = await collateralVault.getCollateralAmount(
-      aliceSigner.address,
+    collateralAmount = await collateralAggregator.getCollateralAmount(
+      bobSigner.address,
       hexETHString,
     );
 
     let totalPresentValue = await lendingMarketController.getTotalPresentValue(
       hexETHString,
-      aliceSigner.address,
+      bobSigner.address,
     );
 
     expect(collateralAmount.toString()).to.equal(depositAmountInETH);
@@ -157,6 +131,13 @@ describe('ZC e2e test', async () => {
       this.skip();
     }
 
+    const [futureValueAliceBefore] = await lendingMarket.getFutureValue(
+      aliceSigner.address,
+    );
+    const [futureValueBobBefore] = await lendingMarket.getFutureValue(
+      bobSigner.address,
+    );
+
     // Make lend orders
     await lendingMarketController
       .connect(aliceSigner)
@@ -170,7 +151,7 @@ describe('ZC e2e test', async () => {
       .then((tx) => tx.wait());
 
     // Make borrow orders
-    await lendingMarketController
+    const receipt = await lendingMarketController
       .connect(bobSigner)
       .createOrder(
         targetCurrency,
@@ -181,33 +162,50 @@ describe('ZC e2e test', async () => {
       )
       .then((tx) => tx.wait());
 
+    // Calculate the future value from order rate & amount
+    // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
+    const { timestamp } = await ethers.provider.getBlock(receipt.blockHash);
+    const dt = maturities[0] - timestamp;
+    const currentRate = ethers.BigNumber.from(orderRate)
+      .mul(dt)
+      .div(SECONDS_IN_YEAR);
+    const calculatedFV = ethers.BigNumber.from(orderAmountInFIL)
+      .mul(currentRate.add(ethers.BigNumber.from(100).mul(BP)))
+      .div(BP)
+      .div(100);
+
     // Check collateral of Alice
-    const collateralAmountAlice = await collateralVault.getCollateralAmount(
-      aliceSigner.address,
-      hexETHString,
-    );
+    const collateralAmountAlice =
+      await collateralAggregator.getCollateralAmount(
+        aliceSigner.address,
+        hexETHString,
+      );
     const unusedCollateralAlice =
       await collateralAggregator.getUnusedCollateral(aliceSigner.address);
+    const [futureValueAliceAfter] = await lendingMarket.getFutureValue(
+      aliceSigner.address,
+    );
 
     expect(collateralAmountAlice.toString()).to.equal(
       unusedCollateralAlice.toString(),
     );
+    expect(
+      futureValueAliceAfter.sub(futureValueAliceBefore).toString(),
+    ).to.equal(calculatedFV.toString());
 
     // Check collateral of Bob
-    const collateralAmountBob = await collateralVault.getCollateralAmount(
-      bobSigner.address,
-      hexETHString,
-    );
-    const unusedCollateralBob = await collateralAggregator.getUnusedCollateral(
-      bobSigner.address,
-    );
-    const totalPresentValueBob =
-      await lendingMarketController.getTotalPresentValueInETH(
+    const unsettledCollateralBob =
+      await collateralAggregator.getUnsettledCollateral(
         bobSigner.address,
+        targetCurrency,
       );
+    const [futureValueBobAfter] = await lendingMarket.getFutureValue(
+      bobSigner.address,
+    );
 
-    expect(collateralAmountBob.toString()).to.equal(
-      unusedCollateralBob.add(totalPresentValueBob.abs()).toString(),
+    expect(unsettledCollateralBob.toString()).to.equal('0');
+    expect(futureValueBobAfter.sub(futureValueBobBefore).toString()).to.equal(
+      `-${calculatedFV.toString()}`,
     );
   });
 });

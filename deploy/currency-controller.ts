@@ -3,12 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 import { btcToETHRate, ethToUSDRate, filToETHRate } from '../utils/numbers';
-import {
-  hexBTCString,
-  hexETHString,
-  hexFILString,
-  zeroAddress,
-} from '../utils/strings';
+import { hexBTCString, hexETHString, hexFILString } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -80,7 +75,6 @@ const func: DeployFunction = async function ({
           'Ethereum',
           ethToUSDPriceFeed.address,
           7500,
-          zeroAddress,
         )
         .then((tx) => tx.wait());
 
@@ -90,7 +84,6 @@ const func: DeployFunction = async function ({
           'Filecoin',
           filToETHPriceFeed.address,
           7500,
-          zeroAddress,
         )
         .then((tx) => tx.wait());
 
@@ -100,12 +93,7 @@ const func: DeployFunction = async function ({
           'Bitcoin',
           btcToETHPriceFeed.address,
           7500,
-          zeroAddress,
         )
-        .then((tx) => tx.wait());
-
-      await currencyControllerContract
-        .updateCollateralSupport(hexETHString, true)
         .then((tx) => tx.wait());
     },
   );

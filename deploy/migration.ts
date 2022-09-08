@@ -62,8 +62,8 @@ const func: DeployFunction = async function ({
     return ethers.getContractAt(key, address);
   };
 
+  const beaconProxyController = await getProxy('BeaconProxyController');
   const collateralAggregator = await getProxy('CollateralAggregator');
-  const collateralVault = await getProxy('CollateralVault');
   const currencyController = await getProxy('CurrencyController');
   const lendingMarketController = await getProxy('LendingMarketController');
 
@@ -75,24 +75,24 @@ const func: DeployFunction = async function ({
   // The contract name list that is managed in AddressResolver
   // This list is as same as contracts/libraries/Contracts.sol
   const contractNames = [
+    'BeaconProxyController',
     'CollateralAggregator',
-    'CollateralVault',
     'CurrencyController',
     'LendingMarketController',
   ];
 
   // The contract address list that is managed in AddressResolver
   const contractAddresses = [
+    beaconProxyController.address,
     collateralAggregator.address,
-    collateralVault.address,
     currencyController.address,
     lendingMarketController.address,
   ];
 
   // The contract address list that inherited MixinAddressResolver and need to call `buildCache`
   const buildCachesAddresses = [
+    beaconProxyController.address,
     collateralAggregator.address,
-    collateralVault.address,
     lendingMarketController.address,
   ];
 
@@ -127,8 +127,8 @@ const func: DeployFunction = async function ({
     .then((tx) => tx.wait());
   console.log('Successfully built address caches');
 
-  // Set up for CollateralVault
-  await collateralVault
+  // Set up for CollateralAggregator
+  await collateralAggregator
     .registerCurrency(hexETHString, wETHToken.address)
     .then((tx) => tx.wait());
   console.log('Successfully registered the currency as supported collateral');
@@ -137,7 +137,6 @@ const func: DeployFunction = async function ({
 func.tags = ['Migration'];
 func.dependencies = [
   'CollateralAggregator',
-  'CollateralVault',
   'CurrencyController',
   'LendingMarketController',
   'WETH',
