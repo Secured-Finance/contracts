@@ -18,7 +18,7 @@ const deployContracts = async () => {
   const contracts = [
     'AddressResolver',
     'BeaconProxyController',
-    'CollateralAggregator',
+    'TokenVault',
     'CurrencyController',
     'WETH9Mock',
     'LendingMarketController',
@@ -27,7 +27,7 @@ const deployContracts = async () => {
   const [
     addressResolver,
     beaconProxyController,
-    collateralAggregator,
+    tokenVault,
     currencyController,
     wETHToken,
     lendingMarketController,
@@ -60,13 +60,13 @@ const deployContracts = async () => {
   // Set contract addresses to the Proxy contract
   const [
     beaconProxyControllerAddress,
-    collateralAggregatorAddress,
+    tokenVaultAddress,
     currencyControllerAddress,
     lendingMarketControllerAddress,
   ] = await Promise.all([
     proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
-    proxyController.setCollateralAggregatorImpl(
-      collateralAggregator.address,
+    proxyController.setTokenVaultImpl(
+      tokenVault.address,
       marginCallThresholdRate,
       autoLiquidationThresholdRate,
       liquidationPriceRate,
@@ -96,9 +96,9 @@ const deployContracts = async () => {
     'BeaconProxyController',
     beaconProxyControllerAddress,
   );
-  const collateralAggregatorProxy = await ethers.getContractAt(
-    'CollateralAggregator',
-    collateralAggregatorAddress,
+  const tokenVaultProxy = await ethers.getContractAt(
+    'TokenVault',
+    tokenVaultAddress,
   );
   const currencyControllerProxy = await ethers.getContractAt(
     'CurrencyController',
@@ -149,7 +149,7 @@ const deployContracts = async () => {
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets: [string, Contract][] = [
     ['BeaconProxyController', beaconProxyControllerProxy],
-    ['CollateralAggregator', collateralAggregatorProxy],
+    ['TokenVault', tokenVaultProxy],
     ['CurrencyController', currencyControllerProxy],
     ['LendingMarketController', lendingMarketControllerProxy],
   ];
@@ -161,7 +161,7 @@ const deployContracts = async () => {
 
   const buildCachesAddresses = [
     beaconProxyControllerProxy,
-    collateralAggregatorProxy,
+    tokenVaultProxy,
     lendingMarketControllerProxy,
   ]
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
@@ -205,7 +205,7 @@ const deployContracts = async () => {
     // contracts
     addressResolver: addressResolverProxy,
     beaconProxyController: beaconProxyControllerProxy,
-    collateralAggregator: collateralAggregatorProxy,
+    tokenVault: tokenVaultProxy,
     currencyController: currencyControllerProxy,
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,

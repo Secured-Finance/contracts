@@ -4,9 +4,9 @@ pragma solidity ^0.8.9;
 import {Contracts} from "../libraries/Contracts.sol";
 import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
 import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
-import {ICollateralAggregator} from "../interfaces/ICollateralAggregator.sol";
 import {ICurrencyController} from "../interfaces/ICurrencyController.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
+import {ITokenVault} from "../interfaces/ITokenVault.sol";
 
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
@@ -92,15 +92,15 @@ contract MixinAddressResolver {
         return IBeaconProxyController(getAddress(Contracts.BEACON_PROXY_CONTROLLER));
     }
 
-    function collateralAggregator() internal view returns (ICollateralAggregator) {
-        return ICollateralAggregator(getAddress(Contracts.COLLATERAL_AGGREGATOR));
-    }
-
     function currencyController() internal view returns (ICurrencyController) {
         return ICurrencyController(getAddress(Contracts.CURRENCY_CONTROLLER));
     }
 
     function lendingMarketController() internal view returns (ILendingMarketController) {
         return ILendingMarketController(getAddress(Contracts.LENDING_MARKET_CONTROLLER));
+    }
+
+    function tokenVault() internal view returns (ITokenVault) {
+        return ITokenVault(getAddress(Contracts.TOKEN_VAULT));
     }
 }

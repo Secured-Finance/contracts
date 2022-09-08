@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-interface ICollateralAggregator {
+interface ITokenVault {
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
 

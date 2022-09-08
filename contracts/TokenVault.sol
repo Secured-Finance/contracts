@@ -7,7 +7,7 @@ import {Contracts} from "./libraries/Contracts.sol";
 import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
 import {ERC20Handler} from "./libraries/ERC20Handler.sol";
 // interfaces
-import {ICollateralAggregator} from "./interfaces/ICollateralAggregator.sol";
+import {ITokenVault} from "./interfaces/ITokenVault.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types
@@ -16,25 +16,24 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
-import {CollateralAggregatorStorage as Storage} from "./storages/CollateralAggregatorStorage.sol";
+import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
 
 /**
- * @notice Implements the management of the collateral in each currency for users.
+ * @notice Implements the management of the token in each currency for users.
  *
- * This contract manages the following data related to the collateral.
- * - Deposited amount as the collateral
+ * This contract manages the following data related to tokens.
+ * - Deposited token amount as the collateral
  * - Unsettled collateral amount used by order
+ * - Escrowed token amount added by lending orders
  * - Parameters related to the collateral
  *   - Margin Call Threshold Rate
  *   - Auto Liquidation Threshold Rate
  *   - Liquidation Price Rate
  *   - Min Collateral Rate
  *
- * Currencies that can be used as collateral are registered in the following steps.
- * 1. Call the `supportCurrency` method in `CurrencyController.sol`.
- * 2. Call the `registerCurrency` method in this contract.
+ * To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
  */
-contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ownable, Proxyable {
+contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**

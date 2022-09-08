@@ -82,8 +82,8 @@ contract LendingMarketController is
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](3);
         contracts[0] = Contracts.BEACON_PROXY_CONTROLLER;
-        contracts[1] = Contracts.COLLATERAL_AGGREGATOR;
-        contracts[2] = Contracts.CURRENCY_CONTROLLER;
+        contracts[1] = Contracts.CURRENCY_CONTROLLER;
+        contracts[2] = Contracts.TOKEN_VAULT;
     }
 
     /**
@@ -323,18 +323,18 @@ contract LendingMarketController is
         (uint256 orderId, address maker, uint256 matchedAmount) = ILendingMarket(marketAddr)
             .createOrder(_side, msg.sender, _amount, _rate);
 
-        // Update the unsettled collateral in CollateralAggregator
+        // Update the unsettled collateral in TokenVault
         if (matchedAmount == 0) {
             if (_side == ProtocolTypes.Side.LEND) {
-                collateralAggregator().addEscrowedAmount(maker, _ccy, _amount);
+                tokenVault().addEscrowedAmount(maker, _ccy, _amount);
             } else {
-                collateralAggregator().useUnsettledCollateral(maker, _ccy, _amount);
+                tokenVault().useUnsettledCollateral(maker, _ccy, _amount);
             }
         } else {
             if (_side == ProtocolTypes.Side.LEND) {
-                collateralAggregator().releaseUnsettledCollateral(maker, _ccy, _amount);
+                tokenVault().releaseUnsettledCollateral(maker, _ccy, _amount);
             } else {
-                collateralAggregator().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
+                tokenVault().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
             }
 
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
@@ -390,9 +390,9 @@ contract LendingMarketController is
         );
 
         if (side == ProtocolTypes.Side.LEND) {
-            collateralAggregator().removeEscrowedAmount(msg.sender, msg.sender, _ccy, amount);
+            tokenVault().removeEscrowedAmount(msg.sender, msg.sender, _ccy, amount);
         } else {
-            collateralAggregator().releaseUnsettledCollateral(msg.sender, _ccy, amount);
+            tokenVault().releaseUnsettledCollateral(msg.sender, _ccy, amount);
         }
 
         return true;

@@ -63,9 +63,9 @@ const func: DeployFunction = async function ({
   };
 
   const beaconProxyController = await getProxy('BeaconProxyController');
-  const collateralAggregator = await getProxy('CollateralAggregator');
   const currencyController = await getProxy('CurrencyController');
   const lendingMarketController = await getProxy('LendingMarketController');
+  const tokenVault = await getProxy('TokenVault');
 
   // Get deployed contracts
   const addressResolver = await proxyController
@@ -76,7 +76,7 @@ const func: DeployFunction = async function ({
   // This list is as same as contracts/libraries/Contracts.sol
   const contractNames = [
     'BeaconProxyController',
-    'CollateralAggregator',
+    'TokenVault',
     'CurrencyController',
     'LendingMarketController',
   ];
@@ -84,7 +84,7 @@ const func: DeployFunction = async function ({
   // The contract address list that is managed in AddressResolver
   const contractAddresses = [
     beaconProxyController.address,
-    collateralAggregator.address,
+    tokenVault.address,
     currencyController.address,
     lendingMarketController.address,
   ];
@@ -92,7 +92,7 @@ const func: DeployFunction = async function ({
   // The contract address list that inherited MixinAddressResolver and need to call `buildCache`
   const buildCachesAddresses = [
     beaconProxyController.address,
-    collateralAggregator.address,
+    tokenVault.address,
     lendingMarketController.address,
   ];
 
@@ -127,8 +127,8 @@ const func: DeployFunction = async function ({
     .then((tx) => tx.wait());
   console.log('Successfully built address caches');
 
-  // Set up for CollateralAggregator
-  await collateralAggregator
+  // Set up for TokenVault
+  await tokenVault
     .registerCurrency(hexETHString, wETHToken.address)
     .then((tx) => tx.wait());
   console.log('Successfully registered the currency as supported collateral');
@@ -136,9 +136,9 @@ const func: DeployFunction = async function ({
 
 func.tags = ['Migration'];
 func.dependencies = [
-  'CollateralAggregator',
   'CurrencyController',
   'LendingMarketController',
+  'TokenVault',
   'WETH',
 ];
 

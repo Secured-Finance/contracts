@@ -3,10 +3,10 @@ pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-library CollateralAggregatorStorage {
+library TokenVaultStorage {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.collateralAggregator");
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.tokenVault");
 
     struct Storage {
         // Mapping from user to total unsettled collateral per currency

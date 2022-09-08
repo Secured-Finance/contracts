@@ -78,7 +78,7 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @notice  Sets the implementation contract of CollateralAggregator
+     * @notice  Sets the implementation contract of TokenVault
      * @param newImpl The address of implementation contract
      * @param marginCallThresholdRate The rate used as the margin call threshold
      * @param autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
@@ -86,7 +86,7 @@ contract ProxyController is IProxyController, Ownable {
      * @param minCollateralRate The rate used minima collateral
      * @param WETH9 The address of WETH
      */
-    function setCollateralAggregatorImpl(
+    function setTokenVaultImpl(
         address newImpl,
         uint256 marginCallThresholdRate,
         uint256 autoLiquidationThresholdRate,
@@ -104,7 +104,7 @@ contract ProxyController is IProxyController, Ownable {
             minCollateralRate,
             WETH9
         );
-        _updateImpl(Contracts.COLLATERAL_AGGREGATOR, newImpl, data);
+        _updateImpl(Contracts.TOKEN_VAULT, newImpl, data);
     }
 
     /**

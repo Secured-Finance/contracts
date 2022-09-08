@@ -9,7 +9,7 @@ import { Side } from '../utils/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const BeaconProxyController = artifacts.require('BeaconProxyController');
-const CollateralAggregator = artifacts.require('CollateralAggregator');
+const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
 const LendingMarket = artifacts.require('LendingMarket');
 const LendingMarketController = artifacts.require('LendingMarketController');
@@ -24,7 +24,7 @@ const BP = ethers.BigNumber.from('10000');
 
 describe('LendingMarketController', () => {
   let mockCurrencyController: MockContract;
-  let mockCollateralAggregator: MockContract;
+  let mockTokenVault: MockContract;
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
 
@@ -53,15 +53,12 @@ describe('LendingMarketController', () => {
       owner,
       CurrencyController.abi,
     );
-    mockCollateralAggregator = await deployMockContract(
-      owner,
-      CollateralAggregator.abi,
-    );
+    mockTokenVault = await deployMockContract(owner, TokenVault.abi);
     await mockCurrencyController.mock.isSupportedCcy.returns(true);
-    await mockCollateralAggregator.mock.useUnsettledCollateral.returns();
-    await mockCollateralAggregator.mock.releaseUnsettledCollateral.returns();
-    await mockCollateralAggregator.mock.addEscrowedAmount.returns();
-    await mockCollateralAggregator.mock.removeEscrowedAmount.returns();
+    await mockTokenVault.mock.useUnsettledCollateral.returns();
+    await mockTokenVault.mock.releaseUnsettledCollateral.returns();
+    await mockTokenVault.mock.addEscrowedAmount.returns();
+    await mockTokenVault.mock.removeEscrowedAmount.returns();
 
     // Deploy
     const addressResolver = await deployContract(owner, AddressResolver);
@@ -123,7 +120,7 @@ describe('LendingMarketController', () => {
     const migrationTargets: [string, Contract][] = [
       ['BeaconProxyController', beaconProxyControllerProxy],
       ['CurrencyController', mockCurrencyController],
-      ['CollateralAggregator', mockCollateralAggregator],
+      ['TokenVault', mockTokenVault],
       ['LendingMarketController', lendingMarketControllerProxy],
     ];
 
