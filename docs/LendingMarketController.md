@@ -100,6 +100,23 @@ Gets the lending market contract addresses for the selected currency.
 | ---- | ---- | ----------- |
 | [0] | address[] | Array with the lending market address |
 
+### getLendingMarket
+
+```solidity
+function getLendingMarket(bytes32 _ccy, uint256 _maturity) external view returns (address)
+```
+
+Gets the lending market contract address for the selected currency and maturity.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the market |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The lending market address |
+
 ### getBorrowRates
 
 ```solidity
