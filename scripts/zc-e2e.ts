@@ -6,10 +6,11 @@ import { hexETHString, hexFILString, toBytes32 } from '../utils/strings';
 
 describe('ZC e2e test', async () => {
   const targetCurrency = hexFILString;
-  const BP = 0.01;
+  const BP = 100;
   const depositAmountInETH = '10000000000000000000';
   const orderAmountInFIL = '50000000000000000000';
-  const orderRate = String(3 / BP);
+  const orderRate = String(3 * BP);
+  const SECONDS_IN_YEAR = 31557600;
 
   // Accounts
   let ownerSigner: SignerWithAddress | Wallet;
@@ -157,6 +158,13 @@ describe('ZC e2e test', async () => {
       this.skip();
     }
 
+    const [futureValueAliceBefore] = await lendingMarket.getFutureValue(
+      aliceSigner.address,
+    );
+    const [futureValueBobBefore] = await lendingMarket.getFutureValue(
+      bobSigner.address,
+    );
+
     // Make lend orders
     await lendingMarketController
       .connect(aliceSigner)
@@ -170,7 +178,7 @@ describe('ZC e2e test', async () => {
       .then((tx) => tx.wait());
 
     // Make borrow orders
-    await lendingMarketController
+    const receipt = await lendingMarketController
       .connect(bobSigner)
       .createOrder(
         targetCurrency,
@@ -181,6 +189,18 @@ describe('ZC e2e test', async () => {
       )
       .then((tx) => tx.wait());
 
+    // Calculate the future value from order rate & amount
+    // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
+    const { timestamp } = await ethers.provider.getBlock(receipt.blockHash);
+    const dt = maturities[0] - timestamp;
+    const currentRate = ethers.BigNumber.from(orderRate)
+      .mul(dt)
+      .div(SECONDS_IN_YEAR);
+    const calculatedFV = ethers.BigNumber.from(orderAmountInFIL)
+      .mul(currentRate.add(ethers.BigNumber.from(100).mul(BP)))
+      .div(BP)
+      .div(100);
+
     // Check collateral of Alice
     const independentCollateralAlice =
       await collateralVault.getIndependentCollateral(
@@ -189,27 +209,30 @@ describe('ZC e2e test', async () => {
       );
     const unusedCollateralAlice =
       await collateralAggregator.getUnusedCollateral(aliceSigner.address);
+    const [futureValueAliceAfter] = await lendingMarket.getFutureValue(
+      aliceSigner.address,
+    );
 
     expect(independentCollateralAlice.toString()).to.equal(
       unusedCollateralAlice.toString(),
     );
+    expect(
+      futureValueAliceAfter.sub(futureValueAliceBefore).toString(),
+    ).to.equal(calculatedFV.toString());
 
     // Check collateral of Bob
-    const independentCollateralBob =
-      await collateralVault.getIndependentCollateral(
+    const unsettledCollateralBob =
+      await collateralAggregator.getUnsettledCollateral(
         bobSigner.address,
-        hexETHString,
+        targetCurrency,
       );
-    const unusedCollateralBob = await collateralAggregator.getUnusedCollateral(
+    const [futureValueBobAfter] = await lendingMarket.getFutureValue(
       bobSigner.address,
     );
-    const totalPresentValueBob =
-      await lendingMarketController.getTotalPresentValueInETH(
-        bobSigner.address,
-      );
 
-    expect(independentCollateralBob.toString()).to.equal(
-      unusedCollateralBob.add(totalPresentValueBob.abs()).toString(),
+    expect(unsettledCollateralBob.toString()).to.equal('0');
+    expect(futureValueBobAfter.sub(futureValueBobBefore).toString()).to.equal(
+      `-${calculatedFV.toString()}`,
     );
   });
 });
