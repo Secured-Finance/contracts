@@ -2,13 +2,14 @@
 pragma solidity ^0.8.9;
 
 interface ICollateralAggregator {
-    event Register(address indexed addr);
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
 
-    function isCovered(address _user) external view returns (bool);
+    event Deposit(address user, bytes32 ccy, uint256 amount);
+    event Withdraw(address from, bytes32 ccy, uint256 amount);
+    event CurrencyRegistered(bytes32 ccy, address tokenAddress);
 
-    function isRegisteredUser(address addr) external view returns (bool);
+    function isCovered(address _user) external view returns (bool);
 
     function getWithdrawableCollateral(address _user) external view returns (uint256 maxWithdraw);
 
@@ -20,6 +21,14 @@ interface ICollateralAggregator {
 
     function getTotalUnsettledExposure(address _user) external view returns (uint256);
 
+    function getCollateralAmount(address _user, bytes32 _ccy) external view returns (uint256);
+
+    function getCollateralAmountInETH(address _user, bytes32 _ccy) external view returns (uint256);
+
+    function getTotalCollateralAmountInETH(address _party) external view returns (uint256);
+
+    function getUsedCurrencies(address user) external view returns (bytes32[] memory);
+
     function getCollateralParameters()
         external
         view
@@ -29,8 +38,6 @@ interface ICollateralAggregator {
             uint256,
             uint256
         );
-
-    function register() external;
 
     function useUnsettledCollateral(
         address user,
@@ -49,5 +56,22 @@ interface ICollateralAggregator {
         uint256 autoLiquidationThresholdRate,
         uint256 liquidationPriceRate,
         uint256 minCollateralRate
+    ) external;
+
+    function deposit(bytes32 _ccy, uint256 _amount) external payable;
+
+    function withdraw(bytes32 _ccy, uint256 _amount) external;
+
+    function addEscrowedAmount(
+        address _payer,
+        bytes32 _ccy,
+        uint256 _amount
+    ) external;
+
+    function removeEscrowedAmount(
+        address _payer,
+        address _receiver,
+        bytes32 _ccy,
+        uint256 _amount
     ) external;
 }

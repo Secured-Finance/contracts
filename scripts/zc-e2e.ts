@@ -124,7 +124,7 @@ describe('ZC e2e test', async () => {
     }
 
     // Check collateral of Alice
-    let independentCollateral = await collateralVault.getIndependentCollateral(
+    let collateralAmount = await collateralVault.getCollateralAmount(
       aliceSigner.address,
       hexETHString,
     );
@@ -134,7 +134,7 @@ describe('ZC e2e test', async () => {
       aliceSigner.address,
     );
 
-    expect(independentCollateral.toString()).to.equal(depositAmountInETH);
+    expect(collateralAmount.toString()).to.equal(depositAmountInETH);
     expect(totalPresentValue.toString()).to.equal('0');
   });
 
@@ -182,24 +182,22 @@ describe('ZC e2e test', async () => {
       .then((tx) => tx.wait());
 
     // Check collateral of Alice
-    const independentCollateralAlice =
-      await collateralVault.getIndependentCollateral(
-        aliceSigner.address,
-        hexETHString,
-      );
+    const collateralAmountAlice = await collateralVault.getCollateralAmount(
+      aliceSigner.address,
+      hexETHString,
+    );
     const unusedCollateralAlice =
       await collateralAggregator.getUnusedCollateral(aliceSigner.address);
 
-    expect(independentCollateralAlice.toString()).to.equal(
+    expect(collateralAmountAlice.toString()).to.equal(
       unusedCollateralAlice.toString(),
     );
 
     // Check collateral of Bob
-    const independentCollateralBob =
-      await collateralVault.getIndependentCollateral(
-        bobSigner.address,
-        hexETHString,
-      );
+    const collateralAmountBob = await collateralVault.getCollateralAmount(
+      bobSigner.address,
+      hexETHString,
+    );
     const unusedCollateralBob = await collateralAggregator.getUnusedCollateral(
       bobSigner.address,
     );
@@ -208,7 +206,7 @@ describe('ZC e2e test', async () => {
         bobSigner.address,
       );
 
-    expect(independentCollateralBob.toString()).to.equal(
+    expect(collateralAmountBob.toString()).to.equal(
       unusedCollateralBob.add(totalPresentValueBob.abs()).toString(),
     );
   });

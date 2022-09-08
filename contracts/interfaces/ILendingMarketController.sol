@@ -20,6 +20,7 @@ interface ILendingMarketController {
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event OrderFilled(
+        uint256 orderId,
         address lender,
         address borrower,
         bytes32 ccy,
@@ -27,6 +28,7 @@ interface ILendingMarketController {
         uint256 amount,
         uint256 rate
     );
+    event OrderCanceled(address maker, bytes32 ccy, uint256 maturity, uint256 amount, uint256 rate);
 
     function getBasisDate(bytes32 _ccy) external view returns (uint256);
 
@@ -49,8 +51,6 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
-    function getBeaconProxyAddress(bytes32 beaconName) external view returns (address);
-
     function isInitializedLendingMarket(bytes32 _ccy) external view returns (bool);
 
     function initializeLendingMarket(
@@ -58,8 +58,6 @@ interface ILendingMarketController {
         uint256 _basisDate,
         uint256 _compoundFactor
     ) external;
-
-    function setLendingMarketImpl(address newImpl) external;
 
     function createLendingMarket(bytes32 _ccy) external returns (address market);
 

@@ -13,8 +13,14 @@ library CollateralAggregatorStorage {
         mapping(address => mapping(bytes32 => uint256)) unsettledCollateral;
         // Mapping from user to unsettled exposure
         mapping(address => EnumerableSet.Bytes32Set) exposedUnsettledCurrencies;
-        // Mapping for all registered users
-        mapping(address => bool) isRegistered;
+        // Mapping from currency name to token address
+        mapping(bytes32 => address) tokenAddresses;
+        // Mapping for used currency vaults per user.
+        mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
+        // Mapping for all deposits of currency per users collateral
+        mapping(address => mapping(bytes32 => uint256)) collateralAmounts;
+        // Mapping from user to total escrowed amount per currency
+        mapping(address => mapping(bytes32 => uint256)) escrowedAmount;
     }
 
     function slot() internal pure returns (Storage storage r) {

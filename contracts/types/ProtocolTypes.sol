@@ -9,8 +9,6 @@ library ProtocolTypes {
     // Constant values
     uint256 public constant BP = 10000; // basis point
     uint256 public constant PCT = 10000; // percentage point in basis
-    uint256 public constant PENALTYLEVEL = 1000; // 10% settlement failure penalty
-    uint256 public constant MKTMAKELEVEL = 2000; // 20% for market making
 
     uint256 internal constant DAYS_IN_YEAR = 365;
     uint256 internal constant SECONDS_IN_YEAR = 31557600;

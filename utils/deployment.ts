@@ -20,17 +20,11 @@ const minCollateralRate = 2500;
 const COMPOUND_FACTOR = '1010000000000000000';
 
 const deployContracts = async () => {
-  // Deploy libraries
-  const quickSortLibrary = await ethers
-    .getContractFactory('QuickSort')
-    .then((factory) => factory.deploy());
-  await quickSortLibrary.deployed();
-
   // Deploy contracts
   const contracts = [
     'AddressResolver',
+    'BeaconProxyController',
     'CollateralAggregator',
-    'CollateralVault',
     'CurrencyController',
     'WETH9Mock',
     'LendingMarketController',
@@ -38,8 +32,8 @@ const deployContracts = async () => {
 
   const [
     addressResolver,
+    beaconProxyController,
     collateralAggregator,
-    collateralVault,
     currencyController,
     wETHToken,
     lendingMarketController,
@@ -48,6 +42,12 @@ const deployContracts = async () => {
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
     ),
   );
+
+  const wFILToken = await ethers
+    .getContractFactory('ERC20Mock')
+    .then((factory) =>
+      factory.deploy('Wrapped Filecoin', 'WFIL', '100000000000000000000000'),
+    );
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')
@@ -65,20 +65,18 @@ const deployContracts = async () => {
 
   // Set contract addresses to the Proxy contract
   const [
+    beaconProxyControllerAddress,
     collateralAggregatorAddress,
-    collateralVaultAddress,
     currencyControllerAddress,
     lendingMarketControllerAddress,
   ] = await Promise.all([
+    proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
     proxyController.setCollateralAggregatorImpl(
       collateralAggregator.address,
       marginCallThresholdRate,
       autoLiquidationThresholdRate,
       liquidationPriceRate,
       minCollateralRate,
-    ),
-    proxyController.setCollateralVaultImpl(
-      collateralVault.address,
       wETHToken.address,
     ),
     proxyController.setCurrencyControllerImpl(currencyController.address),
@@ -100,13 +98,13 @@ const deployContracts = async () => {
     'AddressResolver',
     addressResolverProxyAddress,
   );
+  const beaconProxyControllerProxy = await ethers.getContractAt(
+    'BeaconProxyController',
+    beaconProxyControllerAddress,
+  );
   const collateralAggregatorProxy = await ethers.getContractAt(
     'CollateralAggregator',
     collateralAggregatorAddress,
-  );
-  const collateralVaultProxy = await ethers.getContractAt(
-    'CollateralVault',
-    collateralVaultAddress,
   );
   const currencyControllerProxy = await ethers.getContractAt(
     'CurrencyController',
@@ -162,8 +160,8 @@ const deployContracts = async () => {
 
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets: [string, Contract][] = [
+    ['BeaconProxyController', beaconProxyControllerProxy],
     ['CollateralAggregator', collateralAggregatorProxy],
-    ['CollateralVault', collateralVaultProxy],
     ['CurrencyController', currencyControllerProxy],
     ['LendingMarketController', lendingMarketControllerProxy],
   ];
@@ -174,8 +172,8 @@ const deployContracts = async () => {
   };
 
   const buildCachesAddresses = [
+    beaconProxyControllerProxy,
     collateralAggregatorProxy,
-    collateralVaultProxy,
     lendingMarketControllerProxy,
   ]
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
@@ -193,9 +191,7 @@ const deployContracts = async () => {
     .getContractFactory('LendingMarket')
     .then((factory) => factory.deploy());
 
-  await lendingMarketControllerProxy.setLendingMarketImpl(
-    lendingMarket.address,
-  );
+  await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
 
   const { timestamp } = await ethers.provider.getBlock('latest');
   const basisDate = moment(timestamp * 1000).unix();
@@ -218,16 +214,15 @@ const deployContracts = async () => {
   ]);
 
   return {
-    // libraries
-    quickSortLibrary,
     // contracts
     addressResolver: addressResolverProxy,
+    beaconProxyController: beaconProxyControllerProxy,
     collateralAggregator: collateralAggregatorProxy,
-    collateralVault: collateralVaultProxy,
     currencyController: currencyControllerProxy,
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
     wETHToken,
+    wFILToken,
     // mocks
     btcToETHPriceFeed,
     ethToUSDPriceFeed,

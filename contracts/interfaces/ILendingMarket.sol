@@ -81,7 +81,9 @@ interface ILendingMarket {
 
     function openMarket(uint256 maturity) external returns (uint256);
 
-    function cancelOrder(address account, uint256 orderId) external returns (uint256);
+    function cancelOrder(address account, uint256 orderId)
+        external
+        returns (ProtocolTypes.Side, uint256);
 
     function matchOrders(
         ProtocolTypes.Side side,
@@ -94,7 +96,13 @@ interface ILendingMarket {
         address acount,
         uint256 amount,
         uint256 rate
-    ) external returns (address maker, uint256 matchedAmount);
+    )
+        external
+        returns (
+            uint256 orderId,
+            address maker,
+            uint256 matchedAmount
+        );
 
     function pauseMarket() external;
 

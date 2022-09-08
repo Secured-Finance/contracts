@@ -57,7 +57,7 @@
     "ganache": "^7.3.2",
     "ganache-time-traveler": "^1.0.16",
     "hardhat": "^2.7.0",
-    "hardhat-contract-sizer": "^2.1.1",
+    "hardhat-contract-sizer": "^2.6.1",
     "hardhat-deploy": "^0.11.2",
     "hardhat-gas-reporter": "^1.0.4",
     "husky": "^7.0.4",

@@ -1,66 +1,63 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../interfaces/IWETH9.sol";
+import {IWETH9} from "../interfaces/IWETH9.sol";
+import {ERC20Storage as Storage} from "../storages/ERC20Storage.sol";
 
-abstract contract SafeTransfer {
-    address public WETH9;
-
-    function _registerToken(address _WETH9) internal {
-        require(WETH9 == address(0), "WETH9 registered already");
-        WETH9 = _WETH9;
+library ERC20Handler {
+    function initialize(address _weth) internal {
+        require(Storage.slot().weth == address(0), "Already initialized");
+        Storage.slot().weth = _weth;
     }
 
-    receive() external payable {
-        require(msg.sender == WETH9, "Not WETH9");
+    function weth() internal view returns (address) {
+        return Storage.slot().weth;
     }
 
-    function _depositAssets(
+    function depositAssets(
         address _token,
         address _payer,
         address _receiver,
         uint256 _amount
     ) internal {
-        if (address(_token) == WETH9 && address(this).balance >= _amount) {
-            _wrapWETH(_receiver, _amount);
-        } else if (_receiver == address(this)) {
-            _safeTransferFrom(_token, _payer, _amount);
+        if (address(_token) == Storage.slot().weth && address(this).balance >= _amount) {
+            wrapWETH(_receiver, _amount);
         } else {
-            _safeTransferFrom(_token, _payer, _receiver, _amount);
+            safeTransferFrom(_token, _payer, _receiver, _amount);
         }
     }
 
-    function _withdrawAssets(
+    function withdrawAssets(
         address _token,
         address _receiver,
         uint256 _amount
     ) internal {
-        if (address(_token) == WETH9) {
-            _unwrapWETH(_receiver, _amount);
+        if (address(_token) == Storage.slot().weth) {
+            unwrapWETH(_receiver, _amount);
         } else {
-            _safeTransfer(_token, _receiver, _amount);
+            safeTransfer(_token, _receiver, _amount);
         }
     }
 
-    function _wrapWETH(address _receiver, uint256 _amount) internal {
+    function wrapWETH(address _receiver, uint256 _amount) internal {
         _amount = msg.value;
 
-        IWETH9(WETH9).deposit{value: _amount}();
-        IWETH9(WETH9).transfer(_receiver, _amount);
+        IWETH9(Storage.slot().weth).deposit{value: _amount}();
+        IWETH9(Storage.slot().weth).transfer(_receiver, _amount);
     }
 
-    function _unwrapWETH(address _receiver, uint256 _amount) internal {
-        uint256 balanceWETH9 = IWETH9(WETH9).balanceOf(address(this));
+    function unwrapWETH(address _receiver, uint256 _amount) internal {
+        uint256 balanceWETH9 = IWETH9(Storage.slot().weth).balanceOf(address(this));
         require(balanceWETH9 >= _amount, "Insufficient WETH9");
 
         if (balanceWETH9 > 0) {
-            IWETH9(WETH9).withdraw(_amount);
-            _safeTransferETH(_receiver, _amount);
+            IWETH9(Storage.slot().weth).withdraw(_amount);
+            safeTransferETH(_receiver, _amount);
         }
     }
 
     /// @dev Transfer helper from UniswapV2 Router
-    function _safeApprove(
+    function safeApprove(
         address token,
         address to,
         uint256 value
@@ -80,11 +77,11 @@ abstract contract SafeTransfer {
      * Im trying to make it a habit to put external calls last (reentrancy)
      * You can put this in an internal function if you like.
      */
-    function _safeTransfer(
+    function safeTransfer(
         address token,
         address to,
         uint256 amount
-    ) internal virtual {
+    ) internal {
         // solium-disable-next-line security/no-low-level-calls
         (bool success, bytes memory data) = token.call(
             // 0xa9059cbb = bytes4(keccak256("transfer(address,uint256)"))
@@ -96,23 +93,7 @@ abstract contract SafeTransfer {
         ); // ERC20 Transfer failed
     }
 
-    function _safeTransferFrom(
-        address token,
-        address from,
-        uint256 amount
-    ) internal virtual {
-        // solium-disable-next-line security/no-low-level-calls
-        (bool success, bytes memory data) = token.call(
-            // 0x23b872dd = bytes4(keccak256("transferFrom(address,address,uint256)"))
-            abi.encodeWithSelector(0x23b872dd, from, address(this), amount)
-        );
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            "TransferHelper: TRANSFER_FROM_FAILED"
-        ); // ERC20 TransferFrom failed
-    }
-
-    function _safeTransferFrom(
+    function safeTransferFrom(
         address token,
         address from,
         address to,
@@ -128,7 +109,7 @@ abstract contract SafeTransfer {
         );
     }
 
-    function _safeTransferETH(address to, uint256 value) internal {
+    function safeTransferETH(address to, uint256 value) internal {
         (bool success, ) = to.call{value: value}(new bytes(0));
         require(success, "TransferHelper: ETH_TRANSFER_FAILED");
     }

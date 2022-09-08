@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../libraries/Contracts.sol";
-import "../interfaces/IAddressResolver.sol";
-import "../interfaces/ICollateralAggregator.sol";
-import "../interfaces/ICollateralVault.sol";
-import "../interfaces/ICurrencyController.sol";
-import "../interfaces/ILendingMarketController.sol";
+import {Contracts} from "../libraries/Contracts.sol";
+import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
+import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
+import {ICollateralAggregator} from "../interfaces/ICollateralAggregator.sol";
+import {ICurrencyController} from "../interfaces/ICurrencyController.sol";
+import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
 
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
@@ -88,12 +88,12 @@ contract MixinAddressResolver {
         return false;
     }
 
-    function collateralAggregator() internal view returns (ICollateralAggregator) {
-        return ICollateralAggregator(getAddress(Contracts.COLLATERAL_AGGREGATOR));
+    function beaconProxyController() internal view returns (IBeaconProxyController) {
+        return IBeaconProxyController(getAddress(Contracts.BEACON_PROXY_CONTROLLER));
     }
 
-    function collateralVault() internal view returns (ICollateralVault) {
-        return ICollateralVault(getAddress(Contracts.COLLATERAL_VAULT));
+    function collateralAggregator() internal view returns (ICollateralAggregator) {
+        return ICollateralAggregator(getAddress(Contracts.COLLATERAL_AGGREGATOR));
     }
 
     function currencyController() internal view returns (ICurrencyController) {
