@@ -342,52 +342,63 @@ describe('LendingMarketController', () => {
         targetCurrency,
       );
 
-      await expect(
-        lendingMarketControllerProxy
-          .connect(alice)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '100000000000000000',
-            '800',
-          ),
-      ).to.emit(lendingMarket1, 'MakeOrder');
-      await expect(
-        lendingMarketControllerProxy
-          .connect(bob)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '50000000000000000',
-            '880',
-          ),
-      ).to.emit(lendingMarket1, 'MakeOrder');
-      await expect(
-        lendingMarketControllerProxy
-          .connect(bob)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '100000000000000000',
-            '720',
-          ),
-      ).to.emit(lendingMarket1, 'MakeOrder');
-      expect(
-        await lendingMarketControllerProxy
-          .connect(carol)
-          .matchOrders(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '100000000000000000',
-            '800',
-          ),
-      ).to.equal(true);
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '800',
+        )
+        .then(async (tx) => {
+          await expect(tx).to.emit(lendingMarket1, 'MakeOrder');
+          await expect(tx)
+            .to.emit(lendingMarketControllerProxy, 'OrderPlaced')
+            .withArgs(
+              1,
+              alice.address,
+              targetCurrency,
+              Side.LEND,
+              maturities[0],
+              '100000000000000000',
+              '800',
+            );
+        });
 
-      const tx = lendingMarketControllerProxy
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '880',
+        )
+        .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '720',
+        )
+        .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .matchOrders(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '800',
+        )
+        .then((tx) => expect(tx).to.equal(true));
+
+      await lendingMarketControllerProxy
         .connect(carol)
         .createOrder(
           targetCurrency,
@@ -395,19 +406,22 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '100000000000000000',
           '800',
-        );
-      await expect(tx).to.emit(lendingMarket1, 'TakeOrder');
-      await expect(tx)
-        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
-        .withArgs(
-          1,
-          alice.address,
-          carol.address,
-          targetCurrency,
-          maturities[0],
-          '100000000000000000',
-          '800',
-        );
+        )
+        .then(async (tx) => {
+          await expect(tx).to.emit(lendingMarket1, 'TakeOrder');
+          await expect(tx)
+            .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+            .withArgs(
+              1,
+              alice.address,
+              carol.address,
+              targetCurrency,
+              Side.BORROW,
+              maturities[0],
+              '100000000000000000',
+              '800',
+            );
+        });
 
       const maturity = await lendingMarket1.getMaturity();
       expect(maturity.toString()).to.equal(

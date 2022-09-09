@@ -154,6 +154,78 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets the amount deposited in the user's collateral.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     * @return The deposited amount
+     */
+    function getCollateralAmount(address _user, bytes32 _ccy)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return Storage.slot().collateralAmounts[_user][_ccy];
+    }
+
+    /**
+     * @notice Gets the amount deposited in the user's collateral by converting it to ETH.
+     * @param _user User's address
+     * @param _ccy Specified currency
+     * @return The deposited amount in ETH
+     */
+    function getCollateralAmountInETH(address _user, bytes32 _ccy)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        uint256 amount = getCollateralAmount(_user, _ccy);
+        return currencyController().convertToETH(_ccy, amount);
+    }
+
+    /**
+     * @notice Gets the total amount deposited in the user's collateral in all currencies.
+     * by converting it to ETH.
+     * @param _user Address of collateral user
+     * @return The total deposited amount in ETH
+     */
+    function getTotalCollateralAmountInETH(address _user) public view override returns (uint256) {
+        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
+        uint256 collateralAmount;
+        uint256 totalCollateral;
+
+        uint256 len = currencies.length();
+
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 ccy = currencies.at(i);
+            collateralAmount = getCollateralAmountInETH(_user, ccy);
+            totalCollateral = totalCollateral + collateralAmount;
+        }
+
+        return totalCollateral;
+    }
+
+    /**
+     * @notice Gets the currencies that the user used as collateral.
+     * @param _user User's address
+     * @return The currency names in bytes32
+     */
+    function getUsedCurrencies(address _user) public view override returns (bytes32[] memory) {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+
+        uint256 numCurrencies = currencySet.length();
+        bytes32[] memory currencies = new bytes32[](numCurrencies);
+
+        for (uint256 i = 0; i < numCurrencies; i++) {
+            bytes32 currency = currencySet.at(i);
+            currencies[i] = currency;
+        }
+
+        return currencies;
+    }
+
+    /**
      * @notice Gets parameters related to collateral.
      * @return marginCallThresholdRate The rate used as the margin call threshold
      * @return autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
@@ -272,6 +344,12 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         emit Withdraw(msg.sender, _ccy, withdrawAmt);
     }
 
+    /**
+     * @notice Add funds to escrow.
+     * @param _payer Address of user making payment
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to be add into escrow
+     */
     function addEscrowedAmount(
         address _payer,
         bytes32 _ccy,
@@ -287,9 +365,16 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         );
         Storage.slot().escrowedAmount[_payer][_ccy] += _amount;
 
-        // emit event
+        emit EscrowedAmountAdded(_payer, _ccy, _amount);
     }
 
+    /**
+     * @notice Remove funds from escrow.
+     * @param _payer Address of user making payment
+     * @param _receiver Address of user receiving payment
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to be removed from escrow
+     */
     function removeEscrowedAmount(
         address _payer,
         address _receiver,
@@ -305,79 +390,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         Storage.slot().escrowedAmount[_payer][_ccy] -= _amount;
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _receiver, _amount);
 
-        // emit event
-    }
-
-    /**
-     * @notice Gets the amount deposited in the user's collateral.
-     * @param _user User's address
-     * @param _ccy Currency name in bytes32
-     * @return The deposited amount
-     */
-    function getCollateralAmount(address _user, bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        return Storage.slot().collateralAmounts[_user][_ccy];
-    }
-
-    /**
-     * @notice Gets the amount deposited in the user's collateral by converting it to ETH.
-     * @param _user User's address
-     * @param _ccy Specified currency
-     * @return The deposited amount in ETH
-     */
-    function getCollateralAmountInETH(address _user, bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        uint256 amount = getCollateralAmount(_user, _ccy);
-        return currencyController().convertToETH(_ccy, amount);
-    }
-
-    /**
-     * @notice Gets the total amount deposited in the user's collateral in all currencies.
-     * by converting it to ETH.
-     * @param _user Address of collateral user
-     * @return The total deposited amount in ETH
-     */
-    function getTotalCollateralAmountInETH(address _user) public view override returns (uint256) {
-        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
-        uint256 collateralAmount;
-        uint256 totalCollateral;
-
-        uint256 len = currencies.length();
-
-        for (uint256 i = 0; i < len; i++) {
-            bytes32 ccy = currencies.at(i);
-            collateralAmount = getCollateralAmountInETH(_user, ccy);
-            totalCollateral = totalCollateral + collateralAmount;
-        }
-
-        return totalCollateral;
-    }
-
-    /**
-     * @notice Gets the currencies that the user used as collateral.
-     * @param _user User's address
-     * @return The currency names in bytes32
-     */
-    function getUsedCurrencies(address _user) public view override returns (bytes32[] memory) {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
-
-        uint256 numCurrencies = currencySet.length();
-        bytes32[] memory currencies = new bytes32[](numCurrencies);
-
-        for (uint256 i = 0; i < numCurrencies; i++) {
-            bytes32 currency = currencySet.at(i);
-            currencies[i] = currency;
-        }
-
-        return currencies;
+        emit EscrowedAmountRemoved(_payer, _receiver, _ccy, _amount);
     }
 
     /**

@@ -338,7 +338,11 @@ contract LendingMarket is
         override
         onlyMaker(_user, _orderId)
         whenNotPaused
-        returns (ProtocolTypes.Side, uint256)
+        returns (
+            ProtocolTypes.Side,
+            uint256,
+            uint256
+        )
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
@@ -364,7 +368,7 @@ contract LendingMarket is
             marketOrder.rate
         );
 
-        return (marketOrder.side, marketOrder.amount);
+        return (marketOrder.side, marketOrder.amount, marketOrder.rate);
     }
 
     /**

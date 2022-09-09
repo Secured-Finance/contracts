@@ -30,6 +30,10 @@ describe('TokenVault', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
 
+  let targetCurrency: string;
+  let previousCurrency: string;
+  let currencyIdx = 0;
+
   const marginCallThresholdRate = 15000;
   const autoLiquidationThresholdRate = 12500;
   const liquidationPriceRate = 12000;
@@ -120,6 +124,12 @@ describe('TokenVault', () => {
     await migrationAddressResolver.buildCaches([tokenVaultProxy.address]);
   });
 
+  beforeEach(async () => {
+    previousCurrency = targetCurrency;
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    currencyIdx++;
+  });
+
   describe('Initialize', async () => {
     it('Update CollateralParameters', async () => {
       const setCollateralParameters = async (...params) => {
@@ -184,20 +194,10 @@ describe('TokenVault', () => {
   });
 
   describe('Deposit & Withdraw', async () => {
-    let targetCurrency;
-    let previousCurrency;
-    let currencyIdx = 0;
-
     before(async () => {
       await mockCurrencyController.mock.isSupportedCcy.returns(true);
       await mockERC20.mock.transferFrom.returns(true);
       await mockERC20.mock.transfer.returns(true);
-    });
-
-    beforeEach(async () => {
-      previousCurrency = targetCurrency;
-      targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-      currencyIdx++;
     });
 
     it('Register a currency', async () => {
@@ -341,6 +341,67 @@ describe('TokenVault', () => {
           .connect(alice)
           .releaseUnsettledCollateral(carol.address, targetCurrency, '1'),
       ).to.be.revertedWith('Only Accepted Contracts');
+    });
+  });
+
+  describe('Escrow', async () => {
+    it('Deposit funds to the escrow', async () => {
+      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
+
+      await expect(
+        tokenVaultCaller.addEscrowedAmount(
+          owner.address,
+          targetCurrency,
+          '10000',
+        ),
+      ).to.emit(tokenVaultProxy, 'EscrowedAmountAdded');
+    });
+
+    it('Withdraw funds From the escrow', async () => {
+      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
+
+      await tokenVaultCaller.addEscrowedAmount(
+        owner.address,
+        targetCurrency,
+        '10000',
+      );
+
+      await expect(
+        tokenVaultCaller.removeEscrowedAmount(
+          owner.address,
+          owner.address,
+          targetCurrency,
+          '10000',
+        ),
+      ).to.emit(tokenVaultProxy, 'EscrowedAmountRemoved');
+    });
+
+    it('Fail to call addEscrowedAmount due to invalid amount', async () => {
+      await expect(
+        tokenVaultCaller.addEscrowedAmount(owner.address, targetCurrency, '0'),
+      ).to.be.revertedWith('Invalid amount');
+    });
+
+    it('Fail to call removeEscrowedAmount due to invalid amount', async () => {
+      await expect(
+        tokenVaultCaller.removeEscrowedAmount(
+          owner.address,
+          owner.address,
+          targetCurrency,
+          '0',
+        ),
+      ).to.be.revertedWith('Invalid amount');
+    });
+
+    it('Fail to call removeEscrowedAmount due to not enough amount', async () => {
+      await expect(
+        tokenVaultCaller.removeEscrowedAmount(
+          owner.address,
+          owner.address,
+          targetCurrency,
+          '10000',
+        ),
+      ).to.be.revertedWith('Not enough escrowed amount');
     });
   });
 });

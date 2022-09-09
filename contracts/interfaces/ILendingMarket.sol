@@ -83,7 +83,11 @@ interface ILendingMarket {
 
     function cancelOrder(address account, uint256 orderId)
         external
-        returns (ProtocolTypes.Side, uint256);
+        returns (
+            ProtocolTypes.Side,
+            uint256,
+            uint256
+        );
 
     function matchOrders(
         ProtocolTypes.Side side,

@@ -5,6 +5,14 @@ interface ITokenVault {
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
 
+    event EscrowedAmountAdded(address indexed payer, bytes32 ccy, uint256 amount);
+    event EscrowedAmountRemoved(
+        address indexed payer,
+        address indexed receiver,
+        bytes32 ccy,
+        uint256 amount
+    );
+
     event Deposit(address user, bytes32 ccy, uint256 amount);
     event Withdraw(address from, bytes32 ccy, uint256 amount);
     event CurrencyRegistered(bytes32 ccy, address tokenAddress);
