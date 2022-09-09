@@ -20,7 +20,7 @@ library ERC20Handler {
         address _receiver,
         uint256 _amount
     ) internal {
-        if (address(_token) == Storage.slot().weth && address(this).balance >= _amount) {
+        if (address(_token) == Storage.slot().weth) {
             wrapWETH(_receiver, _amount);
         } else {
             safeTransferFrom(_token, _payer, _receiver, _amount);
@@ -40,7 +40,7 @@ library ERC20Handler {
     }
 
     function wrapWETH(address _receiver, uint256 _amount) internal {
-        _amount = msg.value;
+        require(address(this).balance >= _amount, "Insufficient ETH");
 
         IWETH9(Storage.slot().weth).deposit{value: _amount}();
         IWETH9(Storage.slot().weth).transfer(_receiver, _amount);
@@ -48,7 +48,7 @@ library ERC20Handler {
 
     function unwrapWETH(address _receiver, uint256 _amount) internal {
         uint256 balanceWETH9 = IWETH9(Storage.slot().weth).balanceOf(address(this));
-        require(balanceWETH9 >= _amount, "Insufficient WETH9");
+        require(balanceWETH9 >= _amount, "Insufficient WETH");
 
         if (balanceWETH9 > 0) {
             IWETH9(Storage.slot().weth).withdraw(_amount);

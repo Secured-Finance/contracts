@@ -314,50 +314,25 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _rate
-    ) external nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        _convertFutureValueToGenesisValue(
-            _ccy,
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity],
-            msg.sender
-        );
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        return _createOrder(_ccy, _maturity, _side, _amount, _rate);
+    }
 
-        // Create a order
-        (uint256 orderId, address maker, uint256 matchedAmount) = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).createOrder(_side, msg.sender, _amount, _rate);
-
-        // Update the unsettled collateral in TokenVault
-        if (matchedAmount == 0) {
-            if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().addEscrowedAmount(maker, _ccy, _amount);
-            } else {
-                tokenVault().useUnsettledCollateral(maker, _ccy, _amount);
-            }
-
-            emit OrderPlaced(orderId, maker, _ccy, _side, _maturity, _amount, _rate);
-        } else {
-            if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().releaseUnsettledCollateral(maker, _ccy, _amount);
-            } else {
-                tokenVault().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
-            }
-
-            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-            Storage.slot().usedCurrencies[maker].add(_ccy);
-
-            emit OrderFilled(
-                orderId,
-                maker,
-                msg.sender,
-                _ccy,
-                _side,
-                _maturity,
-                matchedAmount,
-                _rate
-            );
-        }
-
-        return true;
+    /**
+     * @notice Creates the lend order with ETH. Takes the order if the order is matched,
+     * and places new order if not match it.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
+    function createLendOrderWithETH(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _rate
+    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        return _createOrder(_ccy, _maturity, ProtocolTypes.Side.LEND, msg.value, _rate);
     }
 
     /**
@@ -375,7 +350,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _rate
-    ) external view ifValidMaturity(_ccy, _maturity) returns (bool) {
+    ) external view override ifValidMaturity(_ccy, _maturity) returns (bool) {
         address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         ILendingMarket(marketAddr).matchOrders(_side, _amount, _rate);
 
@@ -392,7 +367,7 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _orderId
-    ) external nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         (ProtocolTypes.Side side, uint256 amount, uint256 rate) = ILendingMarket(marketAddr)
             .cancelOrder(msg.sender, _orderId);
@@ -518,5 +493,57 @@ contract LendingMarketController is
         if (removedAmount != 0) {
             _addGenesisValue(_ccy, _user, basisMaturity, removedAmount);
         }
+    }
+
+    function _createOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) private returns (bool) {
+        _convertFutureValueToGenesisValue(
+            _ccy,
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity],
+            msg.sender
+        );
+
+        // Create a order
+        (uint256 orderId, address maker, uint256 matchedAmount) = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).createOrder(_side, msg.sender, _amount, _rate);
+
+        // Update the unsettled collateral in TokenVault
+        if (matchedAmount == 0) {
+            if (_side == ProtocolTypes.Side.LEND) {
+                tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, _amount);
+            } else {
+                tokenVault().useUnsettledCollateral(maker, _ccy, _amount);
+            }
+
+            emit OrderPlaced(orderId, maker, _ccy, _side, _maturity, _amount, _rate);
+        } else {
+            if (_side == ProtocolTypes.Side.LEND) {
+                tokenVault().releaseUnsettledCollateral(maker, _ccy, _amount);
+            } else {
+                tokenVault().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
+            }
+
+            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+            Storage.slot().usedCurrencies[maker].add(_ccy);
+
+            emit OrderFilled(
+                orderId,
+                maker,
+                msg.sender,
+                _ccy,
+                _side,
+                _maturity,
+                matchedAmount,
+                _rate
+            );
+        }
+
+        return true;
     }
 }

@@ -79,6 +79,34 @@ interface ILendingMarketController {
 
     function createLendingMarket(bytes32 _ccy) external returns (address market);
 
+    function createOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) external returns (bool);
+
+    function createLendOrderWithETH(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _rate
+    ) external payable returns (bool);
+
+    function matchOrders(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) external view returns (bool);
+
+    function cancelOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _orderId
+    ) external returns (bool);
+
     function rotateLendingMarkets(bytes32 _ccy) external;
 
     function pauseLendingMarkets(bytes32 _ccy) external returns (bool);

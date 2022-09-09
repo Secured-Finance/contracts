@@ -7,7 +7,7 @@ import { ethers, web3 } from 'hardhat';
 import { Side } from '../utils/constants';
 import { deployContracts } from '../utils/deployment';
 import { filToETHRate, toBN } from '../utils/numbers';
-import { hexBTCString, hexETHString, hexFILString } from '../utils/strings';
+import { hexETHString, hexFILString } from '../utils/strings';
 
 const toWei = (eth) => {
   return ethers.utils.parseEther(eth);
@@ -29,10 +29,12 @@ describe('Integration test', async () => {
   let filToETHPriceFeed: Contract;
 
   let lendingMarkets: Contract[] = [];
-  let btcLendingMarkets: Contract[] = [];
+  let ethLendingMarkets: Contract[] = [];
 
   let aliceCollateralAmount = toBN('0');
   let carolInitialCollateral = toBN('100000000000000000000');
+
+  let orderAmountInETH = toBN('10000000000');
 
   before('Deploy Contracts', async () => {
     [ownerSigner, aliceSigner, bobSigner, carolSigner] =
@@ -78,15 +80,15 @@ describe('Integration test', async () => {
         ),
       );
 
-    // Deploy Lending Markets for BTC market
+    // Deploy Lending Markets for ETH market
     for (let i = 0; i < 4; i++) {
       const receipt = await lendingMarketController
-        .createLendingMarket(hexBTCString)
+        .createLendingMarket(hexETHString)
         .then((tx) => tx.wait());
     }
 
-    btcLendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexBTCString)
+    ethLendingMarkets = await lendingMarketController
+      .getLendingMarkets(hexETHString)
       .then((addresses) =>
         Promise.all(
           addresses.map((address) =>
@@ -139,8 +141,8 @@ describe('Integration test', async () => {
     it('Make lend orders by Carol', async () => {
       const [_3mMaturity, _6mMaturity, _9mMaturity, _1yMaturity] =
         await lendingMarketController.getMaturities(hexFILString);
-      const [_3mBtcMaturity, _6mBtcMaturity, _9mBtcMaturity, _1yBtcMaturity] =
-        await lendingMarketController.getMaturities(hexBTCString);
+      const [_3mEthMaturity, _6mEthMaturity, _9mEthMaturity, _1yEthMaturity] =
+        await lendingMarketController.getMaturities(hexETHString);
 
       await wFILToken
         .connect(carolSigner)
@@ -162,14 +164,10 @@ describe('Integration test', async () => {
       await expect(
         lendingMarketController
           .connect(carolSigner)
-          .createOrder(
-            hexBTCString,
-            _3mBtcMaturity,
-            Side.LEND,
-            '100000000',
-            '300',
-          ),
-      ).to.emit(btcLendingMarkets[0], 'MakeOrder');
+          .createLendOrderWithETH(hexETHString, _3mEthMaturity, '300', {
+            value: orderAmountInETH,
+          }),
+      ).to.emit(ethLendingMarkets[0], 'MakeOrder');
 
       await expect(
         lendingMarketController
@@ -186,14 +184,10 @@ describe('Integration test', async () => {
       await expect(
         lendingMarketController
           .connect(carolSigner)
-          .createOrder(
-            hexBTCString,
-            _6mBtcMaturity,
-            Side.LEND,
-            '100000000',
-            '310',
-          ),
-      ).to.emit(btcLendingMarkets[1], 'MakeOrder');
+          .createLendOrderWithETH(hexETHString, _6mEthMaturity, '310', {
+            value: orderAmountInETH,
+          }),
+      ).to.emit(ethLendingMarkets[1], 'MakeOrder');
 
       await expect(
         lendingMarketController
@@ -210,14 +204,10 @@ describe('Integration test', async () => {
       await expect(
         lendingMarketController
           .connect(carolSigner)
-          .createOrder(
-            hexBTCString,
-            _9mBtcMaturity,
-            Side.LEND,
-            '100000000',
-            '320',
-          ),
-      ).to.emit(btcLendingMarkets[2], 'MakeOrder');
+          .createLendOrderWithETH(hexETHString, _9mEthMaturity, '320', {
+            value: orderAmountInETH,
+          }),
+      ).to.emit(ethLendingMarkets[2], 'MakeOrder');
 
       await expect(
         lendingMarketController
@@ -234,21 +224,17 @@ describe('Integration test', async () => {
       await expect(
         lendingMarketController
           .connect(carolSigner)
-          .createOrder(
-            hexBTCString,
-            _1yBtcMaturity,
-            Side.LEND,
-            '100000000',
-            '330',
-          ),
-      ).to.emit(btcLendingMarkets[3], 'MakeOrder');
+          .createLendOrderWithETH(hexETHString, _1yEthMaturity, '330', {
+            value: orderAmountInETH,
+          }),
+      ).to.emit(ethLendingMarkets[3], 'MakeOrder');
     });
 
     it('Make borrow orders by Carol', async () => {
       const [_3mMaturity, _6mMaturity, _9mMaturity, _1yMaturity] =
         await lendingMarketController.getMaturities(hexFILString);
-      const [_3mBtcMaturity, _6mBtcMaturity, _9mBtcMaturity, _1yBtcMaturity] =
-        await lendingMarketController.getMaturities(hexBTCString);
+      const [_3mEthMaturity, _6mEthMaturity, _9mEthMaturity, _1yEthMaturity] =
+        await lendingMarketController.getMaturities(hexETHString);
 
       const lendingMarkets = await lendingMarketController
         .getLendingMarkets(hexFILString)
@@ -259,8 +245,8 @@ describe('Integration test', async () => {
             ),
           ),
         );
-      const btcLendingMarkets = await lendingMarketController
-        .getLendingMarkets(hexBTCString)
+      const ethLendingMarkets = await lendingMarketController
+        .getLendingMarkets(hexETHString)
         .then((addresses) =>
           Promise.all(
             addresses.map((address) =>
@@ -285,13 +271,13 @@ describe('Integration test', async () => {
         lendingMarketController
           .connect(carolSigner)
           .createOrder(
-            hexBTCString,
-            _3mBtcMaturity,
+            hexETHString,
+            _3mEthMaturity,
             Side.BORROW,
             '100000000',
             '270',
           ),
-      ).to.emit(btcLendingMarkets[0], 'MakeOrder');
+      ).to.emit(ethLendingMarkets[0], 'MakeOrder');
 
       await expect(
         lendingMarketController
@@ -309,13 +295,13 @@ describe('Integration test', async () => {
         lendingMarketController
           .connect(carolSigner)
           .createOrder(
-            hexBTCString,
-            _6mBtcMaturity,
+            hexETHString,
+            _6mEthMaturity,
             Side.BORROW,
             '100000000',
             '280',
           ),
-      ).to.emit(btcLendingMarkets[1], 'MakeOrder');
+      ).to.emit(ethLendingMarkets[1], 'MakeOrder');
 
       await expect(
         lendingMarketController
@@ -333,13 +319,13 @@ describe('Integration test', async () => {
         lendingMarketController
           .connect(carolSigner)
           .createOrder(
-            hexBTCString,
-            _9mBtcMaturity,
+            hexETHString,
+            _9mEthMaturity,
             Side.BORROW,
             '100000000',
             '290',
           ),
-      ).to.emit(btcLendingMarkets[2], 'MakeOrder');
+      ).to.emit(ethLendingMarkets[2], 'MakeOrder');
 
       await expect(
         lendingMarketController
@@ -357,13 +343,13 @@ describe('Integration test', async () => {
         lendingMarketController
           .connect(carolSigner)
           .createOrder(
-            hexBTCString,
-            _1yBtcMaturity,
+            hexETHString,
+            _1yEthMaturity,
             Side.BORROW,
             '100000000',
             '300',
           ),
-      ).to.emit(btcLendingMarkets[3], 'MakeOrder');
+      ).to.emit(ethLendingMarkets[3], 'MakeOrder');
     });
   });
 
@@ -379,7 +365,7 @@ describe('Integration test', async () => {
         .then((tx) => tx.wait());
 
       expect(await wETHToken.balanceOf(tokenVault.address)).to.equal(
-        carolInitialCollateral.add(depositAmount),
+        carolInitialCollateral.add(depositAmount).add(orderAmountInETH.mul(4)),
       );
 
       let currencies = await tokenVault.getUsedCurrencies(aliceSigner.address);
@@ -826,9 +812,9 @@ describe('Integration test', async () => {
     });
   });
 
-  describe('Test second loan by Alice and Bob for 1 BTC', async () => {
+  describe('Test second loan by Alice and Bob for 1 ETH', async () => {
     let rate = '800';
-    let btcAmount = '1000000000000000000';
+    let ethAmount = '1000000000000000000';
 
     it('Deposit 45 ETH by Alice in Collateral contract', async () => {
       const depositAmount = toBN('45000000000000000000');
@@ -859,10 +845,10 @@ describe('Integration test', async () => {
       expect(totalPresentValue).to.equal('0');
     });
 
-    it('Successfully make order for 1 BTC by Bob, deposit 15 ETH by Bob, take this order by Alice', async () => {
+    it('Successfully make order for 1 ETH by Bob, deposit 15 ETH by Bob, take this order by Alice', async () => {
       let depositAmount = toBN('15000000000000000000');
       const maturities = await lendingMarketController.getMaturities(
-        hexBTCString,
+        hexETHString,
       );
 
       await tokenVault
@@ -872,33 +858,31 @@ describe('Integration test', async () => {
         })
         .then((tx) => tx.wait());
 
-      console.log('Making a new order to lend 1 BTC for 5 years by Bob');
+      console.log('Making a new order to lend 1 ETH for 5 years by Bob');
 
       await expect(
         lendingMarketController
           .connect(bobSigner)
-          .createOrder(hexBTCString, maturities[0], Side.LEND, btcAmount, rate),
-      ).to.emit(btcLendingMarkets[0], 'MakeOrder');
+          .createLendOrderWithETH(hexETHString, maturities[0], rate, {
+            value: ethAmount,
+          }),
+      ).to.emit(ethLendingMarkets[0], 'MakeOrder');
 
       console.log(
-        'Taking order for 1 BTC, and using collateral by Alice as a borrower',
+        'Taking order for 1 ETH, and using collateral by Alice as a borrower',
       );
 
       await expect(
         lendingMarketController
           .connect(aliceSigner)
           .createOrder(
-            hexBTCString,
+            hexETHString,
             maturities[0],
             Side.BORROW,
-            btcAmount,
+            ethAmount,
             rate,
           ),
-      ).to.emit(btcLendingMarkets[0], 'TakeOrder');
-
-      let btcInETH = await currencyController
-        .connect(aliceSigner)
-        ['convertToETH(bytes32,uint256)'](hexBTCString, btcAmount);
+      ).to.emit(ethLendingMarkets[0], 'TakeOrder');
 
       const totalPresentValue =
         await lendingMarketController.getTotalPresentValue(
@@ -910,20 +894,20 @@ describe('Integration test', async () => {
         toBN(totalPresentValue),
       );
 
-      console.log('BTC in ETH is: ' + btcInETH);
+      console.log('ETH is: ' + ethAmount);
 
       const bobCoverage = await tokenVault.getCoverage(bobSigner.address);
       const aliceCoverage = await tokenVault.getCoverage(aliceSigner.address);
       console.group('Collateral coverage for:');
-      console.log('Bob (lender) of 1 BTC is ' + bobCoverage.toString());
-      console.log('Alice (borrower) of 1 BTC is ' + aliceCoverage.toString());
+      console.log('Bob (lender) of 1 ETH is ' + bobCoverage.toString());
+      console.log('Alice (borrower) of 1 ETH is ' + aliceCoverage.toString());
       console.groupEnd();
     });
 
     it('Shift time by 3 month', async () => {
       const totalPresentValue =
         await lendingMarketController.getTotalPresentValue(
-          hexBTCString,
+          hexETHString,
           bobSigner.address,
         );
       console.log('totalPresentValue:', totalPresentValue);
@@ -933,13 +917,13 @@ describe('Integration test', async () => {
       const bobCoverage = await tokenVault.getCoverage(bobSigner.address);
       const aliceCoverage = await tokenVault.getCoverage(aliceSigner.address);
       console.group('Collateral coverage for:');
-      console.log('Bob (lender) of 1 BTC is ' + bobCoverage.toString());
-      console.log('Alice (borrower) of 1 BTC is ' + aliceCoverage.toString());
+      console.log('Bob (lender) of 1 ETH is ' + bobCoverage.toString());
+      console.log('Alice (borrower) of 1 ETH is ' + aliceCoverage.toString());
       console.groupEnd();
 
       const totalPresentValue2 =
         await lendingMarketController.getTotalPresentValue(
-          hexBTCString,
+          hexETHString,
           bobSigner.address,
         );
       console.log('totalPresentValue2:', totalPresentValue2);
@@ -955,11 +939,11 @@ describe('Integration test', async () => {
 
         console.group('Collateral coverage for:');
         console.log(
-          'Bob (lender) of 1 BTC and borrower of 30 FIL is ' +
+          'Bob (lender) of 1 ETH and borrower of 30 FIL is ' +
             bobCoverage.toString(),
         );
         console.log(
-          'Alice (borrower) of 1 BTC and lender of 30 FIL is ' +
+          'Alice (borrower) of 1 ETH and lender of 30 FIL is ' +
             aliceCoverage.toString(),
         );
         console.groupEnd();

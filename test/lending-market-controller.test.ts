@@ -586,6 +586,21 @@ describe('LendingMarketController', () => {
       );
     });
 
+    it('Add an order(payable)', async () => {
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createLendOrderWithETH(targetCurrency, maturities[0], '800', {
+          value: '100000000000000000',
+        })
+        .then((tx) =>
+          expect(tx).to.emit(lendingMarketControllerProxy, 'OrderPlaced'),
+        );
+    });
+
     it('Fail to check if the lending order is matching', async () => {
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,

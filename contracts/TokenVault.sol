@@ -354,7 +354,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _payer,
         bytes32 _ccy,
         uint256 _amount
-    ) external override onlyAcceptedContracts {
+    ) external payable override onlyAcceptedContracts {
         require(_amount > 0, "Invalid amount");
 
         ERC20Handler.depositAssets(

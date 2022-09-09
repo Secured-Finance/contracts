@@ -74,7 +74,7 @@ interface ITokenVault {
         address _payer,
         bytes32 _ccy,
         uint256 _amount
-    ) external;
+    ) external payable;
 
     function removeEscrowedAmount(
         address _payer,
