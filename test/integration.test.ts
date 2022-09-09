@@ -65,7 +65,7 @@ describe('Integration test', async () => {
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 4; i++) {
-      const receipt = await lendingMarketController
+      await lendingMarketController
         .createLendingMarket(hexFILString)
         .then((tx) => tx.wait());
     }
@@ -82,7 +82,7 @@ describe('Integration test', async () => {
 
     // Deploy Lending Markets for ETH market
     for (let i = 0; i < 4; i++) {
-      const receipt = await lendingMarketController
+      await lendingMarketController
         .createLendingMarket(hexETHString)
         .then((tx) => tx.wait());
     }
@@ -139,9 +139,9 @@ describe('Integration test', async () => {
     });
 
     it('Make lend orders by Carol', async () => {
-      const [_3mMaturity, _6mMaturity, _9mMaturity, _1yMaturity] =
+      const maturities: BigNumber[] =
         await lendingMarketController.getMaturities(hexFILString);
-      const [_3mEthMaturity, _6mEthMaturity, _9mEthMaturity, _1yEthMaturity] =
+      const ethMaturities: BigNumber[] =
         await lendingMarketController.getMaturities(hexETHString);
 
       await wFILToken
@@ -149,92 +149,46 @@ describe('Integration test', async () => {
         .approve(tokenVault.address, '300000000000000000000')
         .then((tx) => tx.wait());
 
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _3mMaturity,
-            Side.LEND,
-            toWei('30'),
-            '920',
-          ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      const initialAmount = 30;
+      const initialRate = 920;
+      for (const [idx, maturity] of maturities.entries()) {
+        await expect(
+          lendingMarketController
+            .connect(carolSigner)
+            .createOrder(
+              hexFILString,
+              maturity,
+              Side.LEND,
+              toWei(String(initialAmount + idx)),
+              String(initialRate + 100 * idx),
+            ),
+        ).to.emit(lendingMarkets[idx], 'MakeOrder');
+      }
 
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createLendOrderWithETH(hexETHString, _3mEthMaturity, '300', {
-            value: orderAmountInETH,
-          }),
-      ).to.emit(ethLendingMarkets[0], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _6mMaturity,
-            Side.LEND,
-            toWei('31'),
-            '1020',
-          ),
-      ).to.emit(lendingMarkets[1], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createLendOrderWithETH(hexETHString, _6mEthMaturity, '310', {
-            value: orderAmountInETH,
-          }),
-      ).to.emit(ethLendingMarkets[1], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _9mMaturity,
-            Side.LEND,
-            toWei('32'),
-            '1120',
-          ),
-      ).to.emit(lendingMarkets[2], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createLendOrderWithETH(hexETHString, _9mEthMaturity, '320', {
-            value: orderAmountInETH,
-          }),
-      ).to.emit(ethLendingMarkets[2], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _1yMaturity,
-            Side.LEND,
-            toWei('33'),
-            '1220',
-          ),
-      ).to.emit(lendingMarkets[3], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createLendOrderWithETH(hexETHString, _1yEthMaturity, '330', {
-            value: orderAmountInETH,
-          }),
-      ).to.emit(ethLendingMarkets[3], 'MakeOrder');
+      const initialRateETH = 300;
+      for (const [idx, maturity] of ethMaturities.entries()) {
+        await expect(
+          lendingMarketController
+            .connect(carolSigner)
+            .createLendOrderWithETH(
+              hexETHString,
+              maturity,
+              String(initialRateETH + 10 * idx),
+              {
+                value: orderAmountInETH,
+              },
+            ),
+        ).to.emit(ethLendingMarkets[idx], 'MakeOrder');
+      }
     });
 
     it('Make borrow orders by Carol', async () => {
-      const [_3mMaturity, _6mMaturity, _9mMaturity, _1yMaturity] =
-        await lendingMarketController.getMaturities(hexFILString);
-      const [_3mEthMaturity, _6mEthMaturity, _9mEthMaturity, _1yEthMaturity] =
-        await lendingMarketController.getMaturities(hexETHString);
+      const maturities = await lendingMarketController.getMaturities(
+        hexFILString,
+      );
+      const ethMaturities = await lendingMarketController.getMaturities(
+        hexETHString,
+      );
 
       const lendingMarkets = await lendingMarketController
         .getLendingMarkets(hexFILString)
@@ -255,101 +209,36 @@ describe('Integration test', async () => {
           ),
         );
 
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _3mMaturity,
-            Side.BORROW,
-            toWei('30'),
-            '680',
-          ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      const initialAmount = 30;
+      const initialRate = 680;
+      for (const [idx, maturity] of maturities.entries()) {
+        await expect(
+          lendingMarketController
+            .connect(carolSigner)
+            .createOrder(
+              hexFILString,
+              maturity,
+              Side.BORROW,
+              toWei(String(initialAmount + idx)),
+              String(initialRate + 100 * idx),
+            ),
+        ).to.emit(lendingMarkets[idx], 'MakeOrder');
+      }
 
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexETHString,
-            _3mEthMaturity,
-            Side.BORROW,
-            '100000000',
-            '270',
-          ),
-      ).to.emit(ethLendingMarkets[0], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _6mMaturity,
-            Side.BORROW,
-            toWei('31'),
-            '780',
-          ),
-      ).to.emit(lendingMarkets[1], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexETHString,
-            _6mEthMaturity,
-            Side.BORROW,
-            '100000000',
-            '280',
-          ),
-      ).to.emit(ethLendingMarkets[1], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _9mMaturity,
-            Side.BORROW,
-            toWei('32'),
-            '880',
-          ),
-      ).to.emit(lendingMarkets[2], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexETHString,
-            _9mEthMaturity,
-            Side.BORROW,
-            '100000000',
-            '290',
-          ),
-      ).to.emit(ethLendingMarkets[2], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexFILString,
-            _1yMaturity,
-            Side.BORROW,
-            toWei('33'),
-            '980',
-          ),
-      ).to.emit(lendingMarkets[3], 'MakeOrder');
-
-      await expect(
-        lendingMarketController
-          .connect(carolSigner)
-          .createOrder(
-            hexETHString,
-            _1yEthMaturity,
-            Side.BORROW,
-            '100000000',
-            '300',
-          ),
-      ).to.emit(ethLendingMarkets[3], 'MakeOrder');
+      const initialRateETH = 270;
+      for (const [idx, maturity] of ethMaturities.entries()) {
+        await expect(
+          lendingMarketController
+            .connect(carolSigner)
+            .createOrder(
+              hexETHString,
+              maturity,
+              Side.BORROW,
+              orderAmountInETH,
+              String(initialRateETH + 10 * idx),
+            ),
+        ).to.emit(ethLendingMarkets[idx], 'MakeOrder');
+      }
     });
   });
 
@@ -619,29 +508,16 @@ describe('Integration test', async () => {
   });
 
   describe('Test release collateral functions by canceling lending orders FIL', async () => {
-    it('Successfully cancel order for 100 FIL, expect independent amount to be fully unlocked', async () => {
-      let balance;
-      let gasPrice;
-
-      const maturities = await lendingMarketController.getMaturities(
-        hexFILString,
-      );
-
-      await web3.eth.getGasPrice().then((res) => (gasPrice = toBN(res)));
-      await web3.eth
-        .getBalance(aliceSigner.address)
-        .then((res) => (balance = toBN(res)));
+    it('Successfully cancel order for FIL', async () => {
+      const maturities: BigNumber[] =
+        await lendingMarketController.getMaturities(hexFILString);
 
       let tx = await lendingMarketController
         .connect(aliceSigner)
         .cancelOrder(hexFILString, maturities[0], '3');
 
       await expect(tx).to.emit(lendingMarkets[0], 'CancelOrder');
-
-      const receipt = await tx.wait();
-      if (receipt.gasUsed != null) {
-        balance = await balance.sub(toBN(receipt.gasUsed).mul(gasPrice));
-      }
+      await tx.wait();
 
       const totalUnsettledExp = await tokenVault.getTotalUnsettledExposure(
         aliceSigner.address,
@@ -655,6 +531,39 @@ describe('Integration test', async () => {
       expect(maxWithdrawal.toString()).to.equal(
         aliceCollateralAmount.toString(),
       );
+    });
+
+    it('Successfully cancel order for ETH', async () => {
+      let orderAmount = toBN('100000000000000000000');
+      const balanceBefore = await web3.eth.getBalance(carolSigner.address);
+
+      const ethMaturities: BigNumber[] =
+        await lendingMarketController.getMaturities(hexETHString);
+
+      const receipt = await lendingMarketController
+        .connect(carolSigner)
+        .createLendOrderWithETH(hexETHString, ethMaturities[0], '200', {
+          value: orderAmount,
+        })
+        .then((tx) => tx.wait());
+
+      const balanceAfterOrder = await web3.eth.getBalance(carolSigner.address);
+      expect(
+        toBN(balanceBefore).sub(orderAmount).gt(balanceAfterOrder),
+      ).to.equal(true);
+
+      const { orderId } = receipt.events.find(
+        ({ event }) => event === 'OrderPlaced',
+      ).args;
+
+      await expect(
+        lendingMarketController
+          .connect(carolSigner)
+          .cancelOrder(hexETHString, ethMaturities[0], orderId),
+      ).to.emit(lendingMarketController, 'OrderCanceled');
+
+      const balanceAfterCancel = await web3.eth.getBalance(carolSigner.address);
+      expect(toBN(balanceAfterCancel).gt(balanceAfterOrder)).to.equal(true);
     });
 
     it('Successfully withdraw left collateral by Alice', async () => {
