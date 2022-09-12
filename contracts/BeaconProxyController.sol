@@ -91,7 +91,7 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
     ) external override onlyLendingMarketController returns (address market) {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,bytes32,uint256,uint256)",
-            address(resolver),
+            address(resolver()),
             _ccy,
             _maturity,
             _basisDate
