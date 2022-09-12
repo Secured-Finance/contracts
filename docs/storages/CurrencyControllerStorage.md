@@ -14,8 +14,6 @@ bytes32 STORAGE_SLOT
 struct Storage {
   mapping(bytes32 => struct ProtocolTypes.Currency) currencies;
   mapping(bytes32 => uint256) haircuts;
-  mapping(bytes32 => bool) isCollateral;
-  mapping(bytes32 => address) tokenAddresses;
   mapping(bytes32 => contract AggregatorV3Interface) usdPriceFeeds;
   mapping(bytes32 => contract AggregatorV3Interface) ethPriceFeeds;
   mapping(bytes32 => uint8) usdDecimals;

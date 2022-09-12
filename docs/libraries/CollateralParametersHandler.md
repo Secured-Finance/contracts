@@ -2,7 +2,7 @@
 
 ## CollateralParametersHandler
 
-CollateralParametersHandler is an library to handle the parameters fro CollateralAggregator contract.
+CollateralParametersHandler is an library to handle the parameters fro TokenVault contract.
 
 This manage the main collateral parameters like Margin Call ratio, Auto-Liquidation level,
 Liquidation price, and Minimal collateral ratio.

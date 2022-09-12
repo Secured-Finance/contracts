@@ -214,22 +214,6 @@ Gets the total present value of the account converted to ETH.
 | ---- | ---- | ----------- |
 | totalPresentValue | int256 | The total present value in ETH |
 
-### getBeaconProxyAddress
-
-```solidity
-function getBeaconProxyAddress(bytes32 beaconName) external view returns (address)
-```
-
-Gets the beacon proxy address to the selected name.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| beaconName | bytes32 | The cache name of the beacon proxy |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | address | totalPresentValue The beacon proxy address |
-
 ### isInitializedLendingMarket
 
 ```solidity
@@ -259,18 +243,6 @@ Initialize the lending market to set a basis date and compound factor
 | _ccy | bytes32 | Currency name in bytes32 |
 | _basisDate | uint256 | The basis date when the initial market is opened |
 | _compoundFactor | uint256 | The initial compound factor when the initial market is opened |
-
-### setLendingMarketImpl
-
-```solidity
-function setLendingMarketImpl(address newImpl) external
-```
-
-Sets the implementation contract of LendingMarket
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| newImpl | address | The address of implementation contract |
 
 ### createLendingMarket
 
@@ -307,6 +279,25 @@ before the execution of order creation.
 | _maturity | uint256 | The maturity of the selected market |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _rate | uint256 | Amount of interest rate taker wish to borrow/lend |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
+### createLendOrderWithETH
+
+```solidity
+function createLendOrderWithETH(bytes32 _ccy, uint256 _maturity, uint256 _rate) external payable returns (bool)
+```
+
+Creates the lend order with ETH. Takes the order if the order is matched,
+and places new order if not match it.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
 | _rate | uint256 | Amount of interest rate taker wish to borrow/lend |
 
 | Name | Type | Description |
@@ -420,21 +411,9 @@ Converts the future value to the genesis value if there is balance in the past m
 | _marketAddr | address | Market contract address |
 | _user | address | User's address |
 
-### _deployLendingMarket
+### _createOrder
 
 ```solidity
-function _deployLendingMarket(bytes32 _ccy, uint256 _maturity, uint256 _basisDate) private returns (address)
+function _createOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _rate) private returns (bool)
 ```
-
-Deploys the lending market contract.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the market |
-| _basisDate | uint256 | The basis date |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | address | The proxy contract address of created lending market |
 

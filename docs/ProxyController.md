@@ -75,34 +75,34 @@ Sets the implementation contract of AddressResolver
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
 
-### setCollateralAggregatorImpl
+### setBeaconProxyControllerImpl
 
 ```solidity
-function setCollateralAggregatorImpl(address newImpl, uint256 marginCallThresholdRate, uint256 autoLiquidationThresholdRate, uint256 liquidationPriceRate, uint256 minCollateralRate) external
+function setBeaconProxyControllerImpl(address newImpl) external
 ```
 
-Sets the implementation contract of CollateralAggregator
+Sets the implementation contract of CurrencyController
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
-| marginCallThresholdRate | uint256 |  |
-| autoLiquidationThresholdRate | uint256 |  |
-| liquidationPriceRate | uint256 |  |
-| minCollateralRate | uint256 |  |
 
-### setCollateralVaultImpl
+### setTokenVaultImpl
 
 ```solidity
-function setCollateralVaultImpl(address newImpl, address _WETH9) external
+function setTokenVaultImpl(address newImpl, uint256 marginCallThresholdRate, uint256 autoLiquidationThresholdRate, uint256 liquidationPriceRate, uint256 minCollateralRate, address WETH9) external
 ```
 
-Sets the implementation contract of CollateralVault
+Sets the implementation contract of TokenVault
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
-| _WETH9 | address | The address of WETH |
+| marginCallThresholdRate | uint256 | The rate used as the margin call threshold |
+| autoLiquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
+| liquidationPriceRate | uint256 | The rate used as the liquidation price |
+| minCollateralRate | uint256 | The rate used minima collateral |
+| WETH9 | address | The address of WETH |
 
 ### setCurrencyControllerImpl
 

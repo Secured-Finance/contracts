@@ -2,16 +2,10 @@
 
 ## Contracts
 
-### COLLATERAL_AGGREGATOR
+### BEACON_PROXY_CONTROLLER
 
 ```solidity
-bytes32 COLLATERAL_AGGREGATOR
-```
-
-### COLLATERAL_VAULT
-
-```solidity
-bytes32 COLLATERAL_VAULT
+bytes32 BEACON_PROXY_CONTROLLER
 ```
 
 ### CURRENCY_CONTROLLER
@@ -24,6 +18,12 @@ bytes32 CURRENCY_CONTROLLER
 
 ```solidity
 bytes32 LENDING_MARKET_CONTROLLER
+```
+
+### TOKEN_VAULT
+
+```solidity
+bytes32 TOKEN_VAULT
 ```
 
 ## BeaconContracts

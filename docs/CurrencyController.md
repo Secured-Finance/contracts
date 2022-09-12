@@ -36,7 +36,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 ### supportCurrency
 
 ```solidity
-function supportCurrency(bytes32 _ccy, string _name, address _ethPriceFeed, uint256 _haircut, address _tokenAddress) public
+function supportCurrency(bytes32 _ccy, string _name, address _ethPriceFeed, uint256 _haircut) public
 ```
 
 Adds new currency into the protocol and links with existing ETH price feed of Chainlink.
@@ -47,7 +47,6 @@ Adds new currency into the protocol and links with existing ETH price feed of Ch
 | _name | string | Currency full name |
 | _ethPriceFeed | address | Address for ETH price feed |
 | _haircut | uint256 | Haircut ratio used to calculate in collateral calculations |
-| _tokenAddress | address | Token contract address of the currency |
 
 ### updateCurrencySupport
 
@@ -61,19 +60,6 @@ Updates the flag indicating if the currency is supported in the protocol.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _isSupported | bool | Boolean if currency is supported |
-
-### updateCollateralSupport
-
-```solidity
-function updateCollateralSupport(bytes32 _ccy, bool _isSupported) public
-```
-
-Updates the flag indicating if the currency is accepted as collateral.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _isSupported | bool | Boolean if currency is accepted as collateral or not |
 
 ### updateCcyHaircut
 
@@ -141,18 +127,6 @@ Haircut is used in bilateral netting cross-calculation.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 
-### getTokenAddresses
-
-```solidity
-function getTokenAddresses(bytes32 _ccy) external view returns (address)
-```
-
-Gets token address for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
 ### isSupportedCcy
 
 ```solidity
@@ -168,22 +142,6 @@ Gets if the selected currency is supported.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the selected currency is supported or not |
-
-### isCollateral
-
-```solidity
-function isCollateral(bytes32 _ccy) public view returns (bool)
-```
-
-Gets if the selected currency is accepted as collateral.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the selected currency is accepted as collateral or not |
 
 ### linkPriceFeed
 

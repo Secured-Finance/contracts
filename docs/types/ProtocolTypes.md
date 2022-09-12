@@ -16,18 +16,6 @@ uint256 BP
 uint256 PCT
 ```
 
-### PENALTYLEVEL
-
-```solidity
-uint256 PENALTYLEVEL
-```
-
-### MKTMAKELEVEL
-
-```solidity
-uint256 MKTMAKELEVEL
-```
-
 ### DAYS_IN_YEAR
 
 ```solidity

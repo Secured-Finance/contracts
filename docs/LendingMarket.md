@@ -320,7 +320,7 @@ Opens market
 ### cancelOrder
 
 ```solidity
-function cancelOrder(address _user, uint256 _orderId) public returns (uint256)
+function cancelOrder(address _user, uint256 _orderId) public returns (enum ProtocolTypes.Side, uint256, uint256)
 ```
 
 Cancels the order.
@@ -380,7 +380,7 @@ Reverts if no orders for specified interest rate.
 ### createOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) external returns (address maker, uint256 amount)
+function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) external returns (uint256 orderId, address maker, uint256 amount)
 ```
 
 Creates the order. Takes the order if the order is matched,
@@ -395,6 +395,7 @@ and places new order if not match it.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| orderId | uint256 | Market order id |
 | maker | address | The maker address |
 | amount | uint256 | The taken amount |
 

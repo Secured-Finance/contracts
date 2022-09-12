@@ -8,18 +8,6 @@
 event CacheUpdated(bytes32 name, address destination)
 ```
 
-### resolver
-
-```solidity
-contract IAddressResolver resolver
-```
-
-### addressCache
-
-```solidity
-mapping(bytes32 => address) addressCache
-```
-
 ### onlyAcceptedContracts
 
 ```solidity
@@ -82,16 +70,16 @@ function getAddress(bytes32 name) internal view returns (address)
 function isAcceptedContract(address account) internal view virtual returns (bool)
 ```
 
-### collateralAggregator
+### resolver
 
 ```solidity
-function collateralAggregator() internal view returns (contract ICollateralAggregator)
+function resolver() public view returns (contract IAddressResolver)
 ```
 
-### collateralVault
+### beaconProxyController
 
 ```solidity
-function collateralVault() internal view returns (contract ICollateralVault)
+function beaconProxyController() internal view returns (contract IBeaconProxyController)
 ```
 
 ### currencyController
@@ -104,5 +92,11 @@ function currencyController() internal view returns (contract ICurrencyControlle
 
 ```solidity
 function lendingMarketController() internal view returns (contract ILendingMarketController)
+```
+
+### tokenVault
+
+```solidity
+function tokenVault() internal view returns (contract ITokenVault)
 ```
 

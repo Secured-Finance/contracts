@@ -1,37 +1,37 @@
 # Solidity API
 
-## CollateralAggregator
+## TokenVault
 
-Implements the management of the collateral in each currency for users.
+Implements the management of the token in each currency for users.
 
-This contract manages the following data related to the collateral.
-- Deposited amount as the collateral
+This contract manages the following data related to tokens.
+- Deposited token amount as the collateral
 - Unsettled collateral amount used by order
+- Escrowed token amount added by lending orders
 - Parameters related to the collateral
   - Margin Call Threshold Rate
   - Auto Liquidation Threshold Rate
   - Liquidation Price Rate
   - Min Collateral Rate
 
-_The deposited amount is managed in the CollateralVault contract now. It will be merged to this contract
-in the future._
+To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
 
-### nonRegisteredUser
+### onlyRegisteredCurrency
 
 ```solidity
-modifier nonRegisteredUser(address _user)
+modifier onlyRegisteredCurrency(bytes32 _ccy)
 ```
 
-Modifier to check if user hasn't been registered yet
+Modifier to check if currency hasn't been registered yet
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _user | address | User's address |
+| _ccy | bytes32 | Currency name in bytes32 |
 
 ### initialize
 
 ```solidity
-function initialize(address _owner, address _resolver, uint256 _marginCallThresholdRate, uint256 _autoLiquidationThresholdRate, uint256 _liquidationPriceRate, uint256 _minCollateralRate) public
+function initialize(address _owner, address _resolver, uint256 _marginCallThresholdRate, uint256 _autoLiquidationThresholdRate, uint256 _liquidationPriceRate, uint256 _minCollateralRate, address _WETH9) public
 ```
 
 Initializes the contract.
@@ -46,6 +46,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _autoLiquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
 | _liquidationPriceRate | uint256 | The rate used as the liquidation price |
 | _minCollateralRate | uint256 | The rate used minima collateral |
+| _WETH9 | address | The address of WETH |
 
 ### requiredContracts
 
@@ -67,6 +68,12 @@ Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
+### receive
+
+```solidity
+receive() external payable
+```
+
 ### isCovered
 
 ```solidity
@@ -82,22 +89,6 @@ Gets if the collateral has enough coverage.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the collateral has sufficient coverage or not |
-
-### isRegisteredUser
-
-```solidity
-function isRegisteredUser(address _user) external view returns (bool)
-```
-
-Gets if the user is registered.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the user is registered or not |
 
 ### getWithdrawableCollateral
 
@@ -180,6 +171,73 @@ Gets total unsettled exposure in all currencies.
 | ---- | ---- | ----------- |
 | [0] | uint256 | Total unsettled exposure |
 
+### getCollateralAmount
+
+```solidity
+function getCollateralAmount(address _user, bytes32 _ccy) public view returns (uint256)
+```
+
+Gets the amount deposited in the user's collateral.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The deposited amount |
+
+### getCollateralAmountInETH
+
+```solidity
+function getCollateralAmountInETH(address _user, bytes32 _ccy) public view returns (uint256)
+```
+
+Gets the amount deposited in the user's collateral by converting it to ETH.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccy | bytes32 | Specified currency |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The deposited amount in ETH |
+
+### getTotalCollateralAmountInETH
+
+```solidity
+function getTotalCollateralAmountInETH(address _user) public view returns (uint256)
+```
+
+Gets the total amount deposited in the user's collateral in all currencies.
+by converting it to ETH.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | Address of collateral user |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The total deposited amount in ETH |
+
+### getUsedCurrencies
+
+```solidity
+function getUsedCurrencies(address _user) public view returns (bytes32[])
+```
+
+Gets the currencies that the user used as collateral.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bytes32[] | The currency names in bytes32 |
+
 ### getCollateralParameters
 
 ```solidity
@@ -194,14 +252,6 @@ Gets parameters related to collateral.
 | autoLiquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
 | liquidationPriceRate | uint256 | The rate used as the liquidation price |
 | minCollateralRate | uint256 | The rate used minima collateral |
-
-### register
-
-```solidity
-function register() external
-```
-
-Register user.
 
 ### useUnsettledCollateral
 
@@ -230,6 +280,67 @@ Releases the amount of unsettled exposure for the selected currency.
 | _user | address | User's address |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to be unlocked from unsettled exposure in a specified currency |
+
+### registerCurrency
+
+```solidity
+function registerCurrency(bytes32 _ccy, address _tokenAddress) external
+```
+
+### deposit
+
+```solidity
+function deposit(bytes32 _ccy, uint256 _amount) public payable
+```
+
+_Deposits funds by the caller into collateral._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to deposit |
+
+### withdraw
+
+```solidity
+function withdraw(bytes32 _ccy, uint256 _amount) public
+```
+
+Withdraws funds by the caller from unused collateral.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to withdraw. |
+
+### addEscrowedAmount
+
+```solidity
+function addEscrowedAmount(address _payer, bytes32 _ccy, uint256 _amount) external payable
+```
+
+Add funds to escrow.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _payer | address | Address of user making payment |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to be add into escrow |
+
+### removeEscrowedAmount
+
+```solidity
+function removeEscrowedAmount(address _payer, address _receiver, bytes32 _ccy, uint256 _amount) external
+```
+
+Remove funds from escrow.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _payer | address | Address of user making payment |
+| _receiver | address | Address of user receiving payment |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to be removed from escrow |
 
 ### setCollateralParameters
 
@@ -303,22 +414,6 @@ Gets total unsettled exposure in all currencies.
 | ---- | ---- | ----------- |
 | totalExp | uint256 | The total collateral amount |
 
-### _getTotalCollateral
-
-```solidity
-function _getTotalCollateral(address _user) internal view returns (uint256)
-```
-
-Gets the total collateral in all currencies.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | The total amount of collateral |
-
 ### _getUsedCollateral
 
 ```solidity
@@ -351,4 +446,10 @@ Calculates maximum amount of ETH that can be withdrawn.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256 | Maximum amount of ETH that can be withdrawn |
+
+### _updateUsedCurrencies
+
+```solidity
+function _updateUsedCurrencies(bytes32 _ccy) internal
+```
 
