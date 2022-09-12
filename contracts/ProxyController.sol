@@ -65,41 +65,46 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
-     * @notice  Sets the implementation contract of CollateralAggregator
+     * @notice Sets the implementation contract of CurrencyController
      * @param newImpl The address of implementation contract
      */
-    function setCollateralAggregatorImpl(
+    function setBeaconProxyControllerImpl(address newImpl) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address)",
+            msg.sender,
+            resolver
+        );
+        _updateImpl(Contracts.BEACON_PROXY_CONTROLLER, newImpl, data);
+    }
+
+    /**
+     * @notice  Sets the implementation contract of TokenVault
+     * @param newImpl The address of implementation contract
+     * @param marginCallThresholdRate The rate used as the margin call threshold
+     * @param autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
+     * @param liquidationPriceRate The rate used as the liquidation price
+     * @param minCollateralRate The rate used minima collateral
+     * @param WETH9 The address of WETH
+     */
+    function setTokenVaultImpl(
         address newImpl,
         uint256 marginCallThresholdRate,
         uint256 autoLiquidationThresholdRate,
         uint256 liquidationPriceRate,
-        uint256 minCollateralRate
+        uint256 minCollateralRate,
+        address WETH9
     ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,uint256,uint256,uint256,uint256)",
+            "initialize(address,address,uint256,uint256,uint256,uint256,address)",
             msg.sender,
             resolver,
             marginCallThresholdRate,
             autoLiquidationThresholdRate,
             liquidationPriceRate,
-            minCollateralRate
+            minCollateralRate,
+            WETH9
         );
-        _updateImpl(Contracts.COLLATERAL_AGGREGATOR, newImpl, data);
-    }
-
-    /**
-     * @notice  Sets the implementation contract of CollateralVault
-     * @param newImpl The address of implementation contract
-     * @param _WETH9 The address of WETH
-     */
-    function setCollateralVaultImpl(address newImpl, address _WETH9) external onlyOwner {
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,address)",
-            msg.sender,
-            resolver,
-            _WETH9
-        );
-        _updateImpl(Contracts.COLLATERAL_VAULT, newImpl, data);
+        _updateImpl(Contracts.TOKEN_VAULT, newImpl, data);
     }
 
     /**

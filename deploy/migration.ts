@@ -62,10 +62,10 @@ const func: DeployFunction = async function ({
     return ethers.getContractAt(key, address);
   };
 
-  const collateralAggregator = await getProxy('CollateralAggregator');
-  const collateralVault = await getProxy('CollateralVault');
+  const beaconProxyController = await getProxy('BeaconProxyController');
   const currencyController = await getProxy('CurrencyController');
   const lendingMarketController = await getProxy('LendingMarketController');
+  const tokenVault = await getProxy('TokenVault');
 
   // Get deployed contracts
   const addressResolver = await proxyController
@@ -75,24 +75,24 @@ const func: DeployFunction = async function ({
   // The contract name list that is managed in AddressResolver
   // This list is as same as contracts/libraries/Contracts.sol
   const contractNames = [
-    'CollateralAggregator',
-    'CollateralVault',
+    'BeaconProxyController',
+    'TokenVault',
     'CurrencyController',
     'LendingMarketController',
   ];
 
   // The contract address list that is managed in AddressResolver
   const contractAddresses = [
-    collateralAggregator.address,
-    collateralVault.address,
+    beaconProxyController.address,
+    tokenVault.address,
     currencyController.address,
     lendingMarketController.address,
   ];
 
   // The contract address list that inherited MixinAddressResolver and need to call `buildCache`
   const buildCachesAddresses = [
-    collateralAggregator.address,
-    collateralVault.address,
+    beaconProxyController.address,
+    tokenVault.address,
     lendingMarketController.address,
   ];
 
@@ -127,8 +127,8 @@ const func: DeployFunction = async function ({
     .then((tx) => tx.wait());
   console.log('Successfully built address caches');
 
-  // Set up for CollateralVault
-  await collateralVault
+  // Set up for TokenVault
+  await tokenVault
     .registerCurrency(hexETHString, wETHToken.address)
     .then((tx) => tx.wait());
   console.log('Successfully registered the currency as supported collateral');
@@ -136,10 +136,9 @@ const func: DeployFunction = async function ({
 
 func.tags = ['Migration'];
 func.dependencies = [
-  'CollateralAggregator',
-  'CollateralVault',
   'CurrencyController',
   'LendingMarketController',
+  'TokenVault',
   'WETH',
 ];
 

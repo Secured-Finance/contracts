@@ -1,7 +1,7 @@
 import { artifacts, ethers } from 'hardhat';
 import { steps } from './steps';
 const OrderStatisticsTree = artifacts.require(
-  'HitchensOrderStatisticsTree.sol',
+  'HitchensOrderStatisticsTreeContract.sol',
 );
 
 let ost: any;

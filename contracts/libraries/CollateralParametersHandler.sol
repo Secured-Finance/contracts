@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {CollateralParametersStorage as Storage} from "../storages/CollateralParametersStorage.sol";
 
 /**
- * @notice CollateralParametersHandler is an library to handle the parameters fro CollateralAggregator contract.
+ * @notice CollateralParametersHandler is an library to handle the parameters fro TokenVault contract.
  *
  * This manage the main collateral parameters like Margin Call ratio, Auto-Liquidation level,
  * Liquidation price, and Minimal collateral ratio.

@@ -338,7 +338,11 @@ contract LendingMarket is
         override
         onlyMaker(_user, _orderId)
         whenNotPaused
-        returns (uint256)
+        returns (
+            ProtocolTypes.Side,
+            uint256,
+            uint256
+        )
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
@@ -364,7 +368,7 @@ contract LendingMarket is
             marketOrder.rate
         );
 
-        return marketOrder.amount;
+        return (marketOrder.side, marketOrder.amount, marketOrder.rate);
     }
 
     /**
@@ -522,6 +526,7 @@ contract LendingMarket is
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @return orderId Market order id
      * @return maker The maker address
      * @return amount The taken amount
      */
@@ -536,11 +541,14 @@ contract LendingMarket is
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (address maker, uint256 amount)
+        returns (
+            uint256 orderId,
+            address maker,
+            uint256 amount
+        )
     {
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
-        uint256 orderId;
 
         if (_side == ProtocolTypes.Side.LEND) {
             orderId = Storage.slot().borrowOrders[Storage.slot().maturity].findOrderIdForAmount(
@@ -555,7 +563,7 @@ contract LendingMarket is
         }
 
         if (orderId == 0) {
-            _makeOrder(_side, _user, _amount, _rate);
+            orderId = _makeOrder(_side, _user, _amount, _rate);
             maker = _user;
             amount = 0;
         } else {

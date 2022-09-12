@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../libraries/Contracts.sol";
-import "../interfaces/IAddressResolver.sol";
-import "../interfaces/ICollateralAggregator.sol";
-import "../interfaces/ICollateralVault.sol";
-import "../interfaces/ICurrencyController.sol";
-import "../interfaces/ILendingMarketController.sol";
+import {Contracts} from "../libraries/Contracts.sol";
+import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
+import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
+import {ICurrencyController} from "../interfaces/ICurrencyController.sol";
+import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
+import {ITokenVault} from "../interfaces/ITokenVault.sol";
+import {MixinAddressResolverStorage as Storage} from "../storages/MixinAddressResolverStorage.sol";
 
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
-
-    IAddressResolver public resolver;
-
-    mapping(bytes32 => address) private addressCache;
 
     modifier onlyAcceptedContracts() {
         require(isAcceptedContract(msg.sender), "Only Accepted Contracts");
@@ -38,11 +35,11 @@ contract MixinAddressResolver {
         for (uint256 i = 0; i < contractNames.length; i++) {
             bytes32 name = contractNames[i];
             // Note: can only be invoked once the resolver has all the targets needed added
-            address destination = resolver.getAddress(
+            address destination = Storage.slot().resolver.getAddress(
                 name,
                 string(abi.encodePacked("Resolver missing target: ", name))
             );
-            addressCache[name] = destination;
+            Storage.slot().addressCache[name] = destination;
             emit CacheUpdated(name, destination);
         }
     }
@@ -53,7 +50,8 @@ contract MixinAddressResolver {
             bytes32 name = contractNames[i];
             // false if our cache is invalid or if the resolver doesn't have the required address
             if (
-                resolver.getAddress(name) != addressCache[name] || addressCache[name] == address(0)
+                Storage.slot().resolver.getAddress(name) != Storage.slot().addressCache[name] ||
+                Storage.slot().addressCache[name] == address(0)
             ) {
                 return false;
             }
@@ -67,12 +65,12 @@ contract MixinAddressResolver {
      * @param _resolver The address of the Address Resolver contract
      */
     function registerAddressResolver(address _resolver) internal {
-        require(address(resolver) == address(0), "resolver registered already");
-        resolver = IAddressResolver(_resolver);
+        require(address(Storage.slot().resolver) == address(0), "resolver registered already");
+        Storage.slot().resolver = IAddressResolver(_resolver);
     }
 
     function getAddress(bytes32 name) internal view returns (address) {
-        address _foundAddress = addressCache[name];
+        address _foundAddress = Storage.slot().addressCache[name];
         require(_foundAddress != address(0), string(abi.encodePacked("Missing address: ", name)));
         return _foundAddress;
     }
@@ -88,12 +86,12 @@ contract MixinAddressResolver {
         return false;
     }
 
-    function collateralAggregator() internal view returns (ICollateralAggregator) {
-        return ICollateralAggregator(getAddress(Contracts.COLLATERAL_AGGREGATOR));
+    function resolver() public view returns (IAddressResolver) {
+        return Storage.slot().resolver;
     }
 
-    function collateralVault() internal view returns (ICollateralVault) {
-        return ICollateralVault(getAddress(Contracts.COLLATERAL_VAULT));
+    function beaconProxyController() internal view returns (IBeaconProxyController) {
+        return IBeaconProxyController(getAddress(Contracts.BEACON_PROXY_CONTROLLER));
     }
 
     function currencyController() internal view returns (ICurrencyController) {
@@ -102,5 +100,9 @@ contract MixinAddressResolver {
 
     function lendingMarketController() internal view returns (ILendingMarketController) {
         return ILendingMarketController(getAddress(Contracts.LENDING_MARKET_CONTROLLER));
+    }
+
+    function tokenVault() internal view returns (ITokenVault) {
+        return ITokenVault(getAddress(Contracts.TOKEN_VAULT));
     }
 }

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./HitchensOrderStatisticsTreeLib.sol";
+import "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
-contract HitchensOrderStatisticsTree {
+contract HitchensOrderStatisticsTreeContract {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     HitchensOrderStatisticsTreeLib.Tree tree;

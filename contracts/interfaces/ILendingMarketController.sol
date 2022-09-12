@@ -19,10 +19,30 @@ interface ILendingMarketController {
         uint256 maturity
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event OrderPlaced(
+        uint256 orderId,
+        address indexed maker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 maturity,
+        uint256 amount,
+        uint256 rate
+    );
     event OrderFilled(
-        address lender,
-        address borrower,
-        bytes32 ccy,
+        uint256 orderId,
+        address indexed maker,
+        address indexed taker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 maturity,
+        uint256 amount,
+        uint256 rate
+    );
+    event OrderCanceled(
+        uint256 orderId,
+        address indexed maker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
         uint256 maturity,
         uint256 amount,
         uint256 rate
@@ -49,8 +69,6 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
-    function getBeaconProxyAddress(bytes32 beaconName) external view returns (address);
-
     function isInitializedLendingMarket(bytes32 _ccy) external view returns (bool);
 
     function initializeLendingMarket(
@@ -59,9 +77,35 @@ interface ILendingMarketController {
         uint256 _compoundFactor
     ) external;
 
-    function setLendingMarketImpl(address newImpl) external;
-
     function createLendingMarket(bytes32 _ccy) external returns (address market);
+
+    function createOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) external returns (bool);
+
+    function createLendOrderWithETH(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _rate
+    ) external payable returns (bool);
+
+    function matchOrders(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) external view returns (bool);
+
+    function cancelOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _orderId
+    ) external returns (bool);
 
     function rotateLendingMarkets(bytes32 _ccy) external;
 

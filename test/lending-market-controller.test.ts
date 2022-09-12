@@ -8,7 +8,8 @@ import moment from 'moment';
 import { Side } from '../utils/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
-const CollateralAggregator = artifacts.require('CollateralAggregator');
+const BeaconProxyController = artifacts.require('BeaconProxyController');
+const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
 const LendingMarket = artifacts.require('LendingMarket');
 const LendingMarketController = artifacts.require('LendingMarketController');
@@ -23,7 +24,8 @@ const BP = ethers.BigNumber.from('10000');
 
 describe('LendingMarketController', () => {
   let mockCurrencyController: MockContract;
-  let mockCollateralAggregator: MockContract;
+  let mockTokenVault: MockContract;
+  let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
 
   let targetCurrency: string;
@@ -51,19 +53,22 @@ describe('LendingMarketController', () => {
       owner,
       CurrencyController.abi,
     );
-    mockCollateralAggregator = await deployMockContract(
-      owner,
-      CollateralAggregator.abi,
-    );
+    mockTokenVault = await deployMockContract(owner, TokenVault.abi);
     await mockCurrencyController.mock.isSupportedCcy.returns(true);
-    await mockCollateralAggregator.mock.useUnsettledCollateral.returns();
-    await mockCollateralAggregator.mock.releaseUnsettledCollateral.returns();
+    await mockTokenVault.mock.useUnsettledCollateral.returns();
+    await mockTokenVault.mock.releaseUnsettledCollateral.returns();
+    await mockTokenVault.mock.addEscrowedAmount.returns();
+    await mockTokenVault.mock.removeEscrowedAmount.returns();
 
     // Deploy
     const addressResolver = await deployContract(owner, AddressResolver);
     const proxyController = await deployContract(owner, ProxyController, [
       ethers.constants.AddressZero,
     ]);
+    const beaconProxyController = await deployContract(
+      owner,
+      BeaconProxyController,
+    );
     const lendingMarketController = await deployContract(
       owner,
       LendingMarketController,
@@ -83,10 +88,23 @@ describe('LendingMarketController', () => {
             .proxyAddress,
       );
 
+    const beaconProxyControllerAddress = await proxyController
+      .setBeaconProxyControllerImpl(beaconProxyController.address)
+      .then((tx) => tx.wait())
+      .then(
+        ({ events }) =>
+          events.find(({ event }) => event === 'ProxyCreated').args
+            .proxyAddress,
+      );
+
     // Get the Proxy contracts
     const addressResolverProxy = await ethers.getContractAt(
       'AddressResolver',
       addressResolverProxyAddress,
+    );
+    beaconProxyControllerProxy = await ethers.getContractAt(
+      'BeaconProxyController',
+      beaconProxyControllerAddress,
     );
     lendingMarketControllerProxy = await ethers.getContractAt(
       'LendingMarketController',
@@ -100,8 +118,9 @@ describe('LendingMarketController', () => {
 
     // Set up for AddressResolver and build caches using MigrationAddressResolver
     const migrationTargets: [string, Contract][] = [
+      ['BeaconProxyController', beaconProxyControllerProxy],
       ['CurrencyController', mockCurrencyController],
-      ['CollateralAggregator', mockCollateralAggregator],
+      ['TokenVault', mockTokenVault],
       ['LendingMarketController', lendingMarketControllerProxy],
     ];
 
@@ -117,13 +136,14 @@ describe('LendingMarketController', () => {
       importAddressesArgs.addresses,
     );
     await migrationAddressResolver.buildCaches([
+      beaconProxyControllerProxy.address,
       lendingMarketControllerProxy.address,
     ]);
 
     // Set up for LendingMarketController
     const lendingMarket = await deployContract(owner, LendingMarket);
 
-    await lendingMarketControllerProxy.setLendingMarketImpl(
+    await beaconProxyControllerProxy.setLendingMarketImpl(
       lendingMarket.address,
     );
   });
@@ -154,7 +174,7 @@ describe('LendingMarketController', () => {
     });
 
     it('Get beacon proxy implementations', async () => {
-      const proxy = await lendingMarketControllerProxy.getBeaconProxyAddress(
+      const proxy = await beaconProxyControllerProxy.getBeaconProxyAddress(
         ethers.utils.formatBytes32String('LendingMarket'),
       );
 
@@ -164,7 +184,7 @@ describe('LendingMarketController', () => {
 
     it('Fail to get beacon proxy implementations', async () => {
       await expect(
-        lendingMarketControllerProxy.getBeaconProxyAddress(
+        beaconProxyControllerProxy.getBeaconProxyAddress(
           ethers.utils.formatBytes32String('Test'),
         ),
       ).to.be.revertedWith('Beacon proxy address not found');
@@ -322,52 +342,63 @@ describe('LendingMarketController', () => {
         targetCurrency,
       );
 
-      await expect(
-        lendingMarketControllerProxy
-          .connect(alice)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '100000000000000000',
-            '800',
-          ),
-      ).to.emit(lendingMarket1, 'MakeOrder');
-      await expect(
-        lendingMarketControllerProxy
-          .connect(bob)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '50000000000000000',
-            '880',
-          ),
-      ).to.emit(lendingMarket1, 'MakeOrder');
-      await expect(
-        lendingMarketControllerProxy
-          .connect(bob)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '100000000000000000',
-            '720',
-          ),
-      ).to.emit(lendingMarket1, 'MakeOrder');
-      expect(
-        await lendingMarketControllerProxy
-          .connect(carol)
-          .matchOrders(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '100000000000000000',
-            '800',
-          ),
-      ).to.equal(true);
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '800',
+        )
+        .then(async (tx) => {
+          await expect(tx).to.emit(lendingMarket1, 'MakeOrder');
+          await expect(tx)
+            .to.emit(lendingMarketControllerProxy, 'OrderPlaced')
+            .withArgs(
+              1,
+              alice.address,
+              targetCurrency,
+              Side.LEND,
+              maturities[0],
+              '100000000000000000',
+              '800',
+            );
+        });
 
-      const tx = lendingMarketControllerProxy
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '880',
+        )
+        .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '720',
+        )
+        .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .matchOrders(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '800',
+        )
+        .then((tx) => expect(tx).to.equal(true));
+
+      await lendingMarketControllerProxy
         .connect(carol)
         .createOrder(
           targetCurrency,
@@ -375,18 +406,22 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '100000000000000000',
           '800',
-        );
-      await expect(tx).to.emit(lendingMarket1, 'TakeOrder');
-      await expect(tx)
-        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
-        .withArgs(
-          alice.address,
-          carol.address,
-          targetCurrency,
-          maturities[0],
-          '100000000000000000',
-          '800',
-        );
+        )
+        .then(async (tx) => {
+          await expect(tx).to.emit(lendingMarket1, 'TakeOrder');
+          await expect(tx)
+            .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+            .withArgs(
+              1,
+              alice.address,
+              carol.address,
+              targetCurrency,
+              Side.BORROW,
+              maturities[0],
+              '100000000000000000',
+              '800',
+            );
+        });
 
       const maturity = await lendingMarket1.getMaturity();
       expect(maturity.toString()).to.equal(
@@ -549,6 +584,21 @@ describe('LendingMarketController', () => {
       expect(aliceTotalPV.toString()).to.equal(
         alicePV1.add(alicePV2).toString(),
       );
+    });
+
+    it('Add an order(payable)', async () => {
+      const maturities = await lendingMarketControllerProxy.getMaturities(
+        targetCurrency,
+      );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createLendOrderWithETH(targetCurrency, maturities[0], '800', {
+          value: '100000000000000000',
+        })
+        .then((tx) =>
+          expect(tx).to.emit(lendingMarketControllerProxy, 'OrderPlaced'),
+        );
     });
 
     it('Fail to check if the lending order is matching', async () => {
@@ -752,7 +802,7 @@ describe('LendingMarketController', () => {
 
       // Update implementations
       const lendingMarket = await deployContract(owner, LendingMarket);
-      await lendingMarketControllerProxy.setLendingMarketImpl(
+      await beaconProxyControllerProxy.setLendingMarketImpl(
         lendingMarket.address,
       );
 

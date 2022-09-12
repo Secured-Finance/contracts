@@ -20,8 +20,7 @@ describe('ZC e2e test', async () => {
 
   // Contracts
   let proxyController: Contract;
-  let collateralAggregator: Contract;
-  let collateralVault: Contract;
+  let tokenVault: Contract;
   let lendingMarketController: Contract;
 
   before('Set up for testing', async () => {
@@ -70,15 +69,13 @@ describe('ZC e2e test', async () => {
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
     // Get proxy contracts
-    collateralAggregator = await getProxy('CollateralAggregator');
-    collateralVault = await getProxy('CollateralVault');
+    tokenVault = await getProxy('TokenVault');
     lendingMarketController = await getProxy('LendingMarketController');
 
     console.table(
       {
         proxyController,
-        collateralAggregator,
-        collateralVault,
+        tokenVault,
         lendingMarketController,
       },
       ['address'],
@@ -86,37 +83,14 @@ describe('ZC e2e test', async () => {
   });
 
   it('Deposit ETH', async () => {
-    // Deposit ETH by Alice
-    const isRegisteredAlice = await collateralAggregator.isRegisteredUser(
-      aliceSigner.address,
-    );
-
-    if (!isRegisteredAlice) {
-      await collateralAggregator
-        .connect(aliceSigner)
-        .register()
-        .then((tx) => tx.wait());
-
-      await collateralVault
-        .connect(aliceSigner)
-        .deposit(hexETHString, depositAmountInETH, {
-          value: depositAmountInETH,
-        })
-        .then((tx) => tx.wait());
-    }
-
-    // Deposit ETH by BoB
-    const isRegisteredBob = await collateralAggregator.isRegisteredUser(
+    let collateralAmount = await tokenVault.getCollateralAmount(
       bobSigner.address,
+      hexETHString,
     );
 
-    if (!isRegisteredBob) {
-      await collateralAggregator
-        .connect(bobSigner)
-        .register()
-        .then((tx) => tx.wait());
-
-      await collateralVault
+    if (collateralAmount.toString() === '0') {
+      // Deposit ETH by BoB
+      await tokenVault
         .connect(bobSigner)
         .deposit(hexETHString, depositAmountInETH, {
           value: depositAmountInETH,
@@ -124,18 +98,17 @@ describe('ZC e2e test', async () => {
         .then((tx) => tx.wait());
     }
 
-    // Check collateral of Alice
-    let independentCollateral = await collateralVault.getIndependentCollateral(
-      aliceSigner.address,
+    collateralAmount = await tokenVault.getCollateralAmount(
+      bobSigner.address,
       hexETHString,
     );
 
     let totalPresentValue = await lendingMarketController.getTotalPresentValue(
       hexETHString,
-      aliceSigner.address,
+      bobSigner.address,
     );
 
-    expect(independentCollateral.toString()).to.equal(depositAmountInETH);
+    expect(collateralAmount.toString()).to.equal(depositAmountInETH);
     expect(totalPresentValue.toString()).to.equal('0');
   });
 
@@ -202,18 +175,18 @@ describe('ZC e2e test', async () => {
       .div(100);
 
     // Check collateral of Alice
-    const independentCollateralAlice =
-      await collateralVault.getIndependentCollateral(
-        aliceSigner.address,
-        hexETHString,
-      );
-    const unusedCollateralAlice =
-      await collateralAggregator.getUnusedCollateral(aliceSigner.address);
+    const collateralAmountAlice = await tokenVault.getCollateralAmount(
+      aliceSigner.address,
+      hexETHString,
+    );
+    const unusedCollateralAlice = await tokenVault.getUnusedCollateral(
+      aliceSigner.address,
+    );
     const [futureValueAliceAfter] = await lendingMarket.getFutureValue(
       aliceSigner.address,
     );
 
-    expect(independentCollateralAlice.toString()).to.equal(
+    expect(collateralAmountAlice.toString()).to.equal(
       unusedCollateralAlice.toString(),
     );
     expect(
@@ -221,11 +194,10 @@ describe('ZC e2e test', async () => {
     ).to.equal(calculatedFV.toString());
 
     // Check collateral of Bob
-    const unsettledCollateralBob =
-      await collateralAggregator.getUnsettledCollateral(
-        bobSigner.address,
-        targetCurrency,
-      );
+    const unsettledCollateralBob = await tokenVault.getUnsettledCollateral(
+      bobSigner.address,
+      targetCurrency,
+    );
     const [futureValueBobAfter] = await lendingMarket.getFutureValue(
       bobSigner.address,
     );

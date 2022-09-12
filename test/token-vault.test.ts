@@ -5,34 +5,34 @@ import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
 const AddressResolver = artifacts.require('AddressResolver');
-const CollateralAggregator = artifacts.require('CollateralAggregator');
-const CollateralVault = artifacts.require('CollateralVault');
+const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 const WETH9 = artifacts.require('WETH9Mock');
 const ERC20Mock = artifacts.require('ERC20Mock');
-const CollateralAggregatorCallerMock = artifacts.require(
-  'CollateralAggregatorCallerMock',
-);
+const TokenVaultCallerMock = artifacts.require('TokenVaultCallerMock');
 
 const { deployContract, deployMockContract } = waffle;
 
-describe('CollateralAggregator', () => {
+describe('TokenVault', () => {
   let mockCurrencyController: MockContract;
   let mockLendingMarketController: MockContract;
   let mockWETH9: MockContract;
   let mockERC20: MockContract;
 
-  let collateralAggregatorProxy: Contract;
-  let collateralVaultProxy: Contract;
-  let collateralAggregatorCaller: Contract;
+  let tokenVaultProxy: Contract;
+  let tokenVaultCaller: Contract;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
+
+  let targetCurrency: string;
+  let previousCurrency: string;
+  let currencyIdx = 0;
 
   const marginCallThresholdRate = 15000;
   const autoLiquidationThresholdRate = 12500;
@@ -59,33 +59,21 @@ describe('CollateralAggregator', () => {
     const proxyController = await deployContract(owner, ProxyController, [
       ethers.constants.AddressZero,
     ]);
-    const collateralAggregator = await deployContract(
-      owner,
-      CollateralAggregator,
-    );
-    const collateralVault = await deployContract(owner, CollateralVault);
+    const tokenVault = await deployContract(owner, TokenVault);
 
     // Get the Proxy contract addresses
     await proxyController.setAddressResolverImpl(addressResolver.address);
     const addressResolverProxyAddress =
       await proxyController.getAddressResolverAddress();
 
-    const collateralVaultAddress = await proxyController
-      .setCollateralVaultImpl(collateralVault.address, mockWETH9.address)
-      .then((tx) => tx.wait())
-      .then(
-        ({ events }) =>
-          events.find(({ event }) => event === 'ProxyCreated').args
-            .proxyAddress,
-      );
-
-    const collateralAggregatorAddress = await proxyController
-      .setCollateralAggregatorImpl(
-        collateralAggregator.address,
+    const tokenVaultAddress = await proxyController
+      .setTokenVaultImpl(
+        tokenVault.address,
         marginCallThresholdRate,
         autoLiquidationThresholdRate,
         liquidationPriceRate,
         minCollateralRate,
+        mockWETH9.address,
       )
       .then((tx) => tx.wait())
       .then(
@@ -99,21 +87,16 @@ describe('CollateralAggregator', () => {
       'AddressResolver',
       addressResolverProxyAddress,
     );
-    collateralAggregatorProxy = await ethers.getContractAt(
-      'CollateralAggregator',
-      collateralAggregatorAddress,
-    );
-    collateralVaultProxy = await ethers.getContractAt(
-      'CollateralVault',
-      collateralVaultAddress,
+    tokenVaultProxy = await ethers.getContractAt(
+      'TokenVault',
+      tokenVaultAddress,
     );
 
-    // Deploy CollateralAggregatorCaller
-    collateralAggregatorCaller = await deployContract(
-      owner,
-      CollateralAggregatorCallerMock,
-      [collateralAggregatorProxy.address, mockLendingMarketController.address],
-    );
+    // Deploy TokenVaultCaller
+    tokenVaultCaller = await deployContract(owner, TokenVaultCallerMock, [
+      tokenVaultProxy.address,
+      mockLendingMarketController.address,
+    ]);
 
     // Deploy MigrationAddressResolver
     const migrationAddressResolver = await MigrationAddressResolver.new(
@@ -123,9 +106,8 @@ describe('CollateralAggregator', () => {
     // Set up for AddressResolver and build caches using MigrationAddressResolver
     const migrationTargets: [string, Contract][] = [
       ['CurrencyController', mockCurrencyController],
-      ['CollateralAggregator', collateralAggregatorProxy],
-      ['CollateralVault', collateralVaultProxy],
-      ['LendingMarketController', collateralAggregatorCaller],
+      ['TokenVault', tokenVaultProxy],
+      ['LendingMarketController', tokenVaultCaller],
     ];
 
     const importAddressesArgs = {
@@ -139,33 +121,20 @@ describe('CollateralAggregator', () => {
       importAddressesArgs.names,
       importAddressesArgs.addresses,
     );
-    await migrationAddressResolver.buildCaches([
-      collateralAggregatorProxy.address,
-      collateralVaultProxy.address,
-    ]);
+    await migrationAddressResolver.buildCaches([tokenVaultProxy.address]);
+  });
 
-    // Set up for CollateralAggregator
-    await collateralAggregatorProxy.connect(alice)['register()']();
+  beforeEach(async () => {
+    previousCurrency = targetCurrency;
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    currencyIdx++;
   });
 
   describe('Initialize', async () => {
-    it('Success to register', async () => {
-      await expect(
-        collateralAggregatorProxy.connect(bob)['register()'](),
-      ).to.emit(collateralAggregatorProxy, 'Register');
-    });
-
-    it('Fail to register due to duplication', async () => {
-      await expect(
-        collateralAggregatorProxy.connect(alice)['register()'](),
-      ).to.be.revertedWith('User exists');
-    });
-
     it('Update CollateralParameters', async () => {
       const setCollateralParameters = async (...params) => {
-        await collateralAggregatorProxy.setCollateralParameters(...params);
-        const results =
-          await collateralAggregatorProxy.getCollateralParameters();
+        await tokenVaultProxy.setCollateralParameters(...params);
+        const results = await tokenVaultProxy.getCollateralParameters();
 
         expect(results.length).to.equal(4);
         expect(results[0]).to.equal(params[0]);
@@ -186,68 +155,55 @@ describe('CollateralAggregator', () => {
     it('Fail to call setCollateralParameters due to invalid ratio', async () => {
       // Check updateMarginCallThresholdRate
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('0', '4', '2', '1'),
+        tokenVaultProxy.setCollateralParameters('0', '4', '2', '1'),
       ).to.be.revertedWith('Rate is zero');
 
       // Check autoLiquidationThresholdRate
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '0', '2', '1'),
+        tokenVaultProxy.setCollateralParameters('4', '0', '2', '1'),
       ).to.be.revertedWith('Rate is zero');
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '4', '2', '1'),
+        tokenVaultProxy.setCollateralParameters('4', '4', '2', '1'),
       ).to.be.revertedWith('Auto liquidation threshold rate overflow');
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '5', '2', '1'),
+        tokenVaultProxy.setCollateralParameters('4', '5', '2', '1'),
       ).to.be.revertedWith('Auto liquidation threshold rate overflow');
 
       // Check liquidationPriceRate
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '3', '0', '1'),
+        tokenVaultProxy.setCollateralParameters('4', '3', '0', '1'),
       ).to.be.revertedWith('Rate is zero');
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '3', '3', '1'),
+        tokenVaultProxy.setCollateralParameters('4', '3', '3', '1'),
       ).to.be.revertedWith('Liquidation price rate overflow');
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '3', '4', '1'),
+        tokenVaultProxy.setCollateralParameters('4', '3', '4', '1'),
       ).to.be.revertedWith('Liquidation price rate overflow');
 
       // Check minCollateralRate
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '3', '2', '0'),
+        tokenVaultProxy.setCollateralParameters('4', '3', '2', '0'),
       ).to.be.revertedWith('Rate is zero');
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '3', '2', '3'),
+        tokenVaultProxy.setCollateralParameters('4', '3', '2', '3'),
       ).to.be.revertedWith('Min collateral rate overflow');
       await expect(
-        collateralAggregatorProxy.setCollateralParameters('4', '3', '2', '4'),
+        tokenVaultProxy.setCollateralParameters('4', '3', '2', '4'),
       ).to.be.revertedWith('Min collateral rate overflow');
     });
   });
 
   describe('Deposit & Withdraw', async () => {
-    let targetCurrency;
-    let previousCurrency;
-    let currencyIdx = 0;
-
     before(async () => {
-      await mockCurrencyController.mock.isCollateral.returns(true);
+      await mockCurrencyController.mock.isSupportedCcy.returns(true);
       await mockERC20.mock.transferFrom.returns(true);
       await mockERC20.mock.transfer.returns(true);
     });
 
-    beforeEach(async () => {
-      previousCurrency = targetCurrency;
-      targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-      currencyIdx++;
-    });
-
     it('Register a currency', async () => {
       await expect(
-        collateralVaultProxy.registerCurrency(
-          targetCurrency,
-          mockERC20.address,
-        ),
-      ).to.emit(collateralVaultProxy, 'CurrencyRegistered');
+        tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address),
+      ).to.emit(tokenVaultProxy, 'CurrencyRegistered');
     });
 
     it('Deposit into collateral book', async () => {
@@ -258,34 +214,28 @@ describe('CollateralAggregator', () => {
         'convertToETH(bytes32,uint256)'
       ].returns(valueInETH);
 
-      await collateralVaultProxy.registerCurrency(
-        targetCurrency,
-        mockERC20.address,
-      );
+      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
 
       await expect(
-        collateralVaultProxy.connect(alice).deposit(targetCurrency, value),
+        tokenVaultProxy.connect(alice).deposit(targetCurrency, value),
       )
-        .to.emit(collateralVaultProxy, 'Deposit')
+        .to.emit(tokenVaultProxy, 'Deposit')
         .withArgs(alice.address, targetCurrency, value);
 
-      const currencies = await collateralVaultProxy.getUsedCurrencies(
-        alice.address,
-      );
+      const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
       expect(currencies[0]).to.equal(targetCurrency);
 
-      const independentCollateral =
-        await collateralVaultProxy.getIndependentCollateral(
+      const collateralAmount = await tokenVaultProxy.getCollateralAmount(
+        alice.address,
+        targetCurrency,
+      );
+      const collateralAmountInETH =
+        await tokenVaultProxy.getCollateralAmountInETH(
           alice.address,
           targetCurrency,
         );
-      const independentCollateralInETH =
-        await collateralVaultProxy.getIndependentCollateralInETH(
-          alice.address,
-          targetCurrency,
-        );
-      expect(independentCollateral).to.equal(value);
-      expect(independentCollateralInETH).to.equal(valueInETH);
+      expect(collateralAmount).to.equal(value);
+      expect(collateralAmountInETH).to.equal(valueInETH);
     });
 
     it('Lock the unsettled collateral & Withdraw', async () => {
@@ -305,41 +255,30 @@ describe('CollateralAggregator', () => {
         totalPresentValue,
       );
 
-      await collateralVaultProxy.registerCurrency(
-        targetCurrency,
-        mockERC20.address,
-      );
+      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
 
-      expect(await collateralAggregatorProxy.getCoverage(bob.address)).to.equal(
-        '0',
-      );
-      expect(await collateralAggregatorProxy.isCovered(bob.address)).to.equal(
-        true,
-      );
+      expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('0');
+      expect(await tokenVaultProxy.isCovered(bob.address)).to.equal(true);
 
       // NOTE: Deposit in two currencies to double the collateral
       // since the mock always returns the same value with "convertToETH".
-      await collateralVaultProxy.connect(bob).deposit(targetCurrency, value);
-      await collateralVaultProxy.connect(bob).deposit(previousCurrency, value);
+      await tokenVaultProxy.connect(bob).deposit(targetCurrency, value);
+      await tokenVaultProxy.connect(bob).deposit(previousCurrency, value);
 
-      expect(await collateralAggregatorProxy.isCovered(bob.address)).to.equal(
-        true,
-      );
+      expect(await tokenVaultProxy.isCovered(bob.address)).to.equal(true);
 
       await expect(
-        collateralAggregatorCaller.useUnsettledCollateral(
+        tokenVaultCaller.useUnsettledCollateral(
           bob.address,
           targetCurrency,
           value.div('2'),
         ),
-      ).to.emit(collateralAggregatorProxy, 'UseUnsettledCollateral');
+      ).to.emit(tokenVaultProxy, 'UseUnsettledCollateral');
 
-      expect(await collateralAggregatorProxy.isCovered(bob.address)).to.equal(
-        true,
-      );
+      expect(await tokenVaultProxy.isCovered(bob.address)).to.equal(true);
 
       expect(
-        await collateralAggregatorProxy.getWithdrawableCollateral(bob.address),
+        await tokenVaultProxy.getWithdrawableCollateral(bob.address),
       ).to.equal(
         valueInETH
           .mul('2')
@@ -348,26 +287,22 @@ describe('CollateralAggregator', () => {
           .div('10000'),
       );
 
-      expect(await collateralAggregatorProxy.getCoverage(bob.address)).to.equal(
-        '5000',
-      );
+      expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('5000');
 
       expect(
-        await collateralAggregatorProxy.getUnsettledCollateral(
+        await tokenVaultProxy.getUnsettledCollateral(
           bob.address,
           targetCurrency,
         ),
       ).to.equal(value.div('2').toString());
 
       expect(
-        await collateralAggregatorProxy.getTotalUnsettledExposure(bob.address),
+        await tokenVaultProxy.getTotalUnsettledExposure(bob.address),
       ).to.equal(valueInETH);
 
       await expect(
-        collateralVaultProxy
-          .connect(bob)
-          .withdraw(targetCurrency, '10000000000000'),
-      ).to.emit(collateralVaultProxy, 'Withdraw');
+        tokenVaultProxy.connect(bob).withdraw(targetCurrency, '10000000000000'),
+      ).to.emit(tokenVaultProxy, 'Withdraw');
     });
 
     it('Fail to lock the unsettled collateral due to no enough collateral', async () => {
@@ -379,16 +314,12 @@ describe('CollateralAggregator', () => {
       );
 
       expect(
-        await collateralAggregatorProxy.getWithdrawableCollateral(
-          carol.address,
-        ),
+        await tokenVaultProxy.getWithdrawableCollateral(carol.address),
       ).to.equal('0');
-      expect(
-        await collateralAggregatorProxy.getCoverage(carol.address),
-      ).to.equal('0');
+      expect(await tokenVaultProxy.getCoverage(carol.address)).to.equal('0');
 
       await expect(
-        collateralAggregatorCaller.useUnsettledCollateral(
+        tokenVaultCaller.useUnsettledCollateral(
           carol.address,
           targetCurrency,
           '1',
@@ -396,21 +327,9 @@ describe('CollateralAggregator', () => {
       ).to.be.revertedWith('Not enough collateral');
     });
 
-    it('Fail to call deposit due to unregistered user', async () => {
-      await expect(
-        collateralVaultProxy.connect(owner).deposit(targetCurrency, '1'),
-      ).to.be.revertedWith('User not registered');
-    });
-
-    it('Fail to call withdraw due to unregistered user', async () => {
-      await expect(
-        collateralVaultProxy.connect(owner).withdraw(targetCurrency, '1'),
-      ).to.be.revertedWith('User not registered');
-    });
-
     it('Fail to call useUnsettledCollateral due to invalid caller', async () => {
       await expect(
-        collateralAggregatorProxy
+        tokenVaultProxy
           .connect(alice)
           .useUnsettledCollateral(carol.address, targetCurrency, '1'),
       ).to.be.revertedWith('Only Accepted Contracts');
@@ -418,10 +337,71 @@ describe('CollateralAggregator', () => {
 
     it('Fail to call releaseUnsettledCollateral due to invalid caller', async () => {
       await expect(
-        collateralAggregatorProxy
+        tokenVaultProxy
           .connect(alice)
           .releaseUnsettledCollateral(carol.address, targetCurrency, '1'),
       ).to.be.revertedWith('Only Accepted Contracts');
+    });
+  });
+
+  describe('Escrow', async () => {
+    it('Deposit funds to the escrow', async () => {
+      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
+
+      await expect(
+        tokenVaultCaller.addEscrowedAmount(
+          owner.address,
+          targetCurrency,
+          '10000',
+        ),
+      ).to.emit(tokenVaultProxy, 'EscrowedAmountAdded');
+    });
+
+    it('Withdraw funds From the escrow', async () => {
+      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
+
+      await tokenVaultCaller.addEscrowedAmount(
+        owner.address,
+        targetCurrency,
+        '10000',
+      );
+
+      await expect(
+        tokenVaultCaller.removeEscrowedAmount(
+          owner.address,
+          owner.address,
+          targetCurrency,
+          '10000',
+        ),
+      ).to.emit(tokenVaultProxy, 'EscrowedAmountRemoved');
+    });
+
+    it('Fail to call addEscrowedAmount due to invalid amount', async () => {
+      await expect(
+        tokenVaultCaller.addEscrowedAmount(owner.address, targetCurrency, '0'),
+      ).to.be.revertedWith('Invalid amount');
+    });
+
+    it('Fail to call removeEscrowedAmount due to invalid amount', async () => {
+      await expect(
+        tokenVaultCaller.removeEscrowedAmount(
+          owner.address,
+          owner.address,
+          targetCurrency,
+          '0',
+        ),
+      ).to.be.revertedWith('Invalid amount');
+    });
+
+    it('Fail to call removeEscrowedAmount due to not enough amount', async () => {
+      await expect(
+        tokenVaultCaller.removeEscrowedAmount(
+          owner.address,
+          owner.address,
+          targetCurrency,
+          '10000',
+        ),
+      ).to.be.revertedWith('Not enough escrowed amount');
     });
   });
 });

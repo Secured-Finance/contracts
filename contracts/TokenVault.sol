@@ -5,8 +5,9 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
+import {ERC20Handler} from "./libraries/ERC20Handler.sol";
 // interfaces
-import {ICollateralAggregator} from "./interfaces/ICollateralAggregator.sol";
+import {ITokenVault} from "./interfaces/ITokenVault.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types
@@ -15,32 +16,32 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
-import {CollateralAggregatorStorage as Storage} from "./storages/CollateralAggregatorStorage.sol";
+import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
 
 /**
- * @notice Implements the management of the collateral in each currency for users.
+ * @notice Implements the management of the token in each currency for users.
  *
- * This contract manages the following data related to the collateral.
- * - Deposited amount as the collateral
+ * This contract manages the following data related to tokens.
+ * - Deposited token amount as the collateral
  * - Unsettled collateral amount used by order
+ * - Escrowed token amount added by lending orders
  * - Parameters related to the collateral
  *   - Margin Call Threshold Rate
  *   - Auto Liquidation Threshold Rate
  *   - Liquidation Price Rate
  *   - Min Collateral Rate
  *
- * @dev The deposited amount is managed in the CollateralVault contract now. It will be merged to this contract
- * in the future.
+ * To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
  */
-contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ownable, Proxyable {
+contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**
-     * @notice Modifier to check if user hasn't been registered yet
-     * @param _user User's address
+     * @notice Modifier to check if currency hasn't been registered yet
+     * @param _ccy Currency name in bytes32
      */
-    modifier nonRegisteredUser(address _user) {
-        require(!Storage.slot().isRegistered[_user], "User exists");
+    modifier onlyRegisteredCurrency(bytes32 _ccy) {
+        require(Storage.slot().tokenAddresses[_ccy] != address(0), "Currency not registered");
         _;
     }
 
@@ -53,6 +54,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      * @param _autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
      * @param _liquidationPriceRate The rate used as the liquidation price
      * @param _minCollateralRate The rate used minima collateral
+     * @param _WETH9 The address of WETH
      */
     function initialize(
         address _owner,
@@ -60,11 +62,13 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         uint256 _marginCallThresholdRate,
         uint256 _autoLiquidationThresholdRate,
         uint256 _liquidationPriceRate,
-        uint256 _minCollateralRate
+        uint256 _minCollateralRate,
+        address _WETH9
     ) public initializer onlyProxy {
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
 
+        ERC20Handler.initialize(_WETH9);
         CollateralParametersHandler.setCollateralParameters(
             _marginCallThresholdRate,
             _autoLiquidationThresholdRate,
@@ -75,16 +79,19 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](3);
-        contracts[0] = Contracts.COLLATERAL_VAULT;
-        contracts[1] = Contracts.CURRENCY_CONTROLLER;
-        contracts[2] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts = new bytes32[](2);
+        contracts[0] = Contracts.CURRENCY_CONTROLLER;
+        contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     // @inheritdoc MixinAddressResolver
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
+    receive() external payable {
+        require(msg.sender == ERC20Handler.weth(), "Not WETH");
     }
 
     /**
@@ -94,15 +101,6 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      */
     function isCovered(address _user) public view override returns (bool) {
         return _isCovered(_user, "", 0);
-    }
-
-    /**
-     * @notice Gets if the user is registered.
-     * @param _user User's address
-     * @return The boolean if the user is registered or not
-     */
-    function isRegisteredUser(address _user) external view override returns (bool) {
-        return Storage.slot().isRegistered[_user];
     }
 
     /**
@@ -139,7 +137,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      * @return The total amount of unused collateral
      */
     function getUnusedCollateral(address _user) external view returns (uint256) {
-        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalCollateral = getTotalCollateralAmountInETH(_user);
         uint256 totalUsedCollateral = _getUsedCollateral(_user) +
             _getTotalUnsettledExposure(_user, "", 0);
 
@@ -153,6 +151,78 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      */
     function getTotalUnsettledExposure(address _user) external view override returns (uint256) {
         return _getTotalUnsettledExposure(_user, "", 0);
+    }
+
+    /**
+     * @notice Gets the amount deposited in the user's collateral.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     * @return The deposited amount
+     */
+    function getCollateralAmount(address _user, bytes32 _ccy)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return Storage.slot().collateralAmounts[_user][_ccy];
+    }
+
+    /**
+     * @notice Gets the amount deposited in the user's collateral by converting it to ETH.
+     * @param _user User's address
+     * @param _ccy Specified currency
+     * @return The deposited amount in ETH
+     */
+    function getCollateralAmountInETH(address _user, bytes32 _ccy)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        uint256 amount = getCollateralAmount(_user, _ccy);
+        return currencyController().convertToETH(_ccy, amount);
+    }
+
+    /**
+     * @notice Gets the total amount deposited in the user's collateral in all currencies.
+     * by converting it to ETH.
+     * @param _user Address of collateral user
+     * @return The total deposited amount in ETH
+     */
+    function getTotalCollateralAmountInETH(address _user) public view override returns (uint256) {
+        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
+        uint256 collateralAmount;
+        uint256 totalCollateral;
+
+        uint256 len = currencies.length();
+
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 ccy = currencies.at(i);
+            collateralAmount = getCollateralAmountInETH(_user, ccy);
+            totalCollateral = totalCollateral + collateralAmount;
+        }
+
+        return totalCollateral;
+    }
+
+    /**
+     * @notice Gets the currencies that the user used as collateral.
+     * @param _user User's address
+     * @return The currency names in bytes32
+     */
+    function getUsedCurrencies(address _user) public view override returns (bytes32[] memory) {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+
+        uint256 numCurrencies = currencySet.length();
+        bytes32[] memory currencies = new bytes32[](numCurrencies);
+
+        for (uint256 i = 0; i < numCurrencies; i++) {
+            bytes32 currency = currencySet.at(i);
+            currencies[i] = currency;
+        }
+
+        return currencies;
     }
 
     /**
@@ -174,15 +244,6 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         )
     {
         return CollateralParametersHandler.getCollateralParameters();
-    }
-
-    /**
-     * @notice Register user.
-     */
-    function register() external override nonRegisteredUser(msg.sender) {
-        Storage.slot().isRegistered[msg.sender] = true;
-
-        emit Register(msg.sender);
     }
 
     /**
@@ -224,6 +285,114 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         emit ReleaseUnsettled(_user, _ccy, _amount);
     }
 
+    function registerCurrency(bytes32 _ccy, address _tokenAddress) external onlyOwner {
+        require(currencyController().isSupportedCcy(_ccy), "Invalid currency");
+        Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
+
+        emit CurrencyRegistered(_ccy, _tokenAddress);
+    }
+
+    /**
+     * @dev Deposits funds by the caller into collateral.
+     * @param _amount Amount of funds to deposit
+     * @param _ccy Currency name in bytes32
+     */
+    function deposit(bytes32 _ccy, uint256 _amount)
+        public
+        payable
+        override
+        onlyRegisteredCurrency(_ccy)
+    {
+        require(_amount > 0, "Invalid amount");
+        ERC20Handler.depositAssets(
+            Storage.slot().tokenAddresses[_ccy],
+            msg.sender,
+            address(this),
+            _amount
+        );
+
+        Storage.slot().collateralAmounts[msg.sender][_ccy] += _amount;
+
+        _updateUsedCurrencies(_ccy);
+
+        emit Deposit(msg.sender, _ccy, _amount);
+    }
+
+    /**
+     * @notice Withdraws funds by the caller from unused collateral.
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to withdraw.
+     */
+    function withdraw(bytes32 _ccy, uint256 _amount) public override onlyRegisteredCurrency(_ccy) {
+        // fix according to collateral aggregator
+        require(_amount > 0, "Invalid amount");
+
+        address user = msg.sender;
+        uint256 maxWithdrawETH = _getWithdrawableCollateral(user);
+        uint256 maxWithdraw = currencyController().convertFromETH(_ccy, maxWithdrawETH);
+        uint256 withdrawAmt = _amount > maxWithdraw ? maxWithdraw : _amount;
+
+        require(
+            Storage.slot().collateralAmounts[user][_ccy] >= withdrawAmt,
+            "Not enough collateral in the selected currency"
+        );
+        Storage.slot().collateralAmounts[user][_ccy] -= withdrawAmt;
+
+        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], msg.sender, withdrawAmt);
+        _updateUsedCurrencies(_ccy);
+
+        emit Withdraw(msg.sender, _ccy, withdrawAmt);
+    }
+
+    /**
+     * @notice Add funds to escrow.
+     * @param _payer Address of user making payment
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to be add into escrow
+     */
+    function addEscrowedAmount(
+        address _payer,
+        bytes32 _ccy,
+        uint256 _amount
+    ) external payable override onlyAcceptedContracts {
+        require(_amount > 0, "Invalid amount");
+
+        ERC20Handler.depositAssets(
+            Storage.slot().tokenAddresses[_ccy],
+            _payer,
+            address(this),
+            _amount
+        );
+        Storage.slot().escrowedAmount[_payer][_ccy] += _amount;
+
+        emit EscrowedAmountAdded(_payer, _ccy, _amount);
+    }
+
+    /**
+     * @notice Remove funds from escrow.
+     * @param _payer Address of user making payment
+     * @param _receiver Address of user receiving payment
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to be removed from escrow
+     */
+    function removeEscrowedAmount(
+        address _payer,
+        address _receiver,
+        bytes32 _ccy,
+        uint256 _amount
+    ) external override onlyAcceptedContracts {
+        require(_amount > 0, "Invalid amount");
+        require(
+            Storage.slot().escrowedAmount[_payer][_ccy] >= _amount,
+            "Not enough escrowed amount"
+        );
+
+        Storage.slot().escrowedAmount[_payer][_ccy] -= _amount;
+        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _receiver, _amount);
+
+        emit EscrowedAmountRemoved(_payer, _receiver, _ccy, _amount);
+    }
+
     /**
      * @notice Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning.
@@ -260,7 +429,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         bytes32 _ccy,
         uint256 _unsettledExp
     ) internal view returns (bool) {
-        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalCollateral = getTotalCollateralAmountInETH(_user);
         uint256 totalUsedCollateral = _getUsedCollateral(_user) +
             _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
 
@@ -282,7 +451,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
         bytes32 _ccy,
         uint256 _unsettledExp
     ) internal view returns (uint256 coverage) {
-        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalCollateral = getTotalCollateralAmountInETH(_user);
         uint256 totalUsedCollateral = _getUsedCollateral(_user) +
             _getTotalUnsettledExposure(_user, _ccy, _unsettledExp);
 
@@ -319,15 +488,6 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
     }
 
     /**
-     * @notice Gets the total collateral in all currencies.
-     * @param _user User's address
-     * @return The total amount of collateral
-     */
-    function _getTotalCollateral(address _user) internal view returns (uint256) {
-        return collateralVault().getTotalIndependentCollateralInETH(_user);
-    }
-
-    /**
      * @notice Gets the total collateral used in all currencies.
      * The collateral used is defined as the negative future value in the lending market contract.
      * @param _user User's address
@@ -344,7 +504,7 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
      * @return Maximum amount of ETH that can be withdrawn
      */
     function _getWithdrawableCollateral(address _user) internal view returns (uint256) {
-        uint256 totalCollateral = _getTotalCollateral(_user);
+        uint256 totalCollateral = getTotalCollateralAmountInETH(_user);
         uint256 totalUsedCollateral = _getUsedCollateral(_user) +
             _getTotalUnsettledExposure(_user, "", 0);
 
@@ -364,6 +524,14 @@ contract CollateralAggregator is ICollateralAggregator, MixinAddressResolver, Ow
                     CollateralParametersHandler.marginCallThresholdRate()) / ProtocolTypes.BP;
         } else {
             return 0;
+        }
+    }
+
+    function _updateUsedCurrencies(bytes32 _ccy) internal {
+        if (Storage.slot().collateralAmounts[msg.sender][_ccy] > 0) {
+            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+        } else {
+            Storage.slot().usedCurrencies[msg.sender].remove(_ccy);
         }
     }
 }

@@ -14,8 +14,6 @@ task('register-orders', 'Registers order data into the selected lending market')
       { currency, maturity, midRate, amount, orderCount },
       { deployments, ethers },
     ) => {
-      const [owner] = await ethers.getSigners();
-
       const proxyController = await deployments
         .get('ProxyController')
         .then(({ address }) =>
@@ -24,23 +22,20 @@ task('register-orders', 'Registers order data into the selected lending market')
 
       const contracts = [
         'LendingMarketController',
-        'CollateralVault',
-        'CollateralAggregator',
+        'TokenVault',
         'CurrencyController',
       ];
 
-      const [
-        lendingMarketController,
-        collateralVault,
-        collateralAggregator,
-        currencyController,
-      ] = await Promise.all(
-        contracts.map((contract) =>
-          proxyController
-            .getAddress(toBytes32(contract))
-            .then((address: string) => ethers.getContractAt(contract, address)),
-        ),
-      );
+      const [lendingMarketController, tokenVault, currencyController] =
+        await Promise.all(
+          contracts.map((contract) =>
+            proxyController
+              .getAddress(toBytes32(contract))
+              .then((address: string) =>
+                ethers.getContractAt(contract, address),
+              ),
+          ),
+        );
 
       const currencyName = toBytes32(currency);
       const maturities: BigNumber[] =
@@ -98,19 +93,11 @@ task('register-orders', 'Registers order data into the selected lending market')
       }
 
       // Add collateral
-      const isRegisteredUser = await collateralAggregator.isRegisteredUser(
-        owner.address,
-      );
-
-      if (!isRegisteredUser) {
-        await collateralAggregator.register().then((tx) => tx.wait());
-      }
-
       const depositValue = await currencyController[
         'convertToETH(bytes32,uint256)'
       ](currencyName, totalAmount.times(1.5).dp(0).toFixed());
 
-      await collateralVault
+      await tokenVault
         .deposit(toBytes32('ETH'), depositValue, {
           value: depositValue,
         })

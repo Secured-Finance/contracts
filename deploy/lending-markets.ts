@@ -19,6 +19,9 @@ const func: DeployFunction = async function ({
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
   // Get contracts from proxyController
+  const beaconProxyController = await proxyController
+    .getAddress(toBytes32('BeaconProxyController'))
+    .then((address) => ethers.getContractAt('BeaconProxyController', address));
   const lendingMarketController = await proxyController
     .getAddress(toBytes32('LendingMarketController'))
     .then((address) =>
@@ -26,7 +29,7 @@ const func: DeployFunction = async function ({
     );
 
   await executeIfNewlyDeployment('LendingMarket', deployResult, async () => {
-    await lendingMarketController
+    await beaconProxyController
       .setLendingMarketImpl(deployResult.address)
       .then((tx) => tx.wait());
   });
@@ -89,6 +92,10 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['LendingMarkets'];
-func.dependencies = ['LendingMarketController', 'Migration'];
+func.dependencies = [
+  'BeaconProxyController',
+  'LendingMarketController',
+  'Migration',
+];
 
 export default func;

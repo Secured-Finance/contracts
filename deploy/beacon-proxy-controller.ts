@@ -2,11 +2,6 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
-const MARGIN_CALL_THRESHOLD_RATE = 15000;
-const AUTO_LIQUIDATION_THRESHOLD_RATE = 12500;
-const LIQUIDATION_PRICE_RATE = 12000;
-const MIN_COLLATERAL_RATE = 2500;
-
 const func: DeployFunction = async function ({
   getNamedAccounts,
   deployments,
@@ -15,12 +10,12 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const deployResult = await deploy('CollateralAggregator', {
+  const deployResult = await deploy('BeaconProxyController', {
     from: deployer,
   });
 
   await executeIfNewlyDeployment(
-    'CollateralAggregator',
+    'BeaconProxyController',
     deployResult,
     async () => {
       const proxyController = await deployments
@@ -30,19 +25,13 @@ const func: DeployFunction = async function ({
         );
 
       await proxyController
-        .setCollateralAggregatorImpl(
-          deployResult.address,
-          MARGIN_CALL_THRESHOLD_RATE,
-          AUTO_LIQUIDATION_THRESHOLD_RATE,
-          LIQUIDATION_PRICE_RATE,
-          MIN_COLLATERAL_RATE,
-        )
+        .setBeaconProxyControllerImpl(deployResult.address)
         .then((tx) => tx.wait());
     },
   );
 };
 
-func.tags = ['CollateralAggregator'];
+func.tags = ['BeaconProxyController'];
 func.dependencies = ['ProxyController'];
 
 export default func;

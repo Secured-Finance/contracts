@@ -12,10 +12,8 @@ import "../types/ProtocolTypes.sol";
  */
 interface ICurrencyController {
     event CcyAdded(bytes32 indexed ccy, string name, uint256 haircut);
-    event CcyCollateralUpdate(bytes32 indexed ccy, bool isCollateral);
     event CcySupportUpdate(bytes32 indexed ccy, bool isSupported);
     event HaircutUpdated(bytes32 indexed ccy, uint256 haircut);
-    event MinMarginUpdated(bytes32 indexed ccy, uint256 minMargin);
     event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
     event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
 
@@ -41,8 +39,6 @@ interface ICurrencyController {
 
     function getLastUSDPrice(bytes32 _ccy) external view returns (int256);
 
-    function isCollateral(bytes32) external view returns (bool);
-
     function isSupportedCcy(bytes32 _ccy) external view returns (bool);
 
     function linkPriceFeed(
@@ -57,15 +53,10 @@ interface ICurrencyController {
         bytes32 _ccy,
         string memory _name,
         address _ethPriceFeed,
-        uint256 _haircut,
-        address _tokenAddress
+        uint256 _haircut
     ) external;
 
     function updateCcyHaircut(bytes32 _ccy, uint256 _haircut) external;
 
-    function updateCollateralSupport(bytes32 _ccy, bool _isSupported) external;
-
     function updateCurrencySupport(bytes32 _ccy, bool _isSupported) external;
-
-    function getTokenAddresses(bytes32) external view returns (address);
 }

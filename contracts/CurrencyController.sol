@@ -41,22 +41,15 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _name Currency full name
      * @param _ethPriceFeed Address for ETH price feed
      * @param _haircut Haircut ratio used to calculate in collateral calculations
-     * @param _tokenAddress Token contract address of the currency
      */
     function supportCurrency(
         bytes32 _ccy,
         string memory _name,
         address _ethPriceFeed,
-        uint256 _haircut,
-        address _tokenAddress
+        uint256 _haircut
     ) public override onlyOwner {
         ProtocolTypes.Currency memory currency;
         currency.name = _name;
-
-        if (_tokenAddress != address(0)) {
-            Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
-        }
-
         currency.isSupported = true;
 
         Storage.slot().currencies[_ccy] = currency;
@@ -83,22 +76,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Updates the flag indicating if the currency is accepted as collateral.
-     * @param _ccy Currency name in bytes32
-     * @param _isSupported Boolean if currency is accepted as collateral or not
-     */
-    function updateCollateralSupport(bytes32 _ccy, bool _isSupported)
-        public
-        override
-        onlyOwner
-        supportedCcyOnly(_ccy)
-    {
-        Storage.slot().isCollateral[_ccy] = _isSupported;
-
-        emit CcyCollateralUpdate(_ccy, _isSupported);
-    }
-
-    /**
      * @notice Updates the haircut ratio for supported currency
      * @param _ccy Currency name in bytes32
      * @param _haircut Haircut ratio used to calculate in collateral calculations
@@ -116,8 +93,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
         emit HaircutUpdated(_ccy, _haircut);
     }
-
-    // =========== EXTERNAL GET FUNCTIONS ===========
 
     /**
      * @notice Gets the currency data.
@@ -154,29 +129,12 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets token address for the selected currency.
-     * @param _ccy Currency name in bytes32
-     */
-    function getTokenAddresses(bytes32 _ccy) external view returns (address) {
-        return Storage.slot().tokenAddresses[_ccy];
-    }
-
-    /**
      * @notice Gets if the selected currency is supported.
      * @param _ccy Currency name in bytes32
      * @return The boolean if the selected currency is supported or not
      */
     function isSupportedCcy(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().currencies[_ccy].isSupported;
-    }
-
-    /**
-     * @notice Gets if the selected currency is accepted as collateral.
-     * @param _ccy Currency name in bytes32
-     * @return The boolean if the selected currency is accepted as collateral or not
-     */
-    function isCollateral(bytes32 _ccy) public view returns (bool) {
-        return Storage.slot().isCollateral[_ccy];
     }
 
     // =========== CHAINLINK PRICE FEED FUNCTIONS ===========
@@ -246,8 +204,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             emit PriceFeedRemoved(_ccy, "USD", priceFeed);
         }
     }
-
-    // =========== GET PRICE FUNCTIONS ===========
 
     /**
      * @notice Gets the last price in USD for the selected currency.

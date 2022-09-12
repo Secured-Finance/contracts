@@ -7,11 +7,10 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {ILendingMarketController, Order} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
-import {BeaconContracts, Contracts} from "./libraries/Contracts.sol";
+import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
-import {MixinBeaconProxyController} from "./mixins/MixinBeaconProxyController.sol";
 import {MixinGenesisValue} from "./mixins/MixinGenesisValue.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
@@ -35,7 +34,6 @@ import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarke
 contract LendingMarketController is
     ILendingMarketController,
     MixinAddressResolver,
-    MixinBeaconProxyController,
     MixinGenesisValue,
     ReentrancyGuard,
     Ownable,
@@ -82,9 +80,10 @@ contract LendingMarketController is
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
-        contracts[0] = Contracts.COLLATERAL_AGGREGATOR;
+        contracts = new bytes32[](3);
+        contracts[0] = Contracts.BEACON_PROXY_CONTROLLER;
         contracts[1] = Contracts.CURRENCY_CONTROLLER;
+        contracts[2] = Contracts.TOKEN_VAULT;
     }
 
     /**
@@ -223,15 +222,6 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the beacon proxy address to the selected name.
-     * @param beaconName The cache name of the beacon proxy
-     * @return totalPresentValue The beacon proxy address
-     */
-    function getBeaconProxyAddress(bytes32 beaconName) external view override returns (address) {
-        return _getAddress(beaconName);
-    }
-
-    /**
      * @notice Gets if the lending market is initialized.
      * @param _ccy Currency name in bytes32
      * @return The boolean if the lending market is initialized or not
@@ -256,14 +246,6 @@ contract LendingMarketController is
 
         _registerCurrency(_ccy, 18, _compoundFactor);
         Storage.slot().basisDates[_ccy] = _basisDate;
-    }
-
-    /**
-     * @notice Sets the implementation contract of LendingMarket
-     * @param newImpl The address of implementation contract
-     */
-    function setLendingMarketImpl(address newImpl) external override onlyOwner {
-        _updateBeaconImpl(BeaconContracts.LENDING_MARKET, newImpl);
     }
 
     /**
@@ -294,7 +276,11 @@ contract LendingMarketController is
 
         uint256 nextMaturity = TimeLibrary.addMonths(basisDate, BASIS_TERM);
 
-        market = address(_deployLendingMarket(_ccy, nextMaturity, Storage.slot().basisDates[_ccy]));
+        market = beaconProxyController().deployLendingMarket(
+            _ccy,
+            Storage.slot().basisDates[_ccy],
+            nextMaturity
+        );
 
         Storage.slot().lendingMarkets[_ccy].push(market);
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
@@ -328,37 +314,25 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _rate
-    ) external nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        return _createOrder(_ccy, _maturity, _side, _amount, _rate);
+    }
 
-        _convertFutureValueToGenesisValue(_ccy, marketAddr, msg.sender);
-
-        // Create a order
-        (address maker, uint256 matchedAmount) = ILendingMarket(marketAddr).createOrder(
-            _side,
-            msg.sender,
-            _amount,
-            _rate
-        );
-
-        // Update the unsettled collateral in CollateralAggregator
-        uint256 settledCollateralAmount = (_amount * ProtocolTypes.MKTMAKELEVEL) /
-            ProtocolTypes.PCT;
-        if (matchedAmount == 0) {
-            collateralAggregator().useUnsettledCollateral(maker, _ccy, settledCollateralAmount);
-        } else {
-            collateralAggregator().releaseUnsettledCollateral(maker, _ccy, settledCollateralAmount);
-            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-            Storage.slot().usedCurrencies[maker].add(_ccy);
-
-            if (_side == ProtocolTypes.Side.LEND) {
-                emit OrderFilled(msg.sender, maker, _ccy, _maturity, matchedAmount, _rate);
-            } else {
-                emit OrderFilled(maker, msg.sender, _ccy, _maturity, matchedAmount, _rate);
-            }
-        }
-
-        return true;
+    /**
+     * @notice Creates the lend order with ETH. Takes the order if the order is matched,
+     * and places new order if not match it.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
+    function createLendOrderWithETH(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _rate
+    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        return _createOrder(_ccy, _maturity, ProtocolTypes.Side.LEND, msg.value, _rate);
     }
 
     /**
@@ -376,7 +350,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _rate
-    ) external view ifValidMaturity(_ccy, _maturity) returns (bool) {
+    ) external view override ifValidMaturity(_ccy, _maturity) returns (bool) {
         address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         ILendingMarket(marketAddr).matchOrders(_side, _amount, _rate);
 
@@ -393,15 +367,18 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _orderId
-    ) external nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        uint256 amount = ILendingMarket(marketAddr).cancelOrder(msg.sender, _orderId);
+        (ProtocolTypes.Side side, uint256 amount, uint256 rate) = ILendingMarket(marketAddr)
+            .cancelOrder(msg.sender, _orderId);
 
-        collateralAggregator().releaseUnsettledCollateral(
-            msg.sender,
-            _ccy,
-            (amount * ProtocolTypes.MKTMAKELEVEL) / ProtocolTypes.PCT
-        );
+        if (side == ProtocolTypes.Side.LEND) {
+            tokenVault().removeEscrowedAmount(msg.sender, msg.sender, _ccy, amount);
+        } else {
+            tokenVault().releaseUnsettledCollateral(msg.sender, _ccy, amount);
+        }
+
+        emit OrderCanceled(_orderId, msg.sender, _ccy, side, _maturity, amount, rate);
 
         return true;
     }
@@ -518,25 +495,55 @@ contract LendingMarketController is
         }
     }
 
-    /**
-     * @notice Deploys the lending market contract.
-     * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the market
-     * @param _basisDate The basis date
-     * @return The proxy contract address of created lending market
-     */
-    function _deployLendingMarket(
+    function _createOrder(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _basisDate
-    ) private returns (address) {
-        bytes memory data = abi.encodeWithSignature(
-            "initialize(address,bytes32,uint256,uint256)",
-            address(resolver),
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _rate
+    ) private returns (bool) {
+        _convertFutureValueToGenesisValue(
             _ccy,
-            _maturity,
-            _basisDate
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity],
+            msg.sender
         );
-        return _createProxy(BeaconContracts.LENDING_MARKET, data);
+
+        // Create a order
+        (uint256 orderId, address maker, uint256 matchedAmount) = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).createOrder(_side, msg.sender, _amount, _rate);
+
+        // Update the unsettled collateral in TokenVault
+        if (matchedAmount == 0) {
+            if (_side == ProtocolTypes.Side.LEND) {
+                tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, _amount);
+            } else {
+                tokenVault().useUnsettledCollateral(maker, _ccy, _amount);
+            }
+
+            emit OrderPlaced(orderId, maker, _ccy, _side, _maturity, _amount, _rate);
+        } else {
+            if (_side == ProtocolTypes.Side.LEND) {
+                tokenVault().releaseUnsettledCollateral(maker, _ccy, _amount);
+            } else {
+                tokenVault().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
+            }
+
+            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+            Storage.slot().usedCurrencies[maker].add(_ccy);
+
+            emit OrderFilled(
+                orderId,
+                maker,
+                msg.sender,
+                _ccy,
+                _side,
+                _maturity,
+                matchedAmount,
+                _rate
+            );
+        }
+
+        return true;
     }
 }

@@ -4,13 +4,7 @@ import { DeployResult } from 'hardhat-deploy/types';
 import moment from 'moment';
 
 import { btcToETHRate, ethToUSDRate, filToETHRate } from './numbers';
-import {
-  hexBTCString,
-  hexETHString,
-  hexFILString,
-  toBytes32,
-  zeroAddress,
-} from './strings';
+import { hexBTCString, hexETHString, hexFILString, toBytes32 } from './strings';
 
 const marginCallThresholdRate = 15000;
 const autoLiquidationThresholdRate = 12500;
@@ -20,17 +14,11 @@ const minCollateralRate = 2500;
 const COMPOUND_FACTOR = '1010000000000000000';
 
 const deployContracts = async () => {
-  // Deploy libraries
-  const quickSortLibrary = await ethers
-    .getContractFactory('QuickSort')
-    .then((factory) => factory.deploy());
-  await quickSortLibrary.deployed();
-
   // Deploy contracts
   const contracts = [
     'AddressResolver',
-    'CollateralAggregator',
-    'CollateralVault',
+    'BeaconProxyController',
+    'TokenVault',
     'CurrencyController',
     'WETH9Mock',
     'LendingMarketController',
@@ -38,8 +26,8 @@ const deployContracts = async () => {
 
   const [
     addressResolver,
-    collateralAggregator,
-    collateralVault,
+    beaconProxyController,
+    tokenVault,
     currencyController,
     wETHToken,
     lendingMarketController,
@@ -48,6 +36,12 @@ const deployContracts = async () => {
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
     ),
   );
+
+  const wFILToken = await ethers
+    .getContractFactory('ERC20Mock')
+    .then((factory) =>
+      factory.deploy('Wrapped Filecoin', 'WFIL', '100000000000000000000000'),
+    );
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')
@@ -65,20 +59,18 @@ const deployContracts = async () => {
 
   // Set contract addresses to the Proxy contract
   const [
-    collateralAggregatorAddress,
-    collateralVaultAddress,
+    beaconProxyControllerAddress,
+    tokenVaultAddress,
     currencyControllerAddress,
     lendingMarketControllerAddress,
   ] = await Promise.all([
-    proxyController.setCollateralAggregatorImpl(
-      collateralAggregator.address,
+    proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
+    proxyController.setTokenVaultImpl(
+      tokenVault.address,
       marginCallThresholdRate,
       autoLiquidationThresholdRate,
       liquidationPriceRate,
       minCollateralRate,
-    ),
-    proxyController.setCollateralVaultImpl(
-      collateralVault.address,
       wETHToken.address,
     ),
     proxyController.setCurrencyControllerImpl(currencyController.address),
@@ -100,13 +92,13 @@ const deployContracts = async () => {
     'AddressResolver',
     addressResolverProxyAddress,
   );
-  const collateralAggregatorProxy = await ethers.getContractAt(
-    'CollateralAggregator',
-    collateralAggregatorAddress,
+  const beaconProxyControllerProxy = await ethers.getContractAt(
+    'BeaconProxyController',
+    beaconProxyControllerAddress,
   );
-  const collateralVaultProxy = await ethers.getContractAt(
-    'CollateralVault',
-    collateralVaultAddress,
+  const tokenVaultProxy = await ethers.getContractAt(
+    'TokenVault',
+    tokenVaultAddress,
   );
   const currencyControllerProxy = await ethers.getContractAt(
     'CurrencyController',
@@ -140,30 +132,24 @@ const deployContracts = async () => {
     'Bitcoin',
     btcToETHPriceFeed.address,
     7500,
-    zeroAddress,
   );
   await currencyControllerProxy.supportCurrency(
     hexETHString,
     'Ethereum',
     ethToUSDPriceFeed.address,
     7500,
-    zeroAddress,
   );
   await currencyControllerProxy.supportCurrency(
     hexFILString,
     'Filecoin',
     filToETHPriceFeed.address,
     7500,
-    zeroAddress,
   );
-
-  await currencyControllerProxy.updateCollateralSupport(hexETHString, true);
-  await currencyControllerProxy.updateCollateralSupport(hexFILString, true);
 
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets: [string, Contract][] = [
-    ['CollateralAggregator', collateralAggregatorProxy],
-    ['CollateralVault', collateralVaultProxy],
+    ['BeaconProxyController', beaconProxyControllerProxy],
+    ['TokenVault', tokenVaultProxy],
     ['CurrencyController', currencyControllerProxy],
     ['LendingMarketController', lendingMarketControllerProxy],
   ];
@@ -174,8 +160,8 @@ const deployContracts = async () => {
   };
 
   const buildCachesAddresses = [
-    collateralAggregatorProxy,
-    collateralVaultProxy,
+    beaconProxyControllerProxy,
+    tokenVaultProxy,
     lendingMarketControllerProxy,
   ]
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
@@ -193,9 +179,7 @@ const deployContracts = async () => {
     .getContractFactory('LendingMarket')
     .then((factory) => factory.deploy());
 
-  await lendingMarketControllerProxy.setLendingMarketImpl(
-    lendingMarket.address,
-  );
+  await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
 
   const { timestamp } = await ethers.provider.getBlock('latest');
   const basisDate = moment(timestamp * 1000).unix();
@@ -218,16 +202,15 @@ const deployContracts = async () => {
   ]);
 
   return {
-    // libraries
-    quickSortLibrary,
     // contracts
     addressResolver: addressResolverProxy,
-    collateralAggregator: collateralAggregatorProxy,
-    collateralVault: collateralVaultProxy,
+    beaconProxyController: beaconProxyControllerProxy,
+    tokenVault: tokenVaultProxy,
     currencyController: currencyControllerProxy,
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
     wETHToken,
+    wFILToken,
     // mocks
     btcToETHPriceFeed,
     ethToUSDPriceFeed,
