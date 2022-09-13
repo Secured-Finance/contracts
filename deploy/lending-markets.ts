@@ -1,6 +1,8 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
+
+import { getBasisDate } from '../utils/dates';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { hexFILString, toBytes32 } from '../utils/strings';
 
@@ -42,13 +44,7 @@ const func: DeployFunction = async function ({
 
     if (!basisDate) {
       // basisDate will be 1st of Mar, Jun, Sep, or Dec.
-      const now = moment();
-      const month = now.month();
-      const year = now.year();
-      const newDate = moment(`${year}-${month + 1}-01`, 'YYYY-MM-DD');
-      newDate.add(Math.floor(2 - (month % 3)), 'M');
-
-      basisDate = newDate.unix().toString();
+      basisDate = getBasisDate().toString();
     }
 
     await lendingMarketController

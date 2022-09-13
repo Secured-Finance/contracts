@@ -5,7 +5,9 @@ import { MockContract } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
+
 import { Side } from '../utils/constants';
+import { getBasisDate } from '../utils/dates';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const BeaconProxyController = artifacts.require('BeaconProxyController');
@@ -42,16 +44,7 @@ describe('LendingMarketController', () => {
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
-    const now = moment(timestamp * 1000);
-    const month = now.month();
-    const year = now.year();
-    const newDate = moment(
-      `${year}-${month + 1}-01 00:00:00`,
-      'YYYY-MM-DD hh:mm:ss',
-    );
-    newDate.add(Math.floor(2 - (month % 3)), 'M');
-
-    basisDate = newDate.unix();
+    basisDate = getBasisDate(timestamp * 1000);
   });
 
   before(async () => {
