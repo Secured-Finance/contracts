@@ -42,7 +42,16 @@ describe('LendingMarketController', () => {
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
-    basisDate = moment(timestamp * 1000).unix();
+    const now = moment(timestamp * 1000);
+    const month = now.month();
+    const year = now.year();
+    const newDate = moment(
+      `${year}-${month + 1}-01 00:00:00`,
+      'YYYY-MM-DD hh:mm:ss',
+    );
+    newDate.add(Math.floor(2 - (month % 3)), 'M');
+
+    basisDate = newDate.unix();
   });
 
   before(async () => {
@@ -227,6 +236,7 @@ describe('LendingMarketController', () => {
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
+      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
 
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
         targetCurrency,
@@ -235,12 +245,20 @@ describe('LendingMarketController', () => {
         targetCurrency,
       );
 
-      expect(markets.length).to.equal(3);
-      expect(maturities.length).to.equal(3);
+      expect(markets.length).to.equal(4);
+      expect(maturities.length).to.equal(4);
       markets.forEach((market) => {
         expect(market).to.not.equal(ethers.constants.AddressZero);
         expect(market).to.exist;
       });
+
+      console.table(
+        maturities.map((maturity) => ({
+          Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
+          'Maturity(Unixtime)': maturity.toString(),
+        })),
+      );
+
       maturities.forEach((maturity, i) => {
         expect(maturity.toString()).to.equal(
           moment
