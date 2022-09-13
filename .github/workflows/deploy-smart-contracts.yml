@@ -34,16 +34,12 @@ jobs:
         if: ${{ github.ref == 'refs/heads/develop' }}
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
-          CHAINLINK_NODE_ACCOUNT: ${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}
-          CHAINLINK_JOB_ID: ${{ secrets.DEV_CHAINLINK_JOB_ID }}
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
         run: npm run deploy development
       - name: Deploy for staging environment
         if: ${{ github.ref == 'refs/heads/main' }}
         env:
           PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
-          CHAINLINK_NODE_ACCOUNT: ${{ secrets.STG_CHAINLINK_NODE_ACCOUNT }}
-          CHAINLINK_JOB_ID: ${{ secrets.STG_CHAINLINK_JOB_ID }}
           ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
         run: npm run deploy staging
       - run: |
