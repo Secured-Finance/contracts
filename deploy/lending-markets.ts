@@ -38,10 +38,23 @@ const func: DeployFunction = async function ({
     await lendingMarketController.isInitializedLendingMarket(hexFILString);
 
   if (!isInitialized) {
+    let basisDate = process.env.MARKET_BASIS_DATE;
+
+    if (!basisDate) {
+      // basisDate will be 1st of Mar, Jun, Sep, or Dec.
+      const now = moment();
+      const month = now.month();
+      const year = now.year();
+      const newDate = moment(`${year}-${month + 1}-01`, 'YYYY-MM-DD');
+      newDate.add(Math.floor(2 - (month % 3)), 'M');
+
+      basisDate = newDate.unix().toString();
+    }
+
     await lendingMarketController
       .initializeLendingMarket(
         hexFILString,
-        process.env.MARKET_BASIS_DATE,
+        basisDate,
         process.env.INITIAL_COMPOUND_FACTOR,
       )
       .then((tx) => tx.wait());
