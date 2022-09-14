@@ -19,6 +19,8 @@ interface ITokenVault {
 
     function isCovered(address _user) external view returns (bool);
 
+    function isRegisteredCurrency(bytes32 _ccy) external view returns (bool);
+
     function getWithdrawableCollateral(address _user) external view returns (uint256 maxWithdraw);
 
     function getCoverage(address _user) external view returns (uint256 coverage);

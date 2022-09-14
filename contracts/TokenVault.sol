@@ -41,7 +41,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      */
     modifier onlyRegisteredCurrency(bytes32 _ccy) {
-        require(Storage.slot().tokenAddresses[_ccy] != address(0), "Currency not registered");
+        require(isRegisteredCurrency(_ccy), "Currency not registered");
         _;
     }
 
@@ -101,6 +101,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      */
     function isCovered(address _user) public view override returns (bool) {
         return _isCovered(_user, "", 0);
+    }
+
+    /**
+     * @notice Gets if the currency has been registered
+     * @param _ccy Currency name in bytes32
+     * @return The boolean if the currency has been registered or not
+     */
+    function isRegisteredCurrency(bytes32 _ccy) public view override returns (bool) {
+        return Storage.slot().tokenAddresses[_ccy] != address(0);
     }
 
     /**
@@ -354,7 +363,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _payer,
         bytes32 _ccy,
         uint256 _amount
-    ) external payable override onlyAcceptedContracts {
+    ) external payable override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
         require(_amount > 0, "Invalid amount");
 
         ERC20Handler.depositAssets(
@@ -380,7 +389,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _receiver,
         bytes32 _ccy,
         uint256 _amount
-    ) external override onlyAcceptedContracts {
+    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
         require(_amount > 0, "Invalid amount");
         require(
             Storage.slot().escrowedAmount[_payer][_ccy] >= _amount,
