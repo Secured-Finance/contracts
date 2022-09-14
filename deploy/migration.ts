@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { hexETHString, toBytes32 } from '../utils/strings';
+import { hexETHString, hexFILString, toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -11,7 +11,9 @@ const func: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
 
   // Get deployments
-  const wETHToken = await deployments.get('WETH9Mock');
+  const WETH = process.env.WETH ?? (await deployments.get('WETH9Mock')).address;
+  const EFIL = process.env.EFIL ?? (await deployments.get('EFILMock')).address;
+
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
@@ -111,27 +113,42 @@ const func: DeployFunction = async function ({
 
   console.table(log);
 
+  // Set up for AddressResolver
   if (!isInitialDeployment) {
     console.warn('Skipped migration settings');
-    return;
+  } else {
+    await addressResolver
+      .importAddresses(contractNames.map(toBytes32), contractAddresses)
+      .then((tx) => tx.wait());
+    console.log('Successfully imported Addresses into AddressResolver');
+
+    await migrationAddressResolver
+      .buildCaches(buildCachesAddresses)
+      .then((tx) => tx.wait());
+    console.log('Successfully built address caches');
   }
 
-  // Set up for AddressResolver
-  await addressResolver
-    .importAddresses(contractNames.map(toBytes32), contractAddresses)
-    .then((tx) => tx.wait());
-  console.log('Successfully imported Addresses into AddressResolver');
-
-  await migrationAddressResolver
-    .buildCaches(buildCachesAddresses)
-    .then((tx) => tx.wait());
-  console.log('Successfully built address caches');
-
   // Set up for TokenVault
-  await tokenVault
-    .registerCurrency(hexETHString, wETHToken.address)
-    .then((tx) => tx.wait());
-  console.log('Successfully registered the currency as supported collateral');
+  const currencies = [
+    { name: 'Ethereum', key: hexETHString, address: WETH },
+    { name: 'Filecoin', key: hexFILString, address: EFIL },
+  ];
+
+  for (const currency of currencies) {
+    const isRegistered = await tokenVault.isRegisteredCurrency(currency.key);
+    if (isRegistered) {
+      console.log(
+        `Skipped registering ${currency.name} as supported collateral`,
+      );
+    } else {
+      await tokenVault
+        .registerCurrency(currency.key, currency.address)
+        .then((tx) => tx.wait());
+      console.log(
+        `Successfully registered ${currency.name} as supported collateral`,
+      );
+    }
+  }
 };
 
 func.tags = ['Migration'];
@@ -140,6 +157,7 @@ func.dependencies = [
   'LendingMarketController',
   'TokenVault',
   'WETH',
+  'EFIL',
 ];
 
 export default func;

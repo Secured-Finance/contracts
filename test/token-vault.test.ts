@@ -201,9 +201,14 @@ describe('TokenVault', () => {
     });
 
     it('Register a currency', async () => {
+      expect(await tokenVaultProxy.isRegisteredCurrency(targetCurrency)).to
+        .false;
+
       await expect(
         tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address),
       ).to.emit(tokenVaultProxy, 'CurrencyRegistered');
+
+      expect(await tokenVaultProxy.isRegisteredCurrency(targetCurrency)).true;
     });
 
     it('Deposit into collateral book', async () => {
@@ -345,9 +350,11 @@ describe('TokenVault', () => {
   });
 
   describe('Escrow', async () => {
-    it('Deposit funds to the escrow', async () => {
+    beforeEach(async () => {
       await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
+    });
 
+    it('Deposit funds to the escrow', async () => {
       await expect(
         tokenVaultCaller.addEscrowedAmount(
           owner.address,
@@ -358,8 +365,6 @@ describe('TokenVault', () => {
     });
 
     it('Withdraw funds From the escrow', async () => {
-      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
-
       await tokenVaultCaller.addEscrowedAmount(
         owner.address,
         targetCurrency,
@@ -382,6 +387,13 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Invalid amount');
     });
 
+    it('Fail to call addEscrowedAmount due to unregistered currency', async () => {
+      const fakeCurrency = ethers.utils.formatBytes32String(`Fake`);
+      await expect(
+        tokenVaultCaller.addEscrowedAmount(owner.address, fakeCurrency, '1'),
+      ).to.be.revertedWith('Currency not registered');
+    });
+
     it('Fail to call removeEscrowedAmount due to invalid amount', async () => {
       await expect(
         tokenVaultCaller.removeEscrowedAmount(
@@ -391,6 +403,18 @@ describe('TokenVault', () => {
           '0',
         ),
       ).to.be.revertedWith('Invalid amount');
+    });
+
+    it('Fail to call removeEscrowedAmount due to unregistered currency', async () => {
+      const fakeCurrency = ethers.utils.formatBytes32String(`Fake`);
+      await expect(
+        tokenVaultCaller.removeEscrowedAmount(
+          owner.address,
+          owner.address,
+          fakeCurrency,
+          '1',
+        ),
+      ).to.be.revertedWith('Currency not registered');
     });
 
     it('Fail to call removeEscrowedAmount due to not enough amount', async () => {

@@ -1,6 +1,8 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
+
+import { getBasisDate } from '../utils/dates';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { hexFILString, toBytes32 } from '../utils/strings';
 
@@ -38,10 +40,17 @@ const func: DeployFunction = async function ({
     await lendingMarketController.isInitializedLendingMarket(hexFILString);
 
   if (!isInitialized) {
+    let basisDate = process.env.MARKET_BASIS_DATE;
+
+    if (!basisDate) {
+      // basisDate will be 1st of Mar, Jun, Sep, or Dec.
+      basisDate = getBasisDate().toString();
+    }
+
     await lendingMarketController
       .initializeLendingMarket(
         hexFILString,
-        process.env.MARKET_BASIS_DATE,
+        basisDate,
         process.env.INITIAL_COMPOUND_FACTOR,
       )
       .then((tx) => tx.wait());

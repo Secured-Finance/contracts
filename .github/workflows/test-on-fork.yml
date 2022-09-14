@@ -20,8 +20,6 @@ jobs:
         run: |
           echo "NETWORK=development" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
-          echo "CHAINLINK_NODE_ACCOUNT=${{ secrets.DEV_CHAINLINK_NODE_ACCOUNT }}" >> $GITHUB_ENV
-          echo "CHAINLINK_JOB_ID=${{ secrets.DEV_CHAINLINK_JOB_ID }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.DEV_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "TENDERLY_USER=${{ secrets.DEV_TENDERLY_USER }}" >> $GITHUB_ENV
           echo "TENDERLY_PROJECT=${{ secrets.DEV_TENDERLY_PROJECT }}" >> $GITHUB_ENV
@@ -31,8 +29,6 @@ jobs:
         run: |
           echo "NETWORK=staging" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.STG_PRIVATE_KEY }}" >> $GITHUB_ENV
-          echo "CHAINLINK_NODE_ACCOUNT=${{ secrets.STG_CHAINLINK_NODE_ACCOUNT }}" >> $GITHUB_ENV
-          echo "CHAINLINK_JOB_ID=${{ secrets.STG_CHAINLINK_JOB_ID }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "TENDERLY_USER=${{ secrets.STG_TENDERLY_USER }}" >> $GITHUB_ENV
           echo "TENDERLY_PROJECT=${{ secrets.STG_TENDERLY_PROJECT }}" >> $GITHUB_ENV

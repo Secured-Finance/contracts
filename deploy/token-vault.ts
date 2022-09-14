@@ -15,7 +15,7 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const wETHToken = await deployments.get('WETH9Mock');
+  const WETH = process.env.WETH ?? (await deployments.get('WETH9Mock')).address;
   const deployResult = await deploy('TokenVault', {
     from: deployer,
   });
@@ -32,7 +32,7 @@ const func: DeployFunction = async function ({
         AUTO_LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PRICE_RATE,
         MIN_COLLATERAL_RATE,
-        wETHToken.address,
+        WETH,
       )
       .then((tx) => tx.wait());
   });
