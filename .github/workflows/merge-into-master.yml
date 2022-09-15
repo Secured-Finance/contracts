@@ -19,6 +19,8 @@ jobs:
         with:
           app_id: ${{ secrets.MACHINE_USER_APP_ID }}
           private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
+          permissions: >-
+            {"workflow": "write"}
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
