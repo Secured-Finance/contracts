@@ -7,6 +7,9 @@ on:
   workflow_run:
     workflows: ['Merge into main']
     types: [completed]
+    branches:
+      - main
+      - SF-208-fix-merging-workflow
 
 jobs:
   deploy:
