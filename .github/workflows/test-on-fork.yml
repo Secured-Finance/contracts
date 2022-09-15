@@ -3,8 +3,11 @@ name: Test on a Fork
 on:
   push:
     branches:
-      - main
       - develop
+  workflow_run:
+    workflows: ['Merge into main']
+    types: [completed]
+
 jobs:
   deploy:
     name: Test on a Fork
