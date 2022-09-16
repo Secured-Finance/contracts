@@ -6,9 +6,12 @@ const func: DeployFunction = async function ({
   getNamedAccounts,
   deployments,
 }: HardhatRuntimeEnvironment) {
+  const log = {};
+  const logHeader = 'Contract Addresses';
   for (const currency of currencies) {
     if (currency.env) {
-      console.log(`${currency.symbol} address is ${currency.env}`);
+      console.log(`${currency.symbol} uses the existing address`);
+      log[currency.symbol] = { [logHeader]: currency.env };
       continue;
     }
 
@@ -19,8 +22,11 @@ const func: DeployFunction = async function ({
       from: deployer,
       args: currency.args,
     });
+    log[currency.symbol] = { [logHeader]: deployResult.address };
     await executeIfNewlyDeployment(currency.mock, deployResult);
   }
+
+  console.table(log);
 };
 
 func.tags = ['Tokens'];
