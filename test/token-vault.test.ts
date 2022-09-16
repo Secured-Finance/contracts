@@ -10,8 +10,8 @@ const CurrencyController = artifacts.require('CurrencyController');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
-const WETH9 = artifacts.require('WETH9Mock');
-const ERC20Mock = artifacts.require('ERC20Mock');
+const WETH9 = artifacts.require('MockWETH9');
+const MockERC20 = artifacts.require('MockERC20');
 const TokenVaultCallerMock = artifacts.require('TokenVaultCallerMock');
 
 const { deployContract, deployMockContract } = waffle;
@@ -52,7 +52,7 @@ describe('TokenVault', () => {
       LendingMarketController.abi,
     );
     mockWETH9 = await deployMockContract(owner, WETH9.abi);
-    mockERC20 = await deployMockContract(owner, ERC20Mock.abi);
+    mockERC20 = await deployMockContract(owner, MockERC20.abi);
 
     // Deploy
     const addressResolver = await deployContract(owner, AddressResolver);
