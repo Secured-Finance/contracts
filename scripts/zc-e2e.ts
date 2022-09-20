@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { Contract, Wallet } from 'ethers';
 import { deployments, ethers } from 'hardhat';
+import { Side } from '../utils/constants';
 import { hexETHString, hexFILString, toBytes32 } from '../utils/strings';
 
 describe('ZC e2e test', async () => {
@@ -22,6 +23,7 @@ describe('ZC e2e test', async () => {
   let proxyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
+  let wFILToken: Contract;
 
   before('Set up for testing', async () => {
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -58,15 +60,19 @@ describe('ZC e2e test', async () => {
       await ethers.provider.send('tenderly_addBalance', params);
     }
 
+    // Get contracts
     const getProxy = (key: string) =>
       proxyController
         .getAddress(toBytes32(key))
         .then((address) => ethers.getContractAt(key, address));
 
-    // Get contracts
     proxyController = await deployments
       .get('ProxyController')
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
+
+    const wFILTokenAddress =
+      process.env.EFIL || (await deployments.get('MockEFIL')).address;
+    wFILToken = await ethers.getContractAt('MockEFIL', wFILTokenAddress);
 
     // Get proxy contracts
     tokenVault = await getProxy('TokenVault');
@@ -80,6 +86,13 @@ describe('ZC e2e test', async () => {
       },
       ['address'],
     );
+
+    // Transfer mock wFIL token
+    if (!process.env.EFIL) {
+      wFILToken
+        .connect(ownerSigner)
+        .transfer(aliceSigner.address, orderAmountInFIL);
+    }
   });
 
   it('Deposit ETH', async () => {
@@ -139,12 +152,17 @@ describe('ZC e2e test', async () => {
     );
 
     // Make lend orders
+    await wFILToken
+      .connect(aliceSigner)
+      .approve(tokenVault.address, orderAmountInFIL)
+      .then((tx) => tx.wait());
+
     await lendingMarketController
       .connect(aliceSigner)
       .createOrder(
         targetCurrency,
         maturities[0],
-        '0',
+        Side.LEND,
         orderAmountInFIL,
         orderRate,
       )
