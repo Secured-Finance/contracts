@@ -3,8 +3,19 @@ import { ethers } from 'hardhat';
 import { DeployResult } from 'hardhat-deploy/types';
 import moment from 'moment';
 
-import { btcToETHRate, ethToUSDRate, filToETHRate } from './numbers';
-import { hexBTCString, hexETHString, hexFILString, toBytes32 } from './strings';
+import {
+  btcToETHRate,
+  ethToUSDRate,
+  filToETHRate,
+  usdcToUSDRate,
+} from './numbers';
+import {
+  hexBTCString,
+  hexETHString,
+  hexFILString,
+  hexUSDCString,
+  toBytes32,
+} from './strings';
 
 const marginCallThresholdRate = 15000;
 const autoLiquidationThresholdRate = 12500;
@@ -20,7 +31,7 @@ const deployContracts = async () => {
     'BeaconProxyController',
     'TokenVault',
     'CurrencyController',
-    'WETH9Mock',
+    'MockWETH9',
     'LendingMarketController',
   ];
 
@@ -38,7 +49,7 @@ const deployContracts = async () => {
   );
 
   const wFILToken = await ethers
-    .getContractFactory('ERC20Mock')
+    .getContractFactory('MockERC20')
     .then((factory) =>
       factory.deploy('Wrapped Filecoin', 'WFIL', '100000000000000000000000'),
     );
@@ -110,41 +121,25 @@ const deployContracts = async () => {
   );
 
   // Set up for CurrencyController
+  const priceFeeds: Record<string, Contract> = {};
   const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
-  const btcToETHPriceFeed = await MockV3Aggregator.deploy(
-    18,
-    hexBTCString,
-    btcToETHRate,
-  );
-  const ethToUSDPriceFeed = await MockV3Aggregator.deploy(
-    8,
-    hexETHString,
-    ethToUSDRate,
-  );
-  const filToETHPriceFeed = await MockV3Aggregator.deploy(
-    18,
-    hexFILString,
-    filToETHRate,
-  );
 
-  await currencyControllerProxy.supportCurrency(
-    hexBTCString,
-    'Bitcoin',
-    btcToETHPriceFeed.address,
-    7500,
-  );
-  await currencyControllerProxy.supportCurrency(
-    hexETHString,
-    'Ethereum',
-    ethToUSDPriceFeed.address,
-    7500,
-  );
-  await currencyControllerProxy.supportCurrency(
-    hexFILString,
-    'Filecoin',
-    filToETHPriceFeed.address,
-    7500,
-  );
+  for (const rate of mockRates) {
+    priceFeeds[rate.key] = await MockV3Aggregator.deploy(
+      rate.decimals,
+      rate.key,
+      rate.rate,
+    );
+  }
+
+  for (const currency of currencies) {
+    await currencyControllerProxy.supportCurrency(
+      currency.key,
+      currency.name,
+      priceFeeds[currency.key].address,
+      7500,
+    );
+  }
 
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets: [string, Contract][] = [
@@ -211,10 +206,10 @@ const deployContracts = async () => {
     proxyController,
     wETHToken,
     wFILToken,
-    // mocks
-    btcToETHPriceFeed,
-    ethToUSDPriceFeed,
-    filToETHPriceFeed,
+    btcToETHPriceFeed: priceFeeds[hexBTCString],
+    ethToUSDPriceFeed: priceFeeds[hexETHString],
+    filToETHPriceFeed: priceFeeds[hexFILString],
+    usdcToUSDriceFeed: priceFeeds[hexUSDCString],
   };
 };
 
@@ -232,4 +227,66 @@ const executeIfNewlyDeployment = async (
   }
 };
 
-export { deployContracts, executeIfNewlyDeployment };
+const currencies = [
+  {
+    name: 'Filecoin',
+    symbol: 'eFIL',
+    mock: 'MockEFIL',
+    key: hexFILString,
+    env: process.env.EFIL,
+    args: ['100000000000000000000000'], // 100,000 eFIL
+  },
+  {
+    name: 'USD Coin',
+    symbol: 'USDC',
+    mock: 'MockUSDC',
+    key: hexUSDCString,
+    env: process.env.USDC,
+    args: ['100000000000000'], // 100,000,000 USDC
+  },
+  {
+    name: 'Bitcoin',
+    symbol: 'WBTC',
+    mock: 'MockWBTC',
+    key: hexBTCString,
+    env: process.env.WBTC,
+    args: ['100000000000000'], // 1,000,000 BTC
+  },
+  {
+    name: 'Ethereum',
+    symbol: 'WETH',
+    mock: 'MockWETH9',
+    key: hexETHString,
+    env: process.env.WETH,
+    args: undefined,
+  },
+];
+
+const mockRates = [
+  {
+    name: 'FIL/ETH',
+    key: hexFILString,
+    decimals: 18,
+    rate: filToETHRate,
+  },
+  {
+    name: 'ETH/USD',
+    key: hexETHString,
+    decimals: 8,
+    rate: ethToUSDRate,
+  },
+  {
+    name: 'BTC/ETH',
+    key: hexBTCString,
+    decimals: 18,
+    rate: btcToETHRate,
+  },
+  {
+    name: 'USDC/USD',
+    key: hexUSDCString,
+    decimals: 8,
+    rate: usdcToUSDRate,
+  },
+];
+
+export { deployContracts, executeIfNewlyDeployment, currencies, mockRates };

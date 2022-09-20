@@ -1,6 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { hexETHString, hexFILString, toBytes32 } from '../utils/strings';
+import { currencies } from '../utils/deployment';
+import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -11,9 +12,6 @@ const func: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
 
   // Get deployments
-  const WETH = process.env.WETH ?? (await deployments.get('WETH9Mock')).address;
-  const EFIL = process.env.EFIL ?? (await deployments.get('EFILMock')).address;
-
   const proxyController = await deployments
     .get('ProxyController')
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
@@ -129,11 +127,6 @@ const func: DeployFunction = async function ({
   }
 
   // Set up for TokenVault
-  const currencies = [
-    { name: 'Ethereum', key: hexETHString, address: WETH },
-    { name: 'Filecoin', key: hexFILString, address: EFIL },
-  ];
-
   for (const currency of currencies) {
     const isRegistered = await tokenVault.isRegisteredCurrency(currency.key);
     if (isRegistered) {
@@ -141,8 +134,10 @@ const func: DeployFunction = async function ({
         `Skipped registering ${currency.name} as supported collateral`,
       );
     } else {
+      const address =
+        currency.env || (await deployments.get(currency.mock)).address;
       await tokenVault
-        .registerCurrency(currency.key, currency.address)
+        .registerCurrency(currency.key, address)
         .then((tx) => tx.wait());
       console.log(
         `Successfully registered ${currency.name} as supported collateral`,
@@ -156,8 +151,7 @@ func.dependencies = [
   'CurrencyController',
   'LendingMarketController',
   'TokenVault',
-  'WETH',
-  'EFIL',
+  'Tokens',
 ];
 
 export default func;

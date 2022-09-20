@@ -1,9 +1,10 @@
-import { DeployFunction } from 'hardhat-deploy/types';
+import { DeployFunction, DeployResult } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { executeIfNewlyDeployment } from '../utils/deployment';
-
-import { btcToETHRate, ethToUSDRate, filToETHRate } from '../utils/numbers';
-import { hexBTCString, hexETHString, hexFILString } from '../utils/strings';
+import {
+  currencies,
+  executeIfNewlyDeployment,
+  mockRates,
+} from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -42,59 +43,30 @@ const func: DeployFunction = async function ({
       );
 
       // Set up for CurrencyController
-      const filToETHPriceFeed = await deploy('MockV3Aggregator', {
-        from: deployer,
-        args: [18, hexFILString, filToETHRate.toString()],
-      });
-      console.log(
-        'Deployed MockV3Aggregator FIL/ETH price feed at ' +
-          filToETHPriceFeed.address,
-      );
+      const priceFeeds: Record<string, DeployResult> = {};
 
-      const ethToUSDPriceFeed = await deploy('MockV3Aggregator', {
-        from: deployer,
-        args: [18, hexETHString, ethToUSDRate.toString()],
-      });
-      console.log(
-        'Deployed MockV3Aggregator ETH/USD price feed at ' +
-          ethToUSDPriceFeed.address,
-      );
+      for (const rate of mockRates) {
+        const priceFeed = await deploy('MockV3Aggregator', {
+          from: deployer,
+          args: [rate.decimals, rate.key, rate.rate.toString()],
+        });
+        console.log(
+          `Deployed MockV3Aggregator ${rate.name} price feed at`,
+          priceFeed.address,
+        );
+        priceFeeds[rate.key] = priceFeed;
+      }
 
-      const btcToETHPriceFeed = await deploy('MockV3Aggregator', {
-        from: deployer,
-        args: [18, hexBTCString, btcToETHRate.toString()],
-      });
-      console.log(
-        'Deployed MockV3Aggregator BTC/ETH price feed at ' +
-          btcToETHPriceFeed.address,
-      );
-
-      await currencyControllerContract
-        .supportCurrency(
-          hexETHString,
-          'Ethereum',
-          ethToUSDPriceFeed.address,
-          7500,
-        )
-        .then((tx) => tx.wait());
-
-      await currencyControllerContract
-        .supportCurrency(
-          hexFILString,
-          'Filecoin',
-          filToETHPriceFeed.address,
-          7500,
-        )
-        .then((tx) => tx.wait());
-
-      await currencyControllerContract
-        .supportCurrency(
-          hexBTCString,
-          'Bitcoin',
-          btcToETHPriceFeed.address,
-          7500,
-        )
-        .then((tx) => tx.wait());
+      for (const currency of currencies) {
+        await currencyControllerContract
+          .supportCurrency(
+            currency.key,
+            currency.name,
+            priceFeeds[currency.key].address,
+            7500,
+          )
+          .then((tx) => tx.wait());
+      }
     },
   );
 };

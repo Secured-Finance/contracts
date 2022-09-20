@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract EFILMock is ERC20, Ownable {
+contract MockEFIL is ERC20, Ownable {
     string private _name = "Ethereum Wrapped Filecoin";
     string private _symbol = "eFIL";
 

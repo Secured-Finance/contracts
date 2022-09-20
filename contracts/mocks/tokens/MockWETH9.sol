@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../interfaces/IWETH9.sol";
+import "../../interfaces/IWETH9.sol";
 
-contract WETH9Mock is IWETH9 {
+contract MockWETH9 is IWETH9 {
     string public name = "Wrapped Ether";
     string public symbol = "WETH";
     uint8 public decimals = 18;
