@@ -90,6 +90,22 @@ Gets if the collateral has enough coverage.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the collateral has sufficient coverage or not |
 
+### isRegisteredCurrency
+
+```solidity
+function isRegisteredCurrency(bytes32 _ccy) public view returns (bool)
+```
+
+Gets if the currency has been registered
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the currency has been registered or not |
+
 ### getWithdrawableCollateral
 
 ```solidity
