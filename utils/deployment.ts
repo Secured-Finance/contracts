@@ -3,12 +3,7 @@ import { ethers } from 'hardhat';
 import { DeployResult } from 'hardhat-deploy/types';
 import moment from 'moment';
 
-import {
-  btcToETHRate,
-  ethToUSDRate,
-  filToETHRate,
-  usdcToUSDRate,
-} from './numbers';
+import { currencies, mockRates } from '../utils/currencies';
 import {
   hexBTCString,
   hexETHString,
@@ -227,66 +222,4 @@ const executeIfNewlyDeployment = async (
   }
 };
 
-const currencies = [
-  {
-    name: 'Filecoin',
-    symbol: 'eFIL',
-    mock: 'MockEFIL',
-    key: hexFILString,
-    env: process.env.EFIL,
-    args: ['100000000000000000000000'], // 100,000 eFIL
-  },
-  {
-    name: 'USD Coin',
-    symbol: 'USDC',
-    mock: 'MockUSDC',
-    key: hexUSDCString,
-    env: process.env.USDC,
-    args: ['100000000000000'], // 100,000,000 USDC
-  },
-  {
-    name: 'Bitcoin',
-    symbol: 'WBTC',
-    mock: 'MockWBTC',
-    key: hexBTCString,
-    env: process.env.WBTC,
-    args: ['100000000000000'], // 1,000,000 BTC
-  },
-  {
-    name: 'Ethereum',
-    symbol: 'WETH',
-    mock: 'MockWETH9',
-    key: hexETHString,
-    env: process.env.WETH,
-    args: undefined,
-  },
-];
-
-const mockRates = [
-  {
-    name: 'FIL/ETH',
-    key: hexFILString,
-    decimals: 18,
-    rate: filToETHRate,
-  },
-  {
-    name: 'ETH/USD',
-    key: hexETHString,
-    decimals: 8,
-    rate: ethToUSDRate,
-  },
-  {
-    name: 'BTC/ETH',
-    key: hexBTCString,
-    decimals: 18,
-    rate: btcToETHRate,
-  },
-  {
-    name: 'USDC/USD',
-    key: hexUSDCString,
-    decimals: 8,
-    rate: usdcToUSDRate,
-  },
-];
-
-export { deployContracts, executeIfNewlyDeployment, currencies, mockRates };
+export { deployContracts, executeIfNewlyDeployment };

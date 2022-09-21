@@ -2,8 +2,9 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
 
+import { currencies } from '../utils/currencies';
 import { getBasisDate } from '../utils/dates';
-import { currencies, executeIfNewlyDeployment } from '../utils/deployment';
+import { executeIfNewlyDeployment } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
