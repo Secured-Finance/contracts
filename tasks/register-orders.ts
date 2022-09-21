@@ -119,35 +119,47 @@ task('register-orders', 'Registers order data into the selected lending market')
           availableAmount.toString(),
         );
       } else {
-        const depositValue = BigNumber(totalBorrowAmountInETH.toString())
+        const depositValueInETH = BigNumber(totalBorrowAmountInETH.toString())
           .times(2)
           .minus(availableAmount.toString())
           .dp(0)
           .toFixed();
 
+        const depositValue = await currencyController[
+          'convertFromETH(bytes32,uint256)'
+        ](currencyName, depositValueInETH.toString());
+
+        if (currency !== 'ETH') {
+          const currency = currencies.find(({ key }) => key === currencyName);
+
+          if (currency) {
+            const token = await deployments
+              .get(currency.mock)
+              .then(({ address }) =>
+                ethers.getContractAt(currency.mock, address),
+              );
+
+            const allowance = await token.allowance(
+              owner.address,
+              tokenVault.address,
+            );
+
+            const totalAmount = totalLendAmount.plus(depositValue.toString());
+            if (totalAmount.gt(allowance.toString())) {
+              await token
+                .approve(tokenVault.address, ethers.constants.MaxUint256)
+                .then((tx) => tx.wait());
+            }
+          }
+        }
+
         await tokenVault
-          .deposit(toBytes32('ETH'), depositValue, {
-            value: depositValue,
+          .deposit(currencyName, depositValue, {
+            value: currency === 'ETH' ? depositValue : 0,
           })
           .then((tx) => tx.wait());
 
         console.log(`Successfully deposited ${depositValue} in ETH`);
-      }
-
-      if (currency !== 'ETH') {
-        const currency = currencies.find(({ key }) => key === currencyName);
-
-        if (currency) {
-          const token = await deployments
-            .get(currency.mock)
-            .then(({ address }) =>
-              ethers.getContractAt(currency.mock, address),
-            );
-
-          await token
-            .approve(tokenVault.address, totalLendAmount.toFixed())
-            .then((tx) => tx.wait());
-        }
       }
 
       // Create orders
