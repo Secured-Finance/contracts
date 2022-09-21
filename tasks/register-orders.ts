@@ -108,6 +108,30 @@ task('register-orders', 'Registers order data into the selected lending market')
         'convertToETH(bytes32,uint256)'
       ](currencyName, totalBorrowAmount.toFixed());
 
+      if (currency !== 'ETH') {
+        const currency = currencies.find(({ key }) => key === currencyName);
+
+        if (currency) {
+          const token = await deployments
+            .get(currency.mock)
+            .then(({ address }) =>
+              ethers.getContractAt(currency.mock, address),
+            );
+
+          const allowance = await token.allowance(
+            owner.address,
+            tokenVault.address,
+          );
+
+          const totalAmount = totalLendAmount.plus(totalBorrowAmount);
+          if (totalAmount.gt(allowance.toString())) {
+            await token
+              .approve(tokenVault.address, ethers.constants.MaxUint256)
+              .then((tx) => tx.wait());
+          }
+        }
+      }
+
       if (
         BigNumber(totalBorrowAmountInETH.toString())
           .times(2)
@@ -128,30 +152,6 @@ task('register-orders', 'Registers order data into the selected lending market')
         const depositValue = await currencyController[
           'convertFromETH(bytes32,uint256)'
         ](currencyName, depositValueInETH.toString());
-
-        if (currency !== 'ETH') {
-          const currency = currencies.find(({ key }) => key === currencyName);
-
-          if (currency) {
-            const token = await deployments
-              .get(currency.mock)
-              .then(({ address }) =>
-                ethers.getContractAt(currency.mock, address),
-              );
-
-            const allowance = await token.allowance(
-              owner.address,
-              tokenVault.address,
-            );
-
-            const totalAmount = totalLendAmount.plus(depositValue.toString());
-            if (totalAmount.gt(allowance.toString())) {
-              await token
-                .approve(tokenVault.address, ethers.constants.MaxUint256)
-                .then((tx) => tx.wait());
-            }
-          }
-        }
 
         await tokenVault
           .deposit(currencyName, depositValue, {
