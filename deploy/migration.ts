@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies } from '../utils/deployment';
+import { currencies } from '../utils/currencies';
 import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({

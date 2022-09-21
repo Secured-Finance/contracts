@@ -1,6 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies, executeIfNewlyDeployment } from '../utils/deployment';
+import { currencies } from '../utils/currencies';
+import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,

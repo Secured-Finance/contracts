@@ -1,6 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { task, types } from 'hardhat/config';
 import { Side } from '../utils/constants';
+import { currencies } from '../utils/currencies';
 import { toBytes32 } from '../utils/strings';
 
 task('register-orders', 'Registers order data into the selected lending market')
@@ -14,6 +15,7 @@ task('register-orders', 'Registers order data into the selected lending market')
       { currency, maturity, midRate, amount, orderCount },
       { deployments, ethers },
     ) => {
+      const [owner] = await ethers.getSigners();
       const proxyController = await deployments
         .get('ProxyController')
         .then(({ address }) =>
@@ -46,10 +48,10 @@ task('register-orders', 'Registers order data into the selected lending market')
       );
 
       if (maturityIndex === -1) {
-        console.warn(
-          `Invalid maturity: 'maturity' must be ${maturities.join(', ')}`,
-        );
-        return;
+        const msg = `Invalid maturity: 'maturity' must be ${maturities.join(
+          ', ',
+        )}`;
+        throw new Error(msg);
       }
 
       const boxMuller = (n: number) => {
@@ -64,7 +66,8 @@ task('register-orders', 'Registers order data into the selected lending market')
 
       // Create random amounts and rats
       const orders: { side: number; amount: string; rate: string }[] = [];
-      let totalAmount = BigNumber(0);
+      let totalBorrowAmount = BigNumber(0);
+      let totalLendAmount = BigNumber(0);
 
       for (const [dAmount, dRate] of boxMuller(orderCount)) {
         const orderAmount = BigNumber(dAmount)
@@ -88,34 +91,84 @@ task('register-orders', 'Registers order data into the selected lending market')
             rate: orderRate.toFixed(),
           });
 
-          totalAmount = totalAmount.plus(orderAmount);
+          if (orderSide === Side.BORROW) {
+            totalBorrowAmount = totalBorrowAmount.plus(orderAmount);
+          } else {
+            totalLendAmount = totalLendAmount.plus(orderAmount);
+          }
         }
       }
 
       // Add collateral
-      const depositValue = await currencyController[
+      const availableAmount = await tokenVault.getWithdrawableCollateral(
+        owner.address,
+      );
+
+      const totalBorrowAmountInETH = await currencyController[
         'convertToETH(bytes32,uint256)'
-      ](currencyName, totalAmount.times(1.5).dp(0).toFixed());
+      ](currencyName, totalBorrowAmount.toFixed());
 
-      await tokenVault
-        .deposit(toBytes32('ETH'), depositValue, {
-          value: depositValue,
-        })
-        .then((tx) => tx.wait());
+      if (
+        BigNumber(totalBorrowAmountInETH.toString())
+          .times(2)
+          .lt(availableAmount.toString())
+      ) {
+        console.log('Skipped deposit');
+        console.log(
+          'The current amount available is',
+          availableAmount.toString(),
+        );
+      } else {
+        const depositValue = BigNumber(totalBorrowAmountInETH.toString())
+          .times(2)
+          .minus(availableAmount.toString())
+          .dp(0)
+          .toFixed();
 
-      console.log(`Successfully deposited ${depositValue} in ETH`);
+        await tokenVault
+          .deposit(toBytes32('ETH'), depositValue, {
+            value: depositValue,
+          })
+          .then((tx) => tx.wait());
+
+        console.log(`Successfully deposited ${depositValue} in ETH`);
+      }
+
+      if (currency !== 'ETH') {
+        const currency = currencies.find(({ key }) => key === currencyName);
+
+        if (currency) {
+          const token = await deployments
+            .get(currency.mock)
+            .then(({ address }) =>
+              ethers.getContractAt(currency.mock, address),
+            );
+
+          await token
+            .approve(tokenVault.address, totalLendAmount.toFixed())
+            .then((tx) => tx.wait());
+        }
+      }
 
       // Create orders
       for (const order of orders) {
-        await lendingMarketController
-          .createOrder(
-            currencyName,
-            maturity,
-            order.side,
-            order.amount,
-            order.rate,
-          )
-          .then((tx) => tx.wait());
+        if (order.side === Side.LEND && currency === 'ETH') {
+          await lendingMarketController
+            .createLendOrderWithETH(currencyName, maturity, order.rate, {
+              value: order.amount,
+            })
+            .then((tx) => tx.wait());
+        } else {
+          await lendingMarketController
+            .createOrder(
+              currencyName,
+              maturity,
+              order.side,
+              order.amount,
+              order.rate,
+            )
+            .then((tx) => tx.wait());
+        }
       }
 
       console.table(
