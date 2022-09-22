@@ -279,13 +279,19 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _user User's address
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to be unlocked from unsettled exposure in a specified currency
+     * @param _skipWithdrawal The boolean if withdrawal is skipped or not
      */
     function releaseUnsettledCollateral(
         address _user,
         bytes32 _ccy,
-        uint256 _amount
+        uint256 _amount,
+        bool _skipWithdrawal
     ) external override onlyAcceptedContracts {
         Storage.slot().unsettledCollateral[_user][_ccy] -= _amount;
+
+        if (!_skipWithdrawal) {
+            ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, _amount);
+        }
 
         if (Storage.slot().unsettledCollateral[_user][_ccy] == 0) {
             Storage.slot().exposedUnsettledCurrencies[_user].remove(_ccy);
