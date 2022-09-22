@@ -57,9 +57,9 @@ interface ITokenVault {
 
     function releaseUnsettledCollateral(
         address user,
+        address sender,
         bytes32 ccy,
-        uint256 amount,
-        bool skipWithdrawal
+        uint256 amount
     ) external;
 
     function setCollateralParameters(

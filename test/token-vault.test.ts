@@ -344,7 +344,12 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy
           .connect(alice)
-          .releaseUnsettledCollateral(carol.address, targetCurrency, '1', true),
+          .releaseUnsettledCollateral(
+            carol.address,
+            alice.address,
+            targetCurrency,
+            '1',
+          ),
       ).to.be.revertedWith('Only Accepted Contracts');
     });
   });
