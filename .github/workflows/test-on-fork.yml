@@ -42,19 +42,19 @@ jobs:
         run: npm ci
       - name: Build Smart Contracts
         run: npm run compile
-      - name: Create a fork environment
-        run: |
-          FORK_ID=$(npm run fork $NETWORK | tail -n 1)
-          echo "fork id is $FORK_ID"
-          echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
-      - name: Deploy for fork environment
-        run: npm run deploy $NETWORK
-        env:
-          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-      - name: Run a Loan Test on fork environment
-        env:
-          USE_DEFAULT_ACCOUNTS: true
-          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-        run: npx hardhat --network $NETWORK test "scripts/zc-e2e.ts" --bail
-      - name: Delete the fork environment
-        run: npm run unfork --forkid $FORK_ID
+      # - name: Create a fork environment
+      #   run: |
+      #     FORK_ID=$(npm run fork $NETWORK | tail -n 1)
+      #     echo "fork id is $FORK_ID"
+      #     echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
+      # - name: Deploy for fork environment
+      #   run: npm run deploy $NETWORK
+      #   env:
+      #     FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+      # - name: Run a Loan Test on fork environment
+      #   env:
+      #     USE_DEFAULT_ACCOUNTS: true
+      #     FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+      #   run: npx hardhat --network $NETWORK test "scripts/zc-e2e.ts" --bail
+      # - name: Delete the fork environment
+      #   run: npm run unfork --forkid $FORK_ID
