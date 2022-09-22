@@ -23,11 +23,11 @@ contract TokenVaultCallerMock {
 
     function releaseUnsettledCollateral(
         address user,
+        address sender,
         bytes32 ccy,
-        uint256 amount,
-        bool skipWithdrawal
+        uint256 amount
     ) public {
-        tokenVault.releaseUnsettledCollateral(user, ccy, amount, skipWithdrawal);
+        tokenVault.releaseUnsettledCollateral(user, sender, ccy, amount);
     }
 
     function addEscrowedAmount(
