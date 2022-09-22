@@ -286,7 +286,7 @@ Locks unsettled collateral for the selected currency.
 ### releaseUnsettledCollateral
 
 ```solidity
-function releaseUnsettledCollateral(address _user, bytes32 _ccy, uint256 _amount, bool _skipWithdrawal) external
+function releaseUnsettledCollateral(address _user, address _sender, bytes32 _ccy, uint256 _amount) external
 ```
 
 Releases the amount of unsettled exposure for the selected currency.
@@ -294,9 +294,9 @@ Releases the amount of unsettled exposure for the selected currency.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
+| _sender | address | Address of user sending token |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to be unlocked from unsettled exposure in a specified currency |
-| _skipWithdrawal | bool | The boolean if withdrawal is skipped or not |
 
 ### registerCurrency
 
