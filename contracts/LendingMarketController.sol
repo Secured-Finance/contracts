@@ -375,7 +375,7 @@ contract LendingMarketController is
         if (side == ProtocolTypes.Side.LEND) {
             tokenVault().removeEscrowedAmount(msg.sender, msg.sender, _ccy, amount);
         } else {
-            tokenVault().releaseUnsettledCollateral(msg.sender, _ccy, amount);
+            tokenVault().releaseUnsettledCollateral(msg.sender, _ccy, amount, true);
         }
 
         emit OrderCanceled(_orderId, msg.sender, _ccy, side, _maturity, amount, rate);
@@ -524,7 +524,7 @@ contract LendingMarketController is
             emit OrderPlaced(orderId, maker, _ccy, _side, _maturity, _amount, _rate);
         } else {
             if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().releaseUnsettledCollateral(maker, _ccy, _amount);
+                tokenVault().releaseUnsettledCollateral(maker, _ccy, _amount, false);
             } else {
                 tokenVault().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
             }
