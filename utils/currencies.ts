@@ -35,7 +35,7 @@ const currencies: Currency[] = [
     mock: 'MockEFIL',
     key: hexFILString,
     env: process.env.EFIL,
-    args: ['100000000000000000000000'], // 100,000 eFIL
+    args: ['100000000000000000000000000'], // 100,000,000 eFIL
   },
   {
     name: 'USD Coin',
