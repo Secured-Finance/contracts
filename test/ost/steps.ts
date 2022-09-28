@@ -1,4 +1,10 @@
-const steps = [
+interface Step {
+  action: 'insert' | 'delete';
+  amount: number;
+  rate: number;
+  orderId: number;
+}
+const steps: Step[] = [
   {
     action: 'insert',
     amount: 4000000000000,
@@ -1285,4 +1291,4 @@ const steps = [
   },
 ];
 
-export { steps };
+export { steps, Step };

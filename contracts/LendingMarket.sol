@@ -346,13 +346,13 @@ contract LendingMarket is
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            Storage.slot().lendOrders[Storage.slot().maturity].remove(
+            Storage.slot().lendOrders[Storage.slot().maturity].removeOrder(
                 marketOrder.amount,
                 marketOrder.rate,
                 _orderId
             );
         } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
-            Storage.slot().borrowOrders[Storage.slot().maturity].remove(
+            Storage.slot().borrowOrders[Storage.slot().maturity].removeOrder(
                 marketOrder.amount,
                 marketOrder.rate,
                 _orderId
@@ -382,7 +382,8 @@ contract LendingMarket is
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _rate
+        uint256 _rate,
+        bool _isInterruption
     ) internal returns (uint256 orderId) {
         MarketOrder memory marketOrder;
 
@@ -396,16 +397,18 @@ contract LendingMarket is
         Storage.slot().orders[orderId] = marketOrder;
 
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            Storage.slot().lendOrders[Storage.slot().maturity].insert(
+            Storage.slot().lendOrders[Storage.slot().maturity].insertOrder(
                 marketOrder.amount,
                 marketOrder.rate,
-                orderId
+                orderId,
+                _isInterruption
             );
         } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
-            Storage.slot().borrowOrders[Storage.slot().maturity].insert(
+            Storage.slot().borrowOrders[Storage.slot().maturity].insertOrder(
                 marketOrder.amount,
                 marketOrder.rate,
-                orderId
+                orderId,
+                _isInterruption
             );
         }
 
@@ -424,61 +427,76 @@ contract LendingMarket is
      * @notice Takes the market order.
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
-     * @param _orderId Market order id in the order book
      * @param _amount Amount of funds the maker wants to borrow/lend
      */
     function _takeOrder(
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _orderId,
-        uint256 _amount
-    ) internal returns (address) {
-        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
-        require(_amount <= marketOrder.amount, "Insufficient amount");
-        require(marketOrder.maker != _user, "Maker couldn't take its order");
+        uint256 _amount,
+        uint256 _rate
+    )
+        internal
+        returns (
+            uint256[] memory orderIds,
+            uint256[] memory amounts,
+            address[] memory makers
+        )
+    {
+        uint256 remainingAmount;
+        UnfilledOrder memory unfilledOrder;
 
-        address lender;
-        address borrower;
-        Storage.slot().orders[_orderId].amount = marketOrder.amount - _amount;
-
-        if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            require(
-                Storage.slot().lendOrders[Storage.slot().maturity].fillOrder(
-                    marketOrder.rate,
-                    _orderId,
-                    _amount
-                ),
-                "Couldn't fill order"
-            );
-            lender = marketOrder.maker;
-            borrower = _user;
-        } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
-            require(
-                Storage.slot().borrowOrders[Storage.slot().maturity].fillOrder(
-                    marketOrder.rate,
-                    _orderId,
-                    _amount
-                ),
-                "Couldn't fill order"
-            );
-            lender = _user;
-            borrower = marketOrder.maker;
+        if (_side == ProtocolTypes.Side.BORROW) {
+            (remainingAmount, orderIds, unfilledOrder.amount, unfilledOrder.orderId) = Storage
+                .slot()
+                .lendOrders[Storage.slot().maturity]
+                .fillOrders(_rate, _amount);
+            unfilledOrder.side = ProtocolTypes.Side.LEND;
+        } else if (_side == ProtocolTypes.Side.LEND) {
+            (remainingAmount, orderIds, unfilledOrder.amount, unfilledOrder.orderId) = Storage
+                .slot()
+                .borrowOrders[Storage.slot().maturity]
+                .fillOrders(_rate, _amount);
+            unfilledOrder.side = ProtocolTypes.Side.BORROW;
         }
 
-        // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
-        uint256 currentRate = (marketOrder.rate * (Storage.slot().maturity - block.timestamp)) /
-            ProtocolTypes.SECONDS_IN_YEAR;
-        uint256 fvAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
+        amounts = new uint256[](orderIds.length);
+        makers = new address[](orderIds.length);
+        unfilledOrder.maker = Storage.slot().orders[unfilledOrder.orderId].maker;
 
-        _addFutureValue(lender, borrower, fvAmount, Storage.slot().maturity);
+        for (uint256 i = 0; i < orderIds.length; i++) {
+            MarketOrder memory marketOrder = Storage.slot().orders[orderIds[i]];
 
-        emit TakeOrder(_orderId, _user, _side, _amount, marketOrder.rate);
+            amounts[i] = Storage.slot().orders[orderIds[i]].amount;
+            makers[i] = Storage.slot().orders[orderIds[i]].maker;
+            Storage.slot().orders[orderIds[i]].amount = 0;
 
-        if (marketOrder.amount == 0) {
-            delete Storage.slot().orders[_orderId];
+            address lender;
+            address borrower;
+            if (_side == ProtocolTypes.Side.BORROW) {
+                lender = marketOrder.maker;
+                borrower = _user;
+            } else if (_side == ProtocolTypes.Side.LEND) {
+                lender = _user;
+                borrower = marketOrder.maker;
+            }
+
+            // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
+            uint256 currentRate = (marketOrder.rate * (Storage.slot().maturity - block.timestamp)) /
+                ProtocolTypes.SECONDS_IN_YEAR;
+            uint256 fvAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
+            _addFutureValue(lender, borrower, fvAmount, Storage.slot().maturity);
+
+            delete Storage.slot().orders[orderIds[i]];
         }
 
-        return marketOrder.maker;
+        emit TakeOrders(orderIds, _user, _side, _amount, _rate);
+
+        if (unfilledOrder.amount > 0) {
+            _makeOrder(unfilledOrder.side, unfilledOrder.maker, unfilledOrder.amount, _rate, true);
+        }
+        if (remainingAmount > 0) {
+            _makeOrder(_side, _user, remainingAmount, _rate, false);
+        }
     }
 
     /**
@@ -526,9 +544,9 @@ contract LendingMarket is
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _rate Amount of interest rate taker wish to borrow/lend
-     * @return orderId Market order id
-     * @return maker The maker address
-     * @return amount The taken amount
+     * @return orderIds Market order ids
+     * @return makers The maker addresses
+     * @return amounts The taken amounts
      */
     function createOrder(
         ProtocolTypes.Side _side,
@@ -542,33 +560,27 @@ contract LendingMarket is
         onlyAcceptedContracts
         ifOpened
         returns (
-            uint256 orderId,
-            address maker,
-            uint256 amount
+            uint256[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts
         )
     {
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
 
-        if (_side == ProtocolTypes.Side.LEND) {
-            orderId = Storage.slot().borrowOrders[Storage.slot().maturity].findOrderIdForAmount(
-                _rate,
-                _amount
-            );
-        } else {
-            orderId = Storage.slot().lendOrders[Storage.slot().maturity].findOrderIdForAmount(
-                _rate,
-                _amount
-            );
-        }
+        bool isExists = _side == ProtocolTypes.Side.LEND
+            ? Storage.slot().borrowOrders[Storage.slot().maturity].exists(_rate)
+            : Storage.slot().lendOrders[Storage.slot().maturity].exists(_rate);
 
-        if (orderId == 0) {
-            orderId = _makeOrder(_side, _user, _amount, _rate);
-            maker = _user;
-            amount = 0;
+        if (!isExists) {
+            orderIds = new uint256[](1);
+            makers = new address[](1);
+            amounts = new uint256[](1);
+            orderIds[0] = _makeOrder(_side, _user, _amount, _rate, false);
+            makers[0] = _user;
+            amounts[0] = 0;
         } else {
-            maker = _takeOrder(_side, _user, orderId, _amount);
-            amount = _amount;
+            (orderIds, amounts, makers) = _takeOrder(_side, _user, _amount, _rate);
         }
     }
 

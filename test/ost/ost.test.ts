@@ -1,14 +1,14 @@
-import { artifacts, ethers } from 'hardhat';
-import { steps } from './steps';
+import { Contract } from 'ethers';
+import { artifacts } from 'hardhat';
+import { Step, steps } from './steps';
 const OrderStatisticsTree = artifacts.require(
   'HitchensOrderStatisticsTreeContract.sol',
 );
 
-let ost: any;
+let ost: Contract;
 
 describe('OrderStatisticsTree - sort and rank', () => {
   beforeEach(async () => {
-    const [owner] = await ethers.getSigners();
     ost = await OrderStatisticsTree.new();
   });
 
@@ -20,13 +20,13 @@ describe('OrderStatisticsTree - sort and rank', () => {
   });
 });
 
-async function printExists(s: any) {
+async function printExists(steps: Step[]) {
   console.log();
   console.log('See if values exists');
   console.group('value, exists');
 
-  for (let i = 0; i < s.length; i++) {
-    let element = s[i]['rate'];
+  for (const step of steps) {
+    let element = step.rate;
     if (element > 0) {
       const exists = await ost.valueExists(element);
       console.log(element, exists);
@@ -35,39 +35,27 @@ async function printExists(s: any) {
   console.groupEnd();
 }
 
-async function printScenario(s: any) {
-  let first;
-  let last;
-  let rootVal;
-  let n;
-  let node;
-  let orderCount;
-
+async function printScenario(steps: Step[]) {
   // enumerate the sorted list and stats
   console.group('element, orderCount');
-  for (let i = 0; i < s.length; i++) {
-    let element = s[i]['rate'];
-    orderCount = await ost.getValueCount(element);
+  for (const step of steps) {
+    const element = step.rate;
+    const orderCount = await ost.getValueCount(element);
     console.log(element, orderCount.toString(10));
   }
   console.groupEnd();
 
   // tree structure summary
   console.group('Tree Properties');
-  let rootCount = await ost.getRootCount();
-  first = await ost.firstValue();
-  last = await ost.lastValue();
-  rootVal = await ost.treeRootNode();
+  const rootCount = await ost.getRootCount();
+  const first = await ost.firstValue();
+  const last = await ost.lastValue();
+  const rootVal = await ost.treeRootNode();
 
-  rootCount = rootCount.toString(10);
-  first = first.toString(10);
-  last = last.toString(10);
-  rootVal = rootVal.toString(10);
-
-  console.log('Root Count', rootCount);
-  console.log('First', first);
-  console.log('Last', last);
-  console.log('Root Value', rootVal);
+  console.log('Root Count', rootCount.toString());
+  console.log('First', first.toString());
+  console.log('Last', last.toString());
+  console.log('Root Value', rootVal.toString());
   console.groupEnd();
 
   // enumerate the node contents
@@ -75,34 +63,32 @@ async function printScenario(s: any) {
     'Node Details, (crawled in order), value, parent, left, right, red, head, tail, orderCounter',
   );
 
-  n = first;
+  let n = first;
   while (parseInt(n) > 0) {
-    node = await ost.getNode(n);
+    let node = await ost.getNode(n);
     console.log(
       n,
-      node[0].toString(10),
-      node[1].toString(10),
-      node[2].toString(10),
+      node[0].toString(),
+      node[1].toString(),
+      node[2].toString(),
       node[3],
-      node[4].toString(10),
-      node[5].toString(10),
-      node[6].toString(10),
+      node[4].toString(),
+      node[5].toString(),
+      node[6].toString(),
     );
     n = await ost.nextValue(n);
     n = n.toString(10);
   }
 }
 
-async function loadScenario(steps: any[]) {
-  let amount;
-
-  for (let i = 0; i < steps.length; i++) {
-    amount = steps[i]['amount'];
-    const orderId = steps[i]['orderId'];
-    const rate = steps[i]['rate'];
-    if (steps[i]['action'] == 'insert') {
+async function loadScenario(steps: Step[]) {
+  for (const step of steps) {
+    const amount = step.amount;
+    const orderId = step.orderId;
+    const rate = step.rate;
+    if (step.action == 'insert') {
       await ost.insertAmountValue(amount, rate, orderId);
-    } else if (steps[i]['action'] == 'delete') {
+    } else if (step.action == 'delete') {
       await ost.removeAmountValue(amount, rate, orderId);
     }
   }

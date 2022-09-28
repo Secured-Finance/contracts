@@ -21,8 +21,8 @@ interface ILendingMarket {
         uint256 amount,
         uint256 rate
     );
-    event TakeOrder(
-        uint256 orderId,
+    event TakeOrders(
+        uint256[] orderIds,
         address indexed taker,
         ProtocolTypes.Side side,
         uint256 amount,
@@ -38,6 +38,13 @@ interface ILendingMarket {
         uint256 borrowRate;
         uint256 lendRate;
         uint256 midRate;
+    }
+
+    struct UnfilledOrder {
+        ProtocolTypes.Side side;
+        uint256 orderId;
+        uint256 amount;
+        address maker;
     }
 
     function getBorrowRate() external view returns (uint256 rate);
@@ -103,9 +110,9 @@ interface ILendingMarket {
     )
         external
         returns (
-            uint256 orderId,
-            address maker,
-            uint256 matchedAmount
+            uint256[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts
         );
 
     function pauseMarket() external;

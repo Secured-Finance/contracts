@@ -509,37 +509,54 @@ contract LendingMarketController is
         );
 
         // Create a order
-        (uint256 orderId, address maker, uint256 matchedAmount) = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).createOrder(_side, msg.sender, _amount, _rate);
+        (
+            uint256[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory matchedAmounts
+        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
+                _side,
+                msg.sender,
+                _amount,
+                _rate
+            );
 
         // Update the unsettled collateral in TokenVault
-        if (matchedAmount == 0) {
+        if (matchedAmounts[0] == 0) {
             if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, _amount);
+                tokenVault().addEscrowedAmount{value: msg.value}(makers[0], _ccy, _amount);
             } else {
-                tokenVault().useUnsettledCollateral(maker, _ccy, _amount);
+                tokenVault().useUnsettledCollateral(makers[0], _ccy, _amount);
             }
-
-            emit OrderPlaced(orderId, maker, _ccy, _side, _maturity, _amount, _rate);
         } else {
-            if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().releaseUnsettledCollateral(maker, msg.sender, _ccy, _amount);
-            } else {
-                tokenVault().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
+            for (uint256 i = 0; i < orderIds.length; i++) {
+                if (_side == ProtocolTypes.Side.LEND) {
+                    tokenVault().releaseUnsettledCollateral(
+                        makers[i],
+                        msg.sender,
+                        _ccy,
+                        matchedAmounts[i]
+                    );
+                } else {
+                    tokenVault().removeEscrowedAmount(
+                        makers[i],
+                        msg.sender,
+                        _ccy,
+                        matchedAmounts[i]
+                    );
+                }
+                Storage.slot().usedCurrencies[makers[i]].add(_ccy);
             }
 
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-            Storage.slot().usedCurrencies[maker].add(_ccy);
 
             emit OrderFilled(
-                orderId,
-                maker,
+                orderIds,
+                makers,
                 msg.sender,
                 _ccy,
                 _side,
                 _maturity,
-                matchedAmount,
+                matchedAmounts,
                 _rate
             );
         }

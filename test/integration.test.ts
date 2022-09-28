@@ -552,9 +552,11 @@ describe('Integration test', async () => {
         toBN(balanceBefore).sub(orderAmount).gt(balanceAfterOrder),
       ).to.equal(true);
 
-      const { orderId } = receipt.events.find(
-        ({ event }) => event === 'OrderPlaced',
-      ).args;
+      const events = await ethLendingMarkets[0].queryFilter(
+        ethLendingMarkets[0].filters.MakeOrder(),
+        receipt.blockHash,
+      );
+      const orderId = events[0].args?.orderId;
 
       await expect(
         lendingMarketController
@@ -670,7 +672,7 @@ describe('Integration test', async () => {
             orderAmountInFIL,
             rate,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrder');
+      ).to.emit(lendingMarkets[0], 'TakeOrders');
 
       expect(aliceFILBalance.sub(orderAmountInFIL)).to.equal(
         await wFILToken.balanceOf(aliceSigner.address),
@@ -791,7 +793,7 @@ describe('Integration test', async () => {
             ethAmount,
             rate,
           ),
-      ).to.emit(ethLendingMarkets[0], 'TakeOrder');
+      ).to.emit(ethLendingMarkets[0], 'TakeOrders');
 
       const totalPresentValue =
         await lendingMarketController.getTotalPresentValue(
