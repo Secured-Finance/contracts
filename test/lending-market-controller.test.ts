@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
-import { BigNumber, Contract, Wallet } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
 
@@ -893,18 +893,12 @@ describe('LendingMarketController', () => {
     it('Fill 100 orders at one rate', async () => {
       let totalAmount = BigNumber.from(0);
       const orderAmount = '50000000000000000';
-      const wallets: Wallet[] = [];
+      const users = await ethers.getSigners();
 
       for (let i = 0; i < 100; i++) {
-        const wallet = Wallet.createRandom().connect(ethers.provider);
-        wallets.push(wallet);
-        await owner.sendTransaction({
-          to: wallet.address,
-          value: ethers.utils.parseEther('0.1'),
-        });
         totalAmount = totalAmount.add(orderAmount);
         await lendingMarketControllerProxy
-          .connect(wallet)
+          .connect(users[i % users.length])
           .createOrder(
             targetCurrency,
             maturities[0],
@@ -915,7 +909,7 @@ describe('LendingMarketController', () => {
       }
 
       const receipt = await lendingMarketControllerProxy
-        .connect(owner)
+        .connect(users[0])
         .createOrder(
           targetCurrency,
           maturities[0],
@@ -931,14 +925,16 @@ describe('LendingMarketController', () => {
       expect(orderFilledEvent?.event).to.equal('OrderFilled');
       const { orderIds, makers, taker, ccy, side, maturity, amounts, rate } =
         orderFilledEvent.args;
-      expect(taker).to.equal(owner.address);
+      expect(taker).to.equal(users[0].address);
       expect(ccy).to.equal(targetCurrency);
       expect(side).to.equal(Side.LEND);
       expect(maturity).to.equal(maturities[0]);
       expect(rate).to.equal('880');
       orderIds.forEach((orderId, i) => expect(orderId).to.equal(i + 1));
       amounts.forEach((amount) => expect(amount).to.equal(orderAmount));
-      makers.forEach((maker, i) => expect(maker).to.equal(wallets[i].address));
+      makers.forEach((maker, i) =>
+        expect(maker).to.equal(users[i % users.length].address),
+      );
     });
 
     it('Fail to check if the lending order is matching', async () => {
