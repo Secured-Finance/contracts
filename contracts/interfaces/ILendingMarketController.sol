@@ -29,7 +29,7 @@ interface ILendingMarketController {
         uint256 rate
     );
     event OrderCanceled(
-        uint256 orderId,
+        uint48 orderId,
         address indexed maker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
@@ -94,7 +94,7 @@ interface ILendingMarketController {
     function cancelOrder(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _orderId
+        uint48 _orderId
     ) external returns (bool);
 
     function rotateLendingMarkets(bytes32 _ccy) external;

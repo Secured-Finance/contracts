@@ -39,7 +39,7 @@ contract LendingMarket is
      * @notice Modifier to make a function callable only by order maker.
      * @param _orderId Market order id
      */
-    modifier onlyMaker(address user, uint256 _orderId) {
+    modifier onlyMaker(address user, uint48 _orderId) {
         (, , , address maker, , ) = getOrder(_orderId);
         require(maker != address(0), "Order not found");
         require(user == maker, "Caller is not the maker");
@@ -231,7 +231,7 @@ contract LendingMarket is
      * @return amount Order amount
      * @return timestamp Timestamp when the order was created
      */
-    function getOrder(uint256 _orderId)
+    function getOrder(uint48 _orderId)
         public
         view
         override
@@ -313,7 +313,7 @@ contract LendingMarket is
      * @notice Increases and returns id of last order in order book.
      * @return The new order id
      */
-    function nextOrderId() internal returns (uint256) {
+    function nextOrderId() internal returns (uint48) {
         Storage.slot().lastOrderId++;
         return Storage.slot().lastOrderId;
     }
@@ -340,7 +340,7 @@ contract LendingMarket is
      * @param _user User address
      * @param _orderId Market order id
      */
-    function cancelOrder(address _user, uint256 _orderId)
+    function cancelOrder(address _user, uint48 _orderId)
         external
         override
         onlyMaker(_user, _orderId)
@@ -384,7 +384,7 @@ contract LendingMarket is
         uint256 _amount,
         uint256 _rate,
         bool _isInterruption
-    ) internal returns (uint256 orderId) {
+    ) internal returns (uint48 orderId) {
         MarketOrder memory marketOrder;
 
         marketOrder.side = _side;
@@ -452,9 +452,9 @@ contract LendingMarket is
                 .fillOrders(_rate, _amount);
         }
 
-        uint256[] memory orderIds = new uint256[](filledOrders.length);
+        uint48[] memory orderIds = new uint48[](filledOrders.length);
 
-        for (uint256 i = 0; i < filledOrders.length; i++) {
+        for (uint48 i = 0; i < filledOrders.length; i++) {
             orderIds[i] = filledOrders[i].orderId;
             MarketOrder memory marketOrder = Storage.slot().orders[orderIds[i]];
 

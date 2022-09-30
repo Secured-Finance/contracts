@@ -27,7 +27,7 @@ const BP = ethers.BigNumber.from('10000');
 const checkOrderFilledEvent = async (
   tx: ContractTransaction,
   params: {
-    orders: { orderId: string; maker: string; amount: string }[];
+    orders: { orderId: number; maker: string; amount: string }[];
     taker: string;
     ccy: string;
     side: number;
@@ -40,9 +40,11 @@ const checkOrderFilledEvent = async (
     receipt.events?.find((event) => event?.event == 'OrderFilled')?.args ||
     ({} as any);
 
+  console.log('orders:', orders);
+
   expect(orders).to.deep.equal(
     params.orders.map((order) => [
-      BigNumber.from(order.orderId),
+      order.orderId,
       order.maker,
       BigNumber.from(order.amount),
     ]),
@@ -446,7 +448,7 @@ describe('LendingMarketController', () => {
           checkOrderFilledEvent(tx, {
             orders: [
               {
-                orderId: '1',
+                orderId: 1,
                 maker: alice.address,
                 amount: '100000000000000000',
               },
@@ -669,12 +671,12 @@ describe('LendingMarketController', () => {
       await checkOrderFilledEvent(tx, {
         orders: [
           {
-            orderId: '1',
+            orderId: 1,
             maker: alice.address,
             amount: '50000000000000000',
           },
           {
-            orderId: '2',
+            orderId: 2,
             maker: bob.address,
             amount: '50000000000000000',
           },
@@ -725,12 +727,12 @@ describe('LendingMarketController', () => {
       await checkOrderFilledEvent(tx, {
         orders: [
           {
-            orderId: '1',
+            orderId: 1,
             maker: alice.address,
             amount: '50000000000000000',
           },
           {
-            orderId: '2',
+            orderId: 2,
             maker: bob.address,
             amount: '50000000000000000',
           },
@@ -799,12 +801,12 @@ describe('LendingMarketController', () => {
       await checkOrderFilledEvent(tx, {
         orders: [
           {
-            orderId: '1',
+            orderId: 1,
             maker: alice.address,
             amount: '50000000000000000',
           },
           {
-            orderId: '2',
+            orderId: 2,
             maker: bob.address,
             amount: '50000000000000000',
           },
@@ -853,12 +855,12 @@ describe('LendingMarketController', () => {
       await checkOrderFilledEvent(tx, {
         orders: [
           {
-            orderId: '1',
+            orderId: 1,
             maker: alice.address,
             amount: '50000000000000000',
           },
           {
-            orderId: '2',
+            orderId: 2,
             maker: bob.address,
             amount: '50000000000000000',
           },
@@ -873,7 +875,7 @@ describe('LendingMarketController', () => {
       await expect(tx)
         .to.emit(lendingMarket1, 'MakeOrder')
         .withArgs(
-          '3',
+          3,
           bob.address,
           Side.LEND,
           targetCurrency,

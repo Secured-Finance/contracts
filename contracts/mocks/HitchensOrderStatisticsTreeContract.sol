@@ -57,8 +57,8 @@ contract HitchensOrderStatisticsTreeContract {
         (_parent, _left, _right, _red, _head, _tail, _orderCounter) = tree.getNode(value);
     }
 
-    function getOrderByID(uint256 value, uint256 id) public view returns (OrderItem memory) {
-        return tree.getOrderById(value, id);
+    function getOrderByID(uint256 value, uint48 orderOd) public view returns (OrderItem memory) {
+        return tree.getOrderById(value, orderOd);
     }
 
     function getRootCount() public view returns (uint256 _orderCounter) {
@@ -71,7 +71,7 @@ contract HitchensOrderStatisticsTreeContract {
 
     function insertAmountValue(
         uint256 value,
-        uint256 orderId,
+        uint48 orderId,
         address user,
         uint256 amount
     ) public {
@@ -79,7 +79,7 @@ contract HitchensOrderStatisticsTreeContract {
         tree.insertOrder(value, orderId, user, amount, false);
     }
 
-    function removeAmountValue(uint256 value, uint256 orderId) public {
+    function removeAmountValue(uint256 value, uint48 orderId) public {
         emit RemoveOrder("delete", value, orderId);
         tree.removeOrder(value, orderId);
     }

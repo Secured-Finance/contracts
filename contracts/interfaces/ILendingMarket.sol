@@ -7,14 +7,14 @@ import {FilledOrder} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 interface ILendingMarket {
     event CancelOrder(
-        uint256 orderId,
+        uint48 orderId,
         address indexed maker,
         ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     );
     event MakeOrder(
-        uint256 orderId,
+        uint48 orderId,
         address indexed maker,
         ProtocolTypes.Side side,
         bytes32 ccy,
@@ -23,7 +23,7 @@ interface ILendingMarket {
         uint256 rate
     );
     event TakeOrders(
-        uint256[] orderIds,
+        uint48[] orderIds,
         address indexed taker,
         ProtocolTypes.Side side,
         uint256 amount,
@@ -43,7 +43,7 @@ interface ILendingMarket {
 
     struct UnfilledOrder {
         ProtocolTypes.Side side;
-        uint256 orderId;
+        uint48 orderId;
         uint256 amount;
         address maker;
     }
@@ -68,7 +68,7 @@ interface ILendingMarket {
 
     function isOpened() external view returns (bool);
 
-    function getOrder(uint256 _orderId)
+    function getOrder(uint48 _orderId)
         external
         view
         returns (
@@ -86,7 +86,7 @@ interface ILendingMarket {
 
     function openMarket(uint256 maturity) external returns (uint256);
 
-    function cancelOrder(address user, uint256 orderId)
+    function cancelOrder(address user, uint48 orderId)
         external
         returns (
             ProtocolTypes.Side,

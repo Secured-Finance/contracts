@@ -367,7 +367,7 @@ contract LendingMarketController is
     function cancelOrder(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _orderId
+        uint48 _orderId
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         (ProtocolTypes.Side side, uint256 amount, uint256 rate) = ILendingMarket(marketAddr)

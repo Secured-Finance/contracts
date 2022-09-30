@@ -16,7 +16,7 @@ library LendingMarketStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarket");
 
     struct Storage {
-        uint256 lastOrderId;
+        uint48 lastOrderId;
         bytes32 ccy;
         uint256 basisDate;
         uint256 maturity;
