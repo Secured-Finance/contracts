@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-struct FilledOrder {
+struct UnfilledOrder {
     uint48 orderId;
     address maker;
     uint256 amount;
@@ -496,15 +496,19 @@ library HitchensOrderStatisticsTreeLib {
     )
         internal
         returns (
+            uint48[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts,
             uint256 remainingAmount,
-            FilledOrder[] memory filledOrders,
-            FilledOrder memory unfilledOrder
+            UnfilledOrder memory unfilledOrder
         )
     {
         Node storage gn = self.nodes[value];
 
         remainingAmount = _amount;
-        filledOrders = new FilledOrder[](gn.orderCounter);
+        orderIds = new uint48[](gn.orderCounter);
+        makers = new address[](gn.orderCounter);
+        amounts = new uint256[](gn.orderCounter);
 
         uint256 filledCount = 0;
         OrderItem memory currentOrder = gn.orders[gn.head];
@@ -517,7 +521,7 @@ library HitchensOrderStatisticsTreeLib {
                 remainingAmount -= currentOrder.amount;
                 orderId = currentOrder.next;
             } else {
-                unfilledOrder = FilledOrder(
+                unfilledOrder = UnfilledOrder(
                     currentOrder.orderId,
                     currentOrder.maker,
                     currentOrder.amount - remainingAmount
@@ -525,13 +529,9 @@ library HitchensOrderStatisticsTreeLib {
                 remainingAmount = 0;
             }
 
-            // filledOrderIds[filledCount] = currentOrder.orderId;
-            // filledOrderAmounts[filledCount] = currentOrder.amount;
-            filledOrders[filledCount] = FilledOrder(
-                currentOrder.orderId,
-                currentOrder.maker,
-                currentOrder.amount
-            );
+            orderIds[filledCount] = currentOrder.orderId;
+            makers[filledCount] = currentOrder.maker;
+            amounts[filledCount] = currentOrder.amount;
             delete gn.orders[currentOrder.orderId];
             filledCount++;
         }
@@ -548,7 +548,9 @@ library HitchensOrderStatisticsTreeLib {
             // Reduce array length to delete empty slot using assembly command.
             uint256 _orderCounter = gn.orderCounter;
             assembly {
-                mstore(filledOrders, sub(mload(filledOrders), _orderCounter))
+                mstore(orderIds, sub(mload(orderIds), _orderCounter))
+                mstore(makers, sub(mload(makers), _orderCounter))
+                mstore(amounts, sub(mload(amounts), _orderCounter))
             }
         }
 

@@ -351,9 +351,10 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultCaller.releaseUnsettledCollaterals(
-          [{ orderId: 1, maker: bob.address, amount: value }],
           bob.address,
           targetCurrency,
+          [bob.address],
+          [value],
         ),
       ).to.emit(tokenVaultProxy, 'ReleaseUnsettled');
     });
@@ -459,12 +460,10 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultCaller.removeEscrowedAmounts(
-          [
-            { orderId: '1', maker: owner.address, amount: '10000' },
-            { orderId: '1', maker: alice.address, amount: '10000' },
-          ],
           owner.address,
           targetCurrency,
+          [owner.address, alice.address],
+          ['10000', '10000'],
         ),
       ).to.emit(tokenVaultProxy, 'EscrowedAmountRemoved');
     });

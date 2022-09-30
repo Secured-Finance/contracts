@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
 import {MarketOrder} from "../storages/LendingMarketStorage.sol";
-import {FilledOrder} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 interface ILendingMarket {
     event CancelOrder(
@@ -39,13 +38,6 @@ interface ILendingMarket {
         uint256 borrowRate;
         uint256 lendRate;
         uint256 midRate;
-    }
-
-    struct UnfilledOrder {
-        ProtocolTypes.Side side;
-        uint48 orderId;
-        uint256 amount;
-        address maker;
     }
 
     function getBorrowRate() external view returns (uint256 rate);
@@ -105,7 +97,13 @@ interface ILendingMarket {
         address account,
         uint256 amount,
         uint256 rate
-    ) external returns (FilledOrder[] memory filledOrders);
+    )
+        external
+        returns (
+            uint48[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts
+        );
 
     function pauseMarket() external;
 

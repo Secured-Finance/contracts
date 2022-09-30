@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
-import {FilledOrder} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 struct Order {
     bytes32 ccy;
@@ -21,9 +20,11 @@ interface ILendingMarketController {
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event OrderFilled(
-        FilledOrder[] orders,
         address indexed taker,
         bytes32 indexed ccy,
+        uint48[] orderIds,
+        address[] makers,
+        uint256[] amounts,
         ProtocolTypes.Side side,
         uint256 indexed maturity,
         uint256 rate

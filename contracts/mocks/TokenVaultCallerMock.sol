@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "../interfaces/ITokenVault.sol";
 import "../interfaces/ILendingMarketController.sol";
-import {FilledOrder} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 contract TokenVaultCallerMock {
     ITokenVault public tokenVault;
@@ -32,11 +31,12 @@ contract TokenVaultCallerMock {
     }
 
     function releaseUnsettledCollaterals(
-        FilledOrder[] calldata orders,
         address sender,
-        bytes32 ccy
+        bytes32 ccy,
+        address[] calldata users,
+        uint256[] calldata amounts
     ) public {
-        tokenVault.releaseUnsettledCollaterals(orders, sender, ccy);
+        tokenVault.releaseUnsettledCollaterals(sender, ccy, users, amounts);
     }
 
     function addEscrowedAmount(
@@ -57,11 +57,12 @@ contract TokenVaultCallerMock {
     }
 
     function removeEscrowedAmounts(
-        FilledOrder[] calldata orders,
         address receiver,
-        bytes32 ccy
+        bytes32 ccy,
+        address[] calldata payers,
+        uint256[] calldata amounts
     ) public {
-        tokenVault.removeEscrowedAmounts(orders, receiver, ccy);
+        tokenVault.removeEscrowedAmounts(receiver, ccy, payers, amounts);
     }
 
     function getTotalPresentValueInETH(address _account) public view returns (int256) {

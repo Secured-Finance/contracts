@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {FilledOrder} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
-
 interface ITokenVault {
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
@@ -19,25 +17,25 @@ interface ITokenVault {
     event Withdraw(address from, bytes32 ccy, uint256 amount);
     event CurrencyRegistered(bytes32 ccy, address tokenAddress);
 
-    function isCovered(address _user) external view returns (bool);
+    function isCovered(address user) external view returns (bool);
 
-    function isRegisteredCurrency(bytes32 _ccy) external view returns (bool);
+    function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
 
-    function getWithdrawableCollateral(address _user) external view returns (uint256 maxWithdraw);
+    function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw);
 
-    function getCoverage(address _user) external view returns (uint256 coverage);
+    function getCoverage(address user) external view returns (uint256 coverage);
 
     function getUnsettledCollateral(address user, bytes32 ccy) external view returns (uint256);
 
-    function getUnusedCollateral(address _user) external view returns (uint256);
+    function getUnusedCollateral(address user) external view returns (uint256);
 
-    function getTotalUnsettledExposure(address _user) external view returns (uint256);
+    function getTotalUnsettledExposure(address user) external view returns (uint256);
 
-    function getCollateralAmount(address _user, bytes32 _ccy) external view returns (uint256);
+    function getCollateralAmount(address user, bytes32 ccy) external view returns (uint256);
 
-    function getCollateralAmountInETH(address _user, bytes32 _ccy) external view returns (uint256);
+    function getCollateralAmountInETH(address user, bytes32 ccy) external view returns (uint256);
 
-    function getTotalCollateralAmountInETH(address _party) external view returns (uint256);
+    function getTotalCollateralAmountInETH(address party) external view returns (uint256);
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
@@ -65,9 +63,10 @@ interface ITokenVault {
     ) external;
 
     function releaseUnsettledCollaterals(
-        FilledOrder[] calldata orders,
-        address _sender,
-        bytes32 _ccy
+        address sender,
+        bytes32 ccy,
+        address[] calldata users,
+        uint256[] calldata amounts
     ) external;
 
     function setCollateralParameters(
@@ -77,26 +76,27 @@ interface ITokenVault {
         uint256 minCollateralRate
     ) external;
 
-    function deposit(bytes32 _ccy, uint256 _amount) external payable;
+    function deposit(bytes32 ccy, uint256 amount) external payable;
 
-    function withdraw(bytes32 _ccy, uint256 _amount) external;
+    function withdraw(bytes32 ccy, uint256 amount) external;
 
     function addEscrowedAmount(
-        address _payer,
-        bytes32 _ccy,
-        uint256 _amount
+        address payer,
+        bytes32 ccy,
+        uint256 amount
     ) external payable;
 
     function removeEscrowedAmount(
-        address _payer,
-        address _receiver,
-        bytes32 _ccy,
-        uint256 _amount
+        address payer,
+        address receiver,
+        bytes32 ccy,
+        uint256 amount
     ) external;
 
     function removeEscrowedAmounts(
-        FilledOrder[] calldata orders,
-        address _receiver,
-        bytes32 _ccy
+        address receiver,
+        bytes32 ccy,
+        address[] calldata users,
+        uint256[] calldata amounts
     ) external;
 }

@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
-import { BigNumber, Contract, ContractTransaction } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
 
@@ -23,36 +23,6 @@ const { deployContract, deployMockContract } = waffle;
 const COMPOUND_FACTOR = '1020100000000000000';
 const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');
 const BP = ethers.BigNumber.from('10000');
-
-const checkOrderFilledEvent = async (
-  tx: ContractTransaction,
-  params: {
-    orders: { orderId: number; maker: string; amount: string }[];
-    taker: string;
-    ccy: string;
-    side: number;
-    maturity: BigNumber;
-    rate: string;
-  },
-) => {
-  const receipt = await tx.wait();
-  const { orders, taker, ccy, side, maturity, rate } =
-    receipt.events?.find((event) => event?.event == 'OrderFilled')?.args ||
-    ({} as any);
-
-  expect(orders).to.deep.equal(
-    params.orders.map((order) => [
-      order.orderId,
-      order.maker,
-      BigNumber.from(order.amount),
-    ]),
-  );
-  expect(taker).to.equal(params.taker);
-  expect(ccy).to.equal(params.ccy);
-  expect(side).to.equal(params.side);
-  expect(maturity).to.equal(params.maturity);
-  expect(rate).to.equal(params.rate);
-};
 
 describe('LendingMarketController', () => {
   let mockCurrencyController: MockContract;
@@ -440,30 +410,27 @@ describe('LendingMarketController', () => {
         )
         .then((tx) => expect(tx).to.equal(true));
 
-      await lendingMarketControllerProxy
-        .connect(carol)
-        .createOrder(
+      await expect(
+        lendingMarketControllerProxy
+          .connect(carol)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '800',
+          ),
+      )
+        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+        .withArgs(
+          carol.address,
           targetCurrency,
-          maturities[0],
+          [1],
+          [alice.address],
+          ['100000000000000000'],
           Side.BORROW,
-          '100000000000000000',
+          maturities[0],
           '800',
-        )
-        .then(async (tx) =>
-          checkOrderFilledEvent(tx, {
-            orders: [
-              {
-                orderId: 1,
-                maker: alice.address,
-                amount: '100000000000000000',
-              },
-            ],
-            taker: carol.address,
-            ccy: targetCurrency,
-            side: Side.BORROW,
-            maturity: maturities[0],
-            rate: '800',
-          }),
         );
 
       const maturity = await lendingMarket1.getMaturity();
@@ -673,25 +640,18 @@ describe('LendingMarketController', () => {
           '880',
         );
 
-      await checkOrderFilledEvent(tx, {
-        orders: [
-          {
-            orderId: 1,
-            maker: alice.address,
-            amount: '50000000000000000',
-          },
-          {
-            orderId: 2,
-            maker: bob.address,
-            amount: '50000000000000000',
-          },
-        ],
-        taker: carol.address,
-        ccy: targetCurrency,
-        side: Side.BORROW,
-        maturity: maturities[0],
-        rate: '880',
-      });
+      await expect(tx)
+        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+        .withArgs(
+          carol.address,
+          targetCurrency,
+          [1, 2],
+          [alice.address, bob.address],
+          ['50000000000000000', '50000000000000000'],
+          Side.BORROW,
+          maturities[0],
+          '880',
+        );
       await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
       await expect(tx).to.not.emit(lendingMarket1, 'MakeOrder');
     });
@@ -729,25 +689,18 @@ describe('LendingMarketController', () => {
           '880',
         );
 
-      await checkOrderFilledEvent(tx, {
-        orders: [
-          {
-            orderId: 1,
-            maker: alice.address,
-            amount: '50000000000000000',
-          },
-          {
-            orderId: 2,
-            maker: bob.address,
-            amount: '50000000000000000',
-          },
-        ],
-        taker: carol.address,
-        ccy: targetCurrency,
-        side: Side.LEND,
-        maturity: maturities[0],
-        rate: '880',
-      });
+      await expect(tx)
+        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+        .withArgs(
+          carol.address,
+          targetCurrency,
+          [1, 2],
+          [alice.address, bob.address],
+          ['50000000000000000', '50000000000000000'],
+          Side.LEND,
+          maturities[0],
+          '880',
+        );
       await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
       await expect(tx).to.not.emit(lendingMarket1, 'MakeOrder');
     });
@@ -803,25 +756,18 @@ describe('LendingMarketController', () => {
           '880',
         );
 
-      await checkOrderFilledEvent(tx, {
-        orders: [
-          {
-            orderId: 1,
-            maker: alice.address,
-            amount: '50000000000000000',
-          },
-          {
-            orderId: 2,
-            maker: bob.address,
-            amount: '50000000000000000',
-          },
-        ],
-        taker: ellen.address,
-        ccy: targetCurrency,
-        side: Side.BORROW,
-        maturity: maturities[0],
-        rate: '880',
-      });
+      await expect(tx)
+        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+        .withArgs(
+          ellen.address,
+          targetCurrency,
+          [1, 2],
+          [alice.address, bob.address],
+          ['50000000000000000', '50000000000000000'],
+          Side.BORROW,
+          maturities[0],
+          '880',
+        );
       await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
       await expect(tx).to.not.emit(lendingMarket1, 'MakeOrder');
     });
@@ -857,25 +803,18 @@ describe('LendingMarketController', () => {
           '80000000000000000',
           '880',
         );
-      await checkOrderFilledEvent(tx, {
-        orders: [
-          {
-            orderId: 1,
-            maker: alice.address,
-            amount: '50000000000000000',
-          },
-          {
-            orderId: 2,
-            maker: bob.address,
-            amount: '50000000000000000',
-          },
-        ],
-        taker: carol.address,
-        ccy: targetCurrency,
-        side: Side.BORROW,
-        maturity: maturities[0],
-        rate: '880',
-      });
+      await expect(tx)
+        .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+        .withArgs(
+          carol.address,
+          targetCurrency,
+          [1, 2],
+          [alice.address, bob.address],
+          ['50000000000000000', '50000000000000000'],
+          Side.BORROW,
+          maturities[0],
+          '880',
+        );
       await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
       await expect(tx)
         .to.emit(lendingMarket1, 'MakeOrder')
@@ -984,18 +923,18 @@ describe('LendingMarketController', () => {
       );
 
       expect(orderFilledEvent?.event).to.equal('OrderFilled');
-      const { orders, taker, ccy, side, maturity, rate } =
+      const { taker, ccy, orderIds, makers, amounts, side, maturity, rate } =
         orderFilledEvent.args;
       expect(taker).to.equal(users[0].address);
       expect(ccy).to.equal(targetCurrency);
       expect(side).to.equal(Side.LEND);
       expect(maturity).to.equal(maturities[0]);
       expect(rate).to.equal('880');
-      orders.forEach((order, i) => {
-        expect(order.orderId).to.equal(i + 1);
-        expect(order.amount).to.equal(orderAmount);
-        expect(order.maker).to.equal(users[i % users.length].address);
-      });
+      orderIds.forEach((orderId, i) => expect(orderId).to.equal(i + 1));
+      makers.forEach((maker, i) =>
+        expect(maker).to.equal(users[i % users.length].address),
+      );
+      amounts.forEach((amount) => expect(amount).to.equal(orderAmount));
     });
 
     it('Get an order', async () => {

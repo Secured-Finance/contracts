@@ -6,7 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {HitchensOrderStatisticsTreeLib, FilledOrder, OrderItem} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
+import {HitchensOrderStatisticsTreeLib, UnfilledOrder, OrderItem} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinFutureValue} from "./mixins/MixinFutureValue.sol";
@@ -428,36 +428,40 @@ contract LendingMarket is
         address _user,
         uint256 _amount,
         uint256 _rate
-    ) internal returns (FilledOrder[] memory filledOrders) {
+    )
+        internal
+        returns (
+            uint48[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts
+        )
+    {
         uint256 remainingAmount;
-        FilledOrder memory unfilledOrder;
+        UnfilledOrder memory unfilledOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
-            (remainingAmount, filledOrders, unfilledOrder) = Storage
+            (orderIds, makers, amounts, remainingAmount, unfilledOrder) = Storage
                 .slot()
                 .lendOrders[Storage.slot().maturity]
                 .fillOrders(_rate, _amount);
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (remainingAmount, filledOrders, unfilledOrder) = Storage
+            (orderIds, makers, amounts, remainingAmount, unfilledOrder) = Storage
                 .slot()
                 .borrowOrders[Storage.slot().maturity]
                 .fillOrders(_rate, _amount);
         }
 
-        uint48[] memory orderIds = new uint48[](filledOrders.length);
-
-        for (uint48 i = 0; i < filledOrders.length; i++) {
-            orderIds[i] = filledOrders[i].orderId;
+        for (uint48 i = 0; i < orderIds.length; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[orderIds[i]];
 
             address lender;
             address borrower;
             if (_side == ProtocolTypes.Side.BORROW) {
-                lender = filledOrders[i].maker;
+                lender = makers[i];
                 borrower = _user;
             } else if (_side == ProtocolTypes.Side.LEND) {
                 lender = _user;
-                borrower = filledOrders[i].maker;
+                borrower = makers[i];
             }
 
             // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
@@ -531,7 +535,9 @@ contract LendingMarket is
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _rate Amount of interest rate taker wish to borrow/lend
-     * @return filledOrders Filled orders
+     * @return orderIds Array of filled orders
+     * @return makers Array of filled orders
+     * @return amounts Array of filled orders
      */
     function createOrder(
         ProtocolTypes.Side _side,
@@ -544,7 +550,11 @@ contract LendingMarket is
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (FilledOrder[] memory filledOrders)
+        returns (
+            uint48[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts
+        )
     {
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
@@ -554,14 +564,15 @@ contract LendingMarket is
             : Storage.slot().lendOrders[Storage.slot().maturity].exists(_rate);
 
         if (!isExists) {
-            filledOrders = new FilledOrder[](1);
-            filledOrders[0] = FilledOrder(
-                _makeOrder(_side, _user, _amount, _rate, false),
-                _user,
-                0
-            );
+            orderIds = new uint48[](1);
+            makers = new address[](1);
+            amounts = new uint256[](1);
+
+            orderIds[0] = _makeOrder(_side, _user, _amount, _rate, false);
+            makers[0] = _user;
+            amounts[0] = 0;
         } else {
-            filledOrders = _takeOrder(_side, _user, _amount, _rate);
+            (orderIds, makers, amounts) = _takeOrder(_side, _user, _amount, _rate);
         }
     }
 
