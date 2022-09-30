@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {FilledOrder} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
+
 interface ITokenVault {
     event ReleaseUnsettled(address indexed party, bytes32 ccy, uint256 amount);
     event UseUnsettledCollateral(address indexed party, bytes32 ccy, uint256 amount);
@@ -62,6 +64,12 @@ interface ITokenVault {
         uint256 amount
     ) external;
 
+    function releaseUnsettledCollaterals(
+        FilledOrder[] calldata orders,
+        address _sender,
+        bytes32 _ccy
+    ) external;
+
     function setCollateralParameters(
         uint256 marginCallThresholdRate,
         uint256 autoLiquidationThresholdRate,
@@ -84,5 +92,11 @@ interface ITokenVault {
         address _receiver,
         bytes32 _ccy,
         uint256 _amount
+    ) external;
+
+    function removeEscrowedAmounts(
+        FilledOrder[] calldata orders,
+        address _receiver,
+        bytes32 _ccy
     ) external;
 }

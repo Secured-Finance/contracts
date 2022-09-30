@@ -526,22 +526,13 @@ contract LendingMarketController is
                 tokenVault().useUnsettledCollateral(filledOrders[0].maker, _ccy, _amount);
             }
         } else {
+            if (_side == ProtocolTypes.Side.LEND) {
+                tokenVault().releaseUnsettledCollaterals(filledOrders, msg.sender, _ccy);
+            } else {
+                tokenVault().removeEscrowedAmounts(filledOrders, msg.sender, _ccy);
+            }
+
             for (uint256 i = 0; i < filledOrders.length; i++) {
-                if (_side == ProtocolTypes.Side.LEND) {
-                    tokenVault().releaseUnsettledCollateral(
-                        filledOrders[i].maker,
-                        msg.sender,
-                        _ccy,
-                        filledOrders[i].amount
-                    );
-                } else {
-                    tokenVault().removeEscrowedAmount(
-                        filledOrders[i].maker,
-                        msg.sender,
-                        _ccy,
-                        filledOrders[i].amount
-                    );
-                }
                 Storage.slot().usedCurrencies[filledOrders[i].maker].add(_ccy);
             }
 

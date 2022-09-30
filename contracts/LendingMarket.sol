@@ -385,16 +385,8 @@ contract LendingMarket is
         uint256 _rate,
         bool _isInterruption
     ) internal returns (uint48 orderId) {
-        MarketOrder memory marketOrder;
-
-        marketOrder.side = _side;
-        // marketOrder.amount = _amount;
-        marketOrder.rate = _rate;
-        // marketOrder.maker = _user;
-        marketOrder.maturity = Storage.slot().maturity;
         orderId = nextOrderId();
-
-        Storage.slot().orders[orderId] = marketOrder;
+        Storage.slot().orders[orderId] = MarketOrder(_side, _rate, Storage.slot().maturity);
 
         if (_side == ProtocolTypes.Side.LEND) {
             Storage.slot().lendOrders[Storage.slot().maturity].insertOrder(
@@ -417,11 +409,11 @@ contract LendingMarket is
         emit MakeOrder(
             orderId,
             _user,
-            marketOrder.side,
+            _side,
             Storage.slot().ccy,
-            marketOrder.maturity,
+            Storage.slot().maturity,
             _amount,
-            marketOrder.rate
+            _rate
         );
     }
 

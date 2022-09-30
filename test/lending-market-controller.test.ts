@@ -40,8 +40,6 @@ const checkOrderFilledEvent = async (
     receipt.events?.find((event) => event?.event == 'OrderFilled')?.args ||
     ({} as any);
 
-  console.log('orders:', orders);
-
   expect(orders).to.deep.equal(
     params.orders.map((order) => [
       order.orderId,
@@ -93,8 +91,10 @@ describe('LendingMarketController', () => {
     await mockCurrencyController.mock.isSupportedCcy.returns(true);
     await mockTokenVault.mock.useUnsettledCollateral.returns();
     await mockTokenVault.mock.releaseUnsettledCollateral.returns();
+    await mockTokenVault.mock.releaseUnsettledCollaterals.returns();
     await mockTokenVault.mock.addEscrowedAmount.returns();
     await mockTokenVault.mock.removeEscrowedAmount.returns();
+    await mockTokenVault.mock.removeEscrowedAmounts.returns();
 
     // Deploy
     const addressResolver = await deployContract(owner, AddressResolver);
@@ -325,6 +325,11 @@ describe('LendingMarketController', () => {
       maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
+    });
+
+    it('Get a market currency data', async () => {
+      const lendingMarket = lendingMarketProxies[0];
+      expect(await lendingMarket.getCurrency()).to.equal(targetCurrency);
     });
 
     it('Add orders and check rates', async () => {

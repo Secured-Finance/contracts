@@ -6,6 +6,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Contracts} from "./libraries/Contracts.sol";
 import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
 import {ERC20Handler} from "./libraries/ERC20Handler.sol";
+import {FilledOrder} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
 // interfaces
 import {ITokenVault} from "./interfaces/ITokenVault.sol";
 // mixins
@@ -287,22 +288,23 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         bytes32 _ccy,
         uint256 _amount
     ) external override onlyAcceptedContracts {
-        Storage.slot().unsettledCollateral[_user][_ccy] -= _amount;
+        _releaseUnsettledCollateral(_user, _sender, _ccy, _amount);
+    }
 
-        if (_sender != address(0)) {
-            ERC20Handler.safeTransferFrom(
-                Storage.slot().tokenAddresses[_ccy],
-                _sender,
-                _user,
-                _amount
-            );
+    /**
+     * @notice Releases the amount of unsettled exposure on multiple orders.
+     * @param _orders Target orders
+     * @param _sender Address of user sending token
+     * @param _ccy Currency name in bytes32
+     */
+    function releaseUnsettledCollaterals(
+        FilledOrder[] calldata _orders,
+        address _sender,
+        bytes32 _ccy
+    ) external override onlyAcceptedContracts {
+        for (uint256 i = 0; i < _orders.length; i++) {
+            _releaseUnsettledCollateral(_orders[i].maker, _sender, _ccy, _orders[i].amount);
         }
-
-        if (Storage.slot().unsettledCollateral[_user][_ccy] == 0) {
-            Storage.slot().exposedUnsettledCurrencies[_user].remove(_ccy);
-        }
-
-        emit ReleaseUnsettled(_user, _ccy, _amount);
     }
 
     function registerCurrency(bytes32 _ccy, address _tokenAddress) external onlyOwner {
@@ -401,16 +403,23 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         bytes32 _ccy,
         uint256 _amount
     ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
-        require(_amount > 0, "Invalid amount");
-        require(
-            Storage.slot().escrowedAmount[_payer][_ccy] >= _amount,
-            "Not enough escrowed amount"
-        );
+        _removeEscrowedAmount(_payer, _receiver, _ccy, _amount);
+    }
 
-        Storage.slot().escrowedAmount[_payer][_ccy] -= _amount;
-        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _receiver, _amount);
-
-        emit EscrowedAmountRemoved(_payer, _receiver, _ccy, _amount);
+    /**
+     * @notice Remove funds from escrow on multiple orders.
+     * @param orders Target orders
+     * @param _receiver Address of user receiving payment
+     * @param _ccy Currency name in bytes32
+     */
+    function removeEscrowedAmounts(
+        FilledOrder[] calldata orders,
+        address _receiver,
+        bytes32 _ccy
+    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+        for (uint256 i = 0; i < orders.length; i++) {
+            _removeEscrowedAmount(orders[i].maker, _receiver, _ccy, orders[i].amount);
+        }
     }
 
     /**
@@ -553,5 +562,51 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         } else {
             Storage.slot().usedCurrencies[msg.sender].remove(_ccy);
         }
+    }
+
+    function _releaseUnsettledCollateral(
+        address _user,
+        address _sender,
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal {
+        require(
+            Storage.slot().unsettledCollateral[_user][_ccy] >= _amount,
+            "Not enough unsettled collateral"
+        );
+        Storage.slot().unsettledCollateral[_user][_ccy] -= _amount;
+
+        if (_sender != address(0)) {
+            ERC20Handler.safeTransferFrom(
+                Storage.slot().tokenAddresses[_ccy],
+                _sender,
+                _user,
+                _amount
+            );
+        }
+
+        if (Storage.slot().unsettledCollateral[_user][_ccy] == 0) {
+            Storage.slot().exposedUnsettledCurrencies[_user].remove(_ccy);
+        }
+
+        emit ReleaseUnsettled(_user, _ccy, _amount);
+    }
+
+    function _removeEscrowedAmount(
+        address _payer,
+        address _receiver,
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal {
+        require(_amount > 0, "Invalid amount");
+        require(
+            Storage.slot().escrowedAmount[_payer][_ccy] >= _amount,
+            "Not enough escrowed amount"
+        );
+
+        Storage.slot().escrowedAmount[_payer][_ccy] -= _amount;
+        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _receiver, _amount);
+
+        emit EscrowedAmountRemoved(_payer, _receiver, _ccy, _amount);
     }
 }
