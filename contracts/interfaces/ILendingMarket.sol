@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
 import {MarketOrder} from "../storages/LendingMarketStorage.sol";
+import {FilledOrder} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 interface ILendingMarket {
     event CancelOrder(
@@ -51,8 +52,6 @@ interface ILendingMarket {
 
     function getLendRate() external view returns (uint256 rate);
 
-    function getMaker(uint256 orderId) external view returns (address maker);
-
     function getMarket() external view returns (Market memory);
 
     function getMidRate() external view returns (uint256 rate);
@@ -69,17 +68,16 @@ interface ILendingMarket {
 
     function isOpened() external view returns (bool);
 
-    function getOrder(uint256 orderId) external view returns (MarketOrder memory);
-
-    function getOrderFromTree(uint256 _maturity, uint256 _orderId)
+    function getOrder(uint256 _orderId)
         external
         view
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            ProtocolTypes.Side,
+            uint256 rate,
+            uint256 maturity,
+            address maker,
+            uint256 amount,
+            uint256 timestamp
         );
 
     function futureValueOf(address account) external view returns (int256);
@@ -88,7 +86,7 @@ interface ILendingMarket {
 
     function openMarket(uint256 maturity) external returns (uint256);
 
-    function cancelOrder(address account, uint256 orderId)
+    function cancelOrder(address user, uint256 orderId)
         external
         returns (
             ProtocolTypes.Side,
@@ -104,16 +102,10 @@ interface ILendingMarket {
 
     function createOrder(
         ProtocolTypes.Side side,
-        address acount,
+        address account,
         uint256 amount,
         uint256 rate
-    )
-        external
-        returns (
-            uint256[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts
-        );
+    ) external returns (FilledOrder[] memory filledOrders);
 
     function pauseMarket() external;
 

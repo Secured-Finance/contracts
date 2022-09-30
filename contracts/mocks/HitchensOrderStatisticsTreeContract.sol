@@ -9,7 +9,7 @@ contract HitchensOrderStatisticsTreeContract {
     HitchensOrderStatisticsTreeLib.Tree tree;
 
     event InsertOrder(string action, uint256 amount, uint256 value, uint256 orderId);
-    event RemoveOrder(string action, uint256 amount, uint256 value, uint256 _id);
+    event RemoveOrder(string action, uint256 value, uint256 _id);
 
     constructor() {}
 
@@ -57,18 +57,8 @@ contract HitchensOrderStatisticsTreeContract {
         (_parent, _left, _right, _red, _head, _tail, _orderCounter) = tree.getNode(value);
     }
 
-    function getOrderByID(uint256 value, uint256 id)
-        public
-        view
-        returns (
-            uint256 _orderId,
-            uint256 _next,
-            uint256 _prev,
-            uint256 _timestamp,
-            uint256 _amount
-        )
-    {
-        (_orderId, _next, _prev, _timestamp, _amount) = tree.getOrderById(value, id);
+    function getOrderByID(uint256 value, uint256 id) public view returns (OrderItem memory) {
+        return tree.getOrderById(value, id);
     }
 
     function getRootCount() public view returns (uint256 _orderCounter) {
@@ -80,20 +70,17 @@ contract HitchensOrderStatisticsTreeContract {
     }
 
     function insertAmountValue(
-        uint256 amount,
         uint256 value,
-        uint256 orderId
+        uint256 orderId,
+        address user,
+        uint256 amount
     ) public {
         emit InsertOrder("insert", amount, value, orderId);
-        tree.insertOrder(amount, value, orderId, false);
+        tree.insertOrder(value, orderId, user, amount, false);
     }
 
-    function removeAmountValue(
-        uint256 amount,
-        uint256 value,
-        uint256 orderId
-    ) public {
-        emit RemoveOrder("delete", amount, value, orderId);
-        tree.removeOrder(amount, value, orderId);
+    function removeAmountValue(uint256 value, uint256 orderId) public {
+        emit RemoveOrder("delete", value, orderId);
+        tree.removeOrder(value, orderId);
     }
 }

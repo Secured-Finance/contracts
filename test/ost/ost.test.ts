@@ -1,4 +1,4 @@
-import { Contract } from 'ethers';
+import { constants, Contract } from 'ethers';
 import { artifacts } from 'hardhat';
 import { Step, steps } from './steps';
 const OrderStatisticsTree = artifacts.require(
@@ -87,9 +87,9 @@ async function loadScenario(steps: Step[]) {
     const orderId = step.orderId;
     const rate = step.rate;
     if (step.action == 'insert') {
-      await ost.insertAmountValue(amount, rate, orderId);
+      await ost.insertAmountValue(rate, orderId, constants.AddressZero, amount);
     } else if (step.action == 'delete') {
-      await ost.removeAmountValue(amount, rate, orderId);
+      await ost.removeAmountValue(rate, orderId);
     }
   }
 }

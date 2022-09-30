@@ -6,7 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {HitchensOrderStatisticsTreeLib} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
+import {HitchensOrderStatisticsTreeLib, FilledOrder, OrderItem} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinFutureValue} from "./mixins/MixinFutureValue.sol";
@@ -39,8 +39,10 @@ contract LendingMarket is
      * @notice Modifier to make a function callable only by order maker.
      * @param _orderId Market order id
      */
-    modifier onlyMaker(address account, uint256 _orderId) {
-        require(account == getMaker(_orderId), "caller is not the maker");
+    modifier onlyMaker(address user, uint256 _orderId) {
+        (, , , address maker, , ) = getOrder(_orderId);
+        require(maker != address(0), "Order not found");
+        require(user == maker, "Caller is not the maker");
         _;
     }
 
@@ -93,15 +95,6 @@ contract LendingMarket is
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-    }
-
-    /**
-     * @notice Gets the order maker address.
-     * @param _orderId The market order id
-     * @return maker The order maker address
-     */
-    function getMaker(uint256 _orderId) public view override returns (address maker) {
-        return Storage.slot().orders[_orderId].maker;
     }
 
     /**
@@ -229,38 +222,52 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Gets the market order information.
+     * @notice Gets the market order from the order book.
      * @param _orderId The market order id
-     * @return order The market order information
+     * @return side Order position type, Borrow or Lend
+     * @return rate Amount of interest rate
+     * @return maturity The maturity of the selected order
+     * @return maker The order maker
+     * @return amount Order amount
+     * @return timestamp Timestamp when the order was created
      */
-    function getOrder(uint256 _orderId) external view override returns (MarketOrder memory order) {
-        return Storage.slot().orders[_orderId];
-    }
-
-    /**
-     * @notice Gets the market order from the order book in the maturity.
-     * @param _maturity The maturity of the order book
-     * @param _orderId The market order id
-     * @return order The market order information
-     */
-    function getOrderFromTree(uint256 _maturity, uint256 _orderId)
-        external
+    function getOrder(uint256 _orderId)
+        public
         view
         override
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            ProtocolTypes.Side side,
+            uint256 rate,
+            uint256 maturity,
+            address maker,
+            uint256 amount,
+            uint256 timestamp
         )
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
 
+        OrderItem memory orderItem;
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            return Storage.slot().lendOrders[_maturity].getOrderById(marketOrder.rate, _orderId);
+            orderItem = Storage.slot().lendOrders[marketOrder.maturity].getOrderById(
+                marketOrder.rate,
+                _orderId
+            );
         } else {
-            return Storage.slot().borrowOrders[_maturity].getOrderById(marketOrder.rate, _orderId);
+            orderItem = Storage.slot().borrowOrders[marketOrder.maturity].getOrderById(
+                marketOrder.rate,
+                _orderId
+            );
+        }
+
+        if (orderItem.maker != address(0)) {
+            return (
+                marketOrder.side,
+                marketOrder.rate,
+                marketOrder.maturity,
+                orderItem.maker,
+                orderItem.amount,
+                orderItem.timestamp
+            );
         }
     }
 
@@ -334,10 +341,11 @@ contract LendingMarket is
      * @param _orderId Market order id
      */
     function cancelOrder(address _user, uint256 _orderId)
-        public
+        external
         override
         onlyMaker(_user, _orderId)
         whenNotPaused
+        onlyAcceptedContracts
         returns (
             ProtocolTypes.Side,
             uint256,
@@ -345,30 +353,22 @@ contract LendingMarket is
         )
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
+        uint256 removedAmount;
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            Storage.slot().lendOrders[Storage.slot().maturity].removeOrder(
-                marketOrder.amount,
+            removedAmount = Storage.slot().lendOrders[Storage.slot().maturity].removeOrder(
                 marketOrder.rate,
                 _orderId
             );
         } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
-            Storage.slot().borrowOrders[Storage.slot().maturity].removeOrder(
-                marketOrder.amount,
+            removedAmount = Storage.slot().borrowOrders[Storage.slot().maturity].removeOrder(
                 marketOrder.rate,
                 _orderId
             );
         }
-        delete Storage.slot().orders[_orderId];
 
-        emit CancelOrder(
-            _orderId,
-            marketOrder.maker,
-            marketOrder.side,
-            marketOrder.amount,
-            marketOrder.rate
-        );
+        emit CancelOrder(_orderId, msg.sender, marketOrder.side, removedAmount, marketOrder.rate);
 
-        return (marketOrder.side, marketOrder.amount, marketOrder.rate);
+        return (marketOrder.side, removedAmount, marketOrder.rate);
     }
 
     /**
@@ -388,37 +388,39 @@ contract LendingMarket is
         MarketOrder memory marketOrder;
 
         marketOrder.side = _side;
-        marketOrder.amount = _amount;
+        // marketOrder.amount = _amount;
         marketOrder.rate = _rate;
-        marketOrder.maker = _user;
+        // marketOrder.maker = _user;
         marketOrder.maturity = Storage.slot().maturity;
         orderId = nextOrderId();
 
         Storage.slot().orders[orderId] = marketOrder;
 
-        if (marketOrder.side == ProtocolTypes.Side.LEND) {
+        if (_side == ProtocolTypes.Side.LEND) {
             Storage.slot().lendOrders[Storage.slot().maturity].insertOrder(
-                marketOrder.amount,
-                marketOrder.rate,
+                _rate,
                 orderId,
+                _user,
+                _amount,
                 _isInterruption
             );
-        } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
+        } else if (_side == ProtocolTypes.Side.BORROW) {
             Storage.slot().borrowOrders[Storage.slot().maturity].insertOrder(
-                marketOrder.amount,
-                marketOrder.rate,
+                _rate,
                 orderId,
+                _user,
+                _amount,
                 _isInterruption
             );
         }
 
         emit MakeOrder(
             orderId,
-            marketOrder.maker,
+            _user,
             marketOrder.side,
             Storage.slot().ccy,
             marketOrder.maturity,
-            marketOrder.amount,
+            _amount,
             marketOrder.rate
         );
     }
@@ -434,50 +436,36 @@ contract LendingMarket is
         address _user,
         uint256 _amount,
         uint256 _rate
-    )
-        internal
-        returns (
-            uint256[] memory orderIds,
-            uint256[] memory amounts,
-            address[] memory makers
-        )
-    {
+    ) internal returns (FilledOrder[] memory filledOrders) {
         uint256 remainingAmount;
-        UnfilledOrder memory unfilledOrder;
+        FilledOrder memory unfilledOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
-            (remainingAmount, orderIds, unfilledOrder.amount, unfilledOrder.orderId) = Storage
+            (remainingAmount, filledOrders, unfilledOrder) = Storage
                 .slot()
                 .lendOrders[Storage.slot().maturity]
                 .fillOrders(_rate, _amount);
-            unfilledOrder.side = ProtocolTypes.Side.LEND;
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (remainingAmount, orderIds, unfilledOrder.amount, unfilledOrder.orderId) = Storage
+            (remainingAmount, filledOrders, unfilledOrder) = Storage
                 .slot()
                 .borrowOrders[Storage.slot().maturity]
                 .fillOrders(_rate, _amount);
-            unfilledOrder.side = ProtocolTypes.Side.BORROW;
         }
 
-        amounts = new uint256[](orderIds.length);
-        makers = new address[](orderIds.length);
-        unfilledOrder.maker = Storage.slot().orders[unfilledOrder.orderId].maker;
+        uint256[] memory orderIds = new uint256[](filledOrders.length);
 
-        for (uint256 i = 0; i < orderIds.length; i++) {
+        for (uint256 i = 0; i < filledOrders.length; i++) {
+            orderIds[i] = filledOrders[i].orderId;
             MarketOrder memory marketOrder = Storage.slot().orders[orderIds[i]];
-
-            amounts[i] = Storage.slot().orders[orderIds[i]].amount;
-            makers[i] = Storage.slot().orders[orderIds[i]].maker;
-            Storage.slot().orders[orderIds[i]].amount = 0;
 
             address lender;
             address borrower;
             if (_side == ProtocolTypes.Side.BORROW) {
-                lender = marketOrder.maker;
+                lender = filledOrders[i].maker;
                 borrower = _user;
             } else if (_side == ProtocolTypes.Side.LEND) {
                 lender = _user;
-                borrower = marketOrder.maker;
+                borrower = filledOrders[i].maker;
             }
 
             // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
@@ -485,15 +473,22 @@ contract LendingMarket is
                 ProtocolTypes.SECONDS_IN_YEAR;
             uint256 fvAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
             _addFutureValue(lender, borrower, fvAmount, Storage.slot().maturity);
-
-            delete Storage.slot().orders[orderIds[i]];
         }
 
         emit TakeOrders(orderIds, _user, _side, _amount, _rate);
 
         if (unfilledOrder.amount > 0) {
-            _makeOrder(unfilledOrder.side, unfilledOrder.maker, unfilledOrder.amount, _rate, true);
+            _makeOrder(
+                _side == ProtocolTypes.Side.BORROW
+                    ? ProtocolTypes.Side.LEND
+                    : ProtocolTypes.Side.BORROW,
+                unfilledOrder.maker,
+                unfilledOrder.amount,
+                _rate,
+                true
+            );
         }
+
         if (remainingAmount > 0) {
             _makeOrder(_side, _user, remainingAmount, _rate, false);
         }
@@ -544,9 +539,7 @@ contract LendingMarket is
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _rate Amount of interest rate taker wish to borrow/lend
-     * @return orderIds Market order ids
-     * @return makers The maker addresses
-     * @return amounts The taken amounts
+     * @return filledOrders Filled orders
      */
     function createOrder(
         ProtocolTypes.Side _side,
@@ -559,11 +552,7 @@ contract LendingMarket is
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (
-            uint256[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts
-        )
+        returns (FilledOrder[] memory filledOrders)
     {
         require(_amount > 0, "Can't place empty amount");
         require(_rate > 0, "Can't place empty rate");
@@ -573,14 +562,14 @@ contract LendingMarket is
             : Storage.slot().lendOrders[Storage.slot().maturity].exists(_rate);
 
         if (!isExists) {
-            orderIds = new uint256[](1);
-            makers = new address[](1);
-            amounts = new uint256[](1);
-            orderIds[0] = _makeOrder(_side, _user, _amount, _rate, false);
-            makers[0] = _user;
-            amounts[0] = 0;
+            filledOrders = new FilledOrder[](1);
+            filledOrders[0] = FilledOrder(
+                _makeOrder(_side, _user, _amount, _rate, false),
+                _user,
+                0
+            );
         } else {
-            (orderIds, amounts, makers) = _takeOrder(_side, _user, _amount, _rate);
+            filledOrders = _takeOrder(_side, _user, _amount, _rate);
         }
     }
 

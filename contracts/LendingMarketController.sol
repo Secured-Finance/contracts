@@ -8,6 +8,7 @@ import {ILendingMarketController, Order} from "./interfaces/ILendingMarketContro
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
+import {FilledOrder} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
@@ -509,56 +510,44 @@ contract LendingMarketController is
         );
 
         // Create a order
-        (
-            uint256[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory matchedAmounts
-        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
-                _side,
-                msg.sender,
-                _amount,
-                _rate
-            );
+        FilledOrder[] memory filledOrders = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).createOrder(_side, msg.sender, _amount, _rate);
 
         // Update the unsettled collateral in TokenVault
-        if (matchedAmounts[0] == 0) {
+        if (filledOrders[0].amount == 0) {
             if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().addEscrowedAmount{value: msg.value}(makers[0], _ccy, _amount);
+                tokenVault().addEscrowedAmount{value: msg.value}(
+                    filledOrders[0].maker,
+                    _ccy,
+                    _amount
+                );
             } else {
-                tokenVault().useUnsettledCollateral(makers[0], _ccy, _amount);
+                tokenVault().useUnsettledCollateral(filledOrders[0].maker, _ccy, _amount);
             }
         } else {
-            for (uint256 i = 0; i < orderIds.length; i++) {
+            for (uint256 i = 0; i < filledOrders.length; i++) {
                 if (_side == ProtocolTypes.Side.LEND) {
                     tokenVault().releaseUnsettledCollateral(
-                        makers[i],
+                        filledOrders[i].maker,
                         msg.sender,
                         _ccy,
-                        matchedAmounts[i]
+                        filledOrders[i].amount
                     );
                 } else {
                     tokenVault().removeEscrowedAmount(
-                        makers[i],
+                        filledOrders[i].maker,
                         msg.sender,
                         _ccy,
-                        matchedAmounts[i]
+                        filledOrders[i].amount
                     );
                 }
-                Storage.slot().usedCurrencies[makers[i]].add(_ccy);
+                Storage.slot().usedCurrencies[filledOrders[i].maker].add(_ccy);
             }
 
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
-            emit OrderFilled(
-                orderIds,
-                makers,
-                msg.sender,
-                _ccy,
-                _side,
-                _maturity,
-                matchedAmounts,
-                _rate
-            );
+            emit OrderFilled(filledOrders, msg.sender, _ccy, _side, _maturity, _rate);
         }
 
         return true;
