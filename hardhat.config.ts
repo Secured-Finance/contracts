@@ -32,8 +32,8 @@ const config: HardhatUserConfig = {
     development: {
       url:
         process.env.FORK_RPC_ENDPOINT ||
-        `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 4,
+        `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      chainId: 5,
       accounts: privateKey,
       live: true,
       saveDeployments: true,
