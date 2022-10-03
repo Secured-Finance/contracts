@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../types/ProtocolTypes.sol";
+import {Currency} from "../storages/CurrencyControllerStorage.sol";
 
 /**
  * @dev Currency Controller contract is responsible for managing supported
@@ -23,7 +23,7 @@ interface ICurrencyController {
 
     function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256);
 
-    function getCurrencies(bytes32) external view returns (ProtocolTypes.Currency memory);
+    function getCurrencies(bytes32) external view returns (Currency memory);
 
     function getEthDecimals(bytes32) external view returns (uint8);
 

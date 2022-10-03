@@ -54,6 +54,10 @@ describe('TokenVault', () => {
     mockWETH9 = await deployMockContract(owner, WETH9.abi);
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
 
+    await mockCurrencyController.mock.isSupportedCcy.returns(true);
+    await mockERC20.mock.transferFrom.returns(true);
+    await mockERC20.mock.transfer.returns(true);
+
     // Deploy
     const addressResolver = await deployContract(owner, AddressResolver);
     const proxyController = await deployContract(owner, ProxyController, [
@@ -194,12 +198,6 @@ describe('TokenVault', () => {
   });
 
   describe('Deposit & Withdraw', async () => {
-    before(async () => {
-      await mockCurrencyController.mock.isSupportedCcy.returns(true);
-      await mockERC20.mock.transferFrom.returns(true);
-      await mockERC20.mock.transfer.returns(true);
-    });
-
     it('Register a currency', async () => {
       expect(await tokenVaultProxy.isRegisteredCurrency(targetCurrency)).to
         .false;
@@ -293,6 +291,9 @@ describe('TokenVault', () => {
       );
 
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('5000');
+      expect(await tokenVaultProxy.getUnusedCollateral(bob.address)).to.equal(
+        value,
+      );
 
       expect(
         await tokenVaultProxy.getUnsettledCollateral(
@@ -308,6 +309,54 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.connect(bob).withdraw(targetCurrency, '10000000000000'),
       ).to.emit(tokenVaultProxy, 'Withdraw');
+    });
+
+    it('Lock & unlock the unsettled collateral', async () => {
+      const value = ethers.BigNumber.from('20000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const totalPresentValue = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToETH(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+        valueInETH,
+      );
+      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+        totalPresentValue,
+      );
+
+      await tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
+
+      await tokenVaultProxy.connect(bob).deposit(targetCurrency, value);
+
+      await expect(
+        tokenVaultCaller.useUnsettledCollateral(
+          bob.address,
+          targetCurrency,
+          value.mul(2),
+        ),
+      ).to.emit(tokenVaultProxy, 'UseUnsettledCollateral');
+
+      await expect(
+        tokenVaultCaller.releaseUnsettledCollateral(
+          bob.address,
+          bob.address,
+          targetCurrency,
+          value,
+        ),
+      ).to.emit(tokenVaultProxy, 'ReleaseUnsettled');
+
+      await expect(
+        tokenVaultCaller.releaseUnsettledCollaterals(
+          bob.address,
+          targetCurrency,
+          [bob.address],
+          [value],
+        ),
+      ).to.emit(tokenVaultProxy, 'ReleaseUnsettled');
     });
 
     it('Fail to lock the unsettled collateral due to no enough collateral', async () => {
@@ -340,6 +389,17 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Only Accepted Contracts');
     });
 
+    it('Fail to call releaseUnsettledCollateral due to no enough unsettled collateral', async () => {
+      await expect(
+        tokenVaultCaller.releaseUnsettledCollateral(
+          carol.address,
+          alice.address,
+          targetCurrency,
+          '1000000000000000000000000',
+        ),
+      ).to.be.revertedWith('Not enough unsettled collateral');
+    });
+
     it('Fail to call releaseUnsettledCollateral due to invalid caller', async () => {
       await expect(
         tokenVaultProxy
@@ -369,7 +429,7 @@ describe('TokenVault', () => {
       ).to.emit(tokenVaultProxy, 'EscrowedAmountAdded');
     });
 
-    it('Withdraw funds From the escrow', async () => {
+    it('Withdraw funds from the escrow', async () => {
       await tokenVaultCaller.addEscrowedAmount(
         owner.address,
         targetCurrency,
@@ -382,6 +442,28 @@ describe('TokenVault', () => {
           owner.address,
           targetCurrency,
           '10000',
+        ),
+      ).to.emit(tokenVaultProxy, 'EscrowedAmountRemoved');
+    });
+
+    it('Withdraw funds from the escrow of multiple users', async () => {
+      await tokenVaultCaller.addEscrowedAmount(
+        owner.address,
+        targetCurrency,
+        '10000',
+      );
+      await tokenVaultCaller.addEscrowedAmount(
+        alice.address,
+        targetCurrency,
+        '10000',
+      );
+
+      await expect(
+        tokenVaultCaller.removeEscrowedAmounts(
+          owner.address,
+          targetCurrency,
+          [owner.address, alice.address],
+          ['10000', '10000'],
         ),
       ).to.emit(tokenVaultProxy, 'EscrowedAmountRemoved');
     });

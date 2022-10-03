@@ -30,21 +30,39 @@ contract TokenVaultCallerMock {
         tokenVault.releaseUnsettledCollateral(user, sender, ccy, amount);
     }
 
+    function releaseUnsettledCollaterals(
+        address sender,
+        bytes32 ccy,
+        address[] calldata users,
+        uint256[] calldata amounts
+    ) public {
+        tokenVault.releaseUnsettledCollaterals(sender, ccy, users, amounts);
+    }
+
     function addEscrowedAmount(
-        address paye,
+        address payer,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.addEscrowedAmount(paye, ccy, amount);
+        tokenVault.addEscrowedAmount(payer, ccy, amount);
     }
 
     function removeEscrowedAmount(
-        address paye,
+        address payer,
         address receiver,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.removeEscrowedAmount(paye, receiver, ccy, amount);
+        tokenVault.removeEscrowedAmount(payer, receiver, ccy, amount);
+    }
+
+    function removeEscrowedAmounts(
+        address receiver,
+        bytes32 ccy,
+        address[] calldata payers,
+        uint256[] calldata amounts
+    ) public {
+        tokenVault.removeEscrowedAmounts(receiver, ccy, payers, amounts);
     }
 
     function getTotalPresentValueInETH(address _account) public view returns (int256) {

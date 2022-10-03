@@ -3,10 +3,9 @@ pragma solidity ^0.8.9;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
-import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
-import {CurrencyControllerStorage as Storage} from "./storages/CurrencyControllerStorage.sol";
+import {CurrencyControllerStorage as Storage, Currency} from "./storages/CurrencyControllerStorage.sol";
 
 /**
  * @notice Implements managing of the supported currencies in the protocol.
@@ -48,7 +47,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         address _ethPriceFeed,
         uint256 _haircut
     ) public override onlyOwner {
-        ProtocolTypes.Currency memory currency;
+        Currency memory currency;
         currency.name = _name;
         currency.isSupported = true;
 
@@ -69,7 +68,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _isSupported Boolean if currency is supported
      */
     function updateCurrencySupport(bytes32 _ccy, bool _isSupported) public override onlyOwner {
-        ProtocolTypes.Currency storage currency = Storage.slot().currencies[_ccy];
+        Currency storage currency = Storage.slot().currencies[_ccy];
         currency.isSupported = _isSupported;
 
         emit CcySupportUpdate(_ccy, _isSupported);
@@ -99,7 +98,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      * @return The currency data
      */
-    function getCurrencies(bytes32 _ccy) external view returns (ProtocolTypes.Currency memory) {
+    function getCurrencies(bytes32 _ccy) external view returns (Currency memory) {
         return Storage.slot().currencies[_ccy];
     }
 

@@ -34,9 +34,4 @@ library ProtocolTypes {
         LIQUIDATION_IN_PROGRESS,
         LIQUIDATION
     }
-
-    struct Currency {
-        bool isSupported;
-        string name;
-    }
 }

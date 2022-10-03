@@ -19,27 +19,18 @@ interface ILendingMarketController {
         uint256 maturity
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event OrderPlaced(
-        uint256 orderId,
-        address indexed maker,
-        bytes32 indexed ccy,
-        ProtocolTypes.Side side,
-        uint256 maturity,
-        uint256 amount,
-        uint256 rate
-    );
     event OrderFilled(
-        uint256 orderId,
-        address indexed maker,
         address indexed taker,
         bytes32 indexed ccy,
+        uint48[] orderIds,
+        address[] makers,
+        uint256[] amounts,
         ProtocolTypes.Side side,
-        uint256 maturity,
-        uint256 amount,
+        uint256 indexed maturity,
         uint256 rate
     );
     event OrderCanceled(
-        uint256 orderId,
+        uint48 orderId,
         address indexed maker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
@@ -104,7 +95,7 @@ interface ILendingMarketController {
     function cancelOrder(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _orderId
+        uint48 _orderId
     ) external returns (bool);
 
     function rotateLendingMarkets(bytes32 _ccy) external;

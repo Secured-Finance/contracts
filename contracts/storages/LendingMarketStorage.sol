@@ -6,9 +6,7 @@ import "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 struct MarketOrder {
     ProtocolTypes.Side side;
-    uint256 amount;
     uint256 rate; // in basis points
-    address maker;
     uint256 maturity;
 }
 
@@ -18,7 +16,7 @@ library LendingMarketStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarket");
 
     struct Storage {
-        uint256 lastOrderId;
+        uint48 lastOrderId;
         bytes32 ccy;
         uint256 basisDate;
         uint256 maturity;

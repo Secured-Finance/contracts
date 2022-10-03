@@ -39,7 +39,6 @@ contract MixinFutureValue {
         uint256 amount,
         uint256 maturity
     ) internal returns (bool) {
-        require(lender != borrower, "borrower and lender are the same");
         require(lender != address(0), "add to the zero address of lender");
         require(borrower != address(0), "add to the zero address of borrower");
         require(

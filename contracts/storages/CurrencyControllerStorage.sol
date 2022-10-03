@@ -2,14 +2,18 @@
 pragma solidity ^0.8.9;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "../types/ProtocolTypes.sol";
+
+struct Currency {
+    bool isSupported;
+    string name;
+}
 
 library CurrencyControllerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.currencyController");
 
     struct Storage {
         // Protocol currencies
-        mapping(bytes32 => ProtocolTypes.Currency) currencies;
+        mapping(bytes32 => Currency) currencies;
         mapping(bytes32 => uint256) haircuts;
         // PriceFeed
         mapping(bytes32 => AggregatorV3Interface) usdPriceFeeds;

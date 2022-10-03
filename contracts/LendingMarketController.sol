@@ -366,7 +366,7 @@ contract LendingMarketController is
     function cancelOrder(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _orderId
+        uint48 _orderId
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         (ProtocolTypes.Side side, uint256 amount, uint256 rate) = ILendingMarket(marketAddr)
@@ -509,39 +509,38 @@ contract LendingMarketController is
         );
 
         // Create a order
-        (uint256 orderId, address maker, uint256 matchedAmount) = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).createOrder(_side, msg.sender, _amount, _rate);
+        (
+            uint48[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts
+        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
+                _side,
+                msg.sender,
+                _amount,
+                _rate
+            );
 
         // Update the unsettled collateral in TokenVault
-        if (matchedAmount == 0) {
+        if (amounts[0] == 0) {
             if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, _amount);
+                tokenVault().addEscrowedAmount{value: msg.value}(makers[0], _ccy, _amount);
             } else {
-                tokenVault().useUnsettledCollateral(maker, _ccy, _amount);
+                tokenVault().useUnsettledCollateral(makers[0], _ccy, _amount);
             }
-
-            emit OrderPlaced(orderId, maker, _ccy, _side, _maturity, _amount, _rate);
         } else {
             if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().releaseUnsettledCollateral(maker, msg.sender, _ccy, _amount);
+                tokenVault().releaseUnsettledCollaterals(msg.sender, _ccy, makers, amounts);
             } else {
-                tokenVault().removeEscrowedAmount(maker, msg.sender, _ccy, _amount);
+                tokenVault().removeEscrowedAmounts(msg.sender, _ccy, makers, amounts);
+            }
+
+            for (uint256 i = 0; i < makers.length; i++) {
+                Storage.slot().usedCurrencies[makers[i]].add(_ccy);
             }
 
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-            Storage.slot().usedCurrencies[maker].add(_ccy);
 
-            emit OrderFilled(
-                orderId,
-                maker,
-                msg.sender,
-                _ccy,
-                _side,
-                _maturity,
-                matchedAmount,
-                _rate
-            );
+            emit OrderFilled(msg.sender, _ccy, orderIds, makers, amounts, _side, _maturity, _rate);
         }
 
         return true;

@@ -6,14 +6,14 @@ import {MarketOrder} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
     event CancelOrder(
-        uint256 orderId,
+        uint48 orderId,
         address indexed maker,
         ProtocolTypes.Side side,
         uint256 amount,
         uint256 rate
     );
     event MakeOrder(
-        uint256 orderId,
+        uint48 orderId,
         address indexed maker,
         ProtocolTypes.Side side,
         bytes32 ccy,
@@ -21,8 +21,8 @@ interface ILendingMarket {
         uint256 amount,
         uint256 rate
     );
-    event TakeOrder(
-        uint256 orderId,
+    event TakeOrders(
+        uint48[] orderIds,
         address indexed taker,
         ProtocolTypes.Side side,
         uint256 amount,
@@ -44,8 +44,6 @@ interface ILendingMarket {
 
     function getLendRate() external view returns (uint256 rate);
 
-    function getMaker(uint256 orderId) external view returns (address maker);
-
     function getMarket() external view returns (Market memory);
 
     function getMidRate() external view returns (uint256 rate);
@@ -62,17 +60,16 @@ interface ILendingMarket {
 
     function isOpened() external view returns (bool);
 
-    function getOrder(uint256 orderId) external view returns (MarketOrder memory);
-
-    function getOrderFromTree(uint256 _maturity, uint256 _orderId)
+    function getOrder(uint48 _orderId)
         external
         view
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            ProtocolTypes.Side,
+            uint256 rate,
+            uint256 maturity,
+            address maker,
+            uint256 amount,
+            uint256 timestamp
         );
 
     function futureValueOf(address account) external view returns (int256);
@@ -81,7 +78,7 @@ interface ILendingMarket {
 
     function openMarket(uint256 maturity) external returns (uint256);
 
-    function cancelOrder(address account, uint256 orderId)
+    function cancelOrder(address user, uint48 orderId)
         external
         returns (
             ProtocolTypes.Side,
@@ -97,15 +94,15 @@ interface ILendingMarket {
 
     function createOrder(
         ProtocolTypes.Side side,
-        address acount,
+        address account,
         uint256 amount,
         uint256 rate
     )
         external
         returns (
-            uint256 orderId,
-            address maker,
-            uint256 matchedAmount
+            uint48[] memory orderIds,
+            address[] memory makers,
+            uint256[] memory amounts
         );
 
     function pauseMarket() external;
