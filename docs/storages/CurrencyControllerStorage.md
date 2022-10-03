@@ -1,5 +1,14 @@
 # Solidity API
 
+## Currency
+
+```solidity
+struct Currency {
+  bool isSupported;
+  string name;
+}
+```
+
 ## CurrencyControllerStorage
 
 ### STORAGE_SLOT
@@ -12,7 +21,7 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  mapping(bytes32 => struct ProtocolTypes.Currency) currencies;
+  mapping(bytes32 => struct Currency) currencies;
   mapping(bytes32 => uint256) haircuts;
   mapping(bytes32 => contract AggregatorV3Interface) usdPriceFeeds;
   mapping(bytes32 => contract AggregatorV3Interface) ethPriceFeeds;

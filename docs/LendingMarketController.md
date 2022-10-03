@@ -327,7 +327,7 @@ Gets if the market order will be matched or not.
 ### cancelOrder
 
 ```solidity
-function cancelOrder(bytes32 _ccy, uint256 _maturity, uint256 _orderId) external returns (bool)
+function cancelOrder(bytes32 _ccy, uint256 _maturity, uint48 _orderId) external returns (bool)
 ```
 
 Cancels the own order.
@@ -336,7 +336,7 @@ Cancels the own order.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 of the selected market |
 | _maturity | uint256 | The maturity of the selected market |
-| _orderId | uint256 | Market order id |
+| _orderId | uint48 | Market order id |
 
 ### rotateLendingMarkets
 

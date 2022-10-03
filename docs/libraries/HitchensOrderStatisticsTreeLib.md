@@ -1,5 +1,28 @@
 # Solidity API
 
+## UnfilledOrder
+
+```solidity
+struct UnfilledOrder {
+  uint48 orderId;
+  address maker;
+  uint256 amount;
+}
+```
+
+## OrderItem
+
+```solidity
+struct OrderItem {
+  uint48 orderId;
+  uint48 next;
+  uint48 prev;
+  address maker;
+  uint256 timestamp;
+  uint256 amount;
+}
+```
+
 ## HitchensOrderStatisticsTreeLib
 
 ### EMPTY
@@ -16,22 +39,10 @@ struct Node {
   uint256 left;
   uint256 right;
   bool red;
-  uint256 head;
-  uint256 tail;
+  uint48 head;
+  uint48 tail;
   uint256 orderCounter;
-  mapping(uint256 => struct HitchensOrderStatisticsTreeLib.OrderItem) orders;
-}
-```
-
-### OrderItem
-
-```solidity
-struct OrderItem {
-  uint256 orderId;
-  uint256 next;
-  uint256 prev;
-  uint256 timestamp;
-  uint256 amount;
+  mapping(uint256 => struct OrderItem) orders;
 }
 ```
 
@@ -83,7 +94,7 @@ function amountExistsInNode(struct HitchensOrderStatisticsTreeLib.Tree self, uin
 ### orderExistsInNode
 
 ```solidity
-function orderExistsInNode(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 amount, uint256 value, uint256 orderId) internal view returns (bool)
+function orderExistsInNode(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (bool)
 ```
 
 ### getNode
@@ -107,13 +118,13 @@ function count(struct HitchensOrderStatisticsTreeLib.Tree self) internal view re
 ### insert
 
 ```solidity
-function insert(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 amount, uint256 value, uint256 orderId) internal
+function insert(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value) internal
 ```
 
 ### remove
 
 ```solidity
-function remove(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 amount, uint256 value, uint256 orderId) internal
+function remove(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value) internal
 ```
 
 ### treeMinimum
@@ -161,7 +172,7 @@ function removeFixup(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 va
 ### getOrderById
 
 ```solidity
-function getOrderById(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 orderId) internal view returns (uint256, uint256, uint256, uint256, uint256)
+function getOrderById(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (struct OrderItem)
 ```
 
 _Retrieves the Object denoted by `_id`._
@@ -169,7 +180,7 @@ _Retrieves the Object denoted by `_id`._
 ### isOrderIdExists
 
 ```solidity
-function isOrderIdExists(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 amount, uint256 orderId) internal view returns (bool)
+function isOrderIdExists(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (bool)
 ```
 
 _Return boolean if value, amount and orderId exist in doubly linked list_
@@ -190,10 +201,22 @@ function findOrderIdForAmount(struct HitchensOrderStatisticsTreeLib.Tree self, u
 
 _Return the id of the first OrderItem matching `_amount` in the amount field._
 
-### fillOrder
+### insertOrder
 
 ```solidity
-function fillOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 orderId, uint256 _amount) internal returns (bool)
+function insertOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId, address user, uint256 amount, bool isInterruption) internal
+```
+
+### removeOrder
+
+```solidity
+function removeOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal returns (uint256 amount)
+```
+
+### fillOrders
+
+```solidity
+function fillOrders(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount) internal returns (uint48[] orderIds, address[] makers, uint256[] amounts, uint256 remainingAmount, struct UnfilledOrder unfilledOrder)
 ```
 
 _Reduces order amount once market order taken._
@@ -201,7 +224,7 @@ _Reduces order amount once market order taken._
 ### upSizeOrder
 
 ```solidity
-function upSizeOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 orderId, uint256 _amount) internal returns (bool)
+function upSizeOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId, uint256 _amount) internal returns (bool)
 ```
 
 _Up size order by market maker._
@@ -209,7 +232,7 @@ _Up size order by market maker._
 ### addHead
 
 ```solidity
-function addHead(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount, uint256 _orderId) internal
+function addHead(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 _value, uint48 _orderId, address _user, uint256 _amount) internal
 ```
 
 _Insert a new OrderItem as the new Head with `_amount` in the amount field, and orderId._
@@ -217,47 +240,23 @@ _Insert a new OrderItem as the new Head with `_amount` in the amount field, and 
 ### addTail
 
 ```solidity
-function addTail(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount, uint256 _orderId) internal
+function addTail(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 _value, uint48 _orderId, address _user, uint256 _amount) internal
 ```
 
 _Insert a new OrderItem as the new Tail with `_amount` in the amount field, and orderId._
 
-### removeOrder
+### _removeOrder
 
 ```solidity
-function removeOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 orderId) internal
+function _removeOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal returns (uint256 amount)
 ```
 
 _Remove the OrderItem denoted by `_id` from the List._
 
-### insertOrder
-
-```solidity
-function insertOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount, uint256 _orderId) internal
-```
-
-_Insert a new OrderItem after the last OrderItem with the same `_amount`._
-
-### insertOrderAfter
-
-```solidity
-function insertOrderAfter(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _prevId, uint256 _amount, uint256 _orderId) internal
-```
-
-_Insert a new OrderImer after the Order denoted by `_id` with `_amount` and `_orderId` in the amount field._
-
-### insertOrderBefore
-
-```solidity
-function insertOrderBefore(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _nextId, uint256 _amount, uint256 _orderId) internal
-```
-
-_Insert a new Object before the Object denoted by `_id` with `_amount` and `_orderId` in the data field._
-
 ### _setHead
 
 ```solidity
-function _setHead(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 orderId) internal
+function _setHead(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal
 ```
 
 _Internal function to update the Head pointer._
@@ -265,7 +264,7 @@ _Internal function to update the Head pointer._
 ### _setTail
 
 ```solidity
-function _setTail(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 orderId) internal
+function _setTail(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal
 ```
 
 _Internal function to update the Tail pointer._
@@ -273,7 +272,7 @@ _Internal function to update the Tail pointer._
 ### _createOrder
 
 ```solidity
-function _createOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 amount, uint256 orderId) internal returns (uint256)
+function _createOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId, address user, uint256 amount) internal returns (uint48)
 ```
 
 _Internal function to create an unlinked Order._
@@ -281,7 +280,7 @@ _Internal function to create an unlinked Order._
 ### _link
 
 ```solidity
-function _link(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _prevId, uint256 _nextId) internal
+function _link(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint48 _prevId, uint48 _nextId) internal
 ```
 
 _Internal function to link an Object to another._

@@ -77,7 +77,7 @@ Updates the haircut ratio for supported currency
 ### getCurrencies
 
 ```solidity
-function getCurrencies(bytes32 _ccy) external view returns (struct ProtocolTypes.Currency)
+function getCurrencies(bytes32 _ccy) external view returns (struct Currency)
 ```
 
 Gets the currency data.
@@ -88,7 +88,7 @@ Gets the currency data.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | struct ProtocolTypes.Currency | The currency data |
+| [0] | struct Currency | The currency data |
 
 ### getEthDecimals
 

@@ -5,9 +5,7 @@
 ```solidity
 struct MarketOrder {
   enum ProtocolTypes.Side side;
-  uint256 amount;
   uint256 rate;
-  address maker;
   uint256 maturity;
 }
 ```
@@ -24,7 +22,7 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  uint256 lastOrderId;
+  uint48 lastOrderId;
   bytes32 ccy;
   uint256 basisDate;
   uint256 maturity;

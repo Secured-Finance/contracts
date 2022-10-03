@@ -61,12 +61,3 @@ enum CollateralState {
 }
 ```
 
-### Currency
-
-```solidity
-struct Currency {
-  bool isSupported;
-  string name;
-}
-```
-

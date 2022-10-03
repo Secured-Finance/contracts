@@ -298,6 +298,21 @@ Releases the amount of unsettled exposure for the selected currency.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to be unlocked from unsettled exposure in a specified currency |
 
+### releaseUnsettledCollaterals
+
+```solidity
+function releaseUnsettledCollaterals(address _sender, bytes32 _ccy, address[] _users, uint256[] _amounts) external
+```
+
+Releases the amount of unsettled exposure on multiple orders.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _sender | address | Address of user sending token |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _users | address[] | Array of user's address |
+| _amounts | uint256[] | Array of amount of funds to be unlocked from unsettled exposure |
+
 ### registerCurrency
 
 ```solidity
@@ -358,6 +373,21 @@ Remove funds from escrow.
 | _receiver | address | Address of user receiving payment |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to be removed from escrow |
+
+### removeEscrowedAmounts
+
+```solidity
+function removeEscrowedAmounts(address _receiver, bytes32 _ccy, address[] _payers, uint256[] _amounts) external
+```
+
+Remove funds from escrow on multiple orders.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _receiver | address | Address of user receiving payment |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _payers | address[] | Array of user's address making payment |
+| _amounts | uint256[] | Array of amount of funds to be unlocked from unsettled exposure |
 
 ### setCollateralParameters
 
@@ -468,5 +498,17 @@ Calculates maximum amount of ETH that can be withdrawn.
 
 ```solidity
 function _updateUsedCurrencies(bytes32 _ccy) internal
+```
+
+### _releaseUnsettledCollateral
+
+```solidity
+function _releaseUnsettledCollateral(address _user, address _sender, bytes32 _ccy, uint256 _amount) internal
+```
+
+### _removeEscrowedAmount
+
+```solidity
+function _removeEscrowedAmount(address _payer, address _receiver, bytes32 _ccy, uint256 _amount) internal
 ```
 

@@ -13,15 +13,15 @@ _The market orders is stored in structured red-black trees and doubly linked lis
 ### onlyMaker
 
 ```solidity
-modifier onlyMaker(address account, uint256 _orderId)
+modifier onlyMaker(address user, uint48 _orderId)
 ```
 
 Modifier to make a function callable only by order maker.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| account | address |  |
-| _orderId | uint256 | Market order id |
+| user | address |  |
+| _orderId | uint48 | Market order id |
 
 ### ifOpened
 
@@ -75,22 +75,6 @@ function acceptedContracts() public pure returns (bytes32[] contracts)
 Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
-
-### getMaker
-
-```solidity
-function getMaker(uint256 _orderId) public view returns (address maker)
-```
-
-Gets the order maker address.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderId | uint256 | The market order id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| maker | address | The order maker address |
 
 ### getMarket
 
@@ -223,39 +207,23 @@ Gets if the market is opened.
 ### getOrder
 
 ```solidity
-function getOrder(uint256 _orderId) external view returns (struct MarketOrder order)
+function getOrder(uint48 _orderId) public view returns (enum ProtocolTypes.Side side, uint256 rate, uint256 maturity, address maker, uint256 amount, uint256 timestamp)
 ```
 
-Gets the market order information.
+Gets the market order from the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _orderId | uint256 | The market order id |
+| _orderId | uint48 | The market order id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| order | struct MarketOrder | The market order information |
-
-### getOrderFromTree
-
-```solidity
-function getOrderFromTree(uint256 _maturity, uint256 _orderId) external view returns (uint256, uint256, uint256, uint256, uint256)
-```
-
-Gets the market order from the order book in the maturity.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _maturity | uint256 | The maturity of the order book |
-| _orderId | uint256 | The market order id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | order The market order information |
-| [1] | uint256 |  |
-| [2] | uint256 |  |
-| [3] | uint256 |  |
-| [4] | uint256 |  |
+| side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| rate | uint256 | Amount of interest rate |
+| maturity | uint256 | The maturity of the selected order |
+| maker | address | The order maker |
+| amount | uint256 | Order amount |
+| timestamp | uint256 | Timestamp when the order was created |
 
 ### futureValueOf
 
@@ -296,14 +264,14 @@ Gets the present value calculated from the future value & market rate.
 ### nextOrderId
 
 ```solidity
-function nextOrderId() internal returns (uint256)
+function nextOrderId() internal returns (uint48)
 ```
 
 Increases and returns id of last order in order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The new order id |
+| [0] | uint48 | The new order id |
 
 ### openMarket
 
@@ -320,7 +288,7 @@ Opens market
 ### cancelOrder
 
 ```solidity
-function cancelOrder(address _user, uint256 _orderId) public returns (enum ProtocolTypes.Side, uint256, uint256)
+function cancelOrder(address _user, uint48 _orderId) external returns (enum ProtocolTypes.Side, uint256, uint256)
 ```
 
 Cancels the order.
@@ -328,12 +296,12 @@ Cancels the order.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User address |
-| _orderId | uint256 | Market order id |
+| _orderId | uint48 | Market order id |
 
 ### _makeOrder
 
 ```solidity
-function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) internal returns (uint256 orderId)
+function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate, bool _isInterruption) internal returns (uint48 orderId)
 ```
 
 Makes new market order.
@@ -344,11 +312,12 @@ Makes new market order.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _rate | uint256 | Preferable interest rate |
+| _isInterruption | bool |  |
 
 ### _takeOrder
 
 ```solidity
-function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _orderId, uint256 _amount) internal returns (address)
+function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) internal returns (uint48[] orderIds, address[] makers, uint256[] amounts)
 ```
 
 Takes the market order.
@@ -357,8 +326,8 @@ Takes the market order.
 | ---- | ---- | ----------- |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
-| _orderId | uint256 | Market order id in the order book |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _rate | uint256 |  |
 
 ### matchOrders
 
@@ -380,7 +349,7 @@ Reverts if no orders for specified interest rate.
 ### createOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) external returns (uint256 orderId, address maker, uint256 amount)
+function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) external returns (uint48[] orderIds, address[] makers, uint256[] amounts)
 ```
 
 Creates the order. Takes the order if the order is matched,
@@ -395,9 +364,9 @@ and places new order if not match it.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| orderId | uint256 | Market order id |
-| maker | address | The maker address |
-| amount | uint256 | The taken amount |
+| orderIds | uint48[] | Array of filled orders |
+| makers | address[] | Array of filled orders |
+| amounts | uint256[] | Array of filled orders |
 
 ### pauseMarket
 
