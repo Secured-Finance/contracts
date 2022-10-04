@@ -1,4 +1,4 @@
-name: Reset Smart Contracts
+name: Reset smart contracts
 
 on:
   workflow_dispatch:
