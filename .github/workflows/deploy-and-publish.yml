@@ -55,7 +55,13 @@ jobs:
         run: npm run deploy $NETWORK
         env:
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+      - name: Check diff
+        shell: bash
+        id: diff
+        run: |
+          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
       - name: Run a Loan Test on fork environment
+        if: steps.diff.outputs.count > 0
         env:
           USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
