@@ -1,18 +1,21 @@
-name: Deploy Smart Contracts
+name: Reset Smart Contracts
 
 on:
-  workflow_run:
-    workflows: ['Test on a Fork']
-    types: [completed]
-    branches:
-      - main
-      - develop
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
 
 jobs:
   deploy:
-    name: Deploy Smart Contracts
+    name: Reset Smart Contracts
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Generate token
         id: generate_token
@@ -31,29 +34,23 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Deploy for development environment
-        if: ${{ github.ref == 'refs/heads/develop' }}
+        if: ${{ github.event.inputs.network == 'development' }}
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
-        run: npm run deploy development
+        run: npm run deploy:force development
       - name: Deploy for staging environment
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ github.event.inputs.network == 'staging' }}
         env:
           PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
-        run: npm run deploy staging
+        run: npm run deploy:force staging
       - run: |
           git add .
-      - name: Check diff
-        shell: bash
-        id: diff
-        run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
       - name: Commit and push
         shell: bash
-        if: steps.diff.outputs.count > 0
         run: |
           git config user.name "SF Machine User[bot]"
           git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
-          git commit -m "chore: update smart contracts"
+          git commit -m "chore: reset smart contracts"
           git push
