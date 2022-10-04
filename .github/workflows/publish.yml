@@ -154,7 +154,7 @@ jobs:
           git config user.name "SF Machine User[bot]"
           git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
           npm config set git-tag-version=false
-          if [ ${{ steps.extract_branch.outputs.branch }} = main ]; then
+          if [ ${{ github.event.workflow_run.workflow }} = 'Merge into main' ]; then
             npm version patch
           else
             npm version prerelease --preid beta
