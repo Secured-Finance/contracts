@@ -168,7 +168,7 @@ jobs:
           git push
       - name: Merge main into develop
         shell: bash
-        if: steps.extract_branch.outputs.branch == 'main'
+        if: github.event.workflow_run.workflow == 'Merge into main'
         run: |
           git switch develop
           git merge main
