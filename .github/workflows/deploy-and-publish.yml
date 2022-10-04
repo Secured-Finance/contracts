@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - develop
-      # For testing
-      - SF-208-publishing-bug
   workflow_run:
     workflows: ['Merge into main', 'Reset smart contracts']
     types: [completed]
@@ -27,9 +25,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - name: Set env for development environment
-        # For testing
-        # if: ${{ github.ref == 'refs/heads/develop' }}
-        if: ${{ github.ref == 'refs/heads/SF-208-publishing-bug' }}
+        if: ${{ github.ref == 'refs/heads/develop' }}
         run: |
           echo "NETWORK=development" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
