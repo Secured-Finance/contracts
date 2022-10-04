@@ -117,7 +117,7 @@ jobs:
   publish:
     name: Publish to NPM
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && always() }}
+    if: ${{ github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     needs: [test, deploy]
     steps:
       - name: Generate token
