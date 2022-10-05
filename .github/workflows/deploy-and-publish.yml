@@ -15,8 +15,10 @@ jobs:
   test:
     name: Test on a Fork
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'secured-finance-machine-user[bot]' &&  github.event.workflow_run.workflow != 'Reset Smart Contracts'}}
+    if: ${{ github.actor != 'secured-finance-machine-user[bot]' &&  github.event.workflow.name != 'Reset Smart Contracts'}}
     steps:
+      - name: Test
+        run: echo ${{github.event.workflow}}
       - name: Check conditional job statues
         if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure' }}
         run: exit 1
@@ -25,7 +27,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - name: Set env for development environment
-        if: ${{ github.ref == 'refs/heads/develop' }}
+        if: ${{ github.event.workflow.name != 'Merge into main' }}
         run: |
           echo "NETWORK=development" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
@@ -34,7 +36,7 @@ jobs:
           echo "TENDERLY_PROJECT=${{ secrets.DEV_TENDERLY_PROJECT }}" >> $GITHUB_ENV
           echo "TENDERLY_ACCESS_KEY=${{ secrets.DEV_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
       - name: Set env for staging environment
-        if: ${{ github.ref == 'refs/heads/master' }}
+        if: ${{ github.event.workflow.name == 'Merge into main' }}
         run: |
           echo "NETWORK=staging" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.STG_PRIVATE_KEY }}" >> $GITHUB_ENV
@@ -90,13 +92,13 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Deploy for development environment
-        if: ${{ github.ref == 'refs/heads/develop' }}
+        if: ${{ github.event.workflow.name != 'Merge into main' }}
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
         run: npm run deploy development
       - name: Deploy for staging environment
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ github.event.workflow.name == 'Merge into main' }}
         env:
           PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
@@ -156,7 +158,7 @@ jobs:
           git config user.name "SF Machine User[bot]"
           git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
           npm config set git-tag-version=false
-          if [ ${{ github.event.workflow_run.workflow }} = 'Merge into main' ]; then
+          if [ ${{ github.event.workflow.name }} == 'Merge into main' ]; then
             git switch main
             npm version patch
           else
@@ -172,7 +174,7 @@ jobs:
           git push
       - name: Merge main into develop
         shell: bash
-        if: github.event.workflow_run.workflow == 'Merge into main'
+        if: github.event.workflow.name == 'Merge into main'
         run: |
           git switch develop
           git merge main
