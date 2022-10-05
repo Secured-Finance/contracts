@@ -10,17 +10,13 @@ on:
     branches:
       - main
       - develop
-      # For testing
-      - SF-208-publishing-bug
 
 jobs:
   test:
     name: Test on a Fork
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'secured-finance-machine-user[bot]' &&  github.event.workflow.name != 'Reset Smart Contracts'}}
+    if: ${{ github.actor != 'secured-finance-machine-user[bot]' && github.event.workflow.name != 'Reset Smart Contracts'}}
     steps:
-      - name: Test
-        run: echo ${{github.event.workflow}}
       - name: Check conditional job statues
         if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure' }}
         run: exit 1
