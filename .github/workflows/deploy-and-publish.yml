@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - develop
+      # Fot testing
+      - SF-208-publishing-bug
   workflow_run:
     workflows: ['Merge into main', 'Reset smart contracts']
     types: [completed]
