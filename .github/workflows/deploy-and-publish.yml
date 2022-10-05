@@ -10,6 +10,8 @@ on:
     branches:
       - main
       - develop
+      # For testing
+      - SF-208-publishing-bug
 
 jobs:
   test:
