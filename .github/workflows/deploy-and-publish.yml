@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - develop
-      # For testing
-      - SF-180-publish-workflow-bug
   workflow_run:
     workflows: ['Merge into main', 'Reset smart contracts']
     types: [completed]
@@ -17,9 +15,7 @@ jobs:
   test:
     name: Test on a Fork
     runs-on: ubuntu-latest
-    # For testing
-    # if: ${{ github.actor != 'secured-finance-machine-user[bot]' && github.event.workflow.name != 'Reset Smart Contracts'}}
-    if: ${{ github.actor != 'secured-finance-machine-user[bot]' && github.event.workflow.name == 'Reset Smart Contracts'}}
+    if: ${{ github.actor != 'secured-finance-machine-user[bot]' && github.event.workflow.name != 'Reset Smart Contracts'}}
     steps:
       - name: Check conditional job statues
         if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure' }}
@@ -123,9 +119,7 @@ jobs:
   publish:
     name: Publish to NPM
     runs-on: ubuntu-latest
-    # For testing
-    # if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
-    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && github.event.workflow.name == 'Reset Smart Contracts' }}
+    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     needs: [test, deploy]
     steps:
       - name: Generate token
