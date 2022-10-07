@@ -11,6 +11,11 @@ on:
         options:
           - development
           - staging
+      compoundFactor:
+        description: 'Initial Compound Factor'
+        default: '1000000000000000000'
+        required: false
+        type: string
 
 jobs:
   deploy:
@@ -38,18 +43,19 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
+          INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
         run: npm run deploy:force development
       - name: Deploy for staging environment
         if: ${{ github.event.inputs.network == 'staging' }}
         env:
           PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
+          INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
         run: npm run deploy:force staging
-      - run: |
-          git add .
       - name: Commit and push
         shell: bash
         run: |
+          git add .
           git config user.name "SF Machine User[bot]"
           git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
           git commit -m "chore: reset smart contracts"
