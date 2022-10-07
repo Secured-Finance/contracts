@@ -123,7 +123,9 @@ jobs:
   publish:
     name: Publish to NPM
     runs-on: ubuntu-latest
-    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+    # For testing
+    # if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && github.event.workflow.name == 'Reset Smart Contracts' }}
     needs: [test, deploy]
     steps:
       - name: Generate token
