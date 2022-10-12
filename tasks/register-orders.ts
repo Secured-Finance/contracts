@@ -194,25 +194,45 @@ task('register-orders', 'Registers order data into the selected lending market')
       console.log('Successfully registered orders');
 
       // Show orders in the market
-      const lendingMarketAddresses =
-        await lendingMarketController.getLendingMarkets(currencyName);
-
-      const lendingMarket = await ethers.getContractAt(
-        'LendingMarket',
-        lendingMarketAddresses[maturityIndex],
+      const borrowRates = await lendingMarketController.getBorrowOrderBook(
+        currencyName,
+        maturity,
+        10,
+      );
+      const lendRates = await lendingMarketController.getLendOrderBook(
+        currencyName,
+        maturity,
+        10,
       );
 
-      const borrowRates: BigNumber[] = await lendingMarket.getBorrowRates(10);
-      const lendRates: BigNumber[] = await lendingMarket.getLendRates(10);
+      const getOrderBookObject = (obj: {
+        rates: BigNumber[];
+        amounts: BigNumber[];
+        quantities: BigNumber[];
+      }) => {
+        return obj.rates.map((rate, idx) => ({
+          rate,
+          amount: obj.amounts[idx],
+          quantity: obj.quantities[idx],
+        }));
+      };
 
       const orderBook = [
-        ...lendRates
-          .filter((rate) => rate.toString() !== '0')
-          .sort((a, b) => (a.gte(b) ? -1 : 1))
-          .map((rate) => ({ LEND: rate.toString() })),
-        ...borrowRates
-          .filter((rate) => rate.toString() !== '0')
-          .map((rate) => ({ Borrow: rate.toString() })),
+        ...getOrderBookObject(lendRates)
+          .filter(({ rate }) => rate.toString() !== '0')
+          .sort((a, b) => (a.rate.gte(b.rate) ? -1 : 1))
+          .map(({ rate, amount, quantity }) => ({
+            Lend: amount.toString(),
+            Rate: rate.toString(),
+            Quantity: quantity.toString(),
+          })),
+        ...getOrderBookObject(borrowRates)
+          .filter(({ rate }) => rate.toString() !== '0')
+          .map(({ rate, amount, quantity }) => ({
+            Borrow: amount.toString(),
+            Rate: rate.toString(),
+            Quantity: quantity.toString(),
+          })),
       ];
 
       console.log('Current order book is:');
