@@ -305,56 +305,103 @@ describe('LendingMarketController', () => {
     it('Add orders and check rates', async () => {
       const lendingMarket3 = lendingMarketProxies[3];
 
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .createOrder(
+      const orders = [
+        {
+          maker: alice,
+          side: Side.LEND,
+          amount: '100000000000000000',
+          rate: '800',
+        },
+        {
+          maker: bob,
+          side: Side.LEND,
+          amount: '500000000000000000',
+          rate: '880',
+        },
+        {
+          maker: carol,
+          side: Side.BORROW,
+          amount: '100000000000000000',
+          rate: '720',
+        },
+        {
+          maker: carol,
+          side: Side.BORROW,
+          amount: '200000000000000000',
+          rate: '780',
+        },
+      ];
+
+      for (const order of orders) {
+        await lendingMarketControllerProxy
+          .connect(order.maker)
+          .createOrder(
+            targetCurrency,
+            maturities[3],
+            order.side,
+            order.amount,
+            order.rate,
+          );
+      }
+
+      const borrowRates = await lendingMarket3.getBorrowOrderBook(10);
+      expect(borrowRates.rates[0].toString()).to.equal('780');
+      expect(borrowRates.rates[1].toString()).to.equal('720');
+      expect(borrowRates.rates[2].toString()).to.equal('0');
+      expect(borrowRates.rates.length).to.equal(10);
+      expect(borrowRates.amounts[0].toString()).to.equal('200000000000000000');
+      expect(borrowRates.amounts[1].toString()).to.equal('100000000000000000');
+      expect(borrowRates.amounts[2].toString()).to.equal('0');
+      expect(borrowRates.amounts.length).to.equal(10);
+      expect(borrowRates.quantities[0].toString()).to.equal('1');
+      expect(borrowRates.quantities[1].toString()).to.equal('1');
+      expect(borrowRates.quantities[2].toString()).to.equal('0');
+      expect(borrowRates.quantities.length).to.equal(10);
+
+      const lendRates = await lendingMarket3.getLendOrderBook(10);
+      expect(lendRates.rates[0].toString()).to.equal('800');
+      expect(lendRates.rates[1].toString()).to.equal('880');
+      expect(lendRates.rates[2].toString()).to.equal('0');
+      expect(lendRates.rates.length).to.equal(10);
+      expect(lendRates.amounts[0].toString()).to.equal('100000000000000000');
+      expect(lendRates.amounts[1].toString()).to.equal('500000000000000000');
+      expect(lendRates.amounts[2].toString()).to.equal('0');
+      expect(lendRates.amounts.length).to.equal(10);
+      expect(lendRates.quantities[0].toString()).to.equal('1');
+      expect(lendRates.quantities[1].toString()).to.equal('1');
+      expect(lendRates.quantities[2].toString()).to.equal('0');
+      expect(lendRates.quantities.length).to.equal(10);
+
+      const borrowOrders =
+        await lendingMarketControllerProxy.getBorrowOrderBook(
           targetCurrency,
           maturities[3],
-          Side.LEND,
-          '100000000000000000',
-          '800',
+          10,
         );
 
-      await lendingMarketControllerProxy
-        .connect(bob)
-        .createOrder(
-          targetCurrency,
-          maturities[3],
-          Side.LEND,
-          '50000000000000000',
-          '880',
+      for (let i = 0; i < borrowOrders.rates.length; i++) {
+        expect(borrowRates.rates[i].toString()).to.equal(borrowOrders.rates[i]);
+        expect(borrowRates.amounts[i].toString()).to.equal(
+          borrowOrders.amounts[i],
         );
-
-      await lendingMarketControllerProxy
-        .connect(bob)
-        .createOrder(
-          targetCurrency,
-          maturities[3],
-          Side.BORROW,
-          '100000000000000000',
-          '720',
+        expect(borrowRates.quantities[i].toString()).to.equal(
+          borrowOrders.quantities[i],
         );
-      await lendingMarketControllerProxy
-        .connect(carol)
-        .createOrder(
-          targetCurrency,
-          maturities[3],
-          Side.BORROW,
-          '100000000000000000',
-          '780',
+      }
+
+      const lendOrders = await lendingMarketControllerProxy.getLendOrderBook(
+        targetCurrency,
+        maturities[3],
+        10,
+      );
+
+      for (let i = 0; i < lendOrders.rates.length; i++) {
+        expect(lendRates.rates[i].toString()).to.equal(lendOrders.rates[i]);
+        expect(lendRates.amounts[i].toString()).to.equal(lendOrders.amounts[i]);
+        expect(lendRates.quantities[i].toString()).to.equal(
+          lendOrders.quantities[i],
         );
-
-      const borrowRates = await lendingMarket3.getBorrowRates(10);
-      expect(borrowRates[0].toString()).to.equal('780');
-      expect(borrowRates[1].toString()).to.equal('720');
-      expect(borrowRates[2].toString()).to.equal('0');
-      expect(borrowRates.length).to.equal(10);
-
-      const lendRates = await lendingMarket3.getLendRates(10);
-      expect(lendRates[0].toString()).to.equal('800');
-      expect(lendRates[1].toString()).to.equal('880');
-      expect(lendRates[2].toString()).to.equal('0');
-      expect(lendRates.length).to.equal(10);
+      }
     });
 
     it('Add orders and rotate markets', async () => {

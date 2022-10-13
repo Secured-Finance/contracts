@@ -152,6 +152,60 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the order book of borrow.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @param _limit Max limit to get rates
+     * @return rates The array of borrow order rates
+     * @return amounts The array of borrow order amounts
+     * @return quantities The array of borrow order quantities
+     */
+    function getBorrowOrderBook(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _limit
+    )
+        external
+        view
+        override
+        returns (
+            uint256[] memory rates,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        )
+    {
+        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        return ILendingMarket(marketAddr).getBorrowOrderBook(_limit);
+    }
+
+    /**
+     * @notice Gets the order book of lend.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @param _limit Max limit to get rates
+     * @return rates The array of lend order rates
+     * @return amounts The array of lend order amounts
+     * @return quantities The array of lend order quantities
+     */
+    function getLendOrderBook(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _limit
+    )
+        external
+        view
+        override
+        returns (
+            uint256[] memory rates,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        )
+    {
+        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        return ILendingMarket(marketAddr).getLendOrderBook(_limit);
+    }
+
+    /**
      * @notice Gets mid rates for the selected currency.
      * @param _ccy Currency name in bytes32
      * @return Array with the mid rate of the lending market

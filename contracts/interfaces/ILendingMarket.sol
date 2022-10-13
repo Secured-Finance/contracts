@@ -48,9 +48,23 @@ interface ILendingMarket {
 
     function getMidRate() external view returns (uint256 rate);
 
-    function getBorrowRates(uint256 amount) external view returns (uint256[] memory rates);
+    function getBorrowOrderBook(uint256 limit)
+        external
+        view
+        returns (
+            uint256[] memory rates,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        );
 
-    function getLendRates(uint256 amount) external view returns (uint256[] memory rates);
+    function getLendOrderBook(uint256 limit)
+        external
+        view
+        returns (
+            uint256[] memory rates,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        );
 
     function getMaturity() external view returns (uint256);
 

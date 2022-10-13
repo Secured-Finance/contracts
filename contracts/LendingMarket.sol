@@ -143,20 +143,28 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Gets the borrow rates.
+     * @notice Gets the order book of borrow.
      * @param _limit Max limit to get rates
      * @return rates The array of borrow rates
      */
-    function getBorrowRates(uint256 _limit)
+    function getBorrowOrderBook(uint256 _limit)
         external
         view
         override
-        returns (uint256[] memory rates)
+        returns (
+            uint256[] memory rates,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        )
     {
         rates = new uint256[](_limit);
+        amounts = new uint256[](_limit);
+        quantities = new uint256[](_limit);
 
         uint256 rate = Storage.slot().borrowOrders[Storage.slot().maturity].last();
         rates[0] = rate;
+        amounts[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(rate);
+        quantities[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(rate);
 
         for (uint256 i = 1; i < rates.length; i++) {
             if (rate == 0) {
@@ -165,19 +173,36 @@ contract LendingMarket is
 
             rate = Storage.slot().borrowOrders[Storage.slot().maturity].prev(rate);
             rates[i] = rate;
+            amounts[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
+                rate
+            );
+            quantities[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(rate);
         }
     }
 
     /**
-     * @notice Gets the lend rates.
+     * @notice Gets the order book of lend.
      * @param _limit Max limit to get rates
      * @return rates The array of lending rates
      */
-    function getLendRates(uint256 _limit) external view override returns (uint256[] memory rates) {
+    function getLendOrderBook(uint256 _limit)
+        external
+        view
+        override
+        returns (
+            uint256[] memory rates,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        )
+    {
         rates = new uint256[](_limit);
+        amounts = new uint256[](_limit);
+        quantities = new uint256[](_limit);
 
         uint256 rate = Storage.slot().lendOrders[Storage.slot().maturity].first();
         rates[0] = rate;
+        amounts[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(rate);
+        quantities[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(rate);
 
         for (uint256 i = 1; i < rates.length; i++) {
             if (rate == 0) {
@@ -186,6 +211,10 @@ contract LendingMarket is
 
             rate = Storage.slot().lendOrders[Storage.slot().maturity].next(rate);
             rates[i] = rate;
+            amounts[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
+                rate
+            );
+            quantities[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(rate);
         }
     }
 

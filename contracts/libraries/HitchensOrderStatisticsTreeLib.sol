@@ -125,6 +125,21 @@ library HitchensOrderStatisticsTreeLib {
         return gn.orderCounter;
     }
 
+    function getNodeTotalAmount(Tree storage self, uint256 value)
+        internal
+        view
+        returns (uint256 totalAmount)
+    {
+        Node storage gn = self.nodes[value];
+        OrderItem memory order = gn.orders[gn.head];
+        totalAmount += order.amount;
+
+        while (order.next != 0) {
+            order = gn.orders[order.next];
+            gn.orders[gn.head];
+        }
+    }
+
     function count(Tree storage self) internal view returns (uint256 _count) {
         return getNodeCount(self, self.root);
     }
