@@ -535,18 +535,20 @@ library HitchensOrderStatisticsTreeLib {
             if (currentOrder.amount <= remainingAmount) {
                 remainingAmount -= currentOrder.amount;
                 orderId = currentOrder.next;
+                amounts[filledCount] = currentOrder.amount;
             } else {
                 unfilledOrder = UnfilledOrder(
                     currentOrder.orderId,
                     currentOrder.maker,
                     currentOrder.amount - remainingAmount
                 );
+                amounts[filledCount] = remainingAmount;
                 remainingAmount = 0;
             }
 
             orderIds[filledCount] = currentOrder.orderId;
             makers[filledCount] = currentOrder.maker;
-            amounts[filledCount] = currentOrder.amount;
+
             delete gn.orders[currentOrder.orderId];
             filledCount++;
         }

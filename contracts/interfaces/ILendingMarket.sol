@@ -116,7 +116,8 @@ interface ILendingMarket {
         returns (
             uint48[] memory orderIds,
             address[] memory makers,
-            uint256[] memory amounts
+            uint256[] memory amounts,
+            uint256 remainingAmount
         );
 
     function pauseMarket() external;
