@@ -301,16 +301,16 @@ Releases the amount of unsettled exposure for the selected currency.
 ### releaseUnsettledCollaterals
 
 ```solidity
-function releaseUnsettledCollaterals(address _sender, bytes32 _ccy, address[] _users, uint256[] _amounts) external
+function releaseUnsettledCollaterals(address[] _users, address _sender, bytes32 _ccy, uint256[] _amounts) external
 ```
 
 Releases the amount of unsettled exposure on multiple orders.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _users | address[] | Array of user's address |
 | _sender | address | Address of user sending token |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _users | address[] | Array of user's address |
 | _amounts | uint256[] | Array of amount of funds to be unlocked from unsettled exposure |
 
 ### registerCurrency
@@ -377,16 +377,16 @@ Remove funds from escrow.
 ### removeEscrowedAmounts
 
 ```solidity
-function removeEscrowedAmounts(address _receiver, bytes32 _ccy, address[] _payers, uint256[] _amounts) external
+function removeEscrowedAmounts(address[] _payers, address _receiver, bytes32 _ccy, uint256[] _amounts) external
 ```
 
 Remove funds from escrow on multiple orders.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _payers | address[] | Array of user's address making payment |
 | _receiver | address | Address of user receiving payment |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _payers | address[] | Array of user's address making payment |
 | _amounts | uint256[] | Array of amount of funds to be unlocked from unsettled exposure |
 
 ### setCollateralParameters
