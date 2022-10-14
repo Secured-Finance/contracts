@@ -351,9 +351,9 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultCaller.releaseUnsettledCollaterals(
+          [bob.address],
           bob.address,
           targetCurrency,
-          [bob.address],
           [value],
         ),
       ).to.emit(tokenVaultProxy, 'ReleaseUnsettled');
@@ -460,9 +460,9 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultCaller.removeEscrowedAmounts(
+          [owner.address, alice.address],
           owner.address,
           targetCurrency,
-          [owner.address, alice.address],
           ['10000', '10000'],
         ),
       ).to.emit(tokenVaultProxy, 'EscrowedAmountRemoved');

@@ -451,6 +451,11 @@ contract LendingMarket is
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _rate Amount of interest rate taken
+     * @return orderIds Array of order ids of filled orders
+     * @return makers Array of makers of filled orders
+     * @return amounts Array of amounts of filled orders
+     * @return remainingAmount Amount of the order that is not filled and is placed
      */
     function _takeOrder(
         ProtocolTypes.Side _side,
@@ -462,10 +467,10 @@ contract LendingMarket is
         returns (
             uint48[] memory orderIds,
             address[] memory makers,
-            uint256[] memory amounts
+            uint256[] memory amounts,
+            uint256 remainingAmount
         )
     {
-        uint256 remainingAmount;
         UnfilledOrder memory unfilledOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
@@ -564,9 +569,10 @@ contract LendingMarket is
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _rate Amount of interest rate taker wish to borrow/lend
-     * @return orderIds Array of filled orders
-     * @return makers Array of filled orders
-     * @return amounts Array of filled orders
+     * @return orderIds Array of order ids of filled orders
+     * @return makers Array of makers of filled orders
+     * @return amounts Array of amounts of filled orders
+     * @return remainingAmount Amount of the order that is not filled and is placed
      */
     function createOrder(
         ProtocolTypes.Side _side,
@@ -582,7 +588,8 @@ contract LendingMarket is
         returns (
             uint48[] memory orderIds,
             address[] memory makers,
-            uint256[] memory amounts
+            uint256[] memory amounts,
+            uint256 remainingAmount
         )
     {
         require(_amount > 0, "Can't place empty amount");
@@ -601,7 +608,7 @@ contract LendingMarket is
             makers[0] = _user;
             amounts[0] = 0;
         } else {
-            (orderIds, makers, amounts) = _takeOrder(_side, _user, _amount, _rate);
+            (orderIds, makers, amounts, remainingAmount) = _takeOrder(_side, _user, _amount, _rate);
         }
     }
 

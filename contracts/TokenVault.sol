@@ -292,15 +292,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
     /**
      * @notice Releases the amount of unsettled exposure on multiple orders.
+     * @param _users Array of user's address
      * @param _sender Address of user sending token
      * @param _ccy Currency name in bytes32
-     * @param _users Array of user's address
      * @param _amounts Array of amount of funds to be unlocked from unsettled exposure
      */
     function releaseUnsettledCollaterals(
+        address[] calldata _users,
         address _sender,
         bytes32 _ccy,
-        address[] calldata _users,
         uint256[] calldata _amounts
     ) external override onlyAcceptedContracts {
         for (uint256 i = 0; i < _users.length; i++) {
@@ -409,15 +409,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
     /**
      * @notice Remove funds from escrow on multiple orders.
+     * @param _payers Array of user's address making payment
      * @param _receiver Address of user receiving payment
      * @param _ccy Currency name in bytes32
-     * @param _payers Array of user's address making payment
      * @param _amounts Array of amount of funds to be unlocked from unsettled exposure
      */
     function removeEscrowedAmounts(
+        address[] calldata _payers,
         address _receiver,
         bytes32 _ccy,
-        address[] calldata _payers,
         uint256[] calldata _amounts
     ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
         for (uint256 i = 0; i < _payers.length; i++) {

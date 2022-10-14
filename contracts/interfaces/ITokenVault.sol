@@ -63,9 +63,9 @@ interface ITokenVault {
     ) external;
 
     function releaseUnsettledCollaterals(
+        address[] calldata users,
         address sender,
         bytes32 ccy,
-        address[] calldata users,
         uint256[] calldata amounts
     ) external;
 
@@ -94,9 +94,9 @@ interface ITokenVault {
     ) external;
 
     function removeEscrowedAmounts(
+        address[] calldata users,
         address receiver,
         bytes32 ccy,
-        address[] calldata users,
         uint256[] calldata amounts
     ) external;
 }

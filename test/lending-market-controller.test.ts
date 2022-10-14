@@ -857,7 +857,7 @@ describe('LendingMarketController', () => {
           targetCurrency,
           [1, 2],
           [alice.address, bob.address],
-          ['50000000000000000', '50000000000000000'],
+          ['50000000000000000', '30000000000000000'],
           Side.BORROW,
           maturities[0],
           '880',

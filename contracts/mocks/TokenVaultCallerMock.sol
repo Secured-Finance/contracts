@@ -31,12 +31,12 @@ contract TokenVaultCallerMock {
     }
 
     function releaseUnsettledCollaterals(
+        address[] calldata users,
         address sender,
         bytes32 ccy,
-        address[] calldata users,
         uint256[] calldata amounts
     ) public {
-        tokenVault.releaseUnsettledCollaterals(sender, ccy, users, amounts);
+        tokenVault.releaseUnsettledCollaterals(users, sender, ccy, amounts);
     }
 
     function addEscrowedAmount(
@@ -57,12 +57,12 @@ contract TokenVaultCallerMock {
     }
 
     function removeEscrowedAmounts(
+        address[] calldata payers,
         address receiver,
         bytes32 ccy,
-        address[] calldata payers,
         uint256[] calldata amounts
     ) public {
-        tokenVault.removeEscrowedAmounts(receiver, ccy, payers, amounts);
+        tokenVault.removeEscrowedAmounts(payers, receiver, ccy, amounts);
     }
 
     function getTotalPresentValueInETH(address _account) public view returns (int256) {

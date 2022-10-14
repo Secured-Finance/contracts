@@ -562,11 +562,11 @@ contract LendingMarketController is
             msg.sender
         );
 
-        // Create a order
         (
             uint48[] memory orderIds,
             address[] memory makers,
-            uint256[] memory amounts
+            uint256[] memory amounts,
+            uint256 remainingAmount
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
                 _side,
                 msg.sender,
@@ -574,18 +574,18 @@ contract LendingMarketController is
                 _rate
             );
 
-        // Update the unsettled collateral in TokenVault
-        if (amounts[0] == 0) {
+        if (remainingAmount > 0) {}
+
+        // If the first value of the amount array is 0, it means that the order will not be filled.
+        // `remainingAmount` has a value only if the order is filled.
+        uint256 placedAmount = amounts[0] == 0 ? _amount : remainingAmount;
+
+        // Update the unsettled collateral and escrowed amount in TokenVault
+        if (amounts[0] != 0) {
             if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().addEscrowedAmount{value: msg.value}(makers[0], _ccy, _amount);
+                tokenVault().releaseUnsettledCollaterals(makers, msg.sender, _ccy, amounts);
             } else {
-                tokenVault().useUnsettledCollateral(makers[0], _ccy, _amount);
-            }
-        } else {
-            if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().releaseUnsettledCollaterals(msg.sender, _ccy, makers, amounts);
-            } else {
-                tokenVault().removeEscrowedAmounts(msg.sender, _ccy, makers, amounts);
+                tokenVault().removeEscrowedAmounts(makers, msg.sender, _ccy, amounts);
             }
 
             for (uint256 i = 0; i < makers.length; i++) {
@@ -595,6 +595,15 @@ contract LendingMarketController is
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
             emit OrderFilled(msg.sender, _ccy, orderIds, makers, amounts, _side, _maturity, _rate);
+        }
+
+        if (placedAmount != 0) {
+            address maker = amounts[0] == 0 ? makers[0] : msg.sender;
+            if (_side == ProtocolTypes.Side.LEND) {
+                tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, placedAmount);
+            } else {
+                tokenVault().useUnsettledCollateral(maker, _ccy, placedAmount);
+            }
         }
 
         return true;
