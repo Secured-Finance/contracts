@@ -124,13 +124,13 @@ Gets the mid rate.
 | ---- | ---- | ----------- |
 | rate | uint256 | The mid rate |
 
-### getBorrowRates
+### getBorrowOrderBook
 
 ```solidity
-function getBorrowRates(uint256 _limit) external view returns (uint256[] rates)
+function getBorrowOrderBook(uint256 _limit) external view returns (uint256[] rates, uint256[] amounts, uint256[] quantities)
 ```
 
-Gets the borrow rates.
+Gets the order book of borrow.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -139,14 +139,16 @@ Gets the borrow rates.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | rates | uint256[] | The array of borrow rates |
+| amounts | uint256[] |  |
+| quantities | uint256[] |  |
 
-### getLendRates
+### getLendOrderBook
 
 ```solidity
-function getLendRates(uint256 _limit) external view returns (uint256[] rates)
+function getLendOrderBook(uint256 _limit) external view returns (uint256[] rates, uint256[] amounts, uint256[] quantities)
 ```
 
-Gets the lend rates.
+Gets the order book of lend.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -155,6 +157,8 @@ Gets the lend rates.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | rates | uint256[] | The array of lending rates |
+| amounts | uint256[] |  |
+| quantities | uint256[] |  |
 
 ### getMaturity
 
@@ -317,7 +321,7 @@ Makes new market order.
 ### _takeOrder
 
 ```solidity
-function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) internal returns (uint48[] orderIds, address[] makers, uint256[] amounts)
+function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) internal returns (uint48[] orderIds, address[] makers, uint256[] amounts, uint256 remainingAmount)
 ```
 
 Takes the market order.
@@ -327,7 +331,14 @@ Takes the market order.
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _rate | uint256 |  |
+| _rate | uint256 | Amount of interest rate taken |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| orderIds | uint48[] | Array of order ids of filled orders |
+| makers | address[] | Array of makers of filled orders |
+| amounts | uint256[] | Array of amounts of filled orders |
+| remainingAmount | uint256 | Amount of the order that is not filled and is placed |
 
 ### matchOrders
 
@@ -349,7 +360,7 @@ Reverts if no orders for specified interest rate.
 ### createOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) external returns (uint48[] orderIds, address[] makers, uint256[] amounts)
+function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _rate) external returns (uint48[] orderIds, address[] makers, uint256[] amounts, uint256 remainingAmount)
 ```
 
 Creates the order. Takes the order if the order is matched,
@@ -364,9 +375,10 @@ and places new order if not match it.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| orderIds | uint48[] | Array of filled orders |
-| makers | address[] | Array of filled orders |
-| amounts | uint256[] | Array of filled orders |
+| orderIds | uint48[] | Array of order ids of filled orders |
+| makers | address[] | Array of makers of filled orders |
+| amounts | uint256[] | Array of amounts of filled orders |
+| remainingAmount | uint256 | Amount of the order that is not filled and is placed |
 
 ### pauseMarket
 

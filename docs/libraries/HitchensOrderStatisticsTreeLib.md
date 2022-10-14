@@ -109,6 +109,12 @@ function getNode(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value)
 function getNodeCount(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256)
 ```
 
+### getNodeTotalAmount
+
+```solidity
+function getNodeTotalAmount(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value) internal view returns (uint256 totalAmount)
+```
+
 ### count
 
 ```solidity

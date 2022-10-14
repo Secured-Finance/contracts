@@ -149,6 +149,46 @@ Gets lend rates for the selected currency.
 | ---- | ---- | ----------- |
 | [0] | uint256[] | Array with the lending rate of the lending market |
 
+### getBorrowOrderBook
+
+```solidity
+function getBorrowOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _limit) external view returns (uint256[] rates, uint256[] amounts, uint256[] quantities)
+```
+
+Gets the order book of borrow.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the market |
+| _limit | uint256 | Max limit to get rates |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| rates | uint256[] | The array of borrow order rates |
+| amounts | uint256[] | The array of borrow order amounts |
+| quantities | uint256[] | The array of borrow order quantities |
+
+### getLendOrderBook
+
+```solidity
+function getLendOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _limit) external view returns (uint256[] rates, uint256[] amounts, uint256[] quantities)
+```
+
+Gets the order book of lend.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the market |
+| _limit | uint256 | Max limit to get rates |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| rates | uint256[] | The array of lend order rates |
+| amounts | uint256[] | The array of lend order amounts |
+| quantities | uint256[] | The array of lend order quantities |
+
 ### getMidRates
 
 ```solidity
