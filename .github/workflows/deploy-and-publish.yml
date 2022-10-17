@@ -143,8 +143,6 @@ jobs:
         shell: bash
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: extract_branch
-      - name: Update documents
-        run: npm run docgen
       - name: 'Setup npm'
         run: |
           npm set @secured-finance:registry=https://npm.pkg.github.com
@@ -164,6 +162,8 @@ jobs:
             npm version prerelease --preid beta
           fi
           npm publish
+      - name: Update documents
+        run: npm run docgen
       - name: Commit and push
         shell: bash
         run: |
