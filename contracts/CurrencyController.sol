@@ -301,6 +301,31 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets the converted amount of currency in ETH.
+     * @param _ccy Currency that has to be converted to ETH
+     * @param _amounts Amounts to be converted
+     * @return amounts The converted amounts
+     */
+    function convertToETH(bytes32 _ccy, uint256[] memory _amounts)
+        external
+        view
+        override
+        returns (uint256[] memory amounts)
+    {
+        if (_isETH(_ccy)) {
+            return _amounts;
+        }
+
+        amounts = new uint256[](_amounts.length);
+        for (uint256 i = 0; i < _amounts.length; i++) {
+            AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
+            (, int256 price, , , ) = priceFeed.latestRoundData();
+
+            amounts[i] = (_amounts[i] * uint256(price)) / 1e18;
+        }
+    }
+
+    /**
      * @notice Gets the converted amount to the selected currency from ETH.
      * @param _ccy Currency that has to be converted from ETH
      * @param _amountETH Amount in ETH to be converted

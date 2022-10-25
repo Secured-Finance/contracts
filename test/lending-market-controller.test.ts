@@ -13,6 +13,7 @@ const AddressResolver = artifacts.require('AddressResolver');
 const BeaconProxyController = artifacts.require('BeaconProxyController');
 const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
+const FutureValue = artifacts.require('FutureValue');
 const LendingMarket = artifacts.require('LendingMarket');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
@@ -59,12 +60,11 @@ describe('LendingMarketController', () => {
     );
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
     await mockCurrencyController.mock.isSupportedCcy.returns(true);
-    await mockTokenVault.mock.useUnsettledCollateral.returns();
-    await mockTokenVault.mock.releaseUnsettledCollateral.returns();
-    await mockTokenVault.mock.releaseUnsettledCollaterals.returns();
-    await mockTokenVault.mock.addEscrowedAmount.returns();
-    await mockTokenVault.mock.removeEscrowedAmount.returns();
-    await mockTokenVault.mock.removeEscrowedAmounts.returns();
+    await mockTokenVault.mock.addCollateral.returns();
+    await mockTokenVault.mock.removeCollateral.returns();
+    // await mockTokenVault.mock.releaseUnsettledCollaterals.returns();
+    await mockTokenVault.mock.depositEscrow.returns();
+    await mockTokenVault.mock.withdrawEscrow.returns();
 
     // Deploy
     const addressResolver = await deployContract(owner, AddressResolver);
@@ -148,10 +148,12 @@ describe('LendingMarketController', () => {
 
     // Set up for LendingMarketController
     const lendingMarket = await deployContract(owner, LendingMarket);
+    const futureValue = await deployContract(owner, FutureValue);
 
     await beaconProxyControllerProxy.setLendingMarketImpl(
       lendingMarket.address,
     );
+    await beaconProxyControllerProxy.setFutureValueImpl(futureValue.address);
   });
 
   describe('Deployment', async () => {
@@ -270,6 +272,7 @@ describe('LendingMarketController', () => {
 
   describe('Order', async () => {
     let lendingMarketProxies: Contract[];
+    let futureValueProxies: Contract[];
     let maturities: BigNumber[];
 
     beforeEach(async () => {
@@ -294,6 +297,14 @@ describe('LendingMarketController', () => {
 
       maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
+      );
+
+      futureValueProxies = await Promise.all(
+        maturities.map((maturity) =>
+          lendingMarketControllerProxy
+            .getFutureValue(targetCurrency, maturity)
+            .then((address) => ethers.getContractAt('FutureValue', address)),
+        ),
       );
     });
 
@@ -494,26 +505,26 @@ describe('LendingMarketController', () => {
       const midRate = await lendingMarket1.getMidRate();
       expect(midRate.toString()).to.equal('800');
 
-      const showPV = async () => {
-        const alicePV = await lendingMarket1.presentValueOf(alice.address);
-        const bobPV = await lendingMarket1.presentValueOf(bob.address);
-        const carolPV = await lendingMarket1.presentValueOf(carol.address);
+      // const showPV = async () => {
+      //   const alicePV = await lendingMarket1.presentValueOf(alice.address);
+      //   const bobPV = await lendingMarket1.presentValueOf(bob.address);
+      //   const carolPV = await lendingMarket1.presentValueOf(carol.address);
 
-        const presentValues = {
-          PresentValue: {
-            Alice: alicePV.toString(),
-            Bob: bobPV.toString(),
-            Carol: carolPV.toString(),
-          },
-        };
-        console.table(presentValues);
-      };
+      //   const presentValues = {
+      //     PresentValue: {
+      //       Alice: alicePV.toString(),
+      //       Bob: bobPV.toString(),
+      //       Carol: carolPV.toString(),
+      //     },
+      //   };
+      //   console.table(presentValues);
+      // };
 
       expect(await lendingMarket1.isOpened()).to.equal(true);
 
-      await showPV();
+      // await showPV();
       await time.increaseTo(maturities[0].toString());
-      await showPV();
+      // await showPV();
 
       expect(await lendingMarket1.isOpened()).to.equal(false);
 
@@ -635,12 +646,12 @@ describe('LendingMarketController', () => {
           targetCurrency,
           alice.address,
         );
-      const alicePV1 = await lendingMarket1.presentValueOf(alice.address);
-      const alicePV2 = await lendingMarket2.presentValueOf(alice.address);
+      // const alicePV1 = await lendingMarket1.presentValueOf(alice.address);
+      // const alicePV2 = await lendingMarket2.presentValueOf(alice.address);
 
-      expect(aliceTotalPV.toString()).to.equal(
-        alicePV1.add(alicePV2).toString(),
-      );
+      // expect(aliceTotalPV.toString()).to.equal(
+      //   alicePV1.add(alicePV2).toString(),
+      // );
     });
 
     it('Add an order(payable)', async () => {
@@ -925,7 +936,7 @@ describe('LendingMarketController', () => {
 
       await expect(
         lendingMarketControllerProxy
-          .connect(alice)
+          .connect(bob)
           .createOrder(
             targetCurrency,
             maturities[0],
@@ -934,6 +945,137 @@ describe('LendingMarketController', () => {
             '880',
           ),
       ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+    });
+
+    it('Fill an order partially out of the orders held', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '880',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '881',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '50000000000000000',
+            '880',
+          ),
+      ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '882',
+        );
+    });
+
+    it('Fill multiple orders partially out of the orders held', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '880',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '881',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '882',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '883',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '50000000000000000',
+            '880',
+          ),
+      ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '50000000000000000',
+            '881',
+          ),
+      ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '50000000000000000',
+            '882',
+          ),
+      ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '882',
+        );
     });
 
     it('Fill 100 orders at one rate', async () => {
@@ -1086,7 +1228,7 @@ describe('LendingMarketController', () => {
     });
 
     it('Update beacon proxy implementations and calculate Genesis value', async () => {
-      const lendingMarket1 = lendingMarketProxies[0];
+      const futureValue1 = futureValueProxies[0];
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -1168,7 +1310,7 @@ describe('LendingMarketController', () => {
       const gvDecimals = await lendingMarketControllerProxy.decimals(
         targetCurrency,
       );
-      const aliceInitialFV = await lendingMarket1.futureValueOf(alice.address);
+      const [aliceInitialFV] = await futureValue1.getFutureValue(alice.address);
       const aliceExpectedGV = aliceInitialFV
         .mul(ethers.BigNumber.from('10').pow(gvDecimals))
         .div(initialCF);

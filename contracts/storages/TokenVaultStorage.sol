@@ -9,8 +9,8 @@ library TokenVaultStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.tokenVault");
 
     struct Storage {
-        // Mapping from user to total unsettled collateral per currency
-        mapping(address => mapping(bytes32 => uint256)) unsettledCollateral;
+        // // Mapping from user to total unsettled collateral per currency
+        // mapping(address => mapping(bytes32 => uint256)) unsettledCollateral;
         // Mapping from user to unsettled exposure
         mapping(address => EnumerableSet.Bytes32Set) exposedUnsettledCurrencies;
         // Mapping from currency name to token address

@@ -164,12 +164,15 @@ const deployContracts = async () => {
   await migrationAddressResolver.buildCaches(buildCachesAddresses);
 
   // Set up for LendingMarketController
-  // const lendingMarket = await deployContract(owner, LendingMarket);
   const lendingMarket = await ethers
     .getContractFactory('LendingMarket')
     .then((factory) => factory.deploy());
+  const futureValue = await ethers
+    .getContractFactory('FutureValue')
+    .then((factory) => factory.deploy());
 
   await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
+  await beaconProxyControllerProxy.setFutureValueImpl(futureValue.address);
 
   const { timestamp } = await ethers.provider.getBlock('latest');
   const basisDate = moment(timestamp * 1000).unix();

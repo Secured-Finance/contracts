@@ -23,6 +23,11 @@ interface ICurrencyController {
 
     function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256);
 
+    function convertToETH(bytes32 _ccy, uint256[] memory _amounts)
+        external
+        view
+        returns (uint256[] memory amounts);
+
     function getCurrencies(bytes32) external view returns (Currency memory);
 
     function getEthDecimals(bytes32) external view returns (uint8);

@@ -86,9 +86,34 @@ interface ILendingMarket {
             uint256 timestamp
         );
 
-    function futureValueOf(address account) external view returns (int256);
+    function getTotalAmountFromLendOrders(address _user)
+        external
+        view
+        returns (
+            uint256 activeAmount,
+            uint256 inactiveFutureValue,
+            uint256 maturity
+        );
 
-    function presentValueOf(address account) external view returns (int256);
+    function getTotalAmountFromBorrowOrders(address _user)
+        external
+        view
+        returns (
+            uint256 activeAmount,
+            uint256 inactiveAmount,
+            uint256 inactiveFutureValue,
+            uint256 maturity
+        );
+
+    function getActiveLendOrderIds(address _user)
+        external
+        view
+        returns (uint48[] memory activeOrderIds);
+
+    function getActiveBorrowOrderIds(address _user)
+        external
+        view
+        returns (uint48[] memory activeOrderIds);
 
     function openMarket(uint256 maturity) external returns (uint256);
 
@@ -105,6 +130,15 @@ interface ILendingMarket {
         uint256 amount,
         uint256 rate
     ) external view returns (uint256);
+
+    function cleanOrders(address _user)
+        external
+        returns (
+            uint256 activeLendOrderCount,
+            uint256 activeBorrowOrderCount,
+            uint256 removedLendOrderFutureValue,
+            uint256 removedBorrowOrderFutureValue
+        );
 
     function createOrder(
         ProtocolTypes.Side side,
@@ -123,8 +157,4 @@ interface ILendingMarket {
     function pauseMarket() external;
 
     function unpauseMarket() external;
-
-    function removeFutureValueInPastMaturity(address _account)
-        external
-        returns (int256 removedAmount, uint256 basisMaturity);
 }

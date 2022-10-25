@@ -17,7 +17,11 @@ interface IBeaconProxyController {
 
     function getBeaconProxyAddress(bytes32 beaconName) external view returns (address);
 
+    function setFutureValueImpl(address newImpl) external;
+
     function setLendingMarketImpl(address newImpl) external;
+
+    function deployFutureValue(address _lendingMarket) external returns (address futureValue);
 
     function deployLendingMarket(
         bytes32 _ccy,

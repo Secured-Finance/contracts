@@ -140,6 +140,26 @@ library HitchensOrderStatisticsTreeLib {
         }
     }
 
+    function getNodeOrderIds(Tree storage self, uint256 value)
+        internal
+        view
+        returns (uint48[] memory orderIds)
+    {
+        Node storage gn = self.nodes[value];
+        OrderItem memory order = gn.orders[gn.head];
+        orderIds = new uint48[](gn.orderCounter);
+
+        for (uint256 i = 0; i < gn.orderCounter; i++) {
+            orderIds[i] = order.orderId;
+            order = gn.orders[order.next];
+        }
+
+        while (order.next != 0) {
+            order = gn.orders[order.next];
+            gn.orders[gn.head];
+        }
+    }
+
     function count(Tree storage self) internal view returns (uint256 _count) {
         return getNodeCount(self, self.root);
     }

@@ -13,8 +13,9 @@ struct Order {
 
 interface ILendingMarketController {
     event LendingMarketCreated(
-        bytes32 ccy,
+        bytes32 indexed ccy,
         address indexed marketAddr,
+        address futureValue,
         uint256 index,
         uint256 maturity
     );
@@ -44,6 +45,8 @@ interface ILendingMarketController {
     function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory);
 
     function getLendingMarket(bytes32 _ccy, uint256 _maturity) external view returns (address);
+
+    function getFutureValue(bytes32 _ccy, uint256 _maturity) external view returns (address);
 
     function getBorrowRates(bytes32 _ccy) external view returns (uint256[] memory rates);
 
@@ -86,6 +89,20 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
+    function calculateTotalLentFundsInETH(address _account)
+        external
+        view
+        returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount);
+
+    function calculateTotalBorrowedFundsInETH(address account)
+        external
+        view
+        returns (
+            uint256 totalWorkingOrderAmount,
+            uint256 totalDebtAmount,
+            uint256 totalBorrowedAmount
+        );
+
     function isInitializedLendingMarket(bytes32 _ccy) external view returns (bool);
 
     function initializeLendingMarket(
@@ -94,7 +111,9 @@ interface ILendingMarketController {
         uint256 _compoundFactor
     ) external;
 
-    function createLendingMarket(bytes32 _ccy) external returns (address market);
+    function createLendingMarket(bytes32 _ccy)
+        external
+        returns (address market, address futureValue);
 
     function createOrder(
         bytes32 _ccy,
@@ -129,4 +148,8 @@ interface ILendingMarketController {
     function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
 
     function unpauseLendingMarkets(bytes32 _ccy) external returns (bool);
+
+    function convertFutureValueToGenesisValue(address _user) external;
+
+    function cleanOrders(bytes32 _ccy, address _account) external;
 }

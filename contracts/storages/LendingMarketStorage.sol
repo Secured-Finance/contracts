@@ -8,6 +8,7 @@ struct MarketOrder {
     ProtocolTypes.Side side;
     uint256 rate; // in basis points
     uint256 maturity;
+    uint256 timestamp;
 }
 
 library LendingMarketStorage {
@@ -20,7 +21,11 @@ library LendingMarketStorage {
         bytes32 ccy;
         uint256 basisDate;
         uint256 maturity;
-        // Mapping from maturity to rate
+        // Mapping from user to active lend order ids
+        mapping(address => uint48[]) activeLendOrderIds;
+        // Mapping from user to active borrow order ids
+        mapping(address => uint48[]) activeBorrowOrderIds;
+        // Mapping from orderId to order
         mapping(uint256 => MarketOrder) orders;
         // Mapping from maturity to lending orders
         mapping(uint256 => HitchensOrderStatisticsTreeLib.Tree) lendOrders;

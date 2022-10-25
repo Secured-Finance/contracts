@@ -6,6 +6,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 // interfaces
 import {ILendingMarketController, Order} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
+import {IFutureValue} from "./interfaces/IFutureValue.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
@@ -86,6 +87,12 @@ contract LendingMarketController is
         contracts[2] = Contracts.TOKEN_VAULT;
     }
 
+    // @inheritdoc MixinAddressResolver
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.TOKEN_VAULT;
+    }
+
     /**
      * @notice Gets the basis date when the first market opens for the selected currency.
      * @param _ccy Currency name in bytes32
@@ -117,6 +124,24 @@ contract LendingMarketController is
         returns (address)
     {
         return Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+    }
+
+    /**
+     * @notice Gets the feture value contract address for the selected currency and maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @return The lending market address
+     */
+    function getFutureValue(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        override
+        returns (address)
+    {
+        return
+            Storage.slot().futureValues[_ccy][
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ];
     }
 
     /**
@@ -174,8 +199,8 @@ contract LendingMarketController is
             uint256[] memory quantities
         )
     {
-        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        return ILendingMarket(marketAddr).getBorrowOrderBook(_limit);
+        address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        return ILendingMarket(market).getBorrowOrderBook(_limit);
     }
 
     /**
@@ -201,8 +226,8 @@ contract LendingMarketController is
             uint256[] memory quantities
         )
     {
-        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        return ILendingMarket(marketAddr).getLendOrderBook(_limit);
+        address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        return ILendingMarket(market).getLendOrderBook(_limit);
     }
 
     /**
@@ -251,7 +276,11 @@ contract LendingMarketController is
     {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             address marketAddr = Storage.slot().lendingMarkets[_ccy][i];
-            totalPresentValue += ILendingMarket(marketAddr).presentValueOf(_account);
+            address futureValue = Storage.slot().futureValues[_ccy][marketAddr];
+            totalPresentValue += IFutureValue(futureValue).getPresentValue(
+                _account,
+                ILendingMarket(marketAddr).getMidRate()
+            );
         }
     }
 
@@ -272,6 +301,101 @@ contract LendingMarketController is
             bytes32 ccy = currencySet.at(i);
             int256 amount = getTotalPresentValue(ccy, _account);
             totalPresentValue += currencyController().convertToETH(ccy, amount);
+        }
+    }
+
+    function calculateLentFundsFromOrders(bytes32 _ccy, address _account)
+        public
+        view
+        returns (uint256 workingOrderAmount, uint256 claimAmount)
+    {
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            (
+                uint256 activeAmount,
+                uint256 inactiveFutureValueInMaturity,
+                uint256 maturity
+            ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]).getTotalAmountFromLendOrders(
+                    _account
+                );
+
+            workingOrderAmount += activeAmount;
+            // TODO: Need to convert to present value?
+            claimAmount = getCurrentFutureValue(_ccy, maturity, inactiveFutureValueInMaturity);
+        }
+    }
+
+    function calculateTotalLentFundsInETH(address _account)
+        external
+        view
+        override
+        returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount)
+    {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_account];
+
+        for (uint256 i = 0; i < currencySet.length(); i++) {
+            bytes32 ccy = currencySet.at(i);
+            uint256[] memory amounts = new uint256[](2);
+            (amounts[0], amounts[1]) = calculateLentFundsFromOrders(ccy, _account);
+            uint256[] memory amountsInETH = currencyController().convertToETH(ccy, amounts);
+
+            totalWorkingOrderAmount += amountsInETH[0];
+            totalClaimAmount += amountsInETH[1];
+        }
+    }
+
+    function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _account)
+        public
+        view
+        returns (
+            uint256 workingOrderAmount,
+            uint256 obligationAmount,
+            uint256 borrowedAmount
+        )
+    {
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            (
+                uint256 activeAmount,
+                uint256 inactiveAmount,
+                uint256 inactiveFutureValueInMaturity,
+                uint256 maturity
+            ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i])
+                    .getTotalAmountFromBorrowOrders(_account);
+
+            workingOrderAmount += activeAmount;
+            // TODO: Need to convert to present value?
+            obligationAmount = getCurrentFutureValue(_ccy, maturity, inactiveFutureValueInMaturity);
+            borrowedAmount = inactiveAmount;
+        }
+    }
+
+    /**
+     * @notice Gets the funds that is calculated in EHT from account's order list.
+     * @param _account Target account address
+     * @return totalWorkingOrderAmount The total working order amount on the order book
+     * @return totalObligationAmount The total debt amount due to the borrow orders being filled on the order book
+     * @return totalBorrowedAmount The total borrowed amount due to the borrow orders being filled on the order book
+     */
+    function calculateTotalBorrowedFundsInETH(address _account)
+        external
+        view
+        override
+        returns (
+            uint256 totalWorkingOrderAmount,
+            uint256 totalObligationAmount,
+            uint256 totalBorrowedAmount
+        )
+    {
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_account];
+
+        for (uint256 i = 0; i < currencySet.length(); i++) {
+            bytes32 ccy = currencySet.at(i);
+            uint256[] memory amounts = new uint256[](3);
+            (amounts[0], amounts[1], amounts[2]) = calculateBorrowedFundsFromOrders(ccy, _account);
+            uint256[] memory amountsInETH = currencyController().convertToETH(ccy, amounts);
+
+            totalWorkingOrderAmount += amountsInETH[0];
+            totalObligationAmount += amountsInETH[1];
+            totalBorrowedAmount += amountsInETH[2];
         }
     }
 
@@ -312,7 +436,7 @@ contract LendingMarketController is
         external
         override
         onlyOwner
-        returns (address market)
+        returns (address market, address futureValue)
     {
         require(
             isRegisteredCurrency(_ccy),
@@ -335,17 +459,19 @@ contract LendingMarketController is
             Storage.slot().basisDates[_ccy],
             nextMaturity
         );
+        futureValue = beaconProxyController().deployFutureValue(address(this));
 
         Storage.slot().lendingMarkets[_ccy].push(market);
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
+        Storage.slot().futureValues[_ccy][market] = futureValue;
 
         emit LendingMarketCreated(
             _ccy,
             market,
+            futureValue,
             Storage.slot().lendingMarkets[_ccy].length,
             nextMaturity
         );
-        return market;
     }
 
     /**
@@ -405,8 +531,8 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _rate
     ) external view override ifValidMaturity(_ccy, _maturity) returns (bool) {
-        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        ILendingMarket(marketAddr).matchOrders(_side, _amount, _rate);
+        address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        ILendingMarket(market).matchOrders(_side, _amount, _rate);
 
         return true;
     }
@@ -422,14 +548,14 @@ contract LendingMarketController is
         uint256 _maturity,
         uint48 _orderId
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        (ProtocolTypes.Side side, uint256 amount, uint256 rate) = ILendingMarket(marketAddr)
+        address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        (ProtocolTypes.Side side, uint256 amount, uint256 rate) = ILendingMarket(market)
             .cancelOrder(msg.sender, _orderId);
 
         if (side == ProtocolTypes.Side.LEND) {
-            tokenVault().removeEscrowedAmount(msg.sender, msg.sender, _ccy, amount);
+            tokenVault().withdrawEscrow(msg.sender, _ccy, amount);
         } else {
-            tokenVault().releaseUnsettledCollateral(msg.sender, address(0), _ccy, amount);
+            // tokenVault().releaseUnsettledCollateral(msg.sender, address(0), _ccy, amount);
         }
 
         emit OrderCanceled(_orderId, msg.sender, _ccy, side, _maturity, amount, rate);
@@ -513,7 +639,7 @@ contract LendingMarketController is
      * @notice Converts FutureValue to GenesisValue if there is balance in the past maturity.
      * @param _user User's address
      */
-    function convertFutureValueToGenesisValue(address _user) external nonReentrant {
+    function convertFutureValueToGenesisValue(address _user) external override nonReentrant {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
@@ -521,8 +647,13 @@ contract LendingMarketController is
             uint256[] memory maturities = getMaturities(ccy);
 
             for (uint256 j = 0; j < maturities.length; j++) {
-                address marketAddr = Storage.slot().maturityLendingMarkets[ccy][maturities[j]];
-                _convertFutureValueToGenesisValue(ccy, marketAddr, _user);
+                address market = Storage.slot().maturityLendingMarkets[ccy][maturities[j]];
+
+                _convertFutureValueToGenesisValue(
+                    ccy,
+                    Storage.slot().futureValues[ccy][market],
+                    _user
+                );
             }
             if (getGenesisValue(ccy, _user) == 0) {
                 Storage.slot().usedCurrencies[_user].remove(ccy);
@@ -531,18 +662,36 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Cleans own orders to remove order ids that is already filled.
+     * @param _ccy Currency name in bytes32
+     */
+    function cleanOrders(bytes32 _ccy, address _account) external override onlyAcceptedContracts {
+        uint256[] memory maturities = getMaturities(_ccy);
+        uint256 activeOrderCount = 0;
+        for (uint256 i = 0; i < maturities.length; i++) {
+            if (Storage.slot().activeOrderExistences[_account][_ccy][maturities[i]]) {
+                activeOrderCount += _cleanOrders(_ccy, maturities[i], _account);
+            }
+        }
+
+        if (activeOrderCount == 0) {
+            Storage.slot().exposedCurrencies[_account].remove(_ccy);
+        }
+    }
+
+    /**
      * @notice Converts the future value to the genesis value if there is balance in the past maturity.
      * @param _ccy Currency for pausing all lending markets
-     * @param _marketAddr Market contract address
+     * @param _futureValueAddr Market contract address
      * @param _user User's address
      */
     function _convertFutureValueToGenesisValue(
         bytes32 _ccy,
-        address _marketAddr,
+        address _futureValueAddr,
         address _user
     ) private {
-        (int256 removedAmount, uint256 basisMaturity) = ILendingMarket(_marketAddr)
-            .removeFutureValueInPastMaturity(_user);
+        (int256 removedAmount, uint256 basisMaturity) = IFutureValue(_futureValueAddr)
+            .removeFutureValue(_user);
 
         if (removedAmount != 0) {
             _addGenesisValue(_ccy, _user, basisMaturity, removedAmount);
@@ -558,9 +707,13 @@ contract LendingMarketController is
     ) private returns (bool) {
         _convertFutureValueToGenesisValue(
             _ccy,
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity],
+            Storage.slot().futureValues[_ccy][
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ],
             msg.sender
         );
+
+        uint256 activeOrderCount = _cleanOrders(_ccy, _maturity, msg.sender);
 
         (
             uint48[] memory orderIds,
@@ -574,38 +727,126 @@ contract LendingMarketController is
                 _rate
             );
 
-        if (remainingAmount > 0) {}
+        // The case that an order was made, or taken partially
+        if (amounts[0] == 0 || remainingAmount > 0) {
+            activeOrderCount += 1;
+        }
 
-        // If the first value of the amount array is 0, it means that the order will not be filled.
-        // `remainingAmount` has a value only if the order is filled.
-        uint256 placedAmount = amounts[0] == 0 ? _amount : remainingAmount;
+        require(activeOrderCount <= 5, "Too many active orders");
+
+        _updateExposedCurrency(_ccy, _maturity, msg.sender, activeOrderCount);
 
         // Update the unsettled collateral and escrowed amount in TokenVault
         if (amounts[0] != 0) {
-            if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().releaseUnsettledCollaterals(makers, msg.sender, _ccy, amounts);
-            } else {
-                tokenVault().removeEscrowedAmounts(makers, msg.sender, _ccy, amounts);
+            if (_side == ProtocolTypes.Side.BORROW) {
+                tokenVault().withdrawEscrow(msg.sender, _ccy, _amount - remainingAmount);
             }
 
-            for (uint256 i = 0; i < makers.length; i++) {
-                Storage.slot().usedCurrencies[makers[i]].add(_ccy);
-            }
+            // if (_side == ProtocolTypes.Side.LEND) {
+            //     tokenVault().releaseUnsettledCollaterals(makers, msg.sender, _ccy, amounts);
+            // } else {
+            //     tokenVault().removeEscrowedAmounts(makers, msg.sender, _ccy, amounts);
+            // }
+
+            // for (uint256 i = 0; i < makers.length; i++) {
+            //     Storage.slot().usedCurrencies[makers[i]].add(_ccy);
+            // }
 
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
             emit OrderFilled(msg.sender, _ccy, orderIds, makers, amounts, _side, _maturity, _rate);
         }
 
+        // TODO: Need to check the collateral is enough
+
+        // If the first value of the amount array is 0, it means that the order will not be filled.
+        // `remainingAmount` has a value only if the order is filled.
+        uint256 placedAmount = amounts[0] == 0 ? _amount : remainingAmount;
+
         if (placedAmount != 0) {
-            address maker = amounts[0] == 0 ? makers[0] : msg.sender;
             if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, placedAmount);
-            } else {
-                tokenVault().useUnsettledCollateral(maker, _ccy, placedAmount);
+                tokenVault().depositEscrow{value: msg.value}(
+                    amounts[0] == 0 ? makers[0] : msg.sender,
+                    _ccy,
+                    placedAmount
+                );
             }
         }
 
+        // if (placedAmount != 0) {
+        //     address maker = amounts[0] == 0 ? makers[0] : msg.sender;
+        //     if (_side == ProtocolTypes.Side.LEND) {
+        //         tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, placedAmount);
+        //     } else {
+        //         tokenVault().useUnsettledCollateral(maker, _ccy, placedAmount);
+        //     }
+        // }
+
         return true;
+    }
+
+    function _cleanOrders(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _account
+    ) private returns (uint256) {
+        (
+            uint256 activeLendOrderCount,
+            uint256 activeBorrowOrderCount,
+            uint256 removedLendOrderFutureValue,
+            uint256 removedBorrowOrderFutureValue
+        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).cleanOrders(
+                _account
+            );
+
+        if (removedLendOrderFutureValue > 0) {
+            address futureValue = Storage.slot().futureValues[_ccy][
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ];
+            IFutureValue(futureValue).addLendFutureValue(
+                _account,
+                removedLendOrderFutureValue,
+                _maturity
+            );
+        }
+
+        if (removedBorrowOrderFutureValue > 0) {
+            address futureValue = Storage.slot().futureValues[_ccy][
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ];
+            IFutureValue(futureValue).addBorrowFutureValue(
+                _account,
+                removedBorrowOrderFutureValue,
+                _maturity
+            );
+        }
+
+        return activeLendOrderCount + activeBorrowOrderCount;
+    }
+
+    function _updateExposedCurrency(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _account,
+        uint256 _activeOrderCount
+    ) private {
+        bool activeOrderExistence = _activeOrderCount > 0;
+        Storage.slot().activeOrderExistences[_account][_ccy][_maturity] = activeOrderExistence;
+
+        uint256[] memory maturities = getMaturities(_ccy);
+        if (!activeOrderExistence) {
+            for (uint256 i = 0; i < maturities.length; i++) {
+                if (Storage.slot().activeOrderExistences[_account][_ccy][maturities[i]]) {
+                    activeOrderExistence = true;
+                    break;
+                }
+            }
+        }
+
+        if (activeOrderExistence) {
+            Storage.slot().exposedCurrencies[_account].add(_ccy);
+        } else {
+            Storage.slot().exposedCurrencies[_account].remove(_ccy);
+        }
     }
 }

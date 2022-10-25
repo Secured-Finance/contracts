@@ -5,7 +5,7 @@ library FutureValueStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.futureValue");
 
     struct Storage {
-        uint256 maturity;
+        address lendingMarket;
         // Mapping from user to balances
         mapping(address => int256) balances;
         // Mapping from user to maturity

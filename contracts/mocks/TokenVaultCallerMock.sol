@@ -13,59 +13,63 @@ contract TokenVaultCallerMock {
         lendingMarketController = ILendingMarketController(_lendingMarketController);
     }
 
-    function useUnsettledCollateral(
+    function addCollateral(
         address user,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.useUnsettledCollateral(user, ccy, amount);
+        tokenVault.addCollateral(user, ccy, amount);
     }
 
-    function releaseUnsettledCollateral(
+    function removeCollateral(
         address user,
-        address sender,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.releaseUnsettledCollateral(user, sender, ccy, amount);
+        tokenVault.removeCollateral(user, ccy, amount);
     }
 
-    function releaseUnsettledCollaterals(
-        address[] calldata users,
-        address sender,
-        bytes32 ccy,
-        uint256[] calldata amounts
-    ) public {
-        tokenVault.releaseUnsettledCollaterals(users, sender, ccy, amounts);
-    }
-
-    function addEscrowedAmount(
+    function depositEscrow(
         address payer,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.addEscrowedAmount(payer, ccy, amount);
+        tokenVault.depositEscrow(payer, ccy, amount);
     }
 
-    function removeEscrowedAmount(
-        address payer,
+    function withdrawEscrow(
         address receiver,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.removeEscrowedAmount(payer, receiver, ccy, amount);
-    }
-
-    function removeEscrowedAmounts(
-        address[] calldata payers,
-        address receiver,
-        bytes32 ccy,
-        uint256[] calldata amounts
-    ) public {
-        tokenVault.removeEscrowedAmounts(payers, receiver, ccy, amounts);
+        tokenVault.withdrawEscrow(receiver, ccy, amount);
     }
 
     function getTotalPresentValueInETH(address _account) public view returns (int256) {
         return lendingMarketController.getTotalPresentValueInETH(_account);
+    }
+
+    function calculateTotalLentFundsInETH(address _account)
+        public
+        view
+        returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount)
+    {
+        return lendingMarketController.calculateTotalLentFundsInETH(_account);
+    }
+
+    function calculateTotalBorrowedFundsInETH(address _account)
+        public
+        view
+        returns (
+            uint256 totalWorkingOrderAmount,
+            uint256 totalObligationAmount,
+            uint256 totalBorrowedAmount
+        )
+    {
+        return lendingMarketController.calculateTotalBorrowedFundsInETH(_account);
+    }
+
+    function cleanOrders(bytes32 _ccy, address _account) public {
+        return lendingMarketController.cleanOrders(_ccy, _account);
     }
 }

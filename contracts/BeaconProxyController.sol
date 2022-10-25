@@ -71,11 +71,35 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
     }
 
     /**
+     * @notice Sets the implementation contract of FutureValue
+     * @param newImpl The address of implementation contract
+     */
+    function setFutureValueImpl(address newImpl) external override onlyOwner {
+        _updateBeaconImpl(BeaconContracts.FUTURE_VALUE, newImpl);
+    }
+
+    /**
      * @notice Sets the implementation contract of LendingMarket
      * @param newImpl The address of implementation contract
      */
     function setLendingMarketImpl(address newImpl) external override onlyOwner {
         _updateBeaconImpl(BeaconContracts.LENDING_MARKET, newImpl);
+    }
+
+    /**
+     * @notice Deploys new Lending Market and save address at lendingMarkets mapping.
+     * @param _lendingMarket The address of lending market
+     * @notice Reverts on deployment market with existing currency and term
+     * @return futureValue The proxy contract address of created future value
+     */
+    function deployFutureValue(address _lendingMarket)
+        external
+        override
+        onlyLendingMarketController
+        returns (address futureValue)
+    {
+        bytes memory data = abi.encodeWithSignature("initialize(address)", _lendingMarket);
+        futureValue = _createProxy(BeaconContracts.FUTURE_VALUE, data);
     }
 
     /**

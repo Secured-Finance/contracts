@@ -19,11 +19,11 @@ contract MixinGenesisValue {
         return Storage.slot().decimals[_ccy];
     }
 
-    function getTotalLendingSupply(bytes32 _ccy) public view returns (uint256) {
+    function getTotalLendingSupply(bytes32 _ccy) external view returns (uint256) {
         return Storage.slot().totalLendingSupplies[_ccy];
     }
 
-    function getTotalBorrowingSupply(bytes32 _ccy) public view returns (uint256) {
+    function getTotalBorrowingSupply(bytes32 _ccy) external view returns (uint256) {
         return Storage.slot().totalBorrowingSupplies[_ccy];
     }
 
@@ -35,34 +35,28 @@ contract MixinGenesisValue {
         return Storage.slot().compoundFactors[_ccy];
     }
 
-    function getCompoundFactorInMaturity(bytes32 _ccy, uint256 _maturity)
-        public
-        view
-        returns (uint256)
-    {
-        MaturityRate memory maturityRate = Storage.slot().maturityRates[_ccy][_maturity];
-        return maturityRate.compoundFactor;
-    }
-
     function getMaturityRate(bytes32 _ccy, uint256 _maturity)
-        public
+        external
         view
         returns (MaturityRate memory)
     {
         return Storage.slot().maturityRates[_ccy][_maturity];
     }
 
-    function futureValueOf(
+    function getCurrentFutureValue(
         bytes32 _ccy,
         uint256 _maturity,
-        int256 _futureValueInMaturity
-    ) public view returns (int256) {
+        uint256 _futureValueInMaturity
+    ) public view returns (uint256) {
+        if (Storage.slot().maturityRates[_ccy][_maturity].compoundFactor == 0) {
+            return _futureValueInMaturity;
+        }
         // NOTE: The formula is:
         // genesisValue = futureValueInMaturity / compoundFactorInMaturity
         // futureValue = genesisValue * currentCompoundFactor.
         return
-            (_futureValueInMaturity * int256(getCompoundFactor(_ccy))) /
-            int256(getCompoundFactorInMaturity(_ccy, _maturity));
+            (_futureValueInMaturity * getCompoundFactor(_ccy)) /
+            Storage.slot().maturityRates[_ccy][_maturity].compoundFactor;
     }
 
     function _registerCurrency(
