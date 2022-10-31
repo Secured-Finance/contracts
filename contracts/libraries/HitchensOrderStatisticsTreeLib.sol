@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "hardhat/console.sol";
+
 struct UnfilledOrder {
     uint48 orderId;
     address maker;
@@ -16,6 +18,13 @@ struct OrderItem {
     uint256 amount;
 }
 
+/**
+ * @notice HitchensOrderStatisticsTreeLib is a Red-Black Tree binary search library
+ * based on the following library that is extended to manage order data.
+ *
+ * https://github.com/rob-Hitchens/OrderStatisticsTree
+ *
+ */
 library HitchensOrderStatisticsTreeLib {
     uint256 private constant EMPTY = 0;
 
@@ -27,6 +36,7 @@ library HitchensOrderStatisticsTreeLib {
         uint48 head;
         uint48 tail;
         uint256 orderCounter;
+        uint256 orderTotalAmount;
         mapping(uint256 => OrderItem) orders;
     }
 
@@ -112,12 +122,22 @@ library HitchensOrderStatisticsTreeLib {
             bool,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
         require(exists(self, value), "OrderStatisticsTree(403) - Value does not exist.");
         Node storage gn = self.nodes[value];
-        return (gn.parent, gn.left, gn.right, gn.red, gn.head, gn.tail, gn.orderCounter);
+        return (
+            gn.parent,
+            gn.left,
+            gn.right,
+            gn.red,
+            gn.head,
+            gn.tail,
+            gn.orderCounter,
+            gn.orderTotalAmount
+        );
     }
 
     function getNodeCount(Tree storage self, uint256 value) internal view returns (uint256) {
@@ -178,11 +198,23 @@ library HitchensOrderStatisticsTreeLib {
                 return;
             }
         }
+
         Node storage nValue = self.nodes[value];
+        // Update order info as a new one if there is already an old node
+        if (
+            self.root == EMPTY ||
+            (self.nodes[cursor].left != value && self.nodes[cursor].right != value)
+        ) {
+            nValue.orderCounter = 0;
+            nValue.orderTotalAmount = 0;
+            _setHead(self, value, 0);
+            _setTail(self, value, 0);
+        }
         nValue.parent = cursor;
         nValue.left = EMPTY;
         nValue.right = EMPTY;
         nValue.red = true;
+
         if (cursor == EMPTY) {
             self.root = value;
         } else if (value < cursor) {
@@ -418,6 +450,92 @@ library HitchensOrderStatisticsTreeLib {
         self.nodes[value].red = false;
     }
 
+    function dropLeft(
+        Tree storage self,
+        uint256 amount,
+        uint256 limitValue
+    )
+        internal
+        returns (
+            uint256 value,
+            uint256 remainingAmount,
+            UnfilledOrder memory unfilledOrder
+        )
+    {
+        require(amount != EMPTY, "OrderStatisticsTree(409) - Amount to drop cannot be zero");
+        uint256 cursor = first(self);
+        uint256 lastNode = last(self);
+        uint256 cursorNodeAmount = 0;
+        uint256 totalAmount = 0;
+
+        require(cursor <= limitValue || limitValue == 0, "Insufficient limitValue");
+
+        // Find a node whose total amount is over the amount of the argument.
+        while (
+            totalAmount < amount && cursor != EMPTY && (limitValue == 0 || cursor <= limitValue)
+        ) {
+            cursorNodeAmount = self.nodes[cursor].orderTotalAmount;
+            totalAmount += cursorNodeAmount;
+            value = cursor;
+            cursor = next(self, cursor);
+        }
+
+        if (totalAmount >= amount || value == limitValue) {
+            if (totalAmount > amount) {
+                cursor = value;
+                // Update order ids in the node.
+                uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
+                unfilledOrder = fillOrders(self, cursor, filledNodeAmount);
+                // console.log("  filledNodeAmount:", filledNodeAmount);
+                // console.log("  unfilledOrder:", unfilledOrder.amount);
+            }
+
+            self.nodes[cursor].left = 0;
+
+            uint256 parent = self.nodes[cursor].parent;
+
+            while (parent != EMPTY) {
+                if (parent > cursor) {
+                    // Relink the nodes
+                    if (self.nodes[cursor].parent != parent) {
+                        self.nodes[cursor].parent = parent;
+                        self.nodes[parent].left = cursor;
+                    }
+
+                    cursor = parent;
+                }
+
+                parent = self.nodes[parent].parent;
+            }
+        }
+
+        if (amount > totalAmount) {
+            remainingAmount = amount - totalAmount;
+        }
+
+        if (lastNode == value && self.nodes[lastNode].orderTotalAmount == 0) {
+            // The case that all node is dropped.
+            self.root = EMPTY;
+        } else if (value > self.root || (value == self.root && amount >= totalAmount)) {
+            // The case that the root node is dropped
+            self.root = cursor;
+            self.nodes[cursor].parent = 0;
+        }
+
+        if (self.nodes[self.root].left == 0 && self.nodes[self.root].right != 0) {
+            if (self.nodes[self.nodes[self.root].right].left != 0) {
+                rotateRight(self, self.nodes[self.root].right);
+            }
+            rotateLeft(self, self.root);
+        }
+
+        if (self.nodes[self.root].red) {
+            self.nodes[self.root].red = false;
+        }
+
+        // console.log("  remainingAmount:", remainingAmount);
+    }
+
     // Double linked list functions
     /**
      * @dev Retrieves the Object denoted by `_id`.
@@ -469,27 +587,6 @@ library HitchensOrderStatisticsTreeLib {
         return true;
     }
 
-    /**
-     * @dev Return the id of the first OrderItem matching `_amount` in the amount field.
-     */
-    function findOrderIdForAmount(
-        Tree storage self,
-        uint256 value,
-        uint256 amount
-    ) internal view returns (uint256) {
-        Node storage gn = self.nodes[value];
-
-        OrderItem memory order = gn.orders[gn.head];
-        while (order.orderId != gn.tail && order.amount < amount) {
-            order = gn.orders[order.next];
-        }
-        if (order.amount >= amount) {
-            return order.orderId;
-        } else {
-            return 0;
-        }
-    }
-
     function insertOrder(
         Tree storage self,
         uint256 value,
@@ -528,22 +625,18 @@ library HitchensOrderStatisticsTreeLib {
         Tree storage self,
         uint256 value,
         uint256 _amount
-    )
-        internal
-        returns (
-            uint48[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts,
-            uint256 remainingAmount,
-            UnfilledOrder memory unfilledOrder
-        )
-    {
+    ) internal returns (UnfilledOrder memory unfilledOrder) {
         Node storage gn = self.nodes[value];
 
-        remainingAmount = _amount;
-        orderIds = new uint48[](gn.orderCounter);
-        makers = new address[](gn.orderCounter);
-        amounts = new uint256[](gn.orderCounter);
+        require(
+            gn.orderTotalAmount >= _amount,
+            "OrderStatisticsTree(410) - Amount to fill is insufficient"
+        );
+
+        uint256 remainingAmount = _amount;
+        // orderIds = new uint48[](gn.orderCounter);
+        // makers = new address[](gn.orderCounter);
+        // amounts = new uint256[](gn.orderCounter);
 
         uint256 filledCount = 0;
         OrderItem memory currentOrder = gn.orders[gn.head];
@@ -555,82 +648,50 @@ library HitchensOrderStatisticsTreeLib {
             if (currentOrder.amount <= remainingAmount) {
                 remainingAmount -= currentOrder.amount;
                 orderId = currentOrder.next;
-                amounts[filledCount] = currentOrder.amount;
+                // amounts[filledCount] = currentOrder.amount;
             } else {
                 unfilledOrder = UnfilledOrder(
                     currentOrder.orderId,
                     currentOrder.maker,
                     currentOrder.amount - remainingAmount
                 );
-                amounts[filledCount] = remainingAmount;
+                // amounts[filledCount] = remainingAmount;
                 remainingAmount = 0;
             }
 
-            orderIds[filledCount] = currentOrder.orderId;
-            makers[filledCount] = currentOrder.maker;
+            // orderIds[filledCount] = currentOrder.orderId;
+            // makers[filledCount] = currentOrder.maker;
 
-            delete gn.orders[currentOrder.orderId];
+            // delete gn.orders[currentOrder.orderId];
+            _removeOrder(self, value, currentOrder.orderId);
             filledCount++;
         }
 
-        if (currentOrder.orderId == 0) {
-            _setHead(self, value, 0);
-            _setTail(self, value, 0);
-            gn.orderCounter = 0;
-        } else {
-            _setHead(self, value, currentOrder.orderId);
-            currentOrder.prev = 0;
-            gn.orderCounter -= filledCount;
+        // if (currentOrder.orderId == 0) {
+        //     _setHead(self, value, 0);
+        //     _setTail(self, value, 0);
+        //     gn.orderCounter = 0;
+        //     gn.orderTotalAmount = 0;
+        // } else {
+        //     _setHead(self, value, currentOrder.orderId);
+        //     currentOrder.prev = 0;
+        //     gn.orderCounter -= filledCount;
+        //     console.log("_amount:", _amount);
+        //     console.log("unfilledOrder:", unfilledOrder.amount);
+        //     gn.orderTotalAmount -= _amount + unfilledOrder.amount;
 
-            // Reduce array length to delete empty slot using assembly command.
-            uint256 _orderCounter = gn.orderCounter;
-            assembly {
-                mstore(orderIds, sub(mload(orderIds), _orderCounter))
-                mstore(makers, sub(mload(makers), _orderCounter))
-                mstore(amounts, sub(mload(amounts), _orderCounter))
-            }
-        }
+        //     // Reduce array length to delete empty slot using assembly command.
+        //     // uint256 _orderCounter = gn.orderCounter;
+        //     // assembly {
+        //     //     mstore(orderIds, sub(mload(orderIds), _orderCounter))
+        //     //     mstore(makers, sub(mload(makers), _orderCounter))
+        //     //     mstore(amounts, sub(mload(amounts), _orderCounter))
+        //     // }
+        // }
 
-        remove(self, value);
-    }
+        // console.log("unfilledOrder:", unfilledOrder.amount);
 
-    /**
-     * @dev Up size order by market maker.
-     */
-    function upSizeOrder(
-        Tree storage self,
-        uint256 value,
-        uint48 orderId,
-        uint256 _amount
-    ) internal returns (bool) {
-        require(_amount > 0, "Couldn't up size order with 0");
-        Node storage gn = self.nodes[value];
-
-        OrderItem memory order = gn.orders[orderId];
-        uint256 newAmount = order.amount + _amount;
-        gn.orders[orderId].amount = newAmount;
-
-        if (gn.orders[gn.head].amount < newAmount) {
-            OrderItem memory rootOrder = gn.orders[gn.head];
-            while (rootOrder.orderId != gn.tail && rootOrder.amount < newAmount) {
-                rootOrder = gn.orders[rootOrder.next];
-            }
-            if (order.amount > _amount) {
-                OrderItem memory prevOrder = gn.orders[rootOrder.prev];
-                _link(self, value, order.orderId, rootOrder.orderId);
-                _link(self, value, prevOrder.orderId, order.orderId);
-            } else {
-                OrderItem memory nextOrder = gn.orders[rootOrder.next];
-                _link(self, value, order.orderId, nextOrder.orderId);
-                _link(self, value, rootOrder.orderId, order.orderId);
-            }
-        } else {
-            _link(self, value, order.orderId, gn.head);
-            _setHead(self, value, order.orderId);
-            if (gn.tail == 0) _setTail(self, value, order.orderId);
-        }
-
-        return true;
+        // remove(self, value);
     }
 
     /**
@@ -672,6 +733,24 @@ library HitchensOrderStatisticsTreeLib {
     }
 
     /**
+     * @dev Internal function to create an unlinked Order.
+     */
+    function _createOrder(
+        Tree storage self,
+        uint256 value,
+        uint48 orderId,
+        address user,
+        uint256 amount
+    ) internal returns (uint48) {
+        Node storage gn = self.nodes[value];
+        gn.orderCounter += 1;
+        gn.orderTotalAmount += amount;
+        OrderItem memory order = OrderItem(orderId, 0, 0, user, block.timestamp, amount);
+        gn.orders[order.orderId] = order;
+        return order.orderId;
+    }
+
+    /**
      * @dev Remove the OrderItem denoted by `_id` from the List.
      */
     function _removeOrder(
@@ -699,6 +778,7 @@ library HitchensOrderStatisticsTreeLib {
         }
         delete gn.orders[order.orderId];
         gn.orderCounter -= 1;
+        gn.orderTotalAmount -= order.amount;
     }
 
     /**
@@ -725,23 +805,6 @@ library HitchensOrderStatisticsTreeLib {
         Node storage gn = self.nodes[value];
 
         gn.tail = orderId;
-    }
-
-    /**
-     * @dev Internal function to create an unlinked Order.
-     */
-    function _createOrder(
-        Tree storage self,
-        uint256 value,
-        uint48 orderId,
-        address user,
-        uint256 amount
-    ) internal returns (uint48) {
-        Node storage gn = self.nodes[value];
-        gn.orderCounter += 1;
-        OrderItem memory order = OrderItem(orderId, 0, 0, user, block.timestamp, amount);
-        gn.orders[order.orderId] = order;
-        return order.orderId;
     }
 
     /**

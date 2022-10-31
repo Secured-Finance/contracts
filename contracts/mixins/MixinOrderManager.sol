@@ -28,7 +28,7 @@ contract MixinOrderManager {
         uint256 right;
 
         while (cursor != 0 && probe >= _rate && !isOrderIdExists) {
-            (, left, right, , , , ) = Storage.slot().historicalTakenBorrowOrders.getNode(cursor);
+            (, left, right, , , , , ) = Storage.slot().historicalTakenBorrowOrders.getNode(cursor);
             if (left != 0 && _timestamp < left) {
                 cursor = left;
                 probe = Storage.slot().historicalExecutedBorrowRates[cursor];
@@ -63,7 +63,7 @@ contract MixinOrderManager {
         uint256 right;
 
         while (cursor != 0 && probe <= _rate && !isOrderIdExists) {
-            (, left, right, , , , ) = Storage.slot().historicalTakenLendOrders.getNode(cursor);
+            (, left, right, , , , , ) = Storage.slot().historicalTakenLendOrders.getNode(cursor);
             if (left != 0 && _timestamp < left) {
                 cursor = left;
                 probe = Storage.slot().historicalExecutedLendRates[cursor];

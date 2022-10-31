@@ -21,13 +21,14 @@ interface ILendingMarket {
         uint256 amount,
         uint256 rate
     );
-    event TakeOrders(
-        uint48[] orderIds,
-        address indexed taker,
-        ProtocolTypes.Side side,
-        uint256 amount,
-        uint256 rate
-    );
+    // event TakeOrders(
+    //     uint48[] orderIds,
+    //     address indexed taker,
+    //     ProtocolTypes.Side side,
+    //     uint256 amount,
+    //     uint256 rate
+    // );
+    event TakeOrders(address indexed taker, ProtocolTypes.Side side, uint256 amount, uint256 rate);
 
     event OpenMarket(uint256 maturity, uint256 prevMaturity);
 
@@ -125,11 +126,11 @@ interface ILendingMarket {
             uint256
         );
 
-    function matchOrders(
-        ProtocolTypes.Side side,
-        uint256 amount,
-        uint256 rate
-    ) external view returns (uint256);
+    // function matchOrders(
+    //     ProtocolTypes.Side side,
+    //     uint256 amount,
+    //     uint256 rate
+    // ) external view returns (uint256);
 
     function cleanOrders(address _user)
         external
@@ -145,14 +146,7 @@ interface ILendingMarket {
         address account,
         uint256 amount,
         uint256 rate
-    )
-        external
-        returns (
-            uint48[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts,
-            uint256 remainingAmount
-        );
+    ) external returns (uint256 executedRate, uint256 remainingAmount);
 
     function pauseMarket() external;
 

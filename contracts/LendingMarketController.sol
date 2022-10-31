@@ -307,7 +307,7 @@ contract LendingMarketController is
     function calculateLentFundsFromOrders(bytes32 _ccy, address _account)
         public
         view
-        returns (uint256 workingOrderAmount, uint256 claimAmount)
+        returns (uint256 workingOrdersAmount, uint256 claimableAmount)
     {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             (
@@ -318,9 +318,9 @@ contract LendingMarketController is
                     _account
                 );
 
-            workingOrderAmount += activeAmount;
+            workingOrdersAmount += activeAmount;
             // TODO: Need to convert to present value?
-            claimAmount = getCurrentFutureValue(_ccy, maturity, inactiveFutureValueInMaturity);
+            claimableAmount = getCurrentFutureValue(_ccy, maturity, inactiveFutureValueInMaturity);
         }
     }
 
@@ -328,7 +328,7 @@ contract LendingMarketController is
         external
         view
         override
-        returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount)
+        returns (uint256 totalWorkingOrdersAmount, uint256 totalClaimableAmount)
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_account];
 
@@ -338,8 +338,8 @@ contract LendingMarketController is
             (amounts[0], amounts[1]) = calculateLentFundsFromOrders(ccy, _account);
             uint256[] memory amountsInETH = currencyController().convertToETH(ccy, amounts);
 
-            totalWorkingOrderAmount += amountsInETH[0];
-            totalClaimAmount += amountsInETH[1];
+            totalWorkingOrdersAmount += amountsInETH[0];
+            totalClaimableAmount += amountsInETH[1];
         }
     }
 
@@ -347,7 +347,7 @@ contract LendingMarketController is
         public
         view
         returns (
-            uint256 workingOrderAmount,
+            uint256 workingOrdersAmount,
             uint256 obligationAmount,
             uint256 borrowedAmount
         )
@@ -361,7 +361,7 @@ contract LendingMarketController is
             ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i])
                     .getTotalAmountFromBorrowOrders(_account);
 
-            workingOrderAmount += activeAmount;
+            workingOrdersAmount += activeAmount;
             // TODO: Need to convert to present value?
             obligationAmount = getCurrentFutureValue(_ccy, maturity, inactiveFutureValueInMaturity);
             borrowedAmount = inactiveAmount;
@@ -371,7 +371,7 @@ contract LendingMarketController is
     /**
      * @notice Gets the funds that is calculated in EHT from account's order list.
      * @param _account Target account address
-     * @return totalWorkingOrderAmount The total working order amount on the order book
+     * @return totalWorkingOrdersAmount The total working orders amount on the order book
      * @return totalObligationAmount The total debt amount due to the borrow orders being filled on the order book
      * @return totalBorrowedAmount The total borrowed amount due to the borrow orders being filled on the order book
      */
@@ -380,7 +380,7 @@ contract LendingMarketController is
         view
         override
         returns (
-            uint256 totalWorkingOrderAmount,
+            uint256 totalWorkingOrdersAmount,
             uint256 totalObligationAmount,
             uint256 totalBorrowedAmount
         )
@@ -393,7 +393,7 @@ contract LendingMarketController is
             (amounts[0], amounts[1], amounts[2]) = calculateBorrowedFundsFromOrders(ccy, _account);
             uint256[] memory amountsInETH = currencyController().convertToETH(ccy, amounts);
 
-            totalWorkingOrderAmount += amountsInETH[0];
+            totalWorkingOrdersAmount += amountsInETH[0];
             totalObligationAmount += amountsInETH[1];
             totalBorrowedAmount += amountsInETH[2];
         }
@@ -515,27 +515,27 @@ contract LendingMarketController is
         return _createOrder(_ccy, _maturity, ProtocolTypes.Side.LEND, msg.value, _rate);
     }
 
-    /**
-     * @notice Gets if the market order will be matched or not.
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
-     * @param _side Order position type, Borrow or Lend
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _rate Amount of interest rate taker wish to borrow/lend
-     * @return True if the execution of the operation succeeds
-     */
-    function matchOrders(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _rate
-    ) external view override ifValidMaturity(_ccy, _maturity) returns (bool) {
-        address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        ILendingMarket(market).matchOrders(_side, _amount, _rate);
+    // /**
+    //  * @notice Gets if the market order will be matched or not.
+    //  * @param _ccy Currency name in bytes32 of the selected market
+    //  * @param _maturity The maturity of the selected market
+    //  * @param _side Order position type, Borrow or Lend
+    //  * @param _amount Amount of funds the maker wants to borrow/lend
+    //  * @param _rate Amount of interest rate taker wish to borrow/lend
+    //  * @return True if the execution of the operation succeeds
+    //  */
+    // function matchOrders(
+    //     bytes32 _ccy,
+    //     uint256 _maturity,
+    //     ProtocolTypes.Side _side,
+    //     uint256 _amount,
+    //     uint256 _rate
+    // ) external view override ifValidMaturity(_ccy, _maturity) returns (bool) {
+    //     address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+    //     ILendingMarket(market).matchOrders(_side, _amount, _rate);
 
-        return true;
-    }
+    //     return true;
+    // }
 
     /**
      * @notice Cancels the own order.
@@ -715,20 +715,12 @@ contract LendingMarketController is
 
         uint256 activeOrderCount = _cleanOrders(_ccy, _maturity, msg.sender);
 
-        (
-            uint48[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts,
-            uint256 remainingAmount
-        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
-                _side,
-                msg.sender,
-                _amount,
-                _rate
-            );
+        (uint256 executedRate, uint256 remainingAmount) = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).createOrder(_side, msg.sender, _amount, _rate);
 
         // The case that an order was made, or taken partially
-        if (amounts[0] == 0 || remainingAmount > 0) {
+        if (executedRate == 0 || remainingAmount > 0) {
             activeOrderCount += 1;
         }
 
@@ -737,7 +729,7 @@ contract LendingMarketController is
         _updateExposedCurrency(_ccy, _maturity, msg.sender, activeOrderCount);
 
         // Update the unsettled collateral and escrowed amount in TokenVault
-        if (amounts[0] != 0) {
+        if (executedRate != 0) {
             if (_side == ProtocolTypes.Side.BORROW) {
                 tokenVault().withdrawEscrow(msg.sender, _ccy, _amount - remainingAmount);
             }
@@ -754,23 +746,17 @@ contract LendingMarketController is
 
             Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
-            emit OrderFilled(msg.sender, _ccy, orderIds, makers, amounts, _side, _maturity, _rate);
+            // emit OrderFilled(msg.sender, _ccy, orderIds, makers, amounts, _side, _maturity, _rate);
         }
 
         // TODO: Need to check the collateral is enough
 
         // If the first value of the amount array is 0, it means that the order will not be filled.
         // `remainingAmount` has a value only if the order is filled.
-        uint256 placedAmount = amounts[0] == 0 ? _amount : remainingAmount;
+        uint256 placedAmount = executedRate == 0 ? _amount : remainingAmount;
 
-        if (placedAmount != 0) {
-            if (_side == ProtocolTypes.Side.LEND) {
-                tokenVault().depositEscrow{value: msg.value}(
-                    amounts[0] == 0 ? makers[0] : msg.sender,
-                    _ccy,
-                    placedAmount
-                );
-            }
+        if (placedAmount != 0 && _side == ProtocolTypes.Side.LEND) {
+            tokenVault().depositEscrow{value: msg.value}(msg.sender, _ccy, placedAmount);
         }
 
         // if (placedAmount != 0) {

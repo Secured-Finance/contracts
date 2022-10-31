@@ -18,8 +18,6 @@ import {Proxyable} from "./utils/Proxyable.sol";
 // storages
 import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @notice Implements the management of the token in each currency for users.
  *
@@ -447,13 +445,13 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     ) private view returns (uint256 totalCollateral, uint256 totalUsedCollateral) {
         uint256 usedCollateral = _getUsedCollateral(_user);
         (
-            uint256 workingOrderAmount,
+            uint256 workingOrdersAmount,
             uint256 obligationAmount,
             uint256 borrowedAmount
         ) = _getBorrowedFundsFromLendingMarkets(_user, _ccy, _unsettledExp);
 
         totalCollateral = _getTotalInternalCollateralAmountInETH(_user) + borrowedAmount;
-        totalUsedCollateral = usedCollateral + workingOrderAmount + obligationAmount;
+        totalUsedCollateral = usedCollateral + workingOrdersAmount + obligationAmount;
     }
 
     /**
@@ -461,7 +459,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _user User's ethereum address
      * @param _ccy Currency name in bytes32
      * @param _unsettledExp Additional exposure to lock into unsettled exposure
-     * @return workingOrderAmount The total working order amount on the order book
+     * @return workingOrdersAmount The total working orders amount on the order book
      * @return obligationAmount The total obligation amount due to the borrow orders being filled on the order book
      * @return borrowedAmount The total borrowed amount due to the borrow orders being filled on the order book
      */
@@ -473,14 +471,14 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         internal
         view
         returns (
-            uint256 workingOrderAmount,
+            uint256 workingOrdersAmount,
             uint256 obligationAmount,
             uint256 borrowedAmount
         )
     {
-        (workingOrderAmount, obligationAmount, borrowedAmount) = lendingMarketController()
+        (workingOrdersAmount, obligationAmount, borrowedAmount) = lendingMarketController()
             .calculateTotalBorrowedFundsInETH(_user);
-        workingOrderAmount += _unsettledExp > 0
+        workingOrdersAmount += _unsettledExp > 0
             ? currencyController().convertToETH(_ccy, _unsettledExp)
             : 0;
     }
