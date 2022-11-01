@@ -4,27 +4,51 @@ import { artifacts } from 'hardhat';
 import {
   borrowingLimitOrders,
   borrowingMarketOrders,
-} from './borrowing-orders';
-import { lendingLimitOrders, lendingMarketOrders } from './lending-orders';
+} from './data/borrowing-orders';
+import { lendingLimitOrders, lendingMarketOrders } from './data/lending-orders';
 const OrderStatisticsTree = artifacts.require(
   'HitchensOrderStatisticsTreeContract.sol',
 );
 
 let ost: Contract;
 
+interface Order {
+  rate: number;
+  orderId: number;
+  amount: number;
+}
+
+export interface Condition {
+  title: string;
+  orders: Order[];
+  inputs: {
+    title: string;
+    targetAmount: number;
+    droppedAmount: number;
+    limitValue?: number;
+  }[];
+}
+
+interface Test {
+  label: string;
+  method: string;
+  marketOrderConditions: Condition[];
+  limitOrderConditions: Condition[];
+}
+
 describe('OrderStatisticsTree - drop values', () => {
-  const tests = [
+  const tests: Test[] = [
     {
       label: 'Lending',
       method: 'dropValuesFromFirst',
-      marketOrders: lendingMarketOrders,
-      limitOrders: lendingLimitOrders,
+      marketOrderConditions: lendingMarketOrders,
+      limitOrderConditions: lendingLimitOrders,
     },
     {
       label: 'Borrowing',
       method: 'dropValuesFromLast',
-      marketOrders: borrowingMarketOrders,
-      limitOrders: borrowingLimitOrders,
+      marketOrderConditions: borrowingMarketOrders,
+      limitOrderConditions: borrowingLimitOrders,
     },
   ];
 
@@ -35,7 +59,7 @@ describe('OrderStatisticsTree - drop values', () => {
   for (const test of tests) {
     describe(`${test.label} market orders`, async () => {
       describe('Drop nodes from the tree by one action', async () => {
-        for (const condition of test.marketOrders) {
+        for (const condition of test.marketOrderConditions) {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
@@ -66,7 +90,7 @@ describe('OrderStatisticsTree - drop values', () => {
       });
 
       describe('Drop nodes from the tree by multiple actions', async () => {
-        for (const condition of test.marketOrders) {
+        for (const condition of test.marketOrderConditions) {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
@@ -96,7 +120,7 @@ describe('OrderStatisticsTree - drop values', () => {
       });
 
       describe('Drop nodes from the tree by repeated inserting and dropping', async () => {
-        for (const condition of test.marketOrders) {
+        for (const condition of test.marketOrderConditions) {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
@@ -152,7 +176,7 @@ describe('OrderStatisticsTree - drop values', () => {
 
     describe(`${test.label} limit orders`, async () => {
       describe('Drop nodes from the tree', async () => {
-        for (const condition of test.limitOrders) {
+        for (const condition of test.limitOrderConditions) {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
               const title = `${input.title}: Target amount is ${input.targetAmount}, Limit value ${input?.limitValue}`;

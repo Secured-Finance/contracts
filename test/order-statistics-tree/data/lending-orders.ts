@@ -1,19 +1,4 @@
-interface Order {
-  rate: number;
-  orderId: number;
-  amount: number;
-}
-
-interface Condition {
-  title: string;
-  orders: Order[];
-  inputs: {
-    title: string;
-    targetAmount: number;
-    droppedAmount: number;
-    limitValue?: number;
-  }[];
-}
+import { Condition } from '../drop.test';
 
 const lendingMarketOrders: Condition[] = [
   {

@@ -1,6 +1,6 @@
 import { constants, Contract } from 'ethers';
 import { artifacts } from 'hardhat';
-import { Step, steps } from './steps';
+import { Step, steps } from './data/steps';
 const OrderStatisticsTree = artifacts.require(
   'HitchensOrderStatisticsTreeContract.sol',
 );
@@ -12,7 +12,7 @@ describe('OrderStatisticsTree - insert and delete', () => {
     ost = await OrderStatisticsTree.new();
   });
 
-  it('Should insert all orders and delete after', async () => {
+  it('Insert all orders and delete after', async () => {
     console.log('Number of steps: ' + steps.length);
     let s = await loadScenario(steps);
     await printScenario(steps);
