@@ -536,6 +536,92 @@ library HitchensOrderStatisticsTreeLib {
         // console.log("  remainingAmount:", remainingAmount);
     }
 
+    function dropRight(
+        Tree storage self,
+        uint256 amount,
+        uint256 limitValue
+    )
+        internal
+        returns (
+            uint256 value,
+            uint256 remainingAmount,
+            UnfilledOrder memory unfilledOrder
+        )
+    {
+        require(amount != EMPTY, "OrderStatisticsTree(409) - Amount to drop cannot be zero");
+        uint256 cursor = last(self);
+        uint256 firstNode = first(self);
+        uint256 cursorNodeAmount = 0;
+        uint256 totalAmount = 0;
+
+        require(cursor >= limitValue || limitValue == 0, "Insufficient limitValue");
+
+        // Find a node whose total amount is over the amount of the argument.
+        while (
+            totalAmount < amount && cursor != EMPTY && (limitValue == 0 || cursor >= limitValue)
+        ) {
+            cursorNodeAmount = self.nodes[cursor].orderTotalAmount;
+            totalAmount += cursorNodeAmount;
+            value = cursor;
+            cursor = prev(self, cursor);
+        }
+
+        if (totalAmount >= amount || value == limitValue) {
+            if (totalAmount > amount) {
+                cursor = value;
+                // Update order ids in the node.
+                uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
+                unfilledOrder = fillOrders(self, cursor, filledNodeAmount);
+                // console.log("  filledNodeAmount:", filledNodeAmount);
+                // console.log("  unfilledOrder:", unfilledOrder.amount);
+            }
+
+            self.nodes[cursor].right = 0;
+
+            uint256 parent = self.nodes[cursor].parent;
+
+            while (parent != EMPTY) {
+                if (parent < cursor) {
+                    // Relink the nodes
+                    if (self.nodes[cursor].parent != parent) {
+                        self.nodes[cursor].parent = parent;
+                        self.nodes[parent].right = cursor;
+                    }
+
+                    cursor = parent;
+                }
+
+                parent = self.nodes[parent].parent;
+            }
+        }
+
+        if (amount > totalAmount) {
+            remainingAmount = amount - totalAmount;
+        }
+
+        if (firstNode == value && self.nodes[firstNode].orderTotalAmount == 0) {
+            // The case that all node is dropped.
+            self.root = EMPTY;
+        } else if (value < self.root || (value == self.root && amount >= totalAmount)) {
+            // The case that the root node is dropped
+            self.root = cursor;
+            self.nodes[cursor].parent = 0;
+        }
+
+        if (self.nodes[self.root].right == 0 && self.nodes[self.root].left != 0) {
+            if (self.nodes[self.nodes[self.root].left].right != 0) {
+                rotateLeft(self, self.nodes[self.root].left);
+            }
+            rotateRight(self, self.root);
+        }
+
+        if (self.nodes[self.root].red) {
+            self.nodes[self.root].red = false;
+        }
+
+        // console.log("  remainingAmount:", remainingAmount);
+    }
+
     // Double linked list functions
     /**
      * @dev Retrieves the Object denoted by `_id`.
@@ -642,7 +728,7 @@ library HitchensOrderStatisticsTreeLib {
         OrderItem memory currentOrder = gn.orders[gn.head];
         uint48 orderId = gn.head;
 
-        while (filledCount < gn.orderCounter && remainingAmount != 0) {
+        while (orderId != 0 && remainingAmount != 0) {
             currentOrder = gn.orders[orderId];
 
             if (currentOrder.amount <= remainingAmount) {

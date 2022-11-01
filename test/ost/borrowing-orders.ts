@@ -15,7 +15,7 @@ interface Condition {
   }[];
 }
 
-const marketOrderConditions: Condition[] = [
+const borrowingMarketOrders: Condition[] = [
   {
     title: '1 nodes in the tree',
     orders: [{ rate: 8000, orderId: 1, amount: 100000000 }],
@@ -46,17 +46,17 @@ const marketOrderConditions: Condition[] = [
     inputs: [
       {
         title: 'Fill 1 node partially',
-        targetAmount: 50000000,
-        droppedAmount: 100000000,
+        targetAmount: 100000000,
+        droppedAmount: 300000000,
       },
       {
         title: 'Drop 1 node',
-        targetAmount: 100000000,
-        droppedAmount: 100000000,
+        targetAmount: 300000000,
+        droppedAmount: 300000000,
       },
       {
         title: 'Drop 1 node, Fill 1 node partially',
-        targetAmount: 200000000,
+        targetAmount: 350000000,
         droppedAmount: 400000000,
       },
       {
@@ -81,23 +81,23 @@ const marketOrderConditions: Condition[] = [
     inputs: [
       {
         title: 'Fill 1 node partially',
-        targetAmount: 50000000,
-        droppedAmount: 100000000,
+        targetAmount: 300000000,
+        droppedAmount: 500000000,
       },
       {
         title: 'Drop 1 node',
-        targetAmount: 100000000,
-        droppedAmount: 100000000,
+        targetAmount: 500000000,
+        droppedAmount: 500000000,
       },
       {
         title: 'Drop 1 node, Fill 1 node partially',
-        targetAmount: 200000000,
-        droppedAmount: 400000000,
+        targetAmount: 600000000,
+        droppedAmount: 800000000,
       },
       {
         title: 'Drop 2 nodes',
-        targetAmount: 400000000,
-        droppedAmount: 400000000,
+        targetAmount: 800000000,
+        droppedAmount: 800000000,
       },
       {
         title: 'Drop all nodes',
@@ -124,43 +124,43 @@ const marketOrderConditions: Condition[] = [
     inputs: [
       {
         title: 'Fill 1 node partially',
-        targetAmount: 25000000,
-        droppedAmount: 50000000,
-      },
-      {
-        title: 'Fill 1 node partially, Remove 1 order id',
-        targetAmount: 50000000,
-        droppedAmount: 50000000,
-      },
-      {
-        title: 'Drop 1 node',
-        targetAmount: 100000000,
-        droppedAmount: 100000000,
-      },
-      {
-        title: 'Drop 1 node, Fill 1 node partially',
         targetAmount: 200000000,
         droppedAmount: 250000000,
       },
       {
-        title: 'Drop 1 node, Fill 1 node partially, Remove 1 order id',
+        title: 'Fill 1 node partially, Remove 1 order id',
         targetAmount: 250000000,
         droppedAmount: 250000000,
       },
       {
+        title: 'Drop 1 node',
+        targetAmount: 500000000,
+        droppedAmount: 500000000,
+      },
+      {
+        title: 'Drop 1 node, Fill 1 node partially',
+        targetAmount: 600000000,
+        droppedAmount: 650000000,
+      },
+      {
+        title: 'Drop 1 node, Fill 1 node partially, Remove 1 order id',
+        targetAmount: 680000000,
+        droppedAmount: 800000000,
+      },
+      {
         title: 'Drop 2 nodes',
-        targetAmount: 400000000,
-        droppedAmount: 400000000,
+        targetAmount: 800000000,
+        droppedAmount: 800000000,
       },
       {
         title: 'Drop 2 nodes, Fill 1 node partially',
-        targetAmount: 450000000,
-        droppedAmount: 650000000,
+        targetAmount: 820000000,
+        droppedAmount: 850000000,
       },
       {
         title: 'Drop 2 nodes, Fill 1 node partially, Remove 1 order id',
-        targetAmount: 650000000,
-        droppedAmount: 650000000,
+        targetAmount: 850000000,
+        droppedAmount: 850000000,
       },
       {
         title: 'Drop all nodes',
@@ -213,18 +213,18 @@ const marketOrderConditions: Condition[] = [
       {
         title:
           'Drop multiple nodes less than the root, Fill root node partially',
-        targetAmount: 1300000000,
-        droppedAmount: 1600000000,
+        targetAmount: 6000000000,
+        droppedAmount: 6600000000,
       },
       {
         title: 'Drop multiple nodes less than or equal to the root',
-        targetAmount: 1600000000,
-        droppedAmount: 1600000000,
+        targetAmount: 6600000000,
+        droppedAmount: 6600000000,
       },
       {
         title: 'Drop multiple nodes across the root',
-        targetAmount: 3000000000,
-        droppedAmount: 4600000000,
+        targetAmount: 7000000000,
+        droppedAmount: 7100000000,
       },
       {
         title: 'Drop all nodes',
@@ -240,7 +240,7 @@ const marketOrderConditions: Condition[] = [
   },
 ];
 
-const limitOrderConditions: Condition[] = [
+const borrowingLimitOrders: Condition[] = [
   {
     title: '1 nodes in the tree',
     orders: [{ rate: 8000, orderId: 1, amount: 100000000 }],
@@ -268,32 +268,32 @@ const limitOrderConditions: Condition[] = [
     inputs: [
       {
         title: 'Drop 1 node',
-        targetAmount: 100000000,
-        limitValue: 8000,
-        droppedAmount: 100000000,
+        targetAmount: 300000000,
+        limitValue: 8001,
+        droppedAmount: 300000000,
       },
       {
         title: 'Drop 1 node by limitValue',
-        targetAmount: 200000000,
-        limitValue: 8000,
-        droppedAmount: 100000000,
+        targetAmount: 350000000,
+        limitValue: 8001,
+        droppedAmount: 300000000,
       },
       {
         title: 'Drop 1 node, Fill 1 node partially',
-        targetAmount: 200000000,
-        limitValue: 8001,
+        targetAmount: 350000000,
+        limitValue: 8000,
         droppedAmount: 400000000,
       },
       {
         title: 'Drop all nodes',
         targetAmount: 400000000,
-        limitValue: 8001,
+        limitValue: 8000,
         droppedAmount: 400000000,
       },
       {
         title: 'Drop all nodes by limitValue',
         targetAmount: 1000000000,
-        limitValue: 8001,
+        limitValue: 8000,
         droppedAmount: 400000000,
       },
     ],
@@ -307,49 +307,49 @@ const limitOrderConditions: Condition[] = [
     ],
     inputs: [
       {
-        title: 'Fill 1 node partially',
-        targetAmount: 100000000,
-        limitValue: 8000,
-        droppedAmount: 100000000,
+        title: 'Drop 1 node',
+        targetAmount: 500000000,
+        limitValue: 8002,
+        droppedAmount: 500000000,
       },
       {
         title: 'Drop 1 node by limitValue',
-        targetAmount: 200000000,
-        limitValue: 8000,
-        droppedAmount: 100000000,
+        targetAmount: 600000000,
+        limitValue: 8002,
+        droppedAmount: 500000000,
       },
       {
         title: 'Drop 1 node, Fill 1 node partially',
-        targetAmount: 200000000,
+        targetAmount: 600000000,
         limitValue: 8001,
-        droppedAmount: 400000000,
+        droppedAmount: 800000000,
       },
       {
         title: 'Drop 2 nodes',
-        targetAmount: 400000000,
+        targetAmount: 800000000,
         limitValue: 8001,
-        droppedAmount: 400000000,
+        droppedAmount: 800000000,
       },
       {
         title: 'Drop 2 nodes by limitValue',
         targetAmount: 900000000,
         limitValue: 8001,
-        droppedAmount: 400000000,
+        droppedAmount: 800000000,
       },
       {
         title: 'Drop all nodes',
         targetAmount: 900000000,
-        limitValue: 8002,
+        limitValue: 8000,
         droppedAmount: 900000000,
       },
       {
         title: 'Drop all nodes by limitValue',
         targetAmount: 1000000000,
-        limitValue: 8002,
+        limitValue: 8000,
         droppedAmount: 900000000,
       },
     ],
   },
 ];
 
-export { marketOrderConditions, limitOrderConditions };
+export { borrowingMarketOrders, borrowingLimitOrders };

@@ -86,7 +86,11 @@ contract HitchensOrderStatisticsTreeContract {
         tree.removeOrder(value, orderId);
     }
 
-    function dropValuesFromLeft(uint256 value, uint256 limitValue) public {
+    function dropValuesFromFirst(uint256 value, uint256 limitValue) public {
         tree.dropLeft(value, limitValue);
+    }
+
+    function dropValuesFromLast(uint256 value, uint256 limitValue) public {
+        tree.dropRight(value, limitValue);
     }
 }
