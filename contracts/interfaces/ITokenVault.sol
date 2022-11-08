@@ -9,7 +9,11 @@ interface ITokenVault {
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
     event RegisterCurrency(bytes32 ccy, address tokenAddress);
 
-    function isCovered(address user) external view returns (bool);
+    function isCovered(
+        address user,
+        bytes32 ccy,
+        uint256 unsettledExp
+    ) external view returns (bool);
 
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
 

@@ -668,7 +668,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         // updateOrderHistory(_side, _rate);
 
         // emit TakeOrders(orderIds, _user, _side, _amount, _rate);
-        emit TakeOrders(_user, _side, _amount, _rate);
+        emit TakeOrders(_user, _side, _amount - remainingAmount, _rate, filledFutureValue);
 
         if (unfilledOrder.amount > 0) {
             _makeOrder(
@@ -677,12 +677,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                     : ProtocolTypes.Side.BORROW,
                 unfilledOrder.maker,
                 unfilledOrder.amount,
-                _rate,
+                unfilledOrder.rate,
                 true
             );
         }
 
-        if (remainingAmount > 0) {
+        if (remainingAmount > 0 && _rate != 0) {
             _makeOrder(_side, _user, remainingAmount, _rate, false);
         }
     }
@@ -823,7 +823,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (uint256 filledFutureValue, uint256 remainingAmount)
     {
         require(_amount > 0, "Can't place empty amount");
-        require(_rate > 0, "Can't place empty rate");
         require(
             Storage.slot().userCurrentMaturities[_user] == Storage.slot().maturity ||
                 (Storage.slot().userCurrentMaturities[_user] != Storage.slot().maturity &&
@@ -836,14 +835,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             Storage.slot().userCurrentMaturities[_user] = Storage.slot().maturity;
         }
 
-        bool isExists = _side == ProtocolTypes.Side.LEND
-            ? Storage.slot().borrowOrders[Storage.slot().maturity].exists(_rate)
-            : Storage.slot().lendOrders[Storage.slot().maturity].exists(_rate);
+        bool isExists = _rate == 0 ||
+            (
+                _side == ProtocolTypes.Side.LEND
+                    ? Storage.slot().borrowOrders[Storage.slot().maturity].last() >= _rate
+                    : Storage.slot().lendOrders[Storage.slot().maturity].first() <= _rate
+            );
 
-        if (!isExists) {
-            _makeOrder(_side, _user, _amount, _rate, false);
-        } else {
+        if (isExists) {
             (filledFutureValue, remainingAmount) = _takeOrder(_side, _user, _amount, _rate);
+        } else {
+            _makeOrder(_side, _user, _amount, _rate, false);
         }
     }
 

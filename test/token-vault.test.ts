@@ -273,15 +273,21 @@ describe('TokenVault', () => {
         '0',
       );
 
+      const emptyCurrency = ethers.utils.formatBytes32String('');
+
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('0');
-      expect(await tokenVaultProxy.isCovered(bob.address)).to.equal(true);
+      expect(
+        await tokenVaultProxy.isCovered(bob.address, emptyCurrency, 0),
+      ).to.equal(true);
 
       // NOTE: Deposit in two currencies to double the collateral
       // since the mock always returns the same value with "convertToETH".
       await tokenVaultProxy.connect(bob).deposit(targetCurrency, value);
       await tokenVaultProxy.connect(bob).deposit(previousCurrency, value);
 
-      expect(await tokenVaultProxy.isCovered(bob.address)).to.equal(true);
+      expect(
+        await tokenVaultProxy.isCovered(bob.address, emptyCurrency, 0),
+      ).to.equal(true);
 
       await mockLendingMarketController.mock.calculateTotalBorrowedFundsInETH.returns(
         usedValue,
@@ -289,7 +295,9 @@ describe('TokenVault', () => {
         '0',
       );
 
-      expect(await tokenVaultProxy.isCovered(bob.address)).to.equal(true);
+      expect(
+        await tokenVaultProxy.isCovered(bob.address, emptyCurrency, 0),
+      ).to.equal(true);
       expect(
         await tokenVaultProxy.getWithdrawableCollateral(bob.address),
       ).to.equal(

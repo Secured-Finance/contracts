@@ -28,7 +28,13 @@ interface ILendingMarket {
     //     uint256 amount,
     //     uint256 rate
     // );
-    event TakeOrders(address indexed taker, ProtocolTypes.Side side, uint256 amount, uint256 rate);
+    event TakeOrders(
+        address indexed taker,
+        ProtocolTypes.Side side,
+        uint256 filledAmount,
+        uint256 rate,
+        uint256 filledFutureValue
+    );
 
     event OpenMarket(uint256 maturity, uint256 prevMaturity);
 

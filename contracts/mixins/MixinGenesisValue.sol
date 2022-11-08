@@ -43,11 +43,21 @@ contract MixinGenesisValue {
         return Storage.slot().maturityRates[_ccy][_maturity];
     }
 
-    function getCurrentFutureValue(
+    function getGenesisValueInFutureValue(bytes32 _ccy, address _account)
+        public
+        view
+        returns (int256)
+    {
+        // NOTE: The formula is:
+        // futureValue = genesisValue * currentCompoundFactor.
+        return getGenesisValue(_ccy, _account) * int256(getCompoundFactor(_ccy));
+    }
+
+    function _calculateFutureValueInMaturity(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _futureValueInMaturity
-    ) public view returns (uint256) {
+    ) internal view returns (uint256) {
         if (Storage.slot().maturityRates[_ccy][_maturity].compoundFactor == 0) {
             return _futureValueInMaturity;
         }

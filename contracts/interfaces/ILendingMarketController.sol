@@ -26,7 +26,8 @@ interface ILendingMarketController {
         ProtocolTypes.Side side,
         uint256 indexed maturity,
         uint256 amount,
-        uint256 rate
+        uint256 rate,
+        uint256 filledFutureValue
     );
     event OrderCanceled(
         uint48 orderId,

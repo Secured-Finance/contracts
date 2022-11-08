@@ -9,6 +9,7 @@ struct UnfilledOrder {
     uint48 orderId;
     address maker;
     uint256 amount;
+    uint256 rate;
 }
 
 struct OrderItem {
@@ -759,7 +760,8 @@ library HitchensOrderStatisticsTreeLib {
                 unfilledOrder = UnfilledOrder(
                     currentOrder.orderId,
                     currentOrder.maker,
-                    currentOrder.amount - remainingAmount
+                    currentOrder.amount - remainingAmount,
+                    value
                 );
                 // amounts[filledCount] = remainingAmount;
                 remainingAmount = 0;

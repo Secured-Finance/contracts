@@ -320,7 +320,16 @@ contract LendingMarketController is
 
             workingOrdersAmount += activeAmount;
             // TODO: Need to convert to present value?
-            claimableAmount = getCurrentFutureValue(_ccy, maturity, inactiveFutureValueInMaturity);
+            claimableAmount = _calculateFutureValueInMaturity(
+                _ccy,
+                maturity,
+                inactiveFutureValueInMaturity
+            );
+        }
+
+        int256 futureValue = getGenesisValueInFutureValue(_ccy, _account);
+        if (futureValue > 0) {
+            claimableAmount += uint256(futureValue);
         }
     }
 
@@ -363,8 +372,17 @@ contract LendingMarketController is
 
             workingOrdersAmount += activeAmount;
             // TODO: Need to convert to present value?
-            obligationAmount = getCurrentFutureValue(_ccy, maturity, inactiveFutureValueInMaturity);
+            obligationAmount = _calculateFutureValueInMaturity(
+                _ccy,
+                maturity,
+                inactiveFutureValueInMaturity
+            );
             borrowedAmount = inactiveAmount;
+        }
+
+        int256 futureValue = getGenesisValueInFutureValue(_ccy, _account);
+        if (futureValue < 0) {
+            obligationAmount += uint256(-futureValue);
         }
     }
 
@@ -718,6 +736,8 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _rate
     ) private returns (bool) {
+        require(tokenVault().isCovered(msg.sender, _ccy, _amount), "Not enough collateral");
+
         address futureValueVault = Storage.slot().futureValueVaults[_ccy][
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ];
@@ -768,12 +788,10 @@ contract LendingMarketController is
 
             // Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
-            emit OrderFilled(msg.sender, _ccy, _side, _maturity, _amount, _rate);
+            emit OrderFilled(msg.sender, _ccy, _side, _maturity, _amount, _rate, filledFutureValue);
         }
 
         Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-
-        // TODO: Need to check the collateral is enough
 
         // If the first value of the amount array is 0, it means that the order will not be filled.
         // `remainingAmount` has a value only if the order is filled.
