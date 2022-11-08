@@ -90,7 +90,7 @@ const func: DeployFunction = async function ({
           .then((tx) => tx.wait());
 
         const { marketAddr, futureValue, maturity } = receipt.events.find(
-          ({ event }) => event === 'LendingMarketCreated',
+          ({ event }) => event === 'CreateLendingMarket',
         ).args;
         market.push({
           MarketAddress: marketAddr,

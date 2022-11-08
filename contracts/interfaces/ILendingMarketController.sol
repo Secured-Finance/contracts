@@ -12,15 +12,23 @@ struct Order {
 }
 
 interface ILendingMarketController {
-    event LendingMarketCreated(
+    event CreateLendingMarket(
         bytes32 indexed ccy,
         address indexed marketAddr,
         address futureValue,
         uint256 index,
         uint256 maturity
     );
-    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event OrderFilled(
+    event RotateLendingMarkets(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event PlaceOrder(
+        address indexed maker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 amount,
+        uint256 rate
+    );
+    event FillOrder(
         address indexed taker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
@@ -29,7 +37,14 @@ interface ILendingMarketController {
         uint256 rate,
         uint256 filledFutureValue
     );
-    event OrderCanceled(
+    event FillOrders(
+        address indexed taker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 filledFutureValue
+    );
+    event CancelOrder(
         uint48 orderId,
         address indexed maker,
         bytes32 indexed ccy,

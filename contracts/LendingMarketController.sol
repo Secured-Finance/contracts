@@ -483,7 +483,7 @@ contract LendingMarketController is
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
         Storage.slot().futureValueVaults[_ccy][market] = futureValue;
 
-        emit LendingMarketCreated(
+        emit CreateLendingMarket(
             _ccy,
             market,
             futureValue,
@@ -576,7 +576,7 @@ contract LendingMarketController is
             // tokenVault().releaseUnsettledCollateral(msg.sender, address(0), _ccy, amount);
         }
 
-        emit OrderCanceled(_orderId, msg.sender, _ccy, side, _maturity, amount, rate);
+        emit CancelOrder(_orderId, msg.sender, _ccy, side, _maturity, amount, rate);
 
         return true;
     }
@@ -622,7 +622,7 @@ contract LendingMarketController is
         Storage.slot().maturityLendingMarkets[_ccy][newLastMaturity] = currentMarketAddr;
         delete Storage.slot().maturityLendingMarkets[_ccy][prevMaturity];
 
-        emit LendingMarketsRotated(_ccy, prevMaturity, newLastMaturity);
+        emit RotateLendingMarkets(_ccy, prevMaturity, newLastMaturity);
     }
 
     /**
@@ -759,8 +759,9 @@ contract LendingMarketController is
 
         _updateExposedCurrency(_ccy, _maturity, msg.sender, activeOrderCount);
 
-        // Update the unsettled collateral and escrowed amount in TokenVault
-        if (filledFutureValue != 0) {
+        if (filledFutureValue == 0) {
+            emit PlaceOrder(msg.sender, _ccy, _side, _maturity, _amount, _rate);
+        } else {
             if (_side == ProtocolTypes.Side.BORROW) {
                 tokenVault().withdrawEscrow(msg.sender, _ccy, _amount - remainingAmount);
                 IFutureValueVault(futureValueVault).addBorrowFutureValue(
@@ -788,7 +789,7 @@ contract LendingMarketController is
 
             // Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
-            emit OrderFilled(msg.sender, _ccy, _side, _maturity, _amount, _rate, filledFutureValue);
+            emit FillOrder(msg.sender, _ccy, _side, _maturity, _amount, _rate, filledFutureValue);
         }
 
         Storage.slot().usedCurrencies[msg.sender].add(_ccy);
@@ -837,6 +838,13 @@ contract LendingMarketController is
                 removedLendOrderFutureValue,
                 userCurrentMaturity
             );
+            emit FillOrders(
+                msg.sender,
+                _ccy,
+                ProtocolTypes.Side.LEND,
+                userCurrentMaturity,
+                removedLendOrderFutureValue
+            );
         }
 
         if (removedBorrowOrderFutureValue > 0) {
@@ -847,6 +855,13 @@ contract LendingMarketController is
                 _account,
                 removedBorrowOrderFutureValue,
                 userCurrentMaturity
+            );
+            emit FillOrders(
+                msg.sender,
+                _ccy,
+                ProtocolTypes.Side.BORROW,
+                userCurrentMaturity,
+                removedBorrowOrderFutureValue
             );
         }
 
