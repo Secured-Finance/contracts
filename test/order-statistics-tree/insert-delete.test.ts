@@ -1,6 +1,7 @@
 import { constants, Contract } from 'ethers';
 import { artifacts } from 'hardhat';
 import { Step, steps } from './data/steps';
+
 const OrderStatisticsTree = artifacts.require(
   'HitchensOrderStatisticsTreeContract.sol',
 );

@@ -6,7 +6,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 // interfaces
 import {ILendingMarketController, Order} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
-import {IFutureValue} from "./interfaces/IFutureValue.sol";
+import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
@@ -132,14 +132,14 @@ contract LendingMarketController is
      * @param _maturity The maturity of the market
      * @return The lending market address
      */
-    function getFutureValue(bytes32 _ccy, uint256 _maturity)
+    function getFutureValueVault(bytes32 _ccy, uint256 _maturity)
         external
         view
         override
         returns (address)
     {
         return
-            Storage.slot().futureValues[_ccy][
+            Storage.slot().futureValueVaults[_ccy][
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ];
     }
@@ -276,8 +276,8 @@ contract LendingMarketController is
     {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             address marketAddr = Storage.slot().lendingMarkets[_ccy][i];
-            address futureValue = Storage.slot().futureValues[_ccy][marketAddr];
-            totalPresentValue += IFutureValue(futureValue).getPresentValue(
+            address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
+            totalPresentValue += IFutureValueVault(futureValueVault).getPresentValue(
                 _account,
                 ILendingMarket(marketAddr).getMidRate()
             );
@@ -463,7 +463,7 @@ contract LendingMarketController is
 
         Storage.slot().lendingMarkets[_ccy].push(market);
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
-        Storage.slot().futureValues[_ccy][market] = futureValue;
+        Storage.slot().futureValueVaults[_ccy][market] = futureValue;
 
         emit LendingMarketCreated(
             _ccy,
@@ -637,13 +637,18 @@ contract LendingMarketController is
 
     /**
      * @notice Converts FutureValue to GenesisValue if there is balance in the past maturity.
-     * @param _user User's address
+     * @param _account Target account address
      */
-    function convertFutureValueToGenesisValue(address _user) external override nonReentrant {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+    function convertFutureValueToGenesisValue(address _account) external override nonReentrant {
+        EnumerableSet.Bytes32Set storage usedCcySet = Storage.slot().usedCurrencies[_account];
+        // EnumerableSet.Bytes32Set storage exposedCcySet = Storage.slot().exposedCurrencies[_account];
 
-        for (uint256 i = 0; i < currencySet.length(); i++) {
-            bytes32 ccy = currencySet.at(i);
+        // for (uint256 i = 0; i < exposedCcySet.length(); i++) {
+        //     cleanOrders(exposedCcySet.at(i), _account);
+        // }
+
+        for (uint256 i = 0; i < usedCcySet.length(); i++) {
+            bytes32 ccy = usedCcySet.at(i);
             uint256[] memory maturities = getMaturities(ccy);
 
             for (uint256 j = 0; j < maturities.length; j++) {
@@ -651,50 +656,58 @@ contract LendingMarketController is
 
                 _convertFutureValueToGenesisValue(
                     ccy,
-                    Storage.slot().futureValues[ccy][market],
-                    _user
+                    maturities[j],
+                    Storage.slot().futureValueVaults[ccy][market],
+                    _account
                 );
             }
-            if (getGenesisValue(ccy, _user) == 0) {
-                Storage.slot().usedCurrencies[_user].remove(ccy);
+            if (getGenesisValue(ccy, _account) == 0) {
+                Storage.slot().usedCurrencies[_account].remove(ccy);
             }
         }
     }
 
     /**
      * @notice Cleans own orders to remove order ids that is already filled.
-     * @param _ccy Currency name in bytes32
+     * @param _account Target account address
      */
-    function cleanOrders(bytes32 _ccy, address _account) external override onlyAcceptedContracts {
-        uint256[] memory maturities = getMaturities(_ccy);
-        uint256 activeOrderCount = 0;
-        for (uint256 i = 0; i < maturities.length; i++) {
-            if (Storage.slot().activeOrderExistences[_account][_ccy][maturities[i]]) {
-                activeOrderCount += _cleanOrders(_ccy, maturities[i], _account);
-            }
-        }
+    // function cleanOrders(bytes32 _ccy, address _account) public override {
+    function cleanOrders(address _account) public override {
+        EnumerableSet.Bytes32Set storage exposedCcySet = Storage.slot().exposedCurrencies[_account];
 
-        if (activeOrderCount == 0) {
-            Storage.slot().exposedCurrencies[_account].remove(_ccy);
+        for (uint256 i = 0; i < exposedCcySet.length(); i++) {
+            uint256[] memory maturities = getMaturities(exposedCcySet.at(i));
+            uint256 activeOrderCount = 0;
+
+            for (uint256 j = 0; j < maturities.length; j++) {
+                // if (Storage.slot().activeOrderExistences[_account][_ccy][maturities[i]]) {
+                activeOrderCount += _cleanOrders(exposedCcySet.at(i), maturities[j], _account);
+                // }
+            }
+
+            if (activeOrderCount == 0) {
+                Storage.slot().exposedCurrencies[_account].remove(exposedCcySet.at(i));
+            }
         }
     }
 
     /**
      * @notice Converts the future value to the genesis value if there is balance in the past maturity.
      * @param _ccy Currency for pausing all lending markets
-     * @param _futureValueAddr Market contract address
-     * @param _user User's address
+     * @param _futureValueVault Market contract address
+     * @param _account Target account address
      */
     function _convertFutureValueToGenesisValue(
         bytes32 _ccy,
-        address _futureValueAddr,
-        address _user
+        uint256 _maturity,
+        address _futureValueVault,
+        address _account
     ) private {
-        (int256 removedAmount, uint256 basisMaturity) = IFutureValue(_futureValueAddr)
-            .removeFutureValue(_user);
+        (int256 removedAmount, uint256 basisMaturity) = IFutureValueVault(_futureValueVault)
+            .removeFutureValue(_account, _maturity);
 
         if (removedAmount != 0) {
-            _addGenesisValue(_ccy, _user, basisMaturity, removedAmount);
+            _addGenesisValue(_ccy, _account, basisMaturity, removedAmount);
         }
     }
 
@@ -705,22 +718,20 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _rate
     ) private returns (bool) {
-        _convertFutureValueToGenesisValue(
-            _ccy,
-            Storage.slot().futureValues[_ccy][
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ],
-            msg.sender
-        );
+        address futureValueVault = Storage.slot().futureValueVaults[_ccy][
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ];
+
+        _convertFutureValueToGenesisValue(_ccy, _maturity, futureValueVault, msg.sender);
 
         uint256 activeOrderCount = _cleanOrders(_ccy, _maturity, msg.sender);
 
-        (uint256 executedRate, uint256 remainingAmount) = ILendingMarket(
+        (uint256 filledFutureValue, uint256 remainingAmount) = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ).createOrder(_side, msg.sender, _amount, _rate);
 
         // The case that an order was made, or taken partially
-        if (executedRate == 0 || remainingAmount > 0) {
+        if (filledFutureValue == 0 || remainingAmount > 0) {
             activeOrderCount += 1;
         }
 
@@ -729,9 +740,20 @@ contract LendingMarketController is
         _updateExposedCurrency(_ccy, _maturity, msg.sender, activeOrderCount);
 
         // Update the unsettled collateral and escrowed amount in TokenVault
-        if (executedRate != 0) {
+        if (filledFutureValue != 0) {
             if (_side == ProtocolTypes.Side.BORROW) {
                 tokenVault().withdrawEscrow(msg.sender, _ccy, _amount - remainingAmount);
+                IFutureValueVault(futureValueVault).addBorrowFutureValue(
+                    msg.sender,
+                    filledFutureValue,
+                    _maturity
+                );
+            } else {
+                IFutureValueVault(futureValueVault).addLendFutureValue(
+                    msg.sender,
+                    filledFutureValue,
+                    _maturity
+                );
             }
 
             // if (_side == ProtocolTypes.Side.LEND) {
@@ -744,16 +766,18 @@ contract LendingMarketController is
             //     Storage.slot().usedCurrencies[makers[i]].add(_ccy);
             // }
 
-            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+            // Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
-            // emit OrderFilled(msg.sender, _ccy, orderIds, makers, amounts, _side, _maturity, _rate);
+            emit OrderFilled(msg.sender, _ccy, _side, _maturity, _amount, _rate);
         }
+
+        Storage.slot().usedCurrencies[msg.sender].add(_ccy);
 
         // TODO: Need to check the collateral is enough
 
         // If the first value of the amount array is 0, it means that the order will not be filled.
         // `remainingAmount` has a value only if the order is filled.
-        uint256 placedAmount = executedRate == 0 ? _amount : remainingAmount;
+        uint256 placedAmount = filledFutureValue == 0 ? _amount : remainingAmount;
 
         if (placedAmount != 0 && _side == ProtocolTypes.Side.LEND) {
             tokenVault().depositEscrow{value: msg.value}(msg.sender, _ccy, placedAmount);
@@ -780,30 +804,31 @@ contract LendingMarketController is
             uint256 activeLendOrderCount,
             uint256 activeBorrowOrderCount,
             uint256 removedLendOrderFutureValue,
-            uint256 removedBorrowOrderFutureValue
+            uint256 removedBorrowOrderFutureValue,
+            uint256 userCurrentMaturity
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).cleanOrders(
                 _account
             );
 
         if (removedLendOrderFutureValue > 0) {
-            address futureValue = Storage.slot().futureValues[_ccy][
+            address futureValueVault = Storage.slot().futureValueVaults[_ccy][
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ];
-            IFutureValue(futureValue).addLendFutureValue(
+            IFutureValueVault(futureValueVault).addLendFutureValue(
                 _account,
                 removedLendOrderFutureValue,
-                _maturity
+                userCurrentMaturity
             );
         }
 
         if (removedBorrowOrderFutureValue > 0) {
-            address futureValue = Storage.slot().futureValues[_ccy][
+            address futureValueVault = Storage.slot().futureValueVaults[_ccy][
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ];
-            IFutureValue(futureValue).addBorrowFutureValue(
+            IFutureValueVault(futureValueVault).addBorrowFutureValue(
                 _account,
                 removedBorrowOrderFutureValue,
-                _maturity
+                userCurrentMaturity
             );
         }
 
@@ -819,8 +844,8 @@ contract LendingMarketController is
         bool activeOrderExistence = _activeOrderCount > 0;
         Storage.slot().activeOrderExistences[_account][_ccy][_maturity] = activeOrderExistence;
 
-        uint256[] memory maturities = getMaturities(_ccy);
         if (!activeOrderExistence) {
+            uint256[] memory maturities = getMaturities(_ccy);
             for (uint256 i = 0; i < maturities.length; i++) {
                 if (Storage.slot().activeOrderExistences[_account][_ccy][maturities[i]]) {
                     activeOrderExistence = true;

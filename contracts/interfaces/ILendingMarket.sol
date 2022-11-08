@@ -138,7 +138,8 @@ interface ILendingMarket {
             uint256 activeLendOrderCount,
             uint256 activeBorrowOrderCount,
             uint256 removedLendOrderFutureValue,
-            uint256 removedBorrowOrderFutureValue
+            uint256 removedBorrowOrderFutureValue,
+            uint256 maturity
         );
 
     function createOrder(

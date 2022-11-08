@@ -71,10 +71,10 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
     }
 
     /**
-     * @notice Sets the implementation contract of FutureValue
+     * @notice Sets the implementation contract of FutureValueVault
      * @param newImpl The address of implementation contract
      */
-    function setFutureValueImpl(address newImpl) external override onlyOwner {
+    function setFutureValueVaultImpl(address newImpl) external override onlyOwner {
         _updateBeaconImpl(BeaconContracts.FUTURE_VALUE, newImpl);
     }
 

@@ -286,7 +286,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], msg.sender, withdrawAmt);
         _updateUsedCurrencies(msg.sender, _ccy);
-        lendingMarketController().cleanOrders(_ccy, msg.sender);
+        lendingMarketController().cleanOrders(msg.sender);
 
         emit Withdraw(msg.sender, _ccy, withdrawAmt);
     }

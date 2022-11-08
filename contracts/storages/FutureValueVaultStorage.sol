@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-library FutureValueStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.futureValue");
+library FutureValueVaultStorage {
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.futureValueVault");
 
     struct Storage {
         address lendingMarket;

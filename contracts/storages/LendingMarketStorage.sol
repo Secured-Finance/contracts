@@ -25,6 +25,8 @@ library LendingMarketStorage {
         mapping(address => uint48[]) activeLendOrderIds;
         // Mapping from user to active borrow order ids
         mapping(address => uint48[]) activeBorrowOrderIds;
+        // Mapping from user to current maturity
+        mapping(address => uint256) userCurrentMaturities;
         // Mapping from orderId to order
         mapping(uint256 => MarketOrder) orders;
         // Mapping from maturity to lending orders

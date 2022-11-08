@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {FutureValueStorage as Storage} from "./storages/FutureValueStorage.sol";
+import {FutureValueVaultStorage as Storage} from "./storages/FutureValueVaultStorage.sol";
 // interfaces
-import {IFutureValue} from "./interfaces/IFutureValue.sol";
+import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
@@ -12,7 +12,7 @@ import {Proxyable} from "./utils/Proxyable.sol";
 /**
  * @title FutureValue contract is used to store the future value as a token for Lending deals.
  */
-contract FutureValue is IFutureValue, Proxyable {
+contract FutureValueVault is IFutureValueVault, Proxyable {
     event Transfer(address indexed from, address indexed to, int256 value);
 
     /**
@@ -125,25 +125,31 @@ contract FutureValue is IFutureValue, Proxyable {
         return true;
     }
 
-    function removeFutureValue(address _user)
+    /**
+     * @notice Remove all future values if there is an amount in the past maturity.
+     * @param _user User's address
+     * @return removedAmount Removed future value amount
+     * @return maturity Maturity of future value
+     */
+    function removeFutureValue(address _user, uint256 _activeMaturity)
         external
         override
         onlyLendingMarket
-        returns (int256, uint256)
+        returns (int256 removedAmount, uint256 maturity)
     {
-        int256 balance = Storage.slot().balances[_user];
-        uint256 maturity = Storage.slot().futureValueMaturities[_user];
+        if (Storage.slot().futureValueMaturities[_user] != _activeMaturity) {
+            removedAmount = Storage.slot().balances[_user];
+            maturity = Storage.slot().futureValueMaturities[_user];
 
-        if (balance >= 0) {
-            Storage.slot().totalLendingSupply[maturity] -= uint256(balance);
-        } else {
-            Storage.slot().totalBorrowingSupply[maturity] -= uint256(-balance);
+            if (removedAmount >= 0) {
+                Storage.slot().totalLendingSupply[maturity] -= uint256(removedAmount);
+            } else {
+                Storage.slot().totalBorrowingSupply[maturity] -= uint256(-removedAmount);
+            }
+
+            Storage.slot().balances[_user] = 0;
+
+            emit Transfer(_user, address(0), removedAmount);
         }
-
-        Storage.slot().balances[_user] = 0;
-
-        emit Transfer(_user, address(0), balance);
-
-        return (balance, maturity);
     }
 }

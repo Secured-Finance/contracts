@@ -23,11 +23,9 @@ interface ILendingMarketController {
     event OrderFilled(
         address indexed taker,
         bytes32 indexed ccy,
-        uint48[] orderIds,
-        address[] makers,
-        uint256[] amounts,
         ProtocolTypes.Side side,
         uint256 indexed maturity,
+        uint256 amount,
         uint256 rate
     );
     event OrderCanceled(
@@ -46,7 +44,7 @@ interface ILendingMarketController {
 
     function getLendingMarket(bytes32 _ccy, uint256 _maturity) external view returns (address);
 
-    function getFutureValue(bytes32 _ccy, uint256 _maturity) external view returns (address);
+    function getFutureValueVault(bytes32 _ccy, uint256 _maturity) external view returns (address);
 
     function getBorrowRates(bytes32 _ccy) external view returns (uint256[] memory rates);
 
@@ -151,5 +149,6 @@ interface ILendingMarketController {
 
     function convertFutureValueToGenesisValue(address _user) external;
 
-    function cleanOrders(bytes32 _ccy, address _account) external;
+    // function cleanOrders(bytes32 _ccy, address _account) external;
+    function cleanOrders(address _account) external;
 }

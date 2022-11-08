@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-interface IFutureValue {
+interface IFutureValueVault {
     function getTotalLendingSupply(uint256 _maturity) external view returns (uint256);
 
     function getTotalBorrowingSupply(uint256 _maturity) external view returns (uint256);
@@ -36,5 +36,7 @@ interface IFutureValue {
         uint256 _maturity
     ) external returns (bool);
 
-    function removeFutureValue(address account) external returns (int256, uint256);
+    function removeFutureValue(address _user, uint256 _maturity)
+        external
+        returns (int256 removedAmount, uint256 maturity);
 }

@@ -167,12 +167,14 @@ const deployContracts = async () => {
   const lendingMarket = await ethers
     .getContractFactory('LendingMarket')
     .then((factory) => factory.deploy());
-  const futureValue = await ethers
-    .getContractFactory('FutureValue')
+  const futureValueVault = await ethers
+    .getContractFactory('FutureValueVault')
     .then((factory) => factory.deploy());
 
   await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
-  await beaconProxyControllerProxy.setFutureValueImpl(futureValue.address);
+  await beaconProxyControllerProxy.setFutureValueVaultImpl(
+    futureValueVault.address,
+  );
 
   const { timestamp } = await ethers.provider.getBlock('latest');
   const basisDate = moment(timestamp * 1000).unix();

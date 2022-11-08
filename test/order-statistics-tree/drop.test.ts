@@ -6,6 +6,7 @@ import {
   borrowingMarketOrders,
 } from './data/borrowing-orders';
 import { lendingLimitOrders, lendingMarketOrders } from './data/lending-orders';
+
 const OrderStatisticsTree = artifacts.require(
   'HitchensOrderStatisticsTreeContract.sol',
 );
@@ -26,6 +27,7 @@ export interface Condition {
     targetAmount: number;
     droppedAmount: number;
     limitValue?: number;
+    droppedValue?: number;
   }[];
 }
 
@@ -63,8 +65,6 @@ describe('OrderStatisticsTree - drop values', () => {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
-                console.group();
-
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
                     order.rate,
@@ -77,8 +77,6 @@ describe('OrderStatisticsTree - drop values', () => {
 
                 await ost[test.method](input.targetAmount, 0);
                 const totalAmountAfter = await getTotalAmount('<After>');
-
-                console.groupEnd();
 
                 expect(
                   totalAmountBefore?.sub(totalAmountAfter).toNumber(),
@@ -94,8 +92,6 @@ describe('OrderStatisticsTree - drop values', () => {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
-                console.group();
-
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
                     order.rate,
@@ -111,8 +107,6 @@ describe('OrderStatisticsTree - drop values', () => {
 
                 await ost[test.method](input.targetAmount / 2, 0);
                 await getTotalAmount('<After data is dropped 2>');
-
-                console.groupEnd();
               });
             }
           });
@@ -124,8 +118,6 @@ describe('OrderStatisticsTree - drop values', () => {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
-                console.group();
-
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
                     order.rate,
@@ -162,8 +154,6 @@ describe('OrderStatisticsTree - drop values', () => {
                   '<After data is dropped again>',
                 );
 
-                console.groupEnd();
-
                 expect(
                   totalAmountAfter2?.sub(totalAmountAfter3).toNumber(),
                 ).equal(input.droppedAmount);
@@ -182,8 +172,6 @@ describe('OrderStatisticsTree - drop values', () => {
               const title = `${input.title}: Target amount is ${input.targetAmount}, Limit value ${input?.limitValue}`;
 
               it(title, async () => {
-                console.group();
-
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
                     order.rate,
@@ -200,11 +188,10 @@ describe('OrderStatisticsTree - drop values', () => {
                 );
                 const totalAmountAfter = await getTotalAmount('<After>');
 
-                console.groupEnd();
-
                 expect(
                   totalAmountBefore?.sub(totalAmountAfter).toNumber(),
                 ).equal(input.droppedAmount);
+                expect(await ost.valueExists(input.droppedValue)).to.be.false;
               });
             }
           });
