@@ -1320,7 +1320,19 @@ describe('LendingMarketController', () => {
             .createOrder(
               targetCurrency,
               maturities[0],
-              0,
+              Side.LEND,
+              '100000000000000000',
+              '800',
+            ),
+        ).not.to.be.revertedWith('Not enough collateral');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
               '100000000000000000',
               '800',
             ),

@@ -12,7 +12,7 @@ const toWei = (eth) => {
   return ethers.utils.parseEther(eth);
 };
 
-describe.skip('Integration test', async () => {
+describe('Integration test', async () => {
   let ownerSigner: SignerWithAddress;
   let aliceSigner: SignerWithAddress;
   let bobSigner: SignerWithAddress;
@@ -362,7 +362,7 @@ describe.skip('Integration test', async () => {
         .convertFromETH(hexFILString, orderAmount);
     });
 
-    it('Test', async () => {
+    it('Deposit ETH by Alice in Collateral contract', async () => {
       const collateralAmountBefore = await tokenVault.getCollateralAmount(
         aliceSigner.address,
         targetCurrency,
@@ -416,18 +416,22 @@ describe.skip('Integration test', async () => {
       ).to.emit(lendingMarkets[0], 'MakeOrder');
     });
 
-    it('Check Alice collateral book usage, and total unsettled exposure calculations', async () => {
+    it('Check Alice collateral usage, and total working orders amount calculations', async () => {
       const orderAmountInETH = await currencyController
         .connect(aliceSigner)
         ['convertToETH(bytes32,uint256)'](hexFILString, orderAmountInFIL);
 
-      const exp = await tokenVault.getTotalUnsettledExposure(
-        aliceSigner.address,
+      const { totalWorkingOrdersAmount } =
+        await lendingMarketController.calculateTotalBorrowedFundsInETH(
+          aliceSigner.address,
+        );
+
+      expect(totalWorkingOrdersAmount.toString()).to.equal(
+        orderAmountInETH.toString(),
       );
-      expect(exp.toString()).to.equal(orderAmountInETH.toString());
     });
 
-    it('Calculate collateral coverage of the global collateral book, expect to be equal with manual calculations', async () => {
+    it('Calculate collateral coverage of the collateral, expect to be equal with manual calculations', async () => {
       const collateralAmount = await tokenVault.getCollateralAmount(
         aliceSigner.address,
         targetCurrency,
@@ -435,11 +439,14 @@ describe.skip('Integration test', async () => {
 
       const coverage = await tokenVault.getCoverage(aliceSigner.address);
 
-      const totalUnsettledExp = await tokenVault.getTotalUnsettledExposure(
-        aliceSigner.address,
-      );
+      const { totalWorkingOrdersAmount } =
+        await lendingMarketController.calculateTotalBorrowedFundsInETH(
+          aliceSigner.address,
+        );
 
-      const manualCoverage = ethers.BigNumber.from(totalUnsettledExp.toString())
+      const manualCoverage = ethers.BigNumber.from(
+        totalWorkingOrdersAmount.toString(),
+      )
         .mul('10000')
         .div(collateralAmount.toString());
 
@@ -509,10 +516,11 @@ describe.skip('Integration test', async () => {
       await expect(tx).to.emit(lendingMarkets[0], 'CancelOrder');
       await tx.wait();
 
-      const totalUnsettledExp = await tokenVault.getTotalUnsettledExposure(
-        aliceSigner.address,
-      );
-      expect(totalUnsettledExp.toString()).to.be.equal('0');
+      const { totalWorkingOrdersAmount } =
+        await lendingMarketController.calculateTotalBorrowedFundsInETH(
+          aliceSigner.address,
+        );
+      expect(totalWorkingOrdersAmount.toString()).to.be.equal('0');
 
       const maxWithdrawal = await tokenVault.getWithdrawableCollateral(
         aliceSigner.address,
@@ -555,7 +563,7 @@ describe.skip('Integration test', async () => {
         lendingMarketController
           .connect(carolSigner)
           .cancelOrder(hexETHString, ethMaturities[0], orderId),
-      ).to.emit(lendingMarketController, 'OrderCanceled');
+      ).to.emit(lendingMarketController, 'CancelOrder');
 
       const balanceAfterCancel = await web3.eth.getBalance(carolSigner.address);
       expect(toBN(balanceAfterCancel).gt(balanceAfterOrder)).to.equal(true);
@@ -944,64 +952,6 @@ describe.skip('Integration test', async () => {
               '1003',
             ),
         ).to.emit(lendingMarkets[3], 'TakeOrders');
-      });
-
-      it(`The case that the order is placed after the previous ${input.label} order is filled `, async () => {
-        const signer1 = input.signer1 === 'bob' ? bobSigner : aliceSigner;
-        const signer2 = input.signer2 === 'bob' ? bobSigner : aliceSigner;
-        const collateralAmount = await getUnusedCollateral(bobSigner);
-
-        await wFILToken
-          .connect(aliceSigner)
-          .approve(tokenVault.address, collateralAmount)
-          .then((tx) => tx.wait());
-
-        await expect(
-          lendingMarketController
-            .connect(signer1)
-            .createOrder(
-              hexFILString,
-              maturities[4],
-              input.side1,
-              collateralAmount.div(3),
-              '1004',
-            ),
-        ).to.emit(lendingMarkets[4], 'MakeOrder');
-        await expect(
-          lendingMarketController
-            .connect(signer1)
-            .createOrder(
-              hexFILString,
-              maturities[4],
-              input.side1,
-              collateralAmount.div(3),
-              '1014',
-            ),
-        ).to.emit(lendingMarkets[4], 'MakeOrder');
-
-        await expect(
-          lendingMarketController
-            .connect(signer2)
-            .createOrder(
-              hexFILString,
-              maturities[4],
-              input.side2,
-              collateralAmount.div(4),
-              '1004',
-            ),
-        ).to.emit(lendingMarkets[4], 'TakeOrders');
-
-        await expect(
-          lendingMarketController
-            .connect(signer1)
-            .createOrder(
-              hexFILString,
-              maturities[4],
-              input.side1,
-              collateralAmount.div(3),
-              '1024',
-            ),
-        ).to.emit(lendingMarkets[4], 'MakeOrder');
       });
     }
   });

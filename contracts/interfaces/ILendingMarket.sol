@@ -145,6 +145,8 @@ interface ILendingMarket {
             uint256 activeBorrowOrderCount,
             uint256 removedLendOrderFutureValue,
             uint256 removedBorrowOrderFutureValue,
+            uint256 removedLendOrderAmount,
+            uint256 removedBorrowOrderAmount,
             uint256 maturity
         );
 

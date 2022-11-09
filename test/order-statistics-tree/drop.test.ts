@@ -140,7 +140,7 @@ describe('OrderStatisticsTree - drop values', () => {
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
                     order.rate,
-                    order.orderId,
+                    order.orderId + 100,
                     constants.AddressZero,
                     order.amount,
                   );

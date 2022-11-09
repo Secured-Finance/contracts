@@ -112,7 +112,7 @@ interface ILendingMarketController {
         external
         view
         returns (
-            uint256 totalWorkingOrderAmount,
+            uint256 totalWorkingOrdersAmount,
             uint256 totalDebtAmount,
             uint256 totalBorrowedAmount
         );

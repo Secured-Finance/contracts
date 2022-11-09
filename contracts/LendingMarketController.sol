@@ -736,7 +736,10 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _rate
     ) private returns (bool) {
-        require(tokenVault().isCovered(msg.sender, _ccy, _amount), "Not enough collateral");
+        require(
+            _side == ProtocolTypes.Side.LEND || tokenVault().isCovered(msg.sender, _ccy, _amount),
+            "Not enough collateral"
+        );
 
         address futureValueVault = Storage.slot().futureValueVaults[_ccy][
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
@@ -824,10 +827,20 @@ contract LendingMarketController is
             uint256 activeBorrowOrderCount,
             uint256 removedLendOrderFutureValue,
             uint256 removedBorrowOrderFutureValue,
+            uint256 removedLendOrderAmount,
+            uint256 removedBorrowOrderAmount,
             uint256 userCurrentMaturity
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).cleanOrders(
                 _account
             );
+
+        if (removedLendOrderAmount > 0) {
+            tokenVault().removeCollateral(_account, _ccy, removedLendOrderAmount);
+        }
+
+        if (removedBorrowOrderAmount > 0) {
+            tokenVault().addCollateral(_account, _ccy, removedBorrowOrderAmount);
+        }
 
         if (removedLendOrderFutureValue > 0) {
             address futureValueVault = Storage.slot().futureValueVaults[_ccy][

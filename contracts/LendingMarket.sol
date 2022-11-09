@@ -80,9 +80,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
+        contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
-        contracts[1] = Contracts.TOKEN_VAULT;
     }
 
     // @inheritdoc MixinAddressResolver
@@ -733,21 +732,32 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 activeBorrowOrderCount,
             uint256 removedLendOrderFutureValue,
             uint256 removedBorrowOrderFutureValue,
+            uint256 removedLendOrderAmount,
+            uint256 removedBorrowOrderAmount,
             uint256 maturity
         )
     {
         maturity = Storage.slot().userCurrentMaturities[_user];
 
-        (activeLendOrderCount, removedLendOrderFutureValue) = _cleanLendOrders(_user, maturity);
-        (activeBorrowOrderCount, removedBorrowOrderFutureValue) = _cleanBorrowOrders(
-            _user,
-            maturity
-        );
+        (
+            activeLendOrderCount,
+            removedLendOrderFutureValue,
+            removedLendOrderAmount
+        ) = _cleanLendOrders(_user, maturity);
+        (
+            activeBorrowOrderCount,
+            removedBorrowOrderFutureValue,
+            removedBorrowOrderAmount
+        ) = _cleanBorrowOrders(_user, maturity);
     }
 
     function _cleanLendOrders(address _user, uint256 _maturity)
         private
-        returns (uint256 activeOrderCount, uint256 removedOrderFutureValue)
+        returns (
+            uint256 activeOrderCount,
+            uint256 removedFutureValue,
+            uint256 removedOrderAmount
+        )
     {
         (
             uint48[] memory activeLendOrderIds,
@@ -763,19 +773,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 marketOrder.rate,
                 inActiveLendOrderIds[i]
             );
-            removedOrderFutureValue += Storage.slot().lendOrders[_maturity].getFutureValue(
+            removedFutureValue += Storage.slot().lendOrders[_maturity].getFutureValue(
                 marketOrder.rate,
                 inActiveLendOrderIds[i],
                 _maturity
             );
-
-            tokenVault().removeCollateral(_user, Storage.slot().ccy, orderItem.amount);
+            removedOrderAmount += orderItem.amount;
         }
     }
 
     function _cleanBorrowOrders(address _user, uint256 _maturity)
         private
-        returns (uint256 activeOrderCount, uint256 removedOrderFutureValue)
+        returns (
+            uint256 activeOrderCount,
+            uint256 removedFutureValue,
+            uint256 removedOrderAmount
+        )
     {
         (
             uint48[] memory activeBorrowOrderIds,
@@ -791,13 +804,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 marketOrder.rate,
                 inActiveBorrowOrderIds[i]
             );
-            removedOrderFutureValue += Storage.slot().borrowOrders[_maturity].getFutureValue(
+            removedFutureValue += Storage.slot().borrowOrders[_maturity].getFutureValue(
                 marketOrder.rate,
                 inActiveBorrowOrderIds[i],
                 _maturity
             );
 
-            tokenVault().addCollateral(_user, Storage.slot().ccy, orderItem.amount);
+            removedOrderAmount += orderItem.amount;
         }
     }
 

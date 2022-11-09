@@ -469,7 +469,7 @@ library HitchensOrderStatisticsTreeLib {
             UnfilledOrder memory unfilledOrder
         )
     {
-        require(amount != EMPTY, "OrderStatisticsTree(409) - Amount to drop cannot be zero");
+        require(amount != EMPTY, "OrderStatisticsTree(408) - Amount to drop cannot be zero");
         uint256 value;
         uint256 cursor = first(self);
         uint256 lastNode = last(self);
@@ -563,7 +563,7 @@ library HitchensOrderStatisticsTreeLib {
             UnfilledOrder memory unfilledOrder
         )
     {
-        require(amount != EMPTY, "OrderStatisticsTree(409) - Amount to drop cannot be zero");
+        require(amount != EMPTY, "OrderStatisticsTree(408) - Amount to drop cannot be zero");
         uint256 value;
         uint256 cursor = last(self);
         uint256 firstNode = first(self);
@@ -853,10 +853,15 @@ library HitchensOrderStatisticsTreeLib {
         uint256 amount
     ) internal returns (uint48) {
         Node storage gn = self.nodes[value];
+        require(
+            gn.orders[orderId].timestamp == 0,
+            "OrderStatisticsTree(409) - Order id already exist."
+        );
+
         gn.orderCounter += 1;
         gn.orderTotalAmount += amount;
         OrderItem memory order = OrderItem(orderId, 0, 0, user, block.timestamp, amount);
-        gn.orders[order.orderId] = order;
+        gn.orders[orderId] = order;
         return order.orderId;
     }
 
@@ -915,22 +920,17 @@ library HitchensOrderStatisticsTreeLib {
         uint256 removedAmount = gn.orders[cursor].amount;
 
         while (cursor != orderId) {
+            cursor = gn.orders[cursor].next;
             removedCount++;
             removedAmount += gn.orders[cursor].amount;
-            cursor = gn.orders[cursor].next;
         }
 
-        if (gn.head == orderId && gn.tail == orderId) {
+        if (gn.tail == orderId) {
             _setHead(self, value, 0);
             _setTail(self, value, 0);
-        } else if (gn.head == orderId) {
+        } else {
             _setHead(self, value, order.next);
             gn.orders[order.next].prev = 0;
-        } else if (gn.tail == orderId) {
-            _setTail(self, value, order.prev);
-            gn.orders[order.prev].next = 0;
-        } else {
-            _link(self, value, order.prev, gn.head);
         }
 
         gn.orderCounter -= removedCount;
