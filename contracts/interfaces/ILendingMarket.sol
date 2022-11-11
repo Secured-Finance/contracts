@@ -10,7 +10,7 @@ interface ILendingMarket {
         address indexed maker,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 rate
+        uint256 unitPrice
     );
     event MakeOrder(
         uint48 orderId,
@@ -19,20 +19,13 @@ interface ILendingMarket {
         bytes32 ccy,
         uint256 maturity,
         uint256 amount,
-        uint256 rate
+        uint256 unitPrice
     );
-    // event TakeOrders(
-    //     uint48[] orderIds,
-    //     address indexed taker,
-    //     ProtocolTypes.Side side,
-    //     uint256 amount,
-    //     uint256 rate
-    // );
     event TakeOrders(
         address indexed taker,
         ProtocolTypes.Side side,
         uint256 filledAmount,
-        uint256 rate,
+        uint256 unitPrice,
         uint256 filledFutureValue
     );
 
@@ -42,24 +35,24 @@ interface ILendingMarket {
         bytes32 ccy;
         uint256 maturity;
         uint256 basisDate;
-        uint256 borrowRate;
-        uint256 lendRate;
-        uint256 midRate;
+        uint256 borrowUnitPrice;
+        uint256 lendUnitPrice;
+        uint256 midUnitPrice;
     }
-
-    function getBorrowRate() external view returns (uint256 rate);
-
-    function getLendRate() external view returns (uint256 rate);
 
     function getMarket() external view returns (Market memory);
 
-    function getMidRate() external view returns (uint256 rate);
+    function getBorrowUnitPrice() external view returns (uint256 rate);
+
+    function getLendUnitPrice() external view returns (uint256 rate);
+
+    function getMidUnitPrice() external view returns (uint256 rate);
 
     function getBorrowOrderBook(uint256 limit)
         external
         view
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         );
@@ -68,7 +61,7 @@ interface ILendingMarket {
         external
         view
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         );

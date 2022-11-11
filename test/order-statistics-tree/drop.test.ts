@@ -14,7 +14,7 @@ const OrderStatisticsTree = artifacts.require(
 let ost: Contract;
 
 interface Order {
-  rate: number;
+  unitPrice: number;
   orderId: number;
   amount: number;
 }
@@ -67,7 +67,7 @@ describe('OrderStatisticsTree - drop values', () => {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
-                    order.rate,
+                    order.unitPrice,
                     order.orderId,
                     constants.AddressZero,
                     order.amount,
@@ -94,7 +94,7 @@ describe('OrderStatisticsTree - drop values', () => {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
-                    order.rate,
+                    order.unitPrice,
                     order.orderId,
                     constants.AddressZero,
                     order.amount,
@@ -120,7 +120,7 @@ describe('OrderStatisticsTree - drop values', () => {
               it(`${input.title}: Target amount is ${input.targetAmount}`, async () => {
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
-                    order.rate,
+                    order.unitPrice,
                     order.orderId,
                     constants.AddressZero,
                     order.amount,
@@ -139,7 +139,7 @@ describe('OrderStatisticsTree - drop values', () => {
 
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
-                    order.rate,
+                    order.unitPrice,
                     order.orderId + 100,
                     constants.AddressZero,
                     order.amount,
@@ -174,7 +174,7 @@ describe('OrderStatisticsTree - drop values', () => {
               it(title, async () => {
                 for (const order of condition.orders) {
                   await ost.insertAmountValue(
-                    order.rate,
+                    order.unitPrice,
                     order.orderId,
                     constants.AddressZero,
                     order.amount,

@@ -327,25 +327,25 @@ describe('LendingMarketController', () => {
           maker: alice,
           side: Side.LEND,
           amount: '100000000000000000',
-          rate: '800',
+          unitPrice: '9800',
         },
         {
           maker: bob,
           side: Side.LEND,
           amount: '500000000000000000',
-          rate: '880',
+          unitPrice: '9880',
         },
         {
           maker: carol,
           side: Side.BORROW,
           amount: '100000000000000000',
-          rate: '720',
+          unitPrice: '9720',
         },
         {
           maker: carol,
           side: Side.BORROW,
           amount: '200000000000000000',
-          rate: '780',
+          unitPrice: '9780',
         },
       ];
 
@@ -357,37 +357,45 @@ describe('LendingMarketController', () => {
             maturities[3],
             order.side,
             order.amount,
-            order.rate,
+            order.unitPrice,
           );
       }
 
-      const borrowRates = await lendingMarket3.getBorrowOrderBook(10);
-      expect(borrowRates.rates[0].toString()).to.equal('780');
-      expect(borrowRates.rates[1].toString()).to.equal('720');
-      expect(borrowRates.rates[2].toString()).to.equal('0');
-      expect(borrowRates.rates.length).to.equal(10);
-      expect(borrowRates.amounts[0].toString()).to.equal('200000000000000000');
-      expect(borrowRates.amounts[1].toString()).to.equal('100000000000000000');
-      expect(borrowRates.amounts[2].toString()).to.equal('0');
-      expect(borrowRates.amounts.length).to.equal(10);
-      expect(borrowRates.quantities[0].toString()).to.equal('1');
-      expect(borrowRates.quantities[1].toString()).to.equal('1');
-      expect(borrowRates.quantities[2].toString()).to.equal('0');
-      expect(borrowRates.quantities.length).to.equal(10);
+      const borrowUnitPrices = await lendingMarket3.getBorrowOrderBook(10);
+      expect(borrowUnitPrices.unitPrices[0].toString()).to.equal('9780');
+      expect(borrowUnitPrices.unitPrices[1].toString()).to.equal('9720');
+      expect(borrowUnitPrices.unitPrices[2].toString()).to.equal('0');
+      expect(borrowUnitPrices.unitPrices.length).to.equal(10);
+      expect(borrowUnitPrices.amounts[0].toString()).to.equal(
+        '200000000000000000',
+      );
+      expect(borrowUnitPrices.amounts[1].toString()).to.equal(
+        '100000000000000000',
+      );
+      expect(borrowUnitPrices.amounts[2].toString()).to.equal('0');
+      expect(borrowUnitPrices.amounts.length).to.equal(10);
+      expect(borrowUnitPrices.quantities[0].toString()).to.equal('1');
+      expect(borrowUnitPrices.quantities[1].toString()).to.equal('1');
+      expect(borrowUnitPrices.quantities[2].toString()).to.equal('0');
+      expect(borrowUnitPrices.quantities.length).to.equal(10);
 
-      const lendRates = await lendingMarket3.getLendOrderBook(10);
-      expect(lendRates.rates[0].toString()).to.equal('800');
-      expect(lendRates.rates[1].toString()).to.equal('880');
-      expect(lendRates.rates[2].toString()).to.equal('0');
-      expect(lendRates.rates.length).to.equal(10);
-      expect(lendRates.amounts[0].toString()).to.equal('100000000000000000');
-      expect(lendRates.amounts[1].toString()).to.equal('500000000000000000');
-      expect(lendRates.amounts[2].toString()).to.equal('0');
-      expect(lendRates.amounts.length).to.equal(10);
-      expect(lendRates.quantities[0].toString()).to.equal('1');
-      expect(lendRates.quantities[1].toString()).to.equal('1');
-      expect(lendRates.quantities[2].toString()).to.equal('0');
-      expect(lendRates.quantities.length).to.equal(10);
+      const lendUnitPrices = await lendingMarket3.getLendOrderBook(10);
+      expect(lendUnitPrices.unitPrices[0].toString()).to.equal('9800');
+      expect(lendUnitPrices.unitPrices[1].toString()).to.equal('9880');
+      expect(lendUnitPrices.unitPrices[2].toString()).to.equal('0');
+      expect(lendUnitPrices.unitPrices.length).to.equal(10);
+      expect(lendUnitPrices.amounts[0].toString()).to.equal(
+        '100000000000000000',
+      );
+      expect(lendUnitPrices.amounts[1].toString()).to.equal(
+        '500000000000000000',
+      );
+      expect(lendUnitPrices.amounts[2].toString()).to.equal('0');
+      expect(lendUnitPrices.amounts.length).to.equal(10);
+      expect(lendUnitPrices.quantities[0].toString()).to.equal('1');
+      expect(lendUnitPrices.quantities[1].toString()).to.equal('1');
+      expect(lendUnitPrices.quantities[2].toString()).to.equal('0');
+      expect(lendUnitPrices.quantities.length).to.equal(10);
 
       const borrowOrders =
         await lendingMarketControllerProxy.getBorrowOrderBook(
@@ -396,12 +404,14 @@ describe('LendingMarketController', () => {
           10,
         );
 
-      for (let i = 0; i < borrowOrders.rates.length; i++) {
-        expect(borrowRates.rates[i].toString()).to.equal(borrowOrders.rates[i]);
-        expect(borrowRates.amounts[i].toString()).to.equal(
+      for (let i = 0; i < borrowOrders.unitPrices.length; i++) {
+        expect(borrowUnitPrices.unitPrices[i].toString()).to.equal(
+          borrowOrders.unitPrices[i],
+        );
+        expect(borrowUnitPrices.amounts[i].toString()).to.equal(
           borrowOrders.amounts[i],
         );
-        expect(borrowRates.quantities[i].toString()).to.equal(
+        expect(borrowUnitPrices.quantities[i].toString()).to.equal(
           borrowOrders.quantities[i],
         );
       }
@@ -412,10 +422,14 @@ describe('LendingMarketController', () => {
         10,
       );
 
-      for (let i = 0; i < lendOrders.rates.length; i++) {
-        expect(lendRates.rates[i].toString()).to.equal(lendOrders.rates[i]);
-        expect(lendRates.amounts[i].toString()).to.equal(lendOrders.amounts[i]);
-        expect(lendRates.quantities[i].toString()).to.equal(
+      for (let i = 0; i < lendOrders.unitPrices.length; i++) {
+        expect(lendUnitPrices.unitPrices[i].toString()).to.equal(
+          lendOrders.unitPrices[i],
+        );
+        expect(lendUnitPrices.amounts[i].toString()).to.equal(
+          lendOrders.amounts[i],
+        );
+        expect(lendUnitPrices.quantities[i].toString()).to.equal(
           lendOrders.quantities[i],
         );
       }
@@ -423,9 +437,7 @@ describe('LendingMarketController', () => {
 
     it('Add orders and rotate markets', async () => {
       const lendingMarket1 = lendingMarketProxies[0];
-      const lendingMarket2 = lendingMarketProxies[1];
       const futureValueVault1 = futureValueVaultProxies[0];
-      const futureValueVault2 = futureValueVaultProxies[1];
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -434,7 +446,7 @@ describe('LendingMarketController', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '800',
+          '9800',
         )
         .then(async (tx) => {
           await expect(tx).to.emit(lendingMarket1, 'MakeOrder');
@@ -452,7 +464,7 @@ describe('LendingMarketController', () => {
           maturities[0],
           Side.LEND,
           '50000000000000000',
-          '880',
+          '9880',
         )
         .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
 
@@ -463,7 +475,7 @@ describe('LendingMarketController', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '720',
+          '9720',
         )
         .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
 
@@ -475,7 +487,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.BORROW,
             '100000000000000000',
-            '800',
+            '9800',
           ),
       ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -484,38 +496,55 @@ describe('LendingMarketController', () => {
         moment.unix(basisDate).add(3, 'M').unix().toString(),
       );
 
-      const borrowRate = await lendingMarket1.getBorrowRate();
-      expect(borrowRate.toString()).to.equal('720');
+      const borrowUnitPrice = await lendingMarket1.getBorrowUnitPrice();
+      expect(borrowUnitPrice.toString()).to.equal('9720');
 
-      const lendRate = await lendingMarket1.getLendRate();
-      expect(lendRate.toString()).to.equal('880');
+      const lendUnitPrice = await lendingMarket1.getLendUnitPrice();
+      expect(lendUnitPrice.toString()).to.equal('9880');
 
-      const midRate = await lendingMarket1.getMidRate();
-      expect(midRate.toString()).to.equal('800');
+      const midUnitPrice = await lendingMarket1.getMidUnitPrice();
+      expect(midUnitPrice.toString()).to.equal('9800');
 
-      const showPV = async () => {
-        const rate = await lendingMarket1.getMidRate();
-        const alicePV = await futureValueVault1.getPresentValue(
-          alice.address,
-          rate,
-        );
-        const bobPV = await futureValueVault1.getPresentValue(
-          bob.address,
-          rate,
-        );
-        const carolPV = await futureValueVault1.getPresentValue(
-          carol.address,
-          rate,
-        );
+      const showFV = async () => {
+        const aliceFV = await futureValueVault1.getFutureValue(alice.address);
+        const bobFV = await futureValueVault1.getFutureValue(bob.address);
+        const carolFV = await futureValueVault1.getFutureValue(carol.address);
 
         const presentValues = {
-          PresentValue: {
-            Alice: alicePV.toString(),
-            Bob: bobPV.toString(),
-            Carol: carolPV.toString(),
+          FutureValue: {
+            Alice: aliceFV.futureValue.toString(),
+            Bob: bobFV.futureValue.toString(),
+            Carol: carolFV.futureValue.toString(),
           },
         };
         console.table(presentValues);
+      };
+
+      const showTotalPV = async () => {
+        const aliceTotalPV =
+          await lendingMarketControllerProxy.getTotalPresentValue(
+            targetCurrency,
+            alice.address,
+          );
+        const bobTotalPV =
+          await lendingMarketControllerProxy.getTotalPresentValue(
+            targetCurrency,
+            bob.address,
+          );
+        const carolTotalPV =
+          await lendingMarketControllerProxy.getTotalPresentValue(
+            targetCurrency,
+            carol.address,
+          );
+
+        const totalPresentValues = {
+          TotalPresentValue: {
+            Alice: aliceTotalPV.toString(),
+            Bob: bobTotalPV.toString(),
+            Carol: carolTotalPV.toString(),
+          },
+        };
+        console.table(totalPresentValues);
       };
 
       expect(await lendingMarket1.isOpened()).to.equal(true);
@@ -523,9 +552,10 @@ describe('LendingMarketController', () => {
       await lendingMarketControllerProxy.cleanOrders(alice.address);
       await lendingMarketControllerProxy.cleanOrders(bob.address);
 
-      await showPV();
+      await showFV();
+      await showTotalPV();
       await time.increaseTo(maturities[0].toString());
-      await showPV();
+      // await showPV();
 
       expect(await lendingMarket1.isOpened()).to.equal(false);
 
@@ -536,7 +566,7 @@ describe('LendingMarketController', () => {
           maturities[1],
           Side.LEND,
           '100000000000000000',
-          '880',
+          '9880',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -544,8 +574,8 @@ describe('LendingMarketController', () => {
           targetCurrency,
           maturities[1],
           Side.BORROW,
-          '50000000000000000',
-          '880',
+          '40000000000000000',
+          '9880',
         );
       await lendingMarketControllerProxy
         .connect(carol)
@@ -554,16 +584,16 @@ describe('LendingMarketController', () => {
           maturities[1],
           Side.BORROW,
           '50000000000000000',
-          '800',
+          '9800',
         );
 
-      const borrowRates = await lendingMarketControllerProxy.getBorrowRates(
+      const borrowUnitPrices =
+        await lendingMarketControllerProxy.getBorrowUnitPrices(targetCurrency);
+
+      const lendingRates = await lendingMarketControllerProxy.getLendUnitPrices(
         targetCurrency,
       );
-      const lendingRates = await lendingMarketControllerProxy.getLendRates(
-        targetCurrency,
-      );
-      const midRates = await lendingMarketControllerProxy.getMidRates(
+      const midUnitPrices = await lendingMarketControllerProxy.getMidUnitPrices(
         targetCurrency,
       );
       const market = await lendingMarket1.getMarket();
@@ -576,23 +606,24 @@ describe('LendingMarketController', () => {
             events.find(({ event }) => event === 'RotateLendingMarkets').args,
         );
 
+      await showTotalPV();
+
       const rotatedBorrowRates =
-        await lendingMarketControllerProxy.getBorrowRates(targetCurrency);
+        await lendingMarketControllerProxy.getBorrowUnitPrices(targetCurrency);
       const rotatedLendingRates =
-        await lendingMarketControllerProxy.getLendRates(targetCurrency);
-      const rotatedMidRates = await lendingMarketControllerProxy.getMidRates(
-        targetCurrency,
-      );
+        await lendingMarketControllerProxy.getLendUnitPrices(targetCurrency);
+      const rotatedMidRates =
+        await lendingMarketControllerProxy.getMidUnitPrices(targetCurrency);
       const rotatedMaturities =
         await lendingMarketControllerProxy.getMaturities(targetCurrency);
       const rotatedMarket = await lendingMarket1.getMarket();
 
       // Check borrow rates
       expect(rotatedBorrowRates[0].toString()).to.equal(
-        borrowRates[1].toString(),
+        borrowUnitPrices[1].toString(),
       );
       expect(rotatedBorrowRates[1].toString()).to.equal(
-        borrowRates[2].toString(),
+        borrowUnitPrices[2].toString(),
       );
       expect(rotatedBorrowRates[2].toString()).to.equal('0');
 
@@ -606,8 +637,12 @@ describe('LendingMarketController', () => {
       expect(rotatedLendingRates[2].toString()).to.equal('0');
 
       // Check mid rates
-      expect(rotatedMidRates[0].toString()).to.equal(midRates[1].toString());
-      expect(rotatedMidRates[1].toString()).to.equal(midRates[2].toString());
+      expect(rotatedMidRates[0].toString()).to.equal(
+        midUnitPrices[1].toString(),
+      );
+      expect(rotatedMidRates[1].toString()).to.equal(
+        midUnitPrices[2].toString(),
+      );
       expect(rotatedMidRates[2].toString()).to.equal('0');
 
       // Check maturities
@@ -628,39 +663,55 @@ describe('LendingMarketController', () => {
         moment.unix(basisDate).add(3, 'M').unix().toString(),
       );
       expect(market.basisDate).to.equal(basisDate);
-      expect(market.borrowRate.toString()).to.equal('720');
-      expect(market.lendRate.toString()).to.equal('880');
-      expect(market.midRate.toString()).to.equal('800');
+      expect(market.borrowUnitPrice.toString()).to.equal('9720');
+      expect(market.lendUnitPrice.toString()).to.equal('9880');
+      expect(market.midUnitPrice.toString()).to.equal('9800');
 
       expect(rotatedMarket.ccy).to.equal(targetCurrency);
       expect(rotatedMarket.maturity.toString()).to.equal(
         newMaturity.toString(),
       );
       expect(rotatedMarket.basisDate).to.equal(basisDate);
-      expect(rotatedMarket.borrowRate.toString()).to.equal('0');
-      expect(rotatedMarket.lendRate.toString()).to.equal('0');
-      expect(rotatedMarket.midRate.toString()).to.equal('0');
+      expect(rotatedMarket.borrowUnitPrice.toString()).to.equal('0');
+      expect(rotatedMarket.lendUnitPrice.toString()).to.equal('0');
+      expect(rotatedMarket.midUnitPrice.toString()).to.equal('0');
 
+      console.log('cleanOrders: alice!!!');
+      await lendingMarketControllerProxy.cleanOrders(alice.address);
+      await showTotalPV();
       // Check the total present value
-      const aliceTotalPV =
-        await lendingMarketControllerProxy.getTotalPresentValue(
-          targetCurrency,
-          alice.address,
-        );
-      const rate1 = await lendingMarket1.getMidRate();
-      const rate2 = await lendingMarket2.getMidRate();
-      const alicePV1 = await futureValueVault1.getPresentValue(
-        alice.address,
-        rate1,
-      );
-      const alicePV2 = await futureValueVault2.getPresentValue(
-        alice.address,
-        rate2,
-      );
+      // const aliceTotalPV =
+      //   await lendingMarketControllerProxy.getTotalPresentValue(
+      //     targetCurrency,
+      //     alice.address,
+      //   );
+      // const bobTotalPV =
+      //   await lendingMarketControllerProxy.getTotalPresentValue(
+      //     targetCurrency,
+      //     bob.address,
+      //   );
+      // const carolTotalPV =
+      //   await lendingMarketControllerProxy.getTotalPresentValue(
+      //     targetCurrency,
+      //     carol.address,
+      //   );
+      // const rate1 = await lendingMarket1.getMidUnitPrice();
+      // const rate2 = await lendingMarket2.getMidUnitPrice();
+      // const aliceFV1 = await futureValueVault1.getFutureValue(alice.address);
+      // const aliceFV2 = await futureValueVault2.getFutureValue(alice.address);
+      // console.log('rate1:', rate1);
+      // console.log('rate2:', rate2);
+      // console.log('aliceFV1.futureValue:', aliceFV1.futureValue.toString());
+      // console.log('aliceFV2.futureValue:', aliceFV2.futureValue.toString());
+      // console.log('aliceTotalPV:', aliceTotalPV.toString());
 
-      expect(aliceTotalPV.toString()).to.equal(
-        alicePV1.add(alicePV2).toString(),
-      );
+      // expect(aliceTotalPV.toString()).to.equal(
+      //   aliceFV1.futureValue
+      //     .mul(rate1)
+      //     .div(10000)
+      //     .add(aliceFV2.futureValue.mul(rate2).div(10000))
+      //     .toString(),
+      // );
     });
 
     it('Add an order(payable)', async () => {
@@ -688,12 +739,12 @@ describe('LendingMarketController', () => {
           maturities[0],
           Side.LEND,
           '50000000000000000',
-          '880',
+          '9880',
         );
       const order = await lendingMarket1.getOrder('1');
 
       expect(order.side).to.equal(Side.LEND);
-      expect(order.rate).to.equal('880');
+      expect(order.unitPrice).to.equal('9880');
       expect(order.maturity).to.equal(maturities[0]);
       expect(order.maker).to.equal(alice.address);
       expect(order.amount).to.equal('50000000000000000');
@@ -1235,7 +1286,7 @@ describe('LendingMarketController', () => {
               maturities[0],
               Side.BORROW,
               orderAmount,
-              '880',
+              '9880',
             );
         }
 
@@ -1246,7 +1297,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.LEND,
             totalAmount.toString(),
-            '880',
+            '9880',
           )
           .then((tx) => tx.wait());
 
@@ -1255,14 +1306,14 @@ describe('LendingMarketController', () => {
         );
 
         expect(orderFilledEvent?.event).to.equal('FillOrder');
-        const { taker, ccy, side, maturity, amount, rate } =
+        const { taker, ccy, side, maturity, amount, unitPrice } =
           orderFilledEvent.args;
         expect(taker).to.equal(users[0].address);
         expect(ccy).to.equal(targetCurrency);
         expect(side).to.equal(Side.LEND);
         expect(maturity).to.equal(maturities[0]);
         expect(amount).to.equal(totalAmount);
-        expect(rate).to.equal('880');
+        expect(unitPrice).to.equal('9880');
       });
 
       it('Fill 100 orders in different rate', async () => {
@@ -1279,7 +1330,7 @@ describe('LendingMarketController', () => {
               maturities[0],
               Side.BORROW,
               orderAmount,
-              String(880 + i),
+              String(9880 + i),
             );
         }
 
@@ -1290,7 +1341,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.LEND,
             totalAmount.toString(),
-            '880',
+            '9880',
           )
           .then((tx) => tx.wait());
 
@@ -1299,14 +1350,14 @@ describe('LendingMarketController', () => {
         );
 
         expect(orderFilledEvent?.event).to.equal('FillOrder');
-        const { taker, ccy, side, maturity, amount, rate } =
+        const { taker, ccy, side, maturity, amount, unitPrice } =
           orderFilledEvent.args;
         expect(taker).to.equal(users[0].address);
         expect(ccy).to.equal(targetCurrency);
         expect(side).to.equal(Side.LEND);
         expect(maturity).to.equal(maturities[0]);
         expect(amount).to.equal(totalAmount);
-        expect(rate).to.equal('880');
+        expect(unitPrice).to.equal('9880');
       });
     });
 
@@ -1616,54 +1667,48 @@ describe('LendingMarketController', () => {
           lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
         ).to.emit(lendingMarketControllerProxy, 'RotateLendingMarkets');
 
-        const maturityRates = await Promise.all([
-          lendingMarketControllerProxy.getMaturityRate(
+        const maturityUnitPrices = await Promise.all([
+          lendingMarketControllerProxy.getMaturityUnitPrice(
             targetCurrency,
             maturities[0],
           ),
-          lendingMarketControllerProxy.getMaturityRate(
+          lendingMarketControllerProxy.getMaturityUnitPrice(
             targetCurrency,
             maturities[1],
           ),
-          lendingMarketControllerProxy.getMaturityRate(
+          lendingMarketControllerProxy.getMaturityUnitPrice(
             targetCurrency,
             maturities[2],
           ),
         ]);
 
-        expect(maturityRates[0].prev.toString()).to.equal('0');
-        expect(maturityRates[0].next.toString()).to.equal(maturities[1]);
-        expect(maturityRates[0].compoundFactor.toString()).to.equal(
+        expect(maturityUnitPrices[0].prev.toString()).to.equal('0');
+        expect(maturityUnitPrices[0].next.toString()).to.equal(maturities[1]);
+        expect(maturityUnitPrices[0].compoundFactor.toString()).to.equal(
           COMPOUND_FACTOR,
         );
 
-        const expectedCompoundFactorInMarket1 = maturityRates[0].compoundFactor
-          .mul(
-            maturityRates[1].rate
-              .mul(maturityRates[1].tenor)
-              .add(BP.mul(SECONDS_IN_YEAR)),
-          )
-          .div(SECONDS_IN_YEAR.mul(BP))
-          .toString();
+        const expectedCompoundFactorInMarket1 =
+          maturityUnitPrices[0].compoundFactor
+            .mul(BP)
+            .div(maturityUnitPrices[1].unitPrice)
+            .toString();
 
-        expect(maturityRates[1].prev.toString()).to.equal(maturities[0]);
-        expect(maturityRates[1].next.toString()).to.equal(maturities[2]);
-        expect(maturityRates[1].compoundFactor.toString()).to.equal(
+        expect(maturityUnitPrices[1].prev.toString()).to.equal(maturities[0]);
+        expect(maturityUnitPrices[1].next.toString()).to.equal(maturities[2]);
+        expect(maturityUnitPrices[1].compoundFactor.toString()).to.equal(
           expectedCompoundFactorInMarket1,
         );
 
-        const expectedCompoundFactorInMarket2 = maturityRates[1].compoundFactor
-          .mul(
-            maturityRates[2].rate
-              .mul(maturityRates[2].tenor)
-              .add(BP.mul(SECONDS_IN_YEAR)),
-          )
-          .div(SECONDS_IN_YEAR.mul(BP))
-          .toString();
+        const expectedCompoundFactorInMarket2 =
+          maturityUnitPrices[1].compoundFactor
+            .mul(BP)
+            .div(maturityUnitPrices[2].unitPrice)
+            .toString();
 
-        expect(maturityRates[2].prev.toString()).to.equal(maturities[1]);
-        expect(maturityRates[2].next.toString()).to.equal('0');
-        expect(maturityRates[2].compoundFactor.toString()).to.equal(
+        expect(maturityUnitPrices[2].prev.toString()).to.equal(maturities[1]);
+        expect(maturityUnitPrices[2].next.toString()).to.equal('0');
+        expect(maturityUnitPrices[2].compoundFactor.toString()).to.equal(
           expectedCompoundFactorInMarket2,
         );
       });

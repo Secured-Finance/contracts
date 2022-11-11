@@ -11,8 +11,6 @@ interface IFutureValueVault {
         view
         returns (int256 futureValue, uint256 maturity);
 
-    function getPresentValue(address _user, uint256 _rate) external view returns (int256);
-
     function calculatePresentValue(
         uint256 _futureValue,
         uint256 _maturity,

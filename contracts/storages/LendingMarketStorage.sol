@@ -6,7 +6,7 @@ import "../libraries/HitchensOrderStatisticsTreeLib.sol";
 
 struct MarketOrder {
     ProtocolTypes.Side side;
-    uint256 rate; // in basis points
+    uint256 unitPrice; // in basis points
     uint256 maturity;
     uint256 timestamp;
 }

@@ -9,7 +9,7 @@ struct UnfilledOrder {
     uint48 orderId;
     address maker;
     uint256 amount;
-    uint256 rate;
+    uint256 unitPrice;
 }
 
 struct OrderItem {
@@ -113,9 +113,7 @@ library HitchensOrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId
     ) internal view returns (bool) {
-        bool res = exists(self, value);
-        // console.log("exists?:", res);
-        return orderIdExists(self, value, orderId) && res;
+        return orderIdExists(self, value, orderId) && exists(self, value);
     }
 
     function getNode(Tree storage self, uint256 value)
@@ -156,14 +154,7 @@ library HitchensOrderStatisticsTreeLib {
         view
         returns (uint256 totalAmount)
     {
-        Node storage gn = self.nodes[value];
-        OrderItem memory order = gn.orders[gn.head];
-        totalAmount += order.amount;
-
-        while (order.next != 0) {
-            order = gn.orders[order.next];
-            gn.orders[gn.head];
-        }
+        return self.nodes[value].orderTotalAmount;
     }
 
     function getNodeOrderIds(Tree storage self, uint256 value)
@@ -178,11 +169,6 @@ library HitchensOrderStatisticsTreeLib {
         for (uint256 i = 0; i < gn.orderCounter; i++) {
             orderIds[i] = order.orderId;
             order = gn.orders[order.next];
-        }
-
-        while (order.next != 0) {
-            order = gn.orders[order.next];
-            gn.orders[gn.head];
         }
     }
 
@@ -459,8 +445,7 @@ library HitchensOrderStatisticsTreeLib {
     function dropLeft(
         Tree storage self,
         uint256 amount,
-        uint256 limitValue,
-        uint256 maturity
+        uint256 limitValue
     )
         internal
         returns (
@@ -488,7 +473,7 @@ library HitchensOrderStatisticsTreeLib {
 
             uint256 filledAmount = cursorNodeAmount -
                 (totalAmount > amount ? totalAmount - amount : 0);
-            filledFutureValue += _calculateFutureValue(cursor, filledAmount, maturity);
+            filledFutureValue += _calculateFutureValue(cursor, filledAmount);
 
             cursor = next(self, cursor);
         }
@@ -553,8 +538,7 @@ library HitchensOrderStatisticsTreeLib {
     function dropRight(
         Tree storage self,
         uint256 amount,
-        uint256 limitValue,
-        uint256 maturity
+        uint256 limitValue
     )
         internal
         returns (
@@ -582,7 +566,7 @@ library HitchensOrderStatisticsTreeLib {
 
             uint256 filledAmount = cursorNodeAmount -
                 (totalAmount > amount ? totalAmount - amount : 0);
-            filledFutureValue += _calculateFutureValue(cursor, filledAmount, maturity);
+            filledFutureValue += _calculateFutureValue(cursor, filledAmount);
 
             cursor = prev(self, cursor);
         }
@@ -647,20 +631,10 @@ library HitchensOrderStatisticsTreeLib {
     function getFutureValue(
         Tree storage self,
         uint256 value,
-        uint48 orderId,
-        uint256 maturity
+        uint48 orderId
     ) internal view returns (uint256) {
         Node storage gn = self.nodes[value];
-        // console.log(
-        //     "_calculateFutureValue(value, gn.orders[orderId].amount, maturity):",
-        //     _calculateFutureValue(value, gn.orders[orderId].amount, maturity)
-        // );
-        // require(
-        //     isActiveOrderId(self, value, orderId),
-        //     "OrderStatisticsTree(410) - Order does not exist."
-        // );
-
-        return _calculateFutureValue(value, gn.orders[orderId].amount, maturity);
+        return _calculateFutureValue(value, gn.orders[orderId].amount);
     }
 
     // Double linked list functions
@@ -684,14 +658,20 @@ library HitchensOrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId
     ) internal view returns (bool) {
+        uint48 cursor = orderId;
         Node storage gn = self.nodes[value];
+        OrderItem memory order = gn.orders[cursor];
 
-        OrderItem memory order = gn.orders[orderId];
-        if (order.orderId != orderId) {
+        if (order.orderId != cursor) {
             return false;
         }
 
-        return true;
+        while (order.prev != EMPTY) {
+            cursor = order.prev;
+            order = gn.orders[cursor];
+        }
+
+        return cursor == gn.head;
     }
 
     function insertOrder(
@@ -776,6 +756,15 @@ library HitchensOrderStatisticsTreeLib {
         }
 
         _dropOrders(self, value, currentOrder.orderId);
+
+        if (unfilledOrder.amount > 0) {
+            // NOTE: This order that the filled partially was dropped from a node, and the unfilled amount
+            // will be inserted newly as a new orders.
+            // However, that filled order amount is used when future value is calculated from inactive order.
+            // For that calculation, this order amount needs to be updated by an actual filled amount at this point.
+            OrderItem storage order = self.nodes[value].orders[currentOrder.orderId];
+            order.amount -= unfilledOrder.amount;
+        }
 
         // if (currentOrder.orderId == 0) {
         //     _setHead(self, value, 0);
@@ -978,17 +967,12 @@ library HitchensOrderStatisticsTreeLib {
         gn.orders[_nextId].prev = _prevId;
     }
 
-    function _calculateFutureValue(
-        uint256 rate,
-        uint256 amount,
-        uint256 maturity
-    ) internal view returns (uint256) {
-        // NOTE: The formula is:
-        // futureValue = amount * (1 + rate * (maturity - now) / 360 days)
-        // uint256 actualRate = (rate * (maturity - block.timestamp)) / ProtocolTypes.SECONDS_IN_YEAR;
-        uint256 actualRate = maturity > block.timestamp
-            ? (rate * (maturity - block.timestamp)) / ProtocolTypes.SECONDS_IN_YEAR
-            : 0;
-        return (amount * (ProtocolTypes.BP + actualRate)) / ProtocolTypes.BP;
+    function _calculateFutureValue(uint256 unitPrice, uint256 amount)
+        internal
+        pure
+        returns (uint256)
+    {
+        // return (unitPrice * amount) / ProtocolTypes.BP;
+        return (amount * ProtocolTypes.BP) / unitPrice;
     }
 }

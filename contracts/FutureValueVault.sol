@@ -40,23 +40,13 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
         return Storage.slot().totalBorrowingSupply[_maturity];
     }
 
-    function getFutureValue(address _account) public view override returns (int256, uint256) {
+    function getFutureValue(address _account)
+        public
+        view
+        override
+        returns (int256 futureValue, uint256 maturity)
+    {
         return (Storage.slot().balances[_account], Storage.slot().futureValueMaturities[_account]);
-    }
-
-    /**
-     * @notice Gets the present value calculated from the future value & market rate.
-     * @param _user User address
-     * @param _rate Target market rate
-     * @return The present value
-     */
-    function getPresentValue(address _user, uint256 _rate) external view override returns (int256) {
-        (int256 futureValue, uint256 maturity) = getFutureValue(_user);
-        // NOTE: The formula is: presentValue = futureValue / (1 + rate * (maturity - now) / 360 days).
-        uint256 dt = maturity >= block.timestamp ? maturity - block.timestamp : 0;
-
-        return ((futureValue * int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR)) /
-            int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + _rate * dt));
     }
 
     function calculatePresentValue(
@@ -65,13 +55,13 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
         uint256 _rate
     ) external view override returns (uint256) {
         // NOTE: The formula is: presentValue = futureValue / (1 + rate * (maturity - now) / 360 days).
-        uint256 dt = _maturity >= block.timestamp ? _maturity - block.timestamp : 0;
+        uint256 remainingMaturity = _maturity >= block.timestamp ? _maturity - block.timestamp : 0;
 
         return (((_futureValue * ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR) /
             ProtocolTypes.BP) *
             ProtocolTypes.SECONDS_IN_YEAR +
             _rate *
-            dt);
+            remainingMaturity);
     }
 
     function hasFutureValueInPastMaturity(address account, uint256 maturity)

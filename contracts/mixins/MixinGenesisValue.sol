@@ -2,14 +2,20 @@
 pragma solidity ^0.8.9;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {GenesisValueStorage as Storage, MaturityRate} from "../storages/GenesisValueStorage.sol";
+import {GenesisValueStorage as Storage, MaturityUnitPrice} from "../storages/GenesisValueStorage.sol";
 
 /**
  * @title MixinGenesisValue contract is used to store the genesis value for Lending deals.
  */
 contract MixinGenesisValue {
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
-    event CompoundFactorUpdated(bytes32 indexed ccy, uint256 maturity, uint256 rate, uint256 tenor);
+    event CompoundFactorUpdated(
+        bytes32 indexed ccy,
+        uint256 compoundFactor,
+        uint256 unitPrice,
+        uint256 currentMaturity,
+        uint256 previousMaturity
+    );
 
     function isRegisteredCurrency(bytes32 _ccy) public view returns (bool) {
         return Storage.slot().isRegisteredCurrency[_ccy];
@@ -31,16 +37,20 @@ contract MixinGenesisValue {
         return Storage.slot().balances[_ccy][_account];
     }
 
+    function getCurrentMaturity(bytes32 _ccy) public view returns (uint256) {
+        return Storage.slot().currentMaturity[_ccy];
+    }
+
     function getCompoundFactor(bytes32 _ccy) public view returns (uint256) {
         return Storage.slot().compoundFactors[_ccy];
     }
 
-    function getMaturityRate(bytes32 _ccy, uint256 _maturity)
-        external
+    function getMaturityUnitPrice(bytes32 _ccy, uint256 _maturity)
+        public
         view
-        returns (MaturityRate memory)
+        returns (MaturityUnitPrice memory)
     {
-        return Storage.slot().maturityRates[_ccy][_maturity];
+        return Storage.slot().maturityUnitPrices[_ccy][_maturity];
     }
 
     function getGenesisValueInFutureValue(bytes32 _ccy, address _account)
@@ -50,23 +60,42 @@ contract MixinGenesisValue {
     {
         // NOTE: The formula is:
         // futureValue = genesisValue * currentCompoundFactor.
-        return getGenesisValue(_ccy, _account) * int256(getCompoundFactor(_ccy));
+        return
+            (getGenesisValue(_ccy, _account) * int256(getCompoundFactor(_ccy))) /
+            int256(10**decimals(_ccy));
     }
 
-    function _calculateFutureValueInMaturity(
+    function _calculateGVFromFV(
         bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _futureValueInMaturity
-    ) internal view returns (uint256) {
-        if (Storage.slot().maturityRates[_ccy][_maturity].compoundFactor == 0) {
-            return _futureValueInMaturity;
-        }
-        // NOTE: The formula is:
-        // genesisValue = futureValueInMaturity / compoundFactorInMaturity
-        // futureValue = genesisValue * currentCompoundFactor.
-        return
-            (_futureValueInMaturity * getCompoundFactor(_ccy)) /
-            Storage.slot().maturityRates[_ccy][_maturity].compoundFactor;
+        uint256 _basisMaturity,
+        int256 _futureValue
+    ) internal view returns (int256) {
+        uint256 compoundFactor = Storage
+        .slot()
+        .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
+
+        require(compoundFactor > 0, "Compound factor is not fixed yet");
+
+        // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
+        return (_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor);
+    }
+
+    function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
+        internal
+        pure
+        returns (uint256)
+    {
+        // NOTE: The formula is: presentValue = futureValue * unit price.
+        return (_futureValue * _unitPrice) / ProtocolTypes.BP;
+    }
+
+    function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)
+        internal
+        pure
+        returns (int256)
+    {
+        // NOTE: The formula is: presentValue = futureValue * unit price.
+        return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.BP);
     }
 
     function _registerCurrency(
@@ -87,49 +116,53 @@ contract MixinGenesisValue {
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _nextMaturity,
-        uint256 _rate
+        uint256 _unitPrice
     ) internal {
-        require(_rate != 0, "rate is zero");
+        require(_unitPrice != 0, "unitPrice is zero");
         require(
-            Storage.slot().maturityRates[_ccy][_maturity].next == 0,
+            Storage.slot().maturityUnitPrices[_ccy][_maturity].next == 0,
             "already updated maturity"
         );
         require(_nextMaturity > _maturity, "invalid maturity");
         require(
-            Storage.slot().maturityRates[_ccy][_nextMaturity].compoundFactor == 0,
+            Storage.slot().maturityUnitPrices[_ccy][_nextMaturity].compoundFactor == 0,
             "existed maturity"
         );
 
         if (Storage.slot().initialCompoundFactors[_ccy] == Storage.slot().compoundFactors[_ccy]) {
-            Storage.slot().maturityRates[_ccy][_maturity].compoundFactor = Storage
+            Storage.slot().maturityUnitPrices[_ccy][_maturity].compoundFactor = Storage
                 .slot()
                 .compoundFactors[_ccy];
         } else {
             require(
-                Storage.slot().maturityRates[_ccy][_maturity].compoundFactor != 0,
+                Storage.slot().maturityUnitPrices[_ccy][_maturity].compoundFactor != 0,
                 "invalid compound factor"
             );
         }
 
-        Storage.slot().maturityRates[_ccy][_maturity].next = _nextMaturity;
+        Storage.slot().maturityUnitPrices[_ccy][_maturity].next = _nextMaturity;
 
         // Save actual compound factor here due to calculating the genesis value from future value.
-        // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 + rate * (nextMaturity - maturity) / 360 days).
-        uint256 tenor = _nextMaturity - _maturity;
-        Storage.slot().compoundFactors[_ccy] = ((
-            (Storage.slot().compoundFactors[_ccy] *
-                (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + _rate * tenor))
-        ) / (ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR));
+        // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 / unitPrice).
+        Storage.slot().compoundFactors[_ccy] =
+            ((Storage.slot().compoundFactors[_ccy] * ProtocolTypes.BP)) /
+            _unitPrice;
 
-        Storage.slot().maturityRates[_ccy][_nextMaturity] = MaturityRate({
-            rate: _rate,
-            tenor: tenor,
+        Storage.slot().currentMaturity[_ccy] = _nextMaturity;
+        Storage.slot().maturityUnitPrices[_ccy][_nextMaturity] = MaturityUnitPrice({
+            unitPrice: _unitPrice,
             compoundFactor: Storage.slot().compoundFactors[_ccy],
             prev: _maturity,
             next: 0
         });
 
-        emit CompoundFactorUpdated(_ccy, _nextMaturity, _rate, tenor);
+        emit CompoundFactorUpdated(
+            _ccy,
+            Storage.slot().compoundFactors[_ccy],
+            _unitPrice,
+            _nextMaturity,
+            _maturity
+        );
     }
 
     function _addGenesisValue(
@@ -138,18 +171,10 @@ contract MixinGenesisValue {
         uint256 _basisMaturity,
         int256 _futureValue
     ) internal returns (bool) {
-        require(
-            Storage.slot().maturityRates[_ccy][_basisMaturity].compoundFactor > 0,
-            "Compound factor is not fixed yet"
-        );
-
-        uint256 compoundFactor = Storage.slot().initialCompoundFactors[_ccy] ==
-            Storage.slot().compoundFactors[_ccy]
-            ? Storage.slot().initialCompoundFactors[_ccy]
-            : Storage.slot().maturityRates[_ccy][_basisMaturity].compoundFactor;
-
-        // NOTE: The formula is: tokenAmount = featureValue / compoundFactor.
-        int256 amount = ((_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor));
+        uint256 compoundFactor = Storage
+        .slot()
+        .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
+        int256 amount = (_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor);
         int256 balance = Storage.slot().balances[_ccy][_account];
 
         if (amount >= 0) {

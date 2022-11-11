@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-struct MaturityRate {
-    uint256 rate;
-    uint256 tenor;
+struct MaturityUnitPrice {
+    uint256 unitPrice;
     uint256 compoundFactor;
     uint256 next;
     uint256 prev;
@@ -23,7 +22,7 @@ library GenesisValueStorage {
         mapping(bytes32 => uint256) totalLendingSupplies;
         mapping(bytes32 => uint256) totalBorrowingSupplies;
         // Mapping from maturity to rate per currency
-        mapping(bytes32 => mapping(uint256 => MaturityRate)) maturityRates;
+        mapping(bytes32 => mapping(uint256 => MaturityUnitPrice)) maturityUnitPrices;
     }
 
     function slot() internal pure returns (Storage storage r) {

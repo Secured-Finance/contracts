@@ -83,10 +83,10 @@ contract HitchensOrderStatisticsTreeContract {
     }
 
     function dropValuesFromFirst(uint256 value, uint256 limitValue) public {
-        tree.dropLeft(value, limitValue, block.timestamp + 31557600);
+        tree.dropLeft(value, limitValue);
     }
 
     function dropValuesFromLast(uint256 value, uint256 limitValue) public {
-        tree.dropRight(value, limitValue, block.timestamp + 31557600);
+        tree.dropRight(value, limitValue);
     }
 }

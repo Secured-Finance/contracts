@@ -145,43 +145,59 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets borrow rates for the selected currency.
+     * @notice Gets borrow prices per future value for the selected currency.
      * @param _ccy Currency name in bytes32
-     * @return Array with the borrowing rate of the lending market
+     * @return Array with the borrowing prices per future value of the lending market
      */
-    function getBorrowRates(bytes32 _ccy) external view override returns (uint256[] memory) {
-        uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
+    function getBorrowUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
+        uint256[] memory unitPrices = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
 
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            rates[i] = market.getBorrowRate();
+            unitPrices[i] = market.getBorrowUnitPrice();
         }
 
-        return rates;
+        return unitPrices;
     }
 
     /**
-     * @notice Gets lend rates for the selected currency.
+     * @notice Gets lend prices per future value for the selected currency.
      * @param _ccy Currency name in bytes32
-     * @return Array with the lending rate of the lending market
+     * @return Array with the lending prices per future value of the lending market
      */
-    function getLendRates(bytes32 _ccy) external view override returns (uint256[] memory) {
-        uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
+    function getLendUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
+        uint256[] memory unitPrices = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
 
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            rates[i] = market.getLendRate();
+            unitPrices[i] = market.getLendUnitPrice();
         }
 
-        return rates;
+        return unitPrices;
+    }
+
+    /**
+     * @notice Gets mid prices per future value for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return Array with the mid prices per future value of the lending market
+     */
+    function getMidUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
+        uint256[] memory unitPrices = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
+
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
+            unitPrices[i] = market.getMidUnitPrice();
+        }
+
+        return unitPrices;
     }
 
     /**
      * @notice Gets the order book of borrow.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the market
-     * @param _limit Max limit to get rates
-     * @return rates The array of borrow order rates
+     * @param _limit The limit number to get
+     * @return unitPrices The array of borrow unit prices
      * @return amounts The array of borrow order amounts
      * @return quantities The array of borrow order quantities
      */
@@ -194,7 +210,7 @@ contract LendingMarketController is
         view
         override
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         )
@@ -207,8 +223,8 @@ contract LendingMarketController is
      * @notice Gets the order book of lend.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the market
-     * @param _limit Max limit to get rates
-     * @return rates The array of lend order rates
+     * @param _limit The limit number to get
+     * @return unitPrices The array of borrow unit prices
      * @return amounts The array of lend order amounts
      * @return quantities The array of lend order quantities
      */
@@ -221,29 +237,13 @@ contract LendingMarketController is
         view
         override
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         )
     {
         address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         return ILendingMarket(market).getLendOrderBook(_limit);
-    }
-
-    /**
-     * @notice Gets mid rates for the selected currency.
-     * @param _ccy Currency name in bytes32
-     * @return Array with the mid rate of the lending market
-     */
-    function getMidRates(bytes32 _ccy) external view override returns (uint256[] memory) {
-        uint256[] memory rates = new uint256[](Storage.slot().lendingMarkets[_ccy].length);
-
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            rates[i] = market.getMidRate();
-        }
-
-        return rates;
     }
 
     /**
@@ -276,10 +276,15 @@ contract LendingMarketController is
     {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             address marketAddr = Storage.slot().lendingMarkets[_ccy][i];
-            address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
-            totalPresentValue += IFutureValueVault(futureValueVault).getPresentValue(
-                _account,
-                ILendingMarket(marketAddr).getMidRate()
+            (int256 futureValueInMaturity, uint256 maturity) = IFutureValueVault(
+                Storage.slot().futureValueVaults[_ccy][marketAddr]
+            ).getFutureValue(_account);
+
+            totalPresentValue += _calculatePresentValue(
+                _ccy,
+                maturity,
+                futureValueInMaturity,
+                Storage.slot().lendingMarkets[_ccy][i]
             );
         }
     }
@@ -290,7 +295,7 @@ contract LendingMarketController is
      * @return totalPresentValue The total present value in ETH
      */
     function getTotalPresentValueInETH(address _account)
-        public
+        external
         view
         override
         returns (int256 totalPresentValue)
@@ -319,17 +324,23 @@ contract LendingMarketController is
                 );
 
             workingOrdersAmount += activeAmount;
-            // TODO: Need to convert to present value?
-            claimableAmount = _calculateFutureValueInMaturity(
-                _ccy,
-                maturity,
-                inactiveFutureValueInMaturity
+
+            claimableAmount += uint256(
+                _calculatePresentValue(
+                    _ccy,
+                    maturity,
+                    int256(inactiveFutureValueInMaturity),
+                    Storage.slot().lendingMarkets[_ccy][i]
+                )
             );
         }
 
-        int256 futureValue = getGenesisValueInFutureValue(_ccy, _account);
-        if (futureValue > 0) {
-            claimableAmount += uint256(futureValue);
+        int256 amountFromGV = getGenesisValueInFutureValue(_ccy, _account);
+        if (amountFromGV > 0) {
+            claimableAmount += _calculatePVFromFV(
+                uint256(amountFromGV),
+                ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
+            );
         }
     }
 
@@ -371,18 +382,25 @@ contract LendingMarketController is
                     .getTotalAmountFromBorrowOrders(_account);
 
             workingOrdersAmount += activeAmount;
-            // TODO: Need to convert to present value?
-            obligationAmount = _calculateFutureValueInMaturity(
-                _ccy,
-                maturity,
-                inactiveFutureValueInMaturity
+            obligationAmount += uint256(
+                _calculatePresentValue(
+                    _ccy,
+                    maturity,
+                    int256(inactiveFutureValueInMaturity),
+                    Storage.slot().lendingMarkets[_ccy][i]
+                )
             );
             borrowedAmount = inactiveAmount;
         }
 
-        int256 futureValue = getGenesisValueInFutureValue(_ccy, _account);
-        if (futureValue < 0) {
-            obligationAmount += uint256(-futureValue);
+        int256 amountFromGV = getGenesisValueInFutureValue(_ccy, _account);
+        if (amountFromGV < 0) {
+            obligationAmount += uint256(
+                _calculatePVFromFV(
+                    uint256(-amountFromGV),
+                    ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
+                )
+            );
         }
     }
 
@@ -503,7 +521,7 @@ contract LendingMarketController is
      * @param _maturity The maturity of the selected market
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
      * @return True if the execution of the operation succeeds
      */
     function createOrder(
@@ -511,9 +529,9 @@ contract LendingMarketController is
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _rate
+        uint256 _unitPrice
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        return _createOrder(_ccy, _maturity, _side, _amount, _rate);
+        return _createOrder(_ccy, _maturity, _side, _amount, _unitPrice);
     }
 
     /**
@@ -522,38 +540,16 @@ contract LendingMarketController is
      *
      * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
-     * @param _rate Amount of interest rate taker wish to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
      * @return True if the execution of the operation succeeds
      */
     function createLendOrderWithETH(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _rate
+        uint256 _unitPrice
     ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        return _createOrder(_ccy, _maturity, ProtocolTypes.Side.LEND, msg.value, _rate);
+        return _createOrder(_ccy, _maturity, ProtocolTypes.Side.LEND, msg.value, _unitPrice);
     }
-
-    // /**
-    //  * @notice Gets if the market order will be matched or not.
-    //  * @param _ccy Currency name in bytes32 of the selected market
-    //  * @param _maturity The maturity of the selected market
-    //  * @param _side Order position type, Borrow or Lend
-    //  * @param _amount Amount of funds the maker wants to borrow/lend
-    //  * @param _rate Amount of interest rate taker wish to borrow/lend
-    //  * @return True if the execution of the operation succeeds
-    //  */
-    // function matchOrders(
-    //     bytes32 _ccy,
-    //     uint256 _maturity,
-    //     ProtocolTypes.Side _side,
-    //     uint256 _amount,
-    //     uint256 _rate
-    // ) external view override ifValidMaturity(_ccy, _maturity) returns (bool) {
-    //     address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-    //     ILendingMarket(market).matchOrders(_side, _amount, _rate);
-
-    //     return true;
-    // }
 
     /**
      * @notice Cancels the own order.
@@ -567,7 +563,7 @@ contract LendingMarketController is
         uint48 _orderId
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        (ProtocolTypes.Side side, uint256 amount, uint256 rate) = ILendingMarket(market)
+        (ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) = ILendingMarket(market)
             .cancelOrder(msg.sender, _orderId);
 
         if (side == ProtocolTypes.Side.LEND) {
@@ -576,7 +572,7 @@ contract LendingMarketController is
             // tokenVault().releaseUnsettledCollateral(msg.sender, address(0), _ccy, amount);
         }
 
-        emit CancelOrder(_orderId, msg.sender, _ccy, side, _maturity, amount, rate);
+        emit CancelOrder(_orderId, msg.sender, _ccy, side, _maturity, amount, unitPrice);
 
         return true;
     }
@@ -585,7 +581,7 @@ contract LendingMarketController is
      * @notice Rotate the lending markets. In this rotation, the following actions are happened.
      * - Updates the maturity at the beginning of the market array.
      * - Moves the beginning of the market array to the end of it.
-     * - Update the compound factor in this contract using the next market rate.
+     * - Update the compound factor in this contract using the next market unit price.
      *
      * @param _ccy Currency name in bytes32 of the selected market
      */
@@ -616,7 +612,7 @@ contract LendingMarketController is
             _ccy,
             prevMaturity,
             ILendingMarket(nextMarketAddr).getMaturity(),
-            ILendingMarket(nextMarketAddr).getMidRate()
+            ILendingMarket(nextMarketAddr).getMidUnitPrice()
         );
 
         Storage.slot().maturityLendingMarkets[_ccy][newLastMaturity] = currentMarketAddr;
@@ -734,7 +730,7 @@ contract LendingMarketController is
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _rate
+        uint256 _unitPrice
     ) private returns (bool) {
         require(
             _side == ProtocolTypes.Side.LEND || tokenVault().isCovered(msg.sender, _ccy, _amount),
@@ -751,7 +747,7 @@ contract LendingMarketController is
 
         (uint256 filledFutureValue, uint256 remainingAmount) = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).createOrder(_side, msg.sender, _amount, _rate);
+        ).createOrder(_side, msg.sender, _amount, _unitPrice);
 
         // The case that an order was made, or taken partially
         if (filledFutureValue == 0 || remainingAmount > 0) {
@@ -763,7 +759,7 @@ contract LendingMarketController is
         _updateExposedCurrency(_ccy, _maturity, msg.sender, activeOrderCount);
 
         if (filledFutureValue == 0) {
-            emit PlaceOrder(msg.sender, _ccy, _side, _maturity, _amount, _rate);
+            emit PlaceOrder(msg.sender, _ccy, _side, _maturity, _amount, _unitPrice);
         } else {
             if (_side == ProtocolTypes.Side.BORROW) {
                 tokenVault().withdrawEscrow(msg.sender, _ccy, _amount - remainingAmount);
@@ -780,19 +776,15 @@ contract LendingMarketController is
                 );
             }
 
-            // if (_side == ProtocolTypes.Side.LEND) {
-            //     tokenVault().releaseUnsettledCollaterals(makers, msg.sender, _ccy, amounts);
-            // } else {
-            //     tokenVault().removeEscrowedAmounts(makers, msg.sender, _ccy, amounts);
-            // }
-
-            // for (uint256 i = 0; i < makers.length; i++) {
-            //     Storage.slot().usedCurrencies[makers[i]].add(_ccy);
-            // }
-
-            // Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-
-            emit FillOrder(msg.sender, _ccy, _side, _maturity, _amount, _rate, filledFutureValue);
+            emit FillOrder(
+                msg.sender,
+                _ccy,
+                _side,
+                _maturity,
+                _amount,
+                _unitPrice,
+                filledFutureValue
+            );
         }
 
         Storage.slot().usedCurrencies[msg.sender].add(_ccy);
@@ -905,5 +897,29 @@ contract LendingMarketController is
         } else {
             Storage.slot().exposedCurrencies[_account].remove(_ccy);
         }
+    }
+
+    function _calculatePresentValue(
+        bytes32 _ccy,
+        uint256 maturity,
+        int256 futureValueInMaturity,
+        address lendingMarketInMaturity
+    ) private view returns (int256 totalPresentValue) {
+        uint256 compoundFactorInMaturity = getMaturityUnitPrice(_ccy, maturity).compoundFactor;
+        int256 futureValue;
+        uint256 unitPrice;
+
+        if (compoundFactorInMaturity == 0) {
+            futureValue = futureValueInMaturity;
+            unitPrice = ILendingMarket(lendingMarketInMaturity).getMidUnitPrice();
+        } else {
+            int256 genesisValue = _calculateGVFromFV(_ccy, maturity, futureValueInMaturity);
+            futureValue =
+                (genesisValue * int256(getCompoundFactor(_ccy))) /
+                int256(10**decimals(_ccy));
+            unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice();
+        }
+
+        return _calculatePVFromFV(futureValue, unitPrice);
     }
 }
