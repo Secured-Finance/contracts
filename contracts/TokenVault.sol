@@ -506,9 +506,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @return Maximum amount of ETH that can be withdrawn
      */
     function _getWithdrawableCollateral(address _user) internal view returns (uint256) {
-        // uint256 totalCollateral = getTotalCollateralAmountInETH(_user);
-        // uint256 totalUsedCollateral = _getUsedCollateral(_user) +
-        //     _getTotalUnsettledExposure(_user, "", 0);
         (uint256 totalCollateral, uint256 totalUsedCollateral) = _getActualCollateralAmount(
             _user,
             "",

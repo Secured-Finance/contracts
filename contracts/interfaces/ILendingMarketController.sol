@@ -96,25 +96,19 @@ interface ILendingMarketController {
 
     function getMaturities(bytes32 _ccy) external view returns (uint256[] memory);
 
-    // function getPresentValue(
-    //     bytes32 _ccy,
-    //     uint256 _maturity,
-    //     address _account
-    // ) external view returns (int256);
+    function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
-    function getTotalPresentValue(bytes32 ccy, address account) external view returns (int256);
-
-    function getTotalPresentValueInETH(address account)
+    function getTotalPresentValueInETH(address user)
         external
         view
         returns (int256 totalPresentValue);
 
-    function calculateTotalLentFundsInETH(address _account)
+    function calculateTotalLentFundsInETH(address user)
         external
         view
         returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount);
 
-    function calculateTotalBorrowedFundsInETH(address account)
+    function calculateTotalBorrowedFundsInETH(address user)
         external
         view
         returns (
@@ -163,5 +157,5 @@ interface ILendingMarketController {
 
     function convertFutureValueToGenesisValue(address _user) external;
 
-    function cleanOrders(address _account) external;
+    function cleanOrders(address _user) external;
 }

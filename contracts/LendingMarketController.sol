@@ -265,10 +265,10 @@ contract LendingMarketController is
     /**
      * @notice Gets the total present value of the account for selected currency.
      * @param _ccy Currency name in bytes32 for Lending Market
-     * @param _account Target account address
+     * @param _user User's address
      * @return totalPresentValue The total present value
      */
-    function getTotalPresentValue(bytes32 _ccy, address _account)
+    function getTotalPresentValue(bytes32 _ccy, address _user)
         public
         view
         override
@@ -278,7 +278,7 @@ contract LendingMarketController is
             address marketAddr = Storage.slot().lendingMarkets[_ccy][i];
             (int256 futureValueInMaturity, uint256 maturity) = IFutureValueVault(
                 Storage.slot().futureValueVaults[_ccy][marketAddr]
-            ).getFutureValue(_account);
+            ).getFutureValue(_user);
 
             totalPresentValue += _calculatePresentValue(
                 _ccy,
@@ -291,25 +291,32 @@ contract LendingMarketController is
 
     /**
      * @notice Gets the total present value of the account converted to ETH.
-     * @param _account Target account address
+     * @param _user User's address
      * @return totalPresentValue The total present value in ETH
      */
-    function getTotalPresentValueInETH(address _account)
+    function getTotalPresentValueInETH(address _user)
         external
         view
         override
         returns (int256 totalPresentValue)
     {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_account];
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
-            int256 amount = getTotalPresentValue(ccy, _account);
+            int256 amount = getTotalPresentValue(ccy, _user);
             totalPresentValue += currencyController().convertToETH(ccy, amount);
         }
     }
 
-    function calculateLentFundsFromOrders(bytes32 _ccy, address _account)
+    /**
+     * @notice Gets the funds that are calculated from the user's lending order list for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return workingOrdersAmount The working orders amount on the order book
+     * @return claimableAmount The claimable amount due to the lending orders being filled on the order book
+     */
+    function calculateLentFundsFromOrders(bytes32 _ccy, address _user)
         public
         view
         returns (uint256 workingOrdersAmount, uint256 claimableAmount)
@@ -320,7 +327,7 @@ contract LendingMarketController is
                 uint256 inactiveFutureValueInMaturity,
                 uint256 maturity
             ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]).getTotalAmountFromLendOrders(
-                    _account
+                    _user
                 );
 
             workingOrdersAmount += activeAmount;
@@ -335,27 +342,33 @@ contract LendingMarketController is
             );
         }
 
-        int256 amountFromGV = getGenesisValueInFutureValue(_ccy, _account);
-        if (amountFromGV > 0) {
+        int256 amountInFV = getGenesisValueInFutureValue(_ccy, _user);
+        if (amountInFV > 0) {
             claimableAmount += _calculatePVFromFV(
-                uint256(amountFromGV),
+                uint256(amountInFV),
                 ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
             );
         }
     }
 
-    function calculateTotalLentFundsInETH(address _account)
+    /**
+     * @notice Gets the funds that are calculated in EHT from the user's lending order list.
+     * @param _user User's address
+     * @return totalWorkingOrdersAmount The total working orders amount on the order book
+     * @return totalClaimableAmount The total claimable amount due to the lending orders being filled on the order book
+     */
+    function calculateTotalLentFundsInETH(address _user)
         external
         view
         override
         returns (uint256 totalWorkingOrdersAmount, uint256 totalClaimableAmount)
     {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_account];
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_user];
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
             uint256[] memory amounts = new uint256[](2);
-            (amounts[0], amounts[1]) = calculateLentFundsFromOrders(ccy, _account);
+            (amounts[0], amounts[1]) = calculateLentFundsFromOrders(ccy, _user);
             uint256[] memory amountsInETH = currencyController().convertToETH(ccy, amounts);
 
             totalWorkingOrdersAmount += amountsInETH[0];
@@ -363,7 +376,15 @@ contract LendingMarketController is
         }
     }
 
-    function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _account)
+    /**
+     * @notice Gets the funds that are calculated from the user's borrowing order list for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return workingOrdersAmount The working orders amount on the order book
+     * @return obligationAmount The debt amount due to the borrow orders being filled on the order book
+     * @return borrowedAmount The borrowed amount due to the borrow orders being filled on the order book
+     */
+    function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user)
         public
         view
         returns (
@@ -379,7 +400,7 @@ contract LendingMarketController is
                 uint256 inactiveFutureValueInMaturity,
                 uint256 maturity
             ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i])
-                    .getTotalAmountFromBorrowOrders(_account);
+                    .getTotalAmountFromBorrowOrders(_user);
 
             workingOrdersAmount += activeAmount;
             obligationAmount += uint256(
@@ -393,11 +414,11 @@ contract LendingMarketController is
             borrowedAmount = inactiveAmount;
         }
 
-        int256 amountFromGV = getGenesisValueInFutureValue(_ccy, _account);
-        if (amountFromGV < 0) {
+        int256 amountInFV = getGenesisValueInFutureValue(_ccy, _user);
+        if (amountInFV < 0) {
             obligationAmount += uint256(
                 _calculatePVFromFV(
-                    uint256(-amountFromGV),
+                    uint256(-amountInFV),
                     ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
                 )
             );
@@ -405,13 +426,13 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the funds that is calculated in EHT from account's order list.
-     * @param _account Target account address
+     * @notice Gets the funds that are calculated in EHT from the user's borrowing order list.
+     * @param _user User's address
      * @return totalWorkingOrdersAmount The total working orders amount on the order book
      * @return totalObligationAmount The total debt amount due to the borrow orders being filled on the order book
      * @return totalBorrowedAmount The total borrowed amount due to the borrow orders being filled on the order book
      */
-    function calculateTotalBorrowedFundsInETH(address _account)
+    function calculateTotalBorrowedFundsInETH(address _user)
         external
         view
         override
@@ -421,12 +442,12 @@ contract LendingMarketController is
             uint256 totalBorrowedAmount
         )
     {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_account];
+        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_user];
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
             uint256[] memory amounts = new uint256[](3);
-            (amounts[0], amounts[1], amounts[2]) = calculateBorrowedFundsFromOrders(ccy, _account);
+            (amounts[0], amounts[1], amounts[2]) = calculateBorrowedFundsFromOrders(ccy, _user);
             uint256[] memory amountsInETH = currencyController().convertToETH(ccy, amounts);
 
             totalWorkingOrdersAmount += amountsInETH[0];
@@ -651,15 +672,10 @@ contract LendingMarketController is
 
     /**
      * @notice Converts FutureValue to GenesisValue if there is balance in the past maturity.
-     * @param _account Target account address
+     * @param _user User's address
      */
-    function convertFutureValueToGenesisValue(address _account) external override nonReentrant {
-        EnumerableSet.Bytes32Set storage usedCcySet = Storage.slot().usedCurrencies[_account];
-        // EnumerableSet.Bytes32Set storage exposedCcySet = Storage.slot().exposedCurrencies[_account];
-
-        // for (uint256 i = 0; i < exposedCcySet.length(); i++) {
-        //     cleanOrders(exposedCcySet.at(i), _account);
-        // }
+    function convertFutureValueToGenesisValue(address _user) external override nonReentrant {
+        EnumerableSet.Bytes32Set storage usedCcySet = Storage.slot().usedCurrencies[_user];
 
         for (uint256 i = 0; i < usedCcySet.length(); i++) {
             bytes32 ccy = usedCcySet.at(i);
@@ -672,35 +688,32 @@ contract LendingMarketController is
                     ccy,
                     maturities[j],
                     Storage.slot().futureValueVaults[ccy][market],
-                    _account
+                    _user
                 );
             }
-            if (getGenesisValue(ccy, _account) == 0) {
-                Storage.slot().usedCurrencies[_account].remove(ccy);
+            if (getGenesisValue(ccy, _user) == 0) {
+                Storage.slot().usedCurrencies[_user].remove(ccy);
             }
         }
     }
 
     /**
-     * @notice Cleans own orders to remove order ids that is already filled.
-     * @param _account Target account address
+     * @notice Cleans own orders to remove order ids that are already filled on the order book.
+     * @param _user User's address
      */
-    // function cleanOrders(bytes32 _ccy, address _account) public override {
-    function cleanOrders(address _account) public override {
-        EnumerableSet.Bytes32Set storage exposedCcySet = Storage.slot().exposedCurrencies[_account];
+    function cleanOrders(address _user) public override {
+        EnumerableSet.Bytes32Set storage exposedCcySet = Storage.slot().exposedCurrencies[_user];
 
         for (uint256 i = 0; i < exposedCcySet.length(); i++) {
             uint256[] memory maturities = getMaturities(exposedCcySet.at(i));
             uint256 activeOrderCount = 0;
 
             for (uint256 j = 0; j < maturities.length; j++) {
-                // if (Storage.slot().activeOrderExistences[_account][_ccy][maturities[i]]) {
-                activeOrderCount += _cleanOrders(exposedCcySet.at(i), maturities[j], _account);
-                // }
+                activeOrderCount += _cleanOrders(exposedCcySet.at(i), maturities[j], _user);
             }
 
             if (activeOrderCount == 0) {
-                Storage.slot().exposedCurrencies[_account].remove(exposedCcySet.at(i));
+                Storage.slot().exposedCurrencies[_user].remove(exposedCcySet.at(i));
             }
         }
     }
@@ -709,19 +722,19 @@ contract LendingMarketController is
      * @notice Converts the future value to the genesis value if there is balance in the past maturity.
      * @param _ccy Currency for pausing all lending markets
      * @param _futureValueVault Market contract address
-     * @param _account Target account address
+     * @param _user User's address
      */
     function _convertFutureValueToGenesisValue(
         bytes32 _ccy,
         uint256 _maturity,
         address _futureValueVault,
-        address _account
+        address _user
     ) private {
         (int256 removedAmount, uint256 basisMaturity) = IFutureValueVault(_futureValueVault)
-            .removeFutureValue(_account, _maturity);
+            .removeFutureValue(_user, _maturity);
 
         if (removedAmount != 0) {
-            _addGenesisValue(_ccy, _account, basisMaturity, removedAmount);
+            _addGenesisValue(_ccy, _user, basisMaturity, removedAmount);
         }
     }
 
@@ -797,22 +810,13 @@ contract LendingMarketController is
             tokenVault().depositEscrow{value: msg.value}(msg.sender, _ccy, placedAmount);
         }
 
-        // if (placedAmount != 0) {
-        //     address maker = amounts[0] == 0 ? makers[0] : msg.sender;
-        //     if (_side == ProtocolTypes.Side.LEND) {
-        //         tokenVault().addEscrowedAmount{value: msg.value}(maker, _ccy, placedAmount);
-        //     } else {
-        //         tokenVault().useUnsettledCollateral(maker, _ccy, placedAmount);
-        //     }
-        // }
-
         return true;
     }
 
     function _cleanOrders(
         bytes32 _ccy,
         uint256 _maturity,
-        address _account
+        address _user
     ) private returns (uint256) {
         (
             uint256 activeLendOrderCount,
@@ -823,15 +827,15 @@ contract LendingMarketController is
             uint256 removedBorrowOrderAmount,
             uint256 userCurrentMaturity
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).cleanOrders(
-                _account
+                _user
             );
 
         if (removedLendOrderAmount > 0) {
-            tokenVault().removeCollateral(_account, _ccy, removedLendOrderAmount);
+            tokenVault().removeCollateral(_user, _ccy, removedLendOrderAmount);
         }
 
         if (removedBorrowOrderAmount > 0) {
-            tokenVault().addCollateral(_account, _ccy, removedBorrowOrderAmount);
+            tokenVault().addCollateral(_user, _ccy, removedBorrowOrderAmount);
         }
 
         if (removedLendOrderFutureValue > 0) {
@@ -839,7 +843,7 @@ contract LendingMarketController is
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ];
             IFutureValueVault(futureValueVault).addLendFutureValue(
-                _account,
+                _user,
                 removedLendOrderFutureValue,
                 userCurrentMaturity
             );
@@ -857,7 +861,7 @@ contract LendingMarketController is
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ];
             IFutureValueVault(futureValueVault).addBorrowFutureValue(
-                _account,
+                _user,
                 removedBorrowOrderFutureValue,
                 userCurrentMaturity
             );
@@ -876,16 +880,16 @@ contract LendingMarketController is
     function _updateExposedCurrency(
         bytes32 _ccy,
         uint256 _maturity,
-        address _account,
+        address _user,
         uint256 _activeOrderCount
     ) private {
         bool activeOrderExistence = _activeOrderCount > 0;
-        Storage.slot().activeOrderExistences[_account][_ccy][_maturity] = activeOrderExistence;
+        Storage.slot().activeOrderExistences[_user][_ccy][_maturity] = activeOrderExistence;
 
         if (!activeOrderExistence) {
             uint256[] memory maturities = getMaturities(_ccy);
             for (uint256 i = 0; i < maturities.length; i++) {
-                if (Storage.slot().activeOrderExistences[_account][_ccy][maturities[i]]) {
+                if (Storage.slot().activeOrderExistences[_user][_ccy][maturities[i]]) {
                     activeOrderExistence = true;
                     break;
                 }
@@ -893,9 +897,9 @@ contract LendingMarketController is
         }
 
         if (activeOrderExistence) {
-            Storage.slot().exposedCurrencies[_account].add(_ccy);
+            Storage.slot().exposedCurrencies[_user].add(_ccy);
         } else {
-            Storage.slot().exposedCurrencies[_account].remove(_ccy);
+            Storage.slot().exposedCurrencies[_user].remove(_ccy);
         }
     }
 

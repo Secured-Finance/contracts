@@ -90,3 +90,5 @@ Gets the all imported contract addresses.
 | ---- | ---- | ----------- |
 | [0] | address[] | Array with the contract address |
 
+## AddressResolver
+

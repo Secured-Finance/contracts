@@ -33,8 +33,8 @@ contract MixinGenesisValue {
         return Storage.slot().totalBorrowingSupplies[_ccy];
     }
 
-    function getGenesisValue(bytes32 _ccy, address _account) public view returns (int256) {
-        return Storage.slot().balances[_ccy][_account];
+    function getGenesisValue(bytes32 _ccy, address _user) public view returns (int256) {
+        return Storage.slot().balances[_ccy][_user];
     }
 
     function getCurrentMaturity(bytes32 _ccy) public view returns (uint256) {
@@ -53,7 +53,7 @@ contract MixinGenesisValue {
         return Storage.slot().maturityUnitPrices[_ccy][_maturity];
     }
 
-    function getGenesisValueInFutureValue(bytes32 _ccy, address _account)
+    function getGenesisValueInFutureValue(bytes32 _ccy, address _user)
         public
         view
         returns (int256)
@@ -61,7 +61,7 @@ contract MixinGenesisValue {
         // NOTE: The formula is:
         // futureValue = genesisValue * currentCompoundFactor.
         return
-            (getGenesisValue(_ccy, _account) * int256(getCompoundFactor(_ccy))) /
+            (getGenesisValue(_ccy, _user) * int256(getCompoundFactor(_ccy))) /
             int256(10**decimals(_ccy));
     }
 
@@ -85,7 +85,7 @@ contract MixinGenesisValue {
         pure
         returns (uint256)
     {
-        // NOTE: The formula is: presentValue = futureValue * unit price.
+        // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * _unitPrice) / ProtocolTypes.BP;
     }
 
@@ -94,7 +94,7 @@ contract MixinGenesisValue {
         pure
         returns (int256)
     {
-        // NOTE: The formula is: presentValue = futureValue * unit price.
+        // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.BP);
     }
 
@@ -167,7 +167,7 @@ contract MixinGenesisValue {
 
     function _addGenesisValue(
         bytes32 _ccy,
-        address _account,
+        address _user,
         uint256 _basisMaturity,
         int256 _futureValue
     ) internal returns (bool) {
@@ -175,7 +175,7 @@ contract MixinGenesisValue {
         .slot()
         .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
         int256 amount = (_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor);
-        int256 balance = Storage.slot().balances[_ccy][_account];
+        int256 balance = Storage.slot().balances[_ccy][_user];
 
         if (amount >= 0) {
             if (balance >= 0) {
@@ -203,9 +203,9 @@ contract MixinGenesisValue {
             }
         }
 
-        Storage.slot().balances[_ccy][_account] += amount;
+        Storage.slot().balances[_ccy][_user] += amount;
 
-        emit Transfer(_ccy, address(0), _account, amount);
+        emit Transfer(_ccy, address(0), _user, amount);
 
         return true;
     }

@@ -6,18 +6,12 @@ interface IFutureValueVault {
 
     function getTotalBorrowingSupply(uint256 _maturity) external view returns (uint256);
 
-    function getFutureValue(address _account)
+    function getFutureValue(address _user)
         external
         view
         returns (int256 futureValue, uint256 maturity);
 
-    function calculatePresentValue(
-        uint256 _futureValue,
-        uint256 _maturity,
-        uint256 _rate
-    ) external view returns (uint256);
-
-    function hasFutureValueInPastMaturity(address _account, uint256 _maturity)
+    function hasFutureValueInPastMaturity(address _user, uint256 _maturity)
         external
         view
         returns (bool);

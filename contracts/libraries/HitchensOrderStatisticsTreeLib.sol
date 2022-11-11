@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 // types
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {FutureValue} from "../libraries/FutureValue.sol";
 
 struct UnfilledOrder {
     uint48 orderId;
@@ -484,8 +483,6 @@ library HitchensOrderStatisticsTreeLib {
                 // Update order ids in the node.
                 uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
                 unfilledOrder = fillOrders(self, cursor, filledNodeAmount);
-                // console.log("  filledNodeAmount:", filledNodeAmount);
-                // console.log("  unfilledOrder:", unfilledOrder.amount);
             }
 
             self.nodes[cursor].left = 0;
@@ -530,9 +527,6 @@ library HitchensOrderStatisticsTreeLib {
         if (self.nodes[self.root].red) {
             self.nodes[self.root].red = false;
         }
-
-        // console.log("  remainingAmount:", remainingAmount);
-        // console.log("  filledFutureValue:", filledFutureValue);
     }
 
     function dropRight(
@@ -577,8 +571,6 @@ library HitchensOrderStatisticsTreeLib {
                 // Update order ids in the node.
                 uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
                 unfilledOrder = fillOrders(self, cursor, filledNodeAmount);
-                // console.log("  filledNodeAmount:", filledNodeAmount);
-                // console.log("  unfilledOrder:", unfilledOrder.amount);
             }
 
             self.nodes[cursor].right = 0;
@@ -623,9 +615,6 @@ library HitchensOrderStatisticsTreeLib {
         if (self.nodes[self.root].red) {
             self.nodes[self.root].red = false;
         }
-
-        // console.log("  remainingAmount:", remainingAmount);
-        // console.log("  filledFutureValue:", filledFutureValue);
     }
 
     function getFutureValue(
@@ -721,10 +710,6 @@ library HitchensOrderStatisticsTreeLib {
         );
 
         uint256 remainingAmount = _amount;
-        // orderIds = new uint48[](gn.orderCounter);
-        // makers = new address[](gn.orderCounter);
-        // amounts = new uint256[](gn.orderCounter);
-
         uint256 filledCount = 0;
         OrderItem memory currentOrder = gn.orders[gn.head];
         uint48 orderId = gn.head;
@@ -735,7 +720,6 @@ library HitchensOrderStatisticsTreeLib {
             if (currentOrder.amount <= remainingAmount) {
                 remainingAmount -= currentOrder.amount;
                 orderId = currentOrder.next;
-                // amounts[filledCount] = currentOrder.amount;
             } else {
                 unfilledOrder = UnfilledOrder(
                     currentOrder.orderId,
@@ -743,15 +727,9 @@ library HitchensOrderStatisticsTreeLib {
                     currentOrder.amount - remainingAmount,
                     value
                 );
-                // amounts[filledCount] = remainingAmount;
                 remainingAmount = 0;
             }
 
-            // orderIds[filledCount] = currentOrder.orderId;
-            // makers[filledCount] = currentOrder.maker;
-
-            // delete gn.orders[currentOrder.orderId];
-            // _removeOrder(self, value, currentOrder.orderId);
             filledCount++;
         }
 
@@ -765,32 +743,6 @@ library HitchensOrderStatisticsTreeLib {
             OrderItem storage order = self.nodes[value].orders[currentOrder.orderId];
             order.amount -= unfilledOrder.amount;
         }
-
-        // if (currentOrder.orderId == 0) {
-        //     _setHead(self, value, 0);
-        //     _setTail(self, value, 0);
-        //     gn.orderCounter = 0;
-        //     gn.orderTotalAmount = 0;
-        // } else {
-        //     _setHead(self, value, currentOrder.orderId);
-        //     currentOrder.prev = 0;
-        //     gn.orderCounter -= filledCount;
-        //     console.log("_amount:", _amount);
-        //     console.log("unfilledOrder:", unfilledOrder.amount);
-        //     gn.orderTotalAmount -= _amount + unfilledOrder.amount;
-
-        //     // Reduce array length to delete empty slot using assembly command.
-        //     // uint256 _orderCounter = gn.orderCounter;
-        //     // assembly {
-        //     //     mstore(orderIds, sub(mload(orderIds), _orderCounter))
-        //     //     mstore(makers, sub(mload(makers), _orderCounter))
-        //     //     mstore(amounts, sub(mload(amounts), _orderCounter))
-        //     // }
-        // }
-
-        // console.log("unfilledOrder:", unfilledOrder.amount);
-
-        // remove(self, value);
     }
 
     /**
@@ -972,7 +924,6 @@ library HitchensOrderStatisticsTreeLib {
         pure
         returns (uint256)
     {
-        // return (unitPrice * amount) / ProtocolTypes.BP;
         return (amount * ProtocolTypes.BP) / unitPrice;
     }
 }

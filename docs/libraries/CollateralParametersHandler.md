@@ -113,3 +113,5 @@ function _updateLiquidationPriceRate(uint256 _rate) private
 function _updateMinCollateralRate(uint256 _rate) private
 ```
 
+## CollateralParametersHandler
+

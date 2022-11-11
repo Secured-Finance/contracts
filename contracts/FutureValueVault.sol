@@ -10,7 +10,7 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 
 /**
- * @title FutureValue contract is used to store the future value as a token for Lending deals.
+ * @notice Implements the management of the future value as an amount for Lending deals in each currency.
  */
 contract FutureValueVault is IFutureValueVault, Proxyable {
     event Transfer(address indexed from, address indexed to, int256 value);
@@ -32,51 +32,62 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
         Storage.slot().lendingMarket = _lendingMarket;
     }
 
+    /**
+     * @notice Gets the total lending supply.
+     * @param _maturity The maturity of the market
+     */
     function getTotalLendingSupply(uint256 _maturity) external view override returns (uint256) {
         return Storage.slot().totalLendingSupply[_maturity];
     }
 
+    /**
+     * @notice Gets the total borrowing supply.
+     * @param _maturity The maturity of the market
+     */
     function getTotalBorrowingSupply(uint256 _maturity) external view override returns (uint256) {
         return Storage.slot().totalBorrowingSupply[_maturity];
     }
 
-    function getFutureValue(address _account)
+    /**
+     * @notice Gets the future value of the account.
+     * @param _user User's address
+     * @return futureValue The future value
+     * @return maturity The maturity of the market that the future value was added
+     */
+    function getFutureValue(address _user)
         public
         view
         override
         returns (int256 futureValue, uint256 maturity)
     {
-        return (Storage.slot().balances[_account], Storage.slot().futureValueMaturities[_account]);
+        return (Storage.slot().balances[_user], Storage.slot().futureValueMaturities[_user]);
     }
 
-    function calculatePresentValue(
-        uint256 _futureValue,
-        uint256 _maturity,
-        uint256 _rate
-    ) external view override returns (uint256) {
-        // NOTE: The formula is: presentValue = futureValue / (1 + rate * (maturity - now) / 360 days).
-        uint256 remainingMaturity = _maturity >= block.timestamp ? _maturity - block.timestamp : 0;
-
-        return (((_futureValue * ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR) /
-            ProtocolTypes.BP) *
-            ProtocolTypes.SECONDS_IN_YEAR +
-            _rate *
-            remainingMaturity);
-    }
-
-    function hasFutureValueInPastMaturity(address account, uint256 maturity)
+    /**
+     * @notice Gets if the account has the future value amount in the selected maturity.
+     * @param _user User's address
+     * @param _maturity The maturity of the market
+     * @return The boolean if the lending market is initialized or not
+     */
+    function hasFutureValueInPastMaturity(address _user, uint256 _maturity)
         public
         view
         override
         returns (bool)
     {
-        if (Storage.slot().futureValueMaturities[account] == maturity) {
+        if (Storage.slot().futureValueMaturities[_user] == _maturity) {
             return false;
         } else {
-            return Storage.slot().balances[account] != 0;
+            return Storage.slot().balances[_user] != 0;
         }
     }
 
+    /**
+     * @notice Adds the future value amount for borrowing deals.
+     * @param _user User's address
+     * @param _amount The amount to add
+     * @param _maturity The maturity of the market
+     */
     function addBorrowFutureValue(
         address _user,
         uint256 _amount,
@@ -96,6 +107,12 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
         return true;
     }
 
+    /**
+     * @notice Adds the future value amount for lending deals.
+     * @param _user User's address
+     * @param _amount The amount to add
+     * @param _maturity The maturity of the market
+     */
     function addLendFutureValue(
         address _user,
         uint256 _amount,

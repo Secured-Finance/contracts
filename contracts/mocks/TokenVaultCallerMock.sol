@@ -45,19 +45,19 @@ contract TokenVaultCallerMock {
         tokenVault.withdrawEscrow(receiver, ccy, amount);
     }
 
-    function getTotalPresentValueInETH(address _account) public view returns (int256) {
-        return lendingMarketController.getTotalPresentValueInETH(_account);
+    function getTotalPresentValueInETH(address _user) public view returns (int256) {
+        return lendingMarketController.getTotalPresentValueInETH(_user);
     }
 
-    function calculateTotalLentFundsInETH(address _account)
+    function calculateTotalLentFundsInETH(address _user)
         public
         view
         returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount)
     {
-        return lendingMarketController.calculateTotalLentFundsInETH(_account);
+        return lendingMarketController.calculateTotalLentFundsInETH(_user);
     }
 
-    function calculateTotalBorrowedFundsInETH(address _account)
+    function calculateTotalBorrowedFundsInETH(address _user)
         public
         view
         returns (
@@ -66,10 +66,10 @@ contract TokenVaultCallerMock {
             uint256 totalBorrowedAmount
         )
     {
-        return lendingMarketController.calculateTotalBorrowedFundsInETH(_account);
+        return lendingMarketController.calculateTotalBorrowedFundsInETH(_user);
     }
 
-    function cleanOrders(address _account) public {
-        return lendingMarketController.cleanOrders(_account);
+    function cleanOrders(address _user) public {
+        return lendingMarketController.cleanOrders(_user);
     }
 }
