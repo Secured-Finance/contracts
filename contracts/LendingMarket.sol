@@ -325,7 +325,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         for (uint256 i = 0; i < activeOrderIds.length; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
-            // Get a future value in current maturity.
+            // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
             // as an order canceled in the past market.
             OrderItem memory orderItem = Storage
@@ -340,7 +340,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             if (maturity == 0) {
                 maturity = marketOrder.maturity;
             }
-            // Get a future value in order maturity.
+            // Sum future values in the maturity of orders
             // It will be the future value when the order is created, even if the market is rotated
             // and maturity is updated.
             inactiveFutureValue += Storage.slot().lendOrders[marketOrder.maturity].getFutureValue(
@@ -376,7 +376,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         for (uint256 i = 0; i < activeOrderIds.length; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
-            // Get a future value in current maturity.
+            // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
             // as an order canceled in the past market.
             OrderItem memory orderItem = Storage
@@ -390,7 +390,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveOrderIds[i]];
-            // Get a future value in order maturity.
+            // Sum future values in the maturity of orders
             // It will be the future value when the order is created, even if the market is rotated
             // and maturity is updated.
             OrderItem memory orderItem = Storage
@@ -398,10 +398,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 .borrowOrders[marketOrder.maturity]
                 .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
             inactiveAmount += orderItem.amount;
-            inactiveFutureValue += Storage.slot().borrowOrders[marketOrder.maturity].getFutureValue(
-                    marketOrder.unitPrice,
-                    inActiveOrderIds[i]
-                );
+            inactiveFutureValue += (orderItem.amount * ProtocolTypes.BP) / marketOrder.unitPrice;
         }
     }
 
@@ -675,9 +672,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 .borrowOrders[Storage.slot().maturity]
                 .dropRight(_amount, _unitPrice);
         }
-
-        // TODO Emit order history event here.
-        // updateOrderHistory(_side, _unitPrice);
 
         emit TakeOrders(_user, _side, _amount - remainingAmount, _unitPrice, filledFutureValue);
 

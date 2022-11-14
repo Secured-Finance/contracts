@@ -411,7 +411,7 @@ contract LendingMarketController is
                     Storage.slot().lendingMarkets[_ccy][i]
                 )
             );
-            borrowedAmount = inactiveAmount;
+            borrowedAmount += inactiveAmount;
         }
 
         int256 amountInFV = getGenesisValueInFutureValue(_ccy, _user);

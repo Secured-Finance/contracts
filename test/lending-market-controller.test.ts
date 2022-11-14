@@ -22,10 +22,9 @@ const ProxyController = artifacts.require('ProxyController');
 const { deployContract, deployMockContract } = waffle;
 
 const COMPOUND_FACTOR = '1020100000000000000';
-const SECONDS_IN_YEAR = ethers.BigNumber.from('31557600');
 const BP = ethers.BigNumber.from('10000');
 
-describe('LendingMarketController', () => {
+describe.only('LendingMarketController', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let beaconProxyControllerProxy: Contract;
@@ -1925,6 +1924,126 @@ describe('LendingMarketController', () => {
 
         await convertAllFutureValueToGenesisValue();
         await checkGenesisValue();
+      });
+
+      it('Calculate the total funds from inactive lending order list', async () => {
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '40000000000000000',
+            '8000',
+          );
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '8000',
+          );
+
+        await lendingMarketControllerProxy
+          .connect(carol)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '8150',
+          );
+        await lendingMarketControllerProxy
+          .connect(dave)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '500000000000000000',
+            '8151',
+          );
+
+        const aliceLentFunds =
+          await lendingMarketControllerProxy.calculateLentFundsFromOrders(
+            targetCurrency,
+            alice.address,
+          );
+
+        const bobBorrowedFunds =
+          await lendingMarketControllerProxy.calculateBorrowedFundsFromOrders(
+            targetCurrency,
+            bob.address,
+          );
+
+        expect(aliceLentFunds.workingOrdersAmount).to.equal('0');
+        expect(aliceLentFunds.claimableAmount).to.equal('40750000000000000');
+        expect(bobBorrowedFunds.workingOrdersAmount).to.equal(
+          '60000000000000000',
+        );
+        expect(bobBorrowedFunds.obligationAmount).to.equal('0');
+        expect(bobBorrowedFunds.borrowedAmount).to.equal('0');
+      });
+
+      it('Calculate the total funds from inactive borrowing order list', async () => {
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '30000000000000000',
+            '8000',
+          );
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            '8000',
+          );
+
+        await lendingMarketControllerProxy
+          .connect(carol)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '500000000000000000',
+            '7500',
+          );
+        await lendingMarketControllerProxy
+          .connect(dave)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '500000000000000000',
+            '7501',
+          );
+
+        const aliceLentFunds =
+          await lendingMarketControllerProxy.calculateLentFundsFromOrders(
+            targetCurrency,
+            alice.address,
+          );
+
+        const bobBorrowedFunds =
+          await lendingMarketControllerProxy.calculateBorrowedFundsFromOrders(
+            targetCurrency,
+            bob.address,
+          );
+
+        expect(aliceLentFunds.workingOrdersAmount).to.equal(
+          '70000000000000000',
+        );
+        expect(aliceLentFunds.claimableAmount).to.equal('0');
+        expect(bobBorrowedFunds.workingOrdersAmount).to.equal('0');
+        expect(bobBorrowedFunds.obligationAmount).to.equal('28125000000000000');
+        expect(bobBorrowedFunds.borrowedAmount).to.equal('30000000000000000');
       });
     });
   });
