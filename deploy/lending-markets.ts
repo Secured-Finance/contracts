@@ -107,6 +107,7 @@ const func: DeployFunction = async function ({
 func.tags = ['LendingMarkets'];
 func.dependencies = [
   'BeaconProxyController',
+  'FutureValueVault',
   'LendingMarketController',
   'Migration',
 ];
