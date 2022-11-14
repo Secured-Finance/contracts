@@ -846,7 +846,7 @@ contract LendingMarketController is
                 removedLendOrderFutureValue,
                 userCurrentMaturity
             );
-            emit FillOrders(
+            emit FillOrdersAsync(
                 msg.sender,
                 _ccy,
                 ProtocolTypes.Side.LEND,
@@ -864,7 +864,7 @@ contract LendingMarketController is
                 removedBorrowOrderFutureValue,
                 userCurrentMaturity
             );
-            emit FillOrders(
+            emit FillOrdersAsync(
                 msg.sender,
                 _ccy,
                 ProtocolTypes.Side.BORROW,

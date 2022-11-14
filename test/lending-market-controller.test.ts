@@ -565,8 +565,12 @@ describe('LendingMarketController', () => {
 
       expect(await lendingMarket1.isOpened()).to.equal(true);
 
-      await lendingMarketControllerProxy.cleanOrders(alice.address);
-      await lendingMarketControllerProxy.cleanOrders(bob.address);
+      await expect(
+        lendingMarketControllerProxy.cleanOrders(alice.address),
+      ).to.emit(lendingMarketControllerProxy, 'FillOrdersAsync');
+      await expect(
+        lendingMarketControllerProxy.cleanOrders(bob.address),
+      ).to.not.emit(lendingMarketControllerProxy, 'FillOrdersAsync');
 
       await showFV();
       await showTotalPV();

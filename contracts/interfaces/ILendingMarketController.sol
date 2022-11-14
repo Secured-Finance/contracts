@@ -37,7 +37,7 @@ interface ILendingMarketController {
         uint256 unitPrice,
         uint256 filledFutureValue
     );
-    event FillOrders(
+    event FillOrdersAsync(
         address indexed taker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
