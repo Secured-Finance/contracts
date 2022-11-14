@@ -40,7 +40,3 @@ bytes32 FUTURE_VALUE
 bytes32 LENDING_MARKET
 ```
 
-## Contracts
-
-## BeaconContracts
-

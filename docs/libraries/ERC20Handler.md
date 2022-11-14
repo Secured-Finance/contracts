@@ -68,5 +68,3 @@ function safeTransferFrom(address token, address from, address to, uint256 value
 function safeTransferETH(address to, uint256 value) internal
 ```
 
-## ERC20Handler
-

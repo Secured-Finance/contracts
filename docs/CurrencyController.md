@@ -316,5 +316,3 @@ Gets the converted amount to the selected currency from ETH.
 function _isETH(bytes32 _ccy) internal pure returns (bool)
 ```
 
-## CurrencyController
-

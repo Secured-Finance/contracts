@@ -128,5 +128,3 @@ function _createProxy(bytes32 beaconName, bytes data) internal returns (address)
 function _updateBeaconImpl(bytes32 name, address newAddress) internal returns (address beaconProxyAddress)
 ```
 
-## BeaconProxyController
-
