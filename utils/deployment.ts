@@ -24,19 +24,21 @@ const deployContracts = async () => {
   const contracts = [
     'AddressResolver',
     'BeaconProxyController',
-    'TokenVault',
     'CurrencyController',
-    'MockWETH9',
+    'GenesisValueVault',
     'LendingMarketController',
+    'MockWETH9',
+    'TokenVault',
   ];
 
   const [
     addressResolver,
     beaconProxyController,
-    tokenVault,
     currencyController,
-    wETHToken,
+    genesisValueVault,
     lendingMarketController,
+    wETHToken,
+    tokenVault,
   ] = await Promise.all(
     contracts.map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
@@ -66,11 +68,17 @@ const deployContracts = async () => {
   // Set contract addresses to the Proxy contract
   const [
     beaconProxyControllerAddress,
-    tokenVaultAddress,
     currencyControllerAddress,
+    genesisValueVaultAddress,
     lendingMarketControllerAddress,
+    tokenVaultAddress,
   ] = await Promise.all([
     proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
+    proxyController.setCurrencyControllerImpl(currencyController.address),
+    proxyController.setGenesisValueVaultImpl(genesisValueVault.address),
+    proxyController.setLendingMarketControllerImpl(
+      lendingMarketController.address,
+    ),
     proxyController.setTokenVaultImpl(
       tokenVault.address,
       marginCallThresholdRate,
@@ -78,10 +86,6 @@ const deployContracts = async () => {
       liquidationPriceRate,
       minCollateralRate,
       wETHToken.address,
-    ),
-    proxyController.setCurrencyControllerImpl(currencyController.address),
-    proxyController.setLendingMarketControllerImpl(
-      lendingMarketController.address,
     ),
   ])
     .then((txs) => Promise.all(txs.map((tx) => tx.wait())))
@@ -102,17 +106,21 @@ const deployContracts = async () => {
     'BeaconProxyController',
     beaconProxyControllerAddress,
   );
-  const tokenVaultProxy = await ethers.getContractAt(
-    'TokenVault',
-    tokenVaultAddress,
-  );
   const currencyControllerProxy = await ethers.getContractAt(
     'CurrencyController',
     currencyControllerAddress,
   );
+  const genesisValueVaultProxy = await ethers.getContractAt(
+    'GenesisValueVault',
+    genesisValueVaultAddress,
+  );
   const lendingMarketControllerProxy = await ethers.getContractAt(
     'LendingMarketController',
     lendingMarketControllerAddress,
+  );
+  const tokenVaultProxy = await ethers.getContractAt(
+    'TokenVault',
+    tokenVaultAddress,
   );
 
   // Set up for CurrencyController
@@ -139,9 +147,10 @@ const deployContracts = async () => {
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets: [string, Contract][] = [
     ['BeaconProxyController', beaconProxyControllerProxy],
-    ['TokenVault', tokenVaultProxy],
     ['CurrencyController', currencyControllerProxy],
+    ['GenesisValueVault', genesisValueVaultProxy],
     ['LendingMarketController', lendingMarketControllerProxy],
+    ['TokenVault', tokenVaultProxy],
   ];
 
   const importAddressesArgs = {
@@ -151,8 +160,9 @@ const deployContracts = async () => {
 
   const buildCachesAddresses = [
     beaconProxyControllerProxy,
-    tokenVaultProxy,
     lendingMarketControllerProxy,
+    genesisValueVaultProxy,
+    tokenVaultProxy,
   ]
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
     .map((contract) => contract.address);

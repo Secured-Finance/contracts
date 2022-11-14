@@ -5,6 +5,7 @@ import {Contracts} from "../libraries/Contracts.sol";
 import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
 import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
 import {ICurrencyController} from "../interfaces/ICurrencyController.sol";
+import {IGenesisValueVault} from "../interfaces/IGenesisValueVault.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
 import {ITokenVault} from "../interfaces/ITokenVault.sol";
 import {MixinAddressResolverStorage as Storage} from "../storages/MixinAddressResolverStorage.sol";
@@ -96,6 +97,10 @@ contract MixinAddressResolver {
 
     function currencyController() internal view returns (ICurrencyController) {
         return ICurrencyController(getAddress(Contracts.CURRENCY_CONTROLLER));
+    }
+
+    function genesisValueVault() internal view returns (IGenesisValueVault) {
+        return IGenesisValueVault(getAddress(Contracts.GENESIS_VALUE_VAULT));
     }
 
     function lendingMarketController() internal view returns (ILendingMarketController) {

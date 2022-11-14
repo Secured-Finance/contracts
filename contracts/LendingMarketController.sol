@@ -12,7 +12,6 @@ import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
-import {MixinGenesisValue} from "./mixins/MixinGenesisValue.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
@@ -35,7 +34,6 @@ import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarke
 contract LendingMarketController is
     ILendingMarketController,
     MixinAddressResolver,
-    MixinGenesisValue,
     ReentrancyGuard,
     Ownable,
     Proxyable
@@ -81,10 +79,11 @@ contract LendingMarketController is
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](3);
+        contracts = new bytes32[](4);
         contracts[0] = Contracts.BEACON_PROXY_CONTROLLER;
         contracts[1] = Contracts.CURRENCY_CONTROLLER;
-        contracts[2] = Contracts.TOKEN_VAULT;
+        contracts[2] = Contracts.GENESIS_VALUE_VAULT;
+        contracts[3] = Contracts.TOKEN_VAULT;
     }
 
     // @inheritdoc MixinAddressResolver
@@ -342,7 +341,7 @@ contract LendingMarketController is
             );
         }
 
-        int256 amountInFV = getGenesisValueInFutureValue(_ccy, _user);
+        int256 amountInFV = genesisValueVault().getGenesisValueInFutureValue(_ccy, _user);
         if (amountInFV > 0) {
             claimableAmount += _calculatePVFromFV(
                 uint256(amountInFV),
@@ -414,7 +413,7 @@ contract LendingMarketController is
             borrowedAmount += inactiveAmount;
         }
 
-        int256 amountInFV = getGenesisValueInFutureValue(_ccy, _user);
+        int256 amountInFV = genesisValueVault().getGenesisValueInFutureValue(_ccy, _user);
         if (amountInFV < 0) {
             obligationAmount += uint256(
                 _calculatePVFromFV(
@@ -479,7 +478,7 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        _registerCurrency(_ccy, 18, _compoundFactor);
+        genesisValueVault().registerCurrency(_ccy, 18, _compoundFactor);
         Storage.slot().basisDates[_ccy] = _basisDate;
     }
 
@@ -496,7 +495,7 @@ contract LendingMarketController is
         returns (address market, address futureValue)
     {
         require(
-            isRegisteredCurrency(_ccy),
+            genesisValueVault().isRegisteredCurrency(_ccy),
             "Lending market hasn't been initialized in the currency"
         );
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
@@ -629,7 +628,7 @@ contract LendingMarketController is
             markets[i] = marketAddr;
         }
 
-        _updateCompoundFactor(
+        genesisValueVault().updateCompoundFactor(
             _ccy,
             prevMaturity,
             ILendingMarket(nextMarketAddr).getMaturity(),
@@ -691,7 +690,7 @@ contract LendingMarketController is
                     _user
                 );
             }
-            if (getGenesisValue(ccy, _user) == 0) {
+            if (genesisValueVault().getGenesisValue(ccy, _user) == 0) {
                 Storage.slot().usedCurrencies[_user].remove(ccy);
             }
         }
@@ -734,7 +733,7 @@ contract LendingMarketController is
             .removeFutureValue(_user, _maturity);
 
         if (removedAmount != 0) {
-            _addGenesisValue(_ccy, _user, basisMaturity, removedAmount);
+            genesisValueVault().addGenesisValue(_ccy, _user, basisMaturity, removedAmount);
         }
     }
 
@@ -909,7 +908,9 @@ contract LendingMarketController is
         int256 futureValueInMaturity,
         address lendingMarketInMaturity
     ) private view returns (int256 totalPresentValue) {
-        uint256 compoundFactorInMaturity = getMaturityUnitPrice(_ccy, maturity).compoundFactor;
+        uint256 compoundFactorInMaturity = genesisValueVault()
+            .getMaturityUnitPrice(_ccy, maturity)
+            .compoundFactor;
         int256 futureValue;
         uint256 unitPrice;
 
@@ -917,13 +918,33 @@ contract LendingMarketController is
             futureValue = futureValueInMaturity;
             unitPrice = ILendingMarket(lendingMarketInMaturity).getMidUnitPrice();
         } else {
-            int256 genesisValue = _calculateGVFromFV(_ccy, maturity, futureValueInMaturity);
-            futureValue =
-                (genesisValue * int256(getCompoundFactor(_ccy))) /
-                int256(10**decimals(_ccy));
+            int256 genesisValue = genesisValueVault().calculateGVFromFV(
+                _ccy,
+                maturity,
+                futureValueInMaturity
+            );
+            futureValue = genesisValueVault().calculateFVFromGV(_ccy, 0, genesisValue);
             unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice();
         }
 
         return _calculatePVFromFV(futureValue, unitPrice);
+    }
+
+    function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
+        internal
+        pure
+        returns (uint256)
+    {
+        // NOTE: The formula is: presentValue = futureValue * unitPrice.
+        return (_futureValue * _unitPrice) / ProtocolTypes.BP;
+    }
+
+    function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)
+        internal
+        pure
+        returns (int256)
+    {
+        // NOTE: The formula is: futureValue = presentValue / unitPrice.
+        return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.BP);
     }
 }

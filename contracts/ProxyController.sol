@@ -117,6 +117,15 @@ contract ProxyController is IProxyController, Ownable {
     }
 
     /**
+     * @notice Sets the implementation contract of GenesisValueVault
+     * @param newImpl The address of implementation contract
+     */
+    function setGenesisValueVaultImpl(address newImpl) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature("initialize(address)", resolver);
+        _updateImpl(Contracts.GENESIS_VALUE_VAULT, newImpl, data);
+    }
+
+    /**
      * @notice Sets the implementation contract of LendingMarketController
      * @param newImpl The address of implementation contract
      */

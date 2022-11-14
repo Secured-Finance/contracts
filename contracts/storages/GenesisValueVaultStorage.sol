@@ -8,8 +8,8 @@ struct MaturityUnitPrice {
     uint256 prev;
 }
 
-library GenesisValueStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.genesisValue");
+library GenesisValueVaultStorage {
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.genesisValueVault");
 
     struct Storage {
         mapping(bytes32 => bool) isRegisteredCurrency;

@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {GenesisValueStorage as Storage, MaturityUnitPrice} from "../storages/GenesisValueStorage.sol";
+// interfaces
+import {IGenesisValueVault} from "./interfaces/IGenesisValueVault.sol";
+// libraries
+import {Contracts} from "./libraries/Contracts.sol";
+// mixins
+import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
+// utils
+import {ProtocolTypes} from "./types/ProtocolTypes.sol";
+import {Proxyable} from "./utils/Proxyable.sol";
+// storages
+import {GenesisValueVaultStorage as Storage, MaturityUnitPrice} from "./storages/GenesisValueVaultStorage.sol";
 
 /**
- * @title MixinGenesisValue contract is used to store the genesis value for Lending deals.
+ * @notice Implements the management of the genesis value as an amount for Lending deals.
  */
-contract MixinGenesisValue {
+contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyable {
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
     event CompoundFactorUpdated(
         bytes32 indexed ccy,
@@ -17,37 +26,59 @@ contract MixinGenesisValue {
         uint256 previousMaturity
     );
 
-    function isRegisteredCurrency(bytes32 _ccy) public view returns (bool) {
+    /**
+     * @notice Initializes the contract.
+     * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
+     * @param _resolver The address of the Address Resolver contract
+     */
+    function initialize(address _resolver) public initializer onlyProxy {
+        registerAddressResolver(_resolver);
+    }
+
+    // @inheritdoc MixinAddressResolver
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
+    // @inheritdoc MixinAddressResolver
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
+    function isRegisteredCurrency(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().isRegisteredCurrency[_ccy];
     }
 
-    function decimals(bytes32 _ccy) public view returns (uint8) {
+    function decimals(bytes32 _ccy) public view override returns (uint8) {
         return Storage.slot().decimals[_ccy];
     }
 
-    function getTotalLendingSupply(bytes32 _ccy) external view returns (uint256) {
+    function getTotalLendingSupply(bytes32 _ccy) external view override returns (uint256) {
         return Storage.slot().totalLendingSupplies[_ccy];
     }
 
-    function getTotalBorrowingSupply(bytes32 _ccy) external view returns (uint256) {
+    function getTotalBorrowingSupply(bytes32 _ccy) external view override returns (uint256) {
         return Storage.slot().totalBorrowingSupplies[_ccy];
     }
 
-    function getGenesisValue(bytes32 _ccy, address _user) public view returns (int256) {
+    function getGenesisValue(bytes32 _ccy, address _user) public view override returns (int256) {
         return Storage.slot().balances[_ccy][_user];
     }
 
-    function getCurrentMaturity(bytes32 _ccy) public view returns (uint256) {
+    function getCurrentMaturity(bytes32 _ccy) public view override returns (uint256) {
         return Storage.slot().currentMaturity[_ccy];
     }
 
-    function getCompoundFactor(bytes32 _ccy) public view returns (uint256) {
+    function getCompoundFactor(bytes32 _ccy) public view override returns (uint256) {
         return Storage.slot().compoundFactors[_ccy];
     }
 
     function getMaturityUnitPrice(bytes32 _ccy, uint256 _maturity)
         public
         view
+        override
         returns (MaturityUnitPrice memory)
     {
         return Storage.slot().maturityUnitPrices[_ccy][_maturity];
@@ -56,6 +87,7 @@ contract MixinGenesisValue {
     function getGenesisValueInFutureValue(bytes32 _ccy, address _user)
         public
         view
+        override
         returns (int256)
     {
         // NOTE: The formula is:
@@ -65,11 +97,11 @@ contract MixinGenesisValue {
             int256(10**decimals(_ccy));
     }
 
-    function _calculateGVFromFV(
+    function calculateGVFromFV(
         bytes32 _ccy,
         uint256 _basisMaturity,
         int256 _futureValue
-    ) internal view returns (int256) {
+    ) external view override returns (int256) {
         uint256 compoundFactor = Storage
         .slot()
         .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
@@ -80,29 +112,43 @@ contract MixinGenesisValue {
         return (_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor);
     }
 
-    function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
-        internal
-        pure
-        returns (uint256)
-    {
-        // NOTE: The formula is: presentValue = futureValue * unitPrice.
-        return (_futureValue * _unitPrice) / ProtocolTypes.BP;
+    function calculateFVFromGV(
+        bytes32 _ccy,
+        uint256 _basisMaturity,
+        int256 _genesisValue
+    ) external view override returns (int256) {
+        uint256 compoundFactor = _basisMaturity == 0
+            ? getCompoundFactor(_ccy)
+            : Storage.slot().maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
+
+        require(compoundFactor > 0, "Compound factor is not fixed yet");
+
+        return (_genesisValue * int256(compoundFactor)) / int256(10**decimals(_ccy));
     }
 
-    function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)
-        internal
-        pure
-        returns (int256)
-    {
-        // NOTE: The formula is: presentValue = futureValue * unitPrice.
-        return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.BP);
-    }
+    // function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
+    //     internal
+    //     pure
+    //     returns (uint256)
+    // {
+    //     // NOTE: The formula is: presentValue = futureValue * unitPrice.
+    //     return (_futureValue * _unitPrice) / ProtocolTypes.BP;
+    // }
 
-    function _registerCurrency(
+    // function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)
+    //     internal
+    //     pure
+    //     returns (int256)
+    // {
+    //     // NOTE: The formula is: presentValue = futureValue * unitPrice.
+    //     return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.BP);
+    // }
+
+    function registerCurrency(
         bytes32 _ccy,
         uint8 _decimals,
         uint256 _compoundFactor
-    ) internal {
+    ) external override onlyAcceptedContracts {
         require(_compoundFactor != 0, "Compound factor is zero");
         require(!isRegisteredCurrency(_ccy), "Already registered currency");
 
@@ -112,12 +158,12 @@ contract MixinGenesisValue {
         Storage.slot().compoundFactors[_ccy] = _compoundFactor;
     }
 
-    function _updateCompoundFactor(
+    function updateCompoundFactor(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _nextMaturity,
         uint256 _unitPrice
-    ) internal {
+    ) external override onlyAcceptedContracts {
         require(_unitPrice != 0, "unitPrice is zero");
         require(
             Storage.slot().maturityUnitPrices[_ccy][_maturity].next == 0,
@@ -165,12 +211,12 @@ contract MixinGenesisValue {
         );
     }
 
-    function _addGenesisValue(
+    function addGenesisValue(
         bytes32 _ccy,
         address _user,
         uint256 _basisMaturity,
         int256 _futureValue
-    ) internal returns (bool) {
+    ) external override onlyAcceptedContracts returns (bool) {
         uint256 compoundFactor = Storage
         .slot()
         .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;

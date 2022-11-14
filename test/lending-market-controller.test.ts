@@ -14,6 +14,7 @@ const BeaconProxyController = artifacts.require('BeaconProxyController');
 const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
 const FutureValueVault = artifacts.require('FutureValueVault');
+const GenesisValueVault = artifacts.require('GenesisValueVault');
 const LendingMarket = artifacts.require('LendingMarket');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
@@ -24,11 +25,12 @@ const { deployContract, deployMockContract } = waffle;
 const COMPOUND_FACTOR = '1020100000000000000';
 const BP = ethers.BigNumber.from('10000');
 
-describe.only('LendingMarketController', () => {
+describe('LendingMarketController', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
+  let genesisValueVaultProxy: Contract;
 
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -77,6 +79,7 @@ describe.only('LendingMarketController', () => {
       owner,
       LendingMarketController,
     );
+    const genesisValueVault = await deployContract(owner, GenesisValueVault);
 
     // Get the Proxy contract addresses
     await proxyController.setAddressResolverImpl(addressResolver.address);
@@ -101,6 +104,15 @@ describe.only('LendingMarketController', () => {
             .proxyAddress,
       );
 
+    const genesisValueVaultAddress = await proxyController
+      .setGenesisValueVaultImpl(genesisValueVault.address)
+      .then((tx) => tx.wait())
+      .then(
+        ({ events }) =>
+          events.find(({ event }) => event === 'ProxyCreated').args
+            .proxyAddress,
+      );
+
     // Get the Proxy contracts
     const addressResolverProxy = await ethers.getContractAt(
       'AddressResolver',
@@ -114,7 +126,10 @@ describe.only('LendingMarketController', () => {
       'LendingMarketController',
       lendingMarketControllerAddress,
     );
-
+    genesisValueVaultProxy = await ethers.getContractAt(
+      'GenesisValueVault',
+      genesisValueVaultAddress,
+    );
     // Deploy MigrationAddressResolver
     const migrationAddressResolver = await MigrationAddressResolver.new(
       addressResolverProxyAddress,
@@ -125,6 +140,7 @@ describe.only('LendingMarketController', () => {
       ['BeaconProxyController', beaconProxyControllerProxy],
       ['CurrencyController', mockCurrencyController],
       ['TokenVault', mockTokenVault],
+      ['GenesisValueVault', genesisValueVaultProxy],
       ['LendingMarketController', lendingMarketControllerProxy],
     ];
 
@@ -141,6 +157,7 @@ describe.only('LendingMarketController', () => {
     );
     await migrationAddressResolver.buildCaches([
       beaconProxyControllerProxy.address,
+      genesisValueVaultProxy.address,
       lendingMarketControllerProxy.address,
     ]);
 
@@ -1514,10 +1531,10 @@ describe.only('LendingMarketController', () => {
             '720',
           );
 
-        const initialCF = await lendingMarketControllerProxy.getCompoundFactor(
+        const initialCF = await genesisValueVaultProxy.getCompoundFactor(
           targetCurrency,
         );
-        const gvDecimals = await lendingMarketControllerProxy.decimals(
+        const gvDecimals = await genesisValueVaultProxy.decimals(
           targetCurrency,
         );
         const [aliceInitialFV] = await futureValueVault1.getFutureValue(
@@ -1567,11 +1584,10 @@ describe.only('LendingMarketController', () => {
         const maturitiesBefore =
           await lendingMarketControllerProxy.getMaturities(targetCurrency);
 
-        const aliceGVBefore =
-          await lendingMarketControllerProxy.getGenesisValue(
-            targetCurrency,
-            alice.address,
-          );
+        const aliceGVBefore = await genesisValueVaultProxy.getGenesisValue(
+          targetCurrency,
+          alice.address,
+        );
 
         // Update implementations
         const lendingMarket = await deployContract(owner, LendingMarket);
@@ -1582,7 +1598,7 @@ describe.only('LendingMarketController', () => {
         const maturitiesAfter =
           await lendingMarketControllerProxy.getMaturities(targetCurrency);
 
-        const aliceGVAfter = await lendingMarketControllerProxy.getGenesisValue(
+        const aliceGVAfter = await genesisValueVaultProxy.getGenesisValue(
           targetCurrency,
           alice.address,
         );
@@ -1667,15 +1683,15 @@ describe.only('LendingMarketController', () => {
         ).to.emit(lendingMarketControllerProxy, 'RotateLendingMarkets');
 
         const maturityUnitPrices = await Promise.all([
-          lendingMarketControllerProxy.getMaturityUnitPrice(
+          genesisValueVaultProxy.getMaturityUnitPrice(
             targetCurrency,
             maturities[0],
           ),
-          lendingMarketControllerProxy.getMaturityUnitPrice(
+          genesisValueVaultProxy.getMaturityUnitPrice(
             targetCurrency,
             maturities[1],
           ),
-          lendingMarketControllerProxy.getMaturityUnitPrice(
+          genesisValueVaultProxy.getMaturityUnitPrice(
             targetCurrency,
             maturities[2],
           ),
@@ -1751,7 +1767,7 @@ describe.only('LendingMarketController', () => {
 
           const genesisValues = await Promise.all(
             accounts.map((account) =>
-              lendingMarketControllerProxy.getGenesisValue(
+              genesisValueVaultProxy.getGenesisValue(
                 targetCurrency,
                 account.address,
               ),
@@ -1759,10 +1775,8 @@ describe.only('LendingMarketController', () => {
           );
 
           const totalSupplies = await Promise.all([
-            lendingMarketControllerProxy.getTotalLendingSupply(targetCurrency),
-            lendingMarketControllerProxy.getTotalBorrowingSupply(
-              targetCurrency,
-            ),
+            genesisValueVaultProxy.getTotalLendingSupply(targetCurrency),
+            genesisValueVaultProxy.getTotalBorrowingSupply(targetCurrency),
           ]);
 
           console.table({
