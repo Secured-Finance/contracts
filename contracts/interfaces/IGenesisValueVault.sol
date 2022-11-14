@@ -4,6 +4,15 @@ pragma solidity ^0.8.9;
 import {MaturityUnitPrice} from "../storages/GenesisValueVaultStorage.sol";
 
 interface IGenesisValueVault {
+    event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
+    event CompoundFactorUpdated(
+        bytes32 indexed ccy,
+        uint256 compoundFactor,
+        uint256 unitPrice,
+        uint256 currentMaturity,
+        uint256 previousMaturity
+    );
+
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
 
     function decimals(bytes32 ccy) external view returns (uint8);

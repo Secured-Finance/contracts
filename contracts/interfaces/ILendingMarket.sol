@@ -125,12 +125,6 @@ interface ILendingMarket {
             uint256
         );
 
-    // function matchOrders(
-    //     ProtocolTypes.Side side,
-    //     uint256 amount,
-    //     uint256 rate
-    // ) external view returns (uint256);
-
     function cleanOrders(address _user)
         external
         returns (

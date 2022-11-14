@@ -2,6 +2,8 @@
 pragma solidity ^0.8.9;
 
 interface IFutureValueVault {
+    event Transfer(address indexed from, address indexed to, int256 value);
+
     function getTotalLendingSupply(uint256 _maturity) external view returns (uint256);
 
     function getTotalBorrowingSupply(uint256 _maturity) external view returns (uint256);

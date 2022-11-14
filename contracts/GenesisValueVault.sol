@@ -17,15 +17,6 @@ import {GenesisValueVaultStorage as Storage, MaturityUnitPrice} from "./storages
  * @notice Implements the management of the genesis value as an amount for Lending deals.
  */
 contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyable {
-    event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
-    event CompoundFactorUpdated(
-        bytes32 indexed ccy,
-        uint256 compoundFactor,
-        uint256 unitPrice,
-        uint256 currentMaturity,
-        uint256 previousMaturity
-    );
-
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
@@ -125,24 +116,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         return (_genesisValue * int256(compoundFactor)) / int256(10**decimals(_ccy));
     }
-
-    // function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
-    //     internal
-    //     pure
-    //     returns (uint256)
-    // {
-    //     // NOTE: The formula is: presentValue = futureValue * unitPrice.
-    //     return (_futureValue * _unitPrice) / ProtocolTypes.BP;
-    // }
-
-    // function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)
-    //     internal
-    //     pure
-    //     returns (int256)
-    // {
-    //     // NOTE: The formula is: presentValue = futureValue * unitPrice.
-    //     return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.BP);
-    // }
 
     function registerCurrency(
         bytes32 _ccy,

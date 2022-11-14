@@ -13,8 +13,6 @@ import {Proxyable} from "./utils/Proxyable.sol";
  * @notice Implements the management of the future value as an amount for Lending deals in each currency.
  */
 contract FutureValueVault is IFutureValueVault, Proxyable {
-    event Transfer(address indexed from, address indexed to, int256 value);
-
     /**
      * @notice Modifier to make a function callable only by lending market.
      */
