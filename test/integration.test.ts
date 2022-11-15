@@ -1,5 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { BigNumber, Contract } from 'ethers';
 import { ethers, web3 } from 'hardhat';
@@ -63,7 +62,7 @@ describe('Integration test', async () => {
       .transfer(carolSigner.address, '1000000000000000000000');
 
     // Deploy Lending Markets for FIL market
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 8; i++) {
       await lendingMarketController
         .createLendingMarket(hexFILString)
         .then((tx) => tx.wait());
@@ -80,7 +79,7 @@ describe('Integration test', async () => {
       );
 
     // Deploy Lending Markets for ETH market
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 8; i++) {
       await lendingMarketController
         .createLendingMarket(hexETHString)
         .then((tx) => tx.wait());
@@ -252,7 +251,7 @@ describe('Integration test', async () => {
         .then((tx) => tx.wait());
 
       expect(await wETHToken.balanceOf(tokenVault.address)).to.equal(
-        carolInitialCollateral.add(depositAmount).add(orderAmountInETH.mul(4)),
+        carolInitialCollateral.add(depositAmount).add(orderAmountInETH.mul(8)),
       );
 
       let currencies = await tokenVault.getUsedCurrencies(aliceSigner.address);
@@ -363,7 +362,7 @@ describe('Integration test', async () => {
         .convertFromETH(hexFILString, orderAmount);
     });
 
-    it('Test', async () => {
+    it('Deposit ETH by Alice in Collateral contract', async () => {
       const collateralAmountBefore = await tokenVault.getCollateralAmount(
         aliceSigner.address,
         targetCurrency,
@@ -417,18 +416,22 @@ describe('Integration test', async () => {
       ).to.emit(lendingMarkets[0], 'MakeOrder');
     });
 
-    it('Check Alice collateral book usage, and total unsettled exposure calculations', async () => {
+    it('Check Alice collateral usage, and total working orders amount calculations', async () => {
       const orderAmountInETH = await currencyController
         .connect(aliceSigner)
         ['convertToETH(bytes32,uint256)'](hexFILString, orderAmountInFIL);
 
-      const exp = await tokenVault.getTotalUnsettledExposure(
-        aliceSigner.address,
+      const { totalWorkingOrdersAmount } =
+        await lendingMarketController.calculateTotalBorrowedFundsInETH(
+          aliceSigner.address,
+        );
+
+      expect(totalWorkingOrdersAmount.toString()).to.equal(
+        orderAmountInETH.toString(),
       );
-      expect(exp.toString()).to.equal(orderAmountInETH.toString());
     });
 
-    it('Calculate collateral coverage of the global collateral book, expect to be equal with manual calculations', async () => {
+    it('Calculate collateral coverage of the collateral, expect to be equal with manual calculations', async () => {
       const collateralAmount = await tokenVault.getCollateralAmount(
         aliceSigner.address,
         targetCurrency,
@@ -436,11 +439,14 @@ describe('Integration test', async () => {
 
       const coverage = await tokenVault.getCoverage(aliceSigner.address);
 
-      const totalUnsettledExp = await tokenVault.getTotalUnsettledExposure(
-        aliceSigner.address,
-      );
+      const { totalWorkingOrdersAmount } =
+        await lendingMarketController.calculateTotalBorrowedFundsInETH(
+          aliceSigner.address,
+        );
 
-      const manualCoverage = ethers.BigNumber.from(totalUnsettledExp.toString())
+      const manualCoverage = ethers.BigNumber.from(
+        totalWorkingOrdersAmount.toString(),
+      )
         .mul('10000')
         .div(collateralAmount.toString());
 
@@ -510,10 +516,11 @@ describe('Integration test', async () => {
       await expect(tx).to.emit(lendingMarkets[0], 'CancelOrder');
       await tx.wait();
 
-      const totalUnsettledExp = await tokenVault.getTotalUnsettledExposure(
-        aliceSigner.address,
-      );
-      expect(totalUnsettledExp.toString()).to.be.equal('0');
+      const { totalWorkingOrdersAmount } =
+        await lendingMarketController.calculateTotalBorrowedFundsInETH(
+          aliceSigner.address,
+        );
+      expect(totalWorkingOrdersAmount.toString()).to.be.equal('0');
 
       const maxWithdrawal = await tokenVault.getWithdrawableCollateral(
         aliceSigner.address,
@@ -556,7 +563,7 @@ describe('Integration test', async () => {
         lendingMarketController
           .connect(carolSigner)
           .cancelOrder(hexETHString, ethMaturities[0], orderId),
-      ).to.emit(lendingMarketController, 'OrderCanceled');
+      ).to.emit(lendingMarketController, 'CancelOrder');
 
       const balanceAfterCancel = await web3.eth.getBalance(carolSigner.address);
       expect(toBN(balanceAfterCancel).gt(balanceAfterOrder)).to.equal(true);
@@ -770,22 +777,22 @@ describe('Integration test', async () => {
       ).to.emit(ethLendingMarkets[0], 'TakeOrders');
     });
 
-    it('Shift time by 3 month', async () => {
-      const totalPresentValueBefore =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          bobSigner.address,
-        );
+    // it('Shift time by 3 month', async () => {
+    //   const totalPresentValueBefore =
+    //     await lendingMarketController.getTotalPresentValue(
+    //       hexETHString,
+    //       bobSigner.address,
+    //     );
 
-      await time.increase(time.duration.days(92));
+    //   await time.increase(time.duration.days(92));
 
-      const totalPresentValueAfter =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          bobSigner.address,
-        );
-      expect(totalPresentValueBefore).lt(totalPresentValueAfter);
-    });
+    //   const totalPresentValueAfter =
+    //     await lendingMarketController.getTotalPresentValue(
+    //       hexETHString,
+    //       bobSigner.address,
+    //     );
+    //   expect(totalPresentValueBefore).lt(totalPresentValueAfter);
+    // });
   });
 
   describe('Place and Fill the limit orders on FIL market', async () => {
@@ -881,24 +888,24 @@ describe('Integration test', async () => {
             .connect(signer1)
             .createOrder(
               hexFILString,
-              maturities[1],
+              maturities[2],
               input.side1,
               collateralAmount,
               '1002',
             ),
-        ).to.emit(lendingMarkets[1], 'MakeOrder');
+        ).to.emit(lendingMarkets[2], 'MakeOrder');
 
         await expect(
           lendingMarketController
             .connect(signer2)
             .createOrder(
               hexFILString,
-              maturities[1],
+              maturities[2],
               input.side2,
               collateralAmount.div(2),
               '1002',
             ),
-        ).to.emit(lendingMarkets[1], 'TakeOrders');
+        ).to.emit(lendingMarkets[2], 'TakeOrders');
       });
 
       it(`The case that the filled order amount is less than the ${input.label} input`, async () => {
@@ -916,35 +923,35 @@ describe('Integration test', async () => {
             .connect(signer1)
             .createOrder(
               hexFILString,
-              maturities[1],
+              maturities[3],
               input.side1,
               collateralAmount.div(2),
               '1003',
             ),
-        ).to.emit(lendingMarkets[1], 'MakeOrder');
+        ).to.emit(lendingMarkets[3], 'MakeOrder');
         await expect(
           lendingMarketController
             .connect(signer1)
             .createOrder(
               hexFILString,
-              maturities[1],
+              maturities[3],
               input.side1,
               collateralAmount.div(2),
               '1003',
             ),
-        ).to.emit(lendingMarkets[1], 'MakeOrder');
+        ).to.emit(lendingMarkets[3], 'MakeOrder');
 
         await expect(
           lendingMarketController
             .connect(signer2)
             .createOrder(
               hexFILString,
-              maturities[1],
+              maturities[3],
               input.side2,
               collateralAmount.mul(2),
               '1003',
             ),
-        ).to.emit(lendingMarkets[1], 'TakeOrders');
+        ).to.emit(lendingMarkets[3], 'TakeOrders');
       });
     }
   });

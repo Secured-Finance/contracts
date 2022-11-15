@@ -1,6 +1,6 @@
 # Solidity API
 
-## FutureValueStorage
+## FutureValueVaultStorage
 
 ### STORAGE_SLOT
 
@@ -12,7 +12,7 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  uint256 maturity;
+  address lendingMarket;
   mapping(address => int256) balances;
   mapping(address => uint256) futureValueMaturities;
   mapping(uint256 => uint256) totalLendingSupply;
@@ -23,6 +23,6 @@ struct Storage {
 ### slot
 
 ```solidity
-function slot() internal pure returns (struct FutureValueStorage.Storage r)
+function slot() internal pure returns (struct FutureValueVaultStorage.Storage r)
 ```
 

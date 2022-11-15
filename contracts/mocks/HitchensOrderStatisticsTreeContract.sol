@@ -37,10 +37,6 @@ contract HitchensOrderStatisticsTreeContract {
         _exists = tree.exists(value);
     }
 
-    function amountValueExists(uint256 amount, uint256 value) public view returns (bool _exists) {
-        _exists = tree.amountExistsInNode(amount, value);
-    }
-
     function getNode(uint256 value)
         public
         view
@@ -51,10 +47,12 @@ contract HitchensOrderStatisticsTreeContract {
             bool _red,
             uint256 _head,
             uint256 _tail,
-            uint256 _orderCounter
+            uint256 _orderCounter,
+            uint256 _orderTotalAmount
         )
     {
-        (_parent, _left, _right, _red, _head, _tail, _orderCounter) = tree.getNode(value);
+        (_parent, _left, _right, _red, _head, _tail, _orderCounter, _orderTotalAmount) = tree
+            .getNode(value);
     }
 
     function getOrderByID(uint256 value, uint48 orderOd) public view returns (OrderItem memory) {
@@ -82,5 +80,13 @@ contract HitchensOrderStatisticsTreeContract {
     function removeAmountValue(uint256 value, uint48 orderId) public {
         emit RemoveOrder("delete", value, orderId);
         tree.removeOrder(value, orderId);
+    }
+
+    function dropValuesFromFirst(uint256 value, uint256 limitValue) public {
+        tree.dropLeft(value, limitValue);
+    }
+
+    function dropValuesFromLast(uint256 value, uint256 limitValue) public {
+        tree.dropRight(value, limitValue);
     }
 }

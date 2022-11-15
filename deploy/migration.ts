@@ -64,6 +64,7 @@ const func: DeployFunction = async function ({
 
   const beaconProxyController = await getProxy('BeaconProxyController');
   const currencyController = await getProxy('CurrencyController');
+  const genesisValueVault = await getProxy('GenesisValueVault');
   const lendingMarketController = await getProxy('LendingMarketController');
   const tokenVault = await getProxy('TokenVault');
 
@@ -76,24 +77,27 @@ const func: DeployFunction = async function ({
   // This list is as same as contracts/libraries/Contracts.sol
   const contractNames = [
     'BeaconProxyController',
-    'TokenVault',
     'CurrencyController',
+    'GenesisValueVault',
     'LendingMarketController',
+    'TokenVault',
   ];
 
   // The contract address list that is managed in AddressResolver
   const contractAddresses = [
     beaconProxyController.address,
-    tokenVault.address,
     currencyController.address,
+    genesisValueVault.address,
     lendingMarketController.address,
+    tokenVault.address,
   ];
 
   // The contract address list that inherited MixinAddressResolver and need to call `buildCache`
   const buildCachesAddresses = [
     beaconProxyController.address,
-    tokenVault.address,
+    genesisValueVault.address,
     lendingMarketController.address,
+    tokenVault.address,
   ];
 
   // show log
@@ -149,6 +153,7 @@ const func: DeployFunction = async function ({
 func.tags = ['Migration'];
 func.dependencies = [
   'CurrencyController',
+  'GenesisValueVault',
   'LendingMarketController',
   'TokenVault',
   'Tokens',

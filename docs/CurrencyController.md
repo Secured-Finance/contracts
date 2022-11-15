@@ -276,6 +276,23 @@ Gets the converted amount of currency in ETH.
 | ---- | ---- | ----------- |
 | [0] | int256 | The converted amount |
 
+### convertToETH
+
+```solidity
+function convertToETH(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
+```
+
+Gets the converted amount of currency in ETH.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency that has to be converted to ETH |
+| _amounts | uint256[] | Amounts to be converted |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amounts | uint256[] | The converted amounts |
+
 ### convertFromETH
 
 ```solidity

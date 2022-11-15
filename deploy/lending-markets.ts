@@ -89,11 +89,12 @@ const func: DeployFunction = async function ({
           .createLendingMarket(currency.key)
           .then((tx) => tx.wait());
 
-        const { marketAddr, maturity } = receipt.events.find(
-          ({ event }) => event === 'LendingMarketCreated',
+        const { marketAddr, futureValue, maturity } = receipt.events.find(
+          ({ event }) => event === 'CreateLendingMarket',
         ).args;
         market.push({
-          Address: marketAddr,
+          MarketAddress: marketAddr,
+          FutureValueAddress: futureValue,
           Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
         });
       }
@@ -106,6 +107,7 @@ const func: DeployFunction = async function ({
 func.tags = ['LendingMarkets'];
 func.dependencies = [
   'BeaconProxyController',
+  'FutureValueVault',
   'LendingMarketController',
   'Migration',
 ];

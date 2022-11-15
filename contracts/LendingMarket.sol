@@ -9,7 +9,6 @@ import {Contracts} from "./libraries/Contracts.sol";
 import {HitchensOrderStatisticsTreeLib, UnfilledOrder, OrderItem} from "./libraries/HitchensOrderStatisticsTreeLib.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
-import {MixinFutureValue} from "./mixins/MixinFutureValue.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
@@ -26,13 +25,7 @@ import {LendingMarketStorage as Storage, MarketOrder} from "./storages/LendingMa
  *
  * @dev The market orders is stored in structured red-black trees and doubly linked lists in each node.
  */
-contract LendingMarket is
-    ILendingMarket,
-    MixinAddressResolver,
-    MixinFutureValue,
-    Pausable,
-    Proxyable
-{
+contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
     using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
 
     /**
@@ -107,114 +100,121 @@ contract LendingMarket is
                 ccy: Storage.slot().ccy,
                 maturity: Storage.slot().maturity,
                 basisDate: Storage.slot().basisDate,
-                borrowRate: getBorrowRate(),
-                lendRate: getLendRate(),
-                midRate: getMidRate()
+                borrowUnitPrice: getBorrowUnitPrice(),
+                lendUnitPrice: getLendUnitPrice(),
+                midUnitPrice: getMidUnitPrice()
             });
     }
 
     /**
-     * @notice Gets the highest borrow rate.
-     * @return rate The highest borrow rate
+     * @notice Gets the highest borrow price per future value.
+     * @return The highest borrow price per future value
      */
-    function getBorrowRate() public view override returns (uint256 rate) {
-        uint256 maturity = Storage.slot().maturity;
-        return Storage.slot().borrowOrders[maturity].last();
+    function getBorrowUnitPrice() public view override returns (uint256) {
+        return Storage.slot().borrowOrders[Storage.slot().maturity].last();
     }
 
     /**
-     * @notice Gets the lowest lend rate.
-     * @return rate The lowest lend rate
+     * @notice Gets the lowest lend price per future value.
+     * @return The lowest lend price per future value
      */
-    function getLendRate() public view override returns (uint256 rate) {
+    function getLendUnitPrice() public view override returns (uint256) {
         return Storage.slot().lendOrders[Storage.slot().maturity].first();
     }
 
     /**
-     * @notice Gets the mid rate.
-     * @return rate The mid rate
+     * @notice Gets the mid price per future value.
+     * @return The mid price per future value
      */
-    function getMidRate() public view override returns (uint256 rate) {
-        uint256 borrowRate = getBorrowRate();
-        uint256 lendRate = getLendRate();
-        uint256 combinedRate = borrowRate + lendRate;
-
-        return combinedRate / 2;
+    function getMidUnitPrice() public view override returns (uint256) {
+        uint256 borrowUnitPrice = getBorrowUnitPrice();
+        uint256 lendUnitPrice = getLendUnitPrice();
+        return (borrowUnitPrice + lendUnitPrice) / 2;
     }
 
     /**
      * @notice Gets the order book of borrow.
-     * @param _limit Max limit to get rates
-     * @return rates The array of borrow rates
+     * @param _limit Max limit to get unit prices
+     * @return unitPrices The array of borrow unit prices
      */
     function getBorrowOrderBook(uint256 _limit)
         external
         view
         override
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         )
     {
-        rates = new uint256[](_limit);
+        unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
 
-        uint256 rate = Storage.slot().borrowOrders[Storage.slot().maturity].last();
-        rates[0] = rate;
-        amounts[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(rate);
-        quantities[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(rate);
+        uint256 unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].last();
+        unitPrices[0] = unitPrice;
+        amounts[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
+            unitPrice
+        );
+        quantities[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
+            unitPrice
+        );
 
-        for (uint256 i = 1; i < rates.length; i++) {
-            if (rate == 0) {
+        for (uint256 i = 1; i < unitPrices.length; i++) {
+            if (unitPrice == 0) {
                 break;
             }
 
-            rate = Storage.slot().borrowOrders[Storage.slot().maturity].prev(rate);
-            rates[i] = rate;
+            unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].prev(unitPrice);
+            unitPrices[i] = unitPrice;
             amounts[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
-                rate
+                unitPrice
             );
-            quantities[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(rate);
+            quantities[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
+                unitPrice
+            );
         }
     }
 
     /**
      * @notice Gets the order book of lend.
-     * @param _limit Max limit to get rates
-     * @return rates The array of lending rates
+     * @param _limit Max limit to get unit prices
+     * @return unitPrices The array of lending unit prices
      */
     function getLendOrderBook(uint256 _limit)
         external
         view
         override
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         )
     {
-        rates = new uint256[](_limit);
+        unitPrices = new uint256[](_limit);
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
 
-        uint256 rate = Storage.slot().lendOrders[Storage.slot().maturity].first();
-        rates[0] = rate;
-        amounts[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(rate);
-        quantities[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(rate);
+        uint256 unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].first();
+        unitPrices[0] = unitPrice;
+        amounts[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
+            unitPrice
+        );
+        quantities[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(unitPrice);
 
-        for (uint256 i = 1; i < rates.length; i++) {
-            if (rate == 0) {
+        for (uint256 i = 1; i < unitPrices.length; i++) {
+            if (unitPrice == 0) {
                 break;
             }
 
-            rate = Storage.slot().lendOrders[Storage.slot().maturity].next(rate);
-            rates[i] = rate;
+            unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].next(unitPrice);
+            unitPrices[i] = unitPrice;
             amounts[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
-                rate
+                unitPrice
             );
-            quantities[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(rate);
+            quantities[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(
+                unitPrice
+            );
         }
     }
 
@@ -254,7 +254,7 @@ contract LendingMarket is
      * @notice Gets the market order from the order book.
      * @param _orderId The market order id
      * @return side Order position type, Borrow or Lend
-     * @return rate Amount of interest rate
+     * @return unitPrice Amount of interest unit price
      * @return maturity The maturity of the selected order
      * @return maker The order maker
      * @return amount Order amount
@@ -266,7 +266,7 @@ contract LendingMarket is
         override
         returns (
             ProtocolTypes.Side side,
-            uint256 rate,
+            uint256 unitPrice,
             uint256 maturity,
             address maker,
             uint256 amount,
@@ -278,12 +278,12 @@ contract LendingMarket is
         OrderItem memory orderItem;
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
             orderItem = Storage.slot().lendOrders[marketOrder.maturity].getOrderById(
-                marketOrder.rate,
+                marketOrder.unitPrice,
                 _orderId
             );
         } else {
             orderItem = Storage.slot().borrowOrders[marketOrder.maturity].getOrderById(
-                marketOrder.rate,
+                marketOrder.unitPrice,
                 _orderId
             );
         }
@@ -291,7 +291,7 @@ contract LendingMarket is
         if (orderItem.maker != address(0)) {
             return (
                 marketOrder.side,
-                marketOrder.rate,
+                marketOrder.unitPrice,
                 marketOrder.maturity,
                 orderItem.maker,
                 orderItem.amount,
@@ -301,41 +301,131 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Gets the future value in the latest maturity the user has.
-     *
-     * If the market is rotated, the maturity in the market is updated, so the existing future value
-     * is addressed as an old future value in old maturity.
-     * This method doesn't return those old future values.
-     *
-     * @param _user User address
-     * @return The future value in latest maturity
+     * @notice Calculates and gets the active and inactive amounts from the user orders of lending deals.
+     * @param _user User's address
+     * @return activeAmount The total amount of active order on the order book
+     * @return inactiveFutureValue The total future value amount of inactive orders filled on the order book
+     * @return maturity The maturity of market that orders were placed.
      */
-    function futureValueOf(address _user) public view override returns (int256) {
-        (int256 futureValue, uint256 maturity) = getFutureValue(_user);
+    function getTotalAmountFromLendOrders(address _user)
+        external
+        view
+        override
+        returns (
+            uint256 activeAmount,
+            uint256 inactiveFutureValue,
+            uint256 maturity
+        )
+    {
+        (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = _getActiveLendOrderIds(
+            _user
+        );
 
-        if (Storage.slot().maturity == maturity) {
-            return futureValue;
-        } else {
-            return 0;
+        maturity = Storage.slot().userCurrentMaturities[_user];
+
+        for (uint256 i = 0; i < activeOrderIds.length; i++) {
+            MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
+            // Sum future values in the current maturity.
+            // If the market is rotated and maturity is updated, it will be 0 by treating it
+            // as an order canceled in the past market.
+            OrderItem memory orderItem = Storage
+                .slot()
+                .lendOrders[Storage.slot().maturity]
+                .getOrderById(marketOrder.unitPrice, activeOrderIds[i]);
+            activeAmount += orderItem.amount;
+        }
+
+        for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
+            MarketOrder memory marketOrder = Storage.slot().orders[inActiveOrderIds[i]];
+            if (maturity == 0) {
+                maturity = marketOrder.maturity;
+            }
+            // Sum future values in the maturity of orders
+            // It will be the future value when the order is created, even if the market is rotated
+            // and maturity is updated.
+            inactiveFutureValue += Storage.slot().lendOrders[marketOrder.maturity].getFutureValue(
+                marketOrder.unitPrice,
+                inActiveOrderIds[i]
+            );
         }
     }
 
     /**
-     * @notice Gets the present value calculated from the future value & market rate.
-     * @param _user User address
-     * @return The present value
+     * @notice Calculates and gets the active and inactive amounts from the user orders of borrowing deals.
+     * @param _user User's address
+     * @return activeAmount The total amount of active order on the order book
+     * @return inactiveAmount The total amount of inactive orders filled on the order book
+     * @return inactiveFutureValue The total future value amount of inactive orders filled on the order book
+     * @return maturity The maturity of market that orders were placed.
      */
-    function presentValueOf(address _user) external view override returns (int256) {
-        int256 futureValue = futureValueOf(_user);
+    function getTotalAmountFromBorrowOrders(address _user)
+        external
+        view
+        override
+        returns (
+            uint256 activeAmount,
+            uint256 inactiveAmount,
+            uint256 inactiveFutureValue,
+            uint256 maturity
+        )
+    {
+        (
+            uint48[] memory activeOrderIds,
+            uint48[] memory inActiveOrderIds
+        ) = _getActiveBorrowOrderIds(_user);
 
-        // NOTE: The formula is: presentValue = futureValue / (1 + rate * (maturity - now) / 360 days).
-        uint256 rate = getMidRate();
-        uint256 dt = Storage.slot().maturity >= block.timestamp
-            ? Storage.slot().maturity - block.timestamp
-            : 0;
+        for (uint256 i = 0; i < activeOrderIds.length; i++) {
+            MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
+            // Sum future values in the current maturity.
+            // If the market is rotated and maturity is updated, it will be 0 by treating it
+            // as an order canceled in the past market.
+            OrderItem memory orderItem = Storage
+                .slot()
+                .borrowOrders[Storage.slot().maturity]
+                .getOrderById(marketOrder.unitPrice, activeOrderIds[i]);
+            activeAmount += orderItem.amount;
+        }
 
-        return ((futureValue * int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR)) /
-            int256(ProtocolTypes.BP * ProtocolTypes.SECONDS_IN_YEAR + rate * dt));
+        maturity = Storage.slot().userCurrentMaturities[_user];
+
+        for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
+            MarketOrder memory marketOrder = Storage.slot().orders[inActiveOrderIds[i]];
+            // Sum future values in the maturity of orders
+            // It will be the future value when the order is created, even if the market is rotated
+            // and maturity is updated.
+            OrderItem memory orderItem = Storage
+                .slot()
+                .borrowOrders[marketOrder.maturity]
+                .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
+            inactiveAmount += orderItem.amount;
+            inactiveFutureValue += (orderItem.amount * ProtocolTypes.BP) / marketOrder.unitPrice;
+        }
+    }
+
+    /**
+     * @notice Gets the order ids of active lending order on the order book
+     * @param _user User's address
+     */
+    function getActiveLendOrderIds(address _user)
+        external
+        view
+        override
+        returns (uint48[] memory activeOrderIds)
+    {
+        (activeOrderIds, ) = _getActiveLendOrderIds(_user);
+    }
+
+    /**
+     * @notice Gets the order ids of active borrowing order on the order book
+     * @param _user User's address
+     */
+    function getActiveBorrowOrderIds(address _user)
+        external
+        view
+        override
+        returns (uint48[] memory activeOrderIds)
+    {
+        (activeOrderIds, ) = _getActiveBorrowOrderIds(_user);
     }
 
     /**
@@ -385,181 +475,60 @@ contract LendingMarket is
         uint256 removedAmount;
         if (marketOrder.side == ProtocolTypes.Side.LEND) {
             removedAmount = Storage.slot().lendOrders[Storage.slot().maturity].removeOrder(
-                marketOrder.rate,
+                marketOrder.unitPrice,
                 _orderId
             );
         } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
             removedAmount = Storage.slot().borrowOrders[Storage.slot().maturity].removeOrder(
-                marketOrder.rate,
+                marketOrder.unitPrice,
                 _orderId
             );
         }
 
-        emit CancelOrder(_orderId, msg.sender, marketOrder.side, removedAmount, marketOrder.rate);
-
-        return (marketOrder.side, removedAmount, marketOrder.rate);
-    }
-
-    /**
-     * @notice Makes new market order.
-     * @param _side Order position type, Borrow or Lend
-     * @param _user User's address
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _rate Preferable interest rate
-     */
-    function _makeOrder(
-        ProtocolTypes.Side _side,
-        address _user,
-        uint256 _amount,
-        uint256 _rate,
-        bool _isInterruption
-    ) internal returns (uint48 orderId) {
-        orderId = nextOrderId();
-        Storage.slot().orders[orderId] = MarketOrder(_side, _rate, Storage.slot().maturity);
-
-        if (_side == ProtocolTypes.Side.LEND) {
-            Storage.slot().lendOrders[Storage.slot().maturity].insertOrder(
-                _rate,
-                orderId,
-                _user,
-                _amount,
-                _isInterruption
-            );
-        } else if (_side == ProtocolTypes.Side.BORROW) {
-            Storage.slot().borrowOrders[Storage.slot().maturity].insertOrder(
-                _rate,
-                orderId,
-                _user,
-                _amount,
-                _isInterruption
-            );
-        }
-
-        emit MakeOrder(
-            orderId,
-            _user,
-            _side,
-            Storage.slot().ccy,
-            Storage.slot().maturity,
-            _amount,
-            _rate
+        emit CancelOrder(
+            _orderId,
+            msg.sender,
+            marketOrder.side,
+            removedAmount,
+            marketOrder.unitPrice
         );
+
+        return (marketOrder.side, removedAmount, marketOrder.unitPrice);
     }
 
     /**
-     * @notice Takes the market order.
-     * @param _side Order position type, Borrow or Lend
-     * @param _user User's address
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _rate Amount of interest rate taken
-     * @return orderIds Array of order ids of filled orders
-     * @return makers Array of makers of filled orders
-     * @return amounts Array of amounts of filled orders
-     * @return remainingAmount Amount of the order that is not filled and is placed
+     * @notice Cleans own orders to remove order ids that are already filled on the order book.
+     * @dev The order list per user is not updated in real-time when an order is filled.
+     * This function removes the filled order from that order list per user to reduce gas costs
+     * for calculating if the collateral is enough or not.
+     *
+     * @param _user User address
      */
-    function _takeOrder(
-        ProtocolTypes.Side _side,
-        address _user,
-        uint256 _amount,
-        uint256 _rate
-    )
-        internal
+    function cleanOrders(address _user)
+        external
+        override
         returns (
-            uint48[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts,
-            uint256 remainingAmount
+            uint256 activeLendOrderCount,
+            uint256 activeBorrowOrderCount,
+            uint256 removedLendOrderFutureValue,
+            uint256 removedBorrowOrderFutureValue,
+            uint256 removedLendOrderAmount,
+            uint256 removedBorrowOrderAmount,
+            uint256 maturity
         )
     {
-        UnfilledOrder memory unfilledOrder;
+        maturity = Storage.slot().userCurrentMaturities[_user];
 
-        if (_side == ProtocolTypes.Side.BORROW) {
-            (orderIds, makers, amounts, remainingAmount, unfilledOrder) = Storage
-                .slot()
-                .lendOrders[Storage.slot().maturity]
-                .fillOrders(_rate, _amount);
-        } else if (_side == ProtocolTypes.Side.LEND) {
-            (orderIds, makers, amounts, remainingAmount, unfilledOrder) = Storage
-                .slot()
-                .borrowOrders[Storage.slot().maturity]
-                .fillOrders(_rate, _amount);
-        }
-
-        for (uint48 i = 0; i < orderIds.length; i++) {
-            MarketOrder memory marketOrder = Storage.slot().orders[orderIds[i]];
-
-            address lender;
-            address borrower;
-            if (_side == ProtocolTypes.Side.BORROW) {
-                lender = makers[i];
-                borrower = _user;
-            } else if (_side == ProtocolTypes.Side.LEND) {
-                lender = _user;
-                borrower = makers[i];
-            }
-
-            // NOTE: The formula is: futureValue = amount * (1 + rate * (maturity - now) / 360 days).
-            uint256 currentRate = (marketOrder.rate * (Storage.slot().maturity - block.timestamp)) /
-                ProtocolTypes.SECONDS_IN_YEAR;
-            uint256 fvAmount = (_amount * (ProtocolTypes.BP + currentRate)) / ProtocolTypes.BP;
-            _addFutureValue(lender, borrower, fvAmount, Storage.slot().maturity);
-        }
-
-        emit TakeOrders(orderIds, _user, _side, _amount, _rate);
-
-        if (unfilledOrder.amount > 0) {
-            _makeOrder(
-                _side == ProtocolTypes.Side.BORROW
-                    ? ProtocolTypes.Side.LEND
-                    : ProtocolTypes.Side.BORROW,
-                unfilledOrder.maker,
-                unfilledOrder.amount,
-                _rate,
-                true
-            );
-        }
-
-        if (remainingAmount > 0) {
-            _makeOrder(_side, _user, remainingAmount, _rate, false);
-        }
-    }
-
-    /**
-     * @notice Gets if the market order will be matched or not.
-     *
-     * Returns zero if there is not a matched order.
-     * Reverts if no orders for specified interest rate.
-     *
-     * @param _side Order position type, Borrow or Lend
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _rate Amount of interest rate taker wish to borrow/lend
-     */
-    function matchOrders(
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _rate
-    ) external view override ifOpened returns (uint256) {
-        if (_side == ProtocolTypes.Side.LEND) {
-            require(
-                Storage.slot().borrowOrders[Storage.slot().maturity].exists(_rate),
-                "No orders exists for selected interest rate"
-            );
-            return
-                Storage.slot().borrowOrders[Storage.slot().maturity].findOrderIdForAmount(
-                    _rate,
-                    _amount
-                );
-        } else {
-            require(
-                Storage.slot().lendOrders[Storage.slot().maturity].exists(_rate),
-                "No orders exists for selected interest rate"
-            );
-            return
-                Storage.slot().lendOrders[Storage.slot().maturity].findOrderIdForAmount(
-                    _rate,
-                    _amount
-                );
-        }
+        (
+            activeLendOrderCount,
+            removedLendOrderFutureValue,
+            removedLendOrderAmount
+        ) = _cleanLendOrders(_user, maturity);
+        (
+            activeBorrowOrderCount,
+            removedBorrowOrderFutureValue,
+            removedBorrowOrderAmount
+        ) = _cleanBorrowOrders(_user, maturity);
     }
 
     /**
@@ -568,47 +537,45 @@ contract LendingMarket is
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _rate Amount of interest rate taker wish to borrow/lend
-     * @return orderIds Array of order ids of filled orders
-     * @return makers Array of makers of filled orders
-     * @return amounts Array of amounts of filled orders
-     * @return remainingAmount Amount of the order that is not filled and is placed
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
      */
     function createOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _rate
+        uint256 _unitPrice
     )
         external
         override
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (
-            uint48[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts,
-            uint256 remainingAmount
-        )
+        returns (uint256 filledFutureValue, uint256 remainingAmount)
     {
         require(_amount > 0, "Can't place empty amount");
-        require(_rate > 0, "Can't place empty rate");
+        require(
+            Storage.slot().userCurrentMaturities[_user] == Storage.slot().maturity ||
+                (Storage.slot().userCurrentMaturities[_user] != Storage.slot().maturity &&
+                    Storage.slot().activeLendOrderIds[_user].length == 0 &&
+                    Storage.slot().activeBorrowOrderIds[_user].length == 0),
+            "Order found in past maturity."
+        );
 
-        bool isExists = _side == ProtocolTypes.Side.LEND
-            ? Storage.slot().borrowOrders[Storage.slot().maturity].exists(_rate)
-            : Storage.slot().lendOrders[Storage.slot().maturity].exists(_rate);
+        if (Storage.slot().userCurrentMaturities[_user] != Storage.slot().maturity) {
+            Storage.slot().userCurrentMaturities[_user] = Storage.slot().maturity;
+        }
 
-        if (!isExists) {
-            orderIds = new uint48[](1);
-            makers = new address[](1);
-            amounts = new uint256[](1);
+        bool isExists = _unitPrice == 0 ||
+            (
+                _side == ProtocolTypes.Side.LEND
+                    ? Storage.slot().borrowOrders[Storage.slot().maturity].last() >= _unitPrice
+                    : Storage.slot().lendOrders[Storage.slot().maturity].first() <= _unitPrice
+            );
 
-            orderIds[0] = _makeOrder(_side, _user, _amount, _rate, false);
-            makers[0] = _user;
-            amounts[0] = 0;
+        if (isExists) {
+            (filledFutureValue, remainingAmount) = _takeOrder(_side, _user, _amount, _unitPrice);
         } else {
-            (orderIds, makers, amounts, remainingAmount) = _takeOrder(_side, _user, _amount, _rate);
+            _makeOrder(_side, _user, _amount, _unitPrice, false);
         }
     }
 
@@ -627,18 +594,250 @@ contract LendingMarket is
     }
 
     /**
-     * @notice Remove all future values if there is an amount in the past maturity.
+     * @notice Makes new market order.
+     * @param _side Order position type, Borrow or Lend
      * @param _user User's address
-     * @return removedAmount Removed future value amount
-     * @return maturity Maturity of future value
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Preferable interest unit price
      */
-    function removeFutureValueInPastMaturity(address _user)
-        external
-        onlyAcceptedContracts
-        returns (int256 removedAmount, uint256 maturity)
+    function _makeOrder(
+        ProtocolTypes.Side _side,
+        address _user,
+        uint256 _amount,
+        uint256 _unitPrice,
+        bool _isInterruption
+    ) internal returns (uint48 orderId) {
+        orderId = nextOrderId();
+        Storage.slot().orders[orderId] = MarketOrder(
+            _side,
+            _unitPrice,
+            Storage.slot().maturity,
+            block.timestamp
+        );
+
+        if (_side == ProtocolTypes.Side.LEND) {
+            Storage.slot().lendOrders[Storage.slot().maturity].insertOrder(
+                _unitPrice,
+                orderId,
+                _user,
+                _amount,
+                _isInterruption
+            );
+            Storage.slot().activeLendOrderIds[_user].push(orderId);
+        } else if (_side == ProtocolTypes.Side.BORROW) {
+            Storage.slot().borrowOrders[Storage.slot().maturity].insertOrder(
+                _unitPrice,
+                orderId,
+                _user,
+                _amount,
+                _isInterruption
+            );
+            Storage.slot().activeBorrowOrderIds[_user].push(orderId);
+        }
+
+        emit MakeOrder(
+            orderId,
+            _user,
+            _side,
+            Storage.slot().ccy,
+            Storage.slot().maturity,
+            _amount,
+            _unitPrice
+        );
+    }
+
+    /**
+     * @notice Takes the market order.
+     * @param _side Order position type, Borrow or Lend
+     * @param _user User's address
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taken
+     */
+    function _takeOrder(
+        ProtocolTypes.Side _side,
+        address _user,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) internal returns (uint256 filledFutureValue, uint256 remainingAmount) {
+        UnfilledOrder memory unfilledOrder;
+
+        if (_side == ProtocolTypes.Side.BORROW) {
+            (filledFutureValue, remainingAmount, unfilledOrder) = Storage
+                .slot()
+                .lendOrders[Storage.slot().maturity]
+                .dropLeft(_amount, _unitPrice);
+        } else if (_side == ProtocolTypes.Side.LEND) {
+            (filledFutureValue, remainingAmount, unfilledOrder) = Storage
+                .slot()
+                .borrowOrders[Storage.slot().maturity]
+                .dropRight(_amount, _unitPrice);
+        }
+
+        emit TakeOrders(_user, _side, _amount - remainingAmount, _unitPrice, filledFutureValue);
+
+        if (unfilledOrder.amount > 0) {
+            _makeOrder(
+                _side == ProtocolTypes.Side.BORROW
+                    ? ProtocolTypes.Side.LEND
+                    : ProtocolTypes.Side.BORROW,
+                unfilledOrder.maker,
+                unfilledOrder.amount,
+                unfilledOrder.unitPrice,
+                true
+            );
+        }
+
+        if (remainingAmount > 0 && _unitPrice != 0) {
+            _makeOrder(_side, _user, remainingAmount, _unitPrice, false);
+        }
+    }
+
+    function _cleanLendOrders(address _user, uint256 _maturity)
+        private
+        returns (
+            uint256 activeOrderCount,
+            uint256 removedFutureValue,
+            uint256 removedOrderAmount
+        )
     {
-        if (hasFutureValueInPastMaturity(_user, Storage.slot().maturity)) {
-            (removedAmount, maturity) = _removeFutureValue(_user);
+        (
+            uint48[] memory activeLendOrderIds,
+            uint48[] memory inActiveLendOrderIds
+        ) = _getActiveLendOrderIds(_user);
+
+        Storage.slot().activeLendOrderIds[_user] = activeLendOrderIds;
+        activeOrderCount = activeLendOrderIds.length;
+
+        for (uint256 i = 0; i < inActiveLendOrderIds.length; i++) {
+            MarketOrder memory marketOrder = Storage.slot().orders[inActiveLendOrderIds[i]];
+            OrderItem memory orderItem = Storage.slot().lendOrders[_maturity].getOrderById(
+                marketOrder.unitPrice,
+                inActiveLendOrderIds[i]
+            );
+            removedFutureValue += Storage.slot().lendOrders[_maturity].getFutureValue(
+                marketOrder.unitPrice,
+                inActiveLendOrderIds[i]
+            );
+            removedOrderAmount += orderItem.amount;
+        }
+    }
+
+    function _cleanBorrowOrders(address _user, uint256 _maturity)
+        private
+        returns (
+            uint256 activeOrderCount,
+            uint256 removedFutureValue,
+            uint256 removedOrderAmount
+        )
+    {
+        (
+            uint48[] memory activeBorrowOrderIds,
+            uint48[] memory inActiveBorrowOrderIds
+        ) = _getActiveBorrowOrderIds(_user);
+
+        Storage.slot().activeBorrowOrderIds[_user] = activeBorrowOrderIds;
+        activeOrderCount = activeBorrowOrderIds.length;
+
+        for (uint256 i = 0; i < inActiveBorrowOrderIds.length; i++) {
+            MarketOrder memory marketOrder = Storage.slot().orders[inActiveBorrowOrderIds[i]];
+            OrderItem memory orderItem = Storage.slot().borrowOrders[_maturity].getOrderById(
+                marketOrder.unitPrice,
+                inActiveBorrowOrderIds[i]
+            );
+            removedFutureValue += Storage.slot().borrowOrders[_maturity].getFutureValue(
+                marketOrder.unitPrice,
+                inActiveBorrowOrderIds[i]
+            );
+
+            removedOrderAmount += orderItem.amount;
+        }
+    }
+
+    function _getActiveLendOrderIds(address _user)
+        private
+        view
+        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
+    {
+        uint256 activeOrderCount = 0;
+        uint256 inActiveOrderCount = 0;
+        bool isPastMaturity = Storage.slot().userCurrentMaturities[_user] !=
+            Storage.slot().maturity;
+
+        activeOrderIds = new uint48[](
+            isPastMaturity ? 0 : Storage.slot().activeLendOrderIds[_user].length
+        );
+        inActiveOrderIds = new uint48[](Storage.slot().activeLendOrderIds[_user].length);
+
+        for (uint256 i = 0; i < Storage.slot().activeLendOrderIds[_user].length; i++) {
+            uint48 orderId = Storage.slot().activeLendOrderIds[_user][i];
+            MarketOrder memory marketOrder = Storage.slot().orders[orderId];
+
+            if (
+                !Storage
+                    .slot()
+                    .lendOrders[Storage.slot().userCurrentMaturities[_user]]
+                    .isActiveOrderId(marketOrder.unitPrice, orderId)
+            ) {
+                inActiveOrderCount += 1;
+                inActiveOrderIds[i - activeOrderCount] = orderId;
+                if (!isPastMaturity) {
+                    assembly {
+                        mstore(activeOrderIds, sub(mload(activeOrderIds), 1))
+                    }
+                }
+            } else {
+                if (!isPastMaturity) {
+                    activeOrderCount += 1;
+                    activeOrderIds[i - inActiveOrderCount] = orderId;
+                }
+                assembly {
+                    mstore(inActiveOrderIds, sub(mload(inActiveOrderIds), 1))
+                }
+            }
+        }
+    }
+
+    function _getActiveBorrowOrderIds(address _user)
+        private
+        view
+        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
+    {
+        uint256 activeOrderCount = 0;
+        uint256 inActiveOrderCount = 0;
+        bool isPastMaturity = Storage.slot().userCurrentMaturities[_user] !=
+            Storage.slot().maturity;
+
+        activeOrderIds = new uint48[](
+            isPastMaturity ? 0 : Storage.slot().activeBorrowOrderIds[_user].length
+        );
+        inActiveOrderIds = new uint48[](Storage.slot().activeBorrowOrderIds[_user].length);
+
+        for (uint256 i = 0; i < Storage.slot().activeBorrowOrderIds[_user].length; i++) {
+            uint48 orderId = Storage.slot().activeBorrowOrderIds[_user][i];
+            MarketOrder memory marketOrder = Storage.slot().orders[orderId];
+
+            if (
+                !Storage
+                    .slot()
+                    .borrowOrders[Storage.slot().userCurrentMaturities[_user]]
+                    .isActiveOrderId(marketOrder.unitPrice, orderId)
+            ) {
+                inActiveOrderCount += 1;
+                inActiveOrderIds[i - activeOrderCount] = orderId;
+                if (!isPastMaturity) {
+                    assembly {
+                        mstore(activeOrderIds, sub(mload(activeOrderIds), 1))
+                    }
+                }
+            } else {
+                if (!isPastMaturity) {
+                    activeOrderCount += 1;
+                    activeOrderIds[i - inActiveOrderCount] = orderId;
+                }
+                assembly {
+                    mstore(inActiveOrderIds, sub(mload(inActiveOrderIds), 1))
+                }
+            }
         }
     }
 }

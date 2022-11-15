@@ -10,7 +10,7 @@ interface ILendingMarket {
         address indexed maker,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 rate
+        uint256 unitPrice
     );
     event MakeOrder(
         uint48 orderId,
@@ -19,14 +19,14 @@ interface ILendingMarket {
         bytes32 ccy,
         uint256 maturity,
         uint256 amount,
-        uint256 rate
+        uint256 unitPrice
     );
     event TakeOrders(
-        uint48[] orderIds,
         address indexed taker,
         ProtocolTypes.Side side,
-        uint256 amount,
-        uint256 rate
+        uint256 filledAmount,
+        uint256 unitPrice,
+        uint256 filledFutureValue
     );
 
     event OpenMarket(uint256 maturity, uint256 prevMaturity);
@@ -35,24 +35,24 @@ interface ILendingMarket {
         bytes32 ccy;
         uint256 maturity;
         uint256 basisDate;
-        uint256 borrowRate;
-        uint256 lendRate;
-        uint256 midRate;
+        uint256 borrowUnitPrice;
+        uint256 lendUnitPrice;
+        uint256 midUnitPrice;
     }
-
-    function getBorrowRate() external view returns (uint256 rate);
-
-    function getLendRate() external view returns (uint256 rate);
 
     function getMarket() external view returns (Market memory);
 
-    function getMidRate() external view returns (uint256 rate);
+    function getBorrowUnitPrice() external view returns (uint256 rate);
+
+    function getLendUnitPrice() external view returns (uint256 rate);
+
+    function getMidUnitPrice() external view returns (uint256 rate);
 
     function getBorrowOrderBook(uint256 limit)
         external
         view
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         );
@@ -61,7 +61,7 @@ interface ILendingMarket {
         external
         view
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         );
@@ -86,9 +86,34 @@ interface ILendingMarket {
             uint256 timestamp
         );
 
-    function futureValueOf(address account) external view returns (int256);
+    function getTotalAmountFromLendOrders(address _user)
+        external
+        view
+        returns (
+            uint256 activeAmount,
+            uint256 inactiveFutureValue,
+            uint256 maturity
+        );
 
-    function presentValueOf(address account) external view returns (int256);
+    function getTotalAmountFromBorrowOrders(address _user)
+        external
+        view
+        returns (
+            uint256 activeAmount,
+            uint256 inactiveAmount,
+            uint256 inactiveFutureValue,
+            uint256 maturity
+        );
+
+    function getActiveLendOrderIds(address _user)
+        external
+        view
+        returns (uint48[] memory activeOrderIds);
+
+    function getActiveBorrowOrderIds(address _user)
+        external
+        view
+        returns (uint48[] memory activeOrderIds);
 
     function openMarket(uint256 maturity) external returns (uint256);
 
@@ -100,31 +125,26 @@ interface ILendingMarket {
             uint256
         );
 
-    function matchOrders(
-        ProtocolTypes.Side side,
-        uint256 amount,
-        uint256 rate
-    ) external view returns (uint256);
+    function cleanOrders(address _user)
+        external
+        returns (
+            uint256 activeLendOrderCount,
+            uint256 activeBorrowOrderCount,
+            uint256 removedLendOrderFutureValue,
+            uint256 removedBorrowOrderFutureValue,
+            uint256 removedLendOrderAmount,
+            uint256 removedBorrowOrderAmount,
+            uint256 maturity
+        );
 
     function createOrder(
         ProtocolTypes.Side side,
         address account,
         uint256 amount,
         uint256 rate
-    )
-        external
-        returns (
-            uint48[] memory orderIds,
-            address[] memory makers,
-            uint256[] memory amounts,
-            uint256 remainingAmount
-        );
+    ) external returns (uint256 executedRate, uint256 remainingAmount);
 
     function pauseMarket() external;
 
     function unpauseMarket() external;
-
-    function removeFutureValueInPastMaturity(address _account)
-        external
-        returns (int256 removedAmount, uint256 basisMaturity);
 }

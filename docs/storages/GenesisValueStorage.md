@@ -1,11 +1,10 @@
 # Solidity API
 
-## MaturityRate
+## MaturityUnitPrice
 
 ```solidity
-struct MaturityRate {
-  uint256 rate;
-  uint256 tenor;
+struct MaturityUnitPrice {
+  uint256 unitPrice;
   uint256 compoundFactor;
   uint256 next;
   uint256 prev;
@@ -27,11 +26,12 @@ struct Storage {
   mapping(bytes32 => bool) isRegisteredCurrency;
   mapping(bytes32 => uint256) initialCompoundFactors;
   mapping(bytes32 => uint256) compoundFactors;
+  mapping(bytes32 => uint256) currentMaturity;
   mapping(bytes32 => uint8) decimals;
   mapping(bytes32 => mapping(address => int256)) balances;
   mapping(bytes32 => uint256) totalLendingSupplies;
   mapping(bytes32 => uint256) totalBorrowingSupplies;
-  mapping(bytes32 => mapping(uint256 => struct MaturityRate)) maturityRates;
+  mapping(bytes32 => mapping(uint256 => struct MaturityUnitPrice)) maturityUnitPrices;
 }
 ```
 

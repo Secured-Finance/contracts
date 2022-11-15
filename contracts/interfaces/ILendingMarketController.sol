@@ -12,31 +12,46 @@ struct Order {
 }
 
 interface ILendingMarketController {
-    event LendingMarketCreated(
-        bytes32 ccy,
+    event CreateLendingMarket(
+        bytes32 indexed ccy,
         address indexed marketAddr,
+        address futureValue,
         uint256 index,
         uint256 maturity
     );
-    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event OrderFilled(
-        address indexed taker,
+    event RotateLendingMarkets(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event PlaceOrder(
+        address indexed maker,
         bytes32 indexed ccy,
-        uint48[] orderIds,
-        address[] makers,
-        uint256[] amounts,
         ProtocolTypes.Side side,
         uint256 indexed maturity,
-        uint256 rate
+        uint256 amount,
+        uint256 unitPrice
     );
-    event OrderCanceled(
+    event FillOrder(
+        address indexed taker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 amount,
+        uint256 unitPrice,
+        uint256 filledFutureValue
+    );
+    event FillOrdersAsync(
+        address indexed taker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 filledFutureValue
+    );
+    event CancelOrder(
         uint48 orderId,
         address indexed maker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
         uint256 maturity,
         uint256 amount,
-        uint256 rate
+        uint256 unitPrice
     );
 
     function getBasisDate(bytes32 _ccy) external view returns (uint256);
@@ -45,9 +60,13 @@ interface ILendingMarketController {
 
     function getLendingMarket(bytes32 _ccy, uint256 _maturity) external view returns (address);
 
-    function getBorrowRates(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getFutureValueVault(bytes32 _ccy, uint256 _maturity) external view returns (address);
 
-    function getLendRates(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getBorrowUnitPrices(bytes32 _ccy) external view returns (uint256[] memory rates);
+
+    function getLendUnitPrices(bytes32 _ccy) external view returns (uint256[] memory rates);
+
+    function getMidUnitPrices(bytes32 _ccy) external view returns (uint256[] memory rates);
 
     function getBorrowOrderBook(
         bytes32 _ccy,
@@ -57,7 +76,7 @@ interface ILendingMarketController {
         external
         view
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         );
@@ -70,21 +89,33 @@ interface ILendingMarketController {
         external
         view
         returns (
-            uint256[] memory rates,
+            uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
         );
 
-    function getMidRates(bytes32 _ccy) external view returns (uint256[] memory rates);
-
     function getMaturities(bytes32 _ccy) external view returns (uint256[] memory);
 
-    function getTotalPresentValue(bytes32 ccy, address account) external view returns (int256);
+    function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
-    function getTotalPresentValueInETH(address account)
+    function getTotalPresentValueInETH(address user)
         external
         view
         returns (int256 totalPresentValue);
+
+    function calculateTotalLentFundsInETH(address user)
+        external
+        view
+        returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount);
+
+    function calculateTotalBorrowedFundsInETH(address user)
+        external
+        view
+        returns (
+            uint256 totalWorkingOrdersAmount,
+            uint256 totalDebtAmount,
+            uint256 totalBorrowedAmount
+        );
 
     function isInitializedLendingMarket(bytes32 _ccy) external view returns (bool);
 
@@ -94,7 +125,9 @@ interface ILendingMarketController {
         uint256 _compoundFactor
     ) external;
 
-    function createLendingMarket(bytes32 _ccy) external returns (address market);
+    function createLendingMarket(bytes32 _ccy)
+        external
+        returns (address market, address futureValue);
 
     function createOrder(
         bytes32 _ccy,
@@ -110,14 +143,6 @@ interface ILendingMarketController {
         uint256 _rate
     ) external payable returns (bool);
 
-    function matchOrders(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _rate
-    ) external view returns (bool);
-
     function cancelOrder(
         bytes32 _ccy,
         uint256 _maturity,
@@ -129,4 +154,8 @@ interface ILendingMarketController {
     function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
 
     function unpauseLendingMarkets(bytes32 _ccy) external returns (bool);
+
+    function convertFutureValueToGenesisValue(address _user) external;
+
+    function cleanOrders(address _user) external;
 }

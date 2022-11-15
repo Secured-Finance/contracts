@@ -56,6 +56,18 @@ Gets the beacon proxy address to the selected name.
 | ---- | ---- | ----------- |
 | beaconProxyAddress | address | The beacon proxy address |
 
+### setFutureValueVaultImpl
+
+```solidity
+function setFutureValueVaultImpl(address newImpl) external
+```
+
+Sets the implementation contract of FutureValueVault
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newImpl | address | The address of implementation contract |
+
 ### setLendingMarketImpl
 
 ```solidity
@@ -67,6 +79,23 @@ Sets the implementation contract of LendingMarket
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
+
+### deployFutureValue
+
+```solidity
+function deployFutureValue(address _lendingMarket) external returns (address futureValue)
+```
+
+Deploys new Lending Market and save address at lendingMarkets mapping.
+Reverts on deployment market with existing currency and term
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _lendingMarket | address | The address of lending market |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| futureValue | address | The proxy contract address of created future value |
 
 ### deployLendingMarket
 
