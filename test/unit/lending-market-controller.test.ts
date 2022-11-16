@@ -6,8 +6,8 @@ import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
 
-import { Side } from '../utils/constants';
-import { getBasisDate } from '../utils/dates';
+import { Side } from '../../utils/constants';
+import { getBasisDate } from '../../utils/dates';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const BeaconProxyController = artifacts.require('BeaconProxyController');

@@ -4,7 +4,11 @@
   "description": "Secured Finance protocol smart contracts",
   "scripts": {
     "test": "hardhat test",
+    "test:unit": "hardhat test ./test/unit/*.test.ts",
+    "test:integration": "hardhat test ./test/integration/*.test.ts",
     "test:cov": "hardhat coverage",
+    "test:cov:unit": "hardhat coverage --testfiles './test/unit/**/*.test.ts'",
+    "test:cov:integration": "hardhat coverage --testfiles './test/integration/**/*.test.ts'",
     "compile": "hardhat compile",
     "compile:force": "hardhat compile --force",
     "fork": "hardhat fork --network",
