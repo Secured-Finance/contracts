@@ -7,12 +7,12 @@ import { toBytes32 } from '../utils/strings';
 task('register-orders', 'Registers order data into the selected lending market')
   .addParam('currency', 'Target currency short name')
   .addParam('maturity', 'Target market maturity')
-  .addParam('midRate', 'Target mid rate', undefined, types.string)
+  .addParam('midUnitPrice', 'Target mid unit price', undefined, types.string)
   .addParam('amount', 'Order base amount', undefined, types.string)
   .addParam('orderCount', 'Order count', undefined, types.int)
   .setAction(
     async (
-      { currency, maturity, midRate, amount, orderCount },
+      { currency, maturity, midUnitPrice, amount, orderCount },
       { deployments, ethers },
     ) => {
       const [owner] = await ethers.getSigners();
@@ -65,7 +65,7 @@ task('register-orders', 'Registers order data into the selected lending market')
       };
 
       // Create random amounts and rats
-      const orders: { side: number; amount: string; rate: string }[] = [];
+      const orders: { side: number; amount: string; unitPrice: string }[] = [];
       let totalBorrowAmount = BigNumber(0);
       let totalLendAmount = BigNumber(0);
 
@@ -76,11 +76,11 @@ task('register-orders', 'Registers order data into the selected lending market')
           .plus(amount)
           .dp(0);
         const orderRate = BigNumber(dRate)
-          .times(midRate)
+          .times(midUnitPrice)
           .div(20)
-          .plus(midRate)
+          .plus(midUnitPrice)
           .dp(0);
-        const orderSide = orderRate.gte(midRate) ? Side.LEND : Side.BORROW;
+        const orderSide = orderRate.gte(midUnitPrice) ? Side.LEND : Side.BORROW;
 
         if (orderAmount.lte('0') || orderRate.lte('0')) {
           continue;
@@ -88,7 +88,7 @@ task('register-orders', 'Registers order data into the selected lending market')
           orders.push({
             side: orderSide,
             amount: orderAmount.toFixed(),
-            rate: orderRate.toFixed(),
+            unitPrice: orderRate.toFixed(),
           });
 
           if (orderSide === Side.BORROW) {
@@ -103,10 +103,6 @@ task('register-orders', 'Registers order data into the selected lending market')
       const availableAmount = await tokenVault.getWithdrawableCollateral(
         owner.address,
       );
-
-      const totalBorrowAmountInETH = await currencyController[
-        'convertToETH(bytes32,uint256)'
-      ](currencyName, totalBorrowAmount.toFixed());
 
       if (currency !== 'ETH') {
         const currency = currencies.find(({ key }) => key === currencyName);
@@ -132,8 +128,14 @@ task('register-orders', 'Registers order data into the selected lending market')
         }
       }
 
+      const depositValueInETH = BigNumber(totalBorrowAmount.toString())
+        .times(3)
+        .div(2)
+        .plus(totalLendAmount)
+        .minus(availableAmount.toString())
+        .dp(0);
       if (
-        BigNumber(totalBorrowAmountInETH.toString())
+        BigNumber(depositValueInETH.toString())
           .times(2)
           .lt(availableAmount.toString())
       ) {
@@ -143,12 +145,6 @@ task('register-orders', 'Registers order data into the selected lending market')
           availableAmount.toString(),
         );
       } else {
-        const depositValueInETH = BigNumber(totalBorrowAmountInETH.toString())
-          .times(2)
-          .minus(availableAmount.toString())
-          .dp(0)
-          .toFixed();
-
         const depositValue = await currencyController[
           'convertFromETH(bytes32,uint256)'
         ](currencyName, depositValueInETH.toString());
@@ -166,7 +162,7 @@ task('register-orders', 'Registers order data into the selected lending market')
       for (const order of orders) {
         if (order.side === Side.LEND && currency === 'ETH') {
           await lendingMarketController
-            .createLendOrderWithETH(currencyName, maturity, order.rate, {
+            .createLendOrderWithETH(currencyName, maturity, order.unitPrice, {
               value: order.amount,
             })
             .then((tx) => tx.wait());
@@ -177,7 +173,7 @@ task('register-orders', 'Registers order data into the selected lending market')
               maturity,
               order.side,
               order.amount,
-              order.rate,
+              order.unitPrice,
             )
             .then((tx) => tx.wait());
         }
@@ -187,50 +183,50 @@ task('register-orders', 'Registers order data into the selected lending market')
         orders.map((order) => ({
           Side: order.side === 0 ? 'LEND' : 'BORROW',
           Amount: order.amount,
-          Rate: order.rate,
+          Rate: order.unitPrice,
         })),
       );
 
       console.log('Successfully registered orders');
 
       // Show orders in the market
-      const borrowRates = await lendingMarketController.getBorrowOrderBook(
+      const borrowUnitPrices = await lendingMarketController.getBorrowOrderBook(
         currencyName,
         maturity,
         10,
       );
-      const lendRates = await lendingMarketController.getLendOrderBook(
+      const lendUnitPrices = await lendingMarketController.getLendOrderBook(
         currencyName,
         maturity,
         10,
       );
 
       const getOrderBookObject = (obj: {
-        rates: BigNumber[];
+        unitPrices: BigNumber[];
         amounts: BigNumber[];
         quantities: BigNumber[];
       }) => {
-        return obj.rates.map((rate, idx) => ({
-          rate,
+        return obj.unitPrices.map((unitPrice, idx) => ({
+          unitPrice,
           amount: obj.amounts[idx],
           quantity: obj.quantities[idx],
         }));
       };
 
       const orderBook = [
-        ...getOrderBookObject(lendRates)
-          .filter(({ rate }) => rate.toString() !== '0')
-          .sort((a, b) => (a.rate.gte(b.rate) ? -1 : 1))
-          .map(({ rate, amount, quantity }) => ({
+        ...getOrderBookObject(lendUnitPrices)
+          .filter(({ unitPrice }) => unitPrice.toString() !== '0')
+          .sort((a, b) => (a.unitPrice.gte(b.unitPrice) ? -1 : 1))
+          .map(({ unitPrice, amount, quantity }) => ({
             Lend: amount.toString(),
-            Rate: rate.toString(),
+            UnitPrice: unitPrice.toString(),
             Quantity: quantity.toString(),
           })),
-        ...getOrderBookObject(borrowRates)
-          .filter(({ rate }) => rate.toString() !== '0')
-          .map(({ rate, amount, quantity }) => ({
+        ...getOrderBookObject(borrowUnitPrices)
+          .filter(({ unitPrice }) => unitPrice.toString() !== '0')
+          .map(({ unitPrice, amount, quantity }) => ({
             Borrow: amount.toString(),
-            Rate: rate.toString(),
+            UnitPrice: unitPrice.toString(),
             Quantity: quantity.toString(),
           })),
       ];
