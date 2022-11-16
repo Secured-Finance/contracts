@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // interfaces
-import {ILendingMarketController, Order} from "./interfaces/ILendingMarketController.sol";
+import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
@@ -318,19 +318,23 @@ contract LendingMarketController is
     function calculateLentFundsFromOrders(bytes32 _ccy, address _user)
         public
         view
-        returns (uint256 workingOrdersAmount, uint256 claimableAmount)
+        returns (
+            uint256 workingOrdersAmount,
+            uint256 claimableAmount,
+            uint256 lentAmount
+        )
     {
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             (
                 uint256 activeAmount,
+                uint256 inactiveAmount,
                 uint256 inactiveFutureValueInMaturity,
                 uint256 maturity
             ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]).getTotalAmountFromLendOrders(
-                    _user
-                );
+                        _user
+                    );
 
             workingOrdersAmount += activeAmount;
-
             claimableAmount += uint256(
                 _calculatePresentValue(
                     _ccy,
@@ -339,6 +343,7 @@ contract LendingMarketController is
                     Storage.slot().lendingMarkets[_ccy][i]
                 )
             );
+            lentAmount += inactiveAmount;
         }
 
         int256 amountInFV = genesisValueVault().getGenesisValueInFutureValue(_ccy, _user);
@@ -355,23 +360,29 @@ contract LendingMarketController is
      * @param _user User's address
      * @return totalWorkingOrdersAmount The total working orders amount on the order book
      * @return totalClaimableAmount The total claimable amount due to the lending orders being filled on the order book
+     * @return totalLentAmount The lent amount due to the lend orders being filled on the order book
      */
     function calculateTotalLentFundsInETH(address _user)
         external
         view
         override
-        returns (uint256 totalWorkingOrdersAmount, uint256 totalClaimableAmount)
+        returns (
+            uint256 totalWorkingOrdersAmount,
+            uint256 totalClaimableAmount,
+            uint256 totalLentAmount
+        )
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().exposedCurrencies[_user];
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
-            uint256[] memory amounts = new uint256[](2);
-            (amounts[0], amounts[1]) = calculateLentFundsFromOrders(ccy, _user);
+            uint256[] memory amounts = new uint256[](3);
+            (amounts[0], amounts[1], amounts[2]) = calculateLentFundsFromOrders(ccy, _user);
             uint256[] memory amountsInETH = currencyController().convertToETH(ccy, amounts);
 
             totalWorkingOrdersAmount += amountsInETH[0];
             totalClaimableAmount += amountsInETH[1];
+            totalLentAmount += amountsInETH[2];
         }
     }
 
@@ -531,7 +542,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Creates the order. Takes the order if the order is matched,
+     * @notice Creates an order. Takes orders if the orders are matched,
      * and places new order if not match it.
      *
      * In addition, converts the future value to the genesis value if there is future value in past maturity
@@ -555,7 +566,29 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Creates the lend order with ETH. Takes the order if the order is matched,
+     * @notice Deposits funds and creates an order at the same time.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
+    function depositAndCreateOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        tokenVault().depositFrom(msg.sender, _ccy, _amount);
+
+        return _createOrder(_ccy, _maturity, _side, _amount, _unitPrice);
+    }
+
+    /**
+     * @notice Creates a lend order with ETH. Takes the order if the order is matched,
      * and places new order if not match it.
      *
      * @param _ccy Currency name in bytes32 of the selected market
@@ -568,6 +601,24 @@ contract LendingMarketController is
         uint256 _maturity,
         uint256 _unitPrice
     ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        return _createOrder(_ccy, _maturity, ProtocolTypes.Side.LEND, msg.value, _unitPrice);
+    }
+
+    /**
+     * @notice Deposits funds and creates a lend order with ETH at the same time.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
+    function depositAndCreateLendOrderWithETH(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _unitPrice
+    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, msg.value);
+
         return _createOrder(_ccy, _maturity, ProtocolTypes.Side.LEND, msg.value, _unitPrice);
     }
 
@@ -585,12 +636,6 @@ contract LendingMarketController is
         address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         (ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) = ILendingMarket(market)
             .cancelOrder(msg.sender, _orderId);
-
-        if (side == ProtocolTypes.Side.LEND) {
-            tokenVault().withdrawEscrow(msg.sender, _ccy, amount);
-        } else {
-            // tokenVault().releaseUnsettledCollateral(msg.sender, address(0), _ccy, amount);
-        }
 
         emit CancelOrder(_orderId, msg.sender, _ccy, side, _maturity, amount, unitPrice);
 
@@ -744,10 +789,8 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice
     ) private returns (bool) {
-        require(
-            _side == ProtocolTypes.Side.LEND || tokenVault().isCovered(msg.sender, _ccy, _amount),
-            "Not enough collateral"
-        );
+        require(_amount > 0, "Invalid amount");
+        require(tokenVault().isCovered(msg.sender, _ccy, _amount, _side), "Not enough collateral");
 
         address futureValueVault = Storage.slot().futureValueVaults[_ccy][
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
@@ -774,13 +817,14 @@ contract LendingMarketController is
             emit PlaceOrder(msg.sender, _ccy, _side, _maturity, _amount, _unitPrice);
         } else {
             if (_side == ProtocolTypes.Side.BORROW) {
-                tokenVault().withdrawEscrow(msg.sender, _ccy, _amount - remainingAmount);
+                tokenVault().addCollateral(msg.sender, _ccy, _amount - remainingAmount);
                 IFutureValueVault(futureValueVault).addBorrowFutureValue(
                     msg.sender,
                     filledFutureValue,
                     _maturity
                 );
             } else {
+                tokenVault().removeCollateral(msg.sender, _ccy, _amount - remainingAmount);
                 IFutureValueVault(futureValueVault).addLendFutureValue(
                     msg.sender,
                     filledFutureValue,
@@ -800,14 +844,6 @@ contract LendingMarketController is
         }
 
         Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-
-        // If the first value of the amount array is 0, it means that the order will not be filled.
-        // `remainingAmount` has a value only if the order is filled.
-        uint256 placedAmount = filledFutureValue == 0 ? _amount : remainingAmount;
-
-        if (placedAmount != 0 && _side == ProtocolTypes.Side.LEND) {
-            tokenVault().depositEscrow{value: msg.value}(msg.sender, _ccy, placedAmount);
-        }
 
         return true;
     }

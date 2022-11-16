@@ -3,14 +3,6 @@ pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
 
-struct Order {
-    bytes32 ccy;
-    uint256 term;
-    ProtocolTypes.Side side;
-    uint256 amount;
-    uint256 rate;
-}
-
 interface ILendingMarketController {
     event CreateLendingMarket(
         bytes32 indexed ccy,
@@ -54,24 +46,24 @@ interface ILendingMarketController {
         uint256 unitPrice
     );
 
-    function getBasisDate(bytes32 _ccy) external view returns (uint256);
+    function getBasisDate(bytes32 ccy) external view returns (uint256);
 
-    function getLendingMarkets(bytes32 _ccy) external view returns (address[] memory);
+    function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
 
-    function getLendingMarket(bytes32 _ccy, uint256 _maturity) external view returns (address);
+    function getLendingMarket(bytes32 ccy, uint256 maturity) external view returns (address);
 
-    function getFutureValueVault(bytes32 _ccy, uint256 _maturity) external view returns (address);
+    function getFutureValueVault(bytes32 ccy, uint256 maturity) external view returns (address);
 
-    function getBorrowUnitPrices(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getBorrowUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
-    function getLendUnitPrices(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getLendUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
-    function getMidUnitPrices(bytes32 _ccy) external view returns (uint256[] memory rates);
+    function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
     function getBorrowOrderBook(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _limit
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 limit
     )
         external
         view
@@ -82,9 +74,9 @@ interface ILendingMarketController {
         );
 
     function getLendOrderBook(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _limit
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 limit
     )
         external
         view
@@ -94,7 +86,7 @@ interface ILendingMarketController {
             uint256[] memory quantities
         );
 
-    function getMaturities(bytes32 _ccy) external view returns (uint256[] memory);
+    function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
@@ -106,7 +98,11 @@ interface ILendingMarketController {
     function calculateTotalLentFundsInETH(address user)
         external
         view
-        returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount);
+        returns (
+            uint256 totalWorkingOrderAmount,
+            uint256 totalClaimAmount,
+            uint256 totalLentAmount
+        );
 
     function calculateTotalBorrowedFundsInETH(address user)
         external
@@ -117,45 +113,59 @@ interface ILendingMarketController {
             uint256 totalBorrowedAmount
         );
 
-    function isInitializedLendingMarket(bytes32 _ccy) external view returns (bool);
+    function isInitializedLendingMarket(bytes32 ccy) external view returns (bool);
 
     function initializeLendingMarket(
-        bytes32 _ccy,
-        uint256 _basisDate,
-        uint256 _compoundFactor
+        bytes32 ccy,
+        uint256 basisDate,
+        uint256 compoundFactor
     ) external;
 
-    function createLendingMarket(bytes32 _ccy)
+    function createLendingMarket(bytes32 ccy)
         external
         returns (address market, address futureValue);
 
     function createOrder(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _rate
+        bytes32 ccy,
+        uint256 maturity,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice
+    ) external returns (bool);
+
+    function depositAndCreateOrder(
+        bytes32 ccy,
+        uint256 maturity,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice
     ) external returns (bool);
 
     function createLendOrderWithETH(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 unitPrice
+    ) external payable returns (bool);
+
+    function depositAndCreateLendOrderWithETH(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _rate
+        uint256 _unitPrice
     ) external payable returns (bool);
 
     function cancelOrder(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint48 _orderId
+        bytes32 ccy,
+        uint256 maturity,
+        uint48 orderId
     ) external returns (bool);
 
-    function rotateLendingMarkets(bytes32 _ccy) external;
+    function rotateLendingMarkets(bytes32 ccy) external;
 
-    function pauseLendingMarkets(bytes32 _ccy) external returns (bool);
+    function pauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    function unpauseLendingMarkets(bytes32 _ccy) external returns (bool);
+    function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    function convertFutureValueToGenesisValue(address _user) external;
+    function convertFutureValueToGenesisValue(address user) external;
 
-    function cleanOrders(address _user) external;
+    function cleanOrders(address user) external;
 }

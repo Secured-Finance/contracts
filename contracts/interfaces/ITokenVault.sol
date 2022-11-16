@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-interface ITokenVault {
-    event DepositEscrow(address indexed payer, bytes32 ccy, uint256 amount);
-    event WithdrawEscrow(address indexed receiver, bytes32 ccy, uint256 amount);
+import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 
+interface ITokenVault {
     event Deposit(address indexed user, bytes32 ccy, uint256 amount);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
     event RegisterCurrency(bytes32 ccy, address tokenAddress);
@@ -12,7 +11,8 @@ interface ITokenVault {
     function isCovered(
         address user,
         bytes32 ccy,
-        uint256 unsettledExp
+        uint256 unsettledExp,
+        ProtocolTypes.Side _unsettledOrderSide
     ) external view returns (bool);
 
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
@@ -50,6 +50,12 @@ interface ITokenVault {
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
+    function depositFrom(
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
+    ) external payable;
+
     function withdraw(bytes32 ccy, uint256 amount) external;
 
     function addCollateral(
@@ -62,17 +68,5 @@ interface ITokenVault {
         address _user,
         bytes32 _ccy,
         uint256 _amount
-    ) external;
-
-    function depositEscrow(
-        address payer,
-        bytes32 ccy,
-        uint256 amount
-    ) external payable;
-
-    function withdrawEscrow(
-        address receiver,
-        bytes32 ccy,
-        uint256 amount
     ) external;
 }

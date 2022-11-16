@@ -29,20 +29,12 @@ contract TokenVaultCallerMock {
         tokenVault.removeCollateral(user, ccy, amount);
     }
 
-    function depositEscrow(
+    function depositFrom(
         address payer,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.depositEscrow(payer, ccy, amount);
-    }
-
-    function withdrawEscrow(
-        address receiver,
-        bytes32 ccy,
-        uint256 amount
-    ) public {
-        tokenVault.withdrawEscrow(receiver, ccy, amount);
+        tokenVault.depositFrom(payer, ccy, amount);
     }
 
     function getTotalPresentValueInETH(address _user) public view returns (int256) {
@@ -52,7 +44,11 @@ contract TokenVaultCallerMock {
     function calculateTotalLentFundsInETH(address _user)
         public
         view
-        returns (uint256 totalWorkingOrderAmount, uint256 totalClaimAmount)
+        returns (
+            uint256 totalWorkingOrderAmount,
+            uint256 totalClaimAmount,
+            uint256 totalLentAmount
+        )
     {
         return lendingMarketController.calculateTotalLentFundsInETH(_user);
     }
