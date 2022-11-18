@@ -4,12 +4,6 @@
 
 Implements the management of the future value as an amount for Lending deals in each currency.
 
-### Transfer
-
-```solidity
-event Transfer(address from, address to, int256 value)
-```
-
 ### onlyLendingMarket
 
 ```solidity
@@ -121,7 +115,7 @@ Adds the future value amount for lending deals.
 ### removeFutureValue
 
 ```solidity
-function removeFutureValue(address _user, uint256 _activeMaturity) external returns (int256 removedAmount, uint256 maturity)
+function removeFutureValue(address _user, uint256 _activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity)
 ```
 
 Remove all future values if there is an amount in the past maturity.
@@ -134,5 +128,6 @@ Remove all future values if there is an amount in the past maturity.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | removedAmount | int256 | Removed future value amount |
+| currentAmount | int256 | Current future value amount after update |
 | maturity | uint256 | Maturity of future value |
 

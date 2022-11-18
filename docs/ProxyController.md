@@ -116,6 +116,18 @@ Sets the implementation contract of CurrencyController
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
 
+### setGenesisValueVaultImpl
+
+```solidity
+function setGenesisValueVaultImpl(address newImpl) external
+```
+
+Sets the implementation contract of GenesisValueVault
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newImpl | address | The address of implementation contract |
+
 ### setLendingMarketControllerImpl
 
 ```solidity

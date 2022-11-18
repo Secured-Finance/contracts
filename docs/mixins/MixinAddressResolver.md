@@ -88,6 +88,12 @@ function beaconProxyController() internal view returns (contract IBeaconProxyCon
 function currencyController() internal view returns (contract ICurrencyController)
 ```
 
+### genesisValueVault
+
+```solidity
+function genesisValueVault() internal view returns (contract IGenesisValueVault)
+```
+
 ### lendingMarketController
 
 ```solidity

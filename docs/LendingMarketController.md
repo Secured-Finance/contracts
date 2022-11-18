@@ -130,7 +130,7 @@ Gets the lending market contract address for the selected currency and maturity.
 ### getFutureValueVault
 
 ```solidity
-function getFutureValueVault(bytes32 _ccy, uint256 _maturity) external view returns (address)
+function getFutureValueVault(bytes32 _ccy, uint256 _maturity) public view returns (address)
 ```
 
 Gets the feture value contract address for the selected currency and maturity.
@@ -284,7 +284,7 @@ Gets the total present value of the account converted to ETH.
 ### calculateLentFundsFromOrders
 
 ```solidity
-function calculateLentFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 workingOrdersAmount, uint256 claimableAmount)
+function calculateLentFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 workingOrdersAmount, uint256 claimableAmount, uint256 lentAmount)
 ```
 
 Gets the funds that are calculated from the user's lending order list for the selected currency.
@@ -298,23 +298,7 @@ Gets the funds that are calculated from the user's lending order list for the se
 | ---- | ---- | ----------- |
 | workingOrdersAmount | uint256 | The working orders amount on the order book |
 | claimableAmount | uint256 | The claimable amount due to the lending orders being filled on the order book |
-
-### calculateTotalLentFundsInETH
-
-```solidity
-function calculateTotalLentFundsInETH(address _user) external view returns (uint256 totalWorkingOrdersAmount, uint256 totalClaimableAmount)
-```
-
-Gets the funds that are calculated in EHT from the user's lending order list.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| totalWorkingOrdersAmount | uint256 | The total working orders amount on the order book |
-| totalClaimableAmount | uint256 | The total claimable amount due to the lending orders being filled on the order book |
+| lentAmount | uint256 |  |
 
 ### calculateBorrowedFundsFromOrders
 
@@ -335,23 +319,11 @@ Gets the funds that are calculated from the user's borrowing order list for the 
 | obligationAmount | uint256 | The debt amount due to the borrow orders being filled on the order book |
 | borrowedAmount | uint256 | The borrowed amount due to the borrow orders being filled on the order book |
 
-### calculateTotalBorrowedFundsInETH
+### calculateTotalFundsInETH
 
 ```solidity
-function calculateTotalBorrowedFundsInETH(address _user) external view returns (uint256 totalWorkingOrdersAmount, uint256 totalObligationAmount, uint256 totalBorrowedAmount)
+function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalObligationAmount, uint256 totalBorrowedAmount)
 ```
-
-Gets the funds that are calculated in EHT from the user's borrowing order list.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| totalWorkingOrdersAmount | uint256 | The total working orders amount on the order book |
-| totalObligationAmount | uint256 | The total debt amount due to the borrow orders being filled on the order book |
-| totalBorrowedAmount | uint256 | The total borrowed amount due to the borrow orders being filled on the order book |
 
 ### isInitializedLendingMarket
 
@@ -407,11 +379,31 @@ Reverts on deployment market with existing currency and term
 function createOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external returns (bool)
 ```
 
-Creates the order. Takes the order if the order is matched,
+Creates an order. Takes orders if the orders are matched,
 and places new order if not match it.
 
 In addition, converts the future value to the genesis value if there is future value in past maturity
 before the execution of order creation.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
+### depositAndCreateOrder
+
+```solidity
+function depositAndCreateOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external returns (bool)
+```
+
+Deposits funds and creates an order at the same time.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -431,8 +423,26 @@ before the execution of order creation.
 function createLendOrderWithETH(bytes32 _ccy, uint256 _maturity, uint256 _unitPrice) external payable returns (bool)
 ```
 
-Creates the lend order with ETH. Takes the order if the order is matched,
+Creates a lend order with ETH. Takes the order if the order is matched,
 and places new order if not match it.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
+| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
+### depositAndCreateLendOrderWithETH
+
+```solidity
+function depositAndCreateLendOrderWithETH(bytes32 _ccy, uint256 _maturity, uint256 _unitPrice) external payable returns (bool)
+```
+
+Deposits funds and creates a lend order with ETH at the same time.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -505,18 +515,6 @@ Unpauses previously deployed lending market by currency
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### convertFutureValueToGenesisValue
-
-```solidity
-function convertFutureValueToGenesisValue(address _user) external
-```
-
-Converts FutureValue to GenesisValue if there is balance in the past maturity.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
 ### cleanOrders
 
 ```solidity
@@ -532,7 +530,7 @@ Cleans own orders to remove order ids that are already filled on the order book.
 ### _convertFutureValueToGenesisValue
 
 ```solidity
-function _convertFutureValueToGenesisValue(bytes32 _ccy, uint256 _maturity, address _futureValueVault, address _user) private
+function _convertFutureValueToGenesisValue(bytes32 _ccy, uint256 _maturity, address _futureValueVault, address _user) private returns (int256)
 ```
 
 Converts the future value to the genesis value if there is balance in the past maturity.
@@ -544,6 +542,10 @@ Converts the future value to the genesis value if there is balance in the past m
 | _futureValueVault | address | Market contract address |
 | _user | address | User's address |
 
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | int256 | Current future value amount after update |
+
 ### _createOrder
 
 ```solidity
@@ -553,18 +555,24 @@ function _createOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _
 ### _cleanOrders
 
 ```solidity
-function _cleanOrders(bytes32 _ccy, uint256 _maturity, address _user) private returns (uint256)
-```
-
-### _updateExposedCurrency
-
-```solidity
-function _updateExposedCurrency(bytes32 _ccy, uint256 _maturity, address _user, uint256 _activeOrderCount) private
+function _cleanOrders(bytes32 _ccy, uint256 _maturity, address _user) private returns (uint256 activeOrderCount, bool isFilled)
 ```
 
 ### _calculatePresentValue
 
 ```solidity
 function _calculatePresentValue(bytes32 _ccy, uint256 maturity, int256 futureValueInMaturity, address lendingMarketInMaturity) private view returns (int256 totalPresentValue)
+```
+
+### _calculatePVFromFV
+
+```solidity
+function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice) internal pure returns (uint256)
+```
+
+### _calculatePVFromFV
+
+```solidity
+function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
 ```
 

@@ -245,7 +245,7 @@ Gets the historical price in ETH for the selected currency.
 ### convertToETH
 
 ```solidity
-function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256)
+function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256 amount)
 ```
 
 Gets the converted amount of currency in ETH.
@@ -257,12 +257,12 @@ Gets the converted amount of currency in ETH.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The converted amount |
+| amount | uint256 | The converted amount |
 
 ### convertToETH
 
 ```solidity
-function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256)
+function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256 amount)
 ```
 
 Gets the converted amount of currency in ETH.
@@ -274,7 +274,7 @@ Gets the converted amount of currency in ETH.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | int256 | The converted amount |
+| amount | int256 | The converted amount |
 
 ### convertToETH
 
@@ -296,7 +296,7 @@ Gets the converted amount of currency in ETH.
 ### convertFromETH
 
 ```solidity
-function convertFromETH(bytes32 _ccy, uint256 _amountETH) public view returns (uint256)
+function convertFromETH(bytes32 _ccy, uint256 _amountETH) public view returns (uint256 amount)
 ```
 
 Gets the converted amount to the selected currency from ETH.
@@ -308,7 +308,7 @@ Gets the converted amount to the selected currency from ETH.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The converted amount |
+| amount | uint256 | The converted amount |
 
 ### _isETH
 
