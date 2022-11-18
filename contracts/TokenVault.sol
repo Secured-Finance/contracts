@@ -97,16 +97,23 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     /**
      * @notice Gets if the collateral has enough coverage.
      * @param _user User's address
-     * @param _ccy Currency name in bytes32
-     * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     * @param _unsettledOrderCcy Additional unsettled order currency name in bytes32
+     * @param _unsettledOrderAmount Additional unsettled order amount
      * @return The boolean if the collateral has sufficient coverage or not
      */
     function isCovered(
         address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
+        bytes32 _unsettledOrderCcy,
+        uint256 _unsettledOrderAmount,
+        ProtocolTypes.Side _unsettledOrderSide
     ) public view override returns (bool) {
-        return _isCovered(_user, _ccy, _unsettledExp);
+        return
+            _isCovered(
+                _user,
+                _unsettledOrderCcy,
+                _unsettledOrderAmount,
+                ProtocolTypes.Side.BORROW == _unsettledOrderSide
+            );
     }
 
     /**
@@ -133,7 +140,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @return The rate of collateral used
      */
     function getCoverage(address _user) public view override returns (uint256) {
-        return _getCoverage(_user, "", 0);
+        return _getCoverage(_user);
     }
 
     /**
@@ -142,13 +149,29 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @return The total amount of unused collateral
      */
     function getUnusedCollateral(address _user) external view returns (uint256) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral) = _getActualCollateralAmount(
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
             _user,
             "",
-            0
+            0,
+            false
         );
 
         return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
+    }
+
+    /**
+     * @notice Gets the total collateral amount.
+     * by converting it to ETH.
+     * @param _user Address of collateral user
+     * @return totalCollateralAmount The total collateral amount in ETH
+     */
+    function getTotalCollateralAmount(address _user)
+        public
+        view
+        override
+        returns (uint256 totalCollateralAmount)
+    {
+        (totalCollateralAmount, , ) = _getActualCollateralAmount(_user, "", 0, false);
     }
 
     /**
@@ -157,40 +180,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      * @return The deposited amount
      */
-    function getCollateralAmount(address _user, bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getDepositAmount(address _user, bytes32 _ccy) public view override returns (uint256) {
         return Storage.slot().collateralAmounts[_user][_ccy];
-    }
-
-    /**
-     * @notice Gets the amount deposited in the user's collateral by converting it to ETH.
-     * @param _user User's address
-     * @param _ccy Specified currency
-     * @return The deposited amount in ETH
-     */
-    function getCollateralAmountInETH(address _user, bytes32 _ccy)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        uint256 amount = getCollateralAmount(_user, _ccy);
-        return currencyController().convertToETH(_ccy, amount);
-    }
-
-    /**
-     * @notice Gets the total amount deposited in the user's collateral in all currencies.
-     * by converting it to ETH.
-     * @param _user Address of collateral user
-     * @return The total deposited amount in ETH
-     */
-    function getTotalCollateralAmountInETH(address _user) public view override returns (uint256) {
-        (, , uint256 borrowedAmount) = _getBorrowedFundsFromLendingMarkets(_user, "", 0);
-        return _getTotalInternalCollateralAmountInETH(_user) + borrowedAmount;
     }
 
     /**
@@ -251,19 +242,21 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         override
         onlyRegisteredCurrency(_ccy)
     {
-        require(_amount > 0, "Invalid amount");
-        ERC20Handler.depositAssets(
-            Storage.slot().tokenAddresses[_ccy],
-            msg.sender,
-            address(this),
-            _amount
-        );
+        _deposit(msg.sender, _ccy, _amount);
+    }
 
-        Storage.slot().collateralAmounts[msg.sender][_ccy] += _amount;
-
-        _updateUsedCurrencies(msg.sender, _ccy);
-
-        emit Deposit(msg.sender, _ccy, _amount);
+    /**
+     * @dev Deposits funds by the `from` into collateral.
+     * @param _from user's address
+     * @param _amount Amount of funds to deposit
+     * @param _ccy Currency name in bytes32
+     */
+    function depositFrom(
+        address _from,
+        bytes32 _ccy,
+        uint256 _amount
+    ) external payable override onlyAcceptedContracts {
+        _deposit(_from, _ccy, _amount);
     }
 
     /**
@@ -276,7 +269,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         override
         onlyRegisteredCurrency(_ccy)
     {
-        // fix according to collateral aggregator
         require(_amount > 0, "Invalid amount");
 
         address user = msg.sender;
@@ -333,47 +325,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice deposit funds in escrow.
-     * @param _payer Address of user making payment
-     * @param _ccy Currency name in bytes32
-     * @param _amount Amount of funds to be add into escrow
-     */
-    function depositEscrow(
-        address _payer,
-        bytes32 _ccy,
-        uint256 _amount
-    ) external payable override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
-        require(_amount > 0, "Invalid amount");
-
-        ERC20Handler.depositAssets(
-            Storage.slot().tokenAddresses[_ccy],
-            _payer,
-            address(this),
-            _amount
-        );
-
-        emit DepositEscrow(_payer, _ccy, _amount);
-    }
-
-    /**
-     * @notice Withdraw funds from escrow.
-     * @param _receiver Address of user receiving payment
-     * @param _ccy Currency name in bytes32
-     * @param _amount Amount of funds to be removed from escrow
-     */
-    function withdrawEscrow(
-        address _receiver,
-        bytes32 _ccy,
-        uint256 _amount
-    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
-        require(_amount > 0, "Invalid amount");
-
-        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _receiver, _amount);
-
-        emit WithdrawEscrow(_receiver, _ccy, _amount);
-    }
-
-    /**
      * @notice Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning.
      *
@@ -400,19 +351,21 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     /**
      * @notice Gets if the collateral has enough coverage.
      * @param _user User's address
-     * @param _ccy Currency name in bytes32
-     * @param _unsettledExp Additional exposure to lock into unsettled exposure
+     * @param _unsettledOrderCcy Additional unsettled order currency name in bytes32
+     * @param _unsettledOrderAmount Additional unsettled order amount
      * @return The boolean if the collateral has enough coverage or not
      */
     function _isCovered(
         address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
+        bytes32 _unsettledOrderCcy,
+        uint256 _unsettledOrderAmount,
+        bool _isUnsettledBorrowOrder
     ) internal view returns (bool) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral) = _getActualCollateralAmount(
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
             _user,
-            _ccy,
-            _unsettledExp
+            _unsettledOrderCcy,
+            _unsettledOrderAmount,
+            _isUnsettledBorrowOrder
         );
 
         return
@@ -424,80 +377,74 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     /**
      * @notice Gets the collateral coverage.
      * @param _user User's address
-     * @param _ccy Currency name in bytes32
-     * @param _unsettledExp Additional exposure to lock into unsettled exposure
      * @return coverage The rate of collateral used
      */
-    function _getCoverage(
-        address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
-    ) internal view returns (uint256 coverage) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral) = _getActualCollateralAmount(
+    function _getCoverage(address _user) internal view returns (uint256 coverage) {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
             _user,
-            _ccy,
-            _unsettledExp
+            "",
+            0,
+            false
         );
 
         if (totalCollateral > 0) {
-            coverage = (((totalUsedCollateral) * ProtocolTypes.PCT) / totalCollateral);
+            coverage = (totalUsedCollateral * ProtocolTypes.PCT) / totalCollateral;
         }
     }
 
     function _getActualCollateralAmount(
         address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
-    ) private view returns (uint256 totalCollateral, uint256 totalUsedCollateral) {
-        uint256 usedCollateral = _getUsedCollateral(_user);
-        (
-            uint256 workingOrdersAmount,
-            uint256 obligationAmount,
-            uint256 borrowedAmount
-        ) = _getBorrowedFundsFromLendingMarkets(_user, _ccy, _unsettledExp);
-
-        totalCollateral = _getTotalInternalCollateralAmountInETH(_user) + borrowedAmount;
-        totalUsedCollateral = usedCollateral + workingOrdersAmount + obligationAmount;
-    }
-
-    /**
-     * @notice Gets borrowed funds in all currencies from the Lending Markets.
-     * @param _user User's ethereum address
-     * @param _ccy Currency name in bytes32
-     * @param _unsettledExp Additional exposure to lock into unsettled exposure
-     * @return workingOrdersAmount The total working orders amount on the order book
-     * @return obligationAmount The total obligation amount due to the borrow orders being filled on the order book
-     * @return borrowedAmount The total borrowed amount due to the borrow orders being filled on the order book
-     */
-    function _getBorrowedFundsFromLendingMarkets(
-        address _user,
-        bytes32 _ccy,
-        uint256 _unsettledExp
+        bytes32 _unsettledOrderCcy,
+        uint256 _unsettledOrderAmount,
+        bool _isUnsettledBorrowOrder
     )
-        internal
+        private
         view
         returns (
-            uint256 workingOrdersAmount,
-            uint256 obligationAmount,
-            uint256 borrowedAmount
+            uint256 totalCollateral,
+            uint256 totalUsedCollateral,
+            uint256 totalActualCollateral
         )
     {
-        (workingOrdersAmount, obligationAmount, borrowedAmount) = lendingMarketController()
-            .calculateTotalBorrowedFundsInETH(_user);
-        workingOrdersAmount += _unsettledExp > 0
-            ? currencyController().convertToETH(_ccy, _unsettledExp)
-            : 0;
-    }
+        (
+            uint256 workingLendOrdersAmount,
+            uint256 claimableAmount,
+            uint256 lentAmount,
+            uint256 workingBorrowOrdersAmount,
+            uint256 obligationAmount,
+            uint256 borrowedAmount
+        ) = lendingMarketController().calculateTotalFundsInETH(_user);
 
-    /**
-     * @notice Gets the total collateral used in all currencies.
-     * The collateral used is defined as the negative future value in the lending market contract.
-     * @param _user User's address
-     * @return The total amount of used collateral
-     */
-    function _getUsedCollateral(address _user) internal view returns (uint256) {
-        int256 totalPVInETH = lendingMarketController().getTotalPresentValueInETH(_user);
-        return totalPVInETH > 0 ? 0 : uint256(-totalPVInETH);
+        if (_unsettledOrderAmount > 0) {
+            uint256 unsettledOrderAmountInETH = currencyController().convertToETH(
+                _unsettledOrderCcy,
+                _unsettledOrderAmount
+            );
+
+            require(unsettledOrderAmountInETH != 0, "Too small order amount");
+
+            if (_isUnsettledBorrowOrder) {
+                workingBorrowOrdersAmount += unsettledOrderAmountInETH;
+            } else {
+                require(
+                    getDepositAmount(_user, _unsettledOrderCcy) >= _unsettledOrderAmount,
+                    "Not enough collateral in the selected currency"
+                );
+                workingLendOrdersAmount += unsettledOrderAmountInETH;
+            }
+        }
+
+        uint256 totalInternalCollateral = _getTotalInternalCollateralAmountInETH(_user);
+
+        uint256 actualPlusCollateral = totalInternalCollateral + borrowedAmount;
+        uint256 plusCollateral = actualPlusCollateral + claimableAmount;
+        uint256 minusCollateral = workingLendOrdersAmount + lentAmount;
+
+        totalCollateral = plusCollateral >= minusCollateral ? plusCollateral - minusCollateral : 0;
+        totalUsedCollateral = workingBorrowOrdersAmount + obligationAmount;
+        totalActualCollateral = actualPlusCollateral >= minusCollateral
+            ? actualPlusCollateral - minusCollateral
+            : 0;
     }
 
     /**
@@ -506,26 +453,25 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @return Maximum amount of ETH that can be withdrawn
      */
     function _getWithdrawableCollateral(address _user) internal view returns (uint256) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral) = _getActualCollateralAmount(
-            _user,
-            "",
-            0
-        );
+        (
+            uint256 totalCollateral,
+            uint256 totalUsedCollateral,
+            uint256 totalActualCollateral
+        ) = _getActualCollateralAmount(_user, "", 0, false);
 
         if (totalUsedCollateral == 0) {
-            return totalCollateral;
+            return totalActualCollateral;
         } else if (
-            totalCollateral >
-            ((totalUsedCollateral) * CollateralParametersHandler.marginCallThresholdRate()) /
-                ProtocolTypes.BP
+            totalCollateral * ProtocolTypes.BP >
+            totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate()
         ) {
             // NOTE: The formula is:
             // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
-            return
-                (totalCollateral *
-                    ProtocolTypes.BP -
-                    (totalUsedCollateral) *
-                    CollateralParametersHandler.marginCallThresholdRate()) / ProtocolTypes.BP;
+            uint256 maxWithdraw = (totalCollateral *
+                ProtocolTypes.BP -
+                (totalUsedCollateral) *
+                CollateralParametersHandler.marginCallThresholdRate()) / ProtocolTypes.BP;
+            return maxWithdraw >= totalActualCollateral ? totalActualCollateral : maxWithdraw;
         } else {
             return 0;
         }
@@ -535,22 +481,20 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @notice Gets the total of amount deposited in the user's collateral of all currencies
      *  in this contract by converting it to ETH.
      * @param _user Address of collateral user
-     * @return The total deposited amount in ETH
+     * @return totalCollateral The total deposited amount in ETH
      */
-    function _getTotalInternalCollateralAmountInETH(address _user) private view returns (uint256) {
+    function _getTotalInternalCollateralAmountInETH(address _user)
+        internal
+        view
+        returns (uint256 totalCollateral)
+    {
         EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
-        uint256 collateralAmount;
-        uint256 totalCollateral;
-
         uint256 len = currencies.length();
 
         for (uint256 i = 0; i < len; i++) {
             bytes32 ccy = currencies.at(i);
-            collateralAmount = currencyController().convertToETH(
-                ccy,
-                getCollateralAmount(_user, ccy)
-            );
-            totalCollateral = totalCollateral + collateralAmount;
+            uint256 collateralAmount = getDepositAmount(_user, ccy);
+            totalCollateral += currencyController().convertToETH(ccy, collateralAmount);
         }
 
         return totalCollateral;
@@ -562,5 +506,25 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         } else {
             Storage.slot().usedCurrencies[_user].remove(_ccy);
         }
+    }
+
+    function _deposit(
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal {
+        require(_amount > 0, "Invalid amount");
+        ERC20Handler.depositAssets(
+            Storage.slot().tokenAddresses[_ccy],
+            _user,
+            address(this),
+            _amount
+        );
+
+        Storage.slot().collateralAmounts[_user][_ccy] += _amount;
+
+        _updateUsedCurrencies(_user, _ccy);
+
+        emit Deposit(_user, _ccy, _amount);
     }
 }

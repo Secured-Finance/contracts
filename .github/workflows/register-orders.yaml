@@ -22,8 +22,8 @@ on:
         description: 'Maturity'
         required: true
         type: string
-      midRate:
-        description: 'MidRate'
+      midUnitPrice:
+        description: 'MidUnitPrice'
         required: true
         type: string
       orderAmount:
@@ -65,6 +65,6 @@ jobs:
           --network ${{ github.event.inputs.network }}
           --currency ${{ github.event.inputs.currency }}
           --maturity ${{ github.event.inputs.maturity }}
-          --mid-rate ${{ github.event.inputs.midRate }}
+          --mid-unit-price ${{ github.event.inputs.midUnitPrice }}
           --amount ${{ github.event.inputs.orderAmount }}
           --order-count ${{ github.event.inputs.orderCount }}

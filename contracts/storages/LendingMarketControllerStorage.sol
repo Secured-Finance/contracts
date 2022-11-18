@@ -19,8 +19,6 @@ library LendingMarketControllerStorage {
         mapping(bytes32 => uint256) basisDates;
         // Mapping from user to used currency
         mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
-        // Mapping from user to used currency
-        mapping(address => EnumerableSet.Bytes32Set) exposedCurrencies;
         // Mapping from user to active order existence per currency and maturity
         mapping(address => mapping(bytes32 => mapping(uint256 => bool))) activeOrderExistences;
     }

@@ -32,5 +32,9 @@ interface IFutureValueVault {
 
     function removeFutureValue(address _user, uint256 _maturity)
         external
-        returns (int256 removedAmount, uint256 maturity);
+        returns (
+            int256 removedAmount,
+            int256 currentAmount,
+            uint256 maturity
+        );
 }

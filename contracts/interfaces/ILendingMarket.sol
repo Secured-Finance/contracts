@@ -42,11 +42,11 @@ interface ILendingMarket {
 
     function getMarket() external view returns (Market memory);
 
-    function getBorrowUnitPrice() external view returns (uint256 rate);
+    function getBorrowUnitPrice() external view returns (uint256 unitPrice);
 
-    function getLendUnitPrice() external view returns (uint256 rate);
+    function getLendUnitPrice() external view returns (uint256 unitPrice);
 
-    function getMidUnitPrice() external view returns (uint256 rate);
+    function getMidUnitPrice() external view returns (uint256 unitPrice);
 
     function getBorrowOrderBook(uint256 limit)
         external
@@ -79,7 +79,7 @@ interface ILendingMarket {
         view
         returns (
             ProtocolTypes.Side,
-            uint256 rate,
+            uint256 unitPrice,
             uint256 maturity,
             address maker,
             uint256 amount,
@@ -91,6 +91,7 @@ interface ILendingMarket {
         view
         returns (
             uint256 activeAmount,
+            uint256 inactiveAmount,
             uint256 inactiveFutureValue,
             uint256 maturity
         );
@@ -141,7 +142,7 @@ interface ILendingMarket {
         ProtocolTypes.Side side,
         address account,
         uint256 amount,
-        uint256 rate
+        uint256 unitPrice
     ) external returns (uint256 executedRate, uint256 remainingAmount);
 
     function pauseMarket() external;

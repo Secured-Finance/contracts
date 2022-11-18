@@ -134,16 +134,23 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
      * @notice Remove all future values if there is an amount in the past maturity.
      * @param _user User's address
      * @return removedAmount Removed future value amount
+     * @return currentAmount Current future value amount after update
      * @return maturity Maturity of future value
      */
     function removeFutureValue(address _user, uint256 _activeMaturity)
         external
         override
         onlyLendingMarket
-        returns (int256 removedAmount, uint256 maturity)
+        returns (
+            int256 removedAmount,
+            int256 currentAmount,
+            uint256 maturity
+        )
     {
-        if (Storage.slot().futureValueMaturities[_user] != _activeMaturity) {
-            removedAmount = Storage.slot().balances[_user];
+        currentAmount = Storage.slot().balances[_user];
+
+        if (Storage.slot().futureValueMaturities[_user] != _activeMaturity && currentAmount != 0) {
+            removedAmount = currentAmount;
             maturity = Storage.slot().futureValueMaturities[_user];
 
             if (removedAmount >= 0) {
@@ -153,6 +160,7 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
             }
 
             Storage.slot().balances[_user] = 0;
+            currentAmount = 0;
 
             emit Transfer(_user, address(0), removedAmount);
         }

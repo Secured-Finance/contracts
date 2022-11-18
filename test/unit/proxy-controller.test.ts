@@ -2,8 +2,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
-import { btcToETHRate } from '../utils/numbers';
-import { hexBTCString, toBytes32 } from '../utils/strings';
+import { btcToETHRate } from '../../utils/numbers';
+import { hexBTCString, toBytes32 } from '../../utils/strings';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -53,7 +53,7 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
 
-      expectRevert(
+      await expectRevert(
         proxyController.setCurrencyControllerImpl(currencyController.address, {
           from: aliceSigner.address,
         }),
@@ -113,26 +113,9 @@ describe('ProxyController', () => {
     });
 
     it('Fail to get a proxy address due to empty data', async () => {
-      expectRevert(
+      await expectRevert(
         proxyController.getAddress(toBytes32('Test')),
         'Address not found',
-      );
-    });
-
-    it('Fail to get a proxy address due to non-proxy contract', async () => {
-      const currencyController = await CurrencyController.new(
-        addressResolver.address,
-      );
-
-      const contractName = toBytes32('CurrencyController');
-      await addressResolver.importAddresses(
-        [contractName],
-        [currencyController.address],
-      );
-
-      expectRevert(
-        proxyController.getAddress(toBytes32('Test')),
-        'Proxy address not found',
       );
     });
   });
@@ -193,9 +176,9 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
 
-      expectRevert(
+      await expectRevert(
         currencyController.initialize(ownerSinger.address),
-        'Must be called from UpgradeabilityProxy',
+        'Must be called from proxy contract',
       );
     });
   });
