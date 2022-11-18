@@ -95,21 +95,15 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
-    function calculateTotalLentFundsInETH(address user)
+    function calculateTotalFundsInETH(address _user)
         external
         view
         returns (
-            uint256 totalWorkingOrderAmount,
-            uint256 totalClaimAmount,
-            uint256 totalLentAmount
-        );
-
-    function calculateTotalBorrowedFundsInETH(address user)
-        external
-        view
-        returns (
-            uint256 totalWorkingOrdersAmount,
-            uint256 totalDebtAmount,
+            uint256 totalWorkingLendOrdersAmount,
+            uint256 totalClaimableAmount,
+            uint256 totalLentAmount,
+            uint256 totalWorkingBorrowOrdersAmount,
+            uint256 totalObligationAmount,
             uint256 totalBorrowedAmount
         );
 
@@ -165,7 +159,7 @@ interface ILendingMarketController {
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    function convertFutureValueToGenesisValue(address user) external;
+    // function convertFutureValueToGenesisValue(address user) external;
 
     function cleanOrders(address user) external;
 }

@@ -574,7 +574,6 @@ describe('LendingMarketController', () => {
       await showFV();
       await showTotalPV();
       await time.increaseTo(maturities[0].toString());
-      // await showPV();
 
       expect(await lendingMarket1.isOpened()).to.equal(false);
 
@@ -695,6 +694,7 @@ describe('LendingMarketController', () => {
       expect(rotatedMarket.lendUnitPrice.toString()).to.equal('0');
       expect(rotatedMarket.midUnitPrice.toString()).to.equal('0');
 
+      await showTotalPV();
       await lendingMarketControllerProxy.cleanOrders(alice.address);
       await showTotalPV();
 
@@ -1771,18 +1771,6 @@ describe('LendingMarketController', () => {
           );
         };
 
-        const convertAllFutureValueToGenesisValue = async () => {
-          await lendingMarketControllerProxy.convertFutureValueToGenesisValue(
-            alice.address,
-          );
-          await lendingMarketControllerProxy.convertFutureValueToGenesisValue(
-            bob.address,
-          );
-          await lendingMarketControllerProxy.convertFutureValueToGenesisValue(
-            carol.address,
-          );
-        };
-
         const cleanAllOrders = async () => {
           await lendingMarketControllerProxy.cleanOrders(alice.address);
           await lendingMarketControllerProxy.cleanOrders(bob.address);
@@ -1830,7 +1818,6 @@ describe('LendingMarketController', () => {
           );
         };
 
-        await convertAllFutureValueToGenesisValue();
         await checkGenesisValue();
         await cleanAllOrders();
 
@@ -1852,6 +1839,7 @@ describe('LendingMarketController', () => {
             '50000000000000000',
             '790',
           );
+
         await lendingMarketControllerProxy
           .connect(alice)
           .createOrder(
@@ -1875,9 +1863,9 @@ describe('LendingMarketController', () => {
         await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
 
         await rotateLendingMarkets();
-        await convertAllFutureValueToGenesisValue();
         await cleanAllOrders();
         await checkGenesisValue();
+
         await lendingMarketControllerProxy
           .connect(carol)
           .createOrder(
@@ -1916,7 +1904,6 @@ describe('LendingMarketController', () => {
           );
 
         await rotateLendingMarkets();
-        await convertAllFutureValueToGenesisValue();
         await cleanAllOrders();
         await checkGenesisValue();
 
@@ -1959,11 +1946,7 @@ describe('LendingMarketController', () => {
           );
 
         await rotateLendingMarkets();
-        await convertAllFutureValueToGenesisValue();
         await cleanAllOrders();
-        await checkGenesisValue();
-
-        await convertAllFutureValueToGenesisValue();
         await checkGenesisValue();
       });
 

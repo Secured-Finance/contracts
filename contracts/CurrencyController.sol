@@ -274,30 +274,41 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @notice Gets the converted amount of currency in ETH.
      * @param _ccy Currency that has to be converted to ETH
      * @param _amount Amount to be converted
-     * @return The converted amount
+     * @return amount The converted amount
      */
-    function convertToETH(bytes32 _ccy, uint256 _amount) external view override returns (uint256) {
+    function convertToETH(bytes32 _ccy, uint256 _amount)
+        external
+        view
+        override
+        returns (uint256 amount)
+    {
         if (_isETH(_ccy)) return _amount;
+        if (_amount == 0) return 0;
 
         AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        return (_amount * uint256(price)) / 1e18;
+        amount = (_amount * uint256(price)) / 1e18;
     }
 
     /**
      * @notice Gets the converted amount of currency in ETH.
      * @param _ccy Currency that has to be converted to ETH
      * @param _amount Amount to be converted
-     * @return The converted amount
+     * @return amount The converted amount
      */
-    function convertToETH(bytes32 _ccy, int256 _amount) external view override returns (int256) {
+    function convertToETH(bytes32 _ccy, int256 _amount)
+        external
+        view
+        override
+        returns (int256 amount)
+    {
         if (_isETH(_ccy)) return _amount;
+        if (_amount == 0) return 0;
 
         AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
-
-        return (_amount * price) / 1e18;
+        amount = (_amount * price) / 1e18;
     }
 
     /**
@@ -312,12 +323,12 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         override
         returns (uint256[] memory amounts)
     {
-        if (_isETH(_ccy)) {
-            return _amounts;
-        }
+        if (_isETH(_ccy)) return _amounts;
 
         amounts = new uint256[](_amounts.length);
         for (uint256 i = 0; i < _amounts.length; i++) {
+            if (_amounts[i] == 0) continue;
+
             AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
             (, int256 price, , , ) = priceFeed.latestRoundData();
 
@@ -329,20 +340,21 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @notice Gets the converted amount to the selected currency from ETH.
      * @param _ccy Currency that has to be converted from ETH
      * @param _amountETH Amount in ETH to be converted
-     * @return The converted amount
+     * @return amount The converted amount
      */
     function convertFromETH(bytes32 _ccy, uint256 _amountETH)
         public
         view
         override
-        returns (uint256)
+        returns (uint256 amount)
     {
         if (_isETH(_ccy)) return _amountETH;
 
         AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        return (_amountETH * 1e18) / uint256(price); // add decimals checks
+        amount = (_amountETH * 1e18) / uint256(price); // add decimals checks
+        require(amount != 0, "Too small amount");
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {

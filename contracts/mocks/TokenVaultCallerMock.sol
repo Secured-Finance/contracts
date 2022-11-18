@@ -41,28 +41,19 @@ contract TokenVaultCallerMock {
         return lendingMarketController.getTotalPresentValueInETH(_user);
     }
 
-    function calculateTotalLentFundsInETH(address _user)
+    function calculateTotalFundsInETH(address _user)
         public
         view
         returns (
-            uint256 totalWorkingOrderAmount,
-            uint256 totalClaimAmount,
-            uint256 totalLentAmount
-        )
-    {
-        return lendingMarketController.calculateTotalLentFundsInETH(_user);
-    }
-
-    function calculateTotalBorrowedFundsInETH(address _user)
-        public
-        view
-        returns (
-            uint256 totalWorkingOrderAmount,
+            uint256 totalWorkingLendOrdersAmount,
+            uint256 totalClaimableAmount,
+            uint256 totalLentAmount,
+            uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalObligationAmount,
             uint256 totalBorrowedAmount
         )
     {
-        return lendingMarketController.calculateTotalBorrowedFundsInETH(_user);
+        return lendingMarketController.calculateTotalFundsInETH(_user);
     }
 
     function cleanOrders(address _user) public {

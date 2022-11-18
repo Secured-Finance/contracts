@@ -61,12 +61,10 @@ describe('TokenVault', () => {
     await mockERC20.mock.transfer.returns(true);
     await mockLendingMarketController.mock.cleanOrders.returns();
     await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(0);
-    await mockLendingMarketController.mock.calculateTotalLentFundsInETH.returns(
+    await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
       0,
       0,
       0,
-    );
-    await mockLendingMarketController.mock.calculateTotalBorrowedFundsInETH.returns(
       0,
       0,
       0,
@@ -244,17 +242,17 @@ describe('TokenVault', () => {
       const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
       expect(currencies[0]).to.equal(targetCurrency);
 
-      const collateralAmount = await tokenVaultProxy.getCollateralAmount(
+      const collateralAmount = await tokenVaultProxy.getDepositAmount(
         alice.address,
         targetCurrency,
       );
-      const collateralAmountInETH =
-        await tokenVaultProxy.getCollateralAmountInETH(
-          alice.address,
-          targetCurrency,
-        );
+      // const collateralAmountInETH =
+      //   await tokenVaultProxy.getCollateralAmountInETH(
+      //     alice.address,
+      //     targetCurrency,
+      //   );
       expect(collateralAmount).to.equal(value);
-      expect(collateralAmountInETH).to.equal(valueInETH);
+      // expect(collateralAmountInETH).to.equal(valueInETH);
     });
 
     it('Add the working orders & Withdraw', async () => {
@@ -278,10 +276,13 @@ describe('TokenVault', () => {
         totalPresentValue,
       );
 
-      await mockLendingMarketController.mock.calculateTotalBorrowedFundsInETH.returns(
-        '0',
-        '0',
-        '0',
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
       );
 
       const emptyCurrency = ethers.utils.formatBytes32String('');
@@ -300,10 +301,13 @@ describe('TokenVault', () => {
         await tokenVaultProxy.isCovered(bob.address, emptyCurrency, 0, 0),
       ).to.equal(true);
 
-      await mockLendingMarketController.mock.calculateTotalBorrowedFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
         usedValue,
-        '0',
-        '0',
+        0,
+        0,
       );
 
       expect(
@@ -346,9 +350,12 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalBorrowedFundsInETH.returns(
-        '0',
-        '0',
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
         borrowedAmount,
       );
 
@@ -358,8 +365,8 @@ describe('TokenVault', () => {
         valueInETH.add(borrowedAmount),
       );
       expect(
-        await tokenVaultProxy.getTotalCollateralAmountInETH(carol.address),
-      ).to.equal(valueInETH.add(borrowedAmount));
+        await tokenVaultProxy.getTotalCollateralAmount(carol.address),
+      ).to.equal(value.add(borrowedAmount));
     });
 
     it('Add the obligation amount', async () => {
@@ -379,10 +386,13 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalBorrowedFundsInETH.returns(
-        '0',
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
         obligationAmount,
-        '0',
+        0,
       );
 
       await tokenVaultProxy.connect(dave).deposit(targetCurrency, value);
@@ -418,10 +428,13 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalBorrowedFundsInETH.returns(
-        '0',
-        '0',
-        '0',
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
       );
 
       await tokenVaultCaller
@@ -432,7 +445,7 @@ describe('TokenVault', () => {
         value,
       );
       expect(
-        await tokenVaultProxy.getTotalCollateralAmountInETH(ellen.address),
+        await tokenVaultProxy.getTotalCollateralAmount(ellen.address),
       ).to.equal(value);
 
       await tokenVaultCaller
@@ -443,7 +456,7 @@ describe('TokenVault', () => {
         '0',
       );
       expect(
-        await tokenVaultProxy.getTotalCollateralAmountInETH(ellen.address),
+        await tokenVaultProxy.getTotalCollateralAmount(ellen.address),
       ).to.equal('0');
     });
 

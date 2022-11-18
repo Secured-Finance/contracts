@@ -17,11 +17,14 @@ interface ICurrencyController {
     event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
     event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
 
-    function convertFromETH(bytes32 _ccy, uint256 _amountETH) external view returns (uint256);
+    function convertFromETH(bytes32 _ccy, uint256 _amountETH)
+        external
+        view
+        returns (uint256 amount);
 
-    function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256);
+    function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256 amount);
 
-    function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256);
+    function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256 amount);
 
     function convertToETH(bytes32 _ccy, uint256[] memory _amounts)
         external
