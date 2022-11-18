@@ -232,7 +232,7 @@ Gets the market order from the order book.
 ### getTotalAmountFromLendOrders
 
 ```solidity
-function getTotalAmountFromLendOrders(address _user) external view returns (uint256 activeAmount, uint256 inactiveFutureValue, uint256 maturity)
+function getTotalAmountFromLendOrders(address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
 Calculates and gets the active and inactive amounts from the user orders of lending deals.
@@ -244,6 +244,7 @@ Calculates and gets the active and inactive amounts from the user orders of lend
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | activeAmount | uint256 | The total amount of active order on the order book |
+| inactiveAmount | uint256 | The total amount of inactive orders filled on the order book |
 | inactiveFutureValue | uint256 | The total future value amount of inactive orders filled on the order book |
 | maturity | uint256 | The maturity of market that orders were placed. |
 
@@ -428,5 +429,11 @@ function _getActiveLendOrderIds(address _user) private view returns (uint48[] ac
 
 ```solidity
 function _getActiveBorrowOrderIds(address _user) private view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
+```
+
+### _removeOrderIdFromOrders
+
+```solidity
+function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) private
 ```
 

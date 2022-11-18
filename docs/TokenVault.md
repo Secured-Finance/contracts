@@ -77,7 +77,7 @@ receive() external payable
 ### isCovered
 
 ```solidity
-function isCovered(address _user, bytes32 _ccy, uint256 _unsettledExp) public view returns (bool)
+function isCovered(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, enum ProtocolTypes.Side _unsettledOrderSide) public view returns (bool)
 ```
 
 Gets if the collateral has enough coverage.
@@ -85,8 +85,9 @@ Gets if the collateral has enough coverage.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _unsettledExp | uint256 | Additional exposure to lock into unsettled exposure |
+| _unsettledOrderCcy | bytes32 | Additional unsettled order currency name in bytes32 |
+| _unsettledOrderAmount | uint256 | Additional unsettled order amount |
+| _unsettledOrderSide | enum ProtocolTypes.Side |  |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -156,10 +157,27 @@ Gets the total amount of unused collateral
 | ---- | ---- | ----------- |
 | [0] | uint256 | The total amount of unused collateral |
 
-### getCollateralAmount
+### getTotalCollateralAmount
 
 ```solidity
-function getCollateralAmount(address _user, bytes32 _ccy) public view returns (uint256)
+function getTotalCollateralAmount(address _user) public view returns (uint256 totalCollateralAmount)
+```
+
+Gets the total collateral amount.
+by converting it to ETH.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | Address of collateral user |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| totalCollateralAmount | uint256 | The total collateral amount in ETH |
+
+### getDepositAmount
+
+```solidity
+function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256)
 ```
 
 Gets the amount deposited in the user's collateral.
@@ -172,40 +190,6 @@ Gets the amount deposited in the user's collateral.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256 | The deposited amount |
-
-### getCollateralAmountInETH
-
-```solidity
-function getCollateralAmountInETH(address _user, bytes32 _ccy) public view returns (uint256)
-```
-
-Gets the amount deposited in the user's collateral by converting it to ETH.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-| _ccy | bytes32 | Specified currency |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | The deposited amount in ETH |
-
-### getTotalCollateralAmountInETH
-
-```solidity
-function getTotalCollateralAmountInETH(address _user) public view returns (uint256)
-```
-
-Gets the total amount deposited in the user's collateral in all currencies.
-by converting it to ETH.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | Address of collateral user |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | The total deposited amount in ETH |
 
 ### getUsedCurrencies
 
@@ -257,6 +241,20 @@ _Deposits funds by the caller into collateral._
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
 
+### depositFrom
+
+```solidity
+function depositFrom(address _from, bytes32 _ccy, uint256 _amount) external payable
+```
+
+_Deposits funds by the `from` into collateral._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | user's address |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to deposit |
+
 ### withdraw
 
 ```solidity
@@ -298,34 +296,6 @@ Removes collateral amount.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
-### depositEscrow
-
-```solidity
-function depositEscrow(address _payer, bytes32 _ccy, uint256 _amount) external payable
-```
-
-deposit funds in escrow.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _payer | address | Address of user making payment |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _amount | uint256 | Amount of funds to be add into escrow |
-
-### withdrawEscrow
-
-```solidity
-function withdrawEscrow(address _receiver, bytes32 _ccy, uint256 _amount) external
-```
-
-Withdraw funds from escrow.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _receiver | address | Address of user receiving payment |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _amount | uint256 | Amount of funds to be removed from escrow |
-
 ### setCollateralParameters
 
 ```solidity
@@ -347,7 +317,7 @@ Triggers only be contract owner
 ### _isCovered
 
 ```solidity
-function _isCovered(address _user, bytes32 _ccy, uint256 _unsettledExp) internal view returns (bool)
+function _isCovered(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, bool _isUnsettledBorrowOrder) internal view returns (bool)
 ```
 
 Gets if the collateral has enough coverage.
@@ -355,8 +325,9 @@ Gets if the collateral has enough coverage.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _unsettledExp | uint256 | Additional exposure to lock into unsettled exposure |
+| _unsettledOrderCcy | bytes32 | Additional unsettled order currency name in bytes32 |
+| _unsettledOrderAmount | uint256 | Additional unsettled order amount |
+| _isUnsettledBorrowOrder | bool |  |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -365,7 +336,7 @@ Gets if the collateral has enough coverage.
 ### _getCoverage
 
 ```solidity
-function _getCoverage(address _user, bytes32 _ccy, uint256 _unsettledExp) internal view returns (uint256 coverage)
+function _getCoverage(address _user) internal view returns (uint256 coverage)
 ```
 
 Gets the collateral coverage.
@@ -373,8 +344,6 @@ Gets the collateral coverage.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _unsettledExp | uint256 | Additional exposure to lock into unsettled exposure |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -383,45 +352,8 @@ Gets the collateral coverage.
 ### _getActualCollateralAmount
 
 ```solidity
-function _getActualCollateralAmount(address _user, bytes32 _ccy, uint256 _unsettledExp) private view returns (uint256 totalCollateral, uint256 totalUsedCollateral)
+function _getActualCollateralAmount(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, bool _isUnsettledBorrowOrder) private view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalActualCollateral)
 ```
-
-### _getBorrowedFundsFromLendingMarkets
-
-```solidity
-function _getBorrowedFundsFromLendingMarkets(address _user, bytes32 _ccy, uint256 _unsettledExp) internal view returns (uint256 workingOrdersAmount, uint256 obligationAmount, uint256 borrowedAmount)
-```
-
-Gets borrowed funds in all currencies from the Lending Markets.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's ethereum address |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _unsettledExp | uint256 | Additional exposure to lock into unsettled exposure |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| workingOrdersAmount | uint256 | The total working orders amount on the order book |
-| obligationAmount | uint256 | The total obligation amount due to the borrow orders being filled on the order book |
-| borrowedAmount | uint256 | The total borrowed amount due to the borrow orders being filled on the order book |
-
-### _getUsedCollateral
-
-```solidity
-function _getUsedCollateral(address _user) internal view returns (uint256)
-```
-
-Gets the total collateral used in all currencies.
-The collateral used is defined as the negative future value in the lending market contract.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | The total amount of used collateral |
 
 ### _getWithdrawableCollateral
 
@@ -442,7 +374,7 @@ Calculates maximum amount of ETH that can be withdrawn.
 ### _getTotalInternalCollateralAmountInETH
 
 ```solidity
-function _getTotalInternalCollateralAmountInETH(address _user) private view returns (uint256)
+function _getTotalInternalCollateralAmountInETH(address _user) internal view returns (uint256 totalCollateral)
 ```
 
 Gets the total of amount deposited in the user's collateral of all currencies
@@ -454,11 +386,17 @@ Gets the total of amount deposited in the user's collateral of all currencies
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The total deposited amount in ETH |
+| totalCollateral | uint256 | The total deposited amount in ETH |
 
 ### _updateUsedCurrencies
 
 ```solidity
 function _updateUsedCurrencies(address _user, bytes32 _ccy) internal
+```
+
+### _deposit
+
+```solidity
+function _deposit(address _user, bytes32 _ccy, uint256 _amount) internal
 ```
 

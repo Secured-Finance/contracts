@@ -11,7 +11,7 @@ struct MaturityUnitPrice {
 }
 ```
 
-## GenesisValueStorage
+## GenesisValueVaultStorage
 
 ### STORAGE_SLOT
 
@@ -38,6 +38,6 @@ struct Storage {
 ### slot
 
 ```solidity
-function slot() internal pure returns (struct GenesisValueStorage.Storage r)
+function slot() internal pure returns (struct GenesisValueVaultStorage.Storage r)
 ```
 
