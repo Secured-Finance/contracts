@@ -37,7 +37,7 @@ const config: HardhatUserConfig = {
       accounts: privateKey,
       live: true,
       saveDeployments: true,
-      gasPrice: 1500000000,
+      gasPrice: 'auto',
       gasMultiplier: 3,
     },
     staging: {
@@ -48,7 +48,7 @@ const config: HardhatUserConfig = {
       accounts: privateKey,
       live: true,
       saveDeployments: true,
-      gasPrice: 1500000000,
+      gasPrice: 'auto',
       gasMultiplier: 3,
     },
   },
