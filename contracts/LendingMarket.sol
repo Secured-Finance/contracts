@@ -61,19 +61,19 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _resolver The address of the Address Resolver contract
      * @param _ccy The main currency for the order book
      * @param _maturity The initial maturity of the market
-     * @param _basisDate The basis date when the first market open
+     * @param _genesisDate The initial date when the first market open
      */
     function initialize(
         address _resolver,
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _basisDate
+        uint256 _genesisDate
     ) public initializer onlyBeacon {
         registerAddressResolver(_resolver);
 
         Storage.slot().ccy = _ccy;
         Storage.slot().maturity = _maturity;
-        Storage.slot().basisDate = _basisDate;
+        Storage.slot().genesisDate = _genesisDate;
 
         buildCache();
     }
@@ -99,7 +99,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             Market({
                 ccy: Storage.slot().ccy,
                 maturity: Storage.slot().maturity,
-                basisDate: Storage.slot().basisDate,
+                genesisDate: Storage.slot().genesisDate,
                 borrowUnitPrice: getBorrowUnitPrice(),
                 lendUnitPrice: getLendUnitPrice(),
                 midUnitPrice: getMidUnitPrice()
@@ -247,7 +247,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The boolean if the market is opened or not
      */
     function isOpened() public view override returns (bool) {
-        return !isMatured() && block.timestamp >= Storage.slot().basisDate;
+        return !isMatured() && block.timestamp >= Storage.slot().genesisDate;
     }
 
     /**

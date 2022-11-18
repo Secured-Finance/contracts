@@ -75,7 +75,7 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
      * @param newImpl The address of implementation contract
      */
     function setFutureValueVaultImpl(address newImpl) external override onlyOwner {
-        _updateBeaconImpl(BeaconContracts.FUTURE_VALUE, newImpl);
+        _updateBeaconImpl(BeaconContracts.FUTURE_VALUE_VAULT, newImpl);
     }
 
     /**
@@ -87,28 +87,29 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
     }
 
     /**
-     * @notice Deploys new Lending Market and save address at lendingMarkets mapping.
+     * @notice Deploys new FutureValueVault
      * @notice Reverts on deployment market with existing currency and term
      */
-    function deployFutureValue()
+    function deployFutureValueVault()
         external
         override
         onlyLendingMarketController
         returns (address futureValue)
     {
         bytes memory data = abi.encodeWithSignature("initialize(address)", address(resolver()));
-        futureValue = _createProxy(BeaconContracts.FUTURE_VALUE, data);
+        futureValue = _createProxy(BeaconContracts.FUTURE_VALUE_VAULT, data);
     }
 
     /**
-     * @notice Deploys new Lending Market and save address at lendingMarkets mapping.
+     * @notice Deploys new LendingMarket
      * @param _ccy Main currency for new lending market
-     * @notice Reverts on deployment market with existing currency and term
+     * @param _maturity The initial maturity of the market
+     * @param _genesisDate The initial date when the first market open
      * @return market The proxy contract address of created lending market
      */
     function deployLendingMarket(
         bytes32 _ccy,
-        uint256 _basisDate,
+        uint256 _genesisDate,
         uint256 _maturity
     ) external override onlyLendingMarketController returns (address market) {
         bytes memory data = abi.encodeWithSignature(
@@ -116,7 +117,7 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
             address(resolver()),
             _ccy,
             _maturity,
-            _basisDate
+            _genesisDate
         );
         market = _createProxy(BeaconContracts.LENDING_MARKET, data);
     }

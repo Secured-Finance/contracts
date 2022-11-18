@@ -15,8 +15,8 @@ library LendingMarketControllerStorage {
         mapping(bytes32 => mapping(address => address)) futureValueVaults;
         // Mapping from maturity to lending market contract address per currency
         mapping(bytes32 => mapping(uint256 => address)) maturityLendingMarkets;
-        // Mapping from currency to basis date in the lending market
-        mapping(bytes32 => uint256) basisDates;
+        // Mapping from currency to genesis date in the lending market
+        mapping(bytes32 => uint256) genesisDates;
         // Mapping from user to used currency
         mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
         // Mapping from user to active order existence per currency and maturity

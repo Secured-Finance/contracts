@@ -34,7 +34,7 @@ interface ILendingMarket {
     struct Market {
         bytes32 ccy;
         uint256 maturity;
-        uint256 basisDate;
+        uint256 genesisDate;
         uint256 borrowUnitPrice;
         uint256 lendUnitPrice;
         uint256 midUnitPrice;

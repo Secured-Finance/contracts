@@ -94,12 +94,12 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the basis date when the first market opens for the selected currency.
+     * @notice Gets the genesis date when the first market opens for the selected currency.
      * @param _ccy Currency name in bytes32
-     * @return The basis date
+     * @return The genesis date
      */
-    function getBasisDate(bytes32 _ccy) external view override returns (uint256) {
-        return Storage.slot().basisDates[_ccy];
+    function getGenesisDate(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().genesisDates[_ccy];
     }
 
     /**
@@ -446,25 +446,25 @@ contract LendingMarketController is
      * @return The boolean if the lending market is initialized or not
      */
     function isInitializedLendingMarket(bytes32 _ccy) public view override returns (bool) {
-        return Storage.slot().basisDates[_ccy] != 0;
+        return Storage.slot().genesisDates[_ccy] != 0;
     }
 
     /**
-     * @notice Initialize the lending market to set a basis date and compound factor
+     * @notice Initialize the lending market to set a genesis date and compound factor
      * @param _ccy Currency name in bytes32
-     * @param _basisDate The basis date when the initial market is opened
+     * @param _genesisDate The genesis date when the initial market is opened
      * @param _compoundFactor The initial compound factor when the initial market is opened
      */
     function initializeLendingMarket(
         bytes32 _ccy,
-        uint256 _basisDate,
+        uint256 _genesisDate,
         uint256 _compoundFactor
     ) external override onlyOwner {
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
         genesisValueVault().registerCurrency(_ccy, 18, _compoundFactor);
-        Storage.slot().basisDates[_ccy] = _basisDate;
+        Storage.slot().genesisDates[_ccy] = _genesisDate;
     }
 
     /**
@@ -477,7 +477,7 @@ contract LendingMarketController is
         external
         override
         onlyOwner
-        returns (address market, address futureValue)
+        returns (address market, address futureValueVault)
     {
         require(
             genesisValueVault().isRegisteredCurrency(_ccy),
@@ -485,31 +485,31 @@ contract LendingMarketController is
         );
         require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
 
-        uint256 basisDate = Storage.slot().basisDates[_ccy];
+        uint256 genesisDate = Storage.slot().genesisDates[_ccy];
 
         if (Storage.slot().lendingMarkets[_ccy].length > 0) {
-            basisDate = ILendingMarket(
+            genesisDate = ILendingMarket(
                 Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
             ).getMaturity();
         }
 
-        uint256 nextMaturity = TimeLibrary.addMonths(basisDate, BASIS_TERM);
+        uint256 nextMaturity = TimeLibrary.addMonths(genesisDate, BASIS_TERM);
 
         market = beaconProxyController().deployLendingMarket(
             _ccy,
-            Storage.slot().basisDates[_ccy],
+            Storage.slot().genesisDates[_ccy],
             nextMaturity
         );
-        futureValue = beaconProxyController().deployFutureValue();
+        futureValueVault = beaconProxyController().deployFutureValueVault();
 
         Storage.slot().lendingMarkets[_ccy].push(market);
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
-        Storage.slot().futureValueVaults[_ccy][market] = futureValue;
+        Storage.slot().futureValueVaults[_ccy][market] = futureValueVault;
 
         emit CreateLendingMarket(
             _ccy,
             market,
-            futureValue,
+            futureValueVault,
             Storage.slot().lendingMarkets[_ccy].length,
             nextMaturity
         );

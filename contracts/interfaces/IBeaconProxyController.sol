@@ -21,11 +21,11 @@ interface IBeaconProxyController {
 
     function setLendingMarketImpl(address newImpl) external;
 
-    function deployFutureValue() external returns (address futureValue);
+    function deployFutureValueVault() external returns (address futureValueVault);
 
     function deployLendingMarket(
         bytes32 _ccy,
-        uint256 _basisDate,
+        uint256 _genesisDate,
         uint256 _maturity
     ) external returns (address market);
 }

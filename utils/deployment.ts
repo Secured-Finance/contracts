@@ -187,21 +187,21 @@ const deployContracts = async () => {
   );
 
   const { timestamp } = await ethers.provider.getBlock('latest');
-  const basisDate = moment(timestamp * 1000).unix();
+  const genesisDate = moment(timestamp * 1000).unix();
   await Promise.all([
     lendingMarketControllerProxy.initializeLendingMarket(
       hexBTCString,
-      basisDate,
+      genesisDate,
       COMPOUND_FACTOR,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexETHString,
-      basisDate,
+      genesisDate,
       COMPOUND_FACTOR,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexFILString,
-      basisDate,
+      genesisDate,
       COMPOUND_FACTOR,
     ),
   ]);

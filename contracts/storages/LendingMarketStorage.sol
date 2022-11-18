@@ -19,7 +19,7 @@ library LendingMarketStorage {
     struct Storage {
         uint48 lastOrderId;
         bytes32 ccy;
-        uint256 basisDate;
+        uint256 genesisDate;
         uint256 maturity;
         // Mapping from user to active lend order ids
         mapping(address => uint48[]) activeLendOrderIds;
