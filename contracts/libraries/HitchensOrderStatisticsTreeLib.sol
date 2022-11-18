@@ -622,8 +622,7 @@ library HitchensOrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId
     ) internal view returns (uint256) {
-        Node storage gn = self.nodes[value];
-        return _calculateFutureValue(value, gn.orders[orderId].amount);
+        return _calculateFutureValue(value, self.nodes[value].orders[orderId].amount);
     }
 
     // Double linked list functions

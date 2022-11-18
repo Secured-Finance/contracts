@@ -565,10 +565,10 @@ describe('LendingMarketController', () => {
       expect(await lendingMarket1.isOpened()).to.equal(true);
 
       await expect(
-        lendingMarketControllerProxy.cleanOrders(alice.address),
+        lendingMarketControllerProxy.cleanOrders(targetCurrency, alice.address),
       ).to.emit(lendingMarketControllerProxy, 'FillOrdersAsync');
       await expect(
-        lendingMarketControllerProxy.cleanOrders(bob.address),
+        lendingMarketControllerProxy.cleanOrders(targetCurrency, bob.address),
       ).to.not.emit(lendingMarketControllerProxy, 'FillOrdersAsync');
 
       await showFV();
@@ -695,7 +695,10 @@ describe('LendingMarketController', () => {
       expect(rotatedMarket.midUnitPrice.toString()).to.equal('0');
 
       await showTotalPV();
-      await lendingMarketControllerProxy.cleanOrders(alice.address);
+      await lendingMarketControllerProxy.cleanOrders(
+        targetCurrency,
+        alice.address,
+      );
       await showTotalPV();
 
       // Check the total present value
@@ -1772,9 +1775,9 @@ describe('LendingMarketController', () => {
         };
 
         const cleanAllOrders = async () => {
-          await lendingMarketControllerProxy.cleanOrders(alice.address);
-          await lendingMarketControllerProxy.cleanOrders(bob.address);
-          await lendingMarketControllerProxy.cleanOrders(carol.address);
+          await lendingMarketControllerProxy.cleanAllOrders(alice.address);
+          await lendingMarketControllerProxy.cleanAllOrders(bob.address);
+          await lendingMarketControllerProxy.cleanAllOrders(carol.address);
         };
 
         const checkGenesisValue = async () => {

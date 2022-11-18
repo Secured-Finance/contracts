@@ -212,6 +212,7 @@ const deployContracts = async () => {
     beaconProxyController: beaconProxyControllerProxy,
     tokenVault: tokenVaultProxy,
     currencyController: currencyControllerProxy,
+    genesisValueVault: genesisValueVaultProxy,
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
     wETHToken,

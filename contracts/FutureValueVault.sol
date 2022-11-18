@@ -4,6 +4,10 @@ pragma solidity ^0.8.9;
 import {FutureValueVaultStorage as Storage} from "./storages/FutureValueVaultStorage.sol";
 // interfaces
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
+// libraries
+import {Contracts} from "./libraries/Contracts.sol";
+// mixins
+import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
@@ -12,22 +16,27 @@ import {Proxyable} from "./utils/Proxyable.sol";
 /**
  * @notice Implements the management of the future value as an amount for Lending deals in each currency.
  */
-contract FutureValueVault is IFutureValueVault, Proxyable {
-    /**
-     * @notice Modifier to make a function callable only by lending market.
-     */
-    modifier onlyLendingMarket() {
-        require(Storage.slot().lendingMarket == msg.sender, "Caller is not the lending market");
-        _;
-    }
-
+contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable {
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
-     * @param _lendingMarket The address of the Lending Market contract
+     * @param _resolver The address of the Address Resolver contract
      */
-    function initialize(address _lendingMarket) external initializer onlyBeacon {
-        Storage.slot().lendingMarket = _lendingMarket;
+    function initialize(address _resolver) external initializer onlyBeacon {
+        registerAddressResolver(_resolver);
+        buildCache();
+    }
+
+    // @inheritdoc MixinAddressResolver
+    function requiredContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
+    // @inheritdoc MixinAddressResolver
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     /**
@@ -90,7 +99,7 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
         address _user,
         uint256 _amount,
         uint256 _maturity
-    ) external override onlyLendingMarket returns (bool) {
+    ) external override onlyAcceptedContracts returns (bool) {
         require(_user != address(0), "add to the zero address of borrower");
         require(
             !hasFutureValueInPastMaturity(_user, _maturity),
@@ -115,7 +124,7 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
         address _user,
         uint256 _amount,
         uint256 _maturity
-    ) external override onlyLendingMarket returns (bool) {
+    ) external override onlyAcceptedContracts returns (bool) {
         require(_user != address(0), "add to the zero address of lender");
         require(
             !hasFutureValueInPastMaturity(_user, _maturity),
@@ -140,7 +149,7 @@ contract FutureValueVault is IFutureValueVault, Proxyable {
     function removeFutureValue(address _user, uint256 _activeMaturity)
         external
         override
-        onlyLendingMarket
+        onlyAcceptedContracts
         returns (
             int256 removedAmount,
             int256 currentAmount,

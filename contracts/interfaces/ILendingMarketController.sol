@@ -159,7 +159,7 @@ interface ILendingMarketController {
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    // function convertFutureValueToGenesisValue(address user) external;
+    function cleanAllOrders(address user) external;
 
-    function cleanOrders(address user) external;
+    function cleanOrders(bytes32 _ccy, address _user) external;
 }

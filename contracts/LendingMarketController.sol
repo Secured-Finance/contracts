@@ -40,6 +40,7 @@ contract LendingMarketController is
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     uint256 private constant BASIS_TERM = 3;
+    uint256 private constant MAXIMUM_ORDER_COUNT = 5;
 
     /**
      * @notice Modifier to check if the currency has a lending market.
@@ -499,7 +500,7 @@ contract LendingMarketController is
             Storage.slot().basisDates[_ccy],
             nextMaturity
         );
-        futureValue = beaconProxyController().deployFutureValue(address(this));
+        futureValue = beaconProxyController().deployFutureValue();
 
         Storage.slot().lendingMarkets[_ccy].push(market);
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
@@ -675,7 +676,7 @@ contract LendingMarketController is
 
     /**
      * @notice Unpauses previously deployed lending market by currency
-     * @param _ccy Currency for pausing all lending markets
+     * @param _ccy Currency name in bytes32
      * @return True if the execution of the operation succeeds
      */
     function unpauseLendingMarkets(bytes32 _ccy) external override onlyOwner returns (bool) {
@@ -688,51 +689,63 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Cleans own orders to remove order ids that are already filled on the order book.
+     * @notice Cleans user's all orders to remove order ids that are already filled on the order book.
      * @param _user User's address
      */
-    function cleanOrders(address _user) public override {
+    function cleanAllOrders(address _user) public override {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
-
         for (uint256 i = 0; i < ccySet.length(); i++) {
-            uint256 totalActiveOrderCount = 0;
-            bool futureValueExists = false;
-            bytes32 ccy = ccySet.at(i);
-            uint256[] memory maturities = getMaturities(ccy);
+            cleanOrders(ccySet.at(i), _user);
+        }
+    }
 
-            for (uint256 j = 0; j < maturities.length; j++) {
-                address market = Storage.slot().maturityLendingMarkets[ccy][maturities[j]];
-                int256 currentFutureValue = _convertFutureValueToGenesisValue(
-                    ccy,
+    /**
+     * @notice Cleans user's orders to remove order ids that are already filled on the order book for a selected currency.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     */
+    function cleanOrders(bytes32 _ccy, address _user) public override {
+        EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
+        if (!ccySet.contains(_ccy)) {
+            return;
+        }
+
+        uint256 totalActiveOrderCount = 0;
+        bool futureValueExists = false;
+        uint256[] memory maturities = getMaturities(_ccy);
+
+        for (uint256 j = 0; j < maturities.length; j++) {
+            address market = Storage.slot().maturityLendingMarkets[_ccy][maturities[j]];
+            int256 currentFutureValue = _convertFutureValueToGenesisValue(
+                _ccy,
+                maturities[j],
+                Storage.slot().futureValueVaults[_ccy][market],
+                _user
+            );
+
+            (uint256 activeOrderCount, bool isFilled) = _cleanOrders(_ccy, maturities[j], _user);
+            totalActiveOrderCount += activeOrderCount;
+
+            if (isFilled) {
+                currentFutureValue = _convertFutureValueToGenesisValue(
+                    _ccy,
                     maturities[j],
-                    Storage.slot().futureValueVaults[ccy][market],
+                    Storage.slot().futureValueVaults[_ccy][market],
                     _user
                 );
-
-                (uint256 activeOrderCount, bool isFilled) = _cleanOrders(ccy, maturities[j], _user);
-                totalActiveOrderCount += activeOrderCount;
-
-                if (isFilled) {
-                    currentFutureValue = _convertFutureValueToGenesisValue(
-                        ccy,
-                        maturities[j],
-                        Storage.slot().futureValueVaults[ccy][market],
-                        _user
-                    );
-                }
-
-                if (currentFutureValue != 0) {
-                    futureValueExists = true;
-                }
             }
 
-            if (
-                totalActiveOrderCount == 0 &&
-                !futureValueExists &&
-                genesisValueVault().getGenesisValue(ccy, _user) == 0
-            ) {
-                Storage.slot().usedCurrencies[_user].remove(ccy);
+            if (currentFutureValue != 0) {
+                futureValueExists = true;
             }
+        }
+
+        if (
+            totalActiveOrderCount == 0 &&
+            !futureValueExists &&
+            genesisValueVault().getGenesisValue(_ccy, _user) == 0
+        ) {
+            Storage.slot().usedCurrencies[_user].remove(_ccy);
         }
     }
 
@@ -787,7 +800,7 @@ contract LendingMarketController is
             activeOrderCount += 1;
         }
 
-        require(activeOrderCount <= 5, "Too many active orders");
+        require(activeOrderCount <= MAXIMUM_ORDER_COUNT, "Too many active orders");
 
         if (filledFutureValue == 0) {
             emit PlaceOrder(msg.sender, _ccy, _side, _maturity, _amount, _unitPrice);
@@ -911,15 +924,6 @@ contract LendingMarketController is
         }
 
         return _calculatePVFromFV(futureValue, unitPrice);
-    }
-
-    function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
-        internal
-        pure
-        returns (uint256)
-    {
-        // NOTE: The formula is: presentValue = futureValue * unitPrice.
-        return (_futureValue * _unitPrice) / ProtocolTypes.BP;
     }
 
     function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)

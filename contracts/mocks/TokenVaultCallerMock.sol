@@ -56,7 +56,7 @@ contract TokenVaultCallerMock {
         return lendingMarketController.calculateTotalFundsInETH(_user);
     }
 
-    function cleanOrders(address _user) public {
-        return lendingMarketController.cleanOrders(_user);
+    function cleanOrders(bytes32 _ccy, address _user) public {
+        return lendingMarketController.cleanOrders(_ccy, _user);
     }
 }

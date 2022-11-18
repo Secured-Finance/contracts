@@ -218,8 +218,14 @@ describe('ZC e2e test', async () => {
       )
       .then((tx) => tx.wait());
 
-    await lendingMarketController.cleanOrders(aliceSigner.address);
-    await lendingMarketController.cleanOrders(bobSigner.address);
+    await lendingMarketController.cleanOrders(
+      targetCurrency,
+      aliceSigner.address,
+    );
+    await lendingMarketController.cleanOrders(
+      targetCurrency,
+      bobSigner.address,
+    );
 
     // Calculate the future value from order unitPrice & amount
     // NOTE: The formula is: futureValue = amount / unitPrice.
