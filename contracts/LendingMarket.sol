@@ -558,16 +558,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ifOpened
         returns (uint256 filledFutureValue, uint256 remainingAmount)
     {
+        uint256 userMaturity = Storage.slot().userCurrentMaturities[_user];
         require(_amount > 0, "Can't place empty amount");
         require(
-            Storage.slot().userCurrentMaturities[_user] == Storage.slot().maturity ||
-                (Storage.slot().userCurrentMaturities[_user] != Storage.slot().maturity &&
+            userMaturity == Storage.slot().maturity ||
+                (userMaturity != Storage.slot().maturity &&
                     Storage.slot().activeLendOrderIds[_user].length == 0 &&
                     Storage.slot().activeBorrowOrderIds[_user].length == 0),
             "Order found in past maturity."
         );
 
-        if (Storage.slot().userCurrentMaturities[_user] != Storage.slot().maturity) {
+        if (userMaturity != Storage.slot().maturity) {
             Storage.slot().userCurrentMaturities[_user] = Storage.slot().maturity;
         }
 

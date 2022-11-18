@@ -18,13 +18,13 @@ interface IFutureValueVault {
         view
         returns (bool);
 
-    function addBorrowFutureValue(
+    function addLendFutureValue(
         address _user,
         uint256 _amount,
         uint256 _maturity
     ) external returns (bool);
 
-    function addLendFutureValue(
+    function addBorrowFutureValue(
         address _user,
         uint256 _amount,
         uint256 _maturity

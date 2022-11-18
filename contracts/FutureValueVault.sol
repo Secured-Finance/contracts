@@ -90,31 +90,6 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
-     * @notice Adds the future value amount for borrowing deals.
-     * @param _user User's address
-     * @param _amount The amount to add
-     * @param _maturity The maturity of the market
-     */
-    function addBorrowFutureValue(
-        address _user,
-        uint256 _amount,
-        uint256 _maturity
-    ) external override onlyAcceptedContracts returns (bool) {
-        require(_user != address(0), "add to the zero address of borrower");
-        require(
-            !hasFutureValueInPastMaturity(_user, _maturity),
-            "borrower has the future value in past maturity"
-        );
-
-        Storage.slot().futureValueMaturities[_user] = _maturity;
-        Storage.slot().totalBorrowingSupply[_maturity] += _amount;
-        Storage.slot().balances[_user] -= int256(_amount);
-        emit Transfer(address(0), _user, -int256(_amount));
-
-        return true;
-    }
-
-    /**
      * @notice Adds the future value amount for lending deals.
      * @param _user User's address
      * @param _amount The amount to add
@@ -135,6 +110,31 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         Storage.slot().totalLendingSupply[_maturity] += _amount;
         Storage.slot().balances[_user] += int256(_amount);
         emit Transfer(address(0), _user, int256(_amount));
+
+        return true;
+    }
+
+    /**
+     * @notice Adds the future value amount for borrowing deals.
+     * @param _user User's address
+     * @param _amount The amount to add
+     * @param _maturity The maturity of the market
+     */
+    function addBorrowFutureValue(
+        address _user,
+        uint256 _amount,
+        uint256 _maturity
+    ) external override onlyAcceptedContracts returns (bool) {
+        require(_user != address(0), "add to the zero address of borrower");
+        require(
+            !hasFutureValueInPastMaturity(_user, _maturity),
+            "borrower has the future value in past maturity"
+        );
+
+        Storage.slot().futureValueMaturities[_user] = _maturity;
+        Storage.slot().totalBorrowingSupply[_maturity] += _amount;
+        Storage.slot().balances[_user] -= int256(_amount);
+        emit Transfer(address(0), _user, -int256(_amount));
 
         return true;
     }

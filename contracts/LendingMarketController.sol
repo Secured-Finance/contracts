@@ -856,12 +856,18 @@ contract LendingMarketController is
                 _user
             );
 
-        if (removedLendOrderAmount > 0) {
-            tokenVault().removeCollateral(_user, _ccy, removedLendOrderAmount);
-        }
-
-        if (removedBorrowOrderAmount > 0) {
-            tokenVault().addCollateral(_user, _ccy, removedBorrowOrderAmount);
+        if (removedLendOrderAmount > removedBorrowOrderAmount) {
+            tokenVault().removeCollateral(
+                _user,
+                _ccy,
+                removedLendOrderAmount - removedBorrowOrderAmount
+            );
+        } else if (removedLendOrderAmount < removedBorrowOrderAmount) {
+            tokenVault().addCollateral(
+                _user,
+                _ccy,
+                removedBorrowOrderAmount - removedLendOrderAmount
+            );
         }
 
         if (removedLendOrderFutureValue > 0) {
