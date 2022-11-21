@@ -18,6 +18,12 @@ The users mainly call this contract to create orders to lend or borrow funds.
 uint256 BASIS_TERM
 ```
 
+### MAXIMUM_ORDER_COUNT
+
+```solidity
+uint256 MAXIMUM_ORDER_COUNT
+```
+
 ### hasLendingMarket
 
 ```solidity
@@ -78,13 +84,13 @@ Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
-### getBasisDate
+### getGenesisDate
 
 ```solidity
-function getBasisDate(bytes32 _ccy) external view returns (uint256)
+function getGenesisDate(bytes32 _ccy) external view returns (uint256)
 ```
 
-Gets the basis date when the first market opens for the selected currency.
+Gets the genesis date when the first market opens for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -92,7 +98,7 @@ Gets the basis date when the first market opens for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The basis date |
+| [0] | uint256 | The genesis date |
 
 ### getLendingMarkets
 
@@ -344,21 +350,21 @@ Gets if the lending market is initialized.
 ### initializeLendingMarket
 
 ```solidity
-function initializeLendingMarket(bytes32 _ccy, uint256 _basisDate, uint256 _compoundFactor) external
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor) external
 ```
 
-Initialize the lending market to set a basis date and compound factor
+Initialize the lending market to set a genesis date and compound factor
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _basisDate | uint256 | The basis date when the initial market is opened |
+| _genesisDate | uint256 | The genesis date when the initial market is opened |
 | _compoundFactor | uint256 | The initial compound factor when the initial market is opened |
 
 ### createLendingMarket
 
 ```solidity
-function createLendingMarket(bytes32 _ccy) external returns (address market, address futureValue)
+function createLendingMarket(bytes32 _ccy) external returns (address market, address futureValueVault)
 ```
 
 Deploys new Lending Market and save address at lendingMarkets mapping.
@@ -371,7 +377,7 @@ Reverts on deployment market with existing currency and term
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | market | address | The proxy contract address of created lending market |
-| futureValue | address |  |
+| futureValueVault | address |  |
 
 ### createOrder
 
@@ -509,22 +515,35 @@ Unpauses previously deployed lending market by currency
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency for pausing all lending markets |
+| _ccy | bytes32 | Currency name in bytes32 |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### cleanOrders
+### cleanAllOrders
 
 ```solidity
-function cleanOrders(address _user) public
+function cleanAllOrders(address _user) public
 ```
 
-Cleans own orders to remove order ids that are already filled on the order book.
+Cleans user's all orders to remove order ids that are already filled on the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _user | address | User's address |
+
+### cleanOrders
+
+```solidity
+function cleanOrders(bytes32 _ccy, address _user) public
+```
+
+Cleans user's orders to remove order ids that are already filled on the order book for a selected currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
 
 ### _convertFutureValueToGenesisValue
@@ -562,12 +581,6 @@ function _cleanOrders(bytes32 _ccy, uint256 _maturity, address _user) private re
 
 ```solidity
 function _calculatePresentValue(bytes32 _ccy, uint256 maturity, int256 futureValueInMaturity, address lendingMarketInMaturity) private view returns (int256 totalPresentValue)
-```
-
-### _calculatePVFromFV
-
-```solidity
-function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice) internal pure returns (uint256)
 ```
 
 ### _calculatePVFromFV

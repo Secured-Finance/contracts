@@ -4,18 +4,10 @@
 
 Implements the management of the future value as an amount for Lending deals in each currency.
 
-### onlyLendingMarket
-
-```solidity
-modifier onlyLendingMarket()
-```
-
-Modifier to make a function callable only by lending market.
-
 ### initialize
 
 ```solidity
-function initialize(address _lendingMarket) external
+function initialize(address _resolver) external
 ```
 
 Initializes the contract.
@@ -24,7 +16,27 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _lendingMarket | address | The address of the Lending Market contract |
+| _resolver | address | The address of the Address Resolver contract |
+
+### requiredContracts
+
+```solidity
+function requiredContracts() public pure returns (bytes32[] contracts)
+```
+
+Returns the contract names used in this contract.
+
+_The contract name list is in `./libraries/Contracts.sol`._
+
+### acceptedContracts
+
+```solidity
+function acceptedContracts() public pure returns (bytes32[] contracts)
+```
+
+Returns contract names that can call this contract.
+
+_The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
 ### getTotalLendingSupply
 
@@ -84,20 +96,6 @@ Gets if the account has the future value amount in the selected maturity.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the lending market is initialized or not |
 
-### addBorrowFutureValue
-
-```solidity
-function addBorrowFutureValue(address _user, uint256 _amount, uint256 _maturity) external returns (bool)
-```
-
-Adds the future value amount for borrowing deals.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-| _amount | uint256 | The amount to add |
-| _maturity | uint256 | The maturity of the market |
-
 ### addLendFutureValue
 
 ```solidity
@@ -105,6 +103,20 @@ function addLendFutureValue(address _user, uint256 _amount, uint256 _maturity) e
 ```
 
 Adds the future value amount for lending deals.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _amount | uint256 | The amount to add |
+| _maturity | uint256 | The maturity of the market |
+
+### addBorrowFutureValue
+
+```solidity
+function addBorrowFutureValue(address _user, uint256 _amount, uint256 _maturity) external returns (bool)
+```
+
+Adds the future value amount for borrowing deals.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

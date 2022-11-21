@@ -80,37 +80,28 @@ Sets the implementation contract of LendingMarket
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
 
-### deployFutureValue
+### deployFutureValueVault
 
 ```solidity
-function deployFutureValue(address _lendingMarket) external returns (address futureValue)
+function deployFutureValueVault() external returns (address futureValue)
 ```
 
-Deploys new Lending Market and save address at lendingMarkets mapping.
+Deploys new FutureValueVault
 Reverts on deployment market with existing currency and term
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _lendingMarket | address | The address of lending market |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| futureValue | address | The proxy contract address of created future value |
 
 ### deployLendingMarket
 
 ```solidity
-function deployLendingMarket(bytes32 _ccy, uint256 _basisDate, uint256 _maturity) external returns (address market)
+function deployLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _maturity) external returns (address market)
 ```
 
-Deploys new Lending Market and save address at lendingMarkets mapping.
-Reverts on deployment market with existing currency and term
+Deploys new LendingMarket
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Main currency for new lending market |
-| _basisDate | uint256 |  |
-| _maturity | uint256 |  |
+| _genesisDate | uint256 | The initial date when the first market open |
+| _maturity | uint256 | The initial maturity of the market |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

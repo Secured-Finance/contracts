@@ -42,7 +42,7 @@ Modifier to check if the market is matured.
 ### initialize
 
 ```solidity
-function initialize(address _resolver, bytes32 _ccy, uint256 _maturity, uint256 _basisDate) public
+function initialize(address _resolver, bytes32 _ccy, uint256 _maturity, uint256 _genesisDate) public
 ```
 
 Initializes the contract.
@@ -54,7 +54,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _resolver | address | The address of the Address Resolver contract |
 | _ccy | bytes32 | The main currency for the order book |
 | _maturity | uint256 | The initial maturity of the market |
-| _basisDate | uint256 | The basis date when the first market open |
+| _genesisDate | uint256 | The initial date when the first market open |
 
 ### requiredContracts
 

@@ -34,10 +34,10 @@ bytes32 TOKEN_VAULT
 
 ## BeaconContracts
 
-### FUTURE_VALUE
+### FUTURE_VALUE_VAULT
 
 ```solidity
-bytes32 FUTURE_VALUE
+bytes32 FUTURE_VALUE_VAULT
 ```
 
 ### LENDING_MARKET

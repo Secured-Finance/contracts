@@ -25,7 +25,7 @@ bytes32 STORAGE_SLOT
 struct Storage {
   uint48 lastOrderId;
   bytes32 ccy;
-  uint256 basisDate;
+  uint256 genesisDate;
   uint256 maturity;
   mapping(address => uint48[]) activeLendOrderIds;
   mapping(address => uint48[]) activeBorrowOrderIds;

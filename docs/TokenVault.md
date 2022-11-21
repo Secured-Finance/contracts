@@ -6,8 +6,6 @@ Implements the management of the token in each currency for users.
 
 This contract manages the following data related to tokens.
 - Deposited token amount as the collateral
-- Unsettled collateral amount used by order
-- Escrowed token amount added by lending orders
 - Parameters related to the collateral
   - Margin Call Threshold Rate
   - Auto Liquidation Threshold Rate

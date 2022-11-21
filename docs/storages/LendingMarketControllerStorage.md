@@ -15,7 +15,7 @@ struct Storage {
   mapping(bytes32 => address[]) lendingMarkets;
   mapping(bytes32 => mapping(address => address)) futureValueVaults;
   mapping(bytes32 => mapping(uint256 => address)) maturityLendingMarkets;
-  mapping(bytes32 => uint256) basisDates;
+  mapping(bytes32 => uint256) genesisDates;
   mapping(address => struct EnumerableSet.Bytes32Set) usedCurrencies;
   mapping(address => mapping(bytes32 => mapping(uint256 => bool))) activeOrderExistences;
 }
