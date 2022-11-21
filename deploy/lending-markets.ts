@@ -3,7 +3,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
 
 import { currencies } from '../utils/currencies';
-import { getBasisDate } from '../utils/dates';
+import { getGenesisDate } from '../utils/dates';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
@@ -44,17 +44,17 @@ const func: DeployFunction = async function ({
       await lendingMarketController.isInitializedLendingMarket(currency.key);
 
     if (!isInitialized) {
-      let basisDate = process.env.MARKET_BASIS_DATE;
+      let genesisDate = process.env.MARKET_BASIS_DATE;
 
-      if (!basisDate) {
-        // basisDate will be 1st of Mar, Jun, Sep, or Dec.
-        basisDate = getBasisDate().toString();
+      if (!genesisDate) {
+        // genesisDate will be 1st of Mar, Jun, Sep, or Dec.
+        genesisDate = getGenesisDate().toString();
       }
 
       await lendingMarketController
         .initializeLendingMarket(
           currency.key,
-          basisDate,
+          genesisDate,
           process.env.INITIAL_COMPOUND_FACTOR,
         )
         .then((tx) => tx.wait());
@@ -89,12 +89,12 @@ const func: DeployFunction = async function ({
           .createLendingMarket(currency.key)
           .then((tx) => tx.wait());
 
-        const { marketAddr, futureValue, maturity } = receipt.events.find(
+        const { marketAddr, futureValueVault, maturity } = receipt.events.find(
           ({ event }) => event === 'CreateLendingMarket',
         ).args;
         market.push({
           MarketAddress: marketAddr,
-          FutureValueAddress: futureValue,
+          FutureValueVaultAddress: futureValueVault,
           Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
         });
       }

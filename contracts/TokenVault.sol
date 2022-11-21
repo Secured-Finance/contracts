@@ -23,8 +23,6 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
  *
  * This contract manages the following data related to tokens.
  * - Deposited token amount as the collateral
- * - Unsettled collateral amount used by order
- * - Escrowed token amount added by lending orders
  * - Parameters related to the collateral
  *   - Margin Call Threshold Rate
  *   - Auto Liquidation Threshold Rate
@@ -284,7 +282,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], msg.sender, withdrawAmt);
         _updateUsedCurrencies(msg.sender, _ccy);
-        lendingMarketController().cleanOrders(msg.sender);
+        lendingMarketController().cleanOrders(_ccy, msg.sender);
 
         emit Withdraw(msg.sender, _ccy, withdrawAmt);
     }

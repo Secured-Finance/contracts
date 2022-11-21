@@ -7,7 +7,7 @@ import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
 
 import { Side } from '../../utils/constants';
-import { getBasisDate } from '../../utils/dates';
+import { getGenesisDate } from '../../utils/dates';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const BeaconProxyController = artifacts.require('BeaconProxyController');
@@ -34,7 +34,7 @@ describe('LendingMarketController', () => {
 
   let targetCurrency: string;
   let currencyIdx = 0;
-  let basisDate: number;
+  let genesisDate: number;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -48,7 +48,7 @@ describe('LendingMarketController', () => {
     currencyIdx++;
 
     const { timestamp } = await ethers.provider.getBlock('latest');
-    basisDate = getBasisDate(timestamp * 1000);
+    genesisDate = getGenesisDate(timestamp * 1000);
   });
 
   before(async () => {
@@ -173,7 +173,7 @@ describe('LendingMarketController', () => {
   });
 
   describe('Deployment', async () => {
-    it('Get basisDate', async () => {
+    it('Get genesisDate', async () => {
       expect(
         await lendingMarketControllerProxy.isInitializedLendingMarket(
           targetCurrency,
@@ -182,14 +182,14 @@ describe('LendingMarketController', () => {
 
       await lendingMarketControllerProxy.initializeLendingMarket(
         targetCurrency,
-        basisDate,
+        genesisDate,
         COMPOUND_FACTOR,
       );
-      const res = await lendingMarketControllerProxy.getBasisDate(
+      const res = await lendingMarketControllerProxy.getGenesisDate(
         targetCurrency,
       );
 
-      expect(res).to.equal(basisDate);
+      expect(res).to.equal(genesisDate);
       expect(
         await lendingMarketControllerProxy.isInitializedLendingMarket(
           targetCurrency,
@@ -217,7 +217,7 @@ describe('LendingMarketController', () => {
     it('Create a lending market', async () => {
       await lendingMarketControllerProxy.initializeLendingMarket(
         targetCurrency,
-        basisDate,
+        genesisDate,
         COMPOUND_FACTOR,
       );
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
@@ -238,14 +238,14 @@ describe('LendingMarketController', () => {
       expect(markets[0]).to.not.equal(ethers.constants.AddressZero);
       expect(markets[0]).to.equal(market);
       expect(maturities[0].toString()).to.equal(
-        moment.unix(basisDate).add(3, 'M').unix().toString(),
+        moment.unix(genesisDate).add(3, 'M').unix().toString(),
       );
     });
 
     it('Create multiple lending markets', async () => {
       await lendingMarketControllerProxy.initializeLendingMarket(
         targetCurrency,
-        basisDate,
+        genesisDate,
         COMPOUND_FACTOR,
       );
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
@@ -277,7 +277,7 @@ describe('LendingMarketController', () => {
       maturities.forEach((maturity, i) => {
         expect(maturity.toString()).to.equal(
           moment
-            .unix(basisDate)
+            .unix(genesisDate)
             .add(3 * (i + 1), 'M')
             .unix()
             .toString(),
@@ -297,7 +297,7 @@ describe('LendingMarketController', () => {
 
       await lendingMarketControllerProxy.initializeLendingMarket(
         targetCurrency,
-        basisDate,
+        genesisDate,
         COMPOUND_FACTOR,
       );
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
@@ -508,7 +508,7 @@ describe('LendingMarketController', () => {
 
       const maturity = await lendingMarket1.getMaturity();
       expect(maturity.toString()).to.equal(
-        moment.unix(basisDate).add(3, 'M').unix().toString(),
+        moment.unix(genesisDate).add(3, 'M').unix().toString(),
       );
 
       const borrowUnitPrice = await lendingMarket1.getBorrowUnitPrice();
@@ -565,10 +565,10 @@ describe('LendingMarketController', () => {
       expect(await lendingMarket1.isOpened()).to.equal(true);
 
       await expect(
-        lendingMarketControllerProxy.cleanOrders(alice.address),
+        lendingMarketControllerProxy.cleanOrders(targetCurrency, alice.address),
       ).to.emit(lendingMarketControllerProxy, 'FillOrdersAsync');
       await expect(
-        lendingMarketControllerProxy.cleanOrders(bob.address),
+        lendingMarketControllerProxy.cleanOrders(targetCurrency, bob.address),
       ).to.not.emit(lendingMarketControllerProxy, 'FillOrdersAsync');
 
       await showFV();
@@ -678,9 +678,9 @@ describe('LendingMarketController', () => {
       // Check market data
       expect(market.ccy).to.equal(targetCurrency);
       expect(market.maturity.toString()).to.equal(
-        moment.unix(basisDate).add(3, 'M').unix().toString(),
+        moment.unix(genesisDate).add(3, 'M').unix().toString(),
       );
-      expect(market.basisDate).to.equal(basisDate);
+      expect(market.genesisDate).to.equal(genesisDate);
       expect(market.borrowUnitPrice.toString()).to.equal('9720');
       expect(market.lendUnitPrice.toString()).to.equal('9880');
       expect(market.midUnitPrice.toString()).to.equal('9800');
@@ -689,13 +689,16 @@ describe('LendingMarketController', () => {
       expect(rotatedMarket.maturity.toString()).to.equal(
         newMaturity.toString(),
       );
-      expect(rotatedMarket.basisDate).to.equal(basisDate);
+      expect(rotatedMarket.genesisDate).to.equal(genesisDate);
       expect(rotatedMarket.borrowUnitPrice.toString()).to.equal('0');
       expect(rotatedMarket.lendUnitPrice.toString()).to.equal('0');
       expect(rotatedMarket.midUnitPrice.toString()).to.equal('0');
 
       await showTotalPV();
-      await lendingMarketControllerProxy.cleanOrders(alice.address);
+      await lendingMarketControllerProxy.cleanOrders(
+        targetCurrency,
+        alice.address,
+      );
       await showTotalPV();
 
       // Check the total present value
@@ -1772,9 +1775,9 @@ describe('LendingMarketController', () => {
         };
 
         const cleanAllOrders = async () => {
-          await lendingMarketControllerProxy.cleanOrders(alice.address);
-          await lendingMarketControllerProxy.cleanOrders(bob.address);
-          await lendingMarketControllerProxy.cleanOrders(carol.address);
+          await lendingMarketControllerProxy.cleanAllOrders(alice.address);
+          await lendingMarketControllerProxy.cleanAllOrders(bob.address);
+          await lendingMarketControllerProxy.cleanAllOrders(carol.address);
         };
 
         const checkGenesisValue = async () => {

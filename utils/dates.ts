@@ -1,6 +1,6 @@
 import moment from 'moment';
 
-const getBasisDate = (input?: moment.MomentInput): number => {
+const getGenesisDate = (input?: moment.MomentInput): number => {
   const now = moment(input);
   const month = now.month() + 1;
   const year = now.year();
@@ -10,4 +10,4 @@ const getBasisDate = (input?: moment.MomentInput): number => {
   return newDate.unix();
 };
 
-export { getBasisDate };
+export { getGenesisDate };

@@ -7,7 +7,7 @@ interface ILendingMarketController {
     event CreateLendingMarket(
         bytes32 indexed ccy,
         address indexed marketAddr,
-        address futureValue,
+        address futureValueVault,
         uint256 index,
         uint256 maturity
     );
@@ -46,7 +46,7 @@ interface ILendingMarketController {
         uint256 unitPrice
     );
 
-    function getBasisDate(bytes32 ccy) external view returns (uint256);
+    function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
 
@@ -111,7 +111,7 @@ interface ILendingMarketController {
 
     function initializeLendingMarket(
         bytes32 ccy,
-        uint256 basisDate,
+        uint256 genesisDate,
         uint256 compoundFactor
     ) external;
 
@@ -159,7 +159,7 @@ interface ILendingMarketController {
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    // function convertFutureValueToGenesisValue(address user) external;
+    function cleanAllOrders(address user) external;
 
-    function cleanOrders(address user) external;
+    function cleanOrders(bytes32 _ccy, address _user) external;
 }
