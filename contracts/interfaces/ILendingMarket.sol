@@ -9,11 +9,14 @@ interface ILendingMarket {
         uint48 orderId,
         address indexed maker,
         ProtocolTypes.Side side,
+        bytes32 ccy,
+        uint256 maturity,
         uint256 amount,
         uint256 unitPrice
     );
     event MakeOrder(
         uint48 orderId,
+        uint48 originalOrderId,
         address indexed maker,
         ProtocolTypes.Side side,
         bytes32 ccy,
@@ -24,9 +27,19 @@ interface ILendingMarket {
     event TakeOrders(
         address indexed taker,
         ProtocolTypes.Side side,
+        bytes32 ccy,
+        uint256 maturity,
         uint256 filledAmount,
         uint256 unitPrice,
         uint256 filledFutureValue
+    );
+
+    event CleanOrders(
+        uint48[] orderIds,
+        address indexed maker,
+        ProtocolTypes.Side side,
+        bytes32 indexed ccy,
+        uint256 maturity
     );
 
     event OpenMarket(uint256 maturity, uint256 prevMaturity);
