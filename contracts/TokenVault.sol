@@ -368,7 +368,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         return
             totalUsedCollateral == 0 ||
-            (totalCollateral * ProtocolTypes.PCT >=
+            (totalCollateral * ProtocolTypes.PCT_DIGIT >=
                 totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate());
     }
 
@@ -386,7 +386,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         );
 
         if (totalCollateral > 0) {
-            coverage = (totalUsedCollateral * ProtocolTypes.PCT) / totalCollateral;
+            coverage = (totalUsedCollateral * ProtocolTypes.PCT_DIGIT) / totalCollateral;
         }
     }
 
@@ -407,6 +407,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         (
             uint256 workingLendOrdersAmount,
             uint256 claimableAmount,
+            ,
             uint256 lentAmount,
             uint256 workingBorrowOrdersAmount,
             uint256 obligationAmount,
@@ -460,15 +461,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         if (totalUsedCollateral == 0) {
             return totalActualCollateral;
         } else if (
-            totalCollateral * ProtocolTypes.BP >
+            totalCollateral * ProtocolTypes.PRICE_DIGIT >
             totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate()
         ) {
             // NOTE: The formula is:
             // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
             uint256 maxWithdraw = (totalCollateral *
-                ProtocolTypes.BP -
+                ProtocolTypes.PRICE_DIGIT -
                 (totalUsedCollateral) *
-                CollateralParametersHandler.marginCallThresholdRate()) / ProtocolTypes.BP;
+                CollateralParametersHandler.marginCallThresholdRate()) / ProtocolTypes.PRICE_DIGIT;
             return maxWithdraw >= totalActualCollateral ? totalActualCollateral : maxWithdraw;
         } else {
             return 0;

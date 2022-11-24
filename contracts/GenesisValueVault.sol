@@ -164,7 +164,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // Save actual compound factor here due to calculating the genesis value from future value.
         // NOTE: The formula is: newCompoundFactor = currentCompoundFactor * (1 / unitPrice).
         Storage.slot().compoundFactors[_ccy] =
-            ((Storage.slot().compoundFactors[_ccy] * ProtocolTypes.BP)) /
+            ((Storage.slot().compoundFactors[_ccy] * ProtocolTypes.PRICE_DIGIT)) /
             _unitPrice;
 
         Storage.slot().currentMaturity[_ccy] = _nextMaturity;

@@ -350,7 +350,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 .lendOrders[marketOrder.maturity]
                 .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
             inactiveAmount += orderItem.amount;
-            inactiveFutureValue += (orderItem.amount * ProtocolTypes.BP) / marketOrder.unitPrice;
+            inactiveFutureValue +=
+                (orderItem.amount * ProtocolTypes.PRICE_DIGIT) /
+                marketOrder.unitPrice;
         }
     }
 
@@ -402,7 +404,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 .borrowOrders[marketOrder.maturity]
                 .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
             inactiveAmount += orderItem.amount;
-            inactiveFutureValue += (orderItem.amount * ProtocolTypes.BP) / marketOrder.unitPrice;
+            inactiveFutureValue +=
+                (orderItem.amount * ProtocolTypes.PRICE_DIGIT) /
+                marketOrder.unitPrice;
         }
     }
 

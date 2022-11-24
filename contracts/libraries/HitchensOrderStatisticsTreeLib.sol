@@ -923,6 +923,6 @@ library HitchensOrderStatisticsTreeLib {
         pure
         returns (uint256)
     {
-        return (amount * ProtocolTypes.BP) / unitPrice;
+        return (amount * ProtocolTypes.PRICE_DIGIT) / unitPrice;
     }
 }

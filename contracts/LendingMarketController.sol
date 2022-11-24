@@ -402,6 +402,7 @@ contract LendingMarketController is
         returns (
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
+            uint256 totalEvaluatedClaimableAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalObligationAmount,
@@ -413,16 +414,26 @@ contract LendingMarketController is
         // Calculate total funds from the user's order list
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
-            uint256[] memory amounts = new uint256[](6);
+            uint256[] memory amounts = new uint256[](7);
 
+            // 0: workingLendOrdersAmount
+            // 1: claimableAmount
+            // 2: lentAmount
+            // 3: workingBorrowOrdersAmount
+            // 4: obligationAmount
+            // 5: borrowedAmount
+            // 6: evaluatedClaimableAmount
             (amounts[0], amounts[1], amounts[2]) = calculateLentFundsFromOrders(ccy, _user);
             (amounts[3], amounts[4], amounts[5]) = calculateBorrowedFundsFromOrders(ccy, _user);
+            amounts[6] = amounts[1];
 
             // Calculate total present value from Future Value Vault and Genesis Value Vault.
             int256 totalPresentValue = getTotalPresentValue(ccy, _user);
             if (totalPresentValue >= 0) {
                 // Add to claimableAmount
                 amounts[1] += uint256(totalPresentValue);
+                uint256 haircut = currencyController().getHaircut(ccy);
+                amounts[6] += (uint256(totalPresentValue) * haircut) / ProtocolTypes.PCT_DIGIT;
             } else {
                 // Add to obligationAmount
                 amounts[4] += uint256(-totalPresentValue);
@@ -437,6 +448,8 @@ contract LendingMarketController is
             totalWorkingBorrowOrdersAmount += amountsInETH[3];
             totalObligationAmount += amountsInETH[4];
             totalBorrowedAmount += amountsInETH[5];
+
+            totalEvaluatedClaimableAmount = amountsInETH[6];
         }
     }
 
@@ -938,6 +951,6 @@ contract LendingMarketController is
         returns (int256)
     {
         // NOTE: The formula is: futureValue = presentValue / unitPrice.
-        return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.BP);
+        return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.PRICE_DIGIT);
     }
 }

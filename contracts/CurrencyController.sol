@@ -39,7 +39,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      * @param _name Currency full name
      * @param _ethPriceFeed Address for ETH price feed
-     * @param _haircut Haircut ratio used to calculate in collateral calculations
+     * @param _haircut Remaining ratio after haircut
      */
     function supportCurrency(
         bytes32 _ccy,
@@ -59,7 +59,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         } else {
             require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
         }
-        emit CcyAdded(_ccy, _name, _haircut);
+        emit AddSupportCurrency(_ccy, _name, _haircut);
     }
 
     /**
@@ -71,15 +71,15 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         Currency storage currency = Storage.slot().currencies[_ccy];
         currency.isSupported = _isSupported;
 
-        emit CcySupportUpdate(_ccy, _isSupported);
+        emit UpdateSupportCurrency(_ccy, _isSupported);
     }
 
     /**
      * @notice Updates the haircut ratio for supported currency
      * @param _ccy Currency name in bytes32
-     * @param _haircut Haircut ratio used to calculate in collateral calculations
+     * @param _haircut Remaining ratio after haircut
      */
-    function updateCcyHaircut(bytes32 _ccy, uint256 _haircut)
+    function updateHaircut(bytes32 _ccy, uint256 _haircut)
         public
         override
         onlyOwner
@@ -90,7 +90,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
         Storage.slot().haircuts[_ccy] = _haircut;
 
-        emit HaircutUpdated(_ccy, _haircut);
+        emit UpdateHaircut(_ccy, _haircut);
     }
 
     /**
@@ -98,7 +98,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      * @return The currency data
      */
-    function getCurrencies(bytes32 _ccy) external view returns (Currency memory) {
+    function getCurrency(bytes32 _ccy) external view returns (Currency memory) {
         return Storage.slot().currencies[_ccy];
     }
 
@@ -164,11 +164,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             require(!_isETH(_ccy), "Can't link to ETH");
             Storage.slot().ethPriceFeeds[_ccy] = priceFeed;
             Storage.slot().ethDecimals[_ccy] = decimals;
-            emit PriceFeedAdded(_ccy, "ETH", _priceFeedAddr);
+            emit AddPriceFeed(_ccy, "ETH", _priceFeedAddr);
         } else {
             Storage.slot().usdPriceFeeds[_ccy] = priceFeed;
             Storage.slot().usdDecimals[_ccy] = decimals;
-            emit PriceFeedAdded(_ccy, "USD", _priceFeedAddr);
+            emit AddPriceFeed(_ccy, "USD", _priceFeedAddr);
         }
 
         return true;
@@ -192,7 +192,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             delete Storage.slot().ethPriceFeeds[_ccy];
             delete Storage.slot().ethDecimals[_ccy];
 
-            emit PriceFeedRemoved(_ccy, "ETH", priceFeed);
+            emit RemovePriceFeed(_ccy, "ETH", priceFeed);
         } else {
             address priceFeed = address(Storage.slot().usdPriceFeeds[_ccy]);
 
@@ -200,7 +200,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             delete Storage.slot().usdPriceFeeds[_ccy];
             delete Storage.slot().usdDecimals[_ccy];
 
-            emit PriceFeedRemoved(_ccy, "USD", priceFeed);
+            emit RemovePriceFeed(_ccy, "USD", priceFeed);
         }
     }
 

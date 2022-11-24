@@ -140,7 +140,7 @@ const deployContracts = async () => {
       currency.key,
       currency.name,
       priceFeeds[currency.key].address,
-      7500,
+      currency.haircut,
     );
   }
 

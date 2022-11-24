@@ -18,6 +18,7 @@ export interface Currency {
   mock: string;
   key: string;
   env: string | undefined;
+  haircut: number;
   args?: string[];
 }
 
@@ -35,6 +36,7 @@ const currencies: Currency[] = [
     mock: 'MockEFIL',
     key: hexFILString,
     env: process.env.EFIL,
+    haircut: 5000,
     args: ['100000000000000000000000000'], // 100,000,000 eFIL
   },
   {
@@ -43,6 +45,7 @@ const currencies: Currency[] = [
     mock: 'MockUSDC',
     key: hexUSDCString,
     env: process.env.USDC,
+    haircut: 8000,
     args: ['100000000000000'], // 100,000,000 USDC
   },
   {
@@ -51,6 +54,7 @@ const currencies: Currency[] = [
     mock: 'MockWBTC',
     key: hexBTCString,
     env: process.env.WBTC,
+    haircut: 8000,
     args: ['100000000000000'], // 1,000,000 BTC
   },
   {
@@ -59,6 +63,7 @@ const currencies: Currency[] = [
     mock: 'MockWETH9',
     key: hexETHString,
     env: process.env.WETH,
+    haircut: 8000,
     args: undefined,
   },
 ];
