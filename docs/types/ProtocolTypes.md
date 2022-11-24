@@ -4,16 +4,16 @@
 
 _ProtocolTypes is a base-level contract that holds common Secured Finance protocol types_
 
-### BP
+### PRICE_DIGIT
 
 ```solidity
-uint256 BP
+uint256 PRICE_DIGIT
 ```
 
-### PCT
+### PCT_DIGIT
 
 ```solidity
-uint256 PCT
+uint256 PCT_DIGIT
 ```
 
 ### DAYS_IN_YEAR

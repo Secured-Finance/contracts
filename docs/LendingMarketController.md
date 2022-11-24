@@ -328,7 +328,7 @@ Gets the funds that are calculated from the user's borrowing order list for the 
 ### calculateTotalFundsInETH
 
 ```solidity
-function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalObligationAmount, uint256 totalBorrowedAmount)
+function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalEvaluatedClaimableAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalObligationAmount, uint256 totalBorrowedAmount)
 ```
 
 ### isInitializedLendingMarket
