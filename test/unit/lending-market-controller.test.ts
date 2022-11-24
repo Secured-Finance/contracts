@@ -944,7 +944,18 @@ describe('LendingMarketController', () => {
 
         await expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder');
         await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
-        await expect(tx).to.not.emit(lendingMarket1, 'MakeOrder');
+        await expect(tx)
+          .to.not.emit(lendingMarket1, 'MakeOrder')
+          .withArgs(
+            4,
+            0,
+            bob.address,
+            Side.LEND,
+            targetCurrency,
+            maturities[0],
+            '100000000000000000',
+            '880',
+          );
       });
 
       it('Fill orders at one rate with a partial amount with limit rate', async () => {
@@ -984,6 +995,7 @@ describe('LendingMarketController', () => {
           .to.emit(lendingMarket1, 'MakeOrder')
           .withArgs(
             3,
+            2,
             bob.address,
             Side.LEND,
             targetCurrency,

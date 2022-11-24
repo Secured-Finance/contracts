@@ -495,6 +495,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             _orderId,
             msg.sender,
             marketOrder.side,
+            Storage.slot().ccy,
+            Storage.slot().maturity,
             removedAmount,
             marketOrder.unitPrice
         );
@@ -582,7 +584,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         if (isExists) {
             (filledFutureValue, remainingAmount) = _takeOrder(_side, _user, _amount, _unitPrice);
         } else {
-            _makeOrder(_side, _user, _amount, _unitPrice, false);
+            _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
         }
     }
 
@@ -606,13 +608,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Preferable interest unit price
+     * @param _originalOrderId The original order id that filled partially
      */
     function _makeOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
         uint256 _unitPrice,
-        bool _isInterruption
+        bool _isInterruption,
+        uint48 _originalOrderId
     ) internal returns (uint48 orderId) {
         orderId = nextOrderId();
         Storage.slot().orders[orderId] = MarketOrder(
@@ -644,6 +648,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         emit MakeOrder(
             orderId,
+            _originalOrderId,
             _user,
             _side,
             Storage.slot().ccy,
@@ -680,7 +685,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 .dropRight(_amount, _unitPrice);
         }
 
-        emit TakeOrders(_user, _side, _amount - remainingAmount, _unitPrice, filledFutureValue);
+        emit TakeOrders(
+            _user,
+            _side,
+            Storage.slot().ccy,
+            Storage.slot().maturity,
+            _amount - remainingAmount,
+            _unitPrice,
+            filledFutureValue
+        );
 
         if (unfilledOrder.amount > 0) {
             _makeOrder(
@@ -690,12 +703,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 unfilledOrder.maker,
                 unfilledOrder.amount,
                 unfilledOrder.unitPrice,
-                true
+                true,
+                unfilledOrder.orderId
             );
         }
 
         if (remainingAmount > 0 && _unitPrice != 0) {
-            _makeOrder(_side, _user, remainingAmount, _unitPrice, false);
+            _makeOrder(_side, _user, remainingAmount, _unitPrice, false, 0);
         }
     }
 
@@ -714,8 +728,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         Storage.slot().activeLendOrderIds[_user] = activeLendOrderIds;
         activeOrderCount = activeLendOrderIds.length;
+        uint256 inactiveOrderCount = inActiveLendOrderIds.length;
+        uint48[] memory orderIds = new uint48[](inactiveOrderCount);
 
-        for (uint256 i = 0; i < inActiveLendOrderIds.length; i++) {
+        for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveLendOrderIds[i]];
             OrderItem memory orderItem = Storage.slot().lendOrders[_maturity].getOrderById(
                 marketOrder.unitPrice,
@@ -726,7 +742,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 inActiveLendOrderIds[i]
             );
             removedOrderAmount += orderItem.amount;
+
+            orderIds[i] = orderItem.orderId;
         }
+
+        emit CleanOrders(
+            orderIds,
+            _user,
+            ProtocolTypes.Side.LEND,
+            Storage.slot().ccy,
+            Storage.slot().maturity
+        );
     }
 
     function _cleanBorrowOrders(address _user, uint256 _maturity)
@@ -744,8 +770,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         Storage.slot().activeBorrowOrderIds[_user] = activeBorrowOrderIds;
         activeOrderCount = activeBorrowOrderIds.length;
+        uint256 inactiveOrderCount = inActiveBorrowOrderIds.length;
+        uint48[] memory orderIds = new uint48[](inactiveOrderCount);
 
-        for (uint256 i = 0; i < inActiveBorrowOrderIds.length; i++) {
+        for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveBorrowOrderIds[i]];
             OrderItem memory orderItem = Storage.slot().borrowOrders[_maturity].getOrderById(
                 marketOrder.unitPrice,
@@ -757,7 +785,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
 
             removedOrderAmount += orderItem.amount;
+
+            orderIds[i] = orderItem.orderId;
         }
+
+        emit CleanOrders(
+            orderIds,
+            _user,
+            ProtocolTypes.Side.BORROW,
+            Storage.slot().ccy,
+            Storage.slot().maturity
+        );
     }
 
     function _getActiveLendOrderIds(address _user)
