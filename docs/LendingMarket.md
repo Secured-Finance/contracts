@@ -291,18 +291,6 @@ Gets the order ids of active borrowing order on the order book
 | ---- | ---- | ----------- |
 | _user | address | User's address |
 
-### nextOrderId
-
-```solidity
-function nextOrderId() internal returns (uint48)
-```
-
-Increases and returns id of last order in order book.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint48 | The new order id |
-
 ### openMarket
 
 ```solidity
@@ -318,7 +306,7 @@ Opens market
 ### cancelOrder
 
 ```solidity
-function cancelOrder(address _user, uint48 _orderId) external returns (enum ProtocolTypes.Side, uint256, uint256)
+function cancelOrder(address _user, uint48 _orderId) external returns (enum ProtocolTypes.Side side, uint256 removedAmount, uint256 unitPrice)
 ```
 
 Cancels the order.
@@ -379,7 +367,7 @@ Unpauses the lending market.
 ### _makeOrder
 
 ```solidity
-function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _isInterruption, uint48 _originalOrderId) internal returns (uint48 orderId)
+function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _isInterruption, uint48 _originalOrderId) private returns (uint48 orderId)
 ```
 
 Makes new market order.
@@ -396,7 +384,7 @@ Makes new market order.
 ### _takeOrder
 
 ```solidity
-function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) internal returns (uint256 filledFutureValue, uint256 remainingAmount)
+function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint256 filledFutureValue, uint256 remainingAmount)
 ```
 
 Takes the market order.
@@ -407,34 +395,4 @@ Takes the market order.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taken |
-
-### _cleanLendOrders
-
-```solidity
-function _cleanLendOrders(address _user, uint256 _maturity) private returns (uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
-```
-
-### _cleanBorrowOrders
-
-```solidity
-function _cleanBorrowOrders(address _user, uint256 _maturity) private returns (uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
-```
-
-### _getActiveLendOrderIds
-
-```solidity
-function _getActiveLendOrderIds(address _user) private view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
-```
-
-### _getActiveBorrowOrderIds
-
-```solidity
-function _getActiveBorrowOrderIds(address _user) private view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
-```
-
-### _removeOrderIdFromOrders
-
-```solidity
-function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) private
-```
 

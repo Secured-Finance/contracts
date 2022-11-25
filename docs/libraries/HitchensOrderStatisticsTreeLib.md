@@ -1,9 +1,9 @@
 # Solidity API
 
-## UnfilledOrder
+## RemainingOrder
 
 ```solidity
-struct UnfilledOrder {
+struct RemainingOrder {
   uint48 orderId;
   address maker;
   uint256 amount;
@@ -185,13 +185,13 @@ function removeFixup(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 va
 ### dropLeft
 
 ```solidity
-function dropLeft(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue) internal returns (uint256 filledFutureValue, uint256 remainingAmount, struct UnfilledOrder unfilledOrder)
+function dropLeft(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue) internal returns (uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
 ```
 
 ### dropRight
 
 ```solidity
-function dropRight(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue) internal returns (uint256 filledFutureValue, uint256 remainingAmount, struct UnfilledOrder unfilledOrder)
+function dropRight(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue) internal returns (uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
 ```
 
 ### getFutureValue
@@ -231,7 +231,7 @@ function removeOrder(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 va
 ### fillOrders
 
 ```solidity
-function fillOrders(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount) internal returns (struct UnfilledOrder unfilledOrder)
+function fillOrders(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount) internal returns (struct RemainingOrder remainingOrder)
 ```
 
 _Reduces order amount once market order taken._
