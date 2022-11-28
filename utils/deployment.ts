@@ -22,6 +22,7 @@ const COMPOUND_FACTOR = '1010000000000000000';
 const deployContracts = async () => {
   // Deploy contracts
   const contracts = [
+    // contracts
     'AddressResolver',
     'BeaconProxyController',
     'CurrencyController',
@@ -29,6 +30,8 @@ const deployContracts = async () => {
     'LendingMarketController',
     'MockWETH9',
     'TokenVault',
+    // libs
+    'OrderBookLogic',
   ];
 
   const [
@@ -39,6 +42,7 @@ const deployContracts = async () => {
     lendingMarketController,
     wETHToken,
     tokenVault,
+    orderBookLogic,
   ] = await Promise.all(
     contracts.map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
@@ -140,7 +144,7 @@ const deployContracts = async () => {
       currency.key,
       currency.name,
       priceFeeds[currency.key].address,
-      7500,
+      currency.haircut,
     );
   }
 
@@ -175,7 +179,11 @@ const deployContracts = async () => {
 
   // Set up for LendingMarketController
   const lendingMarket = await ethers
-    .getContractFactory('LendingMarket')
+    .getContractFactory('LendingMarket', {
+      libraries: {
+        OrderBookLogic: orderBookLogic.address,
+      },
+    })
     .then((factory) => factory.deploy());
   const futureValueVault = await ethers
     .getContractFactory('FutureValueVault')

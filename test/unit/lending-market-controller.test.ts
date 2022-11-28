@@ -15,9 +15,9 @@ const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
 const FutureValueVault = artifacts.require('FutureValueVault');
 const GenesisValueVault = artifacts.require('GenesisValueVault');
-const LendingMarket = artifacts.require('LendingMarket');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
+const OrderBookLogic = artifacts.require('OrderBookLogic');
 const ProxyController = artifacts.require('ProxyController');
 
 const { deployContract, deployMockContract } = waffle;
@@ -161,7 +161,14 @@ describe('LendingMarketController', () => {
     ]);
 
     // Set up for LendingMarketController
-    const lendingMarket = await deployContract(owner, LendingMarket);
+    const orderBookLogic = await deployContract(owner, OrderBookLogic);
+    const lendingMarket = await ethers
+      .getContractFactory('LendingMarket', {
+        libraries: {
+          OrderBookLogic: orderBookLogic.address,
+        },
+      })
+      .then((factory) => factory.deploy());
     const futureValueVault = await deployContract(owner, FutureValueVault);
 
     await beaconProxyControllerProxy.setLendingMarketImpl(
@@ -1632,7 +1639,14 @@ describe('LendingMarketController', () => {
         );
 
         // Update implementations
-        const lendingMarket = await deployContract(owner, LendingMarket);
+        const orderBookLogic = await deployContract(owner, OrderBookLogic);
+        const lendingMarket = await ethers
+          .getContractFactory('LendingMarket', {
+            libraries: {
+              OrderBookLogic: orderBookLogic.address,
+            },
+          })
+          .then((factory) => factory.deploy());
         await beaconProxyControllerProxy.setLendingMarketImpl(
           lendingMarket.address,
         );

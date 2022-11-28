@@ -101,6 +101,7 @@ interface ILendingMarketController {
         returns (
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
+            uint256 totalEvaluatedClaimableAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalObligationAmount,

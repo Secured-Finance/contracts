@@ -60,7 +60,7 @@ const func: DeployFunction = async function ({
             currency.key,
             currency.name,
             priceFeeds[currency.key].address,
-            7500,
+            currency.haircut,
           )
           .then((tx) => tx.wait());
       }

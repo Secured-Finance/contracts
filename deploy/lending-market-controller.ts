@@ -10,13 +10,8 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const quickSortLibrary = await deployments.get('QuickSort');
-
   const deployResult = await deploy('LendingMarketController', {
     from: deployer,
-    libraries: {
-      QuickSort: quickSortLibrary.address,
-    },
   });
 
   await executeIfNewlyDeployment(

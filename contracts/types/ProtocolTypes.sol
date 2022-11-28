@@ -7,8 +7,8 @@ pragma solidity ^0.8.9;
  */
 library ProtocolTypes {
     // Constant values
-    uint256 public constant BP = 10000; // basis point
-    uint256 public constant PCT = 10000; // percentage point in basis
+    uint256 public constant PRICE_DIGIT = 10000; // price digit in the basis (10000 -> 1)
+    uint256 public constant PCT_DIGIT = 10000; // percentage digit in the basis (10000 -> 100%)
 
     uint256 internal constant DAYS_IN_YEAR = 365;
     uint256 internal constant SECONDS_IN_YEAR = 31557600;

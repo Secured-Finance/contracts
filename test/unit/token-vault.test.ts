@@ -68,6 +68,7 @@ describe('TokenVault', () => {
       0,
       0,
       0,
+      0,
     );
 
     // Deploy
@@ -283,6 +284,7 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
       );
 
       const emptyCurrency = ethers.utils.formatBytes32String('');
@@ -302,6 +304,7 @@ describe('TokenVault', () => {
       ).to.equal(true);
 
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
         0,
         0,
         0,
@@ -356,6 +359,7 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
         borrowedAmount,
       );
 
@@ -387,6 +391,7 @@ describe('TokenVault', () => {
         totalPresentValue,
       );
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
         0,
         0,
         0,
@@ -429,6 +434,7 @@ describe('TokenVault', () => {
         totalPresentValue,
       );
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
         0,
         0,
         0,

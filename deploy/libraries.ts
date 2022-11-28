@@ -9,9 +9,9 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy('QuickSort', {
+  await deploy('OrderBookLogic', {
     from: deployer,
-  }).then((result) => executeIfNewlyDeployment('QuickSort', result));
+  }).then((result) => executeIfNewlyDeployment('OrderBookLogic', result));
 };
 
 func.tags = ['Libraries'];

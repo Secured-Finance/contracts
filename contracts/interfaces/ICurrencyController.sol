@@ -11,11 +11,13 @@ import {Currency} from "../storages/CurrencyControllerStorage.sol";
  * contract owner is not able to add a new currency into the protocol
  */
 interface ICurrencyController {
-    event CcyAdded(bytes32 indexed ccy, string name, uint256 haircut);
-    event CcySupportUpdate(bytes32 indexed ccy, bool isSupported);
-    event HaircutUpdated(bytes32 indexed ccy, uint256 haircut);
-    event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
-    event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
+    event AddSupportCurrency(bytes32 indexed ccy, string name, uint256 haircut);
+    event UpdateSupportCurrency(bytes32 indexed ccy, bool isSupported);
+
+    event UpdateHaircut(bytes32 indexed ccy, uint256 haircut);
+
+    event AddPriceFeed(bytes32 ccy, string secondCcy, address indexed priceFeed);
+    event RemovePriceFeed(bytes32 ccy, string secondCcy, address indexed priceFeed);
 
     function convertFromETH(bytes32 _ccy, uint256 _amountETH)
         external
@@ -31,7 +33,7 @@ interface ICurrencyController {
         view
         returns (uint256[] memory amounts);
 
-    function getCurrencies(bytes32) external view returns (Currency memory);
+    function getCurrency(bytes32) external view returns (Currency memory);
 
     function getEthDecimals(bytes32) external view returns (uint8);
 
@@ -64,7 +66,7 @@ interface ICurrencyController {
         uint256 _haircut
     ) external;
 
-    function updateCcyHaircut(bytes32 _ccy, uint256 _haircut) external;
+    function updateHaircut(bytes32 _ccy, uint256 _haircut) external;
 
     function updateCurrencySupport(bytes32 _ccy, bool _isSupported) external;
 }

@@ -15,7 +15,13 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const deployResult = await deploy('LendingMarket', { from: deployer });
+  const orderBookLogic = await deployments.get('OrderBookLogic');
+  const deployResult = await deploy('LendingMarket', {
+    from: deployer,
+    libraries: {
+      OrderBookLogic: orderBookLogic.address,
+    },
+  });
 
   const proxyController = await deployments
     .get('ProxyController')
@@ -110,6 +116,7 @@ func.dependencies = [
   'FutureValueVault',
   'LendingMarketController',
   'Migration',
+  'Libraries',
 ];
 
 export default func;

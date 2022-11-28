@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 // types
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 
-struct UnfilledOrder {
+struct RemainingOrder {
     uint48 orderId;
     address maker;
     uint256 amount;
@@ -450,7 +450,7 @@ library HitchensOrderStatisticsTreeLib {
         returns (
             uint256 filledFutureValue,
             uint256 remainingAmount,
-            UnfilledOrder memory unfilledOrder
+            RemainingOrder memory remainingOrder
         )
     {
         require(amount != EMPTY, "OrderStatisticsTree(408) - Amount to drop cannot be zero");
@@ -482,7 +482,7 @@ library HitchensOrderStatisticsTreeLib {
                 cursor = value;
                 // Update order ids in the node.
                 uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
-                unfilledOrder = fillOrders(self, cursor, filledNodeAmount);
+                remainingOrder = fillOrders(self, cursor, filledNodeAmount);
             }
 
             self.nodes[cursor].left = 0;
@@ -538,7 +538,7 @@ library HitchensOrderStatisticsTreeLib {
         returns (
             uint256 filledFutureValue,
             uint256 remainingAmount,
-            UnfilledOrder memory unfilledOrder
+            RemainingOrder memory remainingOrder
         )
     {
         require(amount != EMPTY, "OrderStatisticsTree(408) - Amount to drop cannot be zero");
@@ -570,7 +570,7 @@ library HitchensOrderStatisticsTreeLib {
                 cursor = value;
                 // Update order ids in the node.
                 uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
-                unfilledOrder = fillOrders(self, cursor, filledNodeAmount);
+                remainingOrder = fillOrders(self, cursor, filledNodeAmount);
             }
 
             self.nodes[cursor].right = 0;
@@ -700,7 +700,7 @@ library HitchensOrderStatisticsTreeLib {
         Tree storage self,
         uint256 value,
         uint256 _amount
-    ) internal returns (UnfilledOrder memory unfilledOrder) {
+    ) internal returns (RemainingOrder memory remainingOrder) {
         Node storage gn = self.nodes[value];
 
         require(
@@ -720,7 +720,7 @@ library HitchensOrderStatisticsTreeLib {
                 remainingAmount -= currentOrder.amount;
                 orderId = currentOrder.next;
             } else {
-                unfilledOrder = UnfilledOrder(
+                remainingOrder = RemainingOrder(
                     currentOrder.orderId,
                     currentOrder.maker,
                     currentOrder.amount - remainingAmount,
@@ -734,13 +734,13 @@ library HitchensOrderStatisticsTreeLib {
 
         _dropOrders(self, value, currentOrder.orderId);
 
-        if (unfilledOrder.amount > 0) {
+        if (remainingOrder.amount > 0) {
             // NOTE: This order that the filled partially was dropped from a node, and the unfilled amount
             // will be inserted newly as a new orders.
             // However, that filled order amount is used when future value is calculated from inactive order.
             // For that calculation, this order amount needs to be updated by an actual filled amount at this point.
             OrderItem storage order = self.nodes[value].orders[currentOrder.orderId];
-            order.amount -= unfilledOrder.amount;
+            order.amount -= remainingOrder.amount;
         }
     }
 
@@ -923,6 +923,6 @@ library HitchensOrderStatisticsTreeLib {
         pure
         returns (uint256)
     {
-        return (amount * ProtocolTypes.BP) / unitPrice;
+        return (amount * ProtocolTypes.PRICE_DIGIT) / unitPrice;
     }
 }

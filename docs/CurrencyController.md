@@ -46,7 +46,7 @@ Adds new currency into the protocol and links with existing ETH price feed of Ch
 | _ccy | bytes32 | Currency name in bytes32 |
 | _name | string | Currency full name |
 | _ethPriceFeed | address | Address for ETH price feed |
-| _haircut | uint256 | Haircut ratio used to calculate in collateral calculations |
+| _haircut | uint256 | Remaining ratio after haircut |
 
 ### updateCurrencySupport
 
@@ -61,10 +61,10 @@ Updates the flag indicating if the currency is supported in the protocol.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _isSupported | bool | Boolean if currency is supported |
 
-### updateCcyHaircut
+### updateHaircut
 
 ```solidity
-function updateCcyHaircut(bytes32 _ccy, uint256 _haircut) public
+function updateHaircut(bytes32 _ccy, uint256 _haircut) public
 ```
 
 Updates the haircut ratio for supported currency
@@ -72,12 +72,12 @@ Updates the haircut ratio for supported currency
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _haircut | uint256 | Haircut ratio used to calculate in collateral calculations |
+| _haircut | uint256 | Remaining ratio after haircut |
 
-### getCurrencies
+### getCurrency
 
 ```solidity
-function getCurrencies(bytes32 _ccy) external view returns (struct Currency)
+function getCurrency(bytes32 _ccy) external view returns (struct Currency)
 ```
 
 Gets the currency data.
