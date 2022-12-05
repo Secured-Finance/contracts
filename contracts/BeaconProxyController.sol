@@ -6,6 +6,7 @@ import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/Upgradeabl
 import {IBeaconProxyController} from "./interfaces/IBeaconProxyController.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
 // libraries
+import {AddressResolverLib} from "./libraries/AddressResolverLib.sol";
 import {BeaconContracts, Contracts} from "./libraries/Contracts.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";

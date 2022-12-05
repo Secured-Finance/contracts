@@ -199,6 +199,138 @@ describe('OrderStatisticsTree - drop values', () => {
       });
     });
   }
+
+  describe(`Estimation`, async () => {
+    describe('Estimate the dropped amount from the lending tree', async () => {
+      const orders = [
+        { unitPrice: 8000, orderId: 1, amount: 100000000 },
+        { unitPrice: 8001, orderId: 2, amount: 300000000 },
+        { unitPrice: 8002, orderId: 3, amount: 500000000 },
+      ];
+
+      const tests = [
+        {
+          label: 'Drop 1 node partially',
+          droppedFVAmount: 62500000,
+          estimatedPVAmount: 50000000,
+        },
+        {
+          label: 'Drop 1 node',
+          droppedFVAmount: 125000000,
+          estimatedPVAmount: 100000000,
+        },
+        {
+          label: 'Drop 1 node, Fill 1 node partially',
+          droppedFVAmount: 250000000,
+          estimatedPVAmount: 200012500,
+        },
+        {
+          label: 'Drop 2 nodes, Fill 1 node partially',
+          droppedFVAmount: 625000000,
+          estimatedPVAmount: 500062505,
+        },
+      ];
+
+      for (const test of tests) {
+        it(test.label, async () => {
+          for (const order of orders) {
+            await ost.insertAmountValue(
+              order.unitPrice,
+              order.orderId,
+              constants.AddressZero,
+              order.amount,
+            );
+          }
+
+          const droppedFVAmount = await ost.estimateDroppedAmountFromFirst(
+            test.droppedFVAmount,
+          );
+          expect(droppedFVAmount.toNumber()).equal(test.estimatedPVAmount);
+
+          const totalAmountBefore = await getTotalAmount('<Before>');
+
+          const { remainingOrderAmountInPV } = await ost
+            .dropValuesFromFirst(test.estimatedPVAmount, 0)
+            .then(
+              ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+            );
+
+          const totalAmountAfter = await getTotalAmount('<After>');
+
+          expect(
+            totalAmountAfter
+              .add(remainingOrderAmountInPV.toString())
+              .add(test.estimatedPVAmount.toString()),
+          ).to.equal(totalAmountBefore);
+        });
+      }
+    });
+
+    describe('Estimate the dropped amount from the borrowing tree', async () => {
+      const orders = [
+        { unitPrice: 8000, orderId: 1, amount: 100000000 },
+        { unitPrice: 7999, orderId: 2, amount: 300000000 },
+        { unitPrice: 7998, orderId: 3, amount: 500000000 },
+      ];
+
+      const tests = [
+        {
+          label: 'Drop 1 node partially',
+          droppedFVAmount: 62500000,
+          estimatedPVAmount: 50000000,
+        },
+        {
+          label: 'Drop 1 node',
+          droppedFVAmount: 125000000,
+          estimatedPVAmount: 100000000,
+        },
+        {
+          label: 'Drop 1 node, Fill 1 node partially',
+          droppedFVAmount: 250000000,
+          estimatedPVAmount: 199987500,
+        },
+        {
+          label: 'Drop 2 nodes, Fill 1 node partially',
+          droppedFVAmount: 625000000,
+          estimatedPVAmount: 499937505,
+        },
+      ];
+
+      for (const test of tests) {
+        it(test.label, async () => {
+          for (const order of orders) {
+            await ost.insertAmountValue(
+              order.unitPrice,
+              order.orderId,
+              constants.AddressZero,
+              order.amount,
+            );
+          }
+
+          const droppedFVAmount = await ost.estimateDroppedAmountFromLast(
+            test.droppedFVAmount,
+          );
+          expect(droppedFVAmount.toNumber()).equal(test.estimatedPVAmount);
+
+          const totalAmountBefore = await getTotalAmount('<Before>');
+
+          const { remainingOrderAmountInPV } = await ost
+            .dropValuesFromLast(test.estimatedPVAmount, 0)
+            .then(
+              ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+            );
+
+          const totalAmountAfter = await getTotalAmount('<After>');
+
+          expect(
+            totalAmountAfter
+              .add(remainingOrderAmountInPV.toString())
+              .add(test.estimatedPVAmount.toString()),
+          ).to.equal(totalAmountBefore);
+        });
+      }
+    });
+  });
 });
 
 async function getTotalAmount(msg?: string) {

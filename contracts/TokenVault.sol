@@ -2,6 +2,8 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// dependencies
+import {IUniswapV2Router02} from "./dependencies/uniswap/IUniswapV2Router02.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
@@ -34,6 +36,15 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
 contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    struct CalculatedFundVars {
+        uint256 workingLendOrdersAmount;
+        uint256 collateralAmount;
+        uint256 lentAmount;
+        uint256 workingBorrowOrdersAmount;
+        uint256 debtAmount;
+        uint256 borrowedAmount;
+    }
+
     /**
      * @notice Modifier to check if currency hasn't been registered yet
      * @param _ccy Currency name in bytes32
@@ -48,19 +59,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
-     * @param _marginCallThresholdRate The rate used as the margin call threshold
-     * @param _autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
-     * @param _liquidationPriceRate The rate used as the liquidation price
-     * @param _minCollateralRate The rate used minima collateral
+     * @param _liquidationThresholdRate The rate used as the auto liquidation threshold
+     * @param _uniswapRouter Uniswap router contract address
      * @param _WETH9 The address of WETH
      */
     function initialize(
         address _owner,
         address _resolver,
-        uint256 _marginCallThresholdRate,
-        uint256 _autoLiquidationThresholdRate,
-        uint256 _liquidationPriceRate,
-        uint256 _minCollateralRate,
+        uint256 _liquidationThresholdRate,
+        address _uniswapRouter,
         address _WETH9
     ) public initializer onlyProxy {
         _transferOwnership(_owner);
@@ -68,10 +75,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         ERC20Handler.initialize(_WETH9);
         CollateralParametersHandler.setCollateralParameters(
-            _marginCallThresholdRate,
-            _autoLiquidationThresholdRate,
-            _liquidationPriceRate,
-            _minCollateralRate
+            _liquidationThresholdRate,
+            _uniswapRouter
         );
     }
 
@@ -104,7 +109,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         bytes32 _unsettledOrderCcy,
         uint256 _unsettledOrderAmount,
         ProtocolTypes.Side _unsettledOrderSide
-    ) public view override returns (bool) {
+    ) external view override returns (bool) {
         return
             _isCovered(
                 _user,
@@ -115,12 +120,25 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets if the collateral has enough coverage.
+     * @param _user User's address
+     * @return The boolean if the collateral has sufficient coverage or not
+     */
+    function isCovered(address _user) public view override returns (bool) {
+        return _isCovered(_user, "", 0, false);
+    }
+
+    /**
      * @notice Gets if the currency has been registered
      * @param _ccy Currency name in bytes32
      * @return The boolean if the currency has been registered or not
      */
     function isRegisteredCurrency(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().tokenAddresses[_ccy] != address(0);
+    }
+
+    function getTokenAddress(bytes32 _ccy) public view override returns (address) {
+        return Storage.slot().tokenAddresses[_ccy];
     }
 
     /**
@@ -172,14 +190,36 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         (totalCollateralAmount, , ) = _getActualCollateralAmount(_user, "", 0, false);
     }
 
+    function getLiquidationAmount(address _user) external view override returns (uint256) {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
+            _user,
+            "",
+            0,
+            false
+        );
+
+        return
+            totalCollateral * ProtocolTypes.PCT_DIGIT >=
+                totalUsedCollateral * CollateralParametersHandler.liquidationThresholdRate()
+                ? 0
+                : totalUsedCollateral / 2;
+    }
+
     /**
      * @notice Gets the amount deposited in the user's collateral.
      * @param _user User's address
      * @param _ccy Currency name in bytes32
      * @return The deposited amount
      */
-    function getDepositAmount(address _user, bytes32 _ccy) public view override returns (uint256) {
-        return Storage.slot().collateralAmounts[_user][_ccy];
+    function getDepositAmount(address _user, bytes32 _ccy)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        (, , , uint256 lentAmount, , , uint256 borrowedAmount) = lendingMarketController()
+            .calculateFunds(_ccy, _user);
+        return Storage.slot().collateralAmounts[_user][_ccy] + borrowedAmount - lentAmount;
     }
 
     /**
@@ -202,24 +242,24 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets parameters related to collateral.
-     * @return marginCallThresholdRate The rate used as the margin call threshold
-     * @return autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
-     * @return liquidationPriceRate The rate used as the liquidation price
-     * @return minCollateralRate The rate used minima collateral
+     * @notice Gets liquidation threshold rate
+     * @return liquidationThresholdRate  The rate used as the liquidation threshold
      */
-    function getCollateralParameters()
+    function getLiquidationThresholdRate()
         external
         view
         override
-        returns (
-            uint256 marginCallThresholdRate,
-            uint256 autoLiquidationThresholdRate,
-            uint256 liquidationPriceRate,
-            uint256 minCollateralRate
-        )
+        returns (uint256 liquidationThresholdRate)
     {
-        return CollateralParametersHandler.getCollateralParameters();
+        return CollateralParametersHandler.liquidationThresholdRate();
+    }
+
+    /**
+     * @notice Gets liquidation threshold rate
+     * @return  uniswapRouter Uniswap router contract address
+     */
+    function getUniswapRouter() external view override returns (address uniswapRouter) {
+        return address(CollateralParametersHandler.uniswapRouter());
     }
 
     function registerCurrency(bytes32 _ccy, address _tokenAddress) external onlyOwner {
@@ -269,20 +309,20 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     {
         require(_amount > 0, "Invalid amount");
 
-        address user = msg.sender;
-        uint256 maxWithdrawETH = _getWithdrawableCollateral(user);
+        lendingMarketController().cleanOrders(_ccy, msg.sender);
+
+        uint256 maxWithdrawETH = _getWithdrawableCollateral(msg.sender);
         uint256 maxWithdraw = currencyController().convertFromETH(_ccy, maxWithdrawETH);
         uint256 withdrawAmt = _amount > maxWithdraw ? maxWithdraw : _amount;
 
         require(
-            Storage.slot().collateralAmounts[user][_ccy] >= withdrawAmt,
+            Storage.slot().collateralAmounts[msg.sender][_ccy] >= withdrawAmt,
             "Not enough collateral in the selected currency"
         );
-        Storage.slot().collateralAmounts[user][_ccy] -= withdrawAmt;
+        Storage.slot().collateralAmounts[msg.sender][_ccy] -= withdrawAmt;
 
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], msg.sender, withdrawAmt);
         _updateUsedCurrencies(msg.sender, _ccy);
-        lendingMarketController().cleanOrders(_ccy, msg.sender);
 
         emit Withdraw(msg.sender, _ccy, withdrawAmt);
     }
@@ -322,27 +362,49 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         _updateUsedCurrencies(_user, _ccy);
     }
 
+    function swapCollateral(
+        address _user,
+        bytes32 _ccyIn,
+        bytes32 _ccyOut,
+        uint256 _amountInMax,
+        uint256 _amountOut
+    ) external override onlyAcceptedContracts returns (uint256 amountIn) {
+        address[] memory path = new address[](2);
+        path[0] = getTokenAddress(_ccyIn);
+        path[1] = getTokenAddress(_ccyOut);
+
+        amountIn = CollateralParametersHandler.uniswapRouter().swapTokensForExactTokens(
+            _amountOut,
+            _amountInMax,
+            path,
+            address(this),
+            block.timestamp + 15
+        )[0];
+
+        Storage.slot().collateralAmounts[_user][_ccyIn] -= amountIn;
+        Storage.slot().collateralAmounts[_user][_ccyOut] += _amountOut;
+
+        _updateUsedCurrencies(_user, _ccyIn);
+        _updateUsedCurrencies(_user, _ccyOut);
+
+        emit Swap(_user, _ccyIn, _ccyOut, amountIn, _amountOut);
+    }
+
     /**
      * @notice Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning.
      *
-     * @param _marginCallThresholdRate Margin call threshold ratio
-     * @param _autoLiquidationThresholdRate Auto liquidation threshold rate
-     * @param _liquidationPriceRate Liquidation price rate
-     * @param _minCollateralRate Minimal collateral rate
+     * @param _liquidationThresholdRate Auto liquidation threshold rate
+     * @param _uniswapRouter Uniswap router contract address
      * @notice Triggers only be contract owner
      */
-    function setCollateralParameters(
-        uint256 _marginCallThresholdRate,
-        uint256 _autoLiquidationThresholdRate,
-        uint256 _liquidationPriceRate,
-        uint256 _minCollateralRate
-    ) external onlyOwner {
+    function setCollateralParameters(uint256 _liquidationThresholdRate, address _uniswapRouter)
+        external
+        onlyOwner
+    {
         CollateralParametersHandler.setCollateralParameters(
-            _marginCallThresholdRate,
-            _autoLiquidationThresholdRate,
-            _liquidationPriceRate,
-            _minCollateralRate
+            _liquidationThresholdRate,
+            _uniswapRouter
         );
     }
 
@@ -369,7 +431,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         return
             totalUsedCollateral == 0 ||
             (totalCollateral * ProtocolTypes.PCT_DIGIT >=
-                totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate());
+                totalUsedCollateral * CollateralParametersHandler.liquidationThresholdRate());
     }
 
     /**
@@ -404,14 +466,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             uint256 totalActualCollateral
         )
     {
+        CalculatedFundVars memory vars;
         (
-            uint256 workingLendOrdersAmount,
-            uint256 claimableAmount,
+            vars.workingLendOrdersAmount,
             ,
-            uint256 lentAmount,
-            uint256 workingBorrowOrdersAmount,
-            uint256 obligationAmount,
-            uint256 borrowedAmount
+            vars.collateralAmount,
+            vars.lentAmount,
+            vars.workingBorrowOrdersAmount,
+            vars.debtAmount,
+            vars.borrowedAmount
         ) = lendingMarketController().calculateTotalFundsInETH(_user);
 
         if (_unsettledOrderAmount > 0) {
@@ -423,24 +486,25 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             require(unsettledOrderAmountInETH != 0, "Too small order amount");
 
             if (_isUnsettledBorrowOrder) {
-                workingBorrowOrdersAmount += unsettledOrderAmountInETH;
+                vars.workingBorrowOrdersAmount += unsettledOrderAmountInETH;
             } else {
                 require(
-                    getDepositAmount(_user, _unsettledOrderCcy) >= _unsettledOrderAmount,
+                    Storage.slot().collateralAmounts[_user][_unsettledOrderCcy] >=
+                        _unsettledOrderAmount,
                     "Not enough collateral in the selected currency"
                 );
-                workingLendOrdersAmount += unsettledOrderAmountInETH;
+                vars.workingLendOrdersAmount += unsettledOrderAmountInETH;
             }
         }
 
         uint256 totalInternalCollateral = _getTotalInternalCollateralAmountInETH(_user);
 
-        uint256 actualPlusCollateral = totalInternalCollateral + borrowedAmount;
-        uint256 plusCollateral = actualPlusCollateral + claimableAmount;
-        uint256 minusCollateral = workingLendOrdersAmount + lentAmount;
+        uint256 actualPlusCollateral = totalInternalCollateral + vars.borrowedAmount;
+        uint256 minusCollateral = vars.workingLendOrdersAmount + vars.lentAmount;
+        uint256 plusCollateral = actualPlusCollateral + vars.collateralAmount;
 
         totalCollateral = plusCollateral >= minusCollateral ? plusCollateral - minusCollateral : 0;
-        totalUsedCollateral = workingBorrowOrdersAmount + obligationAmount;
+        totalUsedCollateral = vars.workingBorrowOrdersAmount + vars.debtAmount;
         totalActualCollateral = actualPlusCollateral >= minusCollateral
             ? actualPlusCollateral - minusCollateral
             : 0;
@@ -462,14 +526,14 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             return totalActualCollateral;
         } else if (
             totalCollateral * ProtocolTypes.PRICE_DIGIT >
-            totalUsedCollateral * CollateralParametersHandler.marginCallThresholdRate()
+            totalUsedCollateral * CollateralParametersHandler.liquidationThresholdRate()
         ) {
             // NOTE: The formula is:
             // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
             uint256 maxWithdraw = (totalCollateral *
                 ProtocolTypes.PRICE_DIGIT -
                 (totalUsedCollateral) *
-                CollateralParametersHandler.marginCallThresholdRate()) / ProtocolTypes.PRICE_DIGIT;
+                CollateralParametersHandler.liquidationThresholdRate()) / ProtocolTypes.PRICE_DIGIT;
             return maxWithdraw >= totalActualCollateral ? totalActualCollateral : maxWithdraw;
         } else {
             return 0;
@@ -492,7 +556,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         for (uint256 i = 0; i < len; i++) {
             bytes32 ccy = currencies.at(i);
-            uint256 collateralAmount = getDepositAmount(_user, ccy);
+            uint256 collateralAmount = Storage.slot().collateralAmounts[_user][ccy];
             totalCollateral += currencyController().convertToETH(ccy, collateralAmount);
         }
 

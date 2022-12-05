@@ -80,28 +80,22 @@ contract ProxyController is IProxyController, Ownable {
     /**
      * @notice  Sets the implementation contract of TokenVault
      * @param newImpl The address of implementation contract
-     * @param marginCallThresholdRate The rate used as the margin call threshold
-     * @param autoLiquidationThresholdRate  The rate used as the auto liquidation threshold
-     * @param liquidationPriceRate The rate used as the liquidation price
-     * @param minCollateralRate The rate used minima collateral
+     * @param liquidationThresholdRate  The rate used as the auto liquidation threshold
+     * @param uniswapRouter Uniswap router contract address
      * @param WETH9 The address of WETH
      */
     function setTokenVaultImpl(
         address newImpl,
-        uint256 marginCallThresholdRate,
-        uint256 autoLiquidationThresholdRate,
-        uint256 liquidationPriceRate,
-        uint256 minCollateralRate,
+        uint256 liquidationThresholdRate,
+        address uniswapRouter,
         address WETH9
     ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,uint256,uint256,uint256,uint256,address)",
+            "initialize(address,address,uint256,address,address)",
             msg.sender,
             resolver,
-            marginCallThresholdRate,
-            autoLiquidationThresholdRate,
-            liquidationPriceRate,
-            minCollateralRate,
+            liquidationThresholdRate,
+            uniswapRouter,
             WETH9
         );
         _updateImpl(Contracts.TOKEN_VAULT, newImpl, data);

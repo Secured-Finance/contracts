@@ -12,42 +12,46 @@ import {
   toBytes32,
 } from './strings';
 
-const marginCallThresholdRate = 15000;
-const autoLiquidationThresholdRate = 12500;
-const liquidationPriceRate = 12000;
-const minCollateralRate = 2500;
+const LIQUIDATION_THRESHOLD_RATE = 12500;
 
 const COMPOUND_FACTOR = '1010000000000000000';
 
 const deployContracts = async () => {
-  // Deploy contracts
-  const contracts = [
-    // contracts
-    'AddressResolver',
-    'BeaconProxyController',
-    'CurrencyController',
-    'GenesisValueVault',
-    'LendingMarketController',
-    'MockWETH9',
-    'TokenVault',
-    // libs
-    'OrderBookLogic',
-  ];
+  // Deploy libraries
+  const [fundCalculationLogic, orderBookLogic] = await Promise.all(
+    ['FundCalculationLogic', 'OrderBookLogic'].map((library) =>
+      ethers.getContractFactory(library).then((factory) => factory.deploy()),
+    ),
+  );
 
+  // Deploy contracts
   const [
     addressResolver,
     beaconProxyController,
     currencyController,
     genesisValueVault,
-    lendingMarketController,
     wETHToken,
     tokenVault,
-    orderBookLogic,
-  ] = await Promise.all(
-    contracts.map((contract) =>
+    lendingMarketController,
+  ] = await Promise.all([
+    ...[
+      'AddressResolver',
+      'BeaconProxyController',
+      'CurrencyController',
+      'GenesisValueVault',
+      'MockWETH9',
+      'TokenVault',
+    ].map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
     ),
-  );
+    ethers
+      .getContractFactory('LendingMarketController', {
+        libraries: {
+          FundCalculationLogic: fundCalculationLogic.address,
+        },
+      })
+      .then((factory) => factory.deploy()),
+  ]);
 
   const wFILToken = await ethers
     .getContractFactory('MockERC20')
@@ -85,10 +89,9 @@ const deployContracts = async () => {
     ),
     proxyController.setTokenVaultImpl(
       tokenVault.address,
-      marginCallThresholdRate,
-      autoLiquidationThresholdRate,
-      liquidationPriceRate,
-      minCollateralRate,
+      LIQUIDATION_THRESHOLD_RATE,
+      // TODO: Need to set a mock uniswap contract here
+      ethers.constants.AddressZero,
       wETHToken.address,
     ),
   ])

@@ -45,6 +45,13 @@ interface ILendingMarketController {
         uint256 amount,
         uint256 unitPrice
     );
+    event Liquidate(
+        address indexed user,
+        bytes32 collateralCcy,
+        bytes32 indexed debtCcy,
+        uint256 indexed debtMaturity,
+        uint256 amount
+    );
 
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
@@ -88,6 +95,8 @@ interface ILendingMarketController {
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 
+    function getUsedCurrencies(address _user) external view returns (bytes32[] memory);
+
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
     function getTotalPresentValueInETH(address user)
@@ -95,16 +104,47 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
+    function calculateLentFundsFromOrders(bytes32 _ccy, address _user)
+        external
+        view
+        returns (
+            uint256 workingOrdersAmount,
+            uint256 claimableAmount,
+            uint256 lentAmount
+        );
+
+    function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user)
+        external
+        view
+        returns (
+            uint256 workingOrdersAmount,
+            uint256 debtAmount,
+            uint256 borrowedAmount
+        );
+
+    function calculateFunds(bytes32 _ccy, address _user)
+        external
+        view
+        returns (
+            uint256 workingLendOrdersAmount,
+            uint256 claimableAmount,
+            uint256 collateralAmount,
+            uint256 lentAmount,
+            uint256 workingBorrowOrdersAmount,
+            uint256 debtAmount,
+            uint256 borrowedAmount
+        );
+
     function calculateTotalFundsInETH(address _user)
         external
         view
         returns (
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
-            uint256 totalEvaluatedClaimableAmount,
+            uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
-            uint256 totalObligationAmount,
+            uint256 totalDebtAmount,
             uint256 totalBorrowedAmount
         );
 
@@ -143,9 +183,9 @@ interface ILendingMarketController {
     ) external payable returns (bool);
 
     function depositAndCreateLendOrderWithETH(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _unitPrice
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 unitPrice
     ) external payable returns (bool);
 
     function cancelOrder(

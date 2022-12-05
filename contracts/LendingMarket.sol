@@ -295,6 +295,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Estimates the filled amount at the time of order creation on the order book
+     * using the future value amount.
+     * @param _side Order position type, Borrow or Lend
+     * @param _futureValue Future value amount
+     * @return amount The estimated amount in the present value that is filled on the order book
+     */
+    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
+        external
+        view
+        override
+        returns (uint256 amount)
+    {
+        return OrderBookLogic.estimateFilledAmount(_side, _futureValue);
+    }
+
+    /**
      * @notice Opens market
      * @param _maturity The new maturity
      */
@@ -414,7 +430,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        bool _ignoreRemainingAmount
     )
         external
         override
@@ -445,7 +462,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
 
         if (isExists) {
-            (filledFutureValue, remainingAmount) = _takeOrder(_side, _user, _amount, _unitPrice);
+            (filledFutureValue, remainingAmount) = _takeOrder(
+                _side,
+                _user,
+                _amount,
+                _unitPrice,
+                _ignoreRemainingAmount
+            );
         } else {
             _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
         }
@@ -506,7 +529,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        bool _ignoreRemainingAmount
     ) private returns (uint256 filledFutureValue, uint256 remainingAmount) {
         RemainingOrder memory remainingOrder;
 
@@ -540,7 +564,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
         }
 
-        if (remainingAmount > 0 && _unitPrice != 0) {
+        if (remainingAmount > 0 && _unitPrice != 0 && !_ignoreRemainingAmount) {
             // Make a new order for the remaining amount of input
             _makeOrder(_side, _user, remainingAmount, _unitPrice, false, 0);
         }

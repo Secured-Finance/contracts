@@ -9,16 +9,19 @@ import moment from 'moment';
 import { Side } from '../../utils/constants';
 import { getGenesisDate } from '../../utils/dates';
 
+// contracts
 const AddressResolver = artifacts.require('AddressResolver');
 const BeaconProxyController = artifacts.require('BeaconProxyController');
 const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
 const FutureValueVault = artifacts.require('FutureValueVault');
 const GenesisValueVault = artifacts.require('GenesisValueVault');
-const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
-const OrderBookLogic = artifacts.require('OrderBookLogic');
 const ProxyController = artifacts.require('ProxyController');
+
+// libraries
+const FundCalculationLogic = artifacts.require('FundCalculationLogic');
+const OrderBookLogic = artifacts.require('OrderBookLogic');
 
 const { deployContract, deployMockContract } = waffle;
 
@@ -42,6 +45,7 @@ describe('LendingMarketController', () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
   let ellen: SignerWithAddress;
+  let signers: SignerWithAddress[];
 
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
@@ -52,7 +56,8 @@ describe('LendingMarketController', () => {
   });
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ellen] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave, ellen, ...signers] =
+      await ethers.getSigners();
 
     // Set up for the mocks
     mockCurrencyController = await deployMockContract(
@@ -65,7 +70,13 @@ describe('LendingMarketController', () => {
     await mockTokenVault.mock.removeCollateral.returns();
     await mockTokenVault.mock.depositFrom.returns();
 
-    // Deploy
+    // Deploy libraries
+    const fundCalculationLogic = await deployContract(
+      owner,
+      FundCalculationLogic,
+    );
+
+    // Deploy contracts
     const addressResolver = await deployContract(owner, AddressResolver);
     const proxyController = await deployContract(owner, ProxyController, [
       ethers.constants.AddressZero,
@@ -74,10 +85,13 @@ describe('LendingMarketController', () => {
       owner,
       BeaconProxyController,
     );
-    const lendingMarketController = await deployContract(
-      owner,
-      LendingMarketController,
-    );
+    const lendingMarketController = await ethers
+      .getContractFactory('LendingMarketController', {
+        libraries: {
+          FundCalculationLogic: fundCalculationLogic.address,
+        },
+      })
+      .then((factory) => factory.deploy());
     const genesisValueVault = await deployContract(owner, GenesisValueVault);
 
     // Get the Proxy contract addresses
@@ -371,6 +385,10 @@ describe('LendingMarketController', () => {
         },
       ];
 
+      const usedCurrenciesBefore =
+        await lendingMarketControllerProxy.getUsedCurrencies(alice.address);
+      expect(usedCurrenciesBefore.length).to.equal(0);
+
       for (const order of orders) {
         await lendingMarketControllerProxy
           .connect(order.maker)
@@ -382,6 +400,11 @@ describe('LendingMarketController', () => {
             order.unitPrice,
           );
       }
+
+      const usedCurrenciesAfter =
+        await lendingMarketControllerProxy.getUsedCurrencies(alice.address);
+      expect(usedCurrenciesAfter.length).to.equal(1);
+      expect(usedCurrenciesAfter[0]).to.equal(targetCurrency);
 
       const borrowUnitPrices = await lendingMarket3.getBorrowOrderBook(10);
       expect(borrowUnitPrices.unitPrices[0].toString()).to.equal('9780');
@@ -1472,6 +1495,190 @@ describe('LendingMarketController', () => {
       });
     });
 
+    describe('Liquidation', async () => {
+      beforeEach(async () => {
+        // Set up for the mocks
+        await mockTokenVault.mock.getLiquidationAmount.returns(1);
+        await mockTokenVault.mock.getDepositAmount.returns(1);
+        await mockTokenVault.mock.swapCollateral.returns(0);
+      });
+
+      it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
+        const orderAmount = ethers.BigNumber.from('100000000000000000');
+        const orderRate = ethers.BigNumber.from('8000');
+        const debtAmount = orderAmount.mul('10000').div(orderRate);
+        const liquidationAmount = ethers.BigNumber.from('300000000000000000');
+
+        // Set up for the mocks
+        await mockCurrencyController.mock.convertFromETH.returns(
+          liquidationAmount,
+        );
+
+        await lendingMarketControllerProxy
+          .connect(signers[0])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            orderAmount,
+            orderRate,
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[1])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '200000000000000000',
+            '7999',
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[2])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '200000000000000000',
+            '8000',
+          )
+          .then((tx) =>
+            expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder'),
+          );
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            signers[0].address,
+          )
+          .then((tx) =>
+            expect(tx)
+              .to.emit(lendingMarketControllerProxy, 'Liquidate')
+              .withArgs(
+                signers[0].address,
+                targetCurrency,
+                targetCurrency,
+                maturities[0],
+                debtAmount.mul('7999').div('10000'),
+              ),
+          );
+      });
+
+      it('Liquidate 50% lending position in case the one position cover liquidation amount', async () => {
+        const orderAmount = ethers.BigNumber.from('100000000000000000');
+        const orderRate = ethers.BigNumber.from('8000');
+        const debtAmount = orderAmount.mul('10000').div(orderRate);
+        const liquidationAmount = ethers.BigNumber.from('80000000000000000');
+
+        // Set up for the mocks
+        await mockCurrencyController.mock.convertFromETH.returns(
+          liquidationAmount,
+        );
+
+        await lendingMarketControllerProxy
+          .connect(signers[3])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            orderAmount,
+            orderRate,
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[4])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '200000000000000000',
+            '7999',
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[5])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '200000000000000000',
+            '8000',
+          )
+          .then((tx) =>
+            expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder'),
+          );
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            signers[3].address,
+          )
+          .then((tx) =>
+            expect(tx)
+              .to.emit(lendingMarketControllerProxy, 'Liquidate')
+              .withArgs(
+                signers[3].address,
+                targetCurrency,
+                targetCurrency,
+                maturities[0],
+                liquidationAmount,
+              ),
+          );
+      });
+
+      it('Fail to liquidate lending position due to no debt', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeLiquidationCall(
+              targetCurrency,
+              targetCurrency,
+              maturities[0],
+              signers[0].address,
+            ),
+        ).to.be.revertedWith('No debt in the selected maturity');
+      });
+
+      it('Fail to liquidate lending position due to no liquidation amount', async () => {
+        // Set up for the mocks
+        await mockTokenVault.mock.getLiquidationAmount.returns(0);
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeLiquidationCall(
+              targetCurrency,
+              targetCurrency,
+              maturities[0],
+              signers[0].address,
+            ),
+        ).to.be.revertedWith('User has enough collateral');
+      });
+
+      it('Fail to liquidate lending position due to no collateral in the selected currency', async () => {
+        // Set up for the mocks
+        await mockTokenVault.mock.getDepositAmount.returns(0);
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeLiquidationCall(
+              targetCurrency,
+              targetCurrency,
+              maturities[0],
+              signers[0].address,
+            ),
+        ).to.be.revertedWith('No collateral in the selected currency');
+      });
+    });
+
     describe('Management', async () => {
       it('Pause lending markets', async () => {
         await lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency);
@@ -2035,7 +2242,7 @@ describe('LendingMarketController', () => {
         expect(bobBorrowedFunds.workingOrdersAmount).to.equal(
           '60000000000000000',
         );
-        expect(bobBorrowedFunds.obligationAmount).to.equal('0');
+        expect(bobBorrowedFunds.debtAmount).to.equal('0');
         expect(bobBorrowedFunds.borrowedAmount).to.equal('0');
       });
 
@@ -2095,7 +2302,7 @@ describe('LendingMarketController', () => {
         );
         expect(aliceLentFunds.claimableAmount).to.equal('0');
         expect(bobBorrowedFunds.workingOrdersAmount).to.equal('0');
-        expect(bobBorrowedFunds.obligationAmount).to.equal('28125000000000000');
+        expect(bobBorrowedFunds.debtAmount).to.equal('28125000000000000');
         expect(bobBorrowedFunds.borrowedAmount).to.equal('30000000000000000');
       });
     });

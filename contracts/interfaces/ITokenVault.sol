@@ -7,6 +7,13 @@ interface ITokenVault {
     event Deposit(address indexed user, bytes32 ccy, uint256 amount);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
     event RegisterCurrency(bytes32 ccy, address tokenAddress);
+    event Swap(
+        address indexed user,
+        bytes32 ccyIn,
+        bytes32 ccyOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     function isCovered(
         address user,
@@ -15,7 +22,11 @@ interface ITokenVault {
         ProtocolTypes.Side _unsettledOrderSide
     ) external view returns (bool);
 
+    function isCovered(address _user) external view returns (bool);
+
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
+
+    function getTokenAddress(bytes32 _ccy) external view returns (address);
 
     function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw);
 
@@ -25,26 +36,18 @@ interface ITokenVault {
 
     function getTotalCollateralAmount(address party) external view returns (uint256);
 
+    function getLiquidationAmount(address _user) external view returns (uint256);
+
     function getDepositAmount(address user, bytes32 ccy) external view returns (uint256);
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
-    function getCollateralParameters()
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
+    function getLiquidationThresholdRate() external view returns (uint256 liquidationThresholdRate);
 
-    function setCollateralParameters(
-        uint256 marginCallThresholdRate,
-        uint256 autoLiquidationThresholdRate,
-        uint256 liquidationPriceRate,
-        uint256 minCollateralRate
-    ) external;
+    function getUniswapRouter() external view returns (address uniswapRouter);
+
+    function setCollateralParameters(uint256 _liquidationThresholdRate, address _uniswapRouter)
+        external;
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
@@ -67,4 +70,12 @@ interface ITokenVault {
         bytes32 _ccy,
         uint256 _amount
     ) external;
+
+    function swapCollateral(
+        address _user,
+        bytes32 _ccyIn,
+        bytes32 _ccyOut,
+        uint256 _amountInMax,
+        uint256 _amountOut
+    ) external returns (uint256 amountIn);
 }

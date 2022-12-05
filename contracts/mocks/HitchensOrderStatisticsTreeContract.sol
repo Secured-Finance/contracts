@@ -11,6 +11,12 @@ contract HitchensOrderStatisticsTreeContract {
     event InsertOrder(string action, uint256 amount, uint256 value, uint256 orderId);
     event RemoveOrder(string action, uint256 value, uint256 _id);
 
+    event Drop(
+        uint256 droppedAmountInFV,
+        uint256 remainingOrderAmountInPV,
+        uint256 remainingOrderUnitPrice
+    );
+
     constructor() {}
 
     function treeRootNode() public view returns (uint256 _value) {
@@ -82,11 +88,35 @@ contract HitchensOrderStatisticsTreeContract {
         tree.removeOrder(value, orderId);
     }
 
+    function estimateDroppedAmountFromFirst(uint256 targetFutureValue)
+        public
+        view
+        returns (uint256 droppedAmount)
+    {
+        return tree.estimateDroppedAmountFromLeft(targetFutureValue);
+    }
+
+    function estimateDroppedAmountFromLast(uint256 targetFutureValue)
+        public
+        view
+        returns (uint256 droppedAmount)
+    {
+        return tree.estimateDroppedAmountFromRight(targetFutureValue);
+    }
+
     function dropValuesFromFirst(uint256 value, uint256 limitValue) public {
-        tree.dropLeft(value, limitValue);
+        (uint256 droppedAmountInFV, , RemainingOrder memory remainingOrder) = tree.dropLeft(
+            value,
+            limitValue
+        );
+        emit Drop(droppedAmountInFV, remainingOrder.amount, remainingOrder.unitPrice);
     }
 
     function dropValuesFromLast(uint256 value, uint256 limitValue) public {
-        tree.dropRight(value, limitValue);
+        (uint256 droppedAmountInFV, , RemainingOrder memory remainingOrder) = tree.dropRight(
+            value,
+            limitValue
+        );
+        emit Drop(droppedAmountInFV, remainingOrder.amount, remainingOrder.unitPrice);
     }
 }

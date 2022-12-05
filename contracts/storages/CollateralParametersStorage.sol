@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {IUniswapV2Router02} from "../dependencies/uniswap/IUniswapV2Router02.sol";
+
 library CollateralParametersStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.collateralParameters");
 
     struct Storage {
-        // liquidation price rate in basis point
-        uint256 liquidationPriceRate;
-        // margin call threshold rate in basis point
-        uint256 marginCallThresholdRate;
-        // auto liquidation threshold rate in basis point
-        uint256 autoLiquidationThresholdRate;
-        //  minimal collateral rate in basis point
-        uint256 minCollateralRate;
+        // liquidation threshold rate in basis point
+        uint256 liquidationThresholdRate;
+        //  Uniswap router contract
+        IUniswapV2Router02 uniswapRouter;
     }
 
     function slot() internal pure returns (Storage storage r) {
