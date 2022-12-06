@@ -56,6 +56,12 @@ function getActiveLendOrderIds(address _user) public view returns (uint48[] acti
 function getActiveBorrowOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
+### estimateFilledAmount
+
+```solidity
+function estimateFilledAmount(enum ProtocolTypes.Side _side, uint256 _futureValue) public view returns (uint256 amount)
+```
+
 ### insertOrder
 
 ```solidity

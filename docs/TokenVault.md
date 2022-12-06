@@ -14,6 +14,19 @@ This contract manages the following data related to tokens.
 
 To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
 
+### CalculatedFundVars
+
+```solidity
+struct CalculatedFundVars {
+  uint256 workingLendOrdersAmount;
+  uint256 collateralAmount;
+  uint256 lentAmount;
+  uint256 workingBorrowOrdersAmount;
+  uint256 debtAmount;
+  uint256 borrowedAmount;
+}
+```
+
 ### onlyRegisteredCurrency
 
 ```solidity
@@ -29,7 +42,7 @@ Modifier to check if currency hasn't been registered yet
 ### initialize
 
 ```solidity
-function initialize(address _owner, address _resolver, uint256 _marginCallThresholdRate, uint256 _autoLiquidationThresholdRate, uint256 _liquidationPriceRate, uint256 _minCollateralRate, address _WETH9) public
+function initialize(address _owner, address _resolver, uint256 _liquidationThresholdRate, address _uniswapRouter, address _WETH9) public
 ```
 
 Initializes the contract.
@@ -40,10 +53,8 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | ---- | ---- | ----------- |
 | _owner | address | The address of the contract owner |
 | _resolver | address | The address of the Address Resolver contract |
-| _marginCallThresholdRate | uint256 | The rate used as the margin call threshold |
-| _autoLiquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
-| _liquidationPriceRate | uint256 | The rate used as the liquidation price |
-| _minCollateralRate | uint256 | The rate used minima collateral |
+| _liquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
+| _uniswapRouter | address | Uniswap router contract address |
 | _WETH9 | address | The address of WETH |
 
 ### requiredContracts
@@ -75,7 +86,7 @@ receive() external payable
 ### isCovered
 
 ```solidity
-function isCovered(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, enum ProtocolTypes.Side _unsettledOrderSide) public view returns (bool)
+function isCovered(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, enum ProtocolTypes.Side _unsettledOrderSide) external view returns (bool)
 ```
 
 Gets if the collateral has enough coverage.
@@ -86,6 +97,22 @@ Gets if the collateral has enough coverage.
 | _unsettledOrderCcy | bytes32 | Additional unsettled order currency name in bytes32 |
 | _unsettledOrderAmount | uint256 | Additional unsettled order amount |
 | _unsettledOrderSide | enum ProtocolTypes.Side |  |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the collateral has sufficient coverage or not |
+
+### isCovered
+
+```solidity
+function isCovered(address _user) public view returns (bool)
+```
+
+Gets if the collateral has enough coverage.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -106,6 +133,12 @@ Gets if the currency has been registered
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the currency has been registered or not |
+
+### getTokenAddress
+
+```solidity
+function getTokenAddress(bytes32 _ccy) public view returns (address)
+```
 
 ### getWithdrawableCollateral
 
@@ -172,10 +205,16 @@ by converting it to ETH.
 | ---- | ---- | ----------- |
 | totalCollateralAmount | uint256 | The total collateral amount in ETH |
 
+### getLiquidationAmount
+
+```solidity
+function getLiquidationAmount(address _user) external view returns (uint256)
+```
+
 ### getDepositAmount
 
 ```solidity
-function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256)
+function getDepositAmount(address _user, bytes32 _ccy) external view returns (uint256)
 ```
 
 Gets the amount deposited in the user's collateral.
@@ -205,20 +244,29 @@ Gets the currencies that the user used as collateral.
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The currency names in bytes32 |
 
-### getCollateralParameters
+### getLiquidationThresholdRate
 
 ```solidity
-function getCollateralParameters() external view returns (uint256 marginCallThresholdRate, uint256 autoLiquidationThresholdRate, uint256 liquidationPriceRate, uint256 minCollateralRate)
+function getLiquidationThresholdRate() external view returns (uint256 liquidationThresholdRate)
 ```
 
-Gets parameters related to collateral.
+Gets liquidation threshold rate
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| marginCallThresholdRate | uint256 | The rate used as the margin call threshold |
-| autoLiquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
-| liquidationPriceRate | uint256 | The rate used as the liquidation price |
-| minCollateralRate | uint256 | The rate used minima collateral |
+| liquidationThresholdRate | uint256 | The rate used as the liquidation threshold |
+
+### getUniswapRouter
+
+```solidity
+function getUniswapRouter() external view returns (address uniswapRouter)
+```
+
+Gets liquidation threshold rate
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| uniswapRouter | address | Uniswap router contract address |
 
 ### registerCurrency
 
@@ -294,10 +342,16 @@ Removes collateral amount.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
+### swapCollateral
+
+```solidity
+function swapCollateral(address _user, bytes32 _ccyIn, bytes32 _ccyOut, uint256 _amountInMax, uint256 _amountOut) external returns (uint256 amountIn)
+```
+
 ### setCollateralParameters
 
 ```solidity
-function setCollateralParameters(uint256 _marginCallThresholdRate, uint256 _autoLiquidationThresholdRate, uint256 _liquidationPriceRate, uint256 _minCollateralRate) external
+function setCollateralParameters(uint256 _liquidationThresholdRate, address _uniswapRouter) external
 ```
 
 Sets main collateral parameters this function
@@ -307,10 +361,8 @@ Triggers only be contract owner
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _marginCallThresholdRate | uint256 | Margin call threshold ratio |
-| _autoLiquidationThresholdRate | uint256 | Auto liquidation threshold rate |
-| _liquidationPriceRate | uint256 | Liquidation price rate |
-| _minCollateralRate | uint256 | Minimal collateral rate |
+| _liquidationThresholdRate | uint256 | Auto liquidation threshold rate |
+| _uniswapRouter | address | Uniswap router contract address |
 
 ### _isCovered
 

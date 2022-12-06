@@ -500,12 +500,6 @@ describe('TokenVault', () => {
     });
 
     it('Get the liquidation amount', async () => {
-      // const withdrawableCollateralAmount =
-      //   await tokenVaultProxy.getWithdrawableCollateral(dave.address);
-      // await tokenVaultProxy
-      //   .connect(dave)
-      //   .withdraw(previousCurrency, withdrawableCollateralAmount);
-
       const value = ethers.BigNumber.from('20000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const totalPresentValue = ethers.BigNumber.from('20000000000000');

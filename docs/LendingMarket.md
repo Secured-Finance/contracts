@@ -291,6 +291,24 @@ Gets the order ids of active borrowing order on the order book
 | ---- | ---- | ----------- |
 | _user | address | User's address |
 
+### estimateFilledAmount
+
+```solidity
+function estimateFilledAmount(enum ProtocolTypes.Side _side, uint256 _futureValue) external view returns (uint256 amount)
+```
+
+Estimates the filled amount at the time of order creation on the order book
+using the future value amount.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _futureValue | uint256 | Future value amount |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amount | uint256 | The estimated amount in the present value that is filled on the order book |
+
 ### openMarket
 
 ```solidity
@@ -302,6 +320,10 @@ Opens market
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _maturity | uint256 | The new maturity |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| prevMaturity | uint256 | The previous maturity updated |
 
 ### cancelOrder
 
@@ -315,6 +337,12 @@ Cancels the order.
 | ---- | ---- | ----------- |
 | _user | address | User address |
 | _orderId | uint48 | Market order id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| side | enum ProtocolTypes.Side | The canceled order position type |
+| removedAmount | uint256 | The removed order amount from the order book by canceling |
+| unitPrice | uint256 | The canceled order unit price |
 
 ### cleanOrders
 
@@ -332,10 +360,20 @@ for calculating if the collateral is enough or not._
 | ---- | ---- | ----------- |
 | _user | address | User address |
 
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| activeLendOrderCount | uint256 | The total amount of active lend order on the order book |
+| activeBorrowOrderCount | uint256 | The total amount of active borrow order on the order book |
+| removedLendOrderFutureValue | uint256 | The total FV amount of the removed lend order amount from the order book |
+| removedBorrowOrderFutureValue | uint256 | The total FV amount of the removed borrow order amount from the order book |
+| removedLendOrderAmount | uint256 | The total PV amount of the removed lend order amount from the order book |
+| removedBorrowOrderAmount | uint256 | The total PV amount of the removed borrow order amount from the order book |
+| maturity | uint256 | The maturity of the removed orders |
+
 ### createOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external returns (uint256 filledFutureValue, uint256 remainingAmount)
+function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) external returns (uint256 filledFutureValue, uint256 remainingAmount)
 ```
 
 Creates the order. Takes the order if the order is matched,
@@ -347,6 +385,12 @@ and places new order if not match it.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+| _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after taking orders |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| filledFutureValue | uint256 | The total FV amount of the filled order amount on the order book |
+| remainingAmount | uint256 | The remaining amount that is not filled in the order book |
 
 ### pauseMarket
 
@@ -384,7 +428,7 @@ Makes new market order.
 ### _takeOrder
 
 ```solidity
-function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint256 filledFutureValue, uint256 remainingAmount)
+function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (uint256 filledFutureValue, uint256 remainingAmount)
 ```
 
 Takes the market order.
@@ -395,4 +439,5 @@ Takes the market order.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taken |
+| _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after taking orders |
 
