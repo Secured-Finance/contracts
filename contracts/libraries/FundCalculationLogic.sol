@@ -20,7 +20,7 @@ library FundCalculationLogic {
         bytes32 _debtCcy,
         uint256 _debtMaturity,
         address _user
-    ) public returns (uint256 liquidationPVAmount, uint256 debtFVAmount) {
+    ) public returns (uint256) {
         uint256 liquidationPVAmountInETH = AddressResolverLib.tokenVault().getLiquidationAmount(
             _user
         );
@@ -37,11 +37,10 @@ library FundCalculationLogic {
             _debtMaturity,
             _user
         );
-
         require(futureValueAmount < 0, "No debt in the selected maturity");
         require(fvMaturity == _debtMaturity, "Need to clear orders first");
 
-        debtFVAmount = uint256(-futureValueAmount);
+        uint256 debtFVAmount = uint256(-futureValueAmount);
         uint256 debtPVAmount = uint256(
             _calculatePVFromFVInMaturity(
                 _debtCcy,
@@ -51,31 +50,19 @@ library FundCalculationLogic {
             )
         );
 
-        // uint256 debtPVAmount = futureValueAmount >= 0
-        //     ? 0
-        //     : uint256(
-        //         _calculatePVFromFVInMaturity(
-        //             _debtCcy,
-        //             _debtMaturity,
-        //             -futureValueAmount,
-        //             Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
-        //         )
-        //     );
-
-        liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
+        uint256 liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
             _debtCcy,
             liquidationPVAmountInETH
         );
-        // uint256 liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
-        //     _debtCcy,
-        //     liquidationPVAmountInETH
-        // );
 
+        // If the debt amount is less than the liquidation amount, the debt amount is used as the liquidation amount.
+        // In that case, the actual liquidation ratio is under the liquidation threshold ratio.
         liquidationPVAmount = liquidationPVAmount > debtPVAmount
             ? debtPVAmount
             : liquidationPVAmount;
 
         // Swap collateral from deposited currency to debt currency using Uniswap.
+        // This swapped collateral is used to unwind the debt.
         AddressResolverLib.tokenVault().swapCollateral(
             _user,
             _collateralCcy,
@@ -84,10 +71,17 @@ library FundCalculationLogic {
             liquidationPVAmount
         );
 
-        // liquidationFVAmount =
-        //     (liquidationPVAmount * ProtocolTypes.PRICE_DIGIT) /
-        //     ILendingMarket(Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity])
-        //         .getMidUnitPrice();
+        // Estimate the filled amount from actual orders in the order book using the future value of user debt.
+        // If the estimated amount is less than the liquidation amount, the estimated amount is used as
+        // the liquidation amount because the user has only the original amount of the estimation as collateral.
+        uint256 estimatedDebtPVAmount = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
+        ).estimateFilledAmount(ProtocolTypes.Side.LEND, debtFVAmount);
+
+        return
+            liquidationPVAmount > estimatedDebtPVAmount
+                ? estimatedDebtPVAmount
+                : liquidationPVAmount;
     }
 
     function getFutureValue(
@@ -126,12 +120,8 @@ library FundCalculationLogic {
 
         // Add PV from Genesis Value Vault if the market is nearest market.
         if (market == Storage.slot().lendingMarkets[_ccy][0]) {
-            int256 amountInFV = AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(
-                _ccy,
-                _user
-            );
             presentValue += _calculatePVFromFV(
-                amountInFV,
+                AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(_ccy, _user),
                 ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
             );
         }
@@ -158,12 +148,12 @@ library FundCalculationLogic {
         }
 
         // Get PV from Genesis Value Vault
-        int256 amountInFV = AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(
+        int256 fvAmount = AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(
             _ccy,
             _user
         );
         totalPresentValue += _calculatePVFromFV(
-            amountInFV,
+            fvAmount,
             ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
         );
     }
@@ -325,7 +315,7 @@ library FundCalculationLogic {
         uint256 maturity,
         int256 futureValueInMaturity,
         address lendingMarketInMaturity
-    ) private view returns (int256 totalPresentValue) {
+    ) internal view returns (int256 totalPresentValue) {
         uint256 compoundFactorInMaturity = AddressResolverLib
             .genesisValueVault()
             .getMaturityUnitPrice(_ccy, maturity)

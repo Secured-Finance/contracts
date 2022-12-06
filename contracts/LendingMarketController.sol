@@ -600,8 +600,12 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Liquidates a position if the user's coverage is less than 1.
-     *
+     * @notice Liquidates a lending position if the user's coverage is less than 1.
+     * @param _collateralCcy Currency name to be used as collateral.
+     * @param _debtCcy Currency name to be used as debt.
+     * @param _debtMaturity The market maturity of the debt
+     * @param _user User's address
+     * @return True if the execution of the operation succeeds
      */
     function executeLiquidationCall(
         bytes32 _collateralCcy,
@@ -609,32 +613,30 @@ contract LendingMarketController is
         uint256 _debtMaturity,
         address _user
     ) external nonReentrant ifValidMaturity(_debtCcy, _debtMaturity) returns (bool) {
-        // Clean order first to convert from the inactive orders to the future value.
+        // In order to liquidate using user collateral, inactive order IDs must be cleaned
+        // and converted to actual funds first.
         _cleanOrders(_debtCcy, _debtMaturity, _user);
 
-        // Get the liquidation amount in PV and current debt amount in FV.
-        (uint256 liquidationPVAmount, uint256 debtFVAmount) = FundCalculationLogic
-            .convertToLiquidationAmountFromCollateral(
-                _collateralCcy,
-                _debtCcy,
-                _debtMaturity,
-                _user
-            );
+        uint256 liquidationAmount = FundCalculationLogic.convertToLiquidationAmountFromCollateral(
+            _collateralCcy,
+            _debtCcy,
+            _debtMaturity,
+            _user
+        );
 
-        // Estimate
-        uint256 estimatedDebtPVAmount = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
-        ).estimateFilledAmount(ProtocolTypes.Side.LEND, debtFVAmount);
+        _createOrder(
+            _debtCcy,
+            _debtMaturity,
+            _user,
+            ProtocolTypes.Side.LEND,
+            liquidationAmount,
+            0,
+            true
+        );
 
-        uint256 orderAmount = liquidationPVAmount > estimatedDebtPVAmount
-            ? estimatedDebtPVAmount
-            : liquidationPVAmount;
-
-        _createOrder(_debtCcy, _debtMaturity, _user, ProtocolTypes.Side.LEND, orderAmount, 0, true);
+        emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, liquidationAmount);
 
         _convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
-
-        emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, orderAmount);
 
         return true;
     }
