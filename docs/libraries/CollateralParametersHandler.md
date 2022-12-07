@@ -30,7 +30,7 @@ _Gets liquidation threshold rate_
 ### uniswapRouter
 
 ```solidity
-function uniswapRouter() internal view returns (contract IUniswapV2Router02)
+function uniswapRouter() internal view returns (contract ISwapRouter)
 ```
 
 _Gets min collateral rate_

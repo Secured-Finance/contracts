@@ -2,10 +2,21 @@
 
 ## FundCalculationLogic
 
+### CalculatedAmountVars
+
+```solidity
+struct CalculatedAmountVars {
+  uint256 debtFVAmount;
+  uint256 debtPVAmount;
+  uint256 estimatedDebtPVAmount;
+  uint256 liquidationPVAmount;
+}
+```
+
 ### convertToLiquidationAmountFromCollateral
 
 ```solidity
-function convertToLiquidationAmountFromCollateral(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user) public returns (uint256)
+function convertToLiquidationAmountFromCollateral(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) public returns (uint256)
 ```
 
 ### getFutureValue

@@ -13,7 +13,7 @@ bytes32 STORAGE_SLOT
 ```solidity
 struct Storage {
   uint256 liquidationThresholdRate;
-  contract IUniswapV2Router02 uniswapRouter;
+  contract ISwapRouter uniswapRouter;
 }
 ```
 

@@ -345,8 +345,19 @@ Removes collateral amount.
 ### swapCollateral
 
 ```solidity
-function swapCollateral(address _user, bytes32 _ccyIn, bytes32 _ccyOut, uint256 _amountInMax, uint256 _amountOut) external returns (uint256 amountIn)
+function swapCollateral(address _user, bytes32 _ccyIn, bytes32 _ccyOut, uint256 _amountInMax, uint256 _amountOut, uint24 _poolFee) external returns (uint256 amountIn)
 ```
+
+Swap the collateral to convert to a different currency using Uniswap.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccyIn | bytes32 | Currency name to be converted from |
+| _ccyOut | bytes32 | Currency name to be converted to |
+| _amountInMax | uint256 | The maximum amount to be converted from |
+| _amountOut | uint256 | Amount to be converted to |
+| _poolFee | uint24 | Uniswap pool fee |
 
 ### setCollateralParameters
 

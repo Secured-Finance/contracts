@@ -524,7 +524,7 @@ Cancels the own order.
 ### executeLiquidationCall
 
 ```solidity
-function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user) external returns (bool)
+function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) external returns (bool)
 ```
 
 Liquidates a lending position if the user's coverage is less than 1.
@@ -535,6 +535,7 @@ Liquidates a lending position if the user's coverage is less than 1.
 | _debtCcy | bytes32 | Currency name to be used as debt. |
 | _debtMaturity | uint256 | The market maturity of the debt |
 | _user | address | User's address |
+| _poolFee | uint24 | Uniswap pool fee |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
