@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IUniswapV2Router02} from "../dependencies/uniswap/IUniswapV2Router02.sol";
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {CollateralParametersStorage as Storage} from "../storages/CollateralParametersStorage.sol";
 
 /**
@@ -25,7 +25,7 @@ library CollateralParametersHandler {
     /**
      * @dev Gets min collateral rate
      */
-    function uniswapRouter() internal view returns (IUniswapV2Router02) {
+    function uniswapRouter() internal view returns (ISwapRouter) {
         return Storage.slot().uniswapRouter;
     }
 
@@ -60,6 +60,6 @@ library CollateralParametersHandler {
         require(_uniswapRouter != address(0), "Invalid Uniswap Router");
 
         emit UpdateUniswapRouter(address(Storage.slot().uniswapRouter), _uniswapRouter);
-        Storage.slot().uniswapRouter = IUniswapV2Router02(_uniswapRouter);
+        Storage.slot().uniswapRouter = ISwapRouter(_uniswapRouter);
     }
 }

@@ -161,7 +161,7 @@ interface ILendingMarket {
         address account,
         uint256 amount,
         uint256 unitPrice,
-        bool _ignoreRemainingAmount
+        bool ignoreRemainingAmount
     ) external returns (uint256 executedRate, uint256 remainingAmount);
 
     function pauseMarket() external;

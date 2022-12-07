@@ -14,7 +14,7 @@ const WETH9 = artifacts.require('MockWETH9');
 const MockERC20 = artifacts.require('MockERC20');
 const TokenVaultCallerMock = artifacts.require('TokenVaultCallerMock');
 
-const IUniswapV2Router02 = artifacts.require('IUniswapV2Router02');
+const ISwapRouter = artifacts.require('ISwapRouter');
 
 const { deployContract, deployMockContract } = waffle;
 
@@ -55,7 +55,7 @@ describe('TokenVault', () => {
     );
     mockWETH9 = await deployMockContract(owner, WETH9.abi);
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
-    mockUniswapRouter = await deployMockContract(owner, IUniswapV2Router02.abi);
+    mockUniswapRouter = await deployMockContract(owner, ISwapRouter.abi);
 
     await mockCurrencyController.mock.isSupportedCcy.returns(true);
     await mockERC20.mock.transferFrom.returns(true);
@@ -467,9 +467,7 @@ describe('TokenVault', () => {
       const value = ethers.BigNumber.from('30000000000000');
 
       // Set up for the mocks
-      await mockUniswapRouter.mock.swapTokensForExactTokens.returns([
-        value.div(3),
-      ]);
+      await mockUniswapRouter.mock.exactOutputSingle.returns(value.div(3));
 
       await tokenVaultCaller
         .connect(signers[1])
@@ -481,6 +479,7 @@ describe('TokenVault', () => {
           signers[1].address,
           targetCurrency,
           previousCurrency,
+          '1',
           '1',
           '1',
         );

@@ -2,9 +2,8 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-// dependencies
-import {IUniswapV2Router02} from "./dependencies/uniswap/IUniswapV2Router02.sol";
-// libraries
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+// librariesi
 import {Contracts} from "./libraries/Contracts.sol";
 import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
 import {ERC20Handler} from "./libraries/ERC20Handler.sol";
@@ -362,24 +361,35 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         _updateUsedCurrencies(_user, _ccy);
     }
 
+    /**
+     * @notice Swap the collateral to convert to a different currency using Uniswap.
+     * @param _user User's address
+     * @param _ccyIn Currency name to be converted from
+     * @param _ccyOut Currency name to be converted to
+     * @param _amountInMax The maximum amount to be converted from
+     * @param _amountOut Amount to be converted to
+     * @param _poolFee Uniswap pool fee
+     */
     function swapCollateral(
         address _user,
         bytes32 _ccyIn,
         bytes32 _ccyOut,
         uint256 _amountInMax,
-        uint256 _amountOut
+        uint256 _amountOut,
+        uint24 _poolFee
     ) external override onlyAcceptedContracts returns (uint256 amountIn) {
-        address[] memory path = new address[](2);
-        path[0] = getTokenAddress(_ccyIn);
-        path[1] = getTokenAddress(_ccyOut);
+        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
+            tokenIn: getTokenAddress(_ccyIn),
+            tokenOut: getTokenAddress(_ccyOut),
+            fee: _poolFee,
+            recipient: address(this),
+            deadline: block.timestamp,
+            amountOut: _amountOut,
+            amountInMaximum: _amountInMax,
+            sqrtPriceLimitX96: 0
+        });
 
-        amountIn = CollateralParametersHandler.uniswapRouter().swapTokensForExactTokens(
-            _amountOut,
-            _amountInMax,
-            path,
-            address(this),
-            block.timestamp + 15
-        )[0];
+        amountIn = CollateralParametersHandler.uniswapRouter().exactOutputSingle(params);
 
         Storage.slot().collateralAmounts[_user][_ccyIn] -= amountIn;
         Storage.slot().collateralAmounts[_user][_ccyOut] += _amountOut;

@@ -34,9 +34,11 @@ contract TokenVaultCallerMock {
         bytes32 _ccyIn,
         bytes32 _ccyOut,
         uint256 _amountInMax,
-        uint256 _amountOut
+        uint256 _amountOut,
+        uint24 _poolFee
     ) public returns (uint256 amountIn) {
-        return tokenVault.swapCollateral(_user, _ccyIn, _ccyOut, _amountInMax, _amountOut);
+        return
+            tokenVault.swapCollateral(_user, _ccyIn, _ccyOut, _amountInMax, _amountOut, _poolFee);
     }
 
     function depositFrom(

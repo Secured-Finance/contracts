@@ -2,10 +2,7 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
-const MARGIN_CALL_THRESHOLD_RATE = 15000;
-const AUTO_LIQUIDATION_THRESHOLD_RATE = 12500;
-const LIQUIDATION_PRICE_RATE = 12000;
-const MIN_COLLATERAL_RATE = 2500;
+const LIQUIDATION_THRESHOLD_RATE = 12500;
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -28,10 +25,8 @@ const func: DeployFunction = async function ({
     await proxyController
       .setTokenVaultImpl(
         deployResult.address,
-        MARGIN_CALL_THRESHOLD_RATE,
-        AUTO_LIQUIDATION_THRESHOLD_RATE,
-        LIQUIDATION_PRICE_RATE,
-        MIN_COLLATERAL_RATE,
+        LIQUIDATION_THRESHOLD_RATE,
+        process.env.UNISWAP_SWAP_ROUTER_CONTRACT,
         WETH,
       )
       .then((tx) => tx.wait());

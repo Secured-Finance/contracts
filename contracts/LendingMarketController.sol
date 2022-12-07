@@ -605,13 +605,15 @@ contract LendingMarketController is
      * @param _debtCcy Currency name to be used as debt.
      * @param _debtMaturity The market maturity of the debt
      * @param _user User's address
+     * @param _poolFee Uniswap pool fee
      * @return True if the execution of the operation succeeds
      */
     function executeLiquidationCall(
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
-        address _user
+        address _user,
+        uint24 _poolFee
     ) external nonReentrant ifValidMaturity(_debtCcy, _debtMaturity) returns (bool) {
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
@@ -621,7 +623,8 @@ contract LendingMarketController is
             _collateralCcy,
             _debtCcy,
             _debtMaturity,
-            _user
+            _user,
+            _poolFee
         );
 
         _createOrder(

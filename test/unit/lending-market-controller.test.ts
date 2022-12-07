@@ -1554,6 +1554,7 @@ describe('LendingMarketController', () => {
             targetCurrency,
             maturities[0],
             signers[0].address,
+            '1',
           )
           .then((tx) =>
             expect(tx)
@@ -1619,6 +1620,7 @@ describe('LendingMarketController', () => {
             targetCurrency,
             maturities[0],
             signers[3].address,
+            '1',
           )
           .then((tx) =>
             expect(tx)
@@ -1642,6 +1644,7 @@ describe('LendingMarketController', () => {
               targetCurrency,
               maturities[0],
               signers[0].address,
+              '1',
             ),
         ).to.be.revertedWith('No debt in the selected maturity');
       });
@@ -1658,6 +1661,7 @@ describe('LendingMarketController', () => {
               targetCurrency,
               maturities[0],
               signers[0].address,
+              '1',
             ),
         ).to.be.revertedWith('User has enough collateral');
       });
@@ -1674,6 +1678,7 @@ describe('LendingMarketController', () => {
               targetCurrency,
               maturities[0],
               signers[0].address,
+              '1',
             ),
         ).to.be.revertedWith('No collateral in the selected currency');
       });

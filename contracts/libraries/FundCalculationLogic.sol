@@ -15,12 +15,22 @@ import {LendingMarketControllerStorage as Storage} from "../storages/LendingMark
 library FundCalculationLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    struct CalculatedAmountVars {
+        uint256 debtFVAmount;
+        uint256 debtPVAmount;
+        uint256 estimatedDebtPVAmount;
+        uint256 liquidationPVAmount;
+    }
+
     function convertToLiquidationAmountFromCollateral(
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
-        address _user
+        address _user,
+        uint24 _poolFee
     ) public returns (uint256) {
+        CalculatedAmountVars memory vars;
+
         uint256 liquidationPVAmountInETH = AddressResolverLib.tokenVault().getLiquidationAmount(
             _user
         );
@@ -40,8 +50,8 @@ library FundCalculationLogic {
         require(futureValueAmount < 0, "No debt in the selected maturity");
         require(fvMaturity == _debtMaturity, "Need to clear orders first");
 
-        uint256 debtFVAmount = uint256(-futureValueAmount);
-        uint256 debtPVAmount = uint256(
+        vars.debtFVAmount = uint256(-futureValueAmount);
+        vars.debtPVAmount = uint256(
             _calculatePVFromFVInMaturity(
                 _debtCcy,
                 _debtMaturity,
@@ -50,16 +60,16 @@ library FundCalculationLogic {
             )
         );
 
-        uint256 liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
+        vars.liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
             _debtCcy,
             liquidationPVAmountInETH
         );
 
         // If the debt amount is less than the liquidation amount, the debt amount is used as the liquidation amount.
         // In that case, the actual liquidation ratio is under the liquidation threshold ratio.
-        liquidationPVAmount = liquidationPVAmount > debtPVAmount
-            ? debtPVAmount
-            : liquidationPVAmount;
+        vars.liquidationPVAmount = vars.liquidationPVAmount > vars.debtPVAmount
+            ? vars.debtPVAmount
+            : vars.liquidationPVAmount;
 
         // Swap collateral from deposited currency to debt currency using Uniswap.
         // This swapped collateral is used to unwind the debt.
@@ -68,20 +78,21 @@ library FundCalculationLogic {
             _collateralCcy,
             _debtCcy,
             depositAmount,
-            liquidationPVAmount
+            vars.liquidationPVAmount,
+            _poolFee
         );
 
         // Estimate the filled amount from actual orders in the order book using the future value of user debt.
         // If the estimated amount is less than the liquidation amount, the estimated amount is used as
         // the liquidation amount because the user has only the original amount of the estimation as collateral.
-        uint256 estimatedDebtPVAmount = ILendingMarket(
+        vars.estimatedDebtPVAmount = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
-        ).estimateFilledAmount(ProtocolTypes.Side.LEND, debtFVAmount);
+        ).estimateFilledAmount(ProtocolTypes.Side.LEND, vars.debtFVAmount);
 
         return
-            liquidationPVAmount > estimatedDebtPVAmount
-                ? estimatedDebtPVAmount
-                : liquidationPVAmount;
+            vars.liquidationPVAmount > vars.estimatedDebtPVAmount
+                ? vars.estimatedDebtPVAmount
+                : vars.liquidationPVAmount;
     }
 
     function getFutureValue(

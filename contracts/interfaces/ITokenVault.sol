@@ -19,14 +19,14 @@ interface ITokenVault {
         address user,
         bytes32 ccy,
         uint256 unsettledExp,
-        ProtocolTypes.Side _unsettledOrderSide
+        ProtocolTypes.Side unsettledOrderSide
     ) external view returns (bool);
 
-    function isCovered(address _user) external view returns (bool);
+    function isCovered(address user) external view returns (bool);
 
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
 
-    function getTokenAddress(bytes32 _ccy) external view returns (address);
+    function getTokenAddress(bytes32 ccy) external view returns (address);
 
     function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw);
 
@@ -36,7 +36,7 @@ interface ITokenVault {
 
     function getTotalCollateralAmount(address party) external view returns (uint256);
 
-    function getLiquidationAmount(address _user) external view returns (uint256);
+    function getLiquidationAmount(address user) external view returns (uint256);
 
     function getDepositAmount(address user, bytes32 ccy) external view returns (uint256);
 
@@ -46,36 +46,37 @@ interface ITokenVault {
 
     function getUniswapRouter() external view returns (address uniswapRouter);
 
-    function setCollateralParameters(uint256 _liquidationThresholdRate, address _uniswapRouter)
+    function setCollateralParameters(uint256 liquidationThresholdRate, address uniswapRouter)
         external;
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
     function depositFrom(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
+        address user,
+        bytes32 ccy,
+        uint256 amount
     ) external payable;
 
     function withdraw(bytes32 ccy, uint256 amount) external;
 
     function addCollateral(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
+        address user,
+        bytes32 ccy,
+        uint256 amount
     ) external;
 
     function removeCollateral(
-        address _user,
-        bytes32 _ccy,
-        uint256 _amount
+        address user,
+        bytes32 ccy,
+        uint256 amount
     ) external;
 
     function swapCollateral(
-        address _user,
-        bytes32 _ccyIn,
-        bytes32 _ccyOut,
-        uint256 _amountInMax,
-        uint256 _amountOut
+        address user,
+        bytes32 ccyIn,
+        bytes32 ccyOut,
+        uint256 amountInMax,
+        uint256 amountOut,
+        uint24 poolFee
     ) external returns (uint256 amountIn);
 }
