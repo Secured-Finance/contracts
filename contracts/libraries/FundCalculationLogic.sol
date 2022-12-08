@@ -114,23 +114,74 @@ library FundCalculationLogic {
         }
     }
 
-    function getPresentValue(
+    function calculateActualPresentValue(
         bytes32 _ccy,
         uint256 _maturity,
         address _user
-    ) public view returns (int256 presentValue, uint256 maturity) {
+    ) public view returns (int256 presentValue) {
         address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        bool isDefaultMarket = market == Storage.slot().lendingMarkets[_ccy][0];
 
-        // Get PV from Future Value Vault
-        int256 futureValueInMaturity;
-        (futureValueInMaturity, maturity) = IFutureValueVault(
-            Storage.slot().futureValueVaults[_ccy][market]
-        ).getFutureValue(_user);
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            address currentMarket = Storage.slot().lendingMarkets[_ccy][i];
+            uint256 currentMaturity = ILendingMarket(currentMarket).getMaturity();
 
-        presentValue = _calculatePVFromFVInMaturity(_ccy, maturity, futureValueInMaturity, market);
+            if (isDefaultMarket || currentMarket == market) {
+                // Get PV from Future Value Vault
+                (int256 futureValueInMaturity, uint256 fvMaturity) = IFutureValueVault(
+                    Storage.slot().futureValueVaults[_ccy][currentMarket]
+                ).getFutureValue(_user);
 
-        // Add PV from Genesis Value Vault if the market is nearest market.
-        if (market == Storage.slot().lendingMarkets[_ccy][0]) {
+                if (
+                    (isDefaultMarket && (i == 0 || currentMaturity != fvMaturity)) ||
+                    (!isDefaultMarket && currentMaturity == fvMaturity)
+                ) {
+                    presentValue += _calculatePVFromFVInMaturity(
+                        _ccy,
+                        fvMaturity,
+                        futureValueInMaturity,
+                        currentMarket
+                    );
+                }
+
+                // Get PV from inactive borrow orders
+                (, , uint256 borrowFVInMaturity, uint256 borrowOrdersMaturity) = ILendingMarket(
+                    currentMarket
+                ).getTotalAmountFromBorrowOrders(_user);
+
+                if (
+                    (isDefaultMarket && (i == 0 || currentMaturity != borrowOrdersMaturity)) ||
+                    (!isDefaultMarket && currentMaturity == borrowOrdersMaturity)
+                ) {
+                    presentValue -= _calculatePVFromFVInMaturity(
+                        _ccy,
+                        borrowOrdersMaturity,
+                        int256(borrowFVInMaturity),
+                        currentMarket
+                    );
+                }
+
+                // Get PV from inactive lend orders
+                (, , uint256 lendFVInMaturity, uint256 lendOrdersMaturity) = ILendingMarket(
+                    currentMarket
+                ).getTotalAmountFromLendOrders(_user);
+
+                if (
+                    (isDefaultMarket && (i == 0 || currentMaturity != lendOrdersMaturity)) ||
+                    (!isDefaultMarket && currentMaturity == lendOrdersMaturity)
+                ) {
+                    presentValue += _calculatePVFromFVInMaturity(
+                        _ccy,
+                        lendOrdersMaturity,
+                        int256(lendFVInMaturity),
+                        currentMarket
+                    );
+                }
+            }
+        }
+
+        // Add PV from Genesis Value Vault if the market is that the lending position is rolled to.
+        if (isDefaultMarket) {
             presentValue += _calculatePVFromFV(
                 AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(_ccy, _user),
                 ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
@@ -138,38 +189,94 @@ library FundCalculationLogic {
         }
     }
 
-    function getTotalPresentValue(bytes32 _ccy, address _user)
+    function calculateActualPresentValue(bytes32 _ccy, address _user)
         public
         view
         returns (int256 totalPresentValue)
     {
-        // Get PV from Future Value Vault
+        // Get PV from Future Value Vault and Genesis Value Vault.
+        totalPresentValue = _getTotalPresentValue(_ccy, _user);
+
         for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            address marketAddr = Storage.slot().lendingMarkets[_ccy][i];
-            (int256 futureValueInMaturity, uint256 maturity) = IFutureValueVault(
-                Storage.slot().futureValueVaults[_ccy][marketAddr]
-            ).getFutureValue(_user);
+            address market = Storage.slot().lendingMarkets[_ccy][i];
+
+            // Get PV from inactive borrow orders
+            (, , uint256 borrowFVInMaturity, uint256 borrowOrdersMaturity) = ILendingMarket(market)
+                .getTotalAmountFromBorrowOrders(_user);
+
+            totalPresentValue -= _calculatePVFromFVInMaturity(
+                _ccy,
+                borrowOrdersMaturity,
+                int256(borrowFVInMaturity),
+                market
+            );
+
+            // Get PV from inactive lend orders
+            (, , uint256 lendFVInMaturity, uint256 lendOrdersMaturity) = ILendingMarket(market)
+                .getTotalAmountFromLendOrders(_user);
 
             totalPresentValue += _calculatePVFromFVInMaturity(
                 _ccy,
-                maturity,
-                futureValueInMaturity,
-                Storage.slot().lendingMarkets[_ccy][i]
+                lendOrdersMaturity,
+                int256(lendFVInMaturity),
+                market
             );
         }
-
-        // Get PV from Genesis Value Vault
-        int256 fvAmount = AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(
-            _ccy,
-            _user
-        );
-        totalPresentValue += _calculatePVFromFV(
-            fvAmount,
-            ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
-        );
     }
 
     function calculateLentFundsFromOrders(bytes32 _ccy, address _user)
+        public
+        view
+        returns (
+            uint256 totalWorkingOrdersAmount,
+            uint256 totalClaimableAmount,
+            uint256 totalLentAmount
+        )
+    {
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            (
+                uint256 workingOrdersAmount,
+                uint256 claimableAmount,
+                uint256 lentAmount
+            ) = _calculateLentFundsFromOrders(_ccy, Storage.slot().lendingMarkets[_ccy][i], _user);
+
+            totalWorkingOrdersAmount += workingOrdersAmount;
+            totalClaimableAmount += claimableAmount;
+            totalLentAmount += lentAmount;
+        }
+    }
+
+    function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user)
+        public
+        view
+        returns (
+            uint256 totalWorkingOrdersAmount,
+            uint256 totalDebtAmount,
+            uint256 totalBorrowedAmount
+        )
+    {
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            (
+                uint256 workingOrdersAmount,
+                uint256 debtAmount,
+                uint256 borrowedAmount
+            ) = _calculateBorrowedFundsFromOrders(
+                    _ccy,
+                    Storage.slot().lendingMarkets[_ccy][i],
+                    _user
+                );
+
+            totalWorkingOrdersAmount += workingOrdersAmount;
+            totalDebtAmount += debtAmount;
+            totalBorrowedAmount += borrowedAmount;
+        }
+    }
+
+    function calculateLentFundsFromOrders(
+        bytes32 _ccy,
+        address _market,
+        address _user
+    )
         public
         view
         returns (
@@ -178,30 +285,14 @@ library FundCalculationLogic {
             uint256 lentAmount
         )
     {
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            (
-                uint256 activeAmount,
-                uint256 inactiveAmount,
-                uint256 inactiveFutureValueInMaturity,
-                uint256 maturity
-            ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]).getTotalAmountFromLendOrders(
-                        _user
-                    );
-
-            workingOrdersAmount += activeAmount;
-            claimableAmount += uint256(
-                _calculatePVFromFVInMaturity(
-                    _ccy,
-                    maturity,
-                    int256(inactiveFutureValueInMaturity),
-                    Storage.slot().lendingMarkets[_ccy][i]
-                )
-            );
-            lentAmount += inactiveAmount;
-        }
+        return _calculateLentFundsFromOrders(_ccy, _market, _user);
     }
 
-    function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user)
+    function calculateBorrowedFundsFromOrders(
+        bytes32 _ccy,
+        address _market,
+        address _user
+    )
         public
         view
         returns (
@@ -210,26 +301,7 @@ library FundCalculationLogic {
             uint256 borrowedAmount
         )
     {
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            (
-                uint256 activeAmount,
-                uint256 inactiveAmount,
-                uint256 inactiveFutureValueInMaturity,
-                uint256 maturity
-            ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i])
-                    .getTotalAmountFromBorrowOrders(_user);
-
-            workingOrdersAmount += activeAmount;
-            debtAmount += uint256(
-                _calculatePVFromFVInMaturity(
-                    _ccy,
-                    maturity,
-                    int256(inactiveFutureValueInMaturity),
-                    Storage.slot().lendingMarkets[_ccy][i]
-                )
-            );
-            borrowedAmount += inactiveAmount;
-        }
+        return _calculateBorrowedFundsFromOrders(_ccy, _market, _user);
     }
 
     function calculateFunds(bytes32 _ccy, address _user)
@@ -256,7 +328,7 @@ library FundCalculationLogic {
         collateralAmount = claimableAmount;
 
         // Calculate total present value from Future Value Vault and Genesis Value Vault.
-        int256 totalPresentValue = getTotalPresentValue(_ccy, _user);
+        int256 totalPresentValue = _getTotalPresentValue(_ccy, _user);
         if (totalPresentValue >= 0) {
             // Add to claimableAmount
             claimableAmount += uint256(totalPresentValue);
@@ -361,5 +433,96 @@ library FundCalculationLogic {
     {
         // NOTE: The formula is: futureValue = presentValue / unitPrice.
         return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.PRICE_DIGIT);
+    }
+
+    function _getTotalPresentValue(bytes32 _ccy, address _user)
+        internal
+        view
+        returns (int256 totalPresentValue)
+    {
+        // Get PV from Future Value Vault
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            address marketAddr = Storage.slot().lendingMarkets[_ccy][i];
+            (int256 futureValueInMaturity, uint256 maturity) = IFutureValueVault(
+                Storage.slot().futureValueVaults[_ccy][marketAddr]
+            ).getFutureValue(_user);
+
+            totalPresentValue += _calculatePVFromFVInMaturity(
+                _ccy,
+                maturity,
+                futureValueInMaturity,
+                Storage.slot().lendingMarkets[_ccy][i]
+            );
+        }
+
+        // Get PV from Genesis Value Vault
+        totalPresentValue += _calculatePVFromFV(
+            AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(_ccy, _user),
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
+        );
+    }
+
+    function _calculateLentFundsFromOrders(
+        bytes32 _ccy,
+        address _market,
+        address _user
+    )
+        internal
+        view
+        returns (
+            uint256 workingOrdersAmount,
+            uint256 claimableAmount,
+            uint256 lentAmount
+        )
+    {
+        (
+            uint256 activeAmount,
+            uint256 inactiveAmount,
+            uint256 inactiveFutureValueInMaturity,
+            uint256 maturity
+        ) = ILendingMarket(_market).getTotalAmountFromLendOrders(_user);
+
+        workingOrdersAmount = activeAmount;
+        claimableAmount = uint256(
+            _calculatePVFromFVInMaturity(
+                _ccy,
+                maturity,
+                int256(inactiveFutureValueInMaturity),
+                _market
+            )
+        );
+        lentAmount = inactiveAmount;
+    }
+
+    function _calculateBorrowedFundsFromOrders(
+        bytes32 _ccy,
+        address _market,
+        address _user
+    )
+        internal
+        view
+        returns (
+            uint256 workingOrdersAmount,
+            uint256 debtAmount,
+            uint256 borrowedAmount
+        )
+    {
+        (
+            uint256 activeAmount,
+            uint256 inactiveAmount,
+            uint256 inactiveFutureValueInMaturity,
+            uint256 maturity
+        ) = ILendingMarket(_market).getTotalAmountFromBorrowOrders(_user);
+
+        workingOrdersAmount = activeAmount;
+        debtAmount = uint256(
+            _calculatePVFromFVInMaturity(
+                _ccy,
+                maturity,
+                int256(inactiveFutureValueInMaturity),
+                _market
+            )
+        );
+        borrowedAmount = inactiveAmount;
     }
 }

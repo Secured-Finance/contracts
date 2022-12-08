@@ -749,6 +749,14 @@ describe('LendingMarketController', () => {
         );
 
       expect(aliceTotalPV.add(bobTotalPV).add(carolTotalPV)).to.equal(0);
+
+      // Check the total present value per market
+      const alicePV1 = await lendingMarketControllerProxy.getPresentValue(
+        targetCurrency,
+        maturities[1],
+        alice.address,
+      );
+      expect(aliceTotalPV).to.equal(alicePV1);
     });
 
     it('Deposit and add an order', async () => {
@@ -842,6 +850,139 @@ describe('LendingMarketController', () => {
           .connect(alice)
           .cancelOrder(targetCurrency, maturities[0], '1'),
       ).to.emit(lendingMarket1, 'CancelOrder');
+    });
+
+    it('Fill lending orders and check the total present value', async () => {
+      const checkPresentValue = async () => {
+        const aliceTotalPV =
+          await lendingMarketControllerProxy.getTotalPresentValue(
+            targetCurrency,
+            alice.address,
+          );
+        const alicePVs = await Promise.all(
+          [0, 1, 2].map((marketNo) =>
+            lendingMarketControllerProxy.getPresentValue(
+              targetCurrency,
+              maturities[marketNo],
+              alice.address,
+            ),
+          ),
+        );
+        const totalPresentValues = {
+          'PresentValue(Alice)': {
+            Total: aliceTotalPV.toString(),
+            ...alicePVs.reduce((log, pv, idx) => {
+              log[`Market${idx}`] = pv.toString();
+              return log;
+            }, {}),
+          },
+        };
+        console.table(totalPresentValues);
+        expect(aliceTotalPV).to.equal(
+          alicePVs.reduce((pv, total) => total.add(pv)),
+        );
+      };
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '9800',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '9900',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '50000000000000000',
+            '0',
+          ),
+      ).to.emit(lendingMarketControllerProxy, 'FillOrder');
+
+      await checkPresentValue();
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '9500',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '100000000000000000',
+          '9600',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.LEND,
+            '50000000000000000',
+            '0',
+          ),
+      ).to.emit(lendingMarketControllerProxy, 'FillOrder');
+
+      await checkPresentValue();
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[2],
+          Side.LEND,
+          '100000000000000000',
+          '9000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[2],
+          Side.BORROW,
+          '100000000000000000',
+          '8900',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[2],
+            Side.BORROW,
+            '80000000000000000',
+            '0',
+          ),
+      ).to.emit(lendingMarketControllerProxy, 'FillOrder');
+
+      await checkPresentValue();
     });
 
     describe('Limit Order', async () => {

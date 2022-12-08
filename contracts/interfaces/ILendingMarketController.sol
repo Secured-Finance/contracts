@@ -97,6 +97,12 @@ interface ILendingMarketController {
 
     function getUsedCurrencies(address _user) external view returns (bytes32[] memory);
 
+    function getPresentValue(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) external view returns (int256 presentValue);
+
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
     function getTotalPresentValueInETH(address user)

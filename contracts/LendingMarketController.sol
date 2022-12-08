@@ -273,6 +273,21 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the present value of the account for selected currency and maturity.
+     * @param _ccy Currency name in bytes32 for Lending Market
+     * @param _maturity The maturity of the market
+     * @param _user User's address
+     * @return presentValue The present value
+     */
+    function getPresentValue(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) public view override returns (int256 presentValue) {
+        return FundCalculationLogic.calculateActualPresentValue(_ccy, _maturity, _user);
+    }
+
+    /**
      * @notice Gets the total present value of the account for selected currency.
      * @param _ccy Currency name in bytes32 for Lending Market
      * @param _user User's address
@@ -284,7 +299,7 @@ contract LendingMarketController is
         override
         returns (int256 totalPresentValue)
     {
-        return FundCalculationLogic.getTotalPresentValue(_ccy, _user);
+        return FundCalculationLogic.calculateActualPresentValue(_ccy, _user);
     }
 
     /**
@@ -302,7 +317,7 @@ contract LendingMarketController is
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
-            int256 amount = FundCalculationLogic.getTotalPresentValue(ccy, _user);
+            int256 amount = FundCalculationLogic.calculateActualPresentValue(ccy, _user);
             totalPresentValue += currencyController().convertToETH(ccy, amount);
         }
     }
