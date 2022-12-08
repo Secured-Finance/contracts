@@ -677,6 +677,11 @@ describe('Integration Test: Orders', async () => {
         await wFILToken.balanceOf(aliceSigner.address),
       );
 
+      const collateralETHAmountBobBefore = await tokenVault.getDepositAmount(
+        bobSigner.address,
+        hexETHString,
+      );
+
       await tokenVault
         .connect(bobSigner)
         .deposit(hexETHString, depositAmount.toString(), {
@@ -707,10 +712,19 @@ describe('Integration Test: Orders', async () => {
         aliceSigner.address,
         hexETHString,
       );
-      const collateralAmountBob = await tokenVault.getDepositAmount(
+      const collateralETHAmountBobAfter = await tokenVault.getDepositAmount(
         bobSigner.address,
         hexETHString,
       );
+      const collateralFILAmountBob = await tokenVault.getDepositAmount(
+        bobSigner.address,
+        hexFILString,
+      );
+      expect(collateralETHAmountBobAfter).to.equal(
+        collateralETHAmountBobBefore.add(depositAmount),
+      );
+      expect(collateralFILAmountBob).to.equal(orderAmountInFIL);
+
       const maxWithdrawalAliceAfter =
         await tokenVault.getWithdrawableCollateral(aliceSigner.address);
       const maxWithdrawalBob = await tokenVault.getWithdrawableCollateral(
@@ -727,8 +741,14 @@ describe('Integration Test: Orders', async () => {
       expect(collateralAmountAliceAfter.toString()).to.equal(
         collateralAmountAliceBefore,
       );
-      expect(maxWithdrawalBob.toString()).to.equal(
-        collateralAmountBob.add(totalPresentValueBob.div(2)).toString(),
+
+      const collateralFILAmountBobInETH = await currencyController[
+        'convertToETH(bytes32,uint256)'
+      ](hexFILString, collateralFILAmountBob);
+      expect(maxWithdrawalBob).to.equal(
+        collateralETHAmountBobAfter
+          .add(collateralFILAmountBobInETH)
+          .add(totalPresentValueBob.mul(125).div(100)),
       );
     });
   });

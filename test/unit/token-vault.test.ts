@@ -14,6 +14,8 @@ const WETH9 = artifacts.require('MockWETH9');
 const MockERC20 = artifacts.require('MockERC20');
 const TokenVaultCallerMock = artifacts.require('TokenVaultCallerMock');
 
+const ISwapRouter = artifacts.require('ISwapRouter');
+
 const { deployContract, deployMockContract } = waffle;
 
 describe('TokenVault', () => {
@@ -21,6 +23,7 @@ describe('TokenVault', () => {
   let mockLendingMarketController: MockContract;
   let mockWETH9: MockContract;
   let mockERC20: MockContract;
+  let mockUniswapRouter: MockContract;
 
   let tokenVaultProxy: Contract;
   let tokenVaultCaller: Contract;
@@ -30,19 +33,16 @@ describe('TokenVault', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
-  let ellen: SignerWithAddress;
+  let signers: SignerWithAddress[];
 
   let targetCurrency: string;
   let previousCurrency: string;
   let currencyIdx = 0;
 
-  const marginCallThresholdRate = 15000;
-  const autoLiquidationThresholdRate = 12500;
-  const liquidationPriceRate = 12000;
-  const minCollateralRate = 2500;
+  const LIQUIDATION_THRESHOLD_RATE = 12500;
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ellen] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave, ...signers] = await ethers.getSigners();
 
     // Set up for the mocks
     mockCurrencyController = await deployMockContract(
@@ -55,6 +55,7 @@ describe('TokenVault', () => {
     );
     mockWETH9 = await deployMockContract(owner, WETH9.abi);
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
+    mockUniswapRouter = await deployMockContract(owner, ISwapRouter.abi);
 
     await mockCurrencyController.mock.isSupportedCcy.returns(true);
     await mockERC20.mock.transferFrom.returns(true);
@@ -62,6 +63,15 @@ describe('TokenVault', () => {
     await mockLendingMarketController.mock.cleanOrders.returns();
     await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(0);
     await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+    );
+    await mockLendingMarketController.mock.calculateFunds.returns(
       0,
       0,
       0,
@@ -86,10 +96,8 @@ describe('TokenVault', () => {
     const tokenVaultAddress = await proxyController
       .setTokenVaultImpl(
         tokenVault.address,
-        marginCallThresholdRate,
-        autoLiquidationThresholdRate,
-        liquidationPriceRate,
-        minCollateralRate,
+        LIQUIDATION_THRESHOLD_RATE,
+        mockUniswapRouter.address,
         mockWETH9.address,
       )
       .then((tx) => tx.wait())
@@ -149,23 +157,35 @@ describe('TokenVault', () => {
 
   describe('Initialize', async () => {
     it('Update CollateralParameters', async () => {
-      const setCollateralParameters = async (...params) => {
-        await tokenVaultProxy.setCollateralParameters(...params);
-        const results = await tokenVaultProxy.getCollateralParameters();
+      const setCollateralParameters = async (
+        liquidationThresholdRate: number,
+        uniswapRouter: string,
+      ) => {
+        await tokenVaultProxy.setCollateralParameters(
+          liquidationThresholdRate,
+          uniswapRouter,
+        );
+        const results = await Promise.all([
+          tokenVaultProxy.getLiquidationThresholdRate(),
+          tokenVaultProxy.getUniswapRouter(),
+        ]);
 
-        expect(results.length).to.equal(4);
-        expect(results[0]).to.equal(params[0]);
-        expect(results[1]).to.equal(params[1]);
-        expect(results[2]).to.equal(params[2]);
-        expect(results[3]).to.equal(params[3]);
+        expect(results[0]).to.equal(liquidationThresholdRate.toString());
+        expect(results[1].toLocaleLowerCase()).to.equal(
+          uniswapRouter.toLocaleLowerCase(),
+        );
       };
 
-      await setCollateralParameters('4', '3', '2', '1');
+      console.log('mockUniswapRouter:', mockUniswapRouter.address);
+
       await setCollateralParameters(
-        marginCallThresholdRate,
-        autoLiquidationThresholdRate,
-        liquidationPriceRate,
-        minCollateralRate,
+        1000,
+        ethers.utils.hexlify(ethers.utils.randomBytes(20)),
+        // ethers.constants.AddressZero,
+      );
+      await setCollateralParameters(
+        LIQUIDATION_THRESHOLD_RATE,
+        mockUniswapRouter.address,
       );
     });
 
@@ -181,43 +201,18 @@ describe('TokenVault', () => {
     });
 
     it('Fail to call setCollateralParameters due to invalid ratio', async () => {
-      // Check updateMarginCallThresholdRate
       await expect(
-        tokenVaultProxy.setCollateralParameters('0', '4', '2', '1'),
+        tokenVaultProxy.setCollateralParameters('0', mockUniswapRouter.address),
       ).to.be.revertedWith('Rate is zero');
+    });
 
-      // Check autoLiquidationThresholdRate
+    it('Fail to call setCollateralParameters due to zero address', async () => {
       await expect(
-        tokenVaultProxy.setCollateralParameters('4', '0', '2', '1'),
-      ).to.be.revertedWith('Rate is zero');
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '4', '2', '1'),
-      ).to.be.revertedWith('Auto liquidation threshold rate overflow');
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '5', '2', '1'),
-      ).to.be.revertedWith('Auto liquidation threshold rate overflow');
-
-      // Check liquidationPriceRate
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '3', '0', '1'),
-      ).to.be.revertedWith('Rate is zero');
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '3', '3', '1'),
-      ).to.be.revertedWith('Liquidation price rate overflow');
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '3', '4', '1'),
-      ).to.be.revertedWith('Liquidation price rate overflow');
-
-      // Check minCollateralRate
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '3', '2', '0'),
-      ).to.be.revertedWith('Rate is zero');
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '3', '2', '3'),
-      ).to.be.revertedWith('Min collateral rate overflow');
-      await expect(
-        tokenVaultProxy.setCollateralParameters('4', '3', '2', '4'),
-      ).to.be.revertedWith('Min collateral rate overflow');
+        tokenVaultProxy.setCollateralParameters(
+          LIQUIDATION_THRESHOLD_RATE,
+          ethers.constants.AddressZero,
+        ),
+      ).to.be.revertedWith('Invalid Uniswap Router');
     });
   });
 
@@ -287,21 +282,19 @@ describe('TokenVault', () => {
         0,
       );
 
-      const emptyCurrency = ethers.utils.formatBytes32String('');
-
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('0');
-      expect(
-        await tokenVaultProxy.isCovered(bob.address, emptyCurrency, 0, 0),
-      ).to.equal(true);
+      expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
+        true,
+      );
 
       // NOTE: Deposit in two currencies to double the collateral
       // since the mock always returns the same value with "convertToETH".
       await tokenVaultProxy.connect(bob).deposit(targetCurrency, value);
       await tokenVaultProxy.connect(bob).deposit(previousCurrency, value);
 
-      expect(
-        await tokenVaultProxy.isCovered(bob.address, emptyCurrency, 0, 0),
-      ).to.equal(true);
+      expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
+        true,
+      );
 
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
@@ -313,16 +306,16 @@ describe('TokenVault', () => {
         0,
       );
 
-      expect(
-        await tokenVaultProxy.isCovered(bob.address, emptyCurrency, 0, 0),
-      ).to.equal(true);
+      expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
+        true,
+      );
       expect(
         await tokenVaultProxy.getWithdrawableCollateral(bob.address),
       ).to.equal(
         valueInETH
           .mul('2')
           .mul('10000')
-          .sub(valueInETH.div('2').mul(marginCallThresholdRate))
+          .sub(valueInETH.div('2').mul(LIQUIDATION_THRESHOLD_RATE))
           .div('10000'),
       );
 
@@ -377,7 +370,7 @@ describe('TokenVault', () => {
       const value = ethers.BigNumber.from('20000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const totalPresentValue = ethers.BigNumber.from('20000000000000');
-      const obligationAmount = ethers.BigNumber.from('10000000000000');
+      const debtAmount = ethers.BigNumber.from('10000000000000');
 
       // Set up for the mocks
       await mockCurrencyController.mock[
@@ -396,7 +389,7 @@ describe('TokenVault', () => {
         0,
         0,
         0,
-        obligationAmount,
+        debtAmount,
         0,
       );
 
@@ -407,13 +400,13 @@ describe('TokenVault', () => {
       ).to.equal(
         valueInETH
           .mul('10000')
-          .sub(obligationAmount.mul(marginCallThresholdRate))
+          .sub(debtAmount.mul(LIQUIDATION_THRESHOLD_RATE))
           .div('10000'),
       );
 
       expect(await tokenVaultProxy.getCoverage(dave.address)).to.equal('5000');
       expect(await tokenVaultProxy.getUnusedCollateral(dave.address)).to.equal(
-        valueInETH.sub(obligationAmount),
+        valueInETH.sub(debtAmount),
       );
     });
 
@@ -444,26 +437,106 @@ describe('TokenVault', () => {
       );
 
       await tokenVaultCaller
-        .connect(ellen)
-        .addCollateral(ellen.address, targetCurrency, value);
+        .connect(signers[0])
+        .addCollateral(signers[0].address, targetCurrency, value);
 
-      expect(await tokenVaultProxy.getUnusedCollateral(ellen.address)).to.equal(
-        value,
-      );
       expect(
-        await tokenVaultProxy.getTotalCollateralAmount(ellen.address),
+        await tokenVaultProxy.getUnusedCollateral(signers[0].address),
+      ).to.equal(value);
+      expect(
+        await tokenVaultProxy.getTotalCollateralAmount(signers[0].address),
       ).to.equal(value);
 
       await tokenVaultCaller
-        .connect(ellen)
-        .removeCollateral(ellen.address, targetCurrency, value);
+        .connect(signers[0])
+        .removeCollateral(signers[0].address, targetCurrency, value);
 
-      expect(await tokenVaultProxy.getUnusedCollateral(ellen.address)).to.equal(
-        '0',
+      expect(
+        await tokenVaultProxy.getUnusedCollateral(signers[0].address),
+      ).to.equal('0');
+      expect(
+        await tokenVaultProxy.getTotalCollateralAmount(signers[0].address),
+      ).to.equal('0');
+    });
+
+    it('Add and swap the collateral amount', async function () {
+      if (!previousCurrency) {
+        this.skip();
+      }
+
+      const value = ethers.BigNumber.from('30000000000000');
+
+      // Set up for the mocks
+      await mockUniswapRouter.mock.exactOutputSingle.returns(value.div(3));
+
+      await tokenVaultCaller
+        .connect(signers[1])
+        .addCollateral(signers[1].address, targetCurrency, value);
+
+      await tokenVaultCaller
+        .connect(signers[1])
+        .swapCollateral(
+          signers[1].address,
+          targetCurrency,
+          previousCurrency,
+          '1',
+          '1',
+          '1',
+        );
+
+      expect(
+        await tokenVaultProxy.getDepositAmount(
+          signers[1].address,
+          targetCurrency,
+        ),
+      ).to.equal(value.div(3).mul(2));
+      expect(
+        await tokenVaultProxy.getDepositAmount(
+          signers[1].address,
+          previousCurrency,
+        ),
+      ).to.equal('1');
+    });
+
+    it('Get the liquidation amount', async () => {
+      const value = ethers.BigNumber.from('20000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const totalPresentValue = ethers.BigNumber.from('20000000000000');
+      const debtAmount = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToETH(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+        valueInETH,
+      );
+      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+        totalPresentValue,
+      );
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        debtAmount,
+        0,
+      );
+
+      await tokenVaultProxy.connect(signers[3]).deposit(targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy.getWithdrawableCollateral(signers[3].address),
+      ).to.equal('0');
+
+      expect(await tokenVaultProxy.getCoverage(signers[3].address)).to.equal(
+        '10000',
       );
       expect(
-        await tokenVaultProxy.getTotalCollateralAmount(ellen.address),
-      ).to.equal('0');
+        await tokenVaultProxy.getLiquidationAmount(signers[3].address),
+      ).to.equal(debtAmount.div(2));
     });
 
     it('Fail to call addCollateral due to invalid caller', async () => {

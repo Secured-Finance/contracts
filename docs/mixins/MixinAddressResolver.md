@@ -58,16 +58,16 @@ _Register the Address Resolver contract_
 | ---- | ---- | ----------- |
 | _resolver | address | The address of the Address Resolver contract |
 
-### getAddress
-
-```solidity
-function getAddress(bytes32 name) internal view returns (address)
-```
-
 ### isAcceptedContract
 
 ```solidity
 function isAcceptedContract(address account) internal view virtual returns (bool)
+```
+
+### getAddress
+
+```solidity
+function getAddress(bytes32 name) internal view returns (address)
 ```
 
 ### resolver

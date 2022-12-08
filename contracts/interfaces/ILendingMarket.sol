@@ -129,6 +129,11 @@ interface ILendingMarket {
         view
         returns (uint48[] memory activeOrderIds);
 
+    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
+        external
+        view
+        returns (uint256 amount);
+
     function openMarket(uint256 maturity) external returns (uint256);
 
     function cancelOrder(address user, uint48 orderId)
@@ -155,7 +160,8 @@ interface ILendingMarket {
         ProtocolTypes.Side side,
         address account,
         uint256 amount,
-        uint256 unitPrice
+        uint256 unitPrice,
+        bool ignoreRemainingAmount
     ) external returns (uint256 executedRate, uint256 remainingAmount);
 
     function pauseMarket() external;

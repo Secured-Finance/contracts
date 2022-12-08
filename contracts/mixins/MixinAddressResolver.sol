@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Contracts} from "../libraries/Contracts.sol";
+import {AddressResolverLib} from "../libraries/AddressResolverLib.sol";
 import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
 import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
 import {ICurrencyController} from "../interfaces/ICurrencyController.sol";
@@ -70,12 +70,6 @@ contract MixinAddressResolver {
         Storage.slot().resolver = IAddressResolver(_resolver);
     }
 
-    function getAddress(bytes32 name) internal view returns (address) {
-        address _foundAddress = Storage.slot().addressCache[name];
-        require(_foundAddress != address(0), string(abi.encodePacked("Missing address: ", name)));
-        return _foundAddress;
-    }
-
     function isAcceptedContract(address account) internal view virtual returns (bool) {
         bytes32[] memory contractNames = acceptedContracts();
         for (uint256 i = 0; i < contractNames.length; i++) {
@@ -87,27 +81,31 @@ contract MixinAddressResolver {
         return false;
     }
 
+    function getAddress(bytes32 name) internal view returns (address) {
+        return AddressResolverLib.getAddress(name);
+    }
+
     function resolver() public view returns (IAddressResolver) {
         return Storage.slot().resolver;
     }
 
     function beaconProxyController() internal view returns (IBeaconProxyController) {
-        return IBeaconProxyController(getAddress(Contracts.BEACON_PROXY_CONTROLLER));
+        return AddressResolverLib.beaconProxyController();
     }
 
     function currencyController() internal view returns (ICurrencyController) {
-        return ICurrencyController(getAddress(Contracts.CURRENCY_CONTROLLER));
+        return AddressResolverLib.currencyController();
     }
 
     function genesisValueVault() internal view returns (IGenesisValueVault) {
-        return IGenesisValueVault(getAddress(Contracts.GENESIS_VALUE_VAULT));
+        return AddressResolverLib.genesisValueVault();
     }
 
     function lendingMarketController() internal view returns (ILendingMarketController) {
-        return ILendingMarketController(getAddress(Contracts.LENDING_MARKET_CONTROLLER));
+        return AddressResolverLib.lendingMarketController();
     }
 
     function tokenVault() internal view returns (ITokenVault) {
-        return ITokenVault(getAddress(Contracts.TOKEN_VAULT));
+        return AddressResolverLib.tokenVault();
     }
 }

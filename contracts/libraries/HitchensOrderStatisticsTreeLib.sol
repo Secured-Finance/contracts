@@ -441,6 +441,62 @@ library HitchensOrderStatisticsTreeLib {
         self.nodes[value].red = false;
     }
 
+    function estimateDroppedAmountFromLeft(Tree storage self, uint256 targetFutureValue)
+        internal
+        view
+        returns (uint256 droppedAmount)
+    {
+        uint256 cursor = first(self);
+        uint256 totalDroppedAmountInFV = 0;
+        droppedAmount = 0;
+
+        // Find a node whose total amount is over the amount of the argument.
+        while (totalDroppedAmountInFV < targetFutureValue && cursor != EMPTY) {
+            uint256 cursorNodeAmountInPV = self.nodes[cursor].orderTotalAmount;
+
+            uint256 cursorNodeAmountInFV = _calculateFutureValue(cursor, cursorNodeAmountInPV);
+            totalDroppedAmountInFV += cursorNodeAmountInFV;
+
+            if (totalDroppedAmountInFV > targetFutureValue) {
+                uint256 filledAmountInFV = cursorNodeAmountInFV -
+                    (totalDroppedAmountInFV - targetFutureValue);
+                droppedAmount += (cursorNodeAmountInPV * filledAmountInFV) / cursorNodeAmountInFV;
+            } else {
+                droppedAmount += cursorNodeAmountInPV;
+            }
+
+            cursor = next(self, cursor);
+        }
+    }
+
+    function estimateDroppedAmountFromRight(Tree storage self, uint256 targetFutureValue)
+        internal
+        view
+        returns (uint256 droppedAmount)
+    {
+        uint256 cursor = last(self);
+        uint256 totalDroppedAmountInFV = 0;
+        droppedAmount = 0;
+
+        // Find a node whose total amount is over the amount of the argument.
+        while (totalDroppedAmountInFV < targetFutureValue && cursor != EMPTY) {
+            uint256 cursorNodeAmountInPV = self.nodes[cursor].orderTotalAmount;
+
+            uint256 cursorNodeAmountInFV = _calculateFutureValue(cursor, cursorNodeAmountInPV);
+            totalDroppedAmountInFV += cursorNodeAmountInFV;
+
+            if (totalDroppedAmountInFV > targetFutureValue) {
+                uint256 filledAmountInFV = cursorNodeAmountInFV -
+                    (totalDroppedAmountInFV - targetFutureValue);
+                droppedAmount += (cursorNodeAmountInPV * filledAmountInFV) / cursorNodeAmountInFV;
+            } else {
+                droppedAmount += cursorNodeAmountInPV;
+            }
+
+            cursor = prev(self, cursor);
+        }
+    }
+
     function dropLeft(
         Tree storage self,
         uint256 amount,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {CollateralParametersStorage as Storage} from "../storages/CollateralParametersStorage.sol";
 
 /**
@@ -11,133 +12,54 @@ import {CollateralParametersStorage as Storage} from "../storages/CollateralPara
  *
  */
 library CollateralParametersHandler {
-    event LiquidationPriceRateUpdated(uint256 previousPrice, uint256 price);
-    event AutoLiquidationThresholdRateUpdated(uint256 previousRatio, uint256 ratio);
-    event MarginCallThresholdRateUpdated(uint256 previousRatio, uint256 ratio);
-    event MinCollateralRateUpdated(uint256 previousRatio, uint256 price);
+    event UpdateAutoLiquidationThresholdRate(uint256 previousRatio, uint256 ratio);
+    event UpdateUniswapRouter(address previousUniswapRouter, address uniswapRouter);
 
     /**
-     * @dev Gets collateral parameters
+     * @dev Gets liquidation threshold rate
      */
-    function getCollateralParameters()
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            Storage.slot().marginCallThresholdRate,
-            Storage.slot().autoLiquidationThresholdRate,
-            Storage.slot().liquidationPriceRate,
-            Storage.slot().minCollateralRate
-        );
-    }
-
-    /**
-     * @dev Gets auto liquidation threshold rate
-     */
-    function autoLiquidationThresholdRate() internal view returns (uint256) {
-        return Storage.slot().autoLiquidationThresholdRate;
-    }
-
-    /**
-     * @dev Gets liquidation price rate
-     */
-    function liquidationPriceRate() internal view returns (uint256) {
-        return Storage.slot().liquidationPriceRate;
-    }
-
-    /**
-     * @dev Gets margin call threshold rate
-     */
-    function marginCallThresholdRate() internal view returns (uint256) {
-        return Storage.slot().marginCallThresholdRate;
+    function liquidationThresholdRate() internal view returns (uint256) {
+        return Storage.slot().liquidationThresholdRate;
     }
 
     /**
      * @dev Gets min collateral rate
      */
-    function minCollateralRate() internal view returns (uint256) {
-        return Storage.slot().minCollateralRate;
+    function uniswapRouter() internal view returns (ISwapRouter) {
+        return Storage.slot().uniswapRouter;
     }
 
     /**
      * @dev Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning
      *
-     * @param _marginCallThresholdRate Margin call threshold ratio
-     * @param _autoLiquidationThresholdRate Auto liquidation threshold rate
-     * @param _liquidationPriceRate Liquidation price rate
-     * @param _minCollateralRate Minimal collateral rate
+     * @param _liquidationThresholdRate Auto liquidation threshold rate
+     * @param _uniswapRouter Uniswap router contract address
      * @notice Triggers only be contract owner
      */
-    function setCollateralParameters(
-        uint256 _marginCallThresholdRate,
-        uint256 _autoLiquidationThresholdRate,
-        uint256 _liquidationPriceRate,
-        uint256 _minCollateralRate
-    ) internal {
-        if (_marginCallThresholdRate != Storage.slot().marginCallThresholdRate) {
-            _updateMarginCallThresholdRate(_marginCallThresholdRate);
+    function setCollateralParameters(uint256 _liquidationThresholdRate, address _uniswapRouter)
+        internal
+    {
+        if (_liquidationThresholdRate != Storage.slot().liquidationThresholdRate) {
+            _updateAutoLiquidationThresholdRate(_liquidationThresholdRate);
         }
 
-        if (_autoLiquidationThresholdRate != Storage.slot().autoLiquidationThresholdRate) {
-            _updateAutoLiquidationThresholdRate(_autoLiquidationThresholdRate);
+        if (_uniswapRouter != address(Storage.slot().uniswapRouter)) {
+            _updateUniswapRouter(_uniswapRouter);
         }
-
-        if (_liquidationPriceRate != Storage.slot().liquidationPriceRate) {
-            _updateLiquidationPriceRate(_liquidationPriceRate);
-        }
-
-        if (_minCollateralRate != Storage.slot().minCollateralRate) {
-            _updateMinCollateralRate(_minCollateralRate);
-        }
-    }
-
-    function _updateMarginCallThresholdRate(uint256 _rate) private {
-        require(_rate > 0, "Rate is zero");
-
-        emit MarginCallThresholdRateUpdated(Storage.slot().marginCallThresholdRate, _rate);
-        Storage.slot().marginCallThresholdRate = _rate;
     }
 
     function _updateAutoLiquidationThresholdRate(uint256 _rate) private {
         require(_rate > 0, "Rate is zero");
-        require(
-            _rate < Storage.slot().marginCallThresholdRate,
-            "Auto liquidation threshold rate overflow"
-        );
 
-        emit AutoLiquidationThresholdRateUpdated(
-            Storage.slot().autoLiquidationThresholdRate,
-            _rate
-        );
-        Storage.slot().autoLiquidationThresholdRate = _rate;
+        emit UpdateAutoLiquidationThresholdRate(Storage.slot().liquidationThresholdRate, _rate);
+        Storage.slot().liquidationThresholdRate = _rate;
     }
 
-    function _updateLiquidationPriceRate(uint256 _rate) private {
-        require(_rate > 0, "Rate is zero");
-        require(
-            _rate < Storage.slot().autoLiquidationThresholdRate,
-            "Liquidation price rate overflow"
-        );
+    function _updateUniswapRouter(address _uniswapRouter) private {
+        require(_uniswapRouter != address(0), "Invalid Uniswap Router");
 
-        emit LiquidationPriceRateUpdated(Storage.slot().liquidationPriceRate, _rate);
-        Storage.slot().liquidationPriceRate = _rate;
-    }
-
-    function _updateMinCollateralRate(uint256 _rate) private {
-        require(_rate > 0, "Rate is zero");
-        require(
-            _rate < Storage.slot().autoLiquidationThresholdRate,
-            "Min collateral rate overflow"
-        );
-
-        emit MinCollateralRateUpdated(Storage.slot().minCollateralRate, _rate);
-        Storage.slot().minCollateralRate = _rate;
+        emit UpdateUniswapRouter(address(Storage.slot().uniswapRouter), _uniswapRouter);
+        Storage.slot().uniswapRouter = ISwapRouter(_uniswapRouter);
     }
 }

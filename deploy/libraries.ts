@@ -12,6 +12,10 @@ const func: DeployFunction = async function ({
   await deploy('OrderBookLogic', {
     from: deployer,
   }).then((result) => executeIfNewlyDeployment('OrderBookLogic', result));
+
+  await deploy('FundCalculationLogic', {
+    from: deployer,
+  }).then((result) => executeIfNewlyDeployment('FundCalculationLogic', result));
 };
 
 func.tags = ['Libraries'];

@@ -29,6 +29,18 @@ contract TokenVaultCallerMock {
         tokenVault.removeCollateral(user, ccy, amount);
     }
 
+    function swapCollateral(
+        address _user,
+        bytes32 _ccyIn,
+        bytes32 _ccyOut,
+        uint256 _amountInMax,
+        uint256 _amountOut,
+        uint24 _poolFee
+    ) public returns (uint256 amountIn) {
+        return
+            tokenVault.swapCollateral(_user, _ccyIn, _ccyOut, _amountInMax, _amountOut, _poolFee);
+    }
+
     function depositFrom(
         address payer,
         bytes32 ccy,
@@ -47,14 +59,30 @@ contract TokenVaultCallerMock {
         returns (
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
-            uint256 totalEvaluatedClaimableAmount,
+            uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
-            uint256 totalObligationAmount,
+            uint256 totalDebtAmount,
             uint256 totalBorrowedAmount
         )
     {
         return lendingMarketController.calculateTotalFundsInETH(_user);
+    }
+
+    function calculateFunds(bytes32 _ccy, address _user)
+        public
+        view
+        returns (
+            uint256 workingLendOrdersAmount,
+            uint256 claimableAmount,
+            uint256 collateralAmount,
+            uint256 lentAmount,
+            uint256 workingBorrowOrdersAmount,
+            uint256 debtAmount,
+            uint256 borrowedAmount
+        )
+    {
+        return lendingMarketController.calculateFunds(_ccy, _user);
     }
 
     function cleanOrders(bytes32 _ccy, address _user) public {

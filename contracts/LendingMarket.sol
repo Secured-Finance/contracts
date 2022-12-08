@@ -295,8 +295,25 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Estimates the filled amount at the time of order creation on the order book
+     * using the future value amount.
+     * @param _side Order position type, Borrow or Lend
+     * @param _futureValue Future value amount
+     * @return amount The estimated amount in the present value that is filled on the order book
+     */
+    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
+        external
+        view
+        override
+        returns (uint256 amount)
+    {
+        return OrderBookLogic.estimateFilledAmount(_side, _futureValue);
+    }
+
+    /**
      * @notice Opens market
      * @param _maturity The new maturity
+     * @return prevMaturity The previous maturity updated
      */
     function openMarket(uint256 _maturity)
         external
@@ -315,6 +332,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Cancels the order.
      * @param _user User address
      * @param _orderId Market order id
+     * @return side The canceled order position type
+     * @return removedAmount The removed order amount from the order book by canceling
+     * @return unitPrice The canceled order unit price
      */
     function cancelOrder(address _user, uint48 _orderId)
         external
@@ -348,6 +368,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * for calculating if the collateral is enough or not.
      *
      * @param _user User address
+     * @return activeLendOrderCount The total amount of active lend order on the order book
+     * @return activeBorrowOrderCount The total amount of active borrow order on the order book
+     * @return removedLendOrderFutureValue The total FV amount of the removed lend order amount from the order book
+     * @return removedBorrowOrderFutureValue The total FV amount of the removed borrow order amount from the order book
+     * @return removedLendOrderAmount The total PV amount of the removed lend order amount from the order book
+     * @return removedBorrowOrderAmount The total PV amount of the removed borrow order amount from the order book
+     * @return maturity The maturity of the removed orders
      */
     function cleanOrders(address _user)
         external
@@ -409,12 +436,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after taking orders
+     * @return filledFutureValue The total FV amount of the filled order amount on the order book
+     * @return remainingAmount The remaining amount that is not filled in the order book
      */
     function createOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        bool _ignoreRemainingAmount
     )
         external
         override
@@ -445,7 +476,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
 
         if (isExists) {
-            (filledFutureValue, remainingAmount) = _takeOrder(_side, _user, _amount, _unitPrice);
+            (filledFutureValue, remainingAmount) = _takeOrder(
+                _side,
+                _user,
+                _amount,
+                _unitPrice,
+                _ignoreRemainingAmount
+            );
         } else {
             _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
         }
@@ -501,12 +538,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taken
+     * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after taking orders
      */
     function _takeOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        bool _ignoreRemainingAmount
     ) private returns (uint256 filledFutureValue, uint256 remainingAmount) {
         RemainingOrder memory remainingOrder;
 
@@ -540,7 +579,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
         }
 
-        if (remainingAmount > 0 && _unitPrice != 0) {
+        if (remainingAmount > 0 && _unitPrice != 0 && !_ignoreRemainingAmount) {
             // Make a new order for the remaining amount of input
             _makeOrder(_side, _user, remainingAmount, _unitPrice, false, 0);
         }

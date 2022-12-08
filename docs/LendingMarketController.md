@@ -254,6 +254,22 @@ Gets maturities for the selected currency.
 | ---- | ---- | ----------- |
 | [0] | uint256[] | Array with the lending market maturity |
 
+### getUsedCurrencies
+
+```solidity
+function getUsedCurrencies(address _user) external view returns (bytes32[])
+```
+
+Get all the currencies in which the user has lending positions or orders.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bytes32[] | The array of the currency |
+
 ### getTotalPresentValue
 
 ```solidity
@@ -290,7 +306,7 @@ Gets the total present value of the account converted to ETH.
 ### calculateLentFundsFromOrders
 
 ```solidity
-function calculateLentFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 workingOrdersAmount, uint256 claimableAmount, uint256 lentAmount)
+function calculateLentFundsFromOrders(bytes32 _ccy, address _user) external view returns (uint256 workingOrdersAmount, uint256 claimableAmount, uint256 lentAmount)
 ```
 
 Gets the funds that are calculated from the user's lending order list for the selected currency.
@@ -304,12 +320,12 @@ Gets the funds that are calculated from the user's lending order list for the se
 | ---- | ---- | ----------- |
 | workingOrdersAmount | uint256 | The working orders amount on the order book |
 | claimableAmount | uint256 | The claimable amount due to the lending orders being filled on the order book |
-| lentAmount | uint256 |  |
+| lentAmount | uint256 | The lent amount due to the lend orders being filled on the order book |
 
 ### calculateBorrowedFundsFromOrders
 
 ```solidity
-function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 workingOrdersAmount, uint256 obligationAmount, uint256 borrowedAmount)
+function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user) external view returns (uint256 workingOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
 Gets the funds that are calculated from the user's borrowing order list for the selected currency.
@@ -322,14 +338,45 @@ Gets the funds that are calculated from the user's borrowing order list for the 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | workingOrdersAmount | uint256 | The working orders amount on the order book |
-| obligationAmount | uint256 | The debt amount due to the borrow orders being filled on the order book |
+| debtAmount | uint256 | The debt amount due to the borrow orders being filled on the order book |
+| borrowedAmount | uint256 | The borrowed amount due to the borrow orders being filled on the order book |
+
+### calculateFunds
+
+```solidity
+function calculateFunds(bytes32 _ccy, address _user) external view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+```
+
+Gets the funds that are calculated from the user's lending and borrowing order list
+for the selected currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| workingLendOrdersAmount | uint256 | The working orders amount on the lend order book |
+| claimableAmount | uint256 | The claimable amount due to the lending orders being filled on the order book |
+| collateralAmount | uint256 | The actual collateral amount that is calculated by netting using the haircut. |
+| lentAmount | uint256 | The lent amount due to the lend orders being filled on the order book |
+| workingBorrowOrdersAmount | uint256 | The working orders amount on the borrow order book |
+| debtAmount | uint256 | The debt amount due to the borrow orders being filled on the order book |
 | borrowedAmount | uint256 | The borrowed amount due to the borrow orders being filled on the order book |
 
 ### calculateTotalFundsInETH
 
 ```solidity
-function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalEvaluatedClaimableAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalObligationAmount, uint256 totalBorrowedAmount)
+function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
 ```
+
+Gets the funds that are calculated from the user's lending and borrowing order list
+for all currencies in ETH.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
 
 ### isInitializedLendingMarket
 
@@ -474,6 +521,26 @@ Cancels the own order.
 | _maturity | uint256 | The maturity of the selected market |
 | _orderId | uint48 | Market order id |
 
+### executeLiquidationCall
+
+```solidity
+function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) external returns (bool)
+```
+
+Liquidates a lending position if the user's coverage is less than 1.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _collateralCcy | bytes32 | Currency name to be used as collateral. |
+| _debtCcy | bytes32 | Currency name to be used as debt. |
+| _debtMaturity | uint256 | The market maturity of the debt |
+| _user | address | User's address |
+| _poolFee | uint24 | Uniswap pool fee |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
 ### rotateLendingMarkets
 
 ```solidity
@@ -549,7 +616,7 @@ Cleans user's orders to remove order ids that are already filled on the order bo
 ### _convertFutureValueToGenesisValue
 
 ```solidity
-function _convertFutureValueToGenesisValue(bytes32 _ccy, uint256 _maturity, address _futureValueVault, address _user) private returns (int256)
+function _convertFutureValueToGenesisValue(bytes32 _ccy, uint256 _maturity, address _user) private returns (int256)
 ```
 
 Converts the future value to the genesis value if there is balance in the past maturity.
@@ -558,7 +625,6 @@ Converts the future value to the genesis value if there is balance in the past m
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency for pausing all lending markets |
 | _maturity | uint256 |  |
-| _futureValueVault | address | Market contract address |
 | _user | address | User's address |
 
 | Name | Type | Description |
@@ -568,24 +634,12 @@ Converts the future value to the genesis value if there is balance in the past m
 ### _createOrder
 
 ```solidity
-function _createOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) private returns (bool)
+function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (bool isPlaced)
 ```
 
 ### _cleanOrders
 
 ```solidity
-function _cleanOrders(bytes32 _ccy, uint256 _maturity, address _user) private returns (uint256 activeOrderCount, bool isFilled)
-```
-
-### _calculatePresentValue
-
-```solidity
-function _calculatePresentValue(bytes32 _ccy, uint256 maturity, int256 futureValueInMaturity, address lendingMarketInMaturity) private view returns (int256 totalPresentValue)
-```
-
-### _calculatePVFromFV
-
-```solidity
-function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
+function _cleanOrders(bytes32 _ccy, uint256 _maturity, address _user) private returns (uint256 activeOrderCount, bool isCleaned)
 ```
 

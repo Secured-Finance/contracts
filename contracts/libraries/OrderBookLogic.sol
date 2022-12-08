@@ -310,6 +310,24 @@ library OrderBookLogic {
         }
     }
 
+    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
+        public
+        view
+        returns (uint256 amount)
+    {
+        if (_side == ProtocolTypes.Side.BORROW) {
+            return
+                Storage.slot().lendOrders[Storage.slot().maturity].estimateDroppedAmountFromLeft(
+                    _futureValue
+                );
+        } else {
+            return
+                Storage.slot().borrowOrders[Storage.slot().maturity].estimateDroppedAmountFromRight(
+                    _futureValue
+                );
+        }
+    }
+
     function insertOrder(
         ProtocolTypes.Side _side,
         address _user,

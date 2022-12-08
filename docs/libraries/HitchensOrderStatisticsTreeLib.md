@@ -182,6 +182,18 @@ function replaceParent(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 
 function removeFixup(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 value) private
 ```
 
+### estimateDroppedAmountFromLeft
+
+```solidity
+function estimateDroppedAmountFromLeft(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 targetFutureValue) internal view returns (uint256 droppedAmount)
+```
+
+### estimateDroppedAmountFromRight
+
+```solidity
+function estimateDroppedAmountFromRight(struct HitchensOrderStatisticsTreeLib.Tree self, uint256 targetFutureValue) internal view returns (uint256 droppedAmount)
+```
+
 ### dropLeft
 
 ```solidity
