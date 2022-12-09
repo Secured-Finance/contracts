@@ -26,7 +26,7 @@ describe('Integration Test: Liquidations', async () => {
     ({ tokenVault, lendingMarketController, wETHToken, filToETHPriceFeed } =
       await deployContracts());
 
-    await tokenVault.registerCurrency(hexETHString, wETHToken.address);
+    await tokenVault.registerCurrency(hexETHString, wETHToken.address, true);
 
     // Deploy Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {

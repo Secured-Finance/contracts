@@ -6,7 +6,8 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 interface ITokenVault {
     event Deposit(address indexed user, bytes32 ccy, uint256 amount);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
-    event RegisterCurrency(bytes32 ccy, address tokenAddress);
+    event RegisterCurrency(bytes32 ccy, address tokenAddress, bool isCollateral);
+    event UpdateCurrency(bytes32 ccy, bool isCollateral);
     event Swap(
         address indexed user,
         bytes32 ccyIn,
@@ -24,9 +25,18 @@ interface ITokenVault {
 
     function isCovered(address user) external view returns (bool);
 
+    function isCollateral(bytes32 _ccy) external view returns (bool);
+
+    function isCollateral(bytes32[] calldata _ccys)
+        external
+        view
+        returns (bool[] memory isCollateralCurrencies);
+
     function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
 
     function getTokenAddress(bytes32 ccy) external view returns (address);
+
+    function getCollateralCurrencies() external view returns (bytes32[] memory);
 
     function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw);
 

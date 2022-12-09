@@ -354,6 +354,9 @@ library FundCalculationLogic {
         )
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
+        bool[] memory isCollateral = AddressResolverLib.tokenVault().isCollateral(
+            currencySet.values()
+        );
 
         // Calculate total funds from the user's order list
         for (uint256 i = 0; i < currencySet.length(); i++) {
@@ -385,11 +388,13 @@ library FundCalculationLogic {
             totalWorkingLendOrdersAmount += amountsInETH[0];
             totalClaimableAmount += amountsInETH[1];
             totalCollateralAmount += amountsInETH[2];
-            totalLentAmount += amountsInETH[3];
-
             totalWorkingBorrowOrdersAmount += amountsInETH[4];
             totalDebtAmount += amountsInETH[5];
-            totalBorrowedAmount += amountsInETH[6];
+
+            if (isCollateral[i]) {
+                totalLentAmount += amountsInETH[3];
+                totalBorrowedAmount += amountsInETH[6];
+            }
         }
     }
 

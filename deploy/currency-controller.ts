@@ -56,9 +56,8 @@ const func: DeployFunction = async function ({
 
       for (const currency of currencies) {
         await currencyControllerContract
-          .supportCurrency(
+          .addCurrency(
             currency.key,
-            currency.name,
             priceFeeds[currency.key].address,
             currency.haircut,
           )

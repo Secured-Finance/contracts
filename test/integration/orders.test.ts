@@ -43,9 +43,9 @@ describe('Integration Test: Orders', async () => {
       wFILToken,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETHString, wETHToken.address);
+    await tokenVault.registerCurrency(hexETHString, wETHToken.address, true);
 
-    await tokenVault.registerCurrency(hexFILString, wFILToken.address);
+    await tokenVault.registerCurrency(hexFILString, wFILToken.address, true);
 
     await wFILToken
       .connect(ownerSigner)

@@ -128,6 +128,27 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets if the currency is acceptable as collateral
+     * @param _ccy Currency name in bytes32
+     * @return The boolean if the currency has been registered or not
+     */
+    function isCollateral(bytes32 _ccy) public view override returns (bool) {
+        return Storage.slot().collateralCurrencies.contains(_ccy);
+    }
+
+    function isCollateral(bytes32[] calldata _ccys)
+        external
+        view
+        override
+        returns (bool[] memory isCollateralCurrencies)
+    {
+        isCollateralCurrencies = new bool[](_ccys.length);
+        for (uint256 i = 0; i < _ccys.length; i++) {
+            isCollateralCurrencies[i] = Storage.slot().collateralCurrencies.contains(_ccys[i]);
+        }
+    }
+
+    /**
      * @notice Gets if the currency has been registered
      * @param _ccy Currency name in bytes32
      * @return The boolean if the currency has been registered or not
@@ -136,8 +157,21 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         return Storage.slot().tokenAddresses[_ccy] != address(0);
     }
 
+    /**
+     * @notice Gets the token contract address
+     * @param _ccy Currency name in bytes32
+     * @return The token contract address
+     */
     function getTokenAddress(bytes32 _ccy) public view override returns (address) {
         return Storage.slot().tokenAddresses[_ccy];
+    }
+
+    /**
+     * @notice Gets the currencies accepted as collateral
+     * @return Array of th currency accepted as collateral
+     */
+    function getCollateralCurrencies() external view override returns (bytes32[] memory) {
+        return Storage.slot().collateralCurrencies.values();
     }
 
     /**
@@ -261,11 +295,44 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         return address(CollateralParametersHandler.uniswapRouter());
     }
 
-    function registerCurrency(bytes32 _ccy, address _tokenAddress) external onlyOwner {
-        require(currencyController().isSupportedCcy(_ccy), "Invalid currency");
-        Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
+    /**
+     * @notice Registers new currency and sets if it is acceptable as collateral.
+     * @param _ccy Currency name in bytes32
+     * @param _tokenAddress Token contract address of the selected currency
+     * @param _isCollateral Boolean if the selected currency is acceptable as collateral.
+     */
+    function registerCurrency(
+        bytes32 _ccy,
+        address _tokenAddress,
+        bool _isCollateral
+    ) external onlyOwner {
+        require(currencyController().currencyExists(_ccy), "Invalid currency");
 
-        emit RegisterCurrency(_ccy, _tokenAddress);
+        Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
+        if (_isCollateral) {
+            Storage.slot().collateralCurrencies.add(_ccy);
+        }
+
+        emit RegisterCurrency(_ccy, _tokenAddress, _isCollateral);
+    }
+
+    /**
+     * @notice Updates the currency if it is acceptable as collateral.
+     * @param _ccy Currency name in bytes32
+     * @param _isCollateral Boolean if the selected currency is acceptable as collateral.
+     */
+    function updateCurrency(bytes32 _ccy, bool _isCollateral)
+        external
+        onlyOwner
+        onlyRegisteredCurrency(_ccy)
+    {
+        if (_isCollateral) {
+            Storage.slot().collateralCurrencies.add(_ccy);
+        } else {
+            Storage.slot().collateralCurrencies.remove(_ccy);
+        }
+
+        emit UpdateCurrency(_ccy, _isCollateral);
     }
 
     /**
@@ -500,10 +567,12 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             } else {
                 require(
                     Storage.slot().collateralAmounts[_user][_unsettledOrderCcy] >=
-                        _unsettledOrderAmount,
+                        vars.workingLendOrdersAmount + _unsettledOrderAmount,
                     "Not enough collateral in the selected currency"
                 );
-                vars.workingLendOrdersAmount += unsettledOrderAmountInETH;
+                if (isCollateral(_unsettledOrderCcy)) {
+                    vars.workingLendOrdersAmount += unsettledOrderAmountInETH;
+                }
             }
         }
 
@@ -566,8 +635,10 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         for (uint256 i = 0; i < len; i++) {
             bytes32 ccy = currencies.at(i);
-            uint256 collateralAmount = Storage.slot().collateralAmounts[_user][ccy];
-            totalCollateral += currencyController().convertToETH(ccy, collateralAmount);
+            if (isCollateral(ccy)) {
+                uint256 collateralAmount = Storage.slot().collateralAmounts[_user][ccy];
+                totalCollateral += currencyController().convertToETH(ccy, collateralAmount);
+            }
         }
 
         return totalCollateral;

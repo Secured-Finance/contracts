@@ -57,7 +57,7 @@ describe('TokenVault', () => {
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
     mockUniswapRouter = await deployMockContract(owner, ISwapRouter.abi);
 
-    await mockCurrencyController.mock.isSupportedCcy.returns(true);
+    await mockCurrencyController.mock.currencyExists.returns(true);
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockLendingMarketController.mock.cleanOrders.returns();
@@ -176,8 +176,6 @@ describe('TokenVault', () => {
         );
       };
 
-      console.log('mockUniswapRouter:', mockUniswapRouter.address);
-
       await setCollateralParameters(
         1000,
         ethers.utils.hexlify(ethers.utils.randomBytes(20)),
@@ -194,10 +192,19 @@ describe('TokenVault', () => {
         .false;
 
       await expect(
-        tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address),
+        tokenVaultProxy.registerCurrency(
+          targetCurrency,
+          mockERC20.address,
+          true,
+        ),
       ).to.emit(tokenVaultProxy, 'RegisterCurrency');
 
       expect(await tokenVaultProxy.isRegisteredCurrency(targetCurrency)).true;
+
+      const collateralCurrencies =
+        await tokenVaultProxy.getCollateralCurrencies();
+      expect(collateralCurrencies.length).to.equal(1);
+      expect(collateralCurrencies[0]).to.equal(targetCurrency);
     });
 
     it('Fail to call setCollateralParameters due to invalid ratio', async () => {
@@ -218,7 +225,7 @@ describe('TokenVault', () => {
 
   describe('Deposit & Withdraw', async () => {
     beforeEach(async () => {
-      tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address);
+      tokenVaultProxy.registerCurrency(targetCurrency, mockERC20.address, true);
     });
 
     it('Deposit into collateral book', async () => {

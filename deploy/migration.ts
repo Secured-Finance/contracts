@@ -135,16 +135,16 @@ const func: DeployFunction = async function ({
     const isRegistered = await tokenVault.isRegisteredCurrency(currency.key);
     if (isRegistered) {
       console.log(
-        `Skipped registering ${currency.name} as supported collateral`,
+        `Skipped registering ${currency.symbol} as supported collateral`,
       );
     } else {
       const address =
         currency.env || (await deployments.get(currency.mock)).address;
       await tokenVault
-        .registerCurrency(currency.key, address)
+        .registerCurrency(currency.key, address, currency.isCollateral)
         .then((tx) => tx.wait());
       console.log(
-        `Successfully registered ${currency.name} as supported collateral`,
+        `Successfully registered ${currency.symbol} as supported collateral`,
       );
     }
   }

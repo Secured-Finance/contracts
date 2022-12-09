@@ -13,12 +13,12 @@ import {
 } from './strings';
 
 export interface Currency {
-  name: string;
   symbol: string;
   mock: string;
   key: string;
   env: string | undefined;
   haircut: number;
+  isCollateral: boolean;
   args?: string[];
 }
 
@@ -31,39 +31,39 @@ export interface MockRate {
 
 const currencies: Currency[] = [
   {
-    name: 'Filecoin',
     symbol: 'eFIL',
     mock: 'MockEFIL',
     key: hexFILString,
     env: process.env.EFIL,
     haircut: 5000,
+    isCollateral: false,
     args: ['100000000000000000000000000'], // 100,000,000 eFIL
   },
   {
-    name: 'USD Coin',
     symbol: 'USDC',
     mock: 'MockUSDC',
     key: hexUSDCString,
     env: process.env.USDC,
     haircut: 8000,
+    isCollateral: true,
     args: ['100000000000000'], // 100,000,000 USDC
   },
   {
-    name: 'Bitcoin',
     symbol: 'WBTC',
     mock: 'MockWBTC',
     key: hexBTCString,
     env: process.env.WBTC,
     haircut: 8000,
+    isCollateral: false,
     args: ['100000000000000'], // 1,000,000 BTC
   },
   {
-    name: 'Ethereum',
     symbol: 'WETH',
     mock: 'MockWETH9',
     key: hexETHString,
     env: process.env.WETH,
     haircut: 8000,
+    isCollateral: true,
     args: undefined,
   },
 ];
