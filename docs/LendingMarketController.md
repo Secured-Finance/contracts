@@ -270,6 +270,24 @@ Get all the currencies in which the user has lending positions or orders.
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The array of the currency |
 
+### getPresentValue
+
+```solidity
+function getPresentValue(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 presentValue)
+```
+
+Gets the present value of the account for selected currency and maturity.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 for Lending Market |
+| _maturity | uint256 | The maturity of the market |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| presentValue | int256 | The present value |
+
 ### getTotalPresentValue
 
 ```solidity

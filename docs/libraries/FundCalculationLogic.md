@@ -25,28 +25,40 @@ function convertToLiquidationAmountFromCollateral(bytes32 _collateralCcy, bytes3
 function getFutureValue(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 amount, uint256 maturity)
 ```
 
-### getPresentValue
+### calculateActualPresentValue
 
 ```solidity
-function getPresentValue(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 presentValue, uint256 maturity)
+function calculateActualPresentValue(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 presentValue)
 ```
 
-### getTotalPresentValue
+### calculateActualPresentValue
 
 ```solidity
-function getTotalPresentValue(bytes32 _ccy, address _user) public view returns (int256 totalPresentValue)
+function calculateActualPresentValue(bytes32 _ccy, address _user) public view returns (int256 totalPresentValue)
 ```
 
 ### calculateLentFundsFromOrders
 
 ```solidity
-function calculateLentFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 workingOrdersAmount, uint256 claimableAmount, uint256 lentAmount)
+function calculateLentFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 totalWorkingOrdersAmount, uint256 totalClaimableAmount, uint256 totalLentAmount)
 ```
 
 ### calculateBorrowedFundsFromOrders
 
 ```solidity
-function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 workingOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user) public view returns (uint256 totalWorkingOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
+```
+
+### calculateLentFundsFromOrders
+
+```solidity
+function calculateLentFundsFromOrders(bytes32 _ccy, address _market, address _user) public view returns (uint256 workingOrdersAmount, uint256 claimableAmount, uint256 lentAmount)
+```
+
+### calculateBorrowedFundsFromOrders
+
+```solidity
+function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _market, address _user) public view returns (uint256 workingOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
 ### calculateFunds
@@ -71,5 +83,23 @@ function _calculatePVFromFVInMaturity(bytes32 _ccy, uint256 maturity, int256 fut
 
 ```solidity
 function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
+```
+
+### _getTotalPresentValue
+
+```solidity
+function _getTotalPresentValue(bytes32 _ccy, address _user) internal view returns (int256 totalPresentValue)
+```
+
+### _calculateLentFundsFromOrders
+
+```solidity
+function _calculateLentFundsFromOrders(bytes32 _ccy, address _market, address _user) internal view returns (uint256 workingOrdersAmount, uint256 claimableAmount, uint256 lentAmount)
+```
+
+### _calculateBorrowedFundsFromOrders
+
+```solidity
+function _calculateBorrowedFundsFromOrders(bytes32 _ccy, address _market, address _user) internal view returns (uint256 workingOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
