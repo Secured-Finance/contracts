@@ -5,14 +5,22 @@ import { currencies } from '../utils/currencies';
 import { toBytes32 } from '../utils/strings';
 
 task('register-orders', 'Registers order data into the selected lending market')
-  .addParam('currency', 'Target currency short name')
+  .addParam('collateralCurrency', 'Target collateral currency with short name')
+  .addParam('marketCurrency', 'Target market currency with short name')
   .addParam('maturity', 'Target market maturity')
   .addParam('midUnitPrice', 'Target mid unit price', undefined, types.string)
   .addParam('amount', 'Order base amount', undefined, types.string)
   .addParam('orderCount', 'Order count', undefined, types.int)
   .setAction(
     async (
-      { currency, maturity, midUnitPrice, amount, orderCount },
+      {
+        collateralCurrency,
+        marketCurrency,
+        maturity,
+        midUnitPrice,
+        amount,
+        orderCount,
+      },
       { deployments, ethers },
     ) => {
       const [owner] = await ethers.getSigners();
@@ -39,9 +47,10 @@ task('register-orders', 'Registers order data into the selected lending market')
           ),
         );
 
-      const currencyName = toBytes32(currency);
+      const marketCurrencyName = toBytes32(marketCurrency);
+      const collateralCurrencyName = toBytes32(collateralCurrency);
       const maturities: BigNumber[] =
-        await lendingMarketController.getMaturities(currencyName);
+        await lendingMarketController.getMaturities(marketCurrencyName);
 
       const maturityIndex = maturities.findIndex(
         (value) => value.toString() === maturity,
@@ -69,26 +78,32 @@ task('register-orders', 'Registers order data into the selected lending market')
       let totalBorrowAmount = BigNumber(0);
       let totalLendAmount = BigNumber(0);
 
-      for (const [dAmount, dRate] of boxMuller(orderCount)) {
+      for (const [dAmount, dUnitPrice] of boxMuller(orderCount)) {
         const orderAmount = BigNumber(dAmount)
           .times(amount)
           .div(2)
           .plus(amount)
           .dp(0);
-        const orderRate = BigNumber(dRate)
+        const orderUnitPrice = BigNumber(dUnitPrice)
           .times(midUnitPrice)
           .div(20)
           .plus(midUnitPrice)
           .dp(0);
-        const orderSide = orderRate.gte(midUnitPrice) ? Side.LEND : Side.BORROW;
+        const orderSide = orderUnitPrice.gte(midUnitPrice)
+          ? Side.LEND
+          : Side.BORROW;
 
-        if (orderAmount.lte('0') || orderRate.lte('0')) {
+        if (
+          orderAmount.lte('0') ||
+          orderUnitPrice.lte('0') ||
+          orderUnitPrice.gt('10000')
+        ) {
           continue;
         } else {
           orders.push({
             side: orderSide,
             amount: orderAmount.toFixed(),
-            unitPrice: orderRate.toFixed(),
+            unitPrice: orderUnitPrice.toFixed(),
           });
 
           if (orderSide === Side.BORROW) {
@@ -100,12 +115,14 @@ task('register-orders', 'Registers order data into the selected lending market')
       }
 
       // Add collateral
-      const availableAmount = await tokenVault.getWithdrawableCollateral(
+      const availableAmountInETH = await tokenVault.getWithdrawableCollateral(
         owner.address,
       );
 
-      if (currency !== 'ETH') {
-        const currency = currencies.find(({ key }) => key === currencyName);
+      if (marketCurrency !== 'ETH') {
+        const currency = currencies.find(
+          ({ key }) => key === marketCurrencyName,
+        );
 
         if (currency) {
           const token = await deployments
@@ -119,8 +136,7 @@ task('register-orders', 'Registers order data into the selected lending market')
             tokenVault.address,
           );
 
-          const totalAmount = totalLendAmount.plus(totalBorrowAmount);
-          if (totalAmount.gt(allowance.toString())) {
+          if (totalLendAmount.gt(allowance.toString())) {
             await token
               .approve(tokenVault.address, ethers.constants.MaxUint256)
               .then((tx) => tx.wait());
@@ -128,48 +144,102 @@ task('register-orders', 'Registers order data into the selected lending market')
         }
       }
 
-      const depositValueInETH = BigNumber(totalBorrowAmount.toString())
-        .times(3)
-        .div(2)
-        .plus(totalLendAmount)
-        .minus(availableAmount.toString())
+      if (collateralCurrency !== 'ETH') {
+        const currency = currencies.find(
+          ({ key }) => key === collateralCurrencyName,
+        );
+
+        if (currency) {
+          const token = await deployments
+            .get(currency.mock)
+            .then(({ address }) =>
+              ethers.getContractAt(currency.mock, address),
+            );
+
+          const allowance = await token.allowance(
+            owner.address,
+            tokenVault.address,
+          );
+
+          if (totalBorrowAmount.gt(allowance.toString())) {
+            await token
+              .approve(tokenVault.address, ethers.constants.MaxUint256)
+              .then((tx) => tx.wait());
+          }
+        }
+      }
+
+      const depositValue = BigNumber(totalBorrowAmount.toString())
+        .times(2)
         .dp(0);
+
+      const depositValueInETH = await currencyController[
+        'convertToETH(bytes32,uint256)'
+      ](marketCurrencyName, depositValue.toFixed());
       if (
         BigNumber(depositValueInETH.toString())
           .times(2)
-          .lt(availableAmount.toString())
+          .lt(availableAmountInETH.toString())
       ) {
         console.log('Skipped deposit');
         console.log(
           'The current amount available is',
-          availableAmount.toString(),
+          availableAmountInETH.toString(),
         );
       } else {
-        const depositValue = await currencyController[
-          'convertFromETH(bytes32,uint256)'
-        ](currencyName, depositValueInETH.toString());
+        const depositValueInCollateralCurrency =
+          await currencyController.convertFromETH(
+            collateralCurrencyName,
+            depositValueInETH.toString(),
+          );
 
         await tokenVault
-          .deposit(currencyName, depositValue, {
-            value: currency === 'ETH' ? depositValue : 0,
-          })
+          .deposit(
+            collateralCurrencyName,
+            depositValueInCollateralCurrency.toString(),
+            {
+              value:
+                collateralCurrency === 'ETH'
+                  ? depositValueInCollateralCurrency.toString()
+                  : 0,
+            },
+          )
           .then((tx) => tx.wait());
 
-        console.log(`Successfully deposited ${depositValue} in ETH`);
+        console.log(
+          `Successfully deposited ${depositValueInCollateralCurrency.toString()} in ${collateralCurrency}`,
+        );
       }
 
       // Create orders
       for (const order of orders) {
-        if (order.side === Side.LEND && currency === 'ETH') {
-          await lendingMarketController
-            .createLendOrderWithETH(currencyName, maturity, order.unitPrice, {
-              value: order.amount,
-            })
-            .then((tx) => tx.wait());
+        if (order.side === Side.LEND) {
+          if (marketCurrency === 'ETH') {
+            await lendingMarketController
+              .depositAndCreateLendOrderWithETH(
+                marketCurrencyName,
+                maturity,
+                order.unitPrice,
+                {
+                  value: order.amount,
+                },
+              )
+              .then((tx) => tx.wait());
+          } else {
+            await lendingMarketController
+              .depositAndCreateOrder(
+                marketCurrencyName,
+                maturity,
+                order.side,
+                order.amount,
+                order.unitPrice,
+              )
+              .then((tx) => tx.wait());
+          }
         } else {
           await lendingMarketController
             .createOrder(
-              currencyName,
+              marketCurrencyName,
               maturity,
               order.side,
               order.amount,
@@ -191,12 +261,12 @@ task('register-orders', 'Registers order data into the selected lending market')
 
       // Show orders in the market
       const borrowUnitPrices = await lendingMarketController.getBorrowOrderBook(
-        currencyName,
+        marketCurrencyName,
         maturity,
         10,
       );
       const lendUnitPrices = await lendingMarketController.getLendOrderBook(
-        currencyName,
+        marketCurrencyName,
         maturity,
         10,
       );
