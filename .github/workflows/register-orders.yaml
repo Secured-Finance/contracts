@@ -11,13 +11,24 @@ on:
         options:
           - development
           - staging
-      currency:
-        description: 'Currency'
+      collateralCurrency:
+        description: 'CollateralCurrency'
+        required: true
+        default: 'ETH'
+        type: choice
+        options:
+          - ETH
+          - USDC
+      marketCurrency:
+        description: 'MarketCurrency'
         required: true
         default: 'FIL'
         type: choice
         options:
           - FIL
+          - ETH
+          - USDC
+          - BTC
       maturity:
         description: 'Maturity'
         required: true
@@ -63,7 +74,8 @@ jobs:
         run: >
           npx hardhat register-orders
           --network ${{ github.event.inputs.network }}
-          --currency ${{ github.event.inputs.currency }}
+          --collateral-currency ${{ github.event.inputs.collateralCurrency }}
+          --market-currency ${{ github.event.inputs.marketCurrency }}
           --maturity ${{ github.event.inputs.maturity }}
           --mid-unit-price ${{ github.event.inputs.midUnitPrice }}
           --amount ${{ github.event.inputs.orderAmount }}
