@@ -13,7 +13,7 @@ interface IGenesisValueVault {
         uint256 previousMaturity
     );
 
-    function isRegisteredCurrency(bytes32 ccy) external view returns (bool);
+    function isInitialized(bytes32 ccy) external view returns (bool);
 
     function decimals(bytes32 ccy) external view returns (uint8);
 
@@ -46,7 +46,7 @@ interface IGenesisValueVault {
         int256 genesisValue
     ) external view returns (int256);
 
-    function registerCurrency(
+    function initialize(
         bytes32 ccy,
         uint8 decimals,
         uint256 compoundFactor

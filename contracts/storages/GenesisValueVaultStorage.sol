@@ -12,7 +12,7 @@ library GenesisValueVaultStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.genesisValueVault");
 
     struct Storage {
-        mapping(bytes32 => bool) isRegisteredCurrency;
+        mapping(bytes32 => bool) isInitialized;
         mapping(bytes32 => uint256) initialCompoundFactors;
         mapping(bytes32 => uint256) compoundFactors;
         mapping(bytes32 => uint256) currentMaturity;

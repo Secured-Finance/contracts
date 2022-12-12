@@ -146,9 +146,8 @@ describe('ProxyController', () => {
         hexBTCString,
         btcToETHRate,
       );
-      await currencyControllerProxy1.supportCurrency(
+      await currencyControllerProxy1.addCurrency(
         hexBTCString,
-        'Bitcoin',
         btcToETHPriceFeed.address,
         HAIRCUT,
       );

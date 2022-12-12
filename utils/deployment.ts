@@ -143,9 +143,8 @@ const deployContracts = async () => {
   }
 
   for (const currency of currencies) {
-    await currencyControllerProxy.supportCurrency(
+    await currencyControllerProxy.addCurrency(
       currency.key,
-      currency.name,
       priceFeeds[currency.key].address,
       currency.haircut,
     );

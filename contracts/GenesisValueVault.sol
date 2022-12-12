@@ -38,8 +38,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
-    function isRegisteredCurrency(bytes32 _ccy) public view override returns (bool) {
-        return Storage.slot().isRegisteredCurrency[_ccy];
+    function isInitialized(bytes32 _ccy) public view override returns (bool) {
+        return Storage.slot().isInitialized[_ccy];
     }
 
     function decimals(bytes32 _ccy) public view override returns (uint8) {
@@ -117,15 +117,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return (_genesisValue * int256(compoundFactor)) / int256(10**decimals(_ccy));
     }
 
-    function registerCurrency(
+    function initialize(
         bytes32 _ccy,
         uint8 _decimals,
         uint256 _compoundFactor
     ) external override onlyAcceptedContracts {
         require(_compoundFactor != 0, "Compound factor is zero");
-        require(!isRegisteredCurrency(_ccy), "Already registered currency");
+        require(!isInitialized(_ccy), "Already initialized currency");
 
-        Storage.slot().isRegisteredCurrency[_ccy] = true;
+        Storage.slot().isInitialized[_ccy] = true;
         Storage.slot().decimals[_ccy] = _decimals;
         Storage.slot().initialCompoundFactors[_ccy] = _compoundFactor;
         Storage.slot().compoundFactors[_ccy] = _compoundFactor;

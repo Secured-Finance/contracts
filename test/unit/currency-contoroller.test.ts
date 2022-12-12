@@ -52,17 +52,15 @@ describe('CurrencyController', () => {
 
   describe('Initialize', async () => {
     it('Add ETH as a supported currency', async () => {
-      const name = 'ETH';
-      const currency = ethers.utils.formatBytes32String(name);
+      const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.supportCurrency(
+        currencyControllerProxy.addCurrency(
           currency,
-          name,
           mockPriceFeed.address,
           9000,
         ),
@@ -70,16 +68,13 @@ describe('CurrencyController', () => {
         .to.emit(currencyControllerProxy, 'AddPriceFeed')
         .withArgs(currency, 'USD', mockPriceFeed.address);
 
-      await currencyControllerProxy
-        .getCurrency(currency)
-        .then(({ isSupported, name }) => {
-          expect(isSupported).to.equal(true);
-          expect(name).to.equal(name);
-        });
+      await currencyControllerProxy.currencyExists(currency).then((exists) => {
+        expect(exists).to.true;
+      });
 
       await currencyControllerProxy
-        .getCurrency(ethers.utils.formatBytes32String('TEST'))
-        .then(({ isSupported }) => expect(isSupported).to.equal(false));
+        .currencyExists(ethers.utils.formatBytes32String('TEST'))
+        .then((exists) => expect(exists).to.equal(false));
 
       await currencyControllerProxy
         .getUsdDecimals(currency)
@@ -88,24 +83,18 @@ describe('CurrencyController', () => {
       await currencyControllerProxy
         .getHaircut(currency)
         .then((haircut) => expect(haircut).to.equal(9000));
-
-      await currencyControllerProxy
-        .isSupportedCcy(currency)
-        .then((isSupported) => expect(isSupported).to.true);
     });
 
     it('Add a currency except for ETH as a supported currency', async () => {
-      const name = 'FIL';
-      const currency = ethers.utils.formatBytes32String(name);
+      const currency = ethers.utils.formatBytes32String('FIL');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.supportCurrency(
+        currencyControllerProxy.addCurrency(
           currency,
-          name,
           mockPriceFeed.address,
           8000,
         ),
@@ -119,17 +108,15 @@ describe('CurrencyController', () => {
     });
 
     it('Fail to add ETH as a supported currency due to the invalid price feed', async () => {
-      const name = 'ETH';
-      const currency = ethers.utils.formatBytes32String(name);
+      const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, -1, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.supportCurrency(
+        currencyControllerProxy.addCurrency(
           currency,
-          name,
           mockPriceFeed.address,
           8000,
         ),
@@ -137,17 +124,15 @@ describe('CurrencyController', () => {
     });
 
     it('Fail to add ETH as a supported currency due to the invalid decimals', async () => {
-      const name = 'ETH';
-      const currency = ethers.utils.formatBytes32String(name);
+      const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(19);
 
       await expect(
-        currencyControllerProxy.supportCurrency(
+        currencyControllerProxy.addCurrency(
           currency,
-          name,
           mockPriceFeed.address,
           8000,
         ),
@@ -159,32 +144,26 @@ describe('CurrencyController', () => {
     let currency: string;
 
     beforeEach(async () => {
-      const name = `Test${testIdx}`;
+      currency = ethers.utils.formatBytes32String(`Test${testIdx}`);
       testIdx++;
-      currency = ethers.utils.formatBytes32String(name);
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.supportCurrency(
+      await currencyControllerProxy.addCurrency(
         currency,
-        name,
         mockPriceFeed.address,
         9000,
       );
     });
 
     it('Update a currency support', async () => {
-      await expect(
-        currencyControllerProxy.updateCurrencySupport(currency, false),
-      )
-        .to.emit(currencyControllerProxy, 'UpdateSupportCurrency')
-        .withArgs(currency, false);
+      await expect(currencyControllerProxy.removeCurrency(currency))
+        .to.emit(currencyControllerProxy, 'RemoveCurrency')
+        .withArgs(currency);
 
-      expect(await currencyControllerProxy.isSupportedCcy(currency)).to.equal(
-        false,
-      );
+      expect(await currencyControllerProxy.currencyExists(currency)).to.false;
     });
 
     it('Update a haircut', async () => {
@@ -329,17 +308,14 @@ describe('CurrencyController', () => {
     });
 
     it('Fail to remove an ETH price feed due to invalid PriceFeed', async () => {
-      const name = 'ETH';
-      testIdx++;
-      const dummyCurrency = ethers.utils.formatBytes32String(name);
+      const dummyCurrency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.supportCurrency(
+      await currencyControllerProxy.addCurrency(
         dummyCurrency,
-        name,
         mockPriceFeed.address,
         9000,
       );
@@ -350,17 +326,14 @@ describe('CurrencyController', () => {
     });
 
     it('Fail to remove a none ETH price feed due to invalid PriceFeed', async () => {
-      const name = 'Dummy';
-      testIdx++;
-      const dummyCurrency = ethers.utils.formatBytes32String(name);
+      const dummyCurrency = ethers.utils.formatBytes32String('Dummy');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.supportCurrency(
+      await currencyControllerProxy.addCurrency(
         dummyCurrency,
-        name,
         mockPriceFeed.address,
         9000,
       );
@@ -375,17 +348,15 @@ describe('CurrencyController', () => {
     let currency: string;
 
     beforeEach(async () => {
-      const name = `Test${testIdx}`;
+      currency = ethers.utils.formatBytes32String(`Test${testIdx}`);
       testIdx++;
-      currency = ethers.utils.formatBytes32String(name);
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 10000000000, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.supportCurrency(
+      await currencyControllerProxy.addCurrency(
         currency,
-        name,
         mockPriceFeed.address,
         9000,
       );

@@ -11,8 +11,8 @@ import {Currency} from "../storages/CurrencyControllerStorage.sol";
  * contract owner is not able to add a new currency into the protocol
  */
 interface ICurrencyController {
-    event AddSupportCurrency(bytes32 indexed ccy, string name, uint256 haircut);
-    event UpdateSupportCurrency(bytes32 indexed ccy, bool isSupported);
+    event AddCurrency(bytes32 indexed ccy, uint256 haircut);
+    event RemoveCurrency(bytes32 indexed ccy);
 
     event UpdateHaircut(bytes32 indexed ccy, uint256 haircut);
 
@@ -33,11 +33,11 @@ interface ICurrencyController {
         view
         returns (uint256[] memory amounts);
 
-    function getCurrency(bytes32) external view returns (Currency memory);
-
     function getEthDecimals(bytes32) external view returns (uint8);
 
     function getUsdDecimals(bytes32) external view returns (uint8);
+
+    function getCurrencies() external view returns (bytes32[] memory);
 
     function getHaircut(bytes32 _ccy) external view returns (uint256);
 
@@ -49,7 +49,7 @@ interface ICurrencyController {
 
     function getLastUSDPrice(bytes32 _ccy) external view returns (int256);
 
-    function isSupportedCcy(bytes32 _ccy) external view returns (bool);
+    function currencyExists(bytes32 _ccy) external view returns (bool);
 
     function linkPriceFeed(
         bytes32 _ccy,
@@ -59,14 +59,13 @@ interface ICurrencyController {
 
     function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external;
 
-    function supportCurrency(
+    function addCurrency(
         bytes32 _ccy,
-        string memory _name,
         address _ethPriceFeed,
         uint256 _haircut
     ) external;
 
     function updateHaircut(bytes32 _ccy, uint256 _haircut) external;
 
-    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) external;
+    function removeCurrency(bytes32 _ccy) external;
 }

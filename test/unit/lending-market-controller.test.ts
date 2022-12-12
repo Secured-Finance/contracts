@@ -65,7 +65,7 @@ describe('LendingMarketController', () => {
       CurrencyController.abi,
     );
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
-    await mockCurrencyController.mock.isSupportedCcy.returns(true);
+    await mockCurrencyController.mock.currencyExists.returns(true);
     await mockTokenVault.mock.addCollateral.returns();
     await mockTokenVault.mock.removeCollateral.returns();
     await mockTokenVault.mock.depositFrom.returns();

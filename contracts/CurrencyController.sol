@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
@@ -14,12 +15,14 @@ import {CurrencyControllerStorage as Storage, Currency} from "./storages/Currenc
  * contract owner is not able to add a new currency into the protocol
  */
 contract CurrencyController is ICurrencyController, Ownable, Proxyable {
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
     /**
      * @notice Modifier to check if the currency is supported.
      * @param _ccy Currency name in bytes32
      */
-    modifier supportedCcyOnly(bytes32 _ccy) {
-        require(isSupportedCcy(_ccy), "Unsupported asset");
+    modifier onlySupportedCurrency(bytes32 _ccy) {
+        require(currencyExists(_ccy), "Unsupported asset");
         _;
     }
 
@@ -37,21 +40,15 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     /**
      * @notice Adds new currency into the protocol and links with existing ETH price feed of Chainlink.
      * @param _ccy Currency name in bytes32
-     * @param _name Currency full name
      * @param _ethPriceFeed Address for ETH price feed
      * @param _haircut Remaining ratio after haircut
      */
-    function supportCurrency(
+    function addCurrency(
         bytes32 _ccy,
-        string memory _name,
         address _ethPriceFeed,
         uint256 _haircut
     ) public override onlyOwner {
-        Currency memory currency;
-        currency.name = _name;
-        currency.isSupported = true;
-
-        Storage.slot().currencies[_ccy] = currency;
+        Storage.slot().currencies.add(_ccy);
         Storage.slot().haircuts[_ccy] = _haircut;
 
         if (_ccy != "ETH") {
@@ -59,19 +56,16 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         } else {
             require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
         }
-        emit AddSupportCurrency(_ccy, _name, _haircut);
+        emit AddCurrency(_ccy, _haircut);
     }
 
     /**
      * @notice Updates the flag indicating if the currency is supported in the protocol.
      * @param _ccy Currency name in bytes32
-     * @param _isSupported Boolean if currency is supported
      */
-    function updateCurrencySupport(bytes32 _ccy, bool _isSupported) public override onlyOwner {
-        Currency storage currency = Storage.slot().currencies[_ccy];
-        currency.isSupported = _isSupported;
-
-        emit UpdateSupportCurrency(_ccy, _isSupported);
+    function removeCurrency(bytes32 _ccy) public override onlyOwner {
+        Storage.slot().currencies.remove(_ccy);
+        emit RemoveCurrency(_ccy);
     }
 
     /**
@@ -83,7 +77,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         public
         override
         onlyOwner
-        supportedCcyOnly(_ccy)
+        onlySupportedCurrency(_ccy)
     {
         require(_haircut > 0, "Incorrect haircut ratio");
         require(_haircut <= 10000, "Haircut ratio overflow");
@@ -91,15 +85,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         Storage.slot().haircuts[_ccy] = _haircut;
 
         emit UpdateHaircut(_ccy, _haircut);
-    }
-
-    /**
-     * @notice Gets the currency data.
-     * @param _ccy Currency name in bytes32
-     * @return The currency data
-     */
-    function getCurrency(bytes32 _ccy) external view returns (Currency memory) {
-        return Storage.slot().currencies[_ccy];
     }
 
     /**
@@ -119,6 +104,14 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets all currencies.
+     * @return The array of the currency
+     */
+    function getCurrencies() external view override returns (bytes32[] memory) {
+        return Storage.slot().currencies.values();
+    }
+
+    /**
      * @notice Gets haircut ratio for the selected currency.
      * Haircut is used in bilateral netting cross-calculation.
      * @param _ccy Currency name in bytes32
@@ -132,8 +125,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      * @return The boolean if the selected currency is supported or not
      */
-    function isSupportedCcy(bytes32 _ccy) public view override returns (bool) {
-        return Storage.slot().currencies[_ccy].isSupported;
+    function currencyExists(bytes32 _ccy) public view override returns (bool) {
+        return Storage.slot().currencies.contains(_ccy);
     }
 
     // =========== CHAINLINK PRICE FEED FUNCTIONS ===========
@@ -183,7 +176,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         external
         override
         onlyOwner
-        supportedCcyOnly(_ccy)
+        onlySupportedCurrency(_ccy)
     {
         if (_isEthPriceFeed == true) {
             address priceFeed = address(Storage.slot().ethPriceFeeds[_ccy]);

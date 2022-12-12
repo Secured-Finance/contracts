@@ -439,7 +439,7 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        genesisValueVault().registerCurrency(_ccy, 18, _compoundFactor);
+        genesisValueVault().initialize(_ccy, 18, _compoundFactor);
         Storage.slot().genesisDates[_ccy] = _genesisDate;
     }
 
@@ -456,10 +456,10 @@ contract LendingMarketController is
         returns (address market, address futureValueVault)
     {
         require(
-            genesisValueVault().isRegisteredCurrency(_ccy),
+            genesisValueVault().isInitialized(_ccy),
             "Lending market hasn't been initialized in the currency"
         );
-        require(currencyController().isSupportedCcy(_ccy), "NON SUPPORTED CCY");
+        require(currencyController().currencyExists(_ccy), "Non supported currency");
 
         uint256 genesisDate = Storage.slot().genesisDates[_ccy];
 
@@ -821,8 +821,6 @@ contract LendingMarketController is
     ) private returns (bool isPlaced) {
         require(_amount > 0, "Invalid amount");
         require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
-
-        // _convertFutureValueToGenesisValue(_ccy, _maturity, _user);
 
         (uint256 activeOrderCount, ) = _cleanOrders(_ccy, _maturity, _user);
 
