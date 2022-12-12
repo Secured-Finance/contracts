@@ -12,7 +12,7 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  mapping(address => struct EnumerableSet.Bytes32Set) exposedUnsettledCurrencies;
+  struct EnumerableSet.Bytes32Set collateralCurrencies;
   mapping(bytes32 => address) tokenAddresses;
   mapping(address => struct EnumerableSet.Bytes32Set) usedCurrencies;
   mapping(address => mapping(bytes32 => uint256)) collateralAmounts;

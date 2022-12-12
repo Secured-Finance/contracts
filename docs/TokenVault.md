@@ -118,6 +118,28 @@ Gets if the collateral has enough coverage.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the collateral has sufficient coverage or not |
 
+### isCollateral
+
+```solidity
+function isCollateral(bytes32 _ccy) public view returns (bool)
+```
+
+Gets if the currency is acceptable as collateral
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the currency has been registered or not |
+
+### isCollateral
+
+```solidity
+function isCollateral(bytes32[] _ccys) external view returns (bool[] isCollateralCurrencies)
+```
+
 ### isRegisteredCurrency
 
 ```solidity
@@ -139,6 +161,28 @@ Gets if the currency has been registered
 ```solidity
 function getTokenAddress(bytes32 _ccy) public view returns (address)
 ```
+
+Gets the token contract address
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The token contract address |
+
+### getCollateralCurrencies
+
+```solidity
+function getCollateralCurrencies() external view returns (bytes32[])
+```
+
+Gets the currencies accepted as collateral
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bytes32[] | Array of th currency accepted as collateral |
 
 ### getWithdrawableCollateral
 
@@ -271,8 +315,29 @@ Gets liquidation threshold rate
 ### registerCurrency
 
 ```solidity
-function registerCurrency(bytes32 _ccy, address _tokenAddress) external
+function registerCurrency(bytes32 _ccy, address _tokenAddress, bool _isCollateral) external
 ```
+
+Registers new currency and sets if it is acceptable as collateral.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _tokenAddress | address | Token contract address of the selected currency |
+| _isCollateral | bool | Boolean if the selected currency is acceptable as collateral. |
+
+### updateCurrency
+
+```solidity
+function updateCurrency(bytes32 _ccy, bool _isCollateral) external
+```
+
+Updates the currency if it is acceptable as collateral.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _isCollateral | bool | Boolean if the selected currency is acceptable as collateral. |
 
 ### deposit
 

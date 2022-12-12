@@ -38,10 +38,10 @@ Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
-### isRegisteredCurrency
+### isInitialized
 
 ```solidity
-function isRegisteredCurrency(bytes32 _ccy) public view returns (bool)
+function isInitialized(bytes32 _ccy) public view returns (bool)
 ```
 
 ### decimals
@@ -104,10 +104,10 @@ function calculateGVFromFV(bytes32 _ccy, uint256 _basisMaturity, int256 _futureV
 function calculateFVFromGV(bytes32 _ccy, uint256 _basisMaturity, int256 _genesisValue) external view returns (int256)
 ```
 
-### registerCurrency
+### initialize
 
 ```solidity
-function registerCurrency(bytes32 _ccy, uint8 _decimals, uint256 _compoundFactor) external
+function initialize(bytes32 _ccy, uint8 _decimals, uint256 _compoundFactor) external
 ```
 
 ### updateCompoundFactor

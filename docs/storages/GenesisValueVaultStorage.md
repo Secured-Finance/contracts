@@ -23,7 +23,7 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  mapping(bytes32 => bool) isRegisteredCurrency;
+  mapping(bytes32 => bool) isInitialized;
   mapping(bytes32 => uint256) initialCompoundFactors;
   mapping(bytes32 => uint256) compoundFactors;
   mapping(bytes32 => uint256) currentMaturity;

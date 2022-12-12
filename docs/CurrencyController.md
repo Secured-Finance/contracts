@@ -7,10 +7,10 @@ Implements managing of the supported currencies in the protocol.
 This contract links new currencies to ETH Chainlink price feeds, without an existing price feed
 contract owner is not able to add a new currency into the protocol
 
-### supportedCcyOnly
+### onlySupportedCurrency
 
 ```solidity
-modifier supportedCcyOnly(bytes32 _ccy)
+modifier onlySupportedCurrency(bytes32 _ccy)
 ```
 
 Modifier to check if the currency is supported.
@@ -33,10 +33,10 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | ---- | ---- | ----------- |
 | _owner | address | The address of the contract owner |
 
-### supportCurrency
+### addCurrency
 
 ```solidity
-function supportCurrency(bytes32 _ccy, string _name, address _ethPriceFeed, uint256 _haircut) public
+function addCurrency(bytes32 _ccy, address _ethPriceFeed, uint256 _haircut) public
 ```
 
 Adds new currency into the protocol and links with existing ETH price feed of Chainlink.
@@ -44,14 +44,13 @@ Adds new currency into the protocol and links with existing ETH price feed of Ch
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _name | string | Currency full name |
 | _ethPriceFeed | address | Address for ETH price feed |
 | _haircut | uint256 | Remaining ratio after haircut |
 
-### updateCurrencySupport
+### removeCurrency
 
 ```solidity
-function updateCurrencySupport(bytes32 _ccy, bool _isSupported) public
+function removeCurrency(bytes32 _ccy) public
 ```
 
 Updates the flag indicating if the currency is supported in the protocol.
@@ -59,7 +58,6 @@ Updates the flag indicating if the currency is supported in the protocol.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _isSupported | bool | Boolean if currency is supported |
 
 ### updateHaircut
 
@@ -73,22 +71,6 @@ Updates the haircut ratio for supported currency
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _haircut | uint256 | Remaining ratio after haircut |
-
-### getCurrency
-
-```solidity
-function getCurrency(bytes32 _ccy) external view returns (struct Currency)
-```
-
-Gets the currency data.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | struct Currency | The currency data |
 
 ### getEthDecimals
 
@@ -114,6 +96,18 @@ Gets USD decimal for the selected currency.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 
+### getCurrencies
+
+```solidity
+function getCurrencies() external view returns (bytes32[])
+```
+
+Gets all currencies.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bytes32[] | The array of the currency |
+
 ### getHaircut
 
 ```solidity
@@ -127,10 +121,10 @@ Haircut is used in bilateral netting cross-calculation.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 
-### isSupportedCcy
+### currencyExists
 
 ```solidity
-function isSupportedCcy(bytes32 _ccy) public view returns (bool)
+function currencyExists(bytes32 _ccy) public view returns (bool)
 ```
 
 Gets if the selected currency is supported.
