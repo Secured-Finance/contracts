@@ -88,6 +88,28 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             int256(10**decimals(_ccy));
     }
 
+    function calculateCurrentFVFromFVInMaturity(
+        bytes32 _ccy,
+        uint256 _basisMaturity,
+        int256 _futureValue
+    ) external view override returns (int256) {
+        uint256 compoundFactorInMaturity = Storage
+        .slot()
+        .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
+        uint256 currentCompoundFactor = getCompoundFactor(_ccy);
+
+        require(
+            compoundFactorInMaturity > 0,
+            "Compound factor is not fixed yet in the selected maturity"
+        );
+        require(currentCompoundFactor > 0, "Current compound factor is not fixed yet");
+
+        // NOTE: The formula is:
+        // genesisValue = featureValueInMaturity / compoundFactorInMaturity.
+        // currentFeatureValue = genesisValue * currentCompoundFactor
+        return (_futureValue * int256(currentCompoundFactor)) / int256(compoundFactorInMaturity);
+    }
+
     function calculateGVFromFV(
         bytes32 _ccy,
         uint256 _basisMaturity,

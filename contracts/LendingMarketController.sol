@@ -21,6 +21,8 @@ import {Proxyable} from "./utils/Proxyable.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @notice Implements the module to manage separated lending order-book markets per maturity.
  *
@@ -66,6 +68,11 @@ contract LendingMarketController is
             "Invalid maturity"
         );
         _;
+    }
+
+    modifier hasEnoughCollateral(address _user) {
+        _;
+        require(tokenVault().isCovered(_user), "Not enough collateral");
     }
 
     /**
@@ -273,6 +280,21 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the future value of the account for selected currency and maturity.
+     * @param _ccy Currency name in bytes32 for Lending Market
+     * @param _maturity The maturity of the market
+     * @param _user User's address
+     * @return futureValue The future value
+     */
+    function getFutureValue(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) external view override returns (int256 futureValue) {
+        return FundCalculationLogic.calculateActualFutureValue(_ccy, _maturity, _user);
+    }
+
+    /**
      * @notice Gets the present value of the account for selected currency and maturity.
      * @param _ccy Currency name in bytes32 for Lending Market
      * @param _maturity The maturity of the market
@@ -283,7 +305,7 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         address _user
-    ) public view override returns (int256 presentValue) {
+    ) external view override returns (int256 presentValue) {
         return FundCalculationLogic.calculateActualPresentValue(_ccy, _maturity, _user);
     }
 
@@ -294,7 +316,7 @@ contract LendingMarketController is
      * @return totalPresentValue The total present value
      */
     function getTotalPresentValue(bytes32 _ccy, address _user)
-        public
+        external
         view
         override
         returns (int256 totalPresentValue)
@@ -391,7 +413,9 @@ contract LendingMarketController is
             uint256 borrowedAmount
         )
     {
-        return FundCalculationLogic.calculateFunds(_ccy, _user);
+        if (Storage.slot().usedCurrencies[_user].contains(_ccy)) {
+            return FundCalculationLogic.calculateFunds(_ccy, _user);
+        }
     }
 
     /**
@@ -511,7 +535,14 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    )
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        hasEnoughCollateral(msg.sender)
+        returns (bool)
+    {
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
         return true;
@@ -533,7 +564,14 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    )
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        hasEnoughCollateral(msg.sender)
+        returns (bool)
+    {
         tokenVault().depositFrom(msg.sender, _ccy, _amount);
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
@@ -553,7 +591,15 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _unitPrice
-    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    )
+        external
+        payable
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        hasEnoughCollateral(msg.sender)
+        returns (bool)
+    {
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(
             _ccy,
@@ -579,7 +625,15 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _unitPrice
-    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    )
+        external
+        payable
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        hasEnoughCollateral(msg.sender)
+        returns (bool)
+    {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, msg.value);
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(
@@ -616,9 +670,13 @@ contract LendingMarketController is
 
     /**
      * @notice Liquidates a lending position if the user's coverage is less than 1.
-     * @param _collateralCcy Currency name to be used as collateral.
-     * @param _debtCcy Currency name to be used as debt.
+     * @dev A liquidation amount is calculated from the selected debt, but its maximum amount is the same as a collateral amount.
+     * That amount needs to be set at liquidationAmountMax otherwise currency swapping using Uniswap will fail
+     * if the collateral is insufficient.
+     * @param _collateralCcy Currency name to be used as collateral
+     * @param _debtCcy Currency name to be used as debt
      * @param _debtMaturity The market maturity of the debt
+     * @param _liquidationAmountMax Maximum acceptable liquidation Amount in debt currency
      * @param _user User's address
      * @param _poolFee Uniswap pool fee
      * @return True if the execution of the operation succeeds
@@ -627,17 +685,19 @@ contract LendingMarketController is
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
+        uint256 _liquidationAmountMax,
         address _user,
         uint24 _poolFee
     ) external nonReentrant ifValidMaturity(_debtCcy, _debtMaturity) returns (bool) {
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
-        _cleanOrders(_debtCcy, _debtMaturity, _user);
+        cleanOrders(_debtCcy, _user);
 
         uint256 liquidationAmount = FundCalculationLogic.convertToLiquidationAmountFromCollateral(
             _collateralCcy,
             _debtCcy,
             _debtMaturity,
+            _liquidationAmountMax,
             _user,
             _poolFee
         );
@@ -820,8 +880,6 @@ contract LendingMarketController is
         bool _ignoreRemainingAmount
     ) private returns (bool isPlaced) {
         require(_amount > 0, "Invalid amount");
-        require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
-
         (uint256 activeOrderCount, ) = _cleanOrders(_ccy, _maturity, _user);
 
         (uint256 filledFutureValue, uint256 remainingAmount) = ILendingMarket(

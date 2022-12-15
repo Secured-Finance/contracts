@@ -299,8 +299,8 @@ library OrderBookLogic {
                     }
                 }
             } else {
+                activeOrderCount += 1;
                 if (!isPastMaturity) {
-                    activeOrderCount += 1;
                     activeOrderIds[i - inActiveOrderCount] = orderId;
                 }
                 assembly {

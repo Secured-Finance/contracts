@@ -4,7 +4,10 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { deployContracts } from '../../utils/deployment';
+import {
+  deployContracts,
+  LIQUIDATION_THRESHOLD_RATE,
+} from '../../utils/deployment';
 import { hexETHString, hexFILString } from '../../utils/strings';
 
 const toWei = (eth) => {
@@ -18,11 +21,13 @@ describe('Integration Test: Orders', async () => {
   let carolSigner: SignerWithAddress;
   let daveSigner: SignerWithAddress;
 
+  let addressResolver: Contract;
   let tokenVault: Contract;
   let currencyController: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
+  let mockSwapRouter: Contract;
 
   let lendingMarkets: Contract[] = [];
   let ethLendingMarkets: Contract[] = [];
@@ -36,6 +41,7 @@ describe('Integration Test: Orders', async () => {
       await ethers.getSigners();
 
     ({
+      addressResolver,
       tokenVault,
       currencyController,
       lendingMarketController,
@@ -43,22 +49,36 @@ describe('Integration Test: Orders', async () => {
       wFILToken,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETHString, wETHToken.address, true);
+    await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
+    await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
 
-    await tokenVault.registerCurrency(hexFILString, wFILToken.address, true);
+    mockSwapRouter = await ethers
+      .getContractFactory('MockSwapRouter')
+      .then((factory) =>
+        factory.deploy(addressResolver.address, wETHToken.address),
+      );
 
-    await wFILToken
-      .connect(ownerSigner)
-      .transfer(aliceSigner.address, '1000000000000000000000');
-    await wFILToken
-      .connect(ownerSigner)
-      .transfer(bobSigner.address, '1000000000000000000000');
-    await wFILToken
-      .connect(ownerSigner)
-      .transfer(carolSigner.address, '1000000000000000000000');
-    await wFILToken
-      .connect(ownerSigner)
-      .transfer(daveSigner.address, '1000000000000000000000');
+    await mockSwapRouter.setToken(hexETHString, wETHToken.address);
+    await mockSwapRouter.setToken(hexFILString, wFILToken.address);
+
+    await tokenVault.setCollateralParameters(
+      LIQUIDATION_THRESHOLD_RATE,
+      mockSwapRouter.address,
+    );
+
+    await tokenVault.updateCurrency(hexETHString, true);
+    await tokenVault.updateCurrency(hexFILString, true);
+
+    for (const { address } of [
+      aliceSigner,
+      bobSigner,
+      carolSigner,
+      daveSigner,
+    ]) {
+      await wFILToken
+        .connect(ownerSigner)
+        .transfer(address, '1000000000000000000000');
+    }
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {

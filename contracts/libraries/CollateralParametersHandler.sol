@@ -23,7 +23,7 @@ library CollateralParametersHandler {
     }
 
     /**
-     * @dev Gets min collateral rate
+     * @dev Gets Uniswap Router contract address
      */
     function uniswapRouter() internal view returns (ISwapRouter) {
         return Storage.slot().uniswapRouter;

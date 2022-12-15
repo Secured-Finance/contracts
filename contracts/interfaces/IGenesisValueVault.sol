@@ -34,6 +34,12 @@ interface IGenesisValueVault {
 
     function getGenesisValueInFutureValue(bytes32 ccy, address user) external view returns (int256);
 
+    function calculateCurrentFVFromFVInMaturity(
+        bytes32 _ccy,
+        uint256 _basisMaturity,
+        int256 _futureValue
+    ) external view returns (int256);
+
     function calculateGVFromFV(
         bytes32 ccy,
         uint256 basisMaturity,

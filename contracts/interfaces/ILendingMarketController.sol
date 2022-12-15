@@ -95,12 +95,18 @@ interface ILendingMarketController {
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 
-    function getUsedCurrencies(address _user) external view returns (bytes32[] memory);
+    function getUsedCurrencies(address user) external view returns (bytes32[] memory);
+
+    function getFutureValue(
+        bytes32 ccy,
+        uint256 maturity,
+        address user
+    ) external view returns (int256 futureValue);
 
     function getPresentValue(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
+        bytes32 ccy,
+        uint256 maturity,
+        address user
     ) external view returns (int256 presentValue);
 
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
@@ -110,7 +116,7 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
-    function calculateLentFundsFromOrders(bytes32 _ccy, address _user)
+    function calculateLentFundsFromOrders(bytes32 ccy, address user)
         external
         view
         returns (
@@ -119,7 +125,7 @@ interface ILendingMarketController {
             uint256 lentAmount
         );
 
-    function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user)
+    function calculateBorrowedFundsFromOrders(bytes32 ccy, address user)
         external
         view
         returns (
@@ -128,7 +134,7 @@ interface ILendingMarketController {
             uint256 borrowedAmount
         );
 
-    function calculateFunds(bytes32 _ccy, address _user)
+    function calculateFunds(bytes32 ccy, address user)
         external
         view
         returns (
@@ -141,7 +147,7 @@ interface ILendingMarketController {
             uint256 borrowedAmount
         );
 
-    function calculateTotalFundsInETH(address _user)
+    function calculateTotalFundsInETH(address user)
         external
         view
         returns (
@@ -208,5 +214,5 @@ interface ILendingMarketController {
 
     function cleanAllOrders(address user) external;
 
-    function cleanOrders(bytes32 _ccy, address _user) external;
+    function cleanOrders(bytes32 ccy, address user) external;
 }

@@ -482,7 +482,6 @@ describe('LendingMarketController', () => {
 
     it('Add orders and rotate markets', async () => {
       const lendingMarket1 = lendingMarketProxies[0];
-      const futureValueVault1 = futureValueVaultProxies[0];
 
       await lendingMarketControllerProxy
         .connect(alice)
@@ -551,18 +550,32 @@ describe('LendingMarketController', () => {
       expect(midUnitPrice.toString()).to.equal('9800');
 
       const showFV = async () => {
-        const aliceFV = await futureValueVault1.getFutureValue(alice.address);
-        const bobFV = await futureValueVault1.getFutureValue(bob.address);
-        const carolFV = await futureValueVault1.getFutureValue(carol.address);
+        const aliceFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+        const bobFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[1],
+          bob.address,
+        );
+        const carolFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[1],
+          carol.address,
+        );
 
-        const presentValues = {
+        const futureValues = {
           FutureValue: {
-            Alice: aliceFV.futureValue.toString(),
-            Bob: bobFV.futureValue.toString(),
-            Carol: carolFV.futureValue.toString(),
+            Alice: aliceFV.toString(),
+            Bob: bobFV.toString(),
+            Carol: carolFV.toString(),
           },
         };
-        console.table(presentValues);
+
+        console.table(futureValues);
+        expect(aliceFV.add(bobFV).add(carolFV)).to.equal(0);
       };
 
       const showTotalPV = async () => {
@@ -589,7 +602,9 @@ describe('LendingMarketController', () => {
             Carol: carolTotalPV.toString(),
           },
         };
+
         console.table(totalPresentValues);
+        expect(aliceTotalPV.add(bobTotalPV).add(carolTotalPV)).to.equal(0);
       };
 
       expect(await lendingMarket1.isOpened()).to.equal(true);
@@ -725,38 +740,22 @@ describe('LendingMarketController', () => {
       expect(rotatedMarket.midUnitPrice.toString()).to.equal('0');
 
       await showTotalPV();
+
       await lendingMarketControllerProxy.cleanOrders(
         targetCurrency,
         alice.address,
       );
-      await showTotalPV();
-
-      // Check the total present value
-      const aliceTotalPV =
-        await lendingMarketControllerProxy.getTotalPresentValue(
-          targetCurrency,
-          alice.address,
-        );
-      const bobTotalPV =
-        await lendingMarketControllerProxy.getTotalPresentValue(
-          targetCurrency,
-          bob.address,
-        );
-      const carolTotalPV =
-        await lendingMarketControllerProxy.getTotalPresentValue(
-          targetCurrency,
-          carol.address,
-        );
-
-      expect(aliceTotalPV.add(bobTotalPV).add(carolTotalPV)).to.equal(0);
-
-      // Check the total present value per market
-      const alicePV1 = await lendingMarketControllerProxy.getPresentValue(
+      await lendingMarketControllerProxy.cleanOrders(
         targetCurrency,
-        maturities[1],
-        alice.address,
+        bob.address,
       );
-      expect(aliceTotalPV).to.equal(alicePV1);
+      await lendingMarketControllerProxy.cleanOrders(
+        targetCurrency,
+        carol.address,
+      );
+
+      await showTotalPV();
+      await showFV();
     });
 
     it('Deposit and add an order', async () => {
@@ -1636,7 +1635,7 @@ describe('LendingMarketController', () => {
       });
     });
 
-    describe('Liquidation', async () => {
+    describe('Liquidations', async () => {
       beforeEach(async () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(1);
@@ -1694,6 +1693,7 @@ describe('LendingMarketController', () => {
             targetCurrency,
             targetCurrency,
             maturities[0],
+            '0',
             signers[0].address,
             '1',
           )
@@ -1713,7 +1713,6 @@ describe('LendingMarketController', () => {
       it('Liquidate 50% lending position in case the one position cover liquidation amount', async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        const debtAmount = orderAmount.mul('10000').div(orderRate);
         const liquidationAmount = ethers.BigNumber.from('80000000000000000');
 
         // Set up for the mocks
@@ -1760,6 +1759,7 @@ describe('LendingMarketController', () => {
             targetCurrency,
             targetCurrency,
             maturities[0],
+            '0',
             signers[3].address,
             '1',
           )
@@ -1784,6 +1784,7 @@ describe('LendingMarketController', () => {
               targetCurrency,
               targetCurrency,
               maturities[0],
+              '0',
               signers[0].address,
               '1',
             ),
@@ -1801,27 +1802,11 @@ describe('LendingMarketController', () => {
               targetCurrency,
               targetCurrency,
               maturities[0],
+              '0',
               signers[0].address,
               '1',
             ),
         ).to.be.revertedWith('User has enough collateral');
-      });
-
-      it('Fail to liquidate lending position due to no collateral in the selected currency', async () => {
-        // Set up for the mocks
-        await mockTokenVault.mock.getDepositAmount.returns(0);
-
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .executeLiquidationCall(
-              targetCurrency,
-              targetCurrency,
-              maturities[0],
-              signers[0].address,
-              '1',
-            ),
-        ).to.be.revertedWith('No collateral in the selected currency');
       });
     });
 

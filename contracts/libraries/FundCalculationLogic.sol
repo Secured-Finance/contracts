@@ -12,6 +12,8 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../storages/LendingMarketControllerStorage.sol";
 
+import "hardhat/console.sol";
+
 library FundCalculationLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -26,6 +28,7 @@ library FundCalculationLogic {
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
+        uint256 _liquidationAmountMax,
         address _user,
         uint24 _poolFee
     ) public returns (uint256) {
@@ -36,19 +39,14 @@ library FundCalculationLogic {
         );
         require(liquidationPVAmountInETH != 0, "User has enough collateral");
 
-        uint256 depositAmount = AddressResolverLib.tokenVault().getDepositAmount(
-            _user,
-            _collateralCcy
-        );
-        require(depositAmount != 0, "No collateral in the selected currency");
-
-        (int256 futureValueAmount, uint256 fvMaturity) = getFutureValue(
-            _debtCcy,
-            _debtMaturity,
-            _user
-        );
+        // (int256 futureValueAmount, uint256 fvMaturity) = calculateActualFutureValue(
+        //     _debtCcy,
+        //     _debtMaturity,
+        //     _user
+        // );
+        int256 futureValueAmount = calculateActualFutureValue(_debtCcy, _debtMaturity, _user);
         require(futureValueAmount < 0, "No debt in the selected maturity");
-        require(fvMaturity == _debtMaturity, "Need to clear orders first");
+        // require(fvMaturity == _debtMaturity || fvMaturity == 0, "Need to clear orders first");
 
         vars.debtFVAmount = uint256(-futureValueAmount);
         vars.debtPVAmount = uint256(
@@ -70,6 +68,10 @@ library FundCalculationLogic {
         vars.liquidationPVAmount = vars.liquidationPVAmount > vars.debtPVAmount
             ? vars.debtPVAmount
             : vars.liquidationPVAmount;
+        vars.liquidationPVAmount = _liquidationAmountMax > vars.liquidationPVAmount ||
+            _liquidationAmountMax == 0
+            ? vars.liquidationPVAmount
+            : _liquidationAmountMax;
 
         // Swap collateral from deposited currency to debt currency using Uniswap.
         // This swapped collateral is used to unwind the debt.
@@ -77,7 +79,6 @@ library FundCalculationLogic {
             _user,
             _collateralCcy,
             _debtCcy,
-            depositAmount,
             vars.liquidationPVAmount,
             _poolFee
         );
@@ -95,19 +96,72 @@ library FundCalculationLogic {
                 : vars.liquidationPVAmount;
     }
 
-    function getFutureValue(
+    function calculateActualFutureValue(
         bytes32 _ccy,
         uint256 _maturity,
         address _user
-    ) public view returns (int256 amount, uint256 maturity) {
+    ) public view returns (int256 futureValue) {
         address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        bool isDefaultMarket = market == Storage.slot().lendingMarkets[_ccy][0];
 
-        (amount, maturity) = IFutureValueVault(Storage.slot().futureValueVaults[_ccy][market])
-            .getFutureValue(_user);
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            address currentMarket = Storage.slot().lendingMarkets[_ccy][i];
+            uint256 currentMaturity = ILendingMarket(currentMarket).getMaturity();
 
-        // Add PV from Genesis Value Vault if the market is nearest market.
-        if (market == Storage.slot().lendingMarkets[_ccy][0]) {
-            amount += AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(
+            if (isDefaultMarket || currentMarket == market) {
+                // Get FV from Future Value Vault
+                (int256 futureValueInMaturity, uint256 fvMaturity) = IFutureValueVault(
+                    Storage.slot().futureValueVaults[_ccy][currentMarket]
+                ).getFutureValue(_user);
+
+                if (
+                    (isDefaultMarket && (i == 0 || currentMaturity != fvMaturity)) ||
+                    (!isDefaultMarket && currentMaturity == fvMaturity)
+                ) {
+                    futureValue += _calculateCurrentFVFromFVInMaturity(
+                        _ccy,
+                        fvMaturity,
+                        futureValueInMaturity
+                    );
+                }
+
+                // Get FV from inactive borrow orders
+                (, , uint256 borrowFVInMaturity, uint256 borrowOrdersMaturity) = ILendingMarket(
+                    currentMarket
+                ).getTotalAmountFromBorrowOrders(_user);
+
+                if (
+                    (isDefaultMarket && (i == 0 || currentMaturity != borrowOrdersMaturity)) ||
+                    (!isDefaultMarket && currentMaturity == borrowOrdersMaturity)
+                ) {
+                    futureValue -= _calculateCurrentFVFromFVInMaturity(
+                        _ccy,
+                        borrowOrdersMaturity,
+                        int256(borrowFVInMaturity)
+                    );
+                }
+
+                // Get FV from inactive lend orders
+                (, , uint256 lendFVInMaturity, uint256 lendOrdersMaturity) = ILendingMarket(
+                    currentMarket
+                ).getTotalAmountFromLendOrders(_user);
+
+                if (
+                    (isDefaultMarket && (i == 0 || currentMaturity != lendOrdersMaturity)) ||
+                    (!isDefaultMarket && currentMaturity == lendOrdersMaturity)
+                ) {
+                    futureValue += _calculateCurrentFVFromFVInMaturity(
+                        _ccy,
+                        lendOrdersMaturity,
+                        int256(lendFVInMaturity)
+                    );
+                }
+            }
+        }
+
+        // Add FV from Genesis Value Vault if the market is that the lending position is rolled to.
+        if (isDefaultMarket) {
+            futureValue += AddressResolverLib.genesisValueVault().getGenesisValueInFutureValue(
                 _ccy,
                 _user
             );
@@ -398,6 +452,28 @@ library FundCalculationLogic {
         }
     }
 
+    function _calculateCurrentFVFromFVInMaturity(
+        bytes32 _ccy,
+        uint256 maturity,
+        int256 futureValueInMaturity
+    ) internal view returns (int256 totalFutureValue) {
+        if (
+            AddressResolverLib
+                .genesisValueVault()
+                .getMaturityUnitPrice(_ccy, maturity)
+                .compoundFactor == 0
+        ) {
+            return futureValueInMaturity;
+        } else {
+            return
+                AddressResolverLib.genesisValueVault().calculateCurrentFVFromFVInMaturity(
+                    _ccy,
+                    maturity,
+                    futureValueInMaturity
+                );
+        }
+    }
+
     function _calculatePVFromFVInMaturity(
         bytes32 _ccy,
         uint256 maturity,
@@ -415,16 +491,11 @@ library FundCalculationLogic {
             futureValue = futureValueInMaturity;
             unitPrice = ILendingMarket(lendingMarketInMaturity).getMidUnitPrice();
         } else {
-            int256 genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
-                _ccy,
-                maturity,
-                futureValueInMaturity
-            );
-            futureValue = AddressResolverLib.genesisValueVault().calculateFVFromGV(
-                _ccy,
-                0,
-                genesisValue
-            );
+            futureValue = AddressResolverLib.genesisValueVault().calculateCurrentFVFromFVInMaturity(
+                    _ccy,
+                    maturity,
+                    futureValueInMaturity
+                );
             unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice();
         }
 
