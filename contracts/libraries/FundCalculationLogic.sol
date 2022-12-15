@@ -12,8 +12,6 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../storages/LendingMarketControllerStorage.sol";
 
-import "hardhat/console.sol";
-
 library FundCalculationLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -39,14 +37,8 @@ library FundCalculationLogic {
         );
         require(liquidationPVAmountInETH != 0, "User has enough collateral");
 
-        // (int256 futureValueAmount, uint256 fvMaturity) = calculateActualFutureValue(
-        //     _debtCcy,
-        //     _debtMaturity,
-        //     _user
-        // );
         int256 futureValueAmount = calculateActualFutureValue(_debtCcy, _debtMaturity, _user);
         require(futureValueAmount < 0, "No debt in the selected maturity");
-        // require(fvMaturity == _debtMaturity || fvMaturity == 0, "Need to clear orders first");
 
         vars.debtFVAmount = uint256(-futureValueAmount);
         vars.debtPVAmount = uint256(
@@ -121,7 +113,8 @@ library FundCalculationLogic {
                     futureValue += _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         fvMaturity,
-                        futureValueInMaturity
+                        futureValueInMaturity,
+                        currentMarket
                     );
                 }
 
@@ -137,7 +130,8 @@ library FundCalculationLogic {
                     futureValue -= _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         borrowOrdersMaturity,
-                        int256(borrowFVInMaturity)
+                        int256(borrowFVInMaturity),
+                        currentMarket
                     );
                 }
 
@@ -153,7 +147,8 @@ library FundCalculationLogic {
                     futureValue += _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         lendOrdersMaturity,
-                        int256(lendFVInMaturity)
+                        int256(lendFVInMaturity),
+                        currentMarket
                     );
                 }
             }
@@ -455,18 +450,25 @@ library FundCalculationLogic {
     function _calculateCurrentFVFromFVInMaturity(
         bytes32 _ccy,
         uint256 maturity,
-        int256 futureValueInMaturity
-    ) internal view returns (int256 totalFutureValue) {
+        int256 futureValueInMaturity,
+        address lendingMarketInMaturity
+    ) internal view returns (int256 futureValue) {
         if (
             AddressResolverLib
                 .genesisValueVault()
                 .getMaturityUnitPrice(_ccy, maturity)
                 .compoundFactor == 0
         ) {
-            return futureValueInMaturity;
+            uint256 unitPriceInMaturity = ILendingMarket(lendingMarketInMaturity).getMidUnitPrice();
+            int256 presetValue = _calculatePVFromFV(futureValueInMaturity, unitPriceInMaturity);
+            uint256 currentUnitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0])
+                .getMidUnitPrice();
+
+            futureValue =
+                (presetValue * int256(ProtocolTypes.PRICE_DIGIT)) /
+                int256(currentUnitPrice);
         } else {
-            return
-                AddressResolverLib.genesisValueVault().calculateCurrentFVFromFVInMaturity(
+            futureValue = AddressResolverLib.genesisValueVault().calculateCurrentFVFromFVInMaturity(
                     _ccy,
                     maturity,
                     futureValueInMaturity

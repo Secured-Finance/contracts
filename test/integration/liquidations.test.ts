@@ -12,6 +12,8 @@ import {
 import { filToETHRate } from '../../utils/numbers';
 import { hexETHString, hexFILString } from '../../utils/strings';
 
+const ERROR_RANGE = BigNumber.from(1000);
+
 describe('Integration Test: Liquidations', async () => {
   let owner: SignerWithAddress;
   let singers: SignerWithAddress[];
@@ -254,21 +256,15 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      )
-        .to.emit(lendingMarketController, 'Liquidate')
-        .withArgs(
-          alice.address,
-          hexETHString,
-          hexFILString,
-          maturities[0],
-          filledOrderAmount.div(2),
-        );
+      ).to.emit(lendingMarketController, 'Liquidate');
 
       const lendingInfoAfter = await lendingInfo.load('After', maturities[0]);
       lendingInfo.show();
 
       expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to.true;
-      expect(lendingInfoAfter.pv).to.equal(lendingInfoBefore.pv.div(2));
+      expect(lendingInfoAfter.pv.sub(lendingInfoBefore.pv.div(2)).abs()).to.lt(
+        ERROR_RANGE,
+      );
 
       await expect(
         lendingMarketController.executeLiquidationCall(
@@ -352,9 +348,9 @@ describe('Integration Test: Liquidations', async () => {
         .withdraw(hexFILString, '200000000000000000000');
 
       const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
-      expect(aliceBalanceAfter.sub(aliceBalanceBefore)).to.equal(
-        filledOrderAmount,
-      );
+      expect(
+        aliceBalanceAfter.sub(aliceBalanceBefore).sub(filledOrderAmount).abs(),
+      ).to.lt(ERROR_RANGE);
 
       await filToETHPriceFeed.updateAnswer(filToETHRate.mul('110').div('100'));
 
@@ -369,21 +365,15 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      )
-        .to.emit(lendingMarketController, 'Liquidate')
-        .withArgs(
-          alice.address,
-          hexETHString,
-          hexFILString,
-          maturities[0],
-          filledOrderAmount.div(2),
-        );
+      ).to.emit(lendingMarketController, 'Liquidate');
 
       const lendingInfoAfter = await lendingInfo.load('After', maturities[0]);
       lendingInfo.show();
 
       expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to.true;
-      expect(lendingInfoAfter.pv).to.equal(lendingInfoBefore.pv.div(2));
+      expect(lendingInfoAfter.pv.sub(lendingInfoBefore.pv.div(2)).abs()).to.lt(
+        ERROR_RANGE,
+      );
     });
 
     it('Increase FIL exchange rate by 20%, Liquidate it twice', async () => {
@@ -455,9 +445,9 @@ describe('Integration Test: Liquidations', async () => {
         .withdraw(hexFILString, '200000000000000000000');
 
       const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
-      expect(aliceBalanceAfter.sub(aliceBalanceBefore)).to.equal(
-        filledOrderAmount,
-      );
+      expect(
+        aliceBalanceAfter.sub(aliceBalanceBefore).sub(filledOrderAmount).abs(),
+      ).to.lt(ERROR_RANGE);
 
       await filToETHPriceFeed.updateAnswer(filToETHRate.mul('120').div('100'));
 
@@ -492,8 +482,12 @@ describe('Integration Test: Liquidations', async () => {
 
       expect(lendingInfoAfter1.coverage.lt(lendingInfoBefore.coverage)).to.true;
       expect(lendingInfoAfter2.coverage.lt(lendingInfoAfter1.coverage)).to.true;
-      expect(lendingInfoAfter1.pv).to.equal(lendingInfoBefore.pv.div(2));
-      expect(lendingInfoAfter2.pv).to.equal(lendingInfoAfter1.pv.div(2));
+      expect(lendingInfoAfter1.pv.sub(lendingInfoBefore.pv.div(2)).abs()).to.lt(
+        ERROR_RANGE,
+      );
+      expect(lendingInfoAfter2.pv.sub(lendingInfoAfter1.pv.div(2)).abs()).to.lt(
+        ERROR_RANGE,
+      );
 
       await expect(
         lendingMarketController.executeLiquidationCall(
@@ -631,10 +625,9 @@ describe('Integration Test: Liquidations', async () => {
       const lendingInfoAfter = await lendingInfo.load('After', maturities[1]);
       lendingInfo.show();
 
-      const errorRange = BigNumber.from(1000);
       expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to.true;
       expect(lendingInfoAfter.pv.sub(lendingInfoBefore.pv.div(2)).abs()).to.lt(
-        errorRange,
+        ERROR_RANGE,
       );
     });
 

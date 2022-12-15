@@ -21,8 +21,6 @@ import {Proxyable} from "./utils/Proxyable.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @notice Implements the module to manage separated lending order-book markets per maturity.
  *

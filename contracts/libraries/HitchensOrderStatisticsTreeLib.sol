@@ -727,6 +727,7 @@ library HitchensOrderStatisticsTreeLib {
         bool isInterruption
     ) internal {
         require(amount > 0, "Insufficient amount");
+        require(value <= ProtocolTypes.PRICE_DIGIT, "Insufficient value");
         insert(self, value);
 
         if (isInterruption) {

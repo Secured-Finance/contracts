@@ -27,7 +27,7 @@ async function printExists(steps: Step[]) {
   console.group('value, exists');
 
   for (const step of steps) {
-    let element = step.rate;
+    let element = step.unitPrice;
     if (element > 0) {
       const exists = await ost.valueExists(element);
       console.log(element, exists);
@@ -37,10 +37,10 @@ async function printExists(steps: Step[]) {
 }
 
 async function printScenario(steps: Step[]) {
-  // enumerate the sorted list and stats
+  // enumeunitPrice the sorted list and stats
   console.group('element, orderCount');
   for (const step of steps) {
-    const element = step.rate;
+    const element = step.unitPrice;
     const orderCount = await ost.getValueCount(element);
     console.log(element, orderCount.toString(10));
   }
@@ -59,7 +59,7 @@ async function printScenario(steps: Step[]) {
   console.log('Root Value', rootVal.toString());
   console.groupEnd();
 
-  // enumerate the node contents
+  // enumeunitPrice the node contents
   console.log(
     'Node Details, (crawled in order), value, parent, left, right, red, head, tail, orderCounter',
   );
@@ -86,11 +86,16 @@ async function loadScenario(steps: Step[]) {
   for (const step of steps) {
     const amount = step.amount;
     const orderId = step.orderId;
-    const rate = step.rate;
+    const unitPrice = step.unitPrice;
     if (step.action == 'insert') {
-      await ost.insertAmountValue(rate, orderId, constants.AddressZero, amount);
+      await ost.insertAmountValue(
+        unitPrice,
+        orderId,
+        constants.AddressZero,
+        amount,
+      );
     } else if (step.action == 'delete') {
-      await ost.removeAmountValue(rate, orderId);
+      await ost.removeAmountValue(unitPrice, orderId);
     }
   }
 }
