@@ -16,13 +16,13 @@ struct CalculatedAmountVars {
 ### convertToLiquidationAmountFromCollateral
 
 ```solidity
-function convertToLiquidationAmountFromCollateral(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) public returns (uint256)
+function convertToLiquidationAmountFromCollateral(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, uint256 _liquidationAmountMax, address _user, uint24 _poolFee) public returns (uint256)
 ```
 
-### getFutureValue
+### calculateActualFutureValue
 
 ```solidity
-function getFutureValue(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 amount, uint256 maturity)
+function calculateActualFutureValue(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 futureValue)
 ```
 
 ### calculateActualPresentValue
@@ -71,6 +71,12 @@ function calculateFunds(bytes32 _ccy, address _user) public view returns (uint25
 
 ```solidity
 function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
+```
+
+### _calculateCurrentFVFromFVInMaturity
+
+```solidity
+function _calculateCurrentFVFromFVInMaturity(bytes32 _ccy, uint256 maturity, int256 futureValueInMaturity, address lendingMarketInMaturity) internal view returns (int256 futureValue)
 ```
 
 ### _calculatePVFromFVInMaturity

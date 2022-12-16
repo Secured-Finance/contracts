@@ -270,10 +270,28 @@ Get all the currencies in which the user has lending positions or orders.
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The array of the currency |
 
+### getFutureValue
+
+```solidity
+function getFutureValue(bytes32 _ccy, uint256 _maturity, address _user) external view returns (int256 futureValue)
+```
+
+Gets the future value of the account for selected currency and maturity.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 for Lending Market |
+| _maturity | uint256 | The maturity of the market |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| futureValue | int256 | The future value |
+
 ### getPresentValue
 
 ```solidity
-function getPresentValue(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 presentValue)
+function getPresentValue(bytes32 _ccy, uint256 _maturity, address _user) external view returns (int256 presentValue)
 ```
 
 Gets the present value of the account for selected currency and maturity.
@@ -291,7 +309,7 @@ Gets the present value of the account for selected currency and maturity.
 ### getTotalPresentValue
 
 ```solidity
-function getTotalPresentValue(bytes32 _ccy, address _user) public view returns (int256 totalPresentValue)
+function getTotalPresentValue(bytes32 _ccy, address _user) external view returns (int256 totalPresentValue)
 ```
 
 Gets the total present value of the account for selected currency.
@@ -542,16 +560,21 @@ Cancels the own order.
 ### executeLiquidationCall
 
 ```solidity
-function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) external returns (bool)
+function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, uint256 _liquidationAmountMax, address _user, uint24 _poolFee) external returns (bool)
 ```
 
 Liquidates a lending position if the user's coverage is less than 1.
 
+_A liquidation amount is calculated from the selected debt, but its maximum amount is the same as a collateral amount.
+That amount needs to be set at liquidationAmountMax otherwise currency swapping using Uniswap will fail
+if the collateral is insufficient._
+
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _collateralCcy | bytes32 | Currency name to be used as collateral. |
-| _debtCcy | bytes32 | Currency name to be used as debt. |
+| _collateralCcy | bytes32 | Currency name to be used as collateral |
+| _debtCcy | bytes32 | Currency name to be used as debt |
 | _debtMaturity | uint256 | The market maturity of the debt |
+| _liquidationAmountMax | uint256 | Maximum acceptable liquidation Amount in debt currency |
 | _user | address | User's address |
 | _poolFee | uint24 | Uniswap pool fee |
 
@@ -621,7 +644,7 @@ Cleans user's all orders to remove order ids that are already filled on the orde
 ### cleanOrders
 
 ```solidity
-function cleanOrders(bytes32 _ccy, address _user) public
+function cleanOrders(bytes32 _ccy, address _user) public returns (uint256 totalActiveOrderCount)
 ```
 
 Cleans user's orders to remove order ids that are already filled on the order book for a selected currency.
@@ -652,7 +675,7 @@ Converts the future value to the genesis value if there is balance in the past m
 ### _createOrder
 
 ```solidity
-function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (bool isPlaced)
+function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _isForced) private returns (bool isFilled)
 ```
 
 ### _cleanOrders
