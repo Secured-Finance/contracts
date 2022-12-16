@@ -450,7 +450,7 @@ describe('TokenVault', () => {
 
       await tokenVaultCaller
         .connect(signers[0])
-        .addCollateral(signers[0].address, targetCurrency, value);
+        .addDepositAmount(signers[0].address, targetCurrency, value);
 
       expect(
         await tokenVaultProxy.getUnusedCollateral(signers[0].address),
@@ -461,7 +461,7 @@ describe('TokenVault', () => {
 
       await tokenVaultCaller
         .connect(signers[0])
-        .removeCollateral(signers[0].address, targetCurrency, value);
+        .removeDepositAmount(signers[0].address, targetCurrency, value);
 
       expect(
         await tokenVaultProxy.getUnusedCollateral(signers[0].address),
@@ -483,7 +483,7 @@ describe('TokenVault', () => {
 
       await tokenVaultCaller
         .connect(signers[1])
-        .addCollateral(signers[1].address, targetCurrency, value);
+        .addDepositAmount(signers[1].address, targetCurrency, value);
 
       await tokenVaultCaller
         .connect(signers[1])
@@ -605,28 +605,28 @@ describe('TokenVault', () => {
       ).to.equal(debtAmount.div(2));
     });
 
-    it('Fail to call addCollateral due to invalid caller', async () => {
+    it('Fail to call addDepositAmount due to invalid caller', async () => {
       await expect(
-        tokenVaultProxy.addCollateral(alice.address, targetCurrency, '1'),
+        tokenVaultProxy.addDepositAmount(alice.address, targetCurrency, '1'),
       ).to.be.revertedWith('Only Accepted Contracts');
     });
 
-    it('Fail to call removeCollateral due to invalid caller', async () => {
+    it('Fail to call removeDepositAmount due to invalid caller', async () => {
       await expect(
-        tokenVaultProxy.removeCollateral(alice.address, targetCurrency, '1'),
+        tokenVaultProxy.removeDepositAmount(alice.address, targetCurrency, '1'),
       ).to.be.revertedWith('Only Accepted Contracts');
     });
 
     it('Fail to call depositEscrow due to invalid amount', async () => {
       const amount = ethers.BigNumber.from('20000000000000');
-      await tokenVaultCaller.addCollateral(
+      await tokenVaultCaller.addDepositAmount(
         carol.address,
         targetCurrency,
         amount,
       );
 
       await expect(
-        tokenVaultCaller.removeCollateral(
+        tokenVaultCaller.removeDepositAmount(
           carol.address,
           targetCurrency,
           amount.add('1'),

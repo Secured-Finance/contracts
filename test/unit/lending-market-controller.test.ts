@@ -66,8 +66,8 @@ describe('LendingMarketController', () => {
     );
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
     await mockCurrencyController.mock.currencyExists.returns(true);
-    await mockTokenVault.mock.addCollateral.returns();
-    await mockTokenVault.mock.removeCollateral.returns();
+    await mockTokenVault.mock.addDepositAmount.returns();
+    await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
 
     // Deploy libraries

@@ -391,15 +391,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         lendingMarketController().cleanOrders(_ccy, msg.sender);
 
         uint256 withdrawAmt;
-        uint256 collateral = Storage.slot().depositAmounts[msg.sender][_ccy];
+        uint256 depositAmount = Storage.slot().depositAmounts[msg.sender][_ccy];
         if (isCollateral(_ccy)) {
             uint256 maxWithdrawETH = _getWithdrawableCollateral(msg.sender);
             uint256 maxWithdraw = currencyController().convertFromETH(_ccy, maxWithdrawETH);
 
             withdrawAmt = _amount > maxWithdraw ? maxWithdraw : _amount;
-            withdrawAmt = collateral >= withdrawAmt ? withdrawAmt : collateral;
+            withdrawAmt = depositAmount >= withdrawAmt ? withdrawAmt : depositAmount;
         } else {
-            withdrawAmt = collateral;
+            withdrawAmt = depositAmount;
         }
 
         Storage.slot().depositAmounts[msg.sender][_ccy] -= withdrawAmt;
@@ -411,12 +411,12 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @dev Adds collateral amount.
+     * @dev Adds deposit amount.
      * @param _user User's address
      * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
      */
-    function addCollateral(
+    function addDepositAmount(
         address _user,
         bytes32 _ccy,
         uint256 _amount
@@ -426,12 +426,12 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice Removes collateral amount.
+     * @notice Removes deposit amount.
      * @param _user User's address
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to withdraw.
      */
-    function removeCollateral(
+    function removeDepositAmount(
         address _user,
         bytes32 _ccy,
         uint256 _amount
@@ -460,8 +460,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _amountOut,
         uint24 _poolFee
     ) external override onlyAcceptedContracts returns (uint256 amountIn) {
-        uint256 collateralAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
-        require(collateralAmount > 0, "No collateral in the selected currency");
+        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
+        require(depositAmount > 0, "No deposit amount in the selected currency");
 
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
             tokenIn: getTokenAddress(_ccyFrom),
@@ -470,7 +470,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             recipient: address(this),
             deadline: block.timestamp,
             amountOut: _amountOut,
-            amountInMaximum: collateralAmount,
+            amountInMaximum: depositAmount,
             sqrtPriceLimitX96: 0
         });
 

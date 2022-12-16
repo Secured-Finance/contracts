@@ -13,20 +13,20 @@ contract TokenVaultCallerMock {
         lendingMarketController = ILendingMarketController(_lendingMarketController);
     }
 
-    function addCollateral(
+    function addDepositAmount(
         address user,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.addCollateral(user, ccy, amount);
+        tokenVault.addDepositAmount(user, ccy, amount);
     }
 
-    function removeCollateral(
+    function removeDepositAmount(
         address user,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.removeCollateral(user, ccy, amount);
+        tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
     function swapDepositAmounts(

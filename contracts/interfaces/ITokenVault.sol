@@ -69,13 +69,13 @@ interface ITokenVault {
 
     function withdraw(bytes32 ccy, uint256 amount) external;
 
-    function addCollateral(
+    function addDepositAmount(
         address user,
         bytes32 ccy,
         uint256 amount
     ) external;
 
-    function removeCollateral(
+    function removeDepositAmount(
         address user,
         bytes32 ccy,
         uint256 amount

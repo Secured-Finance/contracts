@@ -867,14 +867,14 @@ contract LendingMarketController is
             ];
 
             if (_side == ProtocolTypes.Side.BORROW) {
-                tokenVault().addCollateral(_user, _ccy, _amount - remainingAmount);
+                tokenVault().addDepositAmount(_user, _ccy, _amount - remainingAmount);
                 IFutureValueVault(futureValueVault).addBorrowFutureValue(
                     _user,
                     filledFutureValue,
                     _maturity
                 );
             } else {
-                tokenVault().removeCollateral(_user, _ccy, _amount - remainingAmount);
+                tokenVault().removeDepositAmount(_user, _ccy, _amount - remainingAmount);
                 IFutureValueVault(futureValueVault).addLendFutureValue(
                     _user,
                     filledFutureValue,
@@ -910,13 +910,13 @@ contract LendingMarketController is
             );
 
         if (removedLendOrderAmount > removedBorrowOrderAmount) {
-            tokenVault().removeCollateral(
+            tokenVault().removeDepositAmount(
                 _user,
                 _ccy,
                 removedLendOrderAmount - removedBorrowOrderAmount
             );
         } else if (removedLendOrderAmount < removedBorrowOrderAmount) {
-            tokenVault().addCollateral(
+            tokenVault().addDepositAmount(
                 _user,
                 _ccy,
                 removedBorrowOrderAmount - removedLendOrderAmount
