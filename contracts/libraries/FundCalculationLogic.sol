@@ -67,7 +67,7 @@ library FundCalculationLogic {
 
         // Swap collateral from deposited currency to debt currency using Uniswap.
         // This swapped collateral is used to unwind the debt.
-        AddressResolverLib.tokenVault().swapCollateral(
+        AddressResolverLib.tokenVault().swapDepositAmounts(
             _user,
             _collateralCcy,
             _debtCcy,

@@ -12,14 +12,6 @@ interface ILendingMarketController {
         uint256 maturity
     );
     event RotateLendingMarkets(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event PlaceOrder(
-        address indexed maker,
-        bytes32 indexed ccy,
-        ProtocolTypes.Side side,
-        uint256 indexed maturity,
-        uint256 amount,
-        uint256 unitPrice
-    );
     event FillOrder(
         address indexed taker,
         bytes32 indexed ccy,
@@ -214,5 +206,5 @@ interface ILendingMarketController {
 
     function cleanAllOrders(address user) external;
 
-    function cleanOrders(bytes32 ccy, address user) external;
+    function cleanOrders(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 }

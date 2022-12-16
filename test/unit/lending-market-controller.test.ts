@@ -494,7 +494,6 @@ describe('LendingMarketController', () => {
         )
         .then(async (tx) => {
           await expect(tx).to.emit(lendingMarket1, 'MakeOrder');
-          await expect(tx).to.emit(lendingMarketControllerProxy, 'PlaceOrder');
           await expect(tx).to.not.emit(
             lendingMarketControllerProxy,
             'FillOrder',
@@ -761,7 +760,6 @@ describe('LendingMarketController', () => {
           '9800',
         )
         .then(async (tx) => {
-          await expect(tx).to.emit(lendingMarketControllerProxy, 'PlaceOrder');
           await expect(tx).to.not.emit(
             lendingMarketControllerProxy,
             'FillOrder',
@@ -776,7 +774,6 @@ describe('LendingMarketController', () => {
           value: '100000000000000000',
         })
         .then(async (tx) => {
-          await expect(tx).to.emit(lendingMarketControllerProxy, 'PlaceOrder');
           await expect(tx).to.not.emit(
             lendingMarketControllerProxy,
             'FillOrder',
@@ -794,7 +791,6 @@ describe('LendingMarketController', () => {
           { value: '100000000000000000' },
         )
         .then(async (tx) => {
-          await expect(tx).to.emit(lendingMarketControllerProxy, 'PlaceOrder');
           await expect(tx).to.not.emit(
             lendingMarketControllerProxy,
             'FillOrder',
@@ -1632,7 +1628,7 @@ describe('LendingMarketController', () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(1);
         await mockTokenVault.mock.getDepositAmount.returns(1);
-        await mockTokenVault.mock.swapCollateral.returns(0);
+        await mockTokenVault.mock.swapDepositAmounts.returns(0);
       });
 
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {

@@ -61,7 +61,7 @@ describe('TokenVault', () => {
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
-    await mockLendingMarketController.mock.cleanOrders.returns();
+    await mockLendingMarketController.mock.cleanOrders.returns(0);
     await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(0);
     await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
       0,
@@ -487,7 +487,7 @@ describe('TokenVault', () => {
 
       await tokenVaultCaller
         .connect(signers[1])
-        .swapCollateral(
+        .swapDepositAmounts(
           signers[1].address,
           targetCurrency,
           previousCurrency,
@@ -549,7 +549,8 @@ describe('TokenVault', () => {
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
         '2500',
       );
-      expect(await tokenVaultProxy.isCovered(signer.address)).to.true;
+      expect(await tokenVaultProxy['isCovered(address)'](signer.address)).to
+        .true;
 
       await mockCurrencyController.mock[
         'convertToETH(bytes32,uint256)'
@@ -558,7 +559,8 @@ describe('TokenVault', () => {
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
         '10000',
       );
-      expect(await tokenVaultProxy.isCovered(signer.address)).to.false;
+      expect(await tokenVaultProxy['isCovered(address)'](signer.address)).to
+        .false;
     });
 
     it('Get the liquidation amount', async () => {

@@ -201,7 +201,7 @@ describe('Integration Test: Orders', async () => {
       }
     });
 
-    it('Make borrow orders by Carol', async () => {
+    it('Make borrow orders by Dave', async () => {
       const ethMaturities = await lendingMarketController.getMaturities(
         hexETHString,
       );
@@ -963,11 +963,13 @@ describe('Integration Test: Orders', async () => {
 
         await wFILToken
           .connect(aliceSigner)
-          .approve(tokenVault.address, collateralAmount.mul(2))
+          .approve(tokenVault.address, collateralAmount.mul(3))
           .then((tx) => tx.wait());
         await tokenVault
           .connect(aliceSigner)
-          .deposit(hexFILString, collateralAmount, { value: collateralAmount })
+          .deposit(hexFILString, collateralAmount.mul(3), {
+            value: collateralAmount.mul(3),
+          })
           .then((tx) => tx.wait());
 
         await expect(

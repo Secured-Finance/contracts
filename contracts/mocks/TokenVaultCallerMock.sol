@@ -29,14 +29,14 @@ contract TokenVaultCallerMock {
         tokenVault.removeCollateral(user, ccy, amount);
     }
 
-    function swapCollateral(
+    function swapDepositAmounts(
         address _user,
         bytes32 _ccyIn,
         bytes32 _ccyOut,
         uint256 _amountOut,
         uint24 _poolFee
     ) public returns (uint256 amountIn) {
-        return tokenVault.swapCollateral(_user, _ccyIn, _ccyOut, _amountOut, _poolFee);
+        return tokenVault.swapDepositAmounts(_user, _ccyIn, _ccyOut, _amountOut, _poolFee);
     }
 
     function depositFrom(
@@ -83,7 +83,7 @@ contract TokenVaultCallerMock {
         return lendingMarketController.calculateFunds(_ccy, _user);
     }
 
-    function cleanOrders(bytes32 _ccy, address _user) public {
+    function cleanOrders(bytes32 _ccy, address _user) public returns (uint256 activeOrderCount) {
         return lendingMarketController.cleanOrders(_ccy, _user);
     }
 }

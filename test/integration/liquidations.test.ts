@@ -125,7 +125,7 @@ describe('Integration Test: Liquidations', async () => {
     }
 
     await tokenVault.connect(owner).deposit(hexETHString, '10000000000', {
-      value: '100000000000000000000',
+      value: '10000000000',
     });
   });
 

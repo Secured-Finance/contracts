@@ -16,6 +16,13 @@ interface ITokenVault {
         uint256 amountOut
     );
 
+    function isCovered(
+        address user,
+        bytes32 ccy,
+        uint256 unsettledExp,
+        ProtocolTypes.Side unsettledOrderSide
+    ) external view returns (bool);
+
     function isCovered(address user) external view returns (bool);
 
     function isCollateral(bytes32 _ccy) external view returns (bool);
@@ -74,7 +81,7 @@ interface ITokenVault {
         uint256 amount
     ) external;
 
-    function swapCollateral(
+    function swapDepositAmounts(
         address user,
         bytes32 ccyFrom,
         bytes32 ccyTo,

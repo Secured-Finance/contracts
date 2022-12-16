@@ -41,7 +41,7 @@ contract LendingMarketController is
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     uint256 private constant BASIS_TERM = 3;
-    uint256 private constant MAXIMUM_ORDER_COUNT = 5;
+    uint256 private constant MAXIMUM_ORDER_COUNT = 20;
 
     /**
      * @notice Modifier to check if the currency has a lending market.
@@ -66,11 +66,6 @@ contract LendingMarketController is
             "Invalid maturity"
         );
         _;
-    }
-
-    modifier hasEnoughCollateral(address _user) {
-        _;
-        require(tokenVault().isCovered(_user), "Not enough collateral");
     }
 
     /**
@@ -533,14 +528,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    )
-        external
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        hasEnoughCollateral(msg.sender)
-        returns (bool)
-    {
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
         return true;
@@ -562,14 +550,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    )
-        external
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        hasEnoughCollateral(msg.sender)
-        returns (bool)
-    {
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         tokenVault().depositFrom(msg.sender, _ccy, _amount);
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
@@ -589,15 +570,7 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _unitPrice
-    )
-        external
-        payable
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        hasEnoughCollateral(msg.sender)
-        returns (bool)
-    {
+    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(
             _ccy,
@@ -623,15 +596,7 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _unitPrice
-    )
-        external
-        payable
-        override
-        nonReentrant
-        ifValidMaturity(_ccy, _maturity)
-        hasEnoughCollateral(msg.sender)
-        returns (bool)
-    {
+    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, msg.value);
         _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(
@@ -805,13 +770,16 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _user User's address
      */
-    function cleanOrders(bytes32 _ccy, address _user) public override {
+    function cleanOrders(bytes32 _ccy, address _user)
+        public
+        override
+        returns (uint256 totalActiveOrderCount)
+    {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
         if (!ccySet.contains(_ccy)) {
-            return;
+            return 0;
         }
 
-        uint256 totalActiveOrderCount = 0;
         bool futureValueExists = false;
         uint256[] memory maturities = getMaturities(_ccy);
 
@@ -825,11 +793,7 @@ contract LendingMarketController is
             (uint256 activeOrderCount, bool isCleaned) = _cleanOrders(_ccy, maturities[j], _user);
             totalActiveOrderCount += activeOrderCount;
 
-            if (isCleaned) {
-                currentFutureValue = _convertFutureValueToGenesisValue(_ccy, maturities[j], _user);
-            }
-
-            if (currentFutureValue != 0) {
+            if (currentFutureValue != 0 || isCleaned) {
                 futureValueExists = true;
             }
         }
@@ -875,27 +839,29 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice,
-        bool _ignoreRemainingAmount
-    ) private returns (bool isPlaced) {
+        bool _isForced
+    ) private returns (bool isFilled) {
         require(_amount > 0, "Invalid amount");
-        (uint256 activeOrderCount, ) = _cleanOrders(_ccy, _maturity, _user);
+        uint256 activeOrderCount = cleanOrders(_ccy, _user);
+
+        if (!_isForced) {
+            require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
+        }
 
         (uint256 filledFutureValue, uint256 remainingAmount) = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).createOrder(_side, _user, _amount, _unitPrice, _ignoreRemainingAmount);
+        ).createOrder(_side, _user, _amount, _unitPrice, _isForced);
 
-        // The case that an order was made, or taken partially
-        if (filledFutureValue == 0 || remainingAmount > 0) {
-            activeOrderCount += 1;
+        if (!_isForced) {
+            // The case that an order was made, or taken partially
+            if (filledFutureValue == 0 || remainingAmount > 0) {
+                activeOrderCount += 1;
+            }
+
+            require(activeOrderCount <= MAXIMUM_ORDER_COUNT, "Too many active orders");
         }
 
-        require(activeOrderCount <= MAXIMUM_ORDER_COUNT, "Too many active orders");
-
-        if (filledFutureValue == 0 && !_ignoreRemainingAmount) {
-            emit PlaceOrder(_user, _ccy, _side, _maturity, _amount, _unitPrice);
-            isPlaced = true;
-            Storage.slot().usedCurrencies[_user].add(_ccy);
-        } else if (filledFutureValue != 0) {
+        if (filledFutureValue != 0) {
             address futureValueVault = Storage.slot().futureValueVaults[_ccy][
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ];
@@ -918,9 +884,10 @@ contract LendingMarketController is
 
             emit FillOrder(_user, _ccy, _side, _maturity, _amount, _unitPrice, filledFutureValue);
 
-            isPlaced = false;
-            Storage.slot().usedCurrencies[_user].add(_ccy);
+            isFilled = true;
         }
+
+        Storage.slot().usedCurrencies[_user].add(_ccy);
     }
 
     function _cleanOrders(
