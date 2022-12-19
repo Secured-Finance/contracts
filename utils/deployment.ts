@@ -56,6 +56,9 @@ const deployContracts = async () => {
   const wFILToken = await ethers
     .getContractFactory('MockEFIL')
     .then((factory) => factory.deploy('100000000000000000000000'));
+  const wUSDCToken = await ethers
+    .getContractFactory('MockUSDC')
+    .then((factory) => factory.deploy('100000000000000000'));
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')
@@ -211,6 +214,11 @@ const deployContracts = async () => {
       genesisDate,
       COMPOUND_FACTOR,
     ),
+    lendingMarketControllerProxy.initializeLendingMarket(
+      hexUSDCString,
+      genesisDate,
+      COMPOUND_FACTOR,
+    ),
   ]);
 
   return {
@@ -224,6 +232,7 @@ const deployContracts = async () => {
     proxyController,
     wETHToken,
     wFILToken,
+    wUSDCToken,
     btcToETHPriceFeed: priceFeeds[hexBTCString],
     ethToUSDPriceFeed: priceFeeds[hexETHString],
     filToETHPriceFeed: priceFeeds[hexFILString],

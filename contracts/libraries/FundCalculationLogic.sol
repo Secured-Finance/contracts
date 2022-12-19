@@ -22,6 +22,15 @@ library FundCalculationLogic {
         uint256 liquidationPVAmount;
     }
 
+    struct CalculatedTotalFundInETHVars {
+        bool[] isCollateral;
+        bytes32 ccy;
+        uint256[] amounts;
+        uint256[] amountsInETH;
+        uint256 plusDepositAmount;
+        uint256 minusDepositAmount;
+    }
+
     function convertToLiquidationAmountFromCollateral(
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
@@ -389,7 +398,11 @@ library FundCalculationLogic {
         }
     }
 
-    function calculateTotalFundsInETH(address _user)
+    function calculateTotalFundsInETH(
+        address _user,
+        bytes32 _depositCcy,
+        uint256 _depositAmount
+    )
         external
         view
         returns (
@@ -399,18 +412,20 @@ library FundCalculationLogic {
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
+            uint256 totalBorrowedAmount,
+            bool isEnoughDeposit
         )
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
-        bool[] memory isCollateral = AddressResolverLib.tokenVault().isCollateral(
-            currencySet.values()
-        );
+        CalculatedTotalFundInETHVars memory vars;
+
+        vars.isCollateral = AddressResolverLib.tokenVault().isCollateral(currencySet.values());
+        vars.plusDepositAmount = _depositAmount;
 
         // Calculate total funds from the user's order list
         for (uint256 i = 0; i < currencySet.length(); i++) {
-            bytes32 ccy = currencySet.at(i);
-            uint256[] memory amounts = new uint256[](7);
+            vars.ccy = currencySet.at(i);
+            vars.amounts = new uint256[](7);
 
             // 0: workingLendOrdersAmount
             // 1: claimableAmount
@@ -420,31 +435,40 @@ library FundCalculationLogic {
             // 5: debtAmount
             // 6: borrowedAmount
             (
-                amounts[0],
-                amounts[1],
-                amounts[2],
-                amounts[3],
-                amounts[4],
-                amounts[5],
-                amounts[6]
-            ) = calculateFunds(ccy, _user);
+                vars.amounts[0],
+                vars.amounts[1],
+                vars.amounts[2],
+                vars.amounts[3],
+                vars.amounts[4],
+                vars.amounts[5],
+                vars.amounts[6]
+            ) = calculateFunds(vars.ccy, _user);
 
-            uint256[] memory amountsInETH = AddressResolverLib.currencyController().convertToETH(
-                ccy,
-                amounts
+            if (vars.ccy == _depositCcy) {
+                // plusDepositAmount: depositAmount + borrowedAmount
+                // minusDepositAmount: workingLendOrdersAmount + lentAmount;
+                vars.plusDepositAmount += vars.amounts[6];
+                vars.minusDepositAmount += vars.amounts[0] + vars.amounts[3];
+            }
+
+            vars.amountsInETH = AddressResolverLib.currencyController().convertToETH(
+                vars.ccy,
+                vars.amounts
             );
 
-            totalWorkingLendOrdersAmount += amountsInETH[0];
-            totalClaimableAmount += amountsInETH[1];
-            totalCollateralAmount += amountsInETH[2];
-            totalWorkingBorrowOrdersAmount += amountsInETH[4];
-            totalDebtAmount += amountsInETH[5];
+            totalWorkingLendOrdersAmount += vars.amountsInETH[0];
+            totalClaimableAmount += vars.amountsInETH[1];
+            totalCollateralAmount += vars.amountsInETH[2];
+            totalWorkingBorrowOrdersAmount += vars.amountsInETH[4];
+            totalDebtAmount += vars.amountsInETH[5];
 
-            if (isCollateral[i]) {
-                totalLentAmount += amountsInETH[3];
-                totalBorrowedAmount += amountsInETH[6];
+            if (vars.isCollateral[i]) {
+                totalLentAmount += vars.amountsInETH[3];
+                totalBorrowedAmount += vars.amountsInETH[6];
             }
         }
+
+        isEnoughDeposit = vars.plusDepositAmount >= vars.minusDepositAmount;
     }
 
     function _calculateCurrentFVFromFVInMaturity(

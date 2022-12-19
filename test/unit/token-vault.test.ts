@@ -71,6 +71,7 @@ describe('TokenVault', () => {
       0,
       0,
       0,
+      true,
     );
     await mockLendingMarketController.mock.calculateFunds.returns(
       0,
@@ -292,6 +293,7 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        true,
       );
 
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('0');
@@ -316,6 +318,7 @@ describe('TokenVault', () => {
         usedValue,
         0,
         0,
+        true,
       );
 
       expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
@@ -366,6 +369,7 @@ describe('TokenVault', () => {
         0,
         0,
         borrowedAmount,
+        true,
       );
 
       await tokenVaultProxy.connect(carol).deposit(targetCurrency, value);
@@ -403,6 +407,7 @@ describe('TokenVault', () => {
         0,
         debtAmount,
         0,
+        true,
       );
 
       await tokenVaultProxy.connect(dave).deposit(targetCurrency, value);
@@ -446,6 +451,7 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        true,
       );
 
       await tokenVaultCaller
@@ -526,6 +532,7 @@ describe('TokenVault', () => {
         0,
         debtAmount,
         0,
+        true,
       );
 
       const nonCollateralCurrency = ethers.utils.formatBytes32String(
@@ -589,6 +596,7 @@ describe('TokenVault', () => {
         0,
         debtAmount,
         0,
+        true,
       );
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);

@@ -430,6 +430,8 @@ describe('Integration Test: Orders', async () => {
       const { totalWorkingBorrowOrdersAmount } =
         await lendingMarketController.calculateTotalFundsInETH(
           aliceSigner.address,
+          ethers.utils.formatBytes32String(''),
+          0,
         );
 
       expect(totalWorkingBorrowOrdersAmount.toString()).to.equal(
@@ -448,6 +450,8 @@ describe('Integration Test: Orders', async () => {
       const { totalWorkingBorrowOrdersAmount } =
         await lendingMarketController.calculateTotalFundsInETH(
           aliceSigner.address,
+          ethers.utils.formatBytes32String(''),
+          0,
         );
 
       const manualCoverage = ethers.BigNumber.from(
@@ -525,6 +529,8 @@ describe('Integration Test: Orders', async () => {
       const { totalWorkingBorrowOrdersAmount } =
         await lendingMarketController.calculateTotalFundsInETH(
           aliceSigner.address,
+          ethers.utils.formatBytes32String(''),
+          0,
         );
       expect(totalWorkingBorrowOrdersAmount.toString()).to.be.equal('0');
 

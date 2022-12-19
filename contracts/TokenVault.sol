@@ -43,6 +43,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
         uint256 borrowedAmount;
+        bool isEnoughDeposit;
     }
 
     /**
@@ -549,6 +550,32 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         )
     {
         CalculatedFundVars memory vars;
+
+        uint256 depositAmount = Storage.slot().depositAmounts[_user][_unsettledOrderCcy];
+        uint256 unsettledBorrowOrdersAmountInETH;
+
+        if (_unsettledOrderAmount > 0) {
+            if (_isUnsettledBorrowOrder) {
+                unsettledBorrowOrdersAmountInETH = currencyController().convertToETH(
+                    _unsettledOrderCcy,
+                    _unsettledOrderAmount
+                );
+            } else {
+                require(
+                    depositAmount >= _unsettledOrderAmount,
+                    "Not enough collateral in the selected currency"
+                );
+                depositAmount -= _unsettledOrderAmount;
+
+                if (isCollateral(_unsettledOrderCcy)) {
+                    vars.workingLendOrdersAmount += currencyController().convertToETH(
+                        _unsettledOrderCcy,
+                        _unsettledOrderAmount
+                    );
+                }
+            }
+        }
+
         (
             vars.workingLendOrdersAmount,
             ,
@@ -556,44 +583,30 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             vars.lentAmount,
             vars.workingBorrowOrdersAmount,
             vars.debtAmount,
-            vars.borrowedAmount
-        ) = lendingMarketController().calculateTotalFundsInETH(_user);
+            vars.borrowedAmount,
+            vars.isEnoughDeposit
+        ) = lendingMarketController().calculateTotalFundsInETH(
+            _user,
+            _unsettledOrderCcy,
+            depositAmount
+        );
+
+        require(
+            vars.isEnoughDeposit || _isUnsettledBorrowOrder || _unsettledOrderAmount == 0,
+            "Not enough collateral in the selected currency"
+        );
+
         uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInETH(_user);
-
-        if (_unsettledOrderAmount > 0) {
-            uint256[] memory amounts = new uint256[](2);
-            amounts[0] = _unsettledOrderAmount;
-            amounts[1] = Storage.slot().depositAmounts[_user][_unsettledOrderCcy];
-            uint256[] memory amountsInETH = currencyController().convertToETH(
-                _unsettledOrderCcy,
-                amounts
-            );
-            uint256 unsettledOrderAmountInETH = amountsInETH[0];
-            uint256 depositAmountInETH = amountsInETH[1];
-
-            require(unsettledOrderAmountInETH != 0, "Too small order amount");
-
-            if (_isUnsettledBorrowOrder) {
-                vars.workingBorrowOrdersAmount += unsettledOrderAmountInETH;
-            } else {
-                // NOTE: To check if the user has enough collateral correctly here, the user's order list
-                // must be cleaned up first before this method is executed.
-                require(
-                    depositAmountInETH >= vars.workingLendOrdersAmount + unsettledOrderAmountInETH,
-                    "Not enough collateral in the selected currency"
-                );
-                if (isCollateral(_unsettledOrderCcy)) {
-                    vars.workingLendOrdersAmount += unsettledOrderAmountInETH;
-                }
-            }
-        }
 
         uint256 actualPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
         uint256 minusCollateral = vars.workingLendOrdersAmount + vars.lentAmount;
         uint256 plusCollateral = actualPlusCollateral + vars.collateralAmount;
 
         totalCollateral = plusCollateral >= minusCollateral ? plusCollateral - minusCollateral : 0;
-        totalUsedCollateral = vars.workingBorrowOrdersAmount + vars.debtAmount;
+        totalUsedCollateral =
+            vars.workingBorrowOrdersAmount +
+            vars.debtAmount +
+            unsettledBorrowOrdersAmountInETH;
         totalActualCollateral = actualPlusCollateral >= minusCollateral
             ? actualPlusCollateral - minusCollateral
             : 0;

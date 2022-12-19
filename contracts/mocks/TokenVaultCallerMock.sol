@@ -51,7 +51,11 @@ contract TokenVaultCallerMock {
         return lendingMarketController.getTotalPresentValueInETH(_user);
     }
 
-    function calculateTotalFundsInETH(address _user)
+    function calculateTotalFundsInETH(
+        address _user,
+        bytes32 _depositCcy,
+        uint256 _depositAmount
+    )
         public
         view
         returns (
@@ -61,10 +65,11 @@ contract TokenVaultCallerMock {
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
+            uint256 totalBorrowedAmount,
+            bool isEnoughDeposit
         )
     {
-        return lendingMarketController.calculateTotalFundsInETH(_user);
+        return lendingMarketController.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
     }
 
     function calculateFunds(bytes32 _ccy, address _user)

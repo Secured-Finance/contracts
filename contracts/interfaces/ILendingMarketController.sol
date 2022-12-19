@@ -139,7 +139,11 @@ interface ILendingMarketController {
             uint256 borrowedAmount
         );
 
-    function calculateTotalFundsInETH(address user)
+    function calculateTotalFundsInETH(
+        address user,
+        bytes32 depositCcy,
+        uint256 depositAmount
+    )
         external
         view
         returns (
@@ -149,7 +153,8 @@ interface ILendingMarketController {
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
+            uint256 totalBorrowedAmount,
+            bool isEnoughDeposit
         );
 
     function isInitializedLendingMarket(bytes32 ccy) external view returns (bool);

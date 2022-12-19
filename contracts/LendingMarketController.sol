@@ -416,7 +416,11 @@ contract LendingMarketController is
      * for all currencies in ETH.
      * @param _user User's address
      */
-    function calculateTotalFundsInETH(address _user)
+    function calculateTotalFundsInETH(
+        address _user,
+        bytes32 _depositCcy,
+        uint256 _depositAmount
+    )
         external
         view
         override
@@ -427,10 +431,11 @@ contract LendingMarketController is
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
+            uint256 totalBorrowedAmount,
+            bool isEnoughDeposit
         )
     {
-        return FundCalculationLogic.calculateTotalFundsInETH(_user);
+        return FundCalculationLogic.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
     }
 
     /**
