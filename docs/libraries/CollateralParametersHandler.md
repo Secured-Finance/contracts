@@ -33,7 +33,7 @@ _Gets liquidation threshold rate_
 function uniswapRouter() internal view returns (contract ISwapRouter)
 ```
 
-_Gets min collateral rate_
+_Gets Uniswap Router contract address_
 
 ### setCollateralParameters
 

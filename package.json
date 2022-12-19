@@ -24,7 +24,7 @@
     "ganache": "ganache",
     "prepublishOnly": "npm run compile",
     "docgen": "hardhat docgen",
-    "predocgen": "npm run compile:force && rm -rf docs"
+    "predocgen": "rm -rf cache && npm run compile:force && rm -rf docs"
   },
   "author": "Secured Finance",
   "license": "ISC",

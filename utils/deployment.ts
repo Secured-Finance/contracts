@@ -12,9 +12,9 @@ import {
   toBytes32,
 } from './strings';
 
-const LIQUIDATION_THRESHOLD_RATE = 12500;
+export const LIQUIDATION_THRESHOLD_RATE = 12500;
 
-const COMPOUND_FACTOR = '1010000000000000000';
+export const COMPOUND_FACTOR = '1010000000000000000';
 
 const deployContracts = async () => {
   // Deploy libraries
@@ -54,10 +54,11 @@ const deployContracts = async () => {
   ]);
 
   const wFILToken = await ethers
-    .getContractFactory('MockERC20')
-    .then((factory) =>
-      factory.deploy('Wrapped Filecoin', 'WFIL', '100000000000000000000000'),
-    );
+    .getContractFactory('MockEFIL')
+    .then((factory) => factory.deploy('100000000000000000000000'));
+  const wUSDCToken = await ethers
+    .getContractFactory('MockUSDC')
+    .then((factory) => factory.deploy('100000000000000000'));
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')
@@ -90,7 +91,6 @@ const deployContracts = async () => {
     proxyController.setTokenVaultImpl(
       tokenVault.address,
       LIQUIDATION_THRESHOLD_RATE,
-      // TODO: Need to set a mock uniswap contract here
       ethers.constants.AddressZero,
       wETHToken.address,
     ),
@@ -214,6 +214,11 @@ const deployContracts = async () => {
       genesisDate,
       COMPOUND_FACTOR,
     ),
+    lendingMarketControllerProxy.initializeLendingMarket(
+      hexUSDCString,
+      genesisDate,
+      COMPOUND_FACTOR,
+    ),
   ]);
 
   return {
@@ -227,10 +232,11 @@ const deployContracts = async () => {
     proxyController,
     wETHToken,
     wFILToken,
+    wUSDCToken,
     btcToETHPriceFeed: priceFeeds[hexBTCString],
     ethToUSDPriceFeed: priceFeeds[hexETHString],
     filToETHPriceFeed: priceFeeds[hexFILString],
-    usdcToUSDriceFeed: priceFeeds[hexUSDCString],
+    usdcToUSDPriceFeed: priceFeeds[hexUSDCString],
   };
 };
 

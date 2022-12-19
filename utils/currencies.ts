@@ -3,7 +3,7 @@ import {
   btcToETHRate,
   ethToUSDRate,
   filToETHRate,
-  usdcToUSDRate,
+  usdcToETHRate,
 } from './numbers';
 import {
   hexBTCString,
@@ -88,10 +88,10 @@ const mockRates: MockRate[] = [
     rate: btcToETHRate,
   },
   {
-    name: 'USDC/USD',
+    name: 'USDC/ETH',
     key: hexUSDCString,
     decimals: 8,
-    rate: usdcToUSDRate,
+    rate: usdcToETHRate,
   },
 ];
 

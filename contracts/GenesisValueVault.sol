@@ -88,11 +88,25 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             int256(10**decimals(_ccy));
     }
 
-    function calculateGVFromFV(
+    function calculateCurrentFVFromFVInMaturity(
         bytes32 _ccy,
         uint256 _basisMaturity,
         int256 _futureValue
     ) external view override returns (int256) {
+        // NOTE: These calculation steps "FV -> GV -> FV" are needed to match the actual conversion step.
+        // Otherwise, Solidity's truncation specification creates a difference in the calculated values.
+        // The formula is:
+        // genesisValue = featureValueInMaturity / compoundFactorInMaturity.
+        // currentFeatureValue = genesisValue * currentCompoundFactor
+        int256 genesisValue = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
+        return calculateFVFromGV(_ccy, 0, genesisValue);
+    }
+
+    function calculateGVFromFV(
+        bytes32 _ccy,
+        uint256 _basisMaturity,
+        int256 _futureValue
+    ) public view override returns (int256) {
         uint256 compoundFactor = Storage
         .slot()
         .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
@@ -107,7 +121,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         uint256 _basisMaturity,
         int256 _genesisValue
-    ) external view override returns (int256) {
+    ) public view override returns (int256) {
         uint256 compoundFactor = _basisMaturity == 0
             ? getCompoundFactor(_ccy)
             : Storage.slot().maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;

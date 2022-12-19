@@ -14,7 +14,8 @@ library OrderBookLogic {
     }
 
     function getLowestLendUnitPrice() public view returns (uint256) {
-        return Storage.slot().lendOrders[Storage.slot().maturity].first();
+        uint256 unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].first();
+        return unitPrice == 0 ? ProtocolTypes.PRICE_DIGIT : unitPrice;
     }
 
     function getBorrowOrderBook(uint256 _limit)
@@ -299,8 +300,8 @@ library OrderBookLogic {
                     }
                 }
             } else {
+                activeOrderCount += 1;
                 if (!isPastMaturity) {
-                    activeOrderCount += 1;
                     activeOrderIds[i - inActiveOrderCount] = orderId;
                 }
                 assembly {

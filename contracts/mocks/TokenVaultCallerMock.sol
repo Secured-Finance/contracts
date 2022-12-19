@@ -13,32 +13,30 @@ contract TokenVaultCallerMock {
         lendingMarketController = ILendingMarketController(_lendingMarketController);
     }
 
-    function addCollateral(
+    function addDepositAmount(
         address user,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.addCollateral(user, ccy, amount);
+        tokenVault.addDepositAmount(user, ccy, amount);
     }
 
-    function removeCollateral(
+    function removeDepositAmount(
         address user,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.removeCollateral(user, ccy, amount);
+        tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
-    function swapCollateral(
+    function swapDepositAmounts(
         address _user,
         bytes32 _ccyIn,
         bytes32 _ccyOut,
-        uint256 _amountInMax,
         uint256 _amountOut,
         uint24 _poolFee
     ) public returns (uint256 amountIn) {
-        return
-            tokenVault.swapCollateral(_user, _ccyIn, _ccyOut, _amountInMax, _amountOut, _poolFee);
+        return tokenVault.swapDepositAmounts(_user, _ccyIn, _ccyOut, _amountOut, _poolFee);
     }
 
     function depositFrom(
@@ -53,7 +51,11 @@ contract TokenVaultCallerMock {
         return lendingMarketController.getTotalPresentValueInETH(_user);
     }
 
-    function calculateTotalFundsInETH(address _user)
+    function calculateTotalFundsInETH(
+        address _user,
+        bytes32 _depositCcy,
+        uint256 _depositAmount
+    )
         public
         view
         returns (
@@ -63,10 +65,11 @@ contract TokenVaultCallerMock {
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
+            uint256 totalBorrowedAmount,
+            bool isEnoughDeposit
         )
     {
-        return lendingMarketController.calculateTotalFundsInETH(_user);
+        return lendingMarketController.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
     }
 
     function calculateFunds(bytes32 _ccy, address _user)
@@ -85,7 +88,7 @@ contract TokenVaultCallerMock {
         return lendingMarketController.calculateFunds(_ccy, _user);
     }
 
-    function cleanOrders(bytes32 _ccy, address _user) public {
+    function cleanOrders(bytes32 _ccy, address _user) public returns (uint256 activeOrderCount) {
         return lendingMarketController.cleanOrders(_ccy, _user);
     }
 }

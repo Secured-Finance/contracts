@@ -92,16 +92,22 @@ function getMaturityUnitPrice(bytes32 _ccy, uint256 _maturity) public view retur
 function getGenesisValueInFutureValue(bytes32 _ccy, address _user) public view returns (int256)
 ```
 
+### calculateCurrentFVFromFVInMaturity
+
+```solidity
+function calculateCurrentFVFromFVInMaturity(bytes32 _ccy, uint256 _basisMaturity, int256 _futureValue) external view returns (int256)
+```
+
 ### calculateGVFromFV
 
 ```solidity
-function calculateGVFromFV(bytes32 _ccy, uint256 _basisMaturity, int256 _futureValue) external view returns (int256)
+function calculateGVFromFV(bytes32 _ccy, uint256 _basisMaturity, int256 _futureValue) public view returns (int256)
 ```
 
 ### calculateFVFromGV
 
 ```solidity
-function calculateFVFromGV(bytes32 _ccy, uint256 _basisMaturity, int256 _genesisValue) external view returns (int256)
+function calculateFVFromGV(bytes32 _ccy, uint256 _basisMaturity, int256 _genesisValue) public view returns (int256)
 ```
 
 ### initialize

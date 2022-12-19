@@ -24,6 +24,7 @@ struct CalculatedFundVars {
   uint256 workingBorrowOrdersAmount;
   uint256 debtAmount;
   uint256 borrowedAmount;
+  bool isEnoughDeposit;
 }
 ```
 
@@ -203,7 +204,7 @@ Gets the maximum amount of ETH that can be withdrawn from user collateral.
 ### getCoverage
 
 ```solidity
-function getCoverage(address _user) public view returns (uint256)
+function getCoverage(address _user) public view returns (uint256 coverage)
 ```
 
 Gets the rate of collateral used.
@@ -214,7 +215,7 @@ Gets the rate of collateral used.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The rate of collateral used |
+| coverage | uint256 | The rate of collateral used |
 
 ### getUnusedCollateral
 
@@ -306,11 +307,11 @@ Gets liquidation threshold rate
 function getUniswapRouter() external view returns (address uniswapRouter)
 ```
 
-Gets liquidation threshold rate
+Gets Uniswap Router contract address
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| uniswapRouter | address | Uniswap router contract address |
+| uniswapRouter | address | Uniswap Router contract address |
 
 ### registerCurrency
 
@@ -379,13 +380,13 @@ Withdraws funds by the caller from unused collateral.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
-### addCollateral
+### addDepositAmount
 
 ```solidity
-function addCollateral(address _user, bytes32 _ccy, uint256 _amount) external
+function addDepositAmount(address _user, bytes32 _ccy, uint256 _amount) external
 ```
 
-_Adds collateral amount._
+_Adds deposit amount._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -393,13 +394,13 @@ _Adds collateral amount._
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
 
-### removeCollateral
+### removeDepositAmount
 
 ```solidity
-function removeCollateral(address _user, bytes32 _ccy, uint256 _amount) external
+function removeDepositAmount(address _user, bytes32 _ccy, uint256 _amount) external
 ```
 
-Removes collateral amount.
+Removes deposit amount.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -407,20 +408,19 @@ Removes collateral amount.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
-### swapCollateral
+### swapDepositAmounts
 
 ```solidity
-function swapCollateral(address _user, bytes32 _ccyIn, bytes32 _ccyOut, uint256 _amountInMax, uint256 _amountOut, uint24 _poolFee) external returns (uint256 amountIn)
+function swapDepositAmounts(address _user, bytes32 _ccyFrom, bytes32 _ccyTo, uint256 _amountOut, uint24 _poolFee) external returns (uint256 amountIn)
 ```
 
-Swap the collateral to convert to a different currency using Uniswap.
+Swap the deposited amount to convert to a different currency using Uniswap.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
-| _ccyIn | bytes32 | Currency name to be converted from |
-| _ccyOut | bytes32 | Currency name to be converted to |
-| _amountInMax | uint256 | The maximum amount to be converted from |
+| _ccyFrom | bytes32 | Currency name to be converted from |
+| _ccyTo | bytes32 | Currency name to be converted to |
 | _amountOut | uint256 | Amount to be converted to |
 | _poolFee | uint24 | Uniswap pool fee |
 
@@ -446,34 +446,11 @@ Triggers only be contract owner
 function _isCovered(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, bool _isUnsettledBorrowOrder) internal view returns (bool)
 ```
 
-Gets if the collateral has enough coverage.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-| _unsettledOrderCcy | bytes32 | Additional unsettled order currency name in bytes32 |
-| _unsettledOrderAmount | uint256 | Additional unsettled order amount |
-| _isUnsettledBorrowOrder | bool |  |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the collateral has enough coverage or not |
-
-### _getCoverage
+### _getActualCollateralAmount
 
 ```solidity
-function _getCoverage(address _user) internal view returns (uint256 coverage)
+function _getActualCollateralAmount(address _user) private view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalActualCollateral)
 ```
-
-Gets the collateral coverage.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| coverage | uint256 | The rate of collateral used |
 
 ### _getActualCollateralAmount
 
@@ -497,10 +474,10 @@ Calculates maximum amount of ETH that can be withdrawn.
 | ---- | ---- | ----------- |
 | [0] | uint256 | Maximum amount of ETH that can be withdrawn |
 
-### _getTotalInternalCollateralAmountInETH
+### _getTotalInternalDepositAmountInETH
 
 ```solidity
-function _getTotalInternalCollateralAmountInETH(address _user) internal view returns (uint256 totalCollateral)
+function _getTotalInternalDepositAmountInETH(address _user) internal view returns (uint256 totalDepositAmount)
 ```
 
 Gets the total of amount deposited in the user's collateral of all currencies
@@ -512,7 +489,7 @@ Gets the total of amount deposited in the user's collateral of all currencies
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| totalCollateral | uint256 | The total deposited amount in ETH |
+| totalDepositAmount | uint256 | The total deposited amount in ETH |
 
 ### _updateUsedCurrencies
 
