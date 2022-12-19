@@ -24,6 +24,7 @@ struct CalculatedFundVars {
   uint256 workingBorrowOrdersAmount;
   uint256 debtAmount;
   uint256 borrowedAmount;
+  bool isEnoughDeposit;
 }
 ```
 

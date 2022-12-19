@@ -13,6 +13,19 @@ struct CalculatedAmountVars {
 }
 ```
 
+### CalculatedTotalFundInETHVars
+
+```solidity
+struct CalculatedTotalFundInETHVars {
+  bool[] isCollateral;
+  bytes32 ccy;
+  uint256[] amounts;
+  uint256[] amountsInETH;
+  uint256 plusDepositAmount;
+  uint256 minusDepositAmount;
+}
+```
+
 ### convertToLiquidationAmountFromCollateral
 
 ```solidity
@@ -70,7 +83,7 @@ function calculateFunds(bytes32 _ccy, address _user) public view returns (uint25
 ### calculateTotalFundsInETH
 
 ```solidity
-function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
+function calculateTotalFundsInETH(address _user, bytes32 _depositCcy, uint256 _depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
 ```
 
 ### _calculateCurrentFVFromFVInMaturity

@@ -404,7 +404,7 @@ for the selected currency.
 ### calculateTotalFundsInETH
 
 ```solidity
-function calculateTotalFundsInETH(address _user) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
+function calculateTotalFundsInETH(address _user, bytes32 _depositCcy, uint256 _depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
 ```
 
 Gets the funds that are calculated from the user's lending and borrowing order list
@@ -413,6 +413,8 @@ for all currencies in ETH.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
+| _depositCcy | bytes32 |  |
+| _depositAmount | uint256 |  |
 
 ### isInitializedLendingMarket
 
