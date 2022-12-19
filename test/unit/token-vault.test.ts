@@ -33,6 +33,7 @@ describe('TokenVault', () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
+  let ellen: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let targetCurrency: string;
@@ -42,7 +43,8 @@ describe('TokenVault', () => {
   const LIQUIDATION_THRESHOLD_RATE = 12500;
 
   before(async () => {
-    [owner, alice, bob, carol, dave, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, carol, dave, ellen, ...signers] =
+      await ethers.getSigners();
 
     // Set up for the mocks
     mockCurrencyController = await deployMockContract(
@@ -382,7 +384,7 @@ describe('TokenVault', () => {
       ).to.equal(value.add(borrowedAmount));
     });
 
-    it('Add the obligation amount', async () => {
+    it('Add the debt amount', async () => {
       const value = ethers.BigNumber.from('20000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const totalPresentValue = ethers.BigNumber.from('20000000000000');
@@ -425,6 +427,56 @@ describe('TokenVault', () => {
       expect(await tokenVaultProxy.getUnusedCollateral(dave.address)).to.equal(
         valueInETH.sub(debtAmount),
       );
+    });
+
+    it('Add the debt amount with unsettled order amount', async () => {
+      const value = ethers.BigNumber.from('20000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const totalPresentValue = ethers.BigNumber.from('20000000000000');
+      const debtAmount = ethers.BigNumber.from('10000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToETH(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+        valueInETH,
+      );
+      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+        totalPresentValue,
+      );
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        debtAmount,
+        0,
+        false,
+      );
+
+      await tokenVaultProxy.connect(ellen).deposit(targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy.getWithdrawableCollateral(ellen.address),
+      ).to.equal(
+        valueInETH
+          .mul('10000')
+          .sub(debtAmount.mul(LIQUIDATION_THRESHOLD_RATE))
+          .div('10000'),
+      );
+
+      expect(await tokenVaultProxy.getCoverage(ellen.address)).to.equal('5000');
+      expect(
+        await tokenVaultProxy['isCovered(address,bytes32,uint256,uint8)'](
+          ellen.address,
+          targetCurrency,
+          '1',
+          1,
+        ),
+      ).to.false;
     });
 
     it('Add and remove the collateral amount', async () => {
