@@ -281,7 +281,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        amount = (_amount * uint256(price)) / 1e18;
+        amount = (_amount * uint256(price)) / 10**Storage.slot().ethDecimals[_ccy];
     }
 
     /**
@@ -301,7 +301,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
         AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
-        amount = (_amount * price) / 1e18;
+        amount = (_amount * price) / int256(10**Storage.slot().ethDecimals[_ccy]);
     }
 
     /**
@@ -325,7 +325,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
             (, int256 price, , , ) = priceFeed.latestRoundData();
 
-            amounts[i] = (_amounts[i] * uint256(price)) / 1e18;
+            amounts[i] = (_amounts[i] * uint256(price)) / 10**Storage.slot().ethDecimals[_ccy];
         }
     }
 
@@ -346,7 +346,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
         (, int256 price, , , ) = priceFeed.latestRoundData();
 
-        amount = (_amountETH * 1e18) / uint256(price); // add decimals checks
+        amount = (_amountETH * 10**Storage.slot().ethDecimals[_ccy]) / uint256(price); // add decimals checks
         require(amount != 0, "Too small amount");
     }
 

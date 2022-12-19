@@ -9,10 +9,10 @@ import {
   deployContracts,
   LIQUIDATION_THRESHOLD_RATE,
 } from '../../utils/deployment';
-import { filToETHRate, usdcToUSDRate } from '../../utils/numbers';
+import { filToETHRate, usdcToETHRate } from '../../utils/numbers';
 import { hexETHString, hexFILString, hexUSDCString } from '../../utils/strings';
 
-const ERROR_RANGE = BigNumber.from(3000);
+const ERROR_RANGE = BigNumber.from(1000);
 
 describe('Integration Test: Liquidations', async () => {
   let owner: SignerWithAddress;
@@ -25,7 +25,7 @@ describe('Integration Test: Liquidations', async () => {
   let wFILToken: Contract;
   let wUSDCToken: Contract;
   let filToETHPriceFeed: Contract;
-  let usdcToUSDriceFeed: Contract;
+  let usdcToUSDPriceFeed: Contract;
   let mockSwapRouter: Contract;
 
   let filLendingMarkets: Contract[] = [];
@@ -117,7 +117,7 @@ describe('Integration Test: Liquidations', async () => {
         hexUSDCString,
         usdcMaturities[1],
         Side.BORROW,
-        '10000000000',
+        '1000000',
         '7990',
       );
 
@@ -127,7 +127,7 @@ describe('Integration Test: Liquidations', async () => {
         hexUSDCString,
         usdcMaturities[1],
         Side.LEND,
-        '10000000000',
+        '1000000',
         '8010',
       );
 
@@ -170,7 +170,7 @@ describe('Integration Test: Liquidations', async () => {
       wFILToken,
       wUSDCToken,
       filToETHPriceFeed,
-      usdcToUSDriceFeed,
+      usdcToUSDPriceFeed,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
@@ -244,8 +244,8 @@ describe('Integration Test: Liquidations', async () => {
 
     await tokenVault
       .connect(owner)
-      .deposit(hexETHString, '100000000000000000000', {
-        value: '100000000000000000000',
+      .deposit(hexETHString, '1000000000000000000000', {
+        value: '1000000000000000000000',
       });
   });
 
@@ -259,7 +259,7 @@ describe('Integration Test: Liquidations', async () => {
     usdcMaturities = await lendingMarketController.getMaturities(hexUSDCString);
 
     await filToETHPriceFeed.updateAnswer(filToETHRate);
-    await usdcToUSDriceFeed.updateAnswer(usdcToUSDRate);
+    await usdcToUSDPriceFeed.updateAnswer(usdcToETHRate);
   });
 
   describe('Liquidations on FIL market by ETH', async () => {
@@ -851,14 +851,20 @@ describe('Integration Test: Liquidations', async () => {
   });
 
   describe('Liquidations on multiple market', async () => {
-    it('Take an order from both FIL & USDC markets, Liquidate one position', async () => {
-      const alice = singers[10];
-      const bob = singers[11];
+    let alice: SignerWithAddress;
+    let bob: SignerWithAddress;
+    let singerIdx = 10;
+    let lendingInfo: LendingInfo;
 
-      const lendingInfo = new LendingInfo(alice.address);
-      const filledOrderAmountInFIL = BigNumber.from('200000000000000000000');
-      const filledOrderAmountInUSDC = BigNumber.from('200000000000');
-      const depositAmountInETH = BigNumber.from('1000000000000000000');
+    const filledOrderAmountInFIL = BigNumber.from('200000000000000000000');
+    const filledOrderAmountInUSDC = BigNumber.from('60000000000');
+    const depositAmountInETH = BigNumber.from('1500000000000000000');
+
+    beforeEach(async () => {
+      alice = singers[singerIdx];
+      bob = singers[singerIdx + 1];
+      singerIdx += 2;
+      lendingInfo = new LendingInfo(alice.address);
 
       const aliceFILBalanceBefore = await wFILToken.balanceOf(alice.address);
       const aliceUSDCBalanceBefore = await wUSDCToken.balanceOf(alice.address);
@@ -868,10 +874,11 @@ describe('Integration Test: Liquidations', async () => {
         .deposit(hexETHString, depositAmountInETH, {
           value: depositAmountInETH,
         });
+
       await tokenVault
         .connect(owner)
-        .deposit(hexETHString, depositAmountInETH.mul(3), {
-          value: depositAmountInETH.mul(3),
+        .deposit(hexETHString, depositAmountInETH.mul(5), {
+          value: depositAmountInETH.mul(5),
         });
 
       // Create order on FIL market
@@ -884,6 +891,7 @@ describe('Integration Test: Liquidations', async () => {
           filledOrderAmountInFIL,
           '8000',
         );
+
       await lendingMarketController
         .connect(owner)
         .createOrder(
@@ -928,11 +936,6 @@ describe('Integration Test: Liquidations', async () => {
       expect(aliceFILBalanceAfter.sub(aliceFILBalanceBefore)).to.equal(
         filledOrderAmountInFIL,
       );
-
-      await lendingInfo.load('Before1', {
-        FIL: filMaturities[0],
-        USDC: usdcMaturities[0],
-      });
 
       // Create order on USDC market
       await lendingMarketController
@@ -988,6 +991,13 @@ describe('Integration Test: Liquidations', async () => {
       expect(aliceUSDCBalanceAfter.sub(aliceUSDCBalanceBefore)).to.equal(
         filledOrderAmountInUSDC,
       );
+    });
+
+    it('Take orders from both FIL & USDC markets, Liquidate the larger position', async () => {
+      await lendingInfo.load('Before1', {
+        FIL: filMaturities[0],
+        USDC: usdcMaturities[0],
+      });
 
       await filToETHPriceFeed.updateAnswer(filToETHRate.mul('110').div('100'));
 
@@ -1015,9 +1025,49 @@ describe('Integration Test: Liquidations', async () => {
 
       expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to.true;
       expect(
-        lendingInfoAfter.pvs[0].sub(lendingInfoBefore.pvs[0].div(2)).abs(),
-      ).to.lt(ERROR_RANGE);
+        lendingInfoBefore.pvs[0]
+          .div(2)
+          .abs()
+          .gte(lendingInfoAfter.pvs[0].abs()),
+      ).to.true;
       expect(lendingInfoAfter.pvs[1]).to.equal(lendingInfoBefore.pvs[1]);
+    });
+
+    it('Take orders from both FIL & USDC markets, Liquidate the smaller position', async () => {
+      await lendingInfo.load('Before1', {
+        FIL: filMaturities[0],
+        USDC: usdcMaturities[0],
+      });
+
+      await filToETHPriceFeed.updateAnswer(filToETHRate.mul('110').div('100'));
+
+      const lendingInfoBefore = await lendingInfo.load('Before2', {
+        FIL: filMaturities[0],
+        USDC: usdcMaturities[0],
+      });
+
+      await expect(
+        lendingMarketController.executeLiquidationCall(
+          hexETHString,
+          hexUSDCString,
+          usdcMaturities[0],
+          0,
+          alice.address,
+          10,
+        ),
+      ).to.emit(lendingMarketController, 'Liquidate');
+
+      const lendingInfoAfter = await lendingInfo.load('After', {
+        FIL: filMaturities[0],
+        USDC: usdcMaturities[0],
+      });
+      lendingInfo.show();
+
+      expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to.true;
+      expect(lendingInfoAfter.pvs[0]).to.equal(lendingInfoBefore.pvs[0]);
+      expect(lendingInfoAfter.pvs[0].sub(lendingInfoBefore.pvs[0]).abs()).to.lt(
+        ERROR_RANGE,
+      );
     });
   });
 });

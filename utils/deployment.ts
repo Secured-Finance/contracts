@@ -236,7 +236,7 @@ const deployContracts = async () => {
     btcToETHPriceFeed: priceFeeds[hexBTCString],
     ethToUSDPriceFeed: priceFeeds[hexETHString],
     filToETHPriceFeed: priceFeeds[hexFILString],
-    usdcToUSDriceFeed: priceFeeds[hexUSDCString],
+    usdcToUSDPriceFeed: priceFeeds[hexUSDCString],
   };
 };
 
