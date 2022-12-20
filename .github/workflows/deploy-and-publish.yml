@@ -18,7 +18,7 @@ jobs:
     if: ${{ github.actor != 'secured-finance-machine-user[bot]' && github.event.workflow.name != 'Reset Smart Contracts'}}
     steps:
       - name: Check conditional job statues
-        if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure' }}
+        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
         run: exit 1
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3

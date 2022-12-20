@@ -44,6 +44,7 @@ jobs:
           PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
           INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
+          UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.DEV_UNISWAP_SWAP_ROUTER_CONTRACT }}
         run: npm run deploy:force development
       - name: Deploy for staging environment
         if: ${{ github.event.inputs.network == 'staging' }}
@@ -51,6 +52,7 @@ jobs:
           PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
           ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
           INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
+          UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.STG_UNISWAP_SWAP_ROUTER_CONTRACT }}
         run: npm run deploy:force staging
       - name: Commit and push
         shell: bash
