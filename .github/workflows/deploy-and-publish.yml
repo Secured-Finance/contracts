@@ -143,16 +143,34 @@ jobs:
         shell: bash
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: extract_branch
-      - name: 'Setup npm'
+      - name: 'Setup for npm'
         run: |
           npm set @secured-finance:registry=https://npm.pkg.github.com
           npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+      - name: 'Setup for git'
+        run: |
+          git config user.name "SF Machine User[bot]"
+          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
+      - name: Update documents
+        if: ${{ github.event.workflow.name != 'Merge into main' }}
+        run: |
+          npm run docgen
+          git add .
+      - name: Check diff
+        shell: bash
+        id: diff
+        run: |
+          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+      - name: Commit and push
+        shell: bash
+        if: steps.diff.outputs.count > 0
+        run: |
+          git commit -m "chore: update docs"
+          git push
       - name: Version and Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "SF Machine User[bot]"
-          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
           npm config set git-tag-version=false
           if [ '${{ github.event.workflow.name }}' = 'Merge into main' ]; then
             git switch main
@@ -162,8 +180,6 @@ jobs:
             npm version prerelease --preid beta
           fi
           npm publish
-      - name: Update documents
-        run: npm run docgen
       - name: Commit and push
         shell: bash
         run: |
