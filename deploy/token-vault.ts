@@ -12,7 +12,8 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const WETH = process.env.WETH || (await deployments.get('MockWETH9')).address;
+  const WETH =
+    process.env.TOKEN_WETH || (await deployments.get('MockWETH9')).address;
   const deployResult = await deploy('TokenVault', {
     from: deployer,
   });

@@ -34,7 +34,7 @@ const currencies: Currency[] = [
     symbol: 'eFIL',
     mock: 'MockEFIL',
     key: hexFILString,
-    env: process.env.EFIL,
+    env: process.env.TOKEN_EFIL,
     haircut: 5000,
     isCollateral: false,
     args: ['100000000000000000000000000'], // 100,000,000 eFIL
@@ -43,7 +43,7 @@ const currencies: Currency[] = [
     symbol: 'USDC',
     mock: 'MockUSDC',
     key: hexUSDCString,
-    env: process.env.USDC,
+    env: process.env.TOKEN_USDC,
     haircut: 8000,
     isCollateral: true,
     args: ['100000000000000'], // 100,000,000 USDC
@@ -52,7 +52,7 @@ const currencies: Currency[] = [
     symbol: 'WBTC',
     mock: 'MockWBTC',
     key: hexBTCString,
-    env: process.env.WBTC,
+    env: process.env.TOKEN_WBTC,
     haircut: 8000,
     isCollateral: false,
     args: ['1000000000000'], // 10,000 BTC
@@ -61,7 +61,7 @@ const currencies: Currency[] = [
     symbol: 'WETH',
     mock: 'MockWETH9',
     key: hexETHString,
-    env: process.env.WETH,
+    env: process.env.TOKEN_WETH,
     haircut: 8000,
     isCollateral: true,
     args: undefined,
