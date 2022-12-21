@@ -1,14 +1,20 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies } from '../utils/currencies';
+import { currencies, Currency } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
   deployments,
+  ethers,
 }: HardhatRuntimeEnvironment) {
+  const { deploy } = deployments;
+  const { deployer } = await getNamedAccounts();
+
+  // Deploy mock tokens
   const log = {};
   const logHeader = 'Contract Addresses';
+  const mockCurrencies: Currency[] = [];
   for (const currency of currencies) {
     if (currency.env) {
       console.log(`${currency.symbol} uses the existing address`);
@@ -16,18 +22,51 @@ const func: DeployFunction = async function ({
       continue;
     }
 
-    const { deploy } = deployments;
-    const { deployer } = await getNamedAccounts();
-
-    const deployResult = await deploy(currency.mock, {
+    const tokenDeployResult = await deploy(currency.mock, {
       from: deployer,
       args: currency.args,
     });
-    log[currency.symbol] = { [logHeader]: deployResult.address };
-    await executeIfNewlyDeployment(currency.mock, deployResult);
+    log[currency.symbol] = { [logHeader]: tokenDeployResult.address };
+
+    await executeIfNewlyDeployment(currency.mock, tokenDeployResult);
+    mockCurrencies.push(currency);
   }
 
   console.table(log);
+
+  // Deploy TokenFaucet
+  if (mockCurrencies.length > 0) {
+    const faucetDeployResult = await deploy('TokenFaucet', { from: deployer });
+    await executeIfNewlyDeployment('TokenFaucet', faucetDeployResult);
+
+    const tokenFaucetContract = await ethers.getContractAt(
+      'TokenFaucet',
+      faucetDeployResult.address,
+    );
+
+    for (const currency of mockCurrencies) {
+      const mockToken = await deployments.get(currency.mock);
+
+      if (
+        currency.symbol !== 'WETH' &&
+        (await tokenFaucetContract.getCurrencyAddress(currency.key)) !==
+          mockToken.address
+      ) {
+        const mockTokenContract = await ethers.getContractAt(
+          currency.mock,
+          mockToken.address,
+        );
+
+        await tokenFaucetContract.registerCurrency(
+          currency.key,
+          mockToken.address,
+          ethers.BigNumber.from(currency.args?.[0]).div(100),
+        );
+
+        await mockTokenContract.setMinterRole(faucetDeployResult.address);
+      }
+    }
+  }
 };
 
 func.tags = ['Tokens'];

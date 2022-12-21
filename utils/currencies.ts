@@ -55,7 +55,7 @@ const currencies: Currency[] = [
     env: process.env.WBTC,
     haircut: 8000,
     isCollateral: false,
-    args: ['100000000000000'], // 1,000,000 BTC
+    args: ['1000000000000'], // 10,000 BTC
   },
   {
     symbol: 'WETH',
