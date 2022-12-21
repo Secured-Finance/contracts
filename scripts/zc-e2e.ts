@@ -70,7 +70,7 @@ describe('ZC e2e test', async () => {
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
     const wFILTokenAddress =
-      process.env.EFIL || (await deployments.get('MockEFIL')).address;
+      process.env.TOKEN_EFIL || (await deployments.get('MockEFIL')).address;
     wFILToken = await ethers.getContractAt('MockEFIL', wFILTokenAddress);
 
     // Get proxy contracts
@@ -87,7 +87,7 @@ describe('ZC e2e test', async () => {
     );
 
     // Transfer mock wFIL token
-    if (!process.env.EFIL) {
+    if (!process.env.TOKEN_EFIL) {
       wFILToken
         .connect(ownerSigner)
         .transfer(aliceSigner.address, orderAmountInFIL);

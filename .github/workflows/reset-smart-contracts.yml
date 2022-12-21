@@ -45,6 +45,10 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
           INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
           UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.DEV_UNISWAP_SWAP_ROUTER_CONTRACT }}
+          TOKEN_EFIL: ${{ secrets.DEV_TOKEN_EFIL }}
+          TOKEN_USDC: ${{ secrets.DEV_TOKEN_USDC }}
+          TOKEN_WBTC: ${{ secrets.DEV_TOKEN_WBTC }}
+          TOKEN_WETH: ${{ secrets.DEV_TOKEN_WETH }}
         run: npm run deploy:force development
       - name: Deploy for staging environment
         if: ${{ github.event.inputs.network == 'staging' }}
@@ -53,6 +57,10 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
           INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
           UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.STG_UNISWAP_SWAP_ROUTER_CONTRACT }}
+          TOKEN_EFIL: ${{ secrets.STG_TOKEN_EFIL }}
+          TOKEN_USDC: ${{ secrets.STG_TOKEN_USDC }}
+          TOKEN_WBTC: ${{ secrets.STG_TOKEN_WBTC }}
+          TOKEN_WETH: ${{ secrets.STG_TOKEN_WETH }}
         run: npm run deploy:force staging
       - name: Commit and push
         shell: bash
