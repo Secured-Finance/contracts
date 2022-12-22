@@ -563,33 +563,6 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Creates a lend order with ETH. Takes the order if the order is matched,
-     * and places new order if not match it.
-     *
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
-     * @return True if the execution of the operation succeeds
-     */
-    function createLendOrderWithETH(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _unitPrice
-    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
-        _createOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            ProtocolTypes.Side.LEND,
-            msg.value,
-            _unitPrice,
-            false
-        );
-        return true;
-    }
-
-    /**
      * @notice Deposits funds and creates a lend order with ETH at the same time.
      *
      * @param _ccy Currency name in bytes32 of the selected market
