@@ -86,7 +86,7 @@ const config: HardhatUserConfig = {
     gasPrice: 125,
   },
   mocha: {
-    timeout: 100000,
+    timeout: 0,
     // reporter: 'eth-gas-reporter',
   },
   contractSizer: {
