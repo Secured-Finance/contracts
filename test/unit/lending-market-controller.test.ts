@@ -767,20 +767,6 @@ describe('LendingMarketController', () => {
         });
     });
 
-    it('Add an order(payable)', async () => {
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .createLendOrderWithETH(targetCurrency, maturities[0], '9800', {
-          value: '100000000000000000',
-        })
-        .then(async (tx) => {
-          await expect(tx).to.not.emit(
-            lendingMarketControllerProxy,
-            'FillOrder',
-          );
-        });
-    });
-
     it('Deposit and add an order(payable)', async () => {
       await lendingMarketControllerProxy
         .connect(alice)

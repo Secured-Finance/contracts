@@ -185,12 +185,6 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external returns (bool);
 
-    function createLendOrderWithETH(
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 unitPrice
-    ) external payable returns (bool);
-
     function depositAndCreateLendOrderWithETH(
         bytes32 ccy,
         uint256 maturity,

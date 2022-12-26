@@ -60,6 +60,10 @@ describe('TokenVault', () => {
     mockUniswapRouter = await deployMockContract(owner, ISwapRouter.abi);
 
     await mockCurrencyController.mock.currencyExists.returns(true);
+    await mockWETH9.mock.transferFrom.returns(true);
+    await mockWETH9.mock.transfer.returns(true);
+    await mockWETH9.mock.approve.returns(true);
+    await mockWETH9.mock.deposit.returns();
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
@@ -228,6 +232,12 @@ describe('TokenVault', () => {
   });
 
   describe('Deposit & Withdraw', async () => {
+    const ETH = ethers.utils.formatBytes32String('ETH');
+
+    before(async () => {
+      await tokenVaultProxy.registerCurrency(ETH, mockWETH9.address, true);
+    });
+
     beforeEach(async () => {
       await tokenVaultProxy.registerCurrency(
         targetCurrency,
@@ -236,7 +246,7 @@ describe('TokenVault', () => {
       );
     });
 
-    it('Deposit into collateral book', async () => {
+    it('Deposit into collateral book using ERC20', async () => {
       const value = '10000000000000';
       const valueInETH = '20000000000000';
 
@@ -257,13 +267,28 @@ describe('TokenVault', () => {
         alice.address,
         targetCurrency,
       );
-      // const collateralAmountInETH =
-      //   await tokenVaultProxy.getCollateralAmountInETH(
-      //     alice.address,
-      //     targetCurrency,
-      //   );
       expect(collateralAmount).to.equal(value);
-      // expect(collateralAmountInETH).to.equal(valueInETH);
+    });
+
+    it('Deposit into collateral book using ETH', async () => {
+      const valueInETH = '20000000000000';
+
+      await expect(
+        tokenVaultProxy
+          .connect(alice)
+          .deposit(ETH, valueInETH, { value: valueInETH }),
+      )
+        .to.emit(tokenVaultProxy, 'Deposit')
+        .withArgs(alice.address, ETH, valueInETH);
+
+      const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
+      expect(currencies.includes(ETH)).to.true;
+
+      const collateralAmount = await tokenVaultProxy.getDepositAmount(
+        alice.address,
+        ETH,
+      );
+      expect(collateralAmount).to.equal(valueInETH);
     });
 
     it('Add the working orders & Withdraw', async () => {
@@ -677,7 +702,7 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Only Accepted Contracts');
     });
 
-    it('Fail to call depositEscrow due to invalid amount', async () => {
+    it('Fail to call addDepositAmount due to invalid amount', async () => {
       const amount = ethers.BigNumber.from('20000000000000');
       await tokenVaultCaller.addDepositAmount(
         carol.address,
@@ -692,6 +717,12 @@ describe('TokenVault', () => {
           amount.add('1'),
         ),
       ).to.be.revertedWith('Not enough collateral in the selected currency');
+    });
+
+    it('Fail to call deposit due to invalid amount', async () => {
+      await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
+        'Invalid amount',
+      );
     });
 
     it('Deposit funds from Alice', async () => {
