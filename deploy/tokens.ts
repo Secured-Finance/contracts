@@ -57,13 +57,17 @@ const func: DeployFunction = async function ({
           mockToken.address,
         );
 
-        await tokenFaucetContract.registerCurrency(
-          currency.key,
-          mockToken.address,
-          ethers.BigNumber.from(currency.args?.[0]).div(100),
-        );
+        await tokenFaucetContract
+          .registerCurrency(
+            currency.key,
+            mockToken.address,
+            ethers.BigNumber.from(currency.args?.[0]).div(100),
+          )
+          .then((tx) => tx.wait());
 
-        await mockTokenContract.setMinterRole(faucetDeployResult.address);
+        await mockTokenContract
+          .setMinterRole(faucetDeployResult.address)
+          .then((tx) => tx.wait());
       }
     }
   }
