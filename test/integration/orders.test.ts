@@ -189,7 +189,7 @@ describe('Integration Test: Orders', async () => {
         await expect(
           lendingMarketController
             .connect(carolSigner)
-            .createLendOrderWithETH(
+            .depositAndCreateLendOrderWithETH(
               hexETHString,
               maturity,
               String(initialUnitPriceETH + 10 * idx),
@@ -564,9 +564,13 @@ describe('Integration Test: Orders', async () => {
 
       const receipt = await lendingMarketController
         .connect(daveSigner)
-        .createLendOrderWithETH(hexETHString, ethMaturities[0], '1000', {
-          value: orderAmount,
-        })
+        .createOrder(
+          hexETHString,
+          ethMaturities[0],
+          Side.LEND,
+          orderAmount,
+          '1000',
+        )
         .then((tx) => tx.wait());
 
       const collateralAfterOrder = await tokenVault.getWithdrawableCollateral(
@@ -818,19 +822,17 @@ describe('Integration Test: Orders', async () => {
     it('Make an order on the ETH lending market by Bob, take the order by Alice', async () => {
       const depositAmount = BigNumber.from('15000000000000000000');
 
-      await tokenVault
-        .connect(bobSigner)
-        .deposit(hexETHString, depositAmount.toString(), {
-          value: depositAmount.toString(),
-        })
-        .then((tx) => tx.wait());
-
       await expect(
         lendingMarketController
           .connect(bobSigner)
-          .createLendOrderWithETH(hexETHString, maturities[0], unitPrice, {
-            value: ethAmount,
-          }),
+          .depositAndCreateLendOrderWithETH(
+            hexETHString,
+            maturities[0],
+            unitPrice,
+            {
+              value: ethAmount,
+            },
+          ),
       ).to.emit(ethLendingMarkets[0], 'MakeOrder');
 
       await expect(

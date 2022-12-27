@@ -681,6 +681,11 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _amount
     ) internal {
         require(_amount > 0, "Invalid amount");
+        require(
+            Storage.slot().tokenAddresses[_ccy] != ERC20Handler.weth() || _amount == msg.value,
+            "Invalid amount"
+        );
+
         ERC20Handler.depositAssets(
             Storage.slot().tokenAddresses[_ccy],
             _user,
