@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, Contract, Wallet } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
@@ -9,14 +9,14 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
 } from '../../utils/deployment';
 import { filToETHRate } from '../../utils/numbers';
+import { Signers } from '../../utils/signers';
 import { hexETHString, hexFILString } from '../../utils/strings';
-import { TestWallet } from '../../utils/wallet';
 
 describe('Integration Test: Order Book', async () => {
-  let signers: SignerWithAddress[];
-  let alice: Wallet;
-  let bob: Wallet;
-  let carol: Wallet;
+  let owner: SignerWithAddress;
+  let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
+  let carol: SignerWithAddress;
 
   let addressResolver: Contract;
   let currencyController: Contract;
@@ -30,19 +30,19 @@ describe('Integration Test: Order Book', async () => {
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
 
-  let testWallet: TestWallet;
+  let signers: Signers;
 
   const initialETHBalance = BigNumber.from('1000000000000000000');
   const initialFILBalance = BigNumber.from('100000000000000000000');
 
-  const createUsers = async (count: number) =>
-    testWallet.create(count, async (user) => {
+  const getUsers = async (count: number) =>
+    signers.get(count, async (signer) => {
       await wFILToken
-        .connect(signers[0])
-        .transfer(user.address, initialFILBalance);
+        .connect(owner)
+        .transfer(signer.address, initialFILBalance);
     });
 
-  const createSampleETHOrders = async (user: Wallet) => {
+  const createSampleETHOrders = async (user: SignerWithAddress) => {
     await tokenVault
       .connect(user)
       .deposit(hexETHString, initialETHBalance.div(3), {
@@ -58,7 +58,7 @@ describe('Integration Test: Order Book', async () => {
       .createOrder(hexETHString, ethMaturities[0], Side.LEND, '1000', '8200');
   };
 
-  const createSampleFILOrders = async (user: Wallet) => {
+  const createSampleFILOrders = async (user: SignerWithAddress) => {
     await wFILToken
       .connect(user)
       .approve(tokenVault.address, initialFILBalance);
@@ -79,8 +79,8 @@ describe('Integration Test: Order Book', async () => {
   };
 
   before('Deploy Contracts', async () => {
-    signers = await ethers.getSigners();
-    testWallet = new TestWallet(initialETHBalance, ethers);
+    signers = new Signers(await ethers.getSigners());
+    [owner] = await signers.get(1);
 
     ({
       addressResolver,
@@ -133,7 +133,7 @@ describe('Integration Test: Order Book', async () => {
       const depositAmount = orderAmount.mul(3).div(2);
 
       before(async () => {
-        [alice, bob, carol] = await createUsers(3);
+        [alice, bob, carol] = await getUsers(3);
         ethMaturities = await lendingMarketController.getMaturities(
           hexETHString,
         );
@@ -214,7 +214,7 @@ describe('Integration Test: Order Book', async () => {
         .div(filToETHRate);
 
       before(async () => {
-        [alice, bob, carol] = await createUsers(3);
+        [alice, bob, carol] = await getUsers(3);
         filMaturities = await lendingMarketController.getMaturities(
           hexFILString,
         );
@@ -299,7 +299,7 @@ describe('Integration Test: Order Book', async () => {
         .div(filToETHRate);
 
       before(async () => {
-        [alice, bob, carol] = await createUsers(3);
+        [alice, bob, carol] = await getUsers(3);
         filMaturities = await lendingMarketController.getMaturities(
           hexFILString,
         );
@@ -454,10 +454,10 @@ describe('Integration Test: Order Book', async () => {
 
   describe('Limit orders', async () => {
     const collateralAmount = initialETHBalance.div(5);
-    let signer1: Wallet;
-    let signer2: Wallet;
+    let signer1: SignerWithAddress;
+    let signer2: SignerWithAddress;
     let orderIds: number[];
-    let orderMaker: Wallet;
+    let orderMaker: SignerWithAddress;
 
     const inputs = [
       {
@@ -493,7 +493,7 @@ describe('Integration Test: Order Book', async () => {
     for (const input of inputs) {
       describe(`Fill a ${input.label} order with the same amount`, async () => {
         it(`Create users`, async () => {
-          [alice, bob] = await createUsers(2);
+          [alice, bob] = await getUsers(2);
 
           await tokenVault
             .connect(bob)
@@ -566,7 +566,7 @@ describe('Integration Test: Order Book', async () => {
 
       describe(`Fill a ${input.label} order with less amount`, async () => {
         it(`Create users`, async () => {
-          [alice, bob] = await createUsers(2);
+          [alice, bob] = await getUsers(2);
 
           await tokenVault
             .connect(bob)
@@ -647,7 +647,7 @@ describe('Integration Test: Order Book', async () => {
 
       describe(`Fill a ${input.label} order with greater amount`, async () => {
         it(`Create users`, async () => {
-          [alice, bob] = await createUsers(2);
+          [alice, bob] = await getUsers(2);
 
           await tokenVault
             .connect(bob)
@@ -748,7 +748,7 @@ describe('Integration Test: Order Book', async () => {
         .div(filToETHRate);
 
       before(async () => {
-        [alice, bob, carol] = await createUsers(3);
+        [alice, bob, carol] = await getUsers(3);
         filMaturities = await lendingMarketController.getMaturities(
           hexFILString,
         );
@@ -825,7 +825,7 @@ describe('Integration Test: Order Book', async () => {
         .div(filToETHRate);
 
       before(async () => {
-        [alice, bob, carol] = await createUsers(3);
+        [alice, bob, carol] = await getUsers(3);
         filMaturities = await lendingMarketController.getMaturities(
           hexFILString,
         );

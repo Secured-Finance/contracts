@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { BigNumber, Contract, Wallet } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
@@ -9,14 +9,14 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
 } from '../../utils/deployment';
 import { filToETHRate } from '../../utils/numbers';
+import { Signers } from '../../utils/signers';
 import { hexETHString, hexFILString } from '../../utils/strings';
-import { TestWallet } from '../../utils/wallet';
 
 describe('Integration Test: Deposit', async () => {
-  let signers: SignerWithAddress[];
-  let alice: Wallet;
-  let bob: Wallet;
-  let carol: Wallet;
+  let owner: SignerWithAddress;
+  let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
+  let carol: SignerWithAddress;
 
   let addressResolver: Contract;
   let currencyController: Contract;
@@ -29,21 +29,21 @@ describe('Integration Test: Deposit', async () => {
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
 
-  let testWallet: TestWallet;
+  let signers: Signers;
 
   const initialETHBalance = BigNumber.from('1000000000000000000');
   const initialFILBalance = BigNumber.from('100000000000000000000');
 
-  const createUsers = async (count: number) =>
-    testWallet.create(count, async (user) => {
+  const getUsers = async (count: number) =>
+    signers.get(count, async (signer) => {
       await wFILToken
-        .connect(signers[0])
-        .transfer(user.address, initialFILBalance);
+        .connect(owner)
+        .transfer(signer.address, initialFILBalance);
     });
 
   before('Deploy Contracts', async () => {
-    signers = await ethers.getSigners();
-    testWallet = new TestWallet(initialETHBalance, ethers);
+    signers = new Signers(await ethers.getSigners());
+    [owner] = await signers.get(1);
 
     ({
       addressResolver,
@@ -82,7 +82,7 @@ describe('Integration Test: Deposit', async () => {
 
   describe('Deposit ETH, Withdraw all collateral', async () => {
     before(async () => {
-      [alice] = await createUsers(1);
+      [alice] = await getUsers(1);
     });
 
     it('Deposit ETH', async () => {
@@ -124,7 +124,7 @@ describe('Integration Test: Deposit', async () => {
 
   describe('Deposit ETH twice, Withdraw all collateral', async () => {
     before(async () => {
-      [alice] = await createUsers(1);
+      [alice] = await getUsers(1);
     });
 
     it('Deposit ETH', async () => {
@@ -185,7 +185,7 @@ describe('Integration Test: Deposit', async () => {
 
   describe('Deposit multiple currency, Withdraw all collateral', async () => {
     before(async () => {
-      [alice] = await createUsers(1);
+      [alice] = await getUsers(1);
     });
 
     it('Deposit ETH', async () => {
@@ -274,7 +274,7 @@ describe('Integration Test: Deposit', async () => {
 
   describe('Deposit by multiple users', async () => {
     before(async () => {
-      [alice, bob] = await createUsers(2);
+      [alice, bob] = await getUsers(2);
     });
 
     it('Deposit FIL', async () => {
@@ -346,7 +346,7 @@ describe('Integration Test: Deposit', async () => {
       .div(5);
 
     before(async () => {
-      [alice, bob, carol] = await createUsers(3);
+      [alice, bob, carol] = await getUsers(3);
       filMaturities = await lendingMarketController.getMaturities(hexFILString);
 
       await wFILToken
@@ -459,7 +459,7 @@ describe('Integration Test: Deposit', async () => {
       .div(5);
 
     before(async () => {
-      [alice, bob, carol] = await createUsers(3);
+      [alice, bob, carol] = await getUsers(3);
       filMaturities = await lendingMarketController.getMaturities(hexFILString);
 
       await wFILToken
@@ -573,7 +573,7 @@ describe('Integration Test: Deposit', async () => {
       .div(filToETHRate);
 
     before(async () => {
-      [alice, bob, carol] = await createUsers(3);
+      [alice, bob, carol] = await getUsers(3);
       filMaturities = await lendingMarketController.getMaturities(hexFILString);
       ethMaturities = await lendingMarketController.getMaturities(hexETHString);
 
