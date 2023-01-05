@@ -19,6 +19,7 @@ describe('Integration Test: Order Book', async () => {
   let carol: Wallet;
 
   let addressResolver: Contract;
+  let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
@@ -44,8 +45,8 @@ describe('Integration Test: Order Book', async () => {
   const createSampleETHOrders = async (user: Wallet) => {
     await tokenVault
       .connect(user)
-      .deposit(hexETHString, initialETHBalance.div(2), {
-        value: initialETHBalance.div(2),
+      .deposit(hexETHString, initialETHBalance.div(3), {
+        value: initialETHBalance.div(3),
       });
 
     await lendingMarketController
@@ -64,8 +65,8 @@ describe('Integration Test: Order Book', async () => {
     await tokenVault.connect(user).deposit(hexFILString, initialFILBalance);
     await tokenVault
       .connect(user)
-      .deposit(hexETHString, initialETHBalance.div(2), {
-        value: initialETHBalance.div(2),
+      .deposit(hexETHString, initialETHBalance.div(3), {
+        value: initialETHBalance.div(3),
       });
 
     await lendingMarketController
@@ -83,6 +84,7 @@ describe('Integration Test: Order Book', async () => {
 
     ({
       addressResolver,
+      currencyController,
       tokenVault,
       lendingMarketController,
       wETHToken,
@@ -286,6 +288,166 @@ describe('Integration Test: Order Book', async () => {
         expect(aliceFILDepositAmount).to.equal(orderAmount);
         expect(bobFILDepositAmount).to.equal('0');
         expect(coverage.sub('8000').abs()).lte(1);
+      });
+    });
+
+    describe('Fill orders on multiple markets', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmountInETH = depositAmount.mul(2).div(5);
+      const orderAmountInFIL = orderAmountInETH
+        .mul(BigNumber.from(10).pow(18))
+        .div(filToETHRate);
+
+      before(async () => {
+        [alice, bob, carol] = await createUsers(3);
+        filMaturities = await lendingMarketController.getMaturities(
+          hexFILString,
+        );
+        ethMaturities = await lendingMarketController.getMaturities(
+          hexETHString,
+        );
+        await createSampleFILOrders(carol);
+        await createSampleETHOrders(carol);
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETHString,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill an order on the FIL market', async () => {
+        await wFILToken
+          .connect(bob)
+          .approve(tokenVault.address, initialFILBalance);
+
+        await lendingMarketController
+          .connect(bob)
+          .depositAndCreateOrder(
+            hexFILString,
+            filMaturities[0],
+            Side.LEND,
+            orderAmountInFIL,
+            '8000',
+          );
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexFILString,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmountInFIL,
+            '0',
+          );
+
+        const aliceFV = await lendingMarketController.getFutureValue(
+          hexFILString,
+          filMaturities[0],
+          alice.address,
+        );
+        const bobFV = await lendingMarketController.getFutureValue(
+          hexFILString,
+          filMaturities[0],
+          bob.address,
+        );
+
+        const bobTotalCollateralAmountAfter =
+          await tokenVault.getTotalCollateralAmount(bob.address);
+
+        expect(aliceFV.add(bobFV)).to.equal('0');
+        expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(1);
+        expect(bobTotalCollateralAmountAfter.sub(orderAmountInETH.div(2))).lte(
+          1,
+        );
+      });
+
+      it('Fill an order on the ETH market', async () => {
+        const orderAmount = orderAmountInETH.div(2);
+
+        await lendingMarketController
+          .connect(bob)
+          .depositAndCreateLendOrderWithETH(
+            hexETHString,
+            ethMaturities[0],
+            '8000',
+            { value: orderAmount },
+          );
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexETHString,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '0',
+          );
+
+        const aliceFV = await lendingMarketController.getFutureValue(
+          hexETHString,
+          ethMaturities[0],
+          alice.address,
+        );
+        const bobFV = await lendingMarketController.getFutureValue(
+          hexETHString,
+          ethMaturities[0],
+          bob.address,
+        );
+
+        expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(1);
+        expect(aliceFV.add(bobFV)).to.equal('0');
+      });
+
+      it('Check collateral', async () => {
+        const coverage = await tokenVault.getCoverage(alice.address);
+        const aliceFILDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexFILString,
+        );
+        const bobFILDepositAmount = await tokenVault.getDepositAmount(
+          bob.address,
+          hexFILString,
+        );
+        const aliceETHDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETHString,
+        );
+        const bobETHDepositAmount = await tokenVault.getDepositAmount(
+          bob.address,
+          hexETHString,
+        );
+        const aliceTotalCollateralAmount =
+          await tokenVault.getTotalCollateralAmount(alice.address);
+        const bobTotalCollateralAmount =
+          await tokenVault.getTotalCollateralAmount(bob.address);
+
+        const filHaircut = await currencyController.getHaircut(hexFILString);
+        const ethHaircut = await currencyController.getHaircut(hexETHString);
+
+        expect(aliceFILDepositAmount).to.equal(orderAmountInFIL);
+        expect(aliceETHDepositAmount).to.equal(
+          depositAmount.add(orderAmountInETH.div(2)),
+        );
+        expect(aliceTotalCollateralAmount).to.equal(aliceETHDepositAmount);
+        expect(bobFILDepositAmount).to.equal('0');
+        expect(bobETHDepositAmount).to.equal('0');
+        expect(
+          bobTotalCollateralAmount.sub(
+            orderAmountInETH
+              .mul(filHaircut)
+              .add(orderAmountInETH.div(2).mul(ethHaircut))
+              .div('10000'),
+          ),
+        );
+        expect(coverage.sub('5000').abs()).lte(1);
       });
     });
   });
