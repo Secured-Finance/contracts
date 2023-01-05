@@ -390,11 +390,14 @@ library FundCalculationLogic {
         if (totalPresentValue >= 0) {
             // Add to claimableAmount
             claimableAmount += uint256(totalPresentValue);
-            uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
-            collateralAmount += (uint256(totalPresentValue) * haircut) / ProtocolTypes.PCT_DIGIT;
         } else {
             // Add to debtAmount
             debtAmount += uint256(-totalPresentValue);
+        }
+
+        if (claimableAmount > 0) {
+            uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
+            collateralAmount = (claimableAmount * haircut) / ProtocolTypes.PCT_DIGIT;
         }
     }
 
