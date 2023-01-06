@@ -508,25 +508,6 @@ Deposits funds and creates an order at the same time.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### createLendOrderWithETH
-
-```solidity
-function createLendOrderWithETH(bytes32 _ccy, uint256 _maturity, uint256 _unitPrice) external payable returns (bool)
-```
-
-Creates a lend order with ETH. Takes the order if the order is matched,
-and places new order if not match it.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
-| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | True if the execution of the operation succeeds |
-
 ### depositAndCreateLendOrderWithETH
 
 ```solidity
