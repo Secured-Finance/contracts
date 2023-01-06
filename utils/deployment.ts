@@ -59,6 +59,9 @@ const deployContracts = async () => {
   const wUSDCToken = await ethers
     .getContractFactory('MockUSDC')
     .then((factory) => factory.deploy('100000000000000000'));
+  const wBTCToken = await ethers
+    .getContractFactory('MockWBTC')
+    .then((factory) => factory.deploy('100000000000000000'));
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')
@@ -233,6 +236,7 @@ const deployContracts = async () => {
     wETHToken,
     wFILToken,
     wUSDCToken,
+    wBTCToken,
     btcToETHPriceFeed: priceFeeds[hexBTCString],
     ethToUSDPriceFeed: priceFeeds[hexETHString],
     filToETHPriceFeed: priceFeeds[hexFILString],

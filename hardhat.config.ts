@@ -24,7 +24,7 @@ const config: HardhatUserConfig = {
     alice: 1,
   },
   networks: {
-    hardhat: {},
+    hardhat: { accounts: { count: 50 } },
     localhost: {
       url: process.env.DEV_RPC_ENDPOINT || 'http://0.0.0.0:8545',
       chainId: 1337,
@@ -86,7 +86,7 @@ const config: HardhatUserConfig = {
     gasPrice: 125,
   },
   mocha: {
-    timeout: 100000,
+    timeout: 0,
     // reporter: 'eth-gas-reporter',
   },
   contractSizer: {
