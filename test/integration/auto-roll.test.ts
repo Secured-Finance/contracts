@@ -5,12 +5,13 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import {
-  deployContracts,
-  LIQUIDATION_THRESHOLD_RATE,
-} from '../../utils/deployment';
-import { Signers } from '../../utils/signers';
 import { hexETHString, hexFILString } from '../../utils/strings';
+import {
+  LIQUIDATION_THRESHOLD_RATE,
+  ORDERS_CALCULATION_TOLERANCE_RANGE,
+} from '../common/constants';
+import { deployContracts } from '../common/deployment';
+import { Signers } from '../common/signers';
 
 const BP = ethers.BigNumber.from('10000');
 
@@ -116,26 +117,30 @@ describe('Integration Test: Auto-roll', async () => {
   });
 
   beforeEach('Set maturities', async () => {
-    maturities = await lendingMarketController.getMaturities(hexETHString);
-    lendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexETHString)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
+    [maturities, lendingMarkets, futureValueVaults] = await Promise.all([
+      lendingMarketController.getMaturities(hexETHString),
+      lendingMarketController
+        .getLendingMarkets(hexETHString)
+        .then((addresses) =>
+          Promise.all(
+            addresses.map((address) =>
+              ethers.getContractAt('LendingMarket', address),
+            ),
           ),
         ),
-      );
-    futureValueVaults = await Promise.all(
-      maturities.map((maturity) =>
-        lendingMarketController
-          .getFutureValueVault(hexETHString, maturity)
-          .then((address) => ethers.getContractAt('FutureValueVault', address)),
+      Promise.all(
+        maturities.map((maturity) =>
+          lendingMarketController
+            .getFutureValueVault(hexETHString, maturity)
+            .then((address) =>
+              ethers.getContractAt('FutureValueVault', address),
+            ),
+        ),
       ),
-    );
+    ]);
   });
 
-  describe('Rotate the lending markets with orders on the single market', async () => {
+  describe('Execute auto-roll with orders on the single market', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
@@ -216,7 +221,9 @@ describe('Integration Test: Auto-roll', async () => {
       const { futureValue: aliceFVAfter } =
         await futureValueVaults[0].getFutureValue(alice.address);
 
-      expect(aliceFVAfter.sub(aliceActualFV).abs()).lte(1);
+      expect(aliceFVAfter.sub(aliceActualFV).abs()).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
 
       // Check present value
       const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
@@ -228,7 +235,7 @@ describe('Integration Test: Auto-roll', async () => {
       expect(alicePV).to.equal(aliceActualFV.mul(midUnitPrice).div(BP));
     });
 
-    it('Rotate the lending markets (1st time)', async () => {
+    it('Execute auto-roll (1st time)', async () => {
       await lendingMarketController
         .connect(carol)
         .depositAndCreateLendOrderWithETH(hexETHString, maturities[1], 8510, {
@@ -286,7 +293,7 @@ describe('Integration Test: Auto-roll', async () => {
         aliceTotalPVAfter
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice0))
           .abs(),
-      ).lte('1');
+      ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
       expect(aliceTotalPVAfter.add(bobTotalPVAfter)).to.equal('0');
 
       // Check the saved unit price and compound factor per maturity
@@ -310,7 +317,7 @@ describe('Integration Test: Auto-roll', async () => {
       );
     });
 
-    it('Rotate the lending markets (2nd time)', async () => {
+    it('Execute auto-roll (2nd time)', async () => {
       await lendingMarketController
         .connect(carol)
         .depositAndCreateLendOrderWithETH(hexETHString, maturities[1], 8100, {
@@ -356,7 +363,7 @@ describe('Integration Test: Auto-roll', async () => {
         aliceTotalPVAfter
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice))
           .abs(),
-      ).lte('1');
+      ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
       expect(aliceTotalPVAfter.add(bobTotalPVAfter)).to.equal('0');
 
       // Check the saved unit price and compound factor per maturity
@@ -381,7 +388,7 @@ describe('Integration Test: Auto-roll', async () => {
     });
   });
 
-  describe('Rotate the lending markets with orders on the multiple markets', async () => {
+  describe('Execute auto-roll with orders on the multiple markets', async () => {
     const orderAmount = BigNumber.from('100000000000000000');
 
     before(async () => {
@@ -422,7 +429,9 @@ describe('Integration Test: Auto-roll', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('125000000000000000').abs()).lte(1);
+      expect(aliceActualFV.sub('125000000000000000').abs()).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
     });
 
     it('Fill an order on the second closest maturity market', async () => {
@@ -478,11 +487,13 @@ describe('Integration Test: Auto-roll', async () => {
         bob.address,
       );
 
-      expect(alicePV.sub('200000000000000000').abs()).lte('1');
+      expect(alicePV.sub('200000000000000000').abs()).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
       expect(alicePV.add(bobPV)).to.equal('0');
     });
 
-    it('Rotate the lending markets (1st time)', async () => {
+    it('Execute auto-roll (1st time)', async () => {
       const aliceTotalPVBefore =
         await lendingMarketController.getTotalPresentValue(
           hexETHString,
@@ -504,7 +515,9 @@ describe('Integration Test: Auto-roll', async () => {
         alice.address,
       );
 
-      expect(alicePV0Before.sub(orderAmount)).lte('2');
+      expect(alicePV0Before.sub(orderAmount)).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
       expect(aliceTotalPVBefore).to.equal(alicePV0Before.add(alicePV1Before));
       expect(aliceTotalPVBefore.add(bobTotalPVBefore)).to.equal('0');
 
@@ -539,7 +552,9 @@ describe('Integration Test: Auto-roll', async () => {
 
       expect(alicePV0After).to.equal('0');
       expect(alicePV1After).to.equal(aliceTotalPVAfter);
-      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte('2');
+      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
     });
 
     it('Clean orders', async () => {

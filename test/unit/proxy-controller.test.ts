@@ -2,8 +2,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
-import { btcToETHRate } from '../../utils/numbers';
 import { hexBTCString, toBytes32 } from '../../utils/strings';
+import { btcToETHRate } from '../common/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
