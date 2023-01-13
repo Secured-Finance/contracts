@@ -54,7 +54,7 @@ const deployContracts = async () => {
 
   const wFILToken = await ethers
     .getContractFactory('MockEFIL')
-    .then((factory) => factory.deploy('100000000000000000000000'));
+    .then((factory) => factory.deploy('10000000000000000000000000000'));
   const wUSDCToken = await ethers
     .getContractFactory('MockUSDC')
     .then((factory) => factory.deploy('100000000000000000'));

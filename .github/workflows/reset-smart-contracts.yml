@@ -13,7 +13,7 @@ on:
           - staging
       compoundFactor:
         description: 'Initial Compound Factor'
-        default: '1000000000000000000'
+        default: '1000000000000000000000000'
         required: false
         type: string
 

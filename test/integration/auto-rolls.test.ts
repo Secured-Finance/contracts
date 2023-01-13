@@ -11,11 +11,12 @@ import {
   ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
+import { formatOrdinals } from '../common/format';
 import { Signers } from '../common/signers';
 
 const BP = ethers.BigNumber.from('10000');
 
-describe('Integration Test: Auto-roll', async () => {
+describe('Integration Test: Auto-rolls', async () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -49,8 +50,8 @@ describe('Integration Test: Auto-roll', async () => {
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    await tokenVault.connect(user).deposit(hexETHString, '300000', {
-      value: '300000',
+    await tokenVault.connect(user).deposit(hexETHString, '3000000', {
+      value: '3000000',
     });
 
     await lendingMarketController
@@ -59,8 +60,8 @@ describe('Integration Test: Auto-roll', async () => {
         hexETHString,
         maturity,
         Side.BORROW,
-        '10000',
-        BigNumber.from(unitPrice).sub('200'),
+        '1000000',
+        BigNumber.from(unitPrice).sub('1000'),
       );
 
     await lendingMarketController
@@ -69,13 +70,46 @@ describe('Integration Test: Auto-roll', async () => {
         hexETHString,
         maturity,
         Side.LEND,
-        '10000',
-        BigNumber.from(unitPrice).add('200'),
+        '1000000',
+        BigNumber.from(unitPrice).add('1000'),
       );
   };
 
+  const executeAutoRoll = async (unitPrice?: string) => {
+    if (unitPrice) {
+      await createSampleETHOrders(carol, maturities[1], unitPrice);
+    }
+    await time.increaseTo(maturities[0].toString());
+    await lendingMarketController
+      .connect(owner)
+      .rotateLendingMarkets(hexETHString);
+  };
+
+  const resetContractInstances = async () => {
+    maturities = await lendingMarketController.getMaturities(hexETHString);
+    [lendingMarkets, futureValueVaults] = await Promise.all([
+      lendingMarketController
+        .getLendingMarkets(hexETHString)
+        .then((addresses) =>
+          Promise.all(
+            addresses.map((address) =>
+              ethers.getContractAt('LendingMarket', address),
+            ),
+          ),
+        ),
+      Promise.all(
+        maturities.map((maturity) =>
+          lendingMarketController
+            .getFutureValueVault(hexETHString, maturity)
+            .then((address) =>
+              ethers.getContractAt('FutureValueVault', address),
+            ),
+        ),
+      ),
+    ]);
+  };
+
   before('Deploy Contracts', async () => {
-    // [owner, alice, bob, carol] = await ethers.getSigners();
     signers = new Signers(await ethers.getSigners());
     [owner] = await signers.get(1);
 
@@ -112,32 +146,10 @@ describe('Integration Test: Auto-roll', async () => {
       await lendingMarketController.createLendingMarket(hexFILString);
       await lendingMarketController.createLendingMarket(hexETHString);
     }
-
-    maturities = await lendingMarketController.getMaturities(hexETHString);
   });
 
-  beforeEach('Set maturities', async () => {
-    [maturities, lendingMarkets, futureValueVaults] = await Promise.all([
-      lendingMarketController.getMaturities(hexETHString),
-      lendingMarketController
-        .getLendingMarkets(hexETHString)
-        .then((addresses) =>
-          Promise.all(
-            addresses.map((address) =>
-              ethers.getContractAt('LendingMarket', address),
-            ),
-          ),
-        ),
-      Promise.all(
-        maturities.map((maturity) =>
-          lendingMarketController
-            .getFutureValueVault(hexETHString, maturity)
-            .then((address) =>
-              ethers.getContractAt('FutureValueVault', address),
-            ),
-        ),
-      ),
-    ]);
+  beforeEach('Reset contract instances', async () => {
+    await resetContractInstances();
   });
 
   describe('Execute auto-roll with orders on the single market', async () => {
@@ -260,10 +272,7 @@ describe('Integration Test: Auto-roll', async () => {
       const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
 
       // Auto-roll
-      await time.increaseTo(maturities[0].toString());
-      await lendingMarketController
-        .connect(owner)
-        .rotateLendingMarkets(hexETHString);
+      await executeAutoRoll();
 
       // Check if the orders in previous market is canceled
       const carolCoverageAfter = await tokenVault.getCoverage(carol.address);
@@ -342,10 +351,7 @@ describe('Integration Test: Auto-roll', async () => {
       const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
 
       // Auto-roll
-      await time.increaseTo(maturities[0].toString());
-      await lendingMarketController
-        .connect(owner)
-        .rotateLendingMarkets(hexETHString);
+      await executeAutoRoll('8000');
 
       // Check present value
       const aliceTotalPVAfter =
@@ -493,7 +499,7 @@ describe('Integration Test: Auto-roll', async () => {
       expect(alicePV.add(bobPV)).to.equal('0');
     });
 
-    it('Execute auto-roll (1st time)', async () => {
+    it('Execute auto-roll', async () => {
       const aliceTotalPVBefore =
         await lendingMarketController.getTotalPresentValue(
           hexETHString,
@@ -524,10 +530,7 @@ describe('Integration Test: Auto-roll', async () => {
       const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
 
       // Auto-roll
-      await time.increaseTo(maturities[0].toString());
-      await lendingMarketController
-        .connect(owner)
-        .rotateLendingMarkets(hexETHString);
+      await executeAutoRoll();
 
       // Check present value
       const aliceTotalPVAfter =
@@ -585,6 +588,244 @@ describe('Integration Test: Auto-roll', async () => {
       expect(alicePV0Before).to.equal(alicePV0After);
       expect(alicePV1Before).to.equal(alicePV1After);
       expect(alicePV1After).to.equal('0');
+    });
+  });
+
+  describe('Execute auto-rolls more times than the number of markets', async () => {
+    const orderAmount = BigNumber.from('1000000000000000000000');
+
+    before(async () => {
+      [alice, bob, carol] = await getUsers(3);
+      await resetContractInstances();
+      await executeAutoRoll('8333');
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .depositAndCreateLendOrderWithETH(
+            hexETHString,
+            maturities[0],
+            '8333',
+            {
+              value: orderAmount,
+            },
+          ),
+      ).to.emit(lendingMarkets[0], 'MakeOrder');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .createOrder(
+            hexETHString,
+            maturities[0],
+            Side.BORROW,
+            orderAmount,
+            0,
+          ),
+      ).to.emit(lendingMarkets[0], 'TakeOrders');
+
+      // Check future value
+      const aliceActualFV = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[0],
+        alice.address,
+      );
+
+      expect(aliceActualFV.sub('1200048001920076803071').abs()).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
+    });
+
+    for (let i = 0; i < 9; i++) {
+      it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
+        const alicePV0Before = await lendingMarketController.getPresentValue(
+          hexETHString,
+          maturities[0],
+          alice.address,
+        );
+        const alicePV1Before = await lendingMarketController.getPresentValue(
+          hexETHString,
+          maturities[1],
+          alice.address,
+        );
+        const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
+
+        // Auto-roll
+        await executeAutoRoll('8333');
+
+        // Check present value
+        const aliceTotalPVAfter =
+          await lendingMarketController.getTotalPresentValue(
+            hexETHString,
+            alice.address,
+          );
+        const alicePV0After = await lendingMarketController.getPresentValue(
+          hexETHString,
+          maturities[0],
+          alice.address,
+        );
+        const alicePV1After = await lendingMarketController.getPresentValue(
+          hexETHString,
+          maturities[1],
+          alice.address,
+        );
+
+        const aliceTotalPV = alicePV0Before
+          .mul('10000')
+          .div(midUnitPrice0)
+          .add(alicePV1Before);
+
+        expect(alicePV0After).to.equal('0');
+        expect(alicePV1After).to.equal(aliceTotalPVAfter);
+        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
+          ORDERS_CALCULATION_TOLERANCE_RANGE,
+        );
+      });
+    }
+  });
+
+  describe('Execute auto-roll well past maturity', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+
+    before(async () => {
+      [alice, bob, carol] = await getUsers(3);
+      await resetContractInstances();
+      await executeAutoRoll('8000');
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
+        value: orderAmount.mul(2),
+      });
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .depositAndCreateLendOrderWithETH(
+            hexETHString,
+            maturities[0],
+            '8000',
+            {
+              value: orderAmount,
+            },
+          ),
+      ).to.emit(lendingMarkets[0], 'MakeOrder');
+
+      await expect(
+        lendingMarketController
+          .connect(bob)
+          .createOrder(
+            hexETHString,
+            maturities[0],
+            Side.BORROW,
+            orderAmount,
+            0,
+          ),
+      ).to.emit(lendingMarkets[0], 'TakeOrders');
+
+      // Check future value
+      const aliceActualFV = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[0],
+        alice.address,
+      );
+
+      expect(aliceActualFV.sub('125000000000000000').abs()).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
+    });
+
+    it('Advance time', async () => {
+      const alicePV0Before = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[0],
+        alice.address,
+      );
+      const alicePV1Before = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
+
+      await time.increaseTo(maturities[0].toString());
+      const alicePV0After = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[0],
+        alice.address,
+      );
+      const alicePV1After = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
+
+      expect(alicePV0Before).to.equal(alicePV0After);
+      expect(alicePV1Before).to.equal(alicePV1After);
+    });
+
+    it('Fail to create an order due to market closure', async () => {
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .depositAndCreateLendOrderWithETH(hexETHString, maturities[0], 8000, {
+            value: orderAmount,
+          }),
+      ).to.be.revertedWith('Market is not opened');
+    });
+
+    it(`Execute auto-roll`, async () => {
+      const alicePV0Before = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[0],
+        alice.address,
+      );
+      const alicePV1Before = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
+      const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
+
+      // Auto-roll
+      await createSampleETHOrders(carol, maturities[1], '8000');
+      await time.increaseTo(maturities[1].toString());
+      await lendingMarketController
+        .connect(owner)
+        .rotateLendingMarkets(hexETHString);
+
+      // Check present value
+      const aliceTotalPVAfter =
+        await lendingMarketController.getTotalPresentValue(
+          hexETHString,
+          alice.address,
+        );
+      const alicePV0After = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[0],
+        alice.address,
+      );
+      const alicePV1After = await lendingMarketController.getPresentValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
+
+      const aliceTotalPV = alicePV0Before
+        .mul('10000')
+        .div(midUnitPrice0)
+        .add(alicePV1Before);
+
+      expect(alicePV0After).to.equal('0');
+      expect(alicePV1After).to.equal(aliceTotalPVAfter);
+      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
+        ORDERS_CALCULATION_TOLERANCE_RANGE,
+      );
     });
   });
 });
