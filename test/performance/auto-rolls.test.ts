@@ -120,6 +120,20 @@ describe('Performance Test: Auto-rolls', async () => {
       );
   });
 
+  /**
+   * At maximum with the current implementation, auto-rolls can be executed for about 150 years at APY 20%
+   * if users have a 1,000,000 token position per currency.
+   *
+   * - Amount: 1,000,000 * 10^18 (ex: 1,000,000 ETH, 1,000,000 eFIL)
+   * - Unit Price: 9523 (APY 20%)
+   * - Max Term: 150 years
+   * - Initial Compound Factor: 10^24
+   * - Compound Factor Decimals: 40
+   *
+   * If I decrease the decimals of the compound factor or increase the initial compound factor amount,
+   * the calculation error of FV and PV will be larger.
+   * If I increase the position amount, unit price, or term more, the calculation will be overflowed.
+   */
   describe('Execute auto-rolls for 150 years', async () => {
     const orderAmount = BigNumber.from('1000000000000000000000000');
 
