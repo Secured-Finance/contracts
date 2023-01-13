@@ -184,12 +184,11 @@ jobs:
         id: diff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
-      - name: Commit and push
+      - name: Commit
         shell: bash
         if: steps.diff.outputs.count > 0
         run: |
           git commit -m "chore: update docs"
-          git push
       - name: Version and Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -202,13 +201,8 @@ jobs:
             git switch develop
             npm version prerelease --preid beta
           fi
-          npm publish
-      - name: Commit and push
-        shell: bash
-        run: |
-          git add .
-          git commit -m "chore(release): update release notes and package versions"
           git push
+          npm publish
       - name: Merge main into develop
         shell: bash
         if: github.event.workflow.name == 'Merge into main'
