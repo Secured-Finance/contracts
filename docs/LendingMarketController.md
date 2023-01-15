@@ -571,10 +571,10 @@ if the collateral is insufficient._
 function rotateLendingMarkets(bytes32 _ccy) external
 ```
 
-Rotate the lending markets. In this rotation, the following actions are happened.
+Rotates the lending markets. In this rotation, the following actions are happened.
 - Updates the maturity at the beginning of the market array.
-- Moves the beginning of the market array to the end of it.
-- Update the compound factor in this contract using the next market unit price.
+- Moves the beginning of the market array to the end of it (Market rotation).
+- Update the compound factor in this contract using the next market unit price. (Auto-rolls)
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

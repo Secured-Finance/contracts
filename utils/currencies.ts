@@ -1,11 +1,5 @@
 import { BigNumber } from 'ethers';
 import {
-  btcToETHRate,
-  ethToUSDRate,
-  filToETHRate,
-  usdcToETHRate,
-} from './numbers';
-import {
   hexBTCString,
   hexETHString,
   hexFILString,
@@ -28,6 +22,11 @@ export interface MockRate {
   decimals: number;
   rate: BigNumber;
 }
+
+const filToETHRate = BigNumber.from('3803677700000000');
+const ethToUSDRate = BigNumber.from('149164000000');
+const btcToETHRate = BigNumber.from('13087292239235700000');
+const usdcToETHRate = BigNumber.from('670403046311442');
 
 const currencies: Currency[] = [
   {

@@ -461,7 +461,7 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        genesisValueVault().initialize(_ccy, 18, _compoundFactor);
+        genesisValueVault().initialize(_ccy, 40, _compoundFactor);
         Storage.slot().genesisDates[_ccy] = _genesisDate;
     }
 
@@ -661,10 +661,10 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Rotate the lending markets. In this rotation, the following actions are happened.
+     * @notice Rotates the lending markets. In this rotation, the following actions are happened.
      * - Updates the maturity at the beginning of the market array.
-     * - Moves the beginning of the market array to the end of it.
-     * - Update the compound factor in this contract using the next market unit price.
+     * - Moves the beginning of the market array to the end of it (Market rotation).
+     * - Update the compound factor in this contract using the next market unit price. (Auto-rolls)
      *
      * @param _ccy Currency name in bytes32 of the selected market
      */

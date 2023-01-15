@@ -4,11 +4,9 @@ import { BigNumber, Contract, Wallet } from 'ethers';
 import { ethers, waffle } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import {
-  deployContracts,
-  LIQUIDATION_THRESHOLD_RATE,
-} from '../../utils/deployment';
 import { hexETHString, hexFILString, hexUSDCString } from '../../utils/strings';
+import { LIQUIDATION_THRESHOLD_RATE } from '../common/constants';
+import { deployContracts } from '../common/deployment';
 
 describe('Performance Test: Order Book', async () => {
   let signers: SignerWithAddress[];

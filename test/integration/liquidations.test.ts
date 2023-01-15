@@ -5,12 +5,13 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import {
-  deployContracts,
-  LIQUIDATION_THRESHOLD_RATE,
-} from '../../utils/deployment';
-import { filToETHRate, usdcToETHRate } from '../../utils/numbers';
 import { hexETHString, hexFILString, hexUSDCString } from '../../utils/strings';
+import {
+  filToETHRate,
+  LIQUIDATION_THRESHOLD_RATE,
+  usdcToETHRate,
+} from '../common/constants';
+import { deployContracts } from '../common/deployment';
 
 const ERROR_RANGE = BigNumber.from(1000);
 

@@ -93,13 +93,17 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _basisMaturity,
         int256 _futureValue
     ) external view override returns (int256) {
-        // NOTE: These calculation steps "FV -> GV -> FV" are needed to match the actual conversion step.
-        // Otherwise, Solidity's truncation specification creates a difference in the calculated values.
-        // The formula is:
-        // genesisValue = featureValueInMaturity / compoundFactorInMaturity.
-        // currentFeatureValue = genesisValue * currentCompoundFactor
-        int256 genesisValue = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
-        return calculateFVFromGV(_ccy, 0, genesisValue);
+        if (_futureValue == 0) {
+            return 0;
+        } else {
+            // NOTE: These calculation steps "FV -> GV -> FV" are needed to match the actual conversion step.
+            // Otherwise, Solidity's truncation specification creates a difference in the calculated values.
+            // The formula is:
+            // genesisValue = featureValueInMaturity / compoundFactorInMaturity.
+            // currentFeatureValue = genesisValue * currentCompoundFactor
+            int256 genesisValue = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
+            return calculateFVFromGV(_ccy, 0, genesisValue);
+        }
     }
 
     function calculateGVFromFV(
@@ -114,7 +118,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         require(compoundFactor > 0, "Compound factor is not fixed yet");
 
         // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
-        return (_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor);
+        bool isPlus = _futureValue > 0;
+        uint256 absFv = uint256(isPlus ? _futureValue : -_futureValue);
+        uint256 absGv = (absFv * 10**decimals(_ccy)) / compoundFactor;
+        return isPlus ? int256(absGv) : -int256(absGv);
     }
 
     function calculateFVFromGV(
@@ -127,8 +134,11 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             : Storage.slot().maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
 
         require(compoundFactor > 0, "Compound factor is not fixed yet");
+        bool isPlus = _genesisValue > 0;
+        uint256 absGv = uint256(isPlus ? _genesisValue : -_genesisValue);
+        uint256 absFv = (absGv * compoundFactor) / 10**decimals(_ccy);
 
-        return (_genesisValue * int256(compoundFactor)) / int256(10**decimals(_ccy));
+        return isPlus ? int256(absFv) : -int256(absFv);
     }
 
     function initialize(
@@ -204,10 +214,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _basisMaturity,
         int256 _futureValue
     ) external override onlyAcceptedContracts returns (bool) {
-        uint256 compoundFactor = Storage
-        .slot()
-        .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
-        int256 amount = (_futureValue * int256(10**decimals(_ccy))) / int256(compoundFactor);
+        int256 amount = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
         int256 balance = Storage.slot().balances[_ccy][_user];
 
         if (amount >= 0) {

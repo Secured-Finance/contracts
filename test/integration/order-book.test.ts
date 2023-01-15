@@ -4,13 +4,14 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import {
-  deployContracts,
-  LIQUIDATION_THRESHOLD_RATE,
-} from '../../utils/deployment';
-import { filToETHRate } from '../../utils/numbers';
-import { Signers } from '../../utils/signers';
 import { hexETHString, hexFILString } from '../../utils/strings';
+import {
+  filToETHRate,
+  LIQUIDATION_THRESHOLD_RATE,
+  ORDERS_CALCULATION_TOLERANCE_RANGE,
+} from '../common/constants';
+import { deployContracts } from '../common/deployment';
+import { Signers } from '../common/signers';
 
 describe('Integration Test: Order Book', async () => {
   let owner: SignerWithAddress;
@@ -184,7 +185,9 @@ describe('Integration Test: Order Book', async () => {
           bob.address,
         );
 
-        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(
+          ORDERS_CALCULATION_TOLERANCE_RANGE,
+        );
         expect(aliceFV.add(bobFV)).to.equal('0');
       });
 
@@ -270,7 +273,9 @@ describe('Integration Test: Order Book', async () => {
           bob.address,
         );
 
-        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(
+          ORDERS_CALCULATION_TOLERANCE_RANGE,
+        );
         expect(aliceFV.add(bobFV)).to.equal('0');
       });
 
@@ -363,9 +368,11 @@ describe('Integration Test: Order Book', async () => {
           await tokenVault.getTotalCollateralAmount(bob.address);
 
         expect(aliceFV.add(bobFV)).to.equal('0');
-        expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(1);
+        expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(
+          ORDERS_CALCULATION_TOLERANCE_RANGE,
+        );
         expect(bobTotalCollateralAmountAfter.sub(orderAmountInETH.div(2))).lte(
-          1,
+          ORDERS_CALCULATION_TOLERANCE_RANGE,
         );
       });
 
@@ -402,7 +409,9 @@ describe('Integration Test: Order Book', async () => {
           bob.address,
         );
 
-        expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(1);
+        expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(
+          ORDERS_CALCULATION_TOLERANCE_RANGE,
+        );
         expect(aliceFV.add(bobFV)).to.equal('0');
       });
 
@@ -793,7 +802,7 @@ describe('Integration Test: Order Book', async () => {
 
         expect(
           unusedCollateral.sub(depositAmountInETH.sub(orderAmountInETH)),
-        ).lte(1);
+        ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
         expect(aliceFV).to.equal('0');
         expect(coverage.sub('8000').abs()).lte(1);
       });
