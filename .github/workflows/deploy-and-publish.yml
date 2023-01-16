@@ -193,16 +193,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm config set git-tag-version=false
           if [ '${{ github.event.workflow.name }}' = 'Merge into main' ]; then
-            git switch main
-            npm version patch
+            npm version patch -m "chore: upgrade to %s"
           else
-            git switch develop
-            npm version prerelease --preid beta
+            npm version prerelease --preid beta -m "chore: upgrade to %s"
           fi
-          git push
           npm publish
+      - name: Push
+        shell: bash
+        run: git push
       - name: Merge main into develop
         shell: bash
         if: github.event.workflow.name == 'Merge into main'
