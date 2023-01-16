@@ -4,8 +4,8 @@ import { MockContract } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
+// contracts
 const AddressResolver = artifacts.require('AddressResolver');
-const TokenVault = artifacts.require('TokenVault');
 const CurrencyController = artifacts.require('CurrencyController');
 const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
@@ -13,6 +13,9 @@ const ProxyController = artifacts.require('ProxyController');
 const WETH9 = artifacts.require('MockWETH9');
 const MockERC20 = artifacts.require('MockERC20');
 const TokenVaultCallerMock = artifacts.require('TokenVaultCallerMock');
+
+// libraries
+const DepositManagementLogic = artifacts.require('DepositManagementLogic');
 
 const ISwapRouter = artifacts.require('ISwapRouter');
 
@@ -89,12 +92,24 @@ describe('TokenVault', () => {
       0,
     );
 
-    // Deploy
+    // Deploy libraries
+    const depositManagementLogic = await deployContract(
+      owner,
+      DepositManagementLogic,
+    );
+
+    // Deploy contracts
     const addressResolver = await deployContract(owner, AddressResolver);
     const proxyController = await deployContract(owner, ProxyController, [
       ethers.constants.AddressZero,
     ]);
-    const tokenVault = await deployContract(owner, TokenVault);
+    const tokenVault = await ethers
+      .getContractFactory('TokenVault', {
+        libraries: {
+          DepositManagementLogic: depositManagementLogic.address,
+        },
+      })
+      .then((factory) => factory.deploy());
 
     // Get the Proxy contract addresses
     await proxyController.setAddressResolverImpl(addressResolver.address);
@@ -268,6 +283,11 @@ describe('TokenVault', () => {
         targetCurrency,
       );
       expect(collateralAmount).to.equal(value);
+
+      const totalCollateralAmount = await tokenVaultProxy.getTotalDepositAmount(
+        targetCurrency,
+      );
+      expect(totalCollateralAmount).to.equal(collateralAmount);
     });
 
     it('Deposit into collateral book using ETH', async () => {
@@ -289,6 +309,11 @@ describe('TokenVault', () => {
         ETH,
       );
       expect(collateralAmount).to.equal(valueInETH);
+
+      const totalCollateralAmount = await tokenVaultProxy.getTotalDepositAmount(
+        ETH,
+      );
+      expect(totalCollateralAmount).to.equal(collateralAmount);
     });
 
     it('Add the working orders & Withdraw', async () => {
@@ -369,6 +394,11 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.connect(bob).withdraw(targetCurrency, '10000000000000'),
       ).to.emit(tokenVaultProxy, 'Withdraw');
+
+      const totalCollateralAmount = await tokenVaultProxy.getTotalDepositAmount(
+        targetCurrency,
+      );
+      expect(totalCollateralAmount).to.equal('10000000000000');
     });
 
     it('Add the borrowed amount', async () => {

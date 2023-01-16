@@ -17,11 +17,15 @@ import {
 
 const deployContracts = async () => {
   // Deploy libraries
-  const [fundCalculationLogic, orderBookLogic] = await Promise.all(
-    ['FundCalculationLogic', 'OrderBookLogic'].map((library) =>
-      ethers.getContractFactory(library).then((factory) => factory.deploy()),
-    ),
-  );
+  const [depositManagementLogic, fundCalculationLogic, orderBookLogic] =
+    await Promise.all(
+      ['DepositManagementLogic', 'FundCalculationLogic', 'OrderBookLogic'].map(
+        (library) =>
+          ethers
+            .getContractFactory(library)
+            .then((factory) => factory.deploy()),
+      ),
+    );
 
   // Deploy contracts
   const [
@@ -39,10 +43,16 @@ const deployContracts = async () => {
       'CurrencyController',
       'GenesisValueVault',
       'MockWETH9',
-      'TokenVault',
     ].map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
     ),
+    ethers
+      .getContractFactory('TokenVault', {
+        libraries: {
+          DepositManagementLogic: depositManagementLogic.address,
+        },
+      })
+      .then((factory) => factory.deploy()),
     ethers
       .getContractFactory('LendingMarketController', {
         libraries: {

@@ -3,11 +3,11 @@ pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-import {IQuoter} from "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
 import {ERC20Handler} from "./libraries/ERC20Handler.sol";
+import {DepositManagementLogic} from "./libraries/logics/DepositManagementLogic.sol";
 // interfaces
 import {ITokenVault} from "./interfaces/ITokenVault.sol";
 // mixins
@@ -35,16 +35,6 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
  */
 contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
-
-    struct CalculatedFundVars {
-        uint256 workingLendOrdersAmount;
-        uint256 collateralAmount;
-        uint256 lentAmount;
-        uint256 workingBorrowOrdersAmount;
-        uint256 debtAmount;
-        uint256 borrowedAmount;
-        bool isEnoughDeposit;
-    }
 
     /**
      * @notice Modifier to check if currency hasn't been registered yet
@@ -112,7 +102,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         ProtocolTypes.Side _unsettledOrderSide
     ) external view override returns (bool) {
         return
-            _isCovered(
+            DepositManagementLogic.isCovered(
                 _user,
                 _unsettledOrderCcy,
                 _unsettledOrderAmount,
@@ -126,7 +116,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @return The boolean if the collateral has sufficient coverage or not
      */
     function isCovered(address _user) public view override returns (bool) {
-        return _isCovered(_user, "", 0, false);
+        return DepositManagementLogic.isCovered(_user, "", 0, false);
     }
 
     /**
@@ -138,6 +128,11 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         return Storage.slot().collateralCurrencies.contains(_ccy);
     }
 
+    /**
+     * @notice Gets if the currencies are acceptable as collateral
+     * @param _ccys Currency name list in bytes32
+     * @return isCollateralCurrencies Array of the boolean if the currency has been registered or not
+     */
     function isCollateral(bytes32[] calldata _ccys)
         external
         view
@@ -146,7 +141,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     {
         isCollateralCurrencies = new bool[](_ccys.length);
         for (uint256 i = 0; i < _ccys.length; i++) {
-            isCollateralCurrencies[i] = Storage.slot().collateralCurrencies.contains(_ccys[i]);
+            isCollateralCurrencies[i] = isCollateral(_ccys[i]);
         }
     }
 
@@ -170,7 +165,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
     /**
      * @notice Gets the currencies accepted as collateral
-     * @return Array of th currency accepted as collateral
+     * @return Array of the currency accepted as collateral
      */
     function getCollateralCurrencies() external view override returns (bytes32[] memory) {
         return Storage.slot().collateralCurrencies.values();
@@ -181,8 +176,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _user User's address
      * @return Maximum amount of ETH that can be withdrawn
      */
-    function getWithdrawableCollateral(address _user) external view virtual returns (uint256) {
-        return _getWithdrawableCollateral(_user);
+    function getWithdrawableCollateral(address _user) external view override returns (uint256) {
+        return DepositManagementLogic.getWithdrawableCollateral(_user);
     }
 
     /**
@@ -190,10 +185,9 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _user User's address
      * @return coverage The rate of collateral used
      */
-    function getCoverage(address _user) public view override returns (uint256 coverage) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
-            _user
-        );
+    function getCoverage(address _user) external view override returns (uint256 coverage) {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = DepositManagementLogic
+            .getCollateralAmount(_user);
 
         if (totalCollateral == 0) {
             coverage = totalUsedCollateral == 0 ? 0 : type(uint256).max;
@@ -203,14 +197,13 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets the total amount of unused collateral
+     * @notice Gets the total amount of the unused collateral
      * @param _user User's address
      * @return The total amount of unused collateral
      */
-    function getUnusedCollateral(address _user) external view returns (uint256) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
-            _user
-        );
+    function getUnusedCollateral(address _user) external view override returns (uint256) {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = DepositManagementLogic
+            .getCollateralAmount(_user);
 
         return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
     }
@@ -227,19 +220,27 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         override
         returns (uint256 totalCollateralAmount)
     {
-        (totalCollateralAmount, , ) = _getActualCollateralAmount(_user);
+        (totalCollateralAmount, , ) = DepositManagementLogic.getCollateralAmount(_user);
     }
 
     function getLiquidationAmount(address _user) external view override returns (uint256) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
-            _user
-        );
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = DepositManagementLogic
+            .getCollateralAmount(_user);
 
         return
             totalCollateral * ProtocolTypes.PCT_DIGIT >=
                 totalUsedCollateral * CollateralParametersHandler.liquidationThresholdRate()
                 ? 0
                 : totalUsedCollateral / 2;
+    }
+
+    /**
+     * @notice Gets the total amount deposited of the selected currency
+     * @param _ccy Currency name in bytes32
+     * @return The total deposited amount
+     */
+    function getTotalDepositAmount(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().totalDepositAmount[_ccy];
     }
 
     /**
@@ -254,9 +255,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         override
         returns (uint256)
     {
-        (, , , uint256 lentAmount, , , uint256 borrowedAmount) = lendingMarketController()
-            .calculateFunds(_ccy, _user);
-        return Storage.slot().depositAmounts[_user][_ccy] + borrowedAmount - lentAmount;
+        return DepositManagementLogic.getDepositAmount(_user, _ccy);
     }
 
     /**
@@ -265,17 +264,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @return The currency names in bytes32
      */
     function getUsedCurrencies(address _user) public view override returns (bytes32[] memory) {
-        EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
-
-        uint256 numCurrencies = currencySet.length();
-        bytes32[] memory currencies = new bytes32[](numCurrencies);
-
-        for (uint256 i = 0; i < numCurrencies; i++) {
-            bytes32 currency = currencySet.at(i);
-            currencies[i] = currency;
-        }
-
-        return currencies;
+        return DepositManagementLogic.getUsedCurrencies(_user);
     }
 
     /**
@@ -390,25 +379,14 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         require(_amount > 0, "Invalid amount");
 
         lendingMarketController().cleanOrders(_ccy, msg.sender);
+        uint256 withdrawableAmount = DepositManagementLogic.withdraw(_ccy, _amount);
+        ERC20Handler.withdrawAssets(
+            Storage.slot().tokenAddresses[_ccy],
+            msg.sender,
+            withdrawableAmount
+        );
 
-        uint256 withdrawAmt;
-        uint256 depositAmount = Storage.slot().depositAmounts[msg.sender][_ccy];
-        if (isCollateral(_ccy)) {
-            uint256 maxWithdrawETH = _getWithdrawableCollateral(msg.sender);
-            uint256 maxWithdraw = currencyController().convertFromETH(_ccy, maxWithdrawETH);
-
-            withdrawAmt = _amount > maxWithdraw ? maxWithdraw : _amount;
-            withdrawAmt = depositAmount >= withdrawAmt ? withdrawAmt : depositAmount;
-        } else {
-            withdrawAmt = depositAmount;
-        }
-
-        Storage.slot().depositAmounts[msg.sender][_ccy] -= withdrawAmt;
-
-        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], msg.sender, withdrawAmt);
-        _updateUsedCurrencies(msg.sender, _ccy);
-
-        emit Withdraw(msg.sender, _ccy, withdrawAmt);
+        emit Withdraw(msg.sender, _ccy, withdrawableAmount);
     }
 
     /**
@@ -422,8 +400,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         bytes32 _ccy,
         uint256 _amount
     ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
-        Storage.slot().depositAmounts[_user][_ccy] += _amount;
-        _updateUsedCurrencies(_user, _ccy);
+        DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
     }
 
     /**
@@ -437,13 +414,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         bytes32 _ccy,
         uint256 _amount
     ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
-        require(
-            Storage.slot().depositAmounts[_user][_ccy] >= _amount,
-            "Not enough collateral in the selected currency"
-        );
-
-        Storage.slot().depositAmounts[_user][_ccy] -= _amount;
-        _updateUsedCurrencies(_user, _ccy);
+        DepositManagementLogic.removeDepositAmount(_user, _ccy, _amount);
     }
 
     /**
@@ -461,7 +432,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _amountOut,
         uint24 _poolFee
     ) external override onlyAcceptedContracts returns (uint256 amountIn) {
-        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
+        uint256 depositAmount = DepositManagementLogic.getInternalDepositAmount(_user, _ccyFrom);
         require(depositAmount > 0, "No deposit amount in the selected currency");
 
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
@@ -477,11 +448,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         amountIn = CollateralParametersHandler.uniswapRouter().exactOutputSingle(params);
 
-        Storage.slot().depositAmounts[_user][_ccyFrom] -= amountIn;
-        Storage.slot().depositAmounts[_user][_ccyTo] += _amountOut;
-
-        _updateUsedCurrencies(_user, _ccyFrom);
-        _updateUsedCurrencies(_user, _ccyTo);
+        DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountIn);
+        DepositManagementLogic.addDepositAmount(_user, _ccyTo, _amountOut);
 
         emit Swap(_user, _ccyFrom, _ccyTo, amountIn, _amountOut);
     }
@@ -504,177 +472,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         );
     }
 
-    function _isCovered(
-        address _user,
-        bytes32 _unsettledOrderCcy,
-        uint256 _unsettledOrderAmount,
-        bool _isUnsettledBorrowOrder
-    ) internal view returns (bool) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getActualCollateralAmount(
-            _user,
-            _unsettledOrderCcy,
-            _unsettledOrderAmount,
-            _isUnsettledBorrowOrder
-        );
-
-        return
-            totalUsedCollateral == 0 ||
-            (totalCollateral * ProtocolTypes.PCT_DIGIT >=
-                totalUsedCollateral * CollateralParametersHandler.liquidationThresholdRate());
-    }
-
-    function _getActualCollateralAmount(address _user)
-        private
-        view
-        returns (
-            uint256 totalCollateral,
-            uint256 totalUsedCollateral,
-            uint256 totalActualCollateral
-        )
-    {
-        return _getActualCollateralAmount(_user, "", 0, false);
-    }
-
-    function _getActualCollateralAmount(
-        address _user,
-        bytes32 _unsettledOrderCcy,
-        uint256 _unsettledOrderAmount,
-        bool _isUnsettledBorrowOrder
-    )
-        private
-        view
-        returns (
-            uint256 totalCollateral,
-            uint256 totalUsedCollateral,
-            uint256 totalActualCollateral
-        )
-    {
-        CalculatedFundVars memory vars;
-
-        uint256 depositAmount = Storage.slot().depositAmounts[_user][_unsettledOrderCcy];
-        uint256 unsettledBorrowOrdersAmountInETH;
-
-        if (_unsettledOrderAmount > 0) {
-            if (_isUnsettledBorrowOrder) {
-                unsettledBorrowOrdersAmountInETH = currencyController().convertToETH(
-                    _unsettledOrderCcy,
-                    _unsettledOrderAmount
-                );
-            } else {
-                require(
-                    depositAmount >= _unsettledOrderAmount,
-                    "Not enough collateral in the selected currency"
-                );
-                depositAmount -= _unsettledOrderAmount;
-
-                if (isCollateral(_unsettledOrderCcy)) {
-                    vars.workingLendOrdersAmount += currencyController().convertToETH(
-                        _unsettledOrderCcy,
-                        _unsettledOrderAmount
-                    );
-                }
-            }
-        }
-
-        (
-            vars.workingLendOrdersAmount,
-            ,
-            vars.collateralAmount,
-            vars.lentAmount,
-            vars.workingBorrowOrdersAmount,
-            vars.debtAmount,
-            vars.borrowedAmount,
-            vars.isEnoughDeposit
-        ) = lendingMarketController().calculateTotalFundsInETH(
-            _user,
-            _unsettledOrderCcy,
-            depositAmount
-        );
-
-        require(
-            vars.isEnoughDeposit || _isUnsettledBorrowOrder || _unsettledOrderAmount == 0,
-            "Not enough collateral in the selected currency"
-        );
-
-        uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInETH(_user);
-
-        uint256 actualPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
-        uint256 minusCollateral = vars.workingLendOrdersAmount + vars.lentAmount;
-        uint256 plusCollateral = actualPlusCollateral + vars.collateralAmount;
-
-        totalCollateral = plusCollateral >= minusCollateral ? plusCollateral - minusCollateral : 0;
-        totalUsedCollateral =
-            vars.workingBorrowOrdersAmount +
-            vars.debtAmount +
-            unsettledBorrowOrdersAmountInETH;
-        totalActualCollateral = actualPlusCollateral >= minusCollateral
-            ? actualPlusCollateral - minusCollateral
-            : 0;
-    }
-
-    /**
-     * @notice Calculates maximum amount of ETH that can be withdrawn.
-     * @param _user User's address
-     * @return Maximum amount of ETH that can be withdrawn
-     */
-    function _getWithdrawableCollateral(address _user) internal view returns (uint256) {
-        (
-            uint256 totalCollateral,
-            uint256 totalUsedCollateral,
-            uint256 totalActualCollateral
-        ) = _getActualCollateralAmount(_user);
-
-        if (totalUsedCollateral == 0) {
-            return totalActualCollateral;
-        } else if (
-            totalCollateral * ProtocolTypes.PRICE_DIGIT >
-            totalUsedCollateral * CollateralParametersHandler.liquidationThresholdRate()
-        ) {
-            // NOTE: The formula is:
-            // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
-            uint256 maxWithdraw = (totalCollateral *
-                ProtocolTypes.PRICE_DIGIT -
-                (totalUsedCollateral) *
-                CollateralParametersHandler.liquidationThresholdRate()) / ProtocolTypes.PRICE_DIGIT;
-            return maxWithdraw >= totalActualCollateral ? totalActualCollateral : maxWithdraw;
-        } else {
-            return 0;
-        }
-    }
-
-    /**
-     * @notice Gets the total of amount deposited in the user's collateral of all currencies
-     *  in this contract by converting it to ETH.
-     * @param _user Address of collateral user
-     * @return totalDepositAmount The total deposited amount in ETH
-     */
-    function _getTotalInternalDepositAmountInETH(address _user)
-        internal
-        view
-        returns (uint256 totalDepositAmount)
-    {
-        EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
-        uint256 len = currencies.length();
-
-        for (uint256 i = 0; i < len; i++) {
-            bytes32 ccy = currencies.at(i);
-            if (isCollateral(ccy)) {
-                uint256 depositAmount = Storage.slot().depositAmounts[_user][ccy];
-                totalDepositAmount += currencyController().convertToETH(ccy, depositAmount);
-            }
-        }
-
-        return totalDepositAmount;
-    }
-
-    function _updateUsedCurrencies(address _user, bytes32 _ccy) internal {
-        if (Storage.slot().depositAmounts[_user][_ccy] > 0) {
-            Storage.slot().usedCurrencies[_user].add(_ccy);
-        } else {
-            Storage.slot().usedCurrencies[_user].remove(_ccy);
-        }
-    }
-
     function _deposit(
         address _user,
         bytes32 _ccy,
@@ -692,10 +489,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             address(this),
             _amount
         );
-
-        Storage.slot().depositAmounts[_user][_ccy] += _amount;
-
-        _updateUsedCurrencies(_user, _ccy);
+        DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
 
         emit Deposit(_user, _ccy, _amount);
     }

@@ -9,6 +9,12 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
+  await deploy('DepositManagementLogic', {
+    from: deployer,
+  }).then((result) =>
+    executeIfNewlyDeployment('DepositManagementLogic', result),
+  );
+
   await deploy('OrderBookLogic', {
     from: deployer,
   }).then((result) => executeIfNewlyDeployment('OrderBookLogic', result));
