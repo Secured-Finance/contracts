@@ -3,14 +3,14 @@ pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // interfaces
-import {ILendingMarket} from "../interfaces/ILendingMarket.sol";
-import {IFutureValueVault} from "../interfaces/IFutureValueVault.sol";
+import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
+import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
-import {AddressResolverLib} from "./AddressResolverLib.sol";
+import {AddressResolverLib} from "../AddressResolverLib.sol";
 // types
-import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage} from "../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
 
 library FundCalculationLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;

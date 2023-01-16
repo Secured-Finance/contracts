@@ -3,7 +3,7 @@ import { artifacts } from 'hardhat';
 import { Step, steps } from './data/steps';
 
 const OrderStatisticsTree = artifacts.require(
-  'HitchensOrderStatisticsTreeContract.sol',
+  'OrderStatisticsTreeContract.sol',
 );
 
 let ost: Contract;

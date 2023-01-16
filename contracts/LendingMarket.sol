@@ -6,7 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {OrderBookLogic} from "./libraries/OrderBookLogic.sol";
+import {OrderBookLogic} from "./libraries/logics/OrderBookLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types

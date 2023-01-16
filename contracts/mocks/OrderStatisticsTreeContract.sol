@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../libraries/HitchensOrderStatisticsTreeLib.sol";
+import "../libraries/OrderStatisticsTreeLib.sol";
 
-contract HitchensOrderStatisticsTreeContract {
-    using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
+contract OrderStatisticsTreeContract {
+    using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
 
-    HitchensOrderStatisticsTreeLib.Tree tree;
+    OrderStatisticsTreeLib.Tree tree;
 
     event InsertOrder(string action, uint256 amount, uint256 value, uint256 orderId);
     event RemoveOrder(string action, uint256 value, uint256 _id);

@@ -21,13 +21,13 @@ struct OrderItem {
 }
 
 /**
- * @notice HitchensOrderStatisticsTreeLib is a Red-Black Tree binary search library
+ * @notice OrderStatisticsTreeLib is a Red-Black Tree binary search library
  * based on the following library that is extended to manage order data.
  *
  * https://github.com/rob-Hitchens/OrderStatisticsTree
  *
  */
-library HitchensOrderStatisticsTreeLib {
+library OrderStatisticsTreeLib {
     uint256 private constant EMPTY = 0;
 
     struct Node {
