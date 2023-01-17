@@ -56,18 +56,6 @@ library DepositManagementLogic {
         return currencies;
     }
 
-    function getCollateralCurrencies() public view returns (bytes32[] memory) {
-        return Storage.slot().collateralCurrencies.values();
-    }
-
-    function getTotalDepositAmount(bytes32 _ccy) public view returns (uint256) {
-        return Storage.slot().totalDepositAmount[_ccy];
-    }
-
-    function getInternalDepositAmount(address _user, bytes32 _ccy) public view returns (uint256) {
-        return Storage.slot().depositAmounts[_user][_ccy];
-    }
-
     function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256) {
         (, , , uint256 lentAmount, , , uint256 borrowedAmount) = AddressResolverLib
             .lendingMarketController()

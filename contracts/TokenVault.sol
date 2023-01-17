@@ -432,7 +432,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _amountOut,
         uint24 _poolFee
     ) external override onlyAcceptedContracts returns (uint256 amountIn) {
-        uint256 depositAmount = DepositManagementLogic.getInternalDepositAmount(_user, _ccyFrom);
+        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
         require(depositAmount > 0, "No deposit amount in the selected currency");
 
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
