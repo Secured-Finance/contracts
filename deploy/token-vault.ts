@@ -14,8 +14,14 @@ const func: DeployFunction = async function ({
 
   const WETH =
     process.env.TOKEN_WETH || (await deployments.get('MockWETH9')).address;
+  const depositManagementLogic = await deployments.get(
+    'DepositManagementLogic',
+  );
   const deployResult = await deploy('TokenVault', {
     from: deployer,
+    libraries: {
+      DepositManagementLogic: depositManagementLogic.address,
+    },
   });
 
   await executeIfNewlyDeployment('TokenVault', deployResult, async () => {
@@ -35,6 +41,6 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['TokenVault'];
-func.dependencies = ['ProxyController', 'Tokens'];
+func.dependencies = ['ProxyController', 'Tokens', 'Libraries'];
 
 export default func;

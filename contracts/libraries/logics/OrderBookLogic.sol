@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ILendingMarket} from "../interfaces/ILendingMarket.sol";
-import {HitchensOrderStatisticsTreeLib, RemainingOrder, OrderItem} from "../libraries/HitchensOrderStatisticsTreeLib.sol";
-import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {LendingMarketStorage as Storage, MarketOrder} from "../storages/LendingMarketStorage.sol";
+import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
+import {OrderStatisticsTreeLib, RemainingOrder, OrderItem} from "../../libraries/OrderStatisticsTreeLib.sol";
+import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
+import {LendingMarketStorage as Storage, MarketOrder} from "../../storages/LendingMarketStorage.sol";
 
 library OrderBookLogic {
-    using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
+    using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
 
     function getHighestBorrowUnitPrice() public view returns (uint256) {
         return Storage.slot().borrowOrders[Storage.slot().maturity].last();

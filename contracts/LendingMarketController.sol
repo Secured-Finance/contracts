@@ -10,7 +10,7 @@ import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
-import {FundCalculationLogic} from "./libraries/FundCalculationLogic.sol";
+import {FundCalculationLogic} from "./libraries/logics/FundCalculationLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types

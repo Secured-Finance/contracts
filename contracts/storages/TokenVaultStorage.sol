@@ -15,10 +15,10 @@ library TokenVaultStorage {
         mapping(bytes32 => address) tokenAddresses;
         // Mapping for used currency vaults per user.
         mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
+        // Mapping from currency to total deposit amount
+        mapping(bytes32 => uint256) totalDepositAmount;
         // Mapping for all deposits per users
         mapping(address => mapping(bytes32 => uint256)) depositAmounts;
-        // Mapping from user to total escrowed amount per currency
-        mapping(address => mapping(bytes32 => uint256)) escrowedAmount;
     }
 
     function slot() internal pure returns (Storage storage r) {

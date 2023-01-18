@@ -83,6 +83,9 @@ describe('Integration Test: Deposit', async () => {
     });
 
     it('Deposit ETH', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexETHString);
+
       await tokenVault
         .connect(alice)
         .deposit(hexETHString, initialETHBalance.div(5), {
@@ -95,13 +98,22 @@ describe('Integration Test: Deposit', async () => {
         alice.address,
         hexETHString,
       );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexETHString,
+      );
 
       expect(tokenVaultBalance).to.equal(initialETHBalance.div(5));
       expect(currencies.includes(hexETHString)).to.equal(true);
       expect(depositAmount).to.equal(initialETHBalance.div(5));
+      expect(
+        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
+      ).to.equal(initialETHBalance.div(5));
     });
 
     it('Withdraw all collateral', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexETHString);
+
       await tokenVault
         .connect(alice)
         .withdraw(hexETHString, initialETHBalance.div(5));
@@ -112,10 +124,16 @@ describe('Integration Test: Deposit', async () => {
         alice.address,
         hexETHString,
       );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexETHString,
+      );
 
       expect(tokenVaultBalance).to.equal(0);
       expect(currencies.includes(hexETHString)).to.equal(false);
       expect(depositAmount).to.equal(0);
+      expect(
+        totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
+      ).to.equal(initialETHBalance.div(5));
     });
   });
 
@@ -148,6 +166,8 @@ describe('Integration Test: Deposit', async () => {
     });
 
     it('Withdraw partially', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexETHString);
       await tokenVault
         .connect(alice)
         .withdraw(hexETHString, initialETHBalance.div(5));
@@ -158,13 +178,21 @@ describe('Integration Test: Deposit', async () => {
         alice.address,
         hexETHString,
       );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexETHString,
+      );
 
       expect(tokenVaultBalance).to.equal(initialETHBalance.div(5));
       expect(currencies.includes(hexETHString)).to.equal(true);
       expect(depositAmount).to.equal(initialETHBalance.div(5));
+      expect(
+        totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
+      ).to.equal(initialETHBalance.div(5));
     });
 
     it('Withdraw with over amount input', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexETHString);
       await tokenVault.connect(alice).withdraw(hexETHString, initialETHBalance);
 
       const tokenVaultBalance = await wETHToken.balanceOf(tokenVault.address);
@@ -173,10 +201,16 @@ describe('Integration Test: Deposit', async () => {
         alice.address,
         hexETHString,
       );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexETHString,
+      );
 
       expect(tokenVaultBalance).to.equal(0);
       expect(currencies.includes(hexETHString)).to.equal(false);
       expect(depositAmount).to.equal(0);
+      expect(
+        totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
+      ).to.equal(initialETHBalance.div(5));
     });
   });
 
@@ -186,6 +220,8 @@ describe('Integration Test: Deposit', async () => {
     });
 
     it('Deposit ETH', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexETHString);
       const collateralAmountBefore = await tokenVault
         .connect(alice)
         .getTotalCollateralAmount(alice.address);
@@ -205,6 +241,9 @@ describe('Integration Test: Deposit', async () => {
         alice.address,
         hexETHString,
       );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexETHString,
+      );
 
       expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(
         initialETHBalance.div(5),
@@ -212,9 +251,14 @@ describe('Integration Test: Deposit', async () => {
       expect(tokenVaultBalance).to.equal(initialETHBalance.div(5));
       expect(currencies.includes(hexETHString)).to.equal(true);
       expect(depositAmount).to.equal(initialETHBalance.div(5));
+      expect(
+        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
+      ).to.equal(initialETHBalance.div(5));
     });
 
     it('Deposit FIL', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexFILString);
       const collateralAmountBefore = await tokenVault
         .connect(alice)
         .getTotalCollateralAmount(alice.address);
@@ -235,17 +279,25 @@ describe('Integration Test: Deposit', async () => {
         alice.address,
         hexFILString,
       );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexFILString,
+      );
 
       expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(0);
       expect(tokenVaultBalance).to.equal(initialFILBalance.div(5));
       expect(currencies.includes(hexFILString)).to.equal(true);
       expect(depositAmount).to.equal(initialFILBalance.div(5));
+      expect(
+        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
+      ).to.equal(initialFILBalance.div(5));
     });
 
     it('Withdraw ETH with over amount input', async () => {
       const collateralAmountBefore = await tokenVault
         .connect(alice)
         .getTotalCollateralAmount(alice.address);
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexETHString);
 
       await tokenVault.connect(alice).withdraw(hexETHString, initialETHBalance);
 
@@ -259,6 +311,9 @@ describe('Integration Test: Deposit', async () => {
         alice.address,
         hexETHString,
       );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexETHString,
+      );
 
       expect(collateralAmountBefore.sub(collateralAmountAfter)).to.equal(
         initialETHBalance.div(5),
@@ -266,6 +321,9 @@ describe('Integration Test: Deposit', async () => {
       expect(tokenVaultBalance).to.equal(0);
       expect(currencies.includes(hexETHString)).to.equal(false);
       expect(depositAmount).to.equal(0);
+      expect(
+        totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
+      ).to.equal(initialETHBalance.div(5));
     });
   });
 

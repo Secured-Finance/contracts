@@ -48,6 +48,8 @@ interface ITokenVault {
 
     function getLiquidationAmount(address user) external view returns (uint256);
 
+    function getTotalDepositAmount(bytes32 _ccy) external view returns (uint256);
+
     function getDepositAmount(address user, bytes32 ccy) external view returns (uint256);
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);

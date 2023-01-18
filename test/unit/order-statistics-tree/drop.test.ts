@@ -8,7 +8,7 @@ import {
 import { lendingLimitOrders, lendingMarketOrders } from './data/lending-orders';
 
 const OrderStatisticsTree = artifacts.require(
-  'HitchensOrderStatisticsTreeContract.sol',
+  'OrderStatisticsTreeContract.sol',
 );
 
 let ost: Contract;

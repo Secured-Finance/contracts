@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
-import "../libraries/HitchensOrderStatisticsTreeLib.sol";
+import "../libraries/OrderStatisticsTreeLib.sol";
 
 struct MarketOrder {
     ProtocolTypes.Side side;
@@ -12,7 +12,7 @@ struct MarketOrder {
 }
 
 library LendingMarketStorage {
-    using HitchensOrderStatisticsTreeLib for HitchensOrderStatisticsTreeLib.Tree;
+    using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
 
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarket");
 
@@ -30,9 +30,9 @@ library LendingMarketStorage {
         // Mapping from orderId to order
         mapping(uint256 => MarketOrder) orders;
         // Mapping from maturity to lending orders
-        mapping(uint256 => HitchensOrderStatisticsTreeLib.Tree) lendOrders;
+        mapping(uint256 => OrderStatisticsTreeLib.Tree) lendOrders;
         // Mapping from maturity to borrowing orders
-        mapping(uint256 => HitchensOrderStatisticsTreeLib.Tree) borrowOrders;
+        mapping(uint256 => OrderStatisticsTreeLib.Tree) borrowOrders;
     }
 
     function slot() internal pure returns (Storage storage r) {
