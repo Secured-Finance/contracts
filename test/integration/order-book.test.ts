@@ -7,7 +7,9 @@ import { Side } from '../../utils/constants';
 import { hexETHString, hexFILString } from '../../utils/strings';
 import {
   filToETHRate,
+  LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
+  LIQUIDATION_USER_FEE_RATE,
   ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -25,7 +27,8 @@ describe('Integration Test: Order Book', async () => {
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
-  let mockSwapRouter: Contract;
+  let mockUniswapRouter: Contract;
+  let mockUniswapQuoter: Contract;
 
   let filLendingMarkets: Contract[] = [];
   let filMaturities: BigNumber[];
@@ -95,18 +98,28 @@ describe('Integration Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
 
-    mockSwapRouter = await ethers
-      .getContractFactory('MockSwapRouter')
+    mockUniswapRouter = await ethers
+      .getContractFactory('MockUniswapRouter')
+      .then((factory) =>
+        factory.deploy(addressResolver.address, wETHToken.address),
+      );
+    mockUniswapQuoter = await ethers
+      .getContractFactory('MockUniswapQuoter')
       .then((factory) =>
         factory.deploy(addressResolver.address, wETHToken.address),
       );
 
-    await mockSwapRouter.setToken(hexETHString, wETHToken.address);
-    await mockSwapRouter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
+    await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
+    await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
-      mockSwapRouter.address,
+      LIQUIDATION_USER_FEE_RATE,
+      LIQUIDATION_PROTOCOL_FEE_RATE,
+      mockUniswapRouter.address,
+      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexETHString, true);

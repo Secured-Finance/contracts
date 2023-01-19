@@ -32,13 +32,13 @@ library FundCalculationLogic {
     }
 
     function convertToLiquidationAmountFromCollateral(
+        address _liquidator,
+        address _user,
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
-        uint256 _liquidationAmountMax,
-        address _user,
         uint24 _poolFee
-    ) public returns (uint256) {
+    ) public returns (uint256 liquidationAmount) {
         CalculatedAmountVars memory vars;
 
         uint256 liquidationPVAmountInETH = AddressResolverLib.tokenVault().getLiquidationAmount(
@@ -69,20 +69,6 @@ library FundCalculationLogic {
         vars.liquidationPVAmount = vars.liquidationPVAmount > vars.debtPVAmount
             ? vars.debtPVAmount
             : vars.liquidationPVAmount;
-        vars.liquidationPVAmount = _liquidationAmountMax > vars.liquidationPVAmount ||
-            _liquidationAmountMax == 0
-            ? vars.liquidationPVAmount
-            : _liquidationAmountMax;
-
-        // Swap collateral from deposited currency to debt currency using Uniswap.
-        // This swapped collateral is used to unwind the debt.
-        AddressResolverLib.tokenVault().swapDepositAmounts(
-            _user,
-            _collateralCcy,
-            _debtCcy,
-            vars.liquidationPVAmount,
-            _poolFee
-        );
 
         // Estimate the filled amount from actual orders in the order book using the future value of user debt.
         // If the estimated amount is less than the liquidation amount, the estimated amount is used as
@@ -91,10 +77,20 @@ library FundCalculationLogic {
             Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
         ).estimateFilledAmount(ProtocolTypes.Side.LEND, vars.debtFVAmount);
 
-        return
-            vars.liquidationPVAmount > vars.estimatedDebtPVAmount
-                ? vars.estimatedDebtPVAmount
-                : vars.liquidationPVAmount;
+        liquidationAmount = vars.liquidationPVAmount > vars.estimatedDebtPVAmount
+            ? vars.estimatedDebtPVAmount
+            : vars.liquidationPVAmount;
+
+        // Swap collateral from deposited currency to debt currency using Uniswap.
+        // This swapped collateral is used to unwind the debt.
+        liquidationAmount = AddressResolverLib.tokenVault().swapDepositAmounts(
+            _liquidator,
+            _user,
+            _collateralCcy,
+            _debtCcy,
+            liquidationAmount,
+            _poolFee
+        );
     }
 
     function calculateActualFutureValue(

@@ -8,7 +8,7 @@ import {ERC20Handler} from "../libraries/ERC20Handler.sol";
 // mixins
 import {MixinAddressResolver} from "../mixins/MixinAddressResolver.sol";
 
-contract MockSwapRouter is MixinAddressResolver {
+contract MockUniswapRouter is MixinAddressResolver {
     mapping(address => bytes32) private currencies;
 
     constructor(address _resolver, address _WETH9) {
@@ -40,9 +40,7 @@ contract MockSwapRouter is MixinAddressResolver {
 
         require(amountIn <= params.amountInMaximum, "Too much requested");
 
-        // ERC20Handler.safeTransfer(params.tokenIn, msg.sender, amountIn);
         ERC20Handler.safeTransferFrom(params.tokenIn, msg.sender, address(this), amountIn);
-        // ERC20Handler.safeTransferFrom(params.tokenOut, address(this), msg.sender, params.amountOut);
         ERC20Handler.safeTransfer(params.tokenOut, msg.sender, params.amountOut);
     }
 }

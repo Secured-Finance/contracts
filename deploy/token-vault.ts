@@ -3,6 +3,8 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const LIQUIDATION_THRESHOLD_RATE = 12500;
+const LIQUIDATION_USER_FEE_RATE = 500;
+const LIQUIDATION_PROTOCOL_FEE_RATE = 200;
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -33,7 +35,10 @@ const func: DeployFunction = async function ({
       .setTokenVaultImpl(
         deployResult.address,
         LIQUIDATION_THRESHOLD_RATE,
+        LIQUIDATION_USER_FEE_RATE,
+        LIQUIDATION_PROTOCOL_FEE_RATE,
         process.env.UNISWAP_SWAP_ROUTER_CONTRACT,
+        process.env.UNISWAP_SWAP_QUOTER_CONTRACT,
         WETH,
       )
       .then((tx) => tx.wait());

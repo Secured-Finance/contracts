@@ -1614,7 +1614,6 @@ describe('LendingMarketController', () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(1);
         await mockTokenVault.mock.getDepositAmount.returns(1);
-        await mockTokenVault.mock.swapDepositAmounts.returns(0);
       });
 
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
@@ -1624,9 +1623,8 @@ describe('LendingMarketController', () => {
         const liquidationAmount = ethers.BigNumber.from('300000000000000000');
 
         // Set up for the mocks
-        await mockCurrencyController.mock.convertFromETH.returns(
-          liquidationAmount,
-        );
+        await mockCurrencyController.mock.convertFromETH.returns('1');
+        await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
 
         await lendingMarketControllerProxy
           .connect(signers[0])
@@ -1667,7 +1665,6 @@ describe('LendingMarketController', () => {
             targetCurrency,
             targetCurrency,
             maturities[0],
-            '0',
             signers[0].address,
             '1',
           )
@@ -1679,7 +1676,7 @@ describe('LendingMarketController', () => {
                 targetCurrency,
                 targetCurrency,
                 maturities[0],
-                debtAmount.mul('7999').div('10000'),
+                liquidationAmount,
               ),
           );
       });
@@ -1690,9 +1687,8 @@ describe('LendingMarketController', () => {
         const liquidationAmount = ethers.BigNumber.from('80000000000000000');
 
         // Set up for the mocks
-        await mockCurrencyController.mock.convertFromETH.returns(
-          liquidationAmount,
-        );
+        await mockCurrencyController.mock.convertFromETH.returns('1');
+        await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
 
         await lendingMarketControllerProxy
           .connect(signers[3])
@@ -1733,7 +1729,6 @@ describe('LendingMarketController', () => {
             targetCurrency,
             targetCurrency,
             maturities[0],
-            '0',
             signers[3].address,
             '1',
           )
@@ -1758,7 +1753,6 @@ describe('LendingMarketController', () => {
               targetCurrency,
               targetCurrency,
               maturities[0],
-              '0',
               signers[0].address,
               '1',
             ),
@@ -1776,7 +1770,6 @@ describe('LendingMarketController', () => {
               targetCurrency,
               targetCurrency,
               maturities[0],
-              '0',
               signers[0].address,
               '1',
             ),

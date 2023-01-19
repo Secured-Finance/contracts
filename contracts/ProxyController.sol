@@ -81,21 +81,30 @@ contract ProxyController is IProxyController, Ownable {
      * @notice  Sets the implementation contract of TokenVault
      * @param newImpl The address of implementation contract
      * @param liquidationThresholdRate  The rate used as the auto liquidation threshold
+     * @param liquidationUserFeeRate The liquidation fee rate received by users
+     * @param liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param uniswapRouter Uniswap router contract address
+     * @param uniswapQuoter Uniswap quoter contract address
      * @param WETH9 The address of WETH
      */
     function setTokenVaultImpl(
         address newImpl,
         uint256 liquidationThresholdRate,
+        uint256 liquidationUserFeeRate,
+        uint256 liquidationProtocolFeeRate,
         address uniswapRouter,
+        address uniswapQuoter,
         address WETH9
     ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,uint256,address,address)",
+            "initialize(address,address,uint256,uint256,uint256,address,address,address)",
             msg.sender,
             resolver,
             liquidationThresholdRate,
+            liquidationUserFeeRate,
+            liquidationProtocolFeeRate,
             uniswapRouter,
+            uniswapQuoter,
             WETH9
         );
         _updateImpl(Contracts.TOKEN_VAULT, newImpl, data);
@@ -130,6 +139,19 @@ contract ProxyController is IProxyController, Ownable {
             resolver
         );
         _updateImpl(Contracts.LENDING_MARKET_CONTROLLER, newImpl, data);
+    }
+
+    /**
+     * @notice Sets the implementation contract of ReserveFund
+     * @param newImpl The address of implementation contract
+     */
+    function setReserveFundImpl(address newImpl) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,address)",
+            msg.sender,
+            resolver
+        );
+        _updateImpl(Contracts.RESERVE_FUND, newImpl, data);
     }
 
     /**

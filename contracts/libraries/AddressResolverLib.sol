@@ -6,6 +6,7 @@ import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
 import {ICurrencyController} from "../interfaces/ICurrencyController.sol";
 import {IGenesisValueVault} from "../interfaces/IGenesisValueVault.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
+import {IReserveFund} from "../interfaces/IReserveFund.sol";
 import {ITokenVault} from "../interfaces/ITokenVault.sol";
 import {MixinAddressResolverStorage as Storage} from "../storages/MixinAddressResolverStorage.sol";
 
@@ -30,6 +31,10 @@ library AddressResolverLib {
 
     function lendingMarketController() internal view returns (ILendingMarketController) {
         return ILendingMarketController(getAddress(Contracts.LENDING_MARKET_CONTROLLER));
+    }
+
+    function reserveFund() internal view returns (IReserveFund) {
+        return IReserveFund(getAddress(Contracts.RESERVE_FUND));
     }
 
     function tokenVault() internal view returns (ITokenVault) {

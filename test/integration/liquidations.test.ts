@@ -8,7 +8,9 @@ import { Side } from '../../utils/constants';
 import { hexETHString, hexFILString, hexUSDCString } from '../../utils/strings';
 import {
   filToETHRate,
+  LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
+  LIQUIDATION_USER_FEE_RATE,
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -27,10 +29,10 @@ describe('Integration Test: Liquidations', async () => {
   let wUSDCToken: Contract;
   let filToETHPriceFeed: Contract;
   let usdcToUSDPriceFeed: Contract;
-  let mockSwapRouter: Contract;
 
-  let filLendingMarkets: Contract[] = [];
-  let usdcLendingMarkets: Contract[] = [];
+  let mockUniswapRouter: Contract;
+  let mockUniswapQuoter: Contract;
+
   let filMaturities: BigNumber[];
   let usdcMaturities: BigNumber[];
 
@@ -178,26 +180,37 @@ describe('Integration Test: Liquidations', async () => {
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
     await tokenVault.registerCurrency(hexUSDCString, wUSDCToken.address, false);
 
-    mockSwapRouter = await ethers
-      .getContractFactory('MockSwapRouter')
+    mockUniswapRouter = await ethers
+      .getContractFactory('MockUniswapRouter')
+      .then((factory) =>
+        factory.deploy(addressResolver.address, wETHToken.address),
+      );
+    mockUniswapQuoter = await ethers
+      .getContractFactory('MockUniswapQuoter')
       .then((factory) =>
         factory.deploy(addressResolver.address, wETHToken.address),
       );
 
-    await mockSwapRouter.setToken(hexETHString, wETHToken.address);
-    await mockSwapRouter.setToken(hexFILString, wFILToken.address);
-    await mockSwapRouter.setToken(hexUSDCString, wUSDCToken.address);
+    await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
+    await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapRouter.setToken(hexUSDCString, wUSDCToken.address);
+    await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
+    await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapQuoter.setToken(hexUSDCString, wUSDCToken.address);
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
-      mockSwapRouter.address,
+      LIQUIDATION_USER_FEE_RATE,
+      LIQUIDATION_PROTOCOL_FEE_RATE,
+      mockUniswapRouter.address,
+      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexETHString, true);
     await tokenVault.updateCurrency(hexFILString, false);
     await tokenVault.updateCurrency(hexUSDCString, true);
 
-    for (const { address } of [owner, ...singers, mockSwapRouter]) {
+    for (const { address } of [owner, ...singers, mockUniswapRouter]) {
       await wFILToken
         .connect(owner)
         .transfer(address, '1000000000000000000000');
@@ -213,26 +226,6 @@ describe('Integration Test: Liquidations', async () => {
         .createLendingMarket(hexUSDCString)
         .then((tx) => tx.wait());
     }
-
-    filLendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexFILString)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
-
-    usdcLendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexUSDCString)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
 
     for (const signer of [owner, ...singers]) {
       await wFILToken
@@ -348,7 +341,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           filMaturities[0],
-          0,
           alice.address,
           10,
         ),
@@ -369,7 +361,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           filMaturities[0],
-          0,
           alice.address,
           10,
         ),
@@ -461,7 +452,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           filMaturities[0],
-          0,
           alice.address,
           10,
         ),
@@ -478,7 +468,7 @@ describe('Integration Test: Liquidations', async () => {
       ).to.lt(ERROR_RANGE);
     });
 
-    it('Increase FIL exchange rate by 20%, Liquidate it twice', async () => {
+    it('Increase FIL exchange rate by 15%, Liquidate it twice', async () => {
       const alice = singers[4];
       const bob = singers[5];
 
@@ -551,7 +541,7 @@ describe('Integration Test: Liquidations', async () => {
         aliceBalanceAfter.sub(aliceBalanceBefore).sub(filledOrderAmount).abs(),
       ).to.lt(ERROR_RANGE);
 
-      await filToETHPriceFeed.updateAnswer(filToETHRate.mul('120').div('100'));
+      await filToETHPriceFeed.updateAnswer(filToETHRate.mul('115').div('100'));
 
       const lendingInfoBefore = await lendingInfo.load('Before', {
         FIL: filMaturities[0],
@@ -562,7 +552,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           filMaturities[0],
-          0,
           alice.address,
           10,
         ),
@@ -577,7 +566,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           filMaturities[0],
-          0,
           alice.address,
           10,
         ),
@@ -602,7 +590,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           filMaturities[0],
-          0,
           alice.address,
           10,
         ),
@@ -614,7 +601,7 @@ describe('Integration Test: Liquidations', async () => {
       const bob = singers[7];
 
       const lendingInfo = new LendingInfo(alice.address);
-      const filledOrderAmount = BigNumber.from('200000000000000000000');
+      const filledOrderAmount = BigNumber.from('180000000000000000000');
       const depositAmount = BigNumber.from('1000000000000000000');
 
       const aliceBalanceBefore = await wFILToken.balanceOf(alice.address);
@@ -723,7 +710,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           filMaturities[1],
-          0,
           alice.address,
           10,
         ),
@@ -820,24 +806,25 @@ describe('Integration Test: Liquidations', async () => {
         FIL: filMaturities[0],
       });
 
-      await expect(
-        lendingMarketController.executeLiquidationCall(
+      await lendingMarketController
+        .executeLiquidationCall(
           hexETHString,
           hexFILString,
           filMaturities[0],
-          '87634484208095058544',
           alice.address,
           10,
-        ),
-      )
-        .to.emit(lendingMarketController, 'Liquidate')
-        .withArgs(
-          alice.address,
-          hexETHString,
-          hexFILString,
-          filMaturities[0],
-          '87634484208095058544',
-        );
+        )
+        .then((tx) => tx.wait())
+        .then((receipt) => {
+          const { user, collateralCcy, debtCcy, debtMaturity, amount } =
+            receipt.events.find(({ event }) => event === 'Liquidate').args;
+
+          expect(user).to.equal(alice.address);
+          expect(collateralCcy).to.equal(hexETHString);
+          expect(debtCcy).to.equal(hexFILString);
+          expect(debtMaturity).to.equal(filMaturities[0]);
+          expect(amount.lt(filledOrderAmount.div(2))).to.true;
+        });
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         FIL: filMaturities[0],
@@ -1012,7 +999,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexFILString,
           usdcMaturities[0],
-          0,
           alice.address,
           10,
         ),
@@ -1052,7 +1038,6 @@ describe('Integration Test: Liquidations', async () => {
           hexETHString,
           hexUSDCString,
           usdcMaturities[0],
-          0,
           alice.address,
           10,
         ),
