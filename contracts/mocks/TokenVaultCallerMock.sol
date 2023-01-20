@@ -49,11 +49,11 @@ contract TokenVaultCallerMock {
     }
 
     function depositFrom(
-        address payer,
+        address from,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.depositFrom(payer, ccy, amount);
+        tokenVault.depositFrom(from, ccy, amount);
     }
 
     function getTotalPresentValueInETH(address _user) public view returns (int256) {

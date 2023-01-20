@@ -212,10 +212,14 @@ library DepositManagementLogic {
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to withdraw.
      */
-    function withdraw(bytes32 _ccy, uint256 _amount) public returns (uint256 withdrawableAmount) {
-        uint256 depositAmount = Storage.slot().depositAmounts[msg.sender][_ccy];
+    function withdraw(
+        address user,
+        bytes32 _ccy,
+        uint256 _amount
+    ) public returns (uint256 withdrawableAmount) {
+        uint256 depositAmount = Storage.slot().depositAmounts[user][_ccy];
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
-            uint256 maxWithdrawETH = getWithdrawableCollateral(msg.sender);
+            uint256 maxWithdrawETH = getWithdrawableCollateral(user);
             uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromETH(
                 _ccy,
                 maxWithdrawETH
@@ -229,7 +233,7 @@ library DepositManagementLogic {
             withdrawableAmount = depositAmount;
         }
 
-        removeDepositAmount(msg.sender, _ccy, withdrawableAmount);
+        removeDepositAmount(user, _ccy, withdrawableAmount);
 
         return withdrawableAmount;
     }

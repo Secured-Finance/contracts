@@ -330,11 +330,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);
-            ERC20Handler.safeApprove(
-                getTokenAddress(_ccy),
-                address(Params.uniswapRouter()),
-                type(uint256).max
-            );
         }
 
         emit RegisterCurrency(_ccy, _tokenAddress, _isCollateral);
@@ -352,11 +347,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     {
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);
-            ERC20Handler.safeApprove(
-                getTokenAddress(_ccy),
-                address(Params.uniswapRouter()),
-                type(uint256).max
-            );
         } else {
             Storage.slot().collateralCurrencies.remove(_ccy);
         }
@@ -402,17 +392,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         override
         onlyRegisteredCurrency(_ccy)
     {
-        require(_amount > 0, "Invalid amount");
-
-        lendingMarketController().cleanOrders(_ccy, msg.sender);
-        uint256 withdrawableAmount = DepositManagementLogic.withdraw(_ccy, _amount);
-        ERC20Handler.withdrawAssets(
-            Storage.slot().tokenAddresses[_ccy],
-            msg.sender,
-            withdrawableAmount
-        );
-
-        emit Withdraw(msg.sender, _ccy, withdrawableAmount);
+        _withdraw(msg.sender, _ccy, _amount);
     }
 
     /**
@@ -460,6 +440,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _amountOut,
         uint24 _poolFee
     ) external override onlyAcceptedContracts returns (uint256 amountOut) {
+        require(isCollateral(_ccyFrom), "Not registered as collateral");
+
         uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
         require(depositAmount > 0, "No deposit amount in the selected currency");
 
@@ -480,6 +462,12 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             amountOutWithFee = estimatedAmountOut;
         }
 
+        ERC20Handler.safeApprove(
+            getTokenAddress(_ccyFrom),
+            address(Params.uniswapRouter()),
+            depositAmount
+        );
+
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
             tokenIn: getTokenAddress(_ccyFrom),
             tokenOut: getTokenAddress(_ccyTo),
@@ -495,7 +483,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 liquidatorFee = (amountOutWithFee * Params.liquidationUserFeeRate()) /
             ProtocolTypes.PCT_DIGIT;
 
-        // uint256 amountOut;
         uint256 protocolFee;
         if (amountOutWithFee == estimatedAmountOut) {
             protocolFee =
@@ -562,5 +549,19 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
 
         emit Deposit(_user, _ccy, _amount);
+    }
+
+    function _withdraw(
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal {
+        require(_amount > 0, "Invalid amount");
+
+        lendingMarketController().cleanOrders(_ccy, _user);
+        uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);
+        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
+
+        emit Withdraw(_user, _ccy, withdrawableAmount);
     }
 }

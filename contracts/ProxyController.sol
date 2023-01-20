@@ -144,12 +144,14 @@ contract ProxyController is IProxyController, Ownable {
     /**
      * @notice Sets the implementation contract of ReserveFund
      * @param newImpl The address of implementation contract
+     * @param WETH9 The address of WETH
      */
-    function setReserveFundImpl(address newImpl) external onlyOwner {
+    function setReserveFundImpl(address newImpl, address WETH9) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address)",
+            "initialize(address,address,address)",
             msg.sender,
-            resolver
+            resolver,
+            WETH9
         );
         _updateImpl(Contracts.RESERVE_FUND, newImpl, data);
     }

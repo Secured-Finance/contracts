@@ -27,7 +27,7 @@ describe('TokenVault', () => {
   let mockCurrencyController: MockContract;
   let mockLendingMarketController: MockContract;
   let mockReserveFund: MockContract;
-  let mockWETH9: MockContract;
+  let mockWETH: MockContract;
   let mockERC20: MockContract;
   let mockUniswapRouter: MockContract;
   let mockUniswapQuoter: MockContract;
@@ -65,16 +65,16 @@ describe('TokenVault', () => {
       owner,
       LendingMarketController.abi,
     );
-    mockWETH9 = await deployMockContract(owner, WETH9.abi);
+    mockWETH = await deployMockContract(owner, WETH9.abi);
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
     mockUniswapRouter = await deployMockContract(owner, ISwapRouter.abi);
     mockUniswapQuoter = await deployMockContract(owner, IQuoter.abi);
 
     await mockCurrencyController.mock.currencyExists.returns(true);
-    await mockWETH9.mock.transferFrom.returns(true);
-    await mockWETH9.mock.transfer.returns(true);
-    await mockWETH9.mock.approve.returns(true);
-    await mockWETH9.mock.deposit.returns();
+    await mockWETH.mock.transferFrom.returns(true);
+    await mockWETH.mock.transfer.returns(true);
+    await mockWETH.mock.approve.returns(true);
+    await mockWETH.mock.deposit.returns();
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
@@ -132,7 +132,7 @@ describe('TokenVault', () => {
         LIQUIDATION_PROTOCOL_FEE_RATE,
         mockUniswapRouter.address,
         mockUniswapQuoter.address,
-        mockWETH9.address,
+        mockWETH.address,
       )
       .then((tx) => tx.wait())
       .then(
@@ -293,7 +293,7 @@ describe('TokenVault', () => {
     const ETH = ethers.utils.formatBytes32String('ETH');
 
     before(async () => {
-      await tokenVaultProxy.registerCurrency(ETH, mockWETH9.address, true);
+      await tokenVaultProxy.registerCurrency(ETH, mockWETH.address, true);
     });
 
     beforeEach(async () => {
@@ -627,12 +627,13 @@ describe('TokenVault', () => {
       ).to.equal('0');
     });
 
-    it('Add and swap the collateral amount', async function () {
+    it('Swap the collateral amount and deposit', async function () {
       if (!previousCurrency) {
         this.skip();
       }
 
       const value = ethers.BigNumber.from('30000000000000');
+      const swapAmount = ethers.BigNumber.from('7000000000000');
 
       // Set up for the mocks
       await mockUniswapRouter.mock.exactOutputSingle.returns(value.div(3));
@@ -649,7 +650,7 @@ describe('TokenVault', () => {
           signers[1].address,
           targetCurrency,
           previousCurrency,
-          '7000000000000',
+          swapAmount,
           '1',
         );
 
@@ -664,7 +665,30 @@ describe('TokenVault', () => {
           signers[1].address,
           previousCurrency,
         ),
-      ).to.equal('7000000000000');
+      ).to.equal(swapAmount);
+
+      // Check fee amounts
+      const { liquidationUserFeeRate, liquidationProtocolFeeRate } =
+        await tokenVaultProxy.getCollateralParameters();
+      const liquidatorFee = await tokenVaultProxy.getDepositAmount(
+        owner.address,
+        previousCurrency,
+      );
+      const protocolFee = await tokenVaultProxy.getDepositAmount(
+        mockReserveFund.address,
+        previousCurrency,
+      );
+      const amountOutWithFee = swapAmount
+        .mul('10000')
+        .div(
+          ethers.BigNumber.from('10000')
+            .sub(liquidationUserFeeRate)
+            .sub(liquidationProtocolFeeRate),
+        );
+
+      expect(swapAmount).to.equal(
+        amountOutWithFee.sub(liquidatorFee).sub(protocolFee),
+      );
     });
 
     it('Add an amount in a currency that is not accepted as collateral', async () => {

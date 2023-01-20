@@ -105,7 +105,7 @@ const deployContracts = async () => {
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
     ),
-    proxyController.setReserveFundImpl(reserveFund.address),
+    proxyController.setReserveFundImpl(reserveFund.address, wETHToken.address),
     proxyController.setTokenVaultImpl(
       tokenVault.address,
       LIQUIDATION_THRESHOLD_RATE,
@@ -194,6 +194,7 @@ const deployContracts = async () => {
     beaconProxyControllerProxy,
     lendingMarketControllerProxy,
     genesisValueVaultProxy,
+    reserveFundProxy,
     tokenVaultProxy,
   ]
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
