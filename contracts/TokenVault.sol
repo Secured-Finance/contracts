@@ -51,8 +51,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
      * @param _liquidationThresholdRate The rate used as the auto liquidation threshold
-     * @param _liquidationUserFeeRate The liquidation fee rate received by users
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
+     * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _uniswapRouter Uniswap router contract address
      * @param _uniswapQuoter Uniswap quoter contract address
      * @param _WETH9 The address of WETH
@@ -61,8 +61,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _owner,
         address _resolver,
         uint256 _liquidationThresholdRate,
-        uint256 _liquidationUserFeeRate,
         uint256 _liquidationProtocolFeeRate,
+        uint256 _liquidatorFeeRate,
         address _uniswapRouter,
         address _uniswapQuoter,
         address _WETH9
@@ -73,8 +73,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         ERC20Handler.initialize(_WETH9);
         Params.setCollateralParameters(
             _liquidationThresholdRate,
-            _liquidationUserFeeRate,
             _liquidationProtocolFeeRate,
+            _liquidatorFeeRate,
             _uniswapRouter,
             _uniswapQuoter
         );
@@ -290,8 +290,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     /**
      * @notice Gets the collateral parameters
      * @return liquidationThresholdRate Auto liquidation threshold rate
-     * @return liquidationUserFeeRate Liquidation fee rate received by users
      * @return liquidationProtocolFeeRate Liquidation fee rate received by protocol
+     * @return liquidatorFeeRate Liquidation fee rate received by liquidators
      * @return uniswapRouter Uniswap router contract address
      * @return uniswapQuoter Uniswap quoter contract address
      */
@@ -301,15 +301,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         override
         returns (
             uint256 liquidationThresholdRate,
-            uint256 liquidationUserFeeRate,
             uint256 liquidationProtocolFeeRate,
+            uint256 liquidatorFeeRate,
             address uniswapRouter,
             address uniswapQuoter
         )
     {
         liquidationThresholdRate = Params.liquidationThresholdRate();
-        liquidationUserFeeRate = Params.liquidationUserFeeRate();
         liquidationProtocolFeeRate = Params.liquidationProtocolFeeRate();
+        liquidatorFeeRate = Params.liquidatorFeeRate();
         uniswapRouter = address(Params.uniswapRouter());
         uniswapQuoter = address(Params.uniswapQuoter());
     }
@@ -447,7 +447,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         uint256 amountOutWithFee = (_amountOut * ProtocolTypes.PCT_DIGIT) /
             (ProtocolTypes.PCT_DIGIT -
-                Params.liquidationUserFeeRate() -
+                Params.liquidatorFeeRate() -
                 Params.liquidationProtocolFeeRate());
 
         uint256 estimatedAmountOut = Params.uniswapQuoter().quoteExactInputSingle(
@@ -480,7 +480,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         });
 
         uint256 amountInWithFee = Params.uniswapRouter().exactOutputSingle(params);
-        uint256 liquidatorFee = (amountOutWithFee * Params.liquidationUserFeeRate()) /
+        uint256 liquidatorFee = (amountOutWithFee * Params.liquidatorFeeRate()) /
             ProtocolTypes.PCT_DIGIT;
 
         uint256 protocolFee;
@@ -507,23 +507,23 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * solves the issue of frontrunning during parameters tuning.
      *
      * @param _liquidationThresholdRate The auto liquidation threshold rate
-     * @param _liquidationUserFeeRate The liquidation fee rate received by users
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
+     * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _uniswapRouter Uniswap router contract address
      * @param _uniswapQuoter Uniswap quoter contract address
      * @notice Triggers only be contract owner
      */
     function setCollateralParameters(
         uint256 _liquidationThresholdRate,
-        uint256 _liquidationUserFeeRate,
         uint256 _liquidationProtocolFeeRate,
+        uint256 _liquidatorFeeRate,
         address _uniswapRouter,
         address _uniswapQuoter
     ) external override onlyOwner {
         Params.setCollateralParameters(
             _liquidationThresholdRate,
-            _liquidationUserFeeRate,
             _liquidationProtocolFeeRate,
+            _liquidatorFeeRate,
             _uniswapRouter,
             _uniswapQuoter
         );

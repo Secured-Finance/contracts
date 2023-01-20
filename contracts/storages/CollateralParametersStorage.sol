@@ -10,10 +10,10 @@ library CollateralParametersStorage {
     struct Storage {
         // Liquidation threshold rate in basis point
         uint256 liquidationThresholdRate;
-        // Liquidation fee in basis point received by users
-        uint256 liquidationUserFeeRate;
         // Liquidation fee in basis point received by protocol
         uint256 liquidationProtocolFeeRate;
+        // Liquidation fee in basis point received by liquidators
+        uint256 liquidatorFeeRate;
         //  Uniswap router contract
         ISwapRouter uniswapRouter;
         //  Uniswap quoter contract

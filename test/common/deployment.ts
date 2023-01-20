@@ -14,7 +14,7 @@ import {
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
-  LIQUIDATION_USER_FEE_RATE,
+  LIQUIDATOR_FEE_RATE,
 } from './constants';
 
 const deployContracts = async () => {
@@ -109,8 +109,8 @@ const deployContracts = async () => {
     proxyController.setTokenVaultImpl(
       tokenVault.address,
       LIQUIDATION_THRESHOLD_RATE,
-      LIQUIDATION_USER_FEE_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
+      LIQUIDATOR_FEE_RATE,
       ethers.utils.hexlify(ethers.utils.randomBytes(20)),
       ethers.utils.hexlify(ethers.utils.randomBytes(20)),
       wETHToken.address,

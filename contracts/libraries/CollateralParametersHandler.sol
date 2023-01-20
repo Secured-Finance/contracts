@@ -15,8 +15,8 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
  */
 library CollateralParametersHandler {
     event UpdateAutoLiquidationThresholdRate(uint256 previousRate, uint256 ratio);
-    event UpdateLiquidationUserFeeRate(uint256 previousRate, uint256 ratio);
     event UpdateLiquidationProtocolFeeRate(uint256 previousRate, uint256 ratio);
+    event UpdateLiquidatorFeeRate(uint256 previousRate, uint256 ratio);
     event UpdateUniswapRouter(address previousUniswapRouter, address uniswapRouter);
     event UpdateUniswapQuoter(address previousUniswapQuoter, address uniswapQuoter);
 
@@ -29,11 +29,11 @@ library CollateralParametersHandler {
     }
 
     /**
-     * @dev Gets the liquidation fee received by users
-     * @return The liquidation fee received by users
+     * @dev Gets the liquidation fee received by liquidators
+     * @return The liquidation fee received by liquidators
      */
-    function liquidationUserFeeRate() internal view returns (uint256) {
-        return Storage.slot().liquidationUserFeeRate;
+    function liquidatorFeeRate() internal view returns (uint256) {
+        return Storage.slot().liquidatorFeeRate;
     }
 
     /**
@@ -62,28 +62,25 @@ library CollateralParametersHandler {
      * @dev Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning
      * @param _liquidationThresholdRate Auto liquidation threshold rate
-     * @param _liquidationUserFeeRate Liquidation fee received by users
      * @param _liquidationProtocolFeeRate Liquidation fee received by protocol
+     * @param _liquidatorFeeRate Liquidation fee received by liquidators
      * @param _uniswapRouter Uniswap router contract address
      * @param _uniswapQuoter Uniswap quoter contract address
      * @notice Triggers only be contract owner
      */
     function setCollateralParameters(
         uint256 _liquidationThresholdRate,
-        uint256 _liquidationUserFeeRate,
         uint256 _liquidationProtocolFeeRate,
+        uint256 _liquidatorFeeRate,
         address _uniswapRouter,
         address _uniswapQuoter
     ) internal {
         require(_liquidationThresholdRate > 0, "Invalid liquidation threshold rate");
         require(
-            _liquidationUserFeeRate <= ProtocolTypes.PCT_DIGIT,
-            "Invalid liquidation user fee rate"
-        );
-        require(
             _liquidationProtocolFeeRate <= ProtocolTypes.PCT_DIGIT,
             "Invalid liquidation protocol fee rate"
         );
+        require(_liquidatorFeeRate <= ProtocolTypes.PCT_DIGIT, "Invalid liquidator fee rate");
         require(_uniswapRouter != address(0), "Invalid Uniswap Router");
         require(_uniswapQuoter != address(0), "Invalid Uniswap Quoter");
 
@@ -95,20 +92,17 @@ library CollateralParametersHandler {
             Storage.slot().liquidationThresholdRate = _liquidationThresholdRate;
         }
 
-        if (_liquidationUserFeeRate != Storage.slot().liquidationUserFeeRate) {
-            emit UpdateLiquidationUserFeeRate(
-                Storage.slot().liquidationUserFeeRate,
-                _liquidationUserFeeRate
-            );
-            Storage.slot().liquidationUserFeeRate = _liquidationUserFeeRate;
-        }
-
         if (_liquidationProtocolFeeRate != Storage.slot().liquidationProtocolFeeRate) {
             emit UpdateLiquidationProtocolFeeRate(
                 Storage.slot().liquidationProtocolFeeRate,
                 _liquidationProtocolFeeRate
             );
             Storage.slot().liquidationProtocolFeeRate = _liquidationProtocolFeeRate;
+        }
+
+        if (_liquidatorFeeRate != Storage.slot().liquidatorFeeRate) {
+            Storage.slot().liquidatorFeeRate = _liquidatorFeeRate;
+            emit UpdateLiquidatorFeeRate(Storage.slot().liquidatorFeeRate, _liquidatorFeeRate);
         }
 
         if (_uniswapRouter != address(Storage.slot().uniswapRouter)) {

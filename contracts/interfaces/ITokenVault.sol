@@ -61,16 +61,16 @@ interface ITokenVault {
         view
         returns (
             uint256 liquidationThresholdRate,
-            uint256 liquidationUserFeeRate,
             uint256 liquidationProtocolFeeRate,
+            uint256 liquidatorFeeRate,
             address uniswapRouter,
             address uniswapQuoter
         );
 
     function setCollateralParameters(
         uint256 liquidationThresholdRate,
-        uint256 liquidationUserFee,
-        uint256 liquidationProtocolFee,
+        uint256 liquidationProtocolFeeRate,
+        uint256 liquidatorFeeRate,
         address uniswapRouter,
         address uniswapQuoter
     ) external;

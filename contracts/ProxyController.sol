@@ -81,8 +81,8 @@ contract ProxyController is IProxyController, Ownable {
      * @notice  Sets the implementation contract of TokenVault
      * @param newImpl The address of implementation contract
      * @param liquidationThresholdRate  The rate used as the auto liquidation threshold
-     * @param liquidationUserFeeRate The liquidation fee rate received by users
      * @param liquidationProtocolFeeRate The liquidation fee rate received by protocol
+     * @param liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param uniswapRouter Uniswap router contract address
      * @param uniswapQuoter Uniswap quoter contract address
      * @param WETH9 The address of WETH
@@ -90,8 +90,8 @@ contract ProxyController is IProxyController, Ownable {
     function setTokenVaultImpl(
         address newImpl,
         uint256 liquidationThresholdRate,
-        uint256 liquidationUserFeeRate,
         uint256 liquidationProtocolFeeRate,
+        uint256 liquidatorFeeRate,
         address uniswapRouter,
         address uniswapQuoter,
         address WETH9
@@ -101,8 +101,8 @@ contract ProxyController is IProxyController, Ownable {
             msg.sender,
             resolver,
             liquidationThresholdRate,
-            liquidationUserFeeRate,
             liquidationProtocolFeeRate,
+            liquidatorFeeRate,
             uniswapRouter,
             uniswapQuoter,
             WETH9

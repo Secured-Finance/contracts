@@ -1,8 +1,8 @@
 import { BigNumber } from 'ethers';
 
 export const LIQUIDATION_THRESHOLD_RATE = 12500;
-export const LIQUIDATION_USER_FEE_RATE = 500;
 export const LIQUIDATION_PROTOCOL_FEE_RATE = 200;
+export const LIQUIDATOR_FEE_RATE = 500;
 export const INITIAL_COMPOUND_FACTOR = '1000000000000000000000000';
 // NOTE: To calculate GV, the 2 steps are required at most such as "Orders -> FV -> GV".
 // Then, a maximum of 3 steps are required to calculate the target FV and PV from that GV.

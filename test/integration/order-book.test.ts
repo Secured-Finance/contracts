@@ -9,7 +9,7 @@ import {
   filToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
-  LIQUIDATION_USER_FEE_RATE,
+  LIQUIDATOR_FEE_RATE,
   ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -116,8 +116,8 @@ describe('Integration Test: Order Book', async () => {
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
-      LIQUIDATION_USER_FEE_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
+      LIQUIDATOR_FEE_RATE,
       mockUniswapRouter.address,
       mockUniswapQuoter.address,
     );

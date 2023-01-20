@@ -10,7 +10,7 @@ import {
   filToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
-  LIQUIDATION_USER_FEE_RATE,
+  LIQUIDATOR_FEE_RATE,
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -41,7 +41,7 @@ describe('Integration Test: Liquidations', async () => {
   let filMaturities: BigNumber[];
   let usdcMaturities: BigNumber[];
 
-  let liquidationUserFeeRate: BigNumber;
+  let liquidatorFeeRate: BigNumber;
   let liquidationProtocolFeeRate: BigNumber;
 
   const initialFILBalance = BigNumber.from('1000000000000000000000');
@@ -230,8 +230,8 @@ describe('Integration Test: Liquidations', async () => {
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
-      LIQUIDATION_USER_FEE_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
+      LIQUIDATOR_FEE_RATE,
       mockUniswapRouter.address,
       mockUniswapQuoter.address,
     );
@@ -265,7 +265,7 @@ describe('Integration Test: Liquidations', async () => {
         value: '1000000000000000000000',
       });
 
-    ({ liquidationUserFeeRate, liquidationProtocolFeeRate } =
+    ({ liquidatorFeeRate, liquidationProtocolFeeRate } =
       await tokenVault.getCollateralParameters());
   });
 
@@ -401,7 +401,7 @@ describe('Integration Test: Liquidations', async () => {
         .mul('10000')
         .div(
           ethers.BigNumber.from('10000')
-            .sub(liquidationUserFeeRate)
+            .sub(liquidatorFeeRate)
             .sub(liquidationProtocolFeeRate),
         );
 
@@ -928,7 +928,7 @@ describe('Integration Test: Liquidations', async () => {
         .mul('10000')
         .div(
           ethers.BigNumber.from('10000')
-            .sub(liquidationUserFeeRate)
+            .sub(liquidatorFeeRate)
             .sub(liquidationProtocolFeeRate),
         );
 

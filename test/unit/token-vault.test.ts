@@ -48,8 +48,8 @@ describe('TokenVault', () => {
   let currencyIdx = 0;
 
   const LIQUIDATION_THRESHOLD_RATE = 12500;
-  const LIQUIDATION_USER_FEE_RATE = 500;
   const LIQUIDATION_PROTOCOL_FEE_RATE = 200;
+  const LIQUIDATOR_FEE_RATE = 500;
 
   before(async () => {
     [owner, alice, bob, carol, dave, ellen, ...signers] =
@@ -128,8 +128,8 @@ describe('TokenVault', () => {
       .setTokenVaultImpl(
         tokenVault.address,
         LIQUIDATION_THRESHOLD_RATE,
-        LIQUIDATION_USER_FEE_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
+        LIQUIDATOR_FEE_RATE,
         mockUniswapRouter.address,
         mockUniswapQuoter.address,
         mockWETH.address,
@@ -199,8 +199,8 @@ describe('TokenVault', () => {
       ) => {
         await tokenVaultProxy.setCollateralParameters(
           liquidationThresholdRate,
-          LIQUIDATION_USER_FEE_RATE,
           LIQUIDATION_PROTOCOL_FEE_RATE,
+          LIQUIDATOR_FEE_RATE,
           uniswapRouter,
           uniswapQuoter,
         );
@@ -264,7 +264,7 @@ describe('TokenVault', () => {
           mockUniswapRouter.address,
           mockUniswapQuoter.address,
         ),
-      ).to.be.revertedWith('Invalid liquidation user fee rate');
+      ).to.be.revertedWith('Invalid liquidation protocol fee rate');
       await expect(
         tokenVaultProxy.setCollateralParameters(
           '1',
@@ -273,15 +273,15 @@ describe('TokenVault', () => {
           mockUniswapRouter.address,
           mockUniswapQuoter.address,
         ),
-      ).to.be.revertedWith('Invalid liquidation protocol fee rate');
+      ).to.be.revertedWith('Invalid liquidator fee rate');
     });
 
     it('Fail to call setCollateralParameters due to zero address', async () => {
       await expect(
         tokenVaultProxy.setCollateralParameters(
           LIQUIDATION_THRESHOLD_RATE,
-          LIQUIDATION_USER_FEE_RATE,
           LIQUIDATION_PROTOCOL_FEE_RATE,
+          LIQUIDATOR_FEE_RATE,
           ethers.constants.AddressZero,
           mockUniswapQuoter.address,
         ),
@@ -668,7 +668,7 @@ describe('TokenVault', () => {
       ).to.equal(swapAmount);
 
       // Check fee amounts
-      const { liquidationUserFeeRate, liquidationProtocolFeeRate } =
+      const { liquidatorFeeRate, liquidationProtocolFeeRate } =
         await tokenVaultProxy.getCollateralParameters();
       const liquidatorFee = await tokenVaultProxy.getDepositAmount(
         owner.address,
@@ -682,7 +682,7 @@ describe('TokenVault', () => {
         .mul('10000')
         .div(
           ethers.BigNumber.from('10000')
-            .sub(liquidationUserFeeRate)
+            .sub(liquidatorFeeRate)
             .sub(liquidationProtocolFeeRate),
         );
 
