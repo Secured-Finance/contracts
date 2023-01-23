@@ -30,21 +30,30 @@ contract TokenVaultCallerMock {
     }
 
     function swapDepositAmounts(
+        address _liquidator,
         address _user,
         bytes32 _ccyIn,
         bytes32 _ccyOut,
         uint256 _amountOut,
         uint24 _poolFee
     ) public returns (uint256 amountIn) {
-        return tokenVault.swapDepositAmounts(_user, _ccyIn, _ccyOut, _amountOut, _poolFee);
+        return
+            tokenVault.swapDepositAmounts(
+                _liquidator,
+                _user,
+                _ccyIn,
+                _ccyOut,
+                _amountOut,
+                _poolFee
+            );
     }
 
     function depositFrom(
-        address payer,
+        address from,
         bytes32 ccy,
         uint256 amount
     ) public {
-        tokenVault.depositFrom(payer, ccy, amount);
+        tokenVault.depositFrom(from, ccy, amount);
     }
 
     function getTotalPresentValueInETH(address _user) public view returns (int256) {

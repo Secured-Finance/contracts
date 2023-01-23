@@ -66,6 +66,7 @@ const func: DeployFunction = async function ({
   const currencyController = await getProxy('CurrencyController');
   const genesisValueVault = await getProxy('GenesisValueVault');
   const lendingMarketController = await getProxy('LendingMarketController');
+  const reserveFund = await getProxy('ReserveFund');
   const tokenVault = await getProxy('TokenVault');
 
   // Get deployed contracts
@@ -80,6 +81,7 @@ const func: DeployFunction = async function ({
     'CurrencyController',
     'GenesisValueVault',
     'LendingMarketController',
+    'ReserveFund',
     'TokenVault',
   ];
 
@@ -89,6 +91,7 @@ const func: DeployFunction = async function ({
     currencyController.address,
     genesisValueVault.address,
     lendingMarketController.address,
+    reserveFund.address,
     tokenVault.address,
   ];
 
@@ -97,6 +100,7 @@ const func: DeployFunction = async function ({
     beaconProxyController.address,
     genesisValueVault.address,
     lendingMarketController.address,
+    reserveFund.address,
     tokenVault.address,
   ];
 
@@ -155,6 +159,7 @@ func.dependencies = [
   'CurrencyController',
   'GenesisValueVault',
   'LendingMarketController',
+  'ReserveFund',
   'TokenVault',
   'Tokens',
 ];

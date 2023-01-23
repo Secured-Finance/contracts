@@ -7,7 +7,9 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexFILString } from '../../utils/strings';
 import {
+  LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
+  LIQUIDATOR_FEE_RATE,
   ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -28,7 +30,8 @@ describe('Performance Test: Auto-rolls', async () => {
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
   let wFILToken: Contract;
-  let mockSwapRouter: Contract;
+  let mockUniswapRouter: Contract;
+  let mockUniswapQuoter: Contract;
 
   let maturities: BigNumber[];
 
@@ -86,17 +89,26 @@ describe('Performance Test: Auto-rolls', async () => {
 
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
 
-    mockSwapRouter = await ethers
-      .getContractFactory('MockSwapRouter')
+    mockUniswapRouter = await ethers
+      .getContractFactory('MockUniswapRouter')
+      .then((factory) =>
+        factory.deploy(addressResolver.address, wETHToken.address),
+      );
+    mockUniswapQuoter = await ethers
+      .getContractFactory('MockUniswapQuoter')
       .then((factory) =>
         factory.deploy(addressResolver.address, wETHToken.address),
       );
 
-    await mockSwapRouter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
-      mockSwapRouter.address,
+      LIQUIDATION_PROTOCOL_FEE_RATE,
+      LIQUIDATOR_FEE_RATE,
+      mockUniswapRouter.address,
+      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexFILString, true);

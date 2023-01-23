@@ -6,6 +6,7 @@ library Contracts {
     bytes32 internal constant CURRENCY_CONTROLLER = "CurrencyController";
     bytes32 internal constant GENESIS_VALUE_VAULT = "GenesisValueVault";
     bytes32 internal constant LENDING_MARKET_CONTROLLER = "LendingMarketController";
+    bytes32 internal constant RESERVE_FUND = "ReserveFund";
     bytes32 internal constant TOKEN_VAULT = "TokenVault";
 }
 

@@ -5,7 +5,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {CollateralParametersHandler} from "./libraries/CollateralParametersHandler.sol";
+import {CollateralParametersHandler as Params} from "./libraries/CollateralParametersHandler.sol";
 import {ERC20Handler} from "./libraries/ERC20Handler.sol";
 import {DepositManagementLogic} from "./libraries/logics/DepositManagementLogic.sol";
 // interfaces
@@ -51,37 +51,48 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
      * @param _liquidationThresholdRate The rate used as the auto liquidation threshold
+     * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
+     * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _uniswapRouter Uniswap router contract address
+     * @param _uniswapQuoter Uniswap quoter contract address
      * @param _WETH9 The address of WETH
      */
     function initialize(
         address _owner,
         address _resolver,
         uint256 _liquidationThresholdRate,
+        uint256 _liquidationProtocolFeeRate,
+        uint256 _liquidatorFeeRate,
         address _uniswapRouter,
+        address _uniswapQuoter,
         address _WETH9
     ) public initializer onlyProxy {
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
 
         ERC20Handler.initialize(_WETH9);
-        CollateralParametersHandler.setCollateralParameters(
+        Params.setCollateralParameters(
             _liquidationThresholdRate,
-            _uniswapRouter
+            _liquidationProtocolFeeRate,
+            _liquidatorFeeRate,
+            _uniswapRouter,
+            _uniswapQuoter
         );
     }
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](2);
+        contracts = new bytes32[](3);
         contracts[0] = Contracts.CURRENCY_CONTROLLER;
         contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts[2] = Contracts.RESERVE_FUND;
     }
 
     // @inheritdoc MixinAddressResolver
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
+        contracts = new bytes32[](2);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts[1] = Contracts.RESERVE_FUND;
     }
 
     receive() external payable {
@@ -210,8 +221,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
     /**
      * @notice Gets the total collateral amount.
-     * by converting it to ETH.
-     * @param _user Address of collateral user
+     * @param _user User's address
      * @return totalCollateralAmount The total collateral amount in ETH
      */
     function getTotalCollateralAmount(address _user)
@@ -223,13 +233,23 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         (totalCollateralAmount, , ) = DepositManagementLogic.getCollateralAmount(_user);
     }
 
-    function getLiquidationAmount(address _user) external view override returns (uint256) {
+    /**
+     * @notice Gets the amount to be liquidated.
+     * @param _user User's address
+     * @return liquidationAmount The the amount to be liquidated
+     */
+    function getLiquidationAmount(address _user)
+        external
+        view
+        override
+        returns (uint256 liquidationAmount)
+    {
         (uint256 totalCollateral, uint256 totalUsedCollateral, ) = DepositManagementLogic
             .getCollateralAmount(_user);
 
         return
             totalCollateral * ProtocolTypes.PCT_DIGIT >=
-                totalUsedCollateral * CollateralParametersHandler.liquidationThresholdRate()
+                totalUsedCollateral * Params.liquidationThresholdRate()
                 ? 0
                 : totalUsedCollateral / 2;
     }
@@ -268,24 +288,30 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets liquidation threshold rate
-     * @return liquidationThresholdRate  The rate used as the liquidation threshold
+     * @notice Gets the collateral parameters
+     * @return liquidationThresholdRate Auto liquidation threshold rate
+     * @return liquidationProtocolFeeRate Liquidation fee rate received by protocol
+     * @return liquidatorFeeRate Liquidation fee rate received by liquidators
+     * @return uniswapRouter Uniswap router contract address
+     * @return uniswapQuoter Uniswap quoter contract address
      */
-    function getLiquidationThresholdRate()
+    function getCollateralParameters()
         external
         view
         override
-        returns (uint256 liquidationThresholdRate)
+        returns (
+            uint256 liquidationThresholdRate,
+            uint256 liquidationProtocolFeeRate,
+            uint256 liquidatorFeeRate,
+            address uniswapRouter,
+            address uniswapQuoter
+        )
     {
-        return CollateralParametersHandler.liquidationThresholdRate();
-    }
-
-    /**
-     * @notice Gets Uniswap Router contract address
-     * @return  uniswapRouter Uniswap Router contract address
-     */
-    function getUniswapRouter() external view override returns (address uniswapRouter) {
-        return address(CollateralParametersHandler.uniswapRouter());
+        liquidationThresholdRate = Params.liquidationThresholdRate();
+        liquidationProtocolFeeRate = Params.liquidationProtocolFeeRate();
+        liquidatorFeeRate = Params.liquidatorFeeRate();
+        uniswapRouter = address(Params.uniswapRouter());
+        uniswapQuoter = address(Params.uniswapQuoter());
     }
 
     /**
@@ -304,11 +330,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);
-            ERC20Handler.safeApprove(
-                getTokenAddress(_ccy),
-                address(CollateralParametersHandler.uniswapRouter()),
-                type(uint256).max
-            );
         }
 
         emit RegisterCurrency(_ccy, _tokenAddress, _isCollateral);
@@ -326,11 +347,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     {
         if (_isCollateral) {
             Storage.slot().collateralCurrencies.add(_ccy);
-            ERC20Handler.safeApprove(
-                getTokenAddress(_ccy),
-                address(CollateralParametersHandler.uniswapRouter()),
-                type(uint256).max
-            );
         } else {
             Storage.slot().collateralCurrencies.remove(_ccy);
         }
@@ -376,17 +392,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         override
         onlyRegisteredCurrency(_ccy)
     {
-        require(_amount > 0, "Invalid amount");
-
-        lendingMarketController().cleanOrders(_ccy, msg.sender);
-        uint256 withdrawableAmount = DepositManagementLogic.withdraw(_ccy, _amount);
-        ERC20Handler.withdrawAssets(
-            Storage.slot().tokenAddresses[_ccy],
-            msg.sender,
-            withdrawableAmount
-        );
-
-        emit Withdraw(msg.sender, _ccy, withdrawableAmount);
+        _withdraw(msg.sender, _ccy, _amount);
     }
 
     /**
@@ -418,7 +424,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice Swap the deposited amount to convert to a different currency using Uniswap.
+     * @notice Swap the deposited amount to convert to a different currency using Uniswap for liquidation.
+     * @param _liquidator Liquidator's address
      * @param _user User's address
      * @param _ccyFrom Currency name to be converted from
      * @param _ccyTo Currency name to be converted to
@@ -426,14 +433,40 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _poolFee Uniswap pool fee
      */
     function swapDepositAmounts(
+        address _liquidator,
         address _user,
         bytes32 _ccyFrom,
         bytes32 _ccyTo,
         uint256 _amountOut,
         uint24 _poolFee
-    ) external override onlyAcceptedContracts returns (uint256 amountIn) {
+    ) external override onlyAcceptedContracts returns (uint256 amountOut) {
+        require(isCollateral(_ccyFrom), "Not registered as collateral");
+
         uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
         require(depositAmount > 0, "No deposit amount in the selected currency");
+
+        uint256 amountOutWithFee = (_amountOut * ProtocolTypes.PCT_DIGIT) /
+            (ProtocolTypes.PCT_DIGIT -
+                Params.liquidatorFeeRate() -
+                Params.liquidationProtocolFeeRate());
+
+        uint256 estimatedAmountOut = Params.uniswapQuoter().quoteExactInputSingle(
+            getTokenAddress(_ccyFrom),
+            getTokenAddress(_ccyTo),
+            _poolFee,
+            depositAmount,
+            0
+        );
+
+        if (amountOutWithFee > estimatedAmountOut) {
+            amountOutWithFee = estimatedAmountOut;
+        }
+
+        ERC20Handler.safeApprove(
+            getTokenAddress(_ccyFrom),
+            address(Params.uniswapRouter()),
+            depositAmount
+        );
 
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
             tokenIn: getTokenAddress(_ccyFrom),
@@ -441,34 +474,58 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             fee: _poolFee,
             recipient: address(this),
             deadline: block.timestamp,
-            amountOut: _amountOut,
+            amountOut: amountOutWithFee,
             amountInMaximum: depositAmount,
             sqrtPriceLimitX96: 0
         });
 
-        amountIn = CollateralParametersHandler.uniswapRouter().exactOutputSingle(params);
+        uint256 amountInWithFee = Params.uniswapRouter().exactOutputSingle(params);
+        uint256 liquidatorFee = (amountOutWithFee * Params.liquidatorFeeRate()) /
+            ProtocolTypes.PCT_DIGIT;
 
-        DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountIn);
-        DepositManagementLogic.addDepositAmount(_user, _ccyTo, _amountOut);
+        uint256 protocolFee;
+        if (amountOutWithFee == estimatedAmountOut) {
+            protocolFee =
+                (amountOutWithFee * Params.liquidationProtocolFeeRate()) /
+                ProtocolTypes.PCT_DIGIT;
+            amountOut = amountOutWithFee - liquidatorFee - protocolFee;
+        } else {
+            protocolFee = amountOutWithFee - _amountOut - liquidatorFee;
+            amountOut = _amountOut;
+        }
 
-        emit Swap(_user, _ccyFrom, _ccyTo, amountIn, _amountOut);
+        DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountInWithFee);
+        DepositManagementLogic.addDepositAmount(_user, _ccyTo, amountOut);
+        DepositManagementLogic.addDepositAmount(_liquidator, _ccyTo, liquidatorFee);
+        DepositManagementLogic.addDepositAmount(address(reserveFund()), _ccyTo, protocolFee);
+
+        emit Swap(_user, _ccyFrom, _ccyTo, amountInWithFee, _amountOut, liquidatorFee, protocolFee);
     }
 
     /**
      * @notice Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning.
      *
-     * @param _liquidationThresholdRate Auto liquidation threshold rate
+     * @param _liquidationThresholdRate The auto liquidation threshold rate
+     * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
+     * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _uniswapRouter Uniswap router contract address
+     * @param _uniswapQuoter Uniswap quoter contract address
      * @notice Triggers only be contract owner
      */
-    function setCollateralParameters(uint256 _liquidationThresholdRate, address _uniswapRouter)
-        external
-        onlyOwner
-    {
-        CollateralParametersHandler.setCollateralParameters(
+    function setCollateralParameters(
+        uint256 _liquidationThresholdRate,
+        uint256 _liquidationProtocolFeeRate,
+        uint256 _liquidatorFeeRate,
+        address _uniswapRouter,
+        address _uniswapQuoter
+    ) external override onlyOwner {
+        Params.setCollateralParameters(
             _liquidationThresholdRate,
-            _uniswapRouter
+            _liquidationProtocolFeeRate,
+            _liquidatorFeeRate,
+            _uniswapRouter,
+            _uniswapQuoter
         );
     }
 
@@ -492,5 +549,19 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
 
         emit Deposit(_user, _ccy, _amount);
+    }
+
+    function _withdraw(
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
+    ) internal {
+        require(_amount > 0, "Invalid amount");
+
+        lendingMarketController().cleanOrders(_ccy, _user);
+        uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);
+        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
+
+        emit Withdraw(_user, _ccy, withdrawableAmount);
     }
 }

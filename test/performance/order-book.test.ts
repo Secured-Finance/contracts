@@ -5,7 +5,11 @@ import { ethers, waffle } from 'hardhat';
 
 import { Side } from '../../utils/constants';
 import { hexETHString, hexFILString, hexUSDCString } from '../../utils/strings';
-import { LIQUIDATION_THRESHOLD_RATE } from '../common/constants';
+import {
+  LIQUIDATION_PROTOCOL_FEE_RATE,
+  LIQUIDATION_THRESHOLD_RATE,
+  LIQUIDATOR_FEE_RATE,
+} from '../common/constants';
 import { deployContracts } from '../common/deployment';
 
 describe('Performance Test: Order Book', async () => {
@@ -34,15 +38,23 @@ describe('Performance Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
     await tokenVault.registerCurrency(hexUSDCString, wUSDCToken.address, false);
 
-    const mockSwapRouter = await ethers
+    const mockUniswapRouter = await ethers
       .getContractFactory('MockSwapRouter')
+      .then((factory) =>
+        factory.deploy(addressResolver.address, wETHToken.address),
+      );
+    const mockUniswapQuoter = await ethers
+      .getContractFactory('MockUniswapQuoter')
       .then((factory) =>
         factory.deploy(addressResolver.address, wETHToken.address),
       );
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
-      mockSwapRouter.address,
+      LIQUIDATION_PROTOCOL_FEE_RATE,
+      LIQUIDATOR_FEE_RATE,
+      mockUniswapRouter.address,
+      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexETHString, true);

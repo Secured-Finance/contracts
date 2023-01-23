@@ -12,7 +12,9 @@ import {
 } from '../../utils/strings';
 import {
   INITIAL_COMPOUND_FACTOR,
+  LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
+  LIQUIDATOR_FEE_RATE,
 } from './constants';
 
 const deployContracts = async () => {
@@ -34,6 +36,7 @@ const deployContracts = async () => {
     currencyController,
     genesisValueVault,
     wETHToken,
+    reserveFund,
     tokenVault,
     lendingMarketController,
   ] = await Promise.all([
@@ -43,6 +46,7 @@ const deployContracts = async () => {
       'CurrencyController',
       'GenesisValueVault',
       'MockWETH9',
+      'ReserveFund',
     ].map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
     ),
@@ -92,6 +96,7 @@ const deployContracts = async () => {
     currencyControllerAddress,
     genesisValueVaultAddress,
     lendingMarketControllerAddress,
+    reserveFundAddress,
     tokenVaultAddress,
   ] = await Promise.all([
     proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
@@ -100,10 +105,14 @@ const deployContracts = async () => {
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
     ),
+    proxyController.setReserveFundImpl(reserveFund.address, wETHToken.address),
     proxyController.setTokenVaultImpl(
       tokenVault.address,
       LIQUIDATION_THRESHOLD_RATE,
-      ethers.constants.AddressZero,
+      LIQUIDATION_PROTOCOL_FEE_RATE,
+      LIQUIDATOR_FEE_RATE,
+      ethers.utils.hexlify(ethers.utils.randomBytes(20)),
+      ethers.utils.hexlify(ethers.utils.randomBytes(20)),
       wETHToken.address,
     ),
   ])
@@ -137,6 +146,10 @@ const deployContracts = async () => {
     'LendingMarketController',
     lendingMarketControllerAddress,
   );
+  const reserveFundProxy = await ethers.getContractAt(
+    'ReserveFund',
+    reserveFundAddress,
+  );
   const tokenVaultProxy = await ethers.getContractAt(
     'TokenVault',
     tokenVaultAddress,
@@ -168,6 +181,7 @@ const deployContracts = async () => {
     ['CurrencyController', currencyControllerProxy],
     ['GenesisValueVault', genesisValueVaultProxy],
     ['LendingMarketController', lendingMarketControllerProxy],
+    ['ReserveFund', reserveFundProxy],
     ['TokenVault', tokenVaultProxy],
   ];
 
@@ -180,6 +194,7 @@ const deployContracts = async () => {
     beaconProxyControllerProxy,
     lendingMarketControllerProxy,
     genesisValueVaultProxy,
+    reserveFundProxy,
     tokenVaultProxy,
   ]
     .filter((contract) => !!contract.buildCache) // exclude contracts that doesn't have buildCache method such as mock
@@ -242,6 +257,7 @@ const deployContracts = async () => {
     genesisValueVault: genesisValueVaultProxy,
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
+    reserveFund: reserveFundProxy,
     wETHToken,
     wFILToken,
     wUSDCToken,

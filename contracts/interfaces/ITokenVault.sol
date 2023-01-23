@@ -13,7 +13,9 @@ interface ITokenVault {
         bytes32 ccyIn,
         bytes32 ccyOut,
         uint256 amountIn,
-        uint256 amountOut
+        uint256 amountOut,
+        uint256 liquidatorFee,
+        uint256 protocolFee
     );
 
     function isCovered(
@@ -46,7 +48,7 @@ interface ITokenVault {
 
     function getTotalCollateralAmount(address party) external view returns (uint256);
 
-    function getLiquidationAmount(address user) external view returns (uint256);
+    function getLiquidationAmount(address user) external view returns (uint256 liquidationAmount);
 
     function getTotalDepositAmount(bytes32 _ccy) external view returns (uint256);
 
@@ -54,12 +56,24 @@ interface ITokenVault {
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
-    function getLiquidationThresholdRate() external view returns (uint256 liquidationThresholdRate);
+    function getCollateralParameters()
+        external
+        view
+        returns (
+            uint256 liquidationThresholdRate,
+            uint256 liquidationProtocolFeeRate,
+            uint256 liquidatorFeeRate,
+            address uniswapRouter,
+            address uniswapQuoter
+        );
 
-    function getUniswapRouter() external view returns (address uniswapRouter);
-
-    function setCollateralParameters(uint256 liquidationThresholdRate, address uniswapRouter)
-        external;
+    function setCollateralParameters(
+        uint256 liquidationThresholdRate,
+        uint256 liquidationProtocolFeeRate,
+        uint256 liquidatorFeeRate,
+        address uniswapRouter,
+        address uniswapQuoter
+    ) external;
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
@@ -84,6 +98,7 @@ interface ITokenVault {
     ) external;
 
     function swapDepositAmounts(
+        address liquidator,
         address user,
         bytes32 ccyFrom,
         bytes32 ccyTo,

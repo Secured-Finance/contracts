@@ -191,6 +191,14 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external payable returns (bool);
 
+    function executeLiquidationCall(
+        bytes32 collateralCcy,
+        bytes32 debtCcy,
+        uint256 debtMaturity,
+        address user,
+        uint24 poolFee
+    ) external returns (bool);
+
     function cancelOrder(
         bytes32 ccy,
         uint256 maturity,

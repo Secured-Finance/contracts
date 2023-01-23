@@ -7,6 +7,7 @@ import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
 import {ICurrencyController} from "../interfaces/ICurrencyController.sol";
 import {IGenesisValueVault} from "../interfaces/IGenesisValueVault.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
+import {IReserveFund} from "../interfaces/IReserveFund.sol";
 import {ITokenVault} from "../interfaces/ITokenVault.sol";
 import {MixinAddressResolverStorage as Storage} from "../storages/MixinAddressResolverStorage.sol";
 
@@ -99,6 +100,10 @@ contract MixinAddressResolver {
 
     function genesisValueVault() internal view returns (IGenesisValueVault) {
         return AddressResolverLib.genesisValueVault();
+    }
+
+    function reserveFund() internal view returns (IReserveFund) {
+        return AddressResolverLib.reserveFund();
     }
 
     function lendingMarketController() internal view returns (ILendingMarketController) {
