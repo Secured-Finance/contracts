@@ -5,3 +5,4 @@ deployments/
 coverage/
 contracts/artifacts/
 coverage.json
+gasReporterOutput.json

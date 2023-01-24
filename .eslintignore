@@ -5,3 +5,4 @@ test/
 migrations/
 coverage/
 coverage.json
+gasReporterOutput.json
