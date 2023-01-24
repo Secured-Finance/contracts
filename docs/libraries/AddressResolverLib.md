@@ -32,6 +32,12 @@ function genesisValueVault() internal view returns (contract IGenesisValueVault)
 function lendingMarketController() internal view returns (contract ILendingMarketController)
 ```
 
+### reserveFund
+
+```solidity
+function reserveFund() internal view returns (contract IReserveFund)
+```
+
 ### tokenVault
 
 ```solidity

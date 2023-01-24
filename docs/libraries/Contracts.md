@@ -26,6 +26,12 @@ bytes32 GENESIS_VALUE_VAULT
 bytes32 LENDING_MARKET_CONTROLLER
 ```
 
+### RESERVE_FUND
+
+```solidity
+bytes32 RESERVE_FUND
+```
+
 ### TOKEN_VAULT
 
 ```solidity

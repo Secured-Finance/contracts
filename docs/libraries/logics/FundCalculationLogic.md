@@ -29,7 +29,7 @@ struct CalculatedTotalFundInETHVars {
 ### convertToLiquidationAmountFromCollateral
 
 ```solidity
-function convertToLiquidationAmountFromCollateral(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, uint256 _liquidationAmountMax, address _user, uint24 _poolFee) public returns (uint256)
+function convertToLiquidationAmountFromCollateral(address _liquidator, address _user, bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, uint24 _poolFee) public returns (uint256 liquidationAmount)
 ```
 
 ### calculateActualFutureValue

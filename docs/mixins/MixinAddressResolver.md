@@ -94,6 +94,12 @@ function currencyController() internal view returns (contract ICurrencyControlle
 function genesisValueVault() internal view returns (contract IGenesisValueVault)
 ```
 
+### reserveFund
+
+```solidity
+function reserveFund() internal view returns (contract IReserveFund)
+```
+
 ### lendingMarketController
 
 ```solidity

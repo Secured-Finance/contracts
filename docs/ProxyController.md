@@ -90,7 +90,7 @@ Sets the implementation contract of CurrencyController
 ### setTokenVaultImpl
 
 ```solidity
-function setTokenVaultImpl(address newImpl, uint256 liquidationThresholdRate, address uniswapRouter, address WETH9) external
+function setTokenVaultImpl(address newImpl, uint256 liquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate, address uniswapRouter, address uniswapQuoter, address WETH9) external
 ```
 
 Sets the implementation contract of TokenVault
@@ -99,7 +99,10 @@ Sets the implementation contract of TokenVault
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
 | liquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
+| liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
+| liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
 | uniswapRouter | address | Uniswap router contract address |
+| uniswapQuoter | address | Uniswap quoter contract address |
 | WETH9 | address | The address of WETH |
 
 ### setCurrencyControllerImpl
@@ -137,6 +140,19 @@ Sets the implementation contract of LendingMarketController
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
+
+### setReserveFundImpl
+
+```solidity
+function setReserveFundImpl(address newImpl, address WETH9) external
+```
+
+Sets the implementation contract of ReserveFund
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newImpl | address | The address of implementation contract |
+| WETH9 | address | The address of WETH |
 
 ### changeProxyAdmins
 

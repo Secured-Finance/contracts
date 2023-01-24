@@ -31,8 +31,8 @@ struct Storage {
   mapping(address => uint48[]) activeBorrowOrderIds;
   mapping(address => uint256) userCurrentMaturities;
   mapping(uint256 => struct MarketOrder) orders;
-  mapping(uint256 => struct HitchensOrderStatisticsTreeLib.Tree) lendOrders;
-  mapping(uint256 => struct HitchensOrderStatisticsTreeLib.Tree) borrowOrders;
+  mapping(uint256 => struct OrderStatisticsTreeLib.Tree) lendOrders;
+  mapping(uint256 => struct OrderStatisticsTreeLib.Tree) borrowOrders;
 }
 ```
 
