@@ -29,6 +29,7 @@ jobs:
         run: |
           echo "NETWORK=development" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ secrets.DEV_UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
+          echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ secrets.DEV_UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
           echo "TOKEN_EFIL=${{ secrets.DEV_TOKEN_EFIL }}" >> $GITHUB_ENV
           echo "TOKEN_USDC=${{ secrets.DEV_TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ secrets.DEV_TOKEN_WBTC }}" >> $GITHUB_ENV
@@ -43,6 +44,7 @@ jobs:
         run: |
           echo "NETWORK=staging" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ secrets.STG_UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
+          echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ secrets.STG_UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
           echo "TOKEN_EFIL=${{ secrets.STG_TOKEN_EFIL }}" >> $GITHUB_ENV
           echo "TOKEN_USDC=${{ secrets.STG_TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ secrets.STG_TOKEN_WBTC }}" >> $GITHUB_ENV
