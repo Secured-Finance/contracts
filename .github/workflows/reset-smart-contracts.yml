@@ -45,6 +45,7 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
           INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
           UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.DEV_UNISWAP_SWAP_ROUTER_CONTRACT }}
+          UNISWAP_SWAP_QUOTER_CONTRACT: ${{ secrets.DEV_UNISWAP_SWAP_QUOTER_CONTRACT }}
           TOKEN_EFIL: ${{ secrets.DEV_TOKEN_EFIL }}
           TOKEN_USDC: ${{ secrets.DEV_TOKEN_USDC }}
           TOKEN_WBTC: ${{ secrets.DEV_TOKEN_WBTC }}
@@ -57,6 +58,7 @@ jobs:
           ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
           INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
           UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.STG_UNISWAP_SWAP_ROUTER_CONTRACT }}
+          UNISWAP_SWAP_QUOTER_CONTRACT: ${{ secrets.STG_UNISWAP_SWAP_QUOTER_CONTRACT }}
           TOKEN_EFIL: ${{ secrets.STG_TOKEN_EFIL }}
           TOKEN_USDC: ${{ secrets.STG_TOKEN_USDC }}
           TOKEN_WBTC: ${{ secrets.STG_TOKEN_WBTC }}
