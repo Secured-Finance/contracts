@@ -11,6 +11,7 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   ORDERS_CALCULATION_TOLERANCE_RANGE,
+  ORDER_FEE_RATE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
@@ -104,6 +105,7 @@ describe('Performance Test: Auto-rolls', async () => {
     await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
 
     await tokenVault.setCollateralParameters(
+      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,

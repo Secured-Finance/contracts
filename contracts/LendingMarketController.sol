@@ -55,6 +55,11 @@ contract LendingMarketController is
         _;
     }
 
+    modifier hasEnoughCollateralAfter() {
+        _;
+        require(tokenVault().isCovered(msg.sender), "Not enough collateral");
+    }
+
     /**
      * @notice Modifier to check if there is a market in the maturity.
      * @param _ccy Currency name in bytes32
@@ -520,7 +525,7 @@ contract LendingMarketController is
      * In addition, converts the future value to the genesis value if there is future value in past maturity
      * before the execution of order creation.
      *
-     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _orderCcy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
@@ -528,21 +533,41 @@ contract LendingMarketController is
      * @return True if the execution of the operation succeeds
      */
     function createOrder(
-        bytes32 _ccy,
+        bytes32 _orderCcy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
-        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+        uint256 _unitPrice,
+        bytes32 _feeCcy
+    )
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_orderCcy, _maturity)
+        hasEnoughCollateralAfter
+        returns (bool)
+    {
+        uint256 filledAmount = _createOrder(
+            _orderCcy,
+            _maturity,
+            msg.sender,
+            _side,
+            _amount,
+            _unitPrice,
+            false
+        );
+
+        if (filledAmount != 0) {
+            tokenVault().payOrderFee(_maturity, msg.sender, _feeCcy, _orderCcy, filledAmount);
+        }
+
         return true;
     }
 
     /**
      * @notice Deposits funds and creates an order at the same time.
      *
-     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _orderCcy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
@@ -550,42 +575,37 @@ contract LendingMarketController is
      * @return True if the execution of the operation succeeds
      */
     function depositAndCreateOrder(
-        bytes32 _ccy,
+        bytes32 _orderCcy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        tokenVault().depositFrom(msg.sender, _ccy, _amount);
-        _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
-        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
-        return true;
-    }
+        uint256 _unitPrice,
+        bytes32 _feeCcy
+    )
+        external
+        payable
+        override
+        nonReentrant
+        ifValidMaturity(_orderCcy, _maturity)
+        hasEnoughCollateralAfter
+        returns (bool)
+    {
+        tokenVault().depositFrom{value: msg.value}(msg.sender, _orderCcy, _amount);
 
-    /**
-     * @notice Deposits funds and creates a lend order with ETH at the same time.
-     *
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
-     * @return True if the execution of the operation succeeds
-     */
-    function depositAndCreateLendOrderWithETH(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _unitPrice
-    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, msg.value);
-        _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
-        _createOrder(
-            _ccy,
+        uint256 filledAmount = _createOrder(
+            _orderCcy,
             _maturity,
             msg.sender,
-            ProtocolTypes.Side.LEND,
-            msg.value,
+            _side,
+            _amount,
             _unitPrice,
             false
         );
+
+        if (filledAmount != 0) {
+            tokenVault().payOrderFee(_maturity, msg.sender, _feeCcy, _orderCcy, filledAmount);
+        }
+
         return true;
     }
 
@@ -641,7 +661,7 @@ contract LendingMarketController is
             _poolFee
         );
 
-        _createOrder(
+        uint256 filledAmount = _createOrder(
             _debtCcy,
             _debtMaturity,
             _user,
@@ -651,9 +671,11 @@ contract LendingMarketController is
             true
         );
 
-        emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, liquidationAmount);
+        if (filledAmount != 0) {
+            emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, liquidationAmount);
 
-        _convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
+            _convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
+        }
 
         return true;
     }
@@ -816,17 +838,18 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice,
         bool _isForced
-    ) private returns (bool isFilled) {
+    ) private returns (uint256 filledAmount) {
         require(_amount > 0, "Invalid amount");
         uint256 activeOrderCount = cleanOrders(_ccy, _user);
 
-        if (!_isForced) {
-            require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
-        }
+        // if (!_isForced) {
+        //     require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
+        // }
 
         (uint256 filledFutureValue, uint256 remainingAmount) = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ).createOrder(_side, _user, _amount, _unitPrice, _isForced);
+        filledAmount = _amount - remainingAmount;
 
         if (!_isForced) {
             // The case that an order was made, or taken partially
@@ -838,32 +861,52 @@ contract LendingMarketController is
         }
 
         if (filledFutureValue != 0) {
-            address futureValueVault = Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ];
+            _updateDepositAmount(_ccy, _maturity, _user, _side, filledFutureValue, filledAmount);
 
-            if (_side == ProtocolTypes.Side.BORROW) {
-                tokenVault().addDepositAmount(_user, _ccy, _amount - remainingAmount);
-                IFutureValueVault(futureValueVault).addBorrowFutureValue(
-                    _user,
-                    filledFutureValue,
-                    _maturity
-                );
-            } else {
-                tokenVault().removeDepositAmount(_user, _ccy, _amount - remainingAmount);
-                IFutureValueVault(futureValueVault).addLendFutureValue(
-                    _user,
-                    filledFutureValue,
-                    _maturity
-                );
-            }
-
-            emit FillOrder(_user, _ccy, _side, _maturity, _amount, _unitPrice, filledFutureValue);
-
-            isFilled = true;
+            emit FillOrder(
+                _user,
+                _ccy,
+                _side,
+                _maturity,
+                filledAmount,
+                _unitPrice,
+                filledFutureValue
+            );
         }
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
+    }
+
+    function _updateDepositAmount(
+        bytes32 _orderCcy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 filledFutureValue,
+        uint256 filledAmount
+    ) private returns (bool) {
+        // if (filledFutureValue == 0) return false;
+        address futureValueVault = Storage.slot().futureValueVaults[_orderCcy][
+            Storage.slot().maturityLendingMarkets[_orderCcy][_maturity]
+        ];
+
+        if (_side == ProtocolTypes.Side.BORROW) {
+            tokenVault().addDepositAmount(_user, _orderCcy, filledAmount);
+            IFutureValueVault(futureValueVault).addBorrowFutureValue(
+                _user,
+                filledFutureValue,
+                _maturity
+            );
+        } else {
+            tokenVault().removeDepositAmount(_user, _orderCcy, filledAmount);
+            IFutureValueVault(futureValueVault).addLendFutureValue(
+                _user,
+                filledFutureValue,
+                _maturity
+            );
+        }
+
+        return true;
     }
 
     function _cleanOrders(

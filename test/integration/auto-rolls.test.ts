@@ -5,12 +5,13 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexETHString, hexFILString } from '../../utils/strings';
+import { hexBTCString, hexETHString, hexFILString } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   ORDERS_CALCULATION_TOLERANCE_RANGE,
+  ORDER_FEE_RATE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
@@ -32,6 +33,7 @@ describe('Integration Test: Auto-rolls', async () => {
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
   let wFILToken: Contract;
+  let wBTCToken: Contract;
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
@@ -40,12 +42,16 @@ describe('Integration Test: Auto-rolls', async () => {
   let signers: Signers;
 
   const initialFILBalance = BigNumber.from('100000000000000000000');
+  const initialBTCBalance = BigNumber.from('1000000000');
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
       await wFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
+      await wBTCToken
+        .connect(owner)
+        .transfer(signer.address, initialBTCBalance);
     });
 
   const createSampleETHOrders = async (
@@ -65,6 +71,7 @@ describe('Integration Test: Auto-rolls', async () => {
         Side.BORROW,
         '1000000',
         BigNumber.from(unitPrice).sub('1000'),
+        hexETHString,
       );
 
     await lendingMarketController
@@ -75,6 +82,7 @@ describe('Integration Test: Auto-rolls', async () => {
         Side.LEND,
         '1000000',
         BigNumber.from(unitPrice).add('1000'),
+        hexETHString,
       );
   };
 
@@ -112,6 +120,13 @@ describe('Integration Test: Auto-rolls', async () => {
     ]);
   };
 
+  const depositBTCForFee = async (user: SignerWithAddress) => {
+    await wBTCToken
+      .connect(user)
+      .approve(tokenVault.address, initialBTCBalance);
+    await tokenVault.connect(user).deposit(hexBTCString, initialBTCBalance);
+  };
+
   before('Deploy Contracts', async () => {
     signers = new Signers(await ethers.getSigners());
     [owner] = await signers.get(1);
@@ -123,10 +138,12 @@ describe('Integration Test: Auto-rolls', async () => {
       lendingMarketController,
       wETHToken,
       wFILToken,
+      wBTCToken,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
+    await tokenVault.registerCurrency(hexBTCString, wBTCToken.address, false);
 
     mockUniswapRouter = await ethers
       .getContractFactory('MockUniswapRouter')
@@ -141,10 +158,13 @@ describe('Integration Test: Auto-rolls', async () => {
 
     await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
     await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapRouter.setToken(hexBTCString, wBTCToken.address);
     await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
     await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapQuoter.setToken(hexBTCString, wBTCToken.address);
 
     await tokenVault.setCollateralParameters(
+      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -182,13 +202,22 @@ describe('Integration Test: Auto-rolls', async () => {
         .deposit(hexETHString, orderAmount.mul(10), {
           value: orderAmount.mul(10),
         });
+      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateLendOrderWithETH(hexETHString, maturities[0], 8000, {
-            value: orderAmount,
-          }),
+          .depositAndCreateOrder(
+            hexETHString,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            8000,
+            hexETHString,
+            {
+              value: orderAmount,
+            },
+          ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
       await expect(
@@ -200,6 +229,7 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount.mul(3),
             8000,
+            hexETHString,
           ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
@@ -212,6 +242,7 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             7990,
+            hexETHString,
           ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
@@ -224,6 +255,7 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
+            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -263,9 +295,17 @@ describe('Integration Test: Auto-rolls', async () => {
     it('Execute auto-roll (1st time)', async () => {
       await lendingMarketController
         .connect(carol)
-        .depositAndCreateLendOrderWithETH(hexETHString, maturities[1], 8510, {
-          value: orderAmount.mul(2),
-        });
+        .depositAndCreateOrder(
+          hexETHString,
+          maturities[1],
+          Side.LEND,
+          orderAmount.mul(2),
+          8510,
+          hexETHString,
+          {
+            value: orderAmount.mul(2),
+          },
+        );
       await lendingMarketController
         .connect(carol)
         .createOrder(
@@ -274,6 +314,7 @@ describe('Integration Test: Auto-rolls', async () => {
           Side.BORROW,
           orderAmount.mul(2),
           8490,
+          hexETHString,
         );
 
       const aliceTotalPVBefore =
@@ -342,9 +383,17 @@ describe('Integration Test: Auto-rolls', async () => {
     it('Execute auto-roll (2nd time)', async () => {
       await lendingMarketController
         .connect(carol)
-        .depositAndCreateLendOrderWithETH(hexETHString, maturities[1], 8100, {
-          value: orderAmount.mul(2),
-        });
+        .depositAndCreateOrder(
+          hexETHString,
+          maturities[1],
+          Side.LEND,
+          orderAmount.mul(2),
+          8100,
+          hexETHString,
+          {
+            value: orderAmount.mul(2),
+          },
+        );
       await lendingMarketController
         .connect(carol)
         .createOrder(
@@ -353,6 +402,7 @@ describe('Integration Test: Auto-rolls', async () => {
           Side.BORROW,
           orderAmount.mul(2),
           7900,
+          hexETHString,
         );
 
       const aliceTotalPVBefore =
@@ -418,13 +468,22 @@ describe('Integration Test: Auto-rolls', async () => {
       await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
+      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateLendOrderWithETH(hexETHString, maturities[0], 8000, {
-            value: orderAmount,
-          }),
+          .depositAndCreateOrder(
+            hexETHString,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            8000,
+            hexETHString,
+            {
+              value: orderAmount,
+            },
+          ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
       await expect(
@@ -436,6 +495,7 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
+            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -461,9 +521,17 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateLendOrderWithETH(hexETHString, maturities[1], 5000, {
-            value: orderAmount,
-          }),
+          .depositAndCreateOrder(
+            hexETHString,
+            maturities[1],
+            Side.LEND,
+            orderAmount,
+            5000,
+            hexETHString,
+            {
+              value: orderAmount,
+            },
+          ),
       ).to.emit(lendingMarkets[1], 'MakeOrder');
 
       await expect(
@@ -475,6 +543,7 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
+            hexBTCString,
           ),
       ).to.emit(lendingMarkets[1], 'TakeOrders');
 
@@ -617,14 +686,18 @@ describe('Integration Test: Auto-rolls', async () => {
       await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
+      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateLendOrderWithETH(
+          .depositAndCreateOrder(
             hexETHString,
             maturities[0],
+            Side.LEND,
+            orderAmount,
             '8333',
+            hexETHString,
             {
               value: orderAmount,
             },
@@ -640,6 +713,7 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
+            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -716,14 +790,18 @@ describe('Integration Test: Auto-rolls', async () => {
       await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
+      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateLendOrderWithETH(
+          .depositAndCreateOrder(
             hexETHString,
             maturities[0],
+            Side.LEND,
+            orderAmount,
             '8000',
+            hexETHString,
             {
               value: orderAmount,
             },
@@ -739,6 +817,7 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
+            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -786,9 +865,17 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateLendOrderWithETH(hexETHString, maturities[0], 8000, {
-            value: orderAmount,
-          }),
+          .depositAndCreateOrder(
+            hexETHString,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            8000,
+            hexETHString,
+            {
+              value: orderAmount,
+            },
+          ),
       ).to.be.revertedWith('Market is not opened');
     });
 

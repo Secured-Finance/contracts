@@ -9,6 +9,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  ORDER_FEE_RATE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 
@@ -50,6 +51,7 @@ describe('Performance Test: Order Book', async () => {
       );
 
     await tokenVault.setCollateralParameters(
+      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,

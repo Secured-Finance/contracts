@@ -69,6 +69,7 @@ describe('LendingMarketController', () => {
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
+    await mockTokenVault.mock.payOrderFee.returns();
 
     // Deploy libraries
     const fundCalculationLogic = await deployContract(
@@ -312,22 +313,19 @@ describe('LendingMarketController', () => {
     let futureValueVaultProxies: Contract[];
     let maturities: BigNumber[];
 
-    beforeEach(async () => {
-      // Set up for the mocks
-      await mockTokenVault.mock.isCovered.returns(true);
-
+    const initialize = async (currency: string) => {
       await lendingMarketControllerProxy.initializeLendingMarket(
-        targetCurrency,
+        currency,
         genesisDate,
         COMPOUND_FACTOR,
       );
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
 
       const marketAddresses =
-        await lendingMarketControllerProxy.getLendingMarkets(targetCurrency);
+        await lendingMarketControllerProxy.getLendingMarkets(currency);
 
       lendingMarketProxies = await Promise.all(
         marketAddresses.map((address) =>
@@ -335,19 +333,24 @@ describe('LendingMarketController', () => {
         ),
       );
 
-      maturities = await lendingMarketControllerProxy.getMaturities(
-        targetCurrency,
-      );
+      maturities = await lendingMarketControllerProxy.getMaturities(currency);
 
       futureValueVaultProxies = await Promise.all(
         maturities.map((maturity) =>
           lendingMarketControllerProxy
-            .getFutureValueVault(targetCurrency, maturity)
+            .getFutureValueVault(currency, maturity)
             .then((address) =>
               ethers.getContractAt('FutureValueVault', address),
             ),
         ),
       );
+    };
+
+    beforeEach(async () => {
+      // Set up for the mocks
+      await mockTokenVault.mock['isCovered(address)'].returns(true);
+
+      await initialize(targetCurrency);
     });
 
     it('Get a market currency data', async () => {
@@ -362,25 +365,25 @@ describe('LendingMarketController', () => {
         {
           maker: alice,
           side: Side.LEND,
-          amount: '100000000000000000',
+          amount: BigNumber.from('100000000000000000'),
           unitPrice: '9800',
         },
         {
           maker: bob,
           side: Side.LEND,
-          amount: '500000000000000000',
+          amount: BigNumber.from('500000000000000000'),
           unitPrice: '9880',
         },
         {
           maker: carol,
           side: Side.BORROW,
-          amount: '100000000000000000',
+          amount: BigNumber.from('100000000000000000'),
           unitPrice: '9720',
         },
         {
           maker: carol,
           side: Side.BORROW,
-          amount: '200000000000000000',
+          amount: BigNumber.from('200000000000000000'),
           unitPrice: '9780',
         },
       ];
@@ -398,6 +401,7 @@ describe('LendingMarketController', () => {
             order.side,
             order.amount,
             order.unitPrice,
+            targetCurrency,
           );
       }
 
@@ -491,6 +495,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '100000000000000000',
           '9800',
+          targetCurrency,
         )
         .then(async (tx) => {
           await expect(tx).to.emit(lendingMarket1, 'MakeOrder');
@@ -508,6 +513,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '50000000000000000',
           '9880',
+          targetCurrency,
         )
         .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
 
@@ -519,6 +525,7 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '100000000000000000',
           '9720',
+          targetCurrency,
         )
         .then((tx) => expect(tx).to.emit(lendingMarket1, 'MakeOrder'));
 
@@ -531,6 +538,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '9800',
+            targetCurrency,
           ),
       ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -620,6 +628,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '100000000000000000',
           '9880',
+          targetCurrency,
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -629,6 +638,7 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '40000000000000000',
           '9880',
+          targetCurrency,
         );
       await lendingMarketControllerProxy
         .connect(carol)
@@ -638,6 +648,7 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '50000000000000000',
           '9800',
+          targetCurrency,
         );
 
       await showLendingInfo();
@@ -758,6 +769,8 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '100000000000000000',
           '9800',
+          targetCurrency,
+          { value: '1000000000000000' },
         )
         .then(async (tx) => {
           await expect(tx).to.not.emit(
@@ -770,11 +783,14 @@ describe('LendingMarketController', () => {
     it('Deposit and add an order(payable)', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
-        .depositAndCreateLendOrderWithETH(
+        .depositAndCreateOrder(
           targetCurrency,
           maturities[0],
+          Side.LEND,
+          '100000000000000000',
           '9800',
-          { value: '100000000000000000' },
+          targetCurrency,
+          { value: '1000000000000000' },
         )
         .then(async (tx) => {
           await expect(tx).to.not.emit(
@@ -795,6 +811,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '50000000000000000',
           '9880',
+          targetCurrency,
         );
       const order = await lendingMarket1.getOrder('1');
 
@@ -816,6 +833,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '50000000000000000',
           '880',
+          targetCurrency,
         );
 
       await expect(
@@ -863,6 +881,7 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '100000000000000000',
           '9800',
+          targetCurrency,
         );
 
       await lendingMarketControllerProxy
@@ -873,6 +892,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '100000000000000000',
           '9900',
+          targetCurrency,
         );
 
       await expect(
@@ -884,6 +904,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '0',
+            targetCurrency,
           ),
       ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -897,6 +918,7 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '100000000000000000',
           '9500',
+          targetCurrency,
         );
 
       await lendingMarketControllerProxy
@@ -907,6 +929,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '100000000000000000',
           '9600',
+          targetCurrency,
         );
 
       await expect(
@@ -918,6 +941,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '0',
+            targetCurrency,
           ),
       ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -931,6 +955,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '100000000000000000',
           '9000',
+          targetCurrency,
         );
 
       await lendingMarketControllerProxy
@@ -941,6 +966,7 @@ describe('LendingMarketController', () => {
           Side.BORROW,
           '100000000000000000',
           '8900',
+          targetCurrency,
         );
 
       await expect(
@@ -952,6 +978,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '80000000000000000',
             '0',
+            targetCurrency,
           ),
       ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -970,6 +997,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -980,6 +1008,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         const tx = await lendingMarketControllerProxy
@@ -990,6 +1019,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '880',
+            targetCurrency,
           );
 
         await expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder');
@@ -1008,6 +1038,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1018,6 +1049,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         const tx = await lendingMarketControllerProxy
@@ -1028,6 +1060,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '880',
+            targetCurrency,
           );
 
         await expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder');
@@ -1046,6 +1079,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1056,6 +1090,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -1065,6 +1100,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(dave)
@@ -1074,6 +1110,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         const tx = await lendingMarketControllerProxy
@@ -1084,6 +1121,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '880',
+            targetCurrency,
           );
 
         await expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder');
@@ -1112,6 +1150,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1122,6 +1161,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         const tx = await lendingMarketControllerProxy
@@ -1132,6 +1172,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '80000000000000000',
             '880',
+            targetCurrency,
           );
         await expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder');
         await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
@@ -1159,6 +1200,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1169,6 +1211,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         const tx = await lendingMarketControllerProxy
@@ -1179,6 +1222,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '120000000000000000',
             '880',
+            targetCurrency,
           );
         await expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder');
         await expect(tx).to.emit(lendingMarket1, 'TakeOrders');
@@ -1194,6 +1238,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         await expect(
@@ -1205,6 +1250,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '50000000000000000',
               '880',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
       });
@@ -1218,6 +1264,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1227,6 +1274,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '881',
+            targetCurrency,
           );
 
         await expect(
@@ -1238,6 +1286,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '100000000000000000',
               '882',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
       });
@@ -1251,6 +1300,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1260,6 +1310,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '881',
+            targetCurrency,
           );
 
         await expect(
@@ -1271,6 +1322,7 @@ describe('LendingMarketController', () => {
               Side.LEND,
               '100000000000000000',
               '879',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
       });
@@ -1284,6 +1336,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1293,6 +1346,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '881',
+            targetCurrency,
           );
 
         await expect(
@@ -1304,6 +1358,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '100000000000000000',
               '0',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
       });
@@ -1317,6 +1372,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1326,6 +1382,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '881',
+            targetCurrency,
           );
 
         await expect(
@@ -1337,6 +1394,7 @@ describe('LendingMarketController', () => {
               Side.LEND,
               '100000000000000000',
               '0',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
       });
@@ -1350,6 +1408,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1360,6 +1419,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '881',
+            targetCurrency,
           );
 
         await expect(
@@ -1371,6 +1431,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '50000000000000000',
               '880',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -1382,6 +1443,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '882',
+            targetCurrency,
           );
       });
 
@@ -1394,6 +1456,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(alice)
@@ -1403,6 +1466,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '881',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1413,6 +1477,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '882',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1423,6 +1488,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '883',
+            targetCurrency,
           );
 
         await expect(
@@ -1434,6 +1500,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '50000000000000000',
               '880',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -1446,6 +1513,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '50000000000000000',
               '881',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -1458,6 +1526,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '50000000000000000',
               '882',
+              targetCurrency,
             ),
         ).to.emit(lendingMarketControllerProxy, 'FillOrder');
 
@@ -1469,6 +1538,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '882',
+            targetCurrency,
           );
       });
 
@@ -1487,6 +1557,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               orderAmount,
               '9880',
+              targetCurrency,
             );
         }
 
@@ -1498,6 +1569,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             totalAmount.toString(),
             '9880',
+            targetCurrency,
           )
           .then((tx) => tx.wait());
 
@@ -1531,6 +1603,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               orderAmount,
               String(9880 + i),
+              targetCurrency,
             );
         }
 
@@ -1542,6 +1615,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             totalAmount.toString(),
             '9880',
+            targetCurrency,
           )
           .then((tx) => tx.wait());
 
@@ -1563,7 +1637,7 @@ describe('LendingMarketController', () => {
 
     describe('Failure', async () => {
       it('Fail to create an order due to insufficient collateral', async () => {
-        await mockTokenVault.mock.isCovered.returns(false);
+        await mockTokenVault.mock['isCovered(address)'].returns(false);
 
         await expect(
           lendingMarketControllerProxy
@@ -1574,6 +1648,7 @@ describe('LendingMarketController', () => {
               Side.LEND,
               '100000000000000000',
               '800',
+              targetCurrency,
             ),
         ).not.to.be.revertedWith(
           'Not enough collateral in the selected currency',
@@ -1588,6 +1663,7 @@ describe('LendingMarketController', () => {
               Side.BORROW,
               '100000000000000000',
               '800',
+              targetCurrency,
             ),
         ).to.be.revertedWith('Not enough collateral');
       });
@@ -1634,6 +1710,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             orderAmount,
             orderRate,
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1644,6 +1721,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '200000000000000000',
             '7999',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1654,6 +1732,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '200000000000000000',
             '8000',
+            targetCurrency,
           )
           .then((tx) =>
             expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder'),
@@ -1698,6 +1777,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             orderAmount,
             orderRate,
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1708,6 +1788,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '200000000000000000',
             '7999',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1718,6 +1799,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '200000000000000000',
             '8000',
+            targetCurrency,
           )
           .then((tx) =>
             expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder'),
@@ -1790,6 +1872,7 @@ describe('LendingMarketController', () => {
               0,
               '100000000000000000',
               '800',
+              targetCurrency,
             ),
         ).to.be.revertedWith('Pausable: paused');
 
@@ -1805,6 +1888,7 @@ describe('LendingMarketController', () => {
             0,
             '100000000000000000',
             '800',
+            targetCurrency,
           );
       });
 
@@ -1819,6 +1903,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '800',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -1828,6 +1913,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1837,6 +1923,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '800',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1846,6 +1933,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '720',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -1856,6 +1944,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '800',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -1865,6 +1954,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '880',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1874,6 +1964,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '800',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1883,6 +1974,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '720',
+            targetCurrency,
           );
 
         const initialCF = await genesisValueVaultProxy.getCompoundFactor(
@@ -1913,6 +2005,7 @@ describe('LendingMarketController', () => {
               Side.LEND,
               '100000000000000000',
               '800',
+              targetCurrency,
             ),
         ).to.be.revertedWith('Invalid maturity');
 
@@ -1924,6 +2017,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '800',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -1933,6 +2027,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '800',
+            targetCurrency,
           );
 
         const maturitiesBefore =
@@ -1984,6 +2079,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '820',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -1993,6 +2089,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '780',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -2003,6 +2100,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '920',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -2012,6 +2110,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '880',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -2022,6 +2121,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '1020',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -2031,6 +2131,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '980',
+            targetCurrency,
           );
 
         await time.increaseTo(maturities[0].toString());
@@ -2163,6 +2264,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '50000000000000000',
             '810',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -2172,6 +2274,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '50000000000000000',
             '790',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -2182,6 +2285,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '800',
+            targetCurrency,
           );
         const tx = await lendingMarketControllerProxy
           .connect(bob)
@@ -2191,6 +2295,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '800',
+            targetCurrency,
           );
 
         const lendingMarket1 = lendingMarketProxies[0];
@@ -2208,6 +2313,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '80000000000000000',
             '810',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(alice)
@@ -2217,6 +2323,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '80000000000000000',
             '790',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -2226,6 +2333,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '800',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(alice)
@@ -2235,6 +2343,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '800',
+            targetCurrency,
           );
 
         await rotateLendingMarkets();
@@ -2249,6 +2358,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '200000000000000000',
             '810',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -2258,6 +2368,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '200000000000000000',
             '790',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -2268,6 +2379,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '200000000000000000',
             '800',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(carol)
@@ -2277,6 +2389,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '200000000000000000',
             '800',
+            targetCurrency,
           );
 
         await rotateLendingMarkets();
@@ -2293,6 +2406,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '40000000000000000',
             '8000',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(bob)
@@ -2302,6 +2416,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '8000',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -2312,6 +2427,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '100000000000000000',
             '8150',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(dave)
@@ -2321,6 +2437,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '500000000000000000',
             '8151',
+            targetCurrency,
           );
 
         const aliceLentFunds =
@@ -2353,6 +2470,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '30000000000000000',
             '8000',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(alice)
@@ -2362,6 +2480,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '100000000000000000',
             '8000',
+            targetCurrency,
           );
 
         await lendingMarketControllerProxy
@@ -2372,6 +2491,7 @@ describe('LendingMarketController', () => {
             Side.BORROW,
             '500000000000000000',
             '7500',
+            targetCurrency,
           );
         await lendingMarketControllerProxy
           .connect(dave)
@@ -2381,6 +2501,7 @@ describe('LendingMarketController', () => {
             Side.LEND,
             '500000000000000000',
             '7501',
+            targetCurrency,
           );
 
         const aliceLentFunds =

@@ -4,13 +4,14 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexETHString, hexFILString } from '../../utils/strings';
+import { hexBTCString, hexETHString, hexFILString } from '../../utils/strings';
 import {
   filToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   ORDERS_CALCULATION_TOLERANCE_RANGE,
+  ORDER_FEE_RATE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
@@ -27,6 +28,7 @@ describe('Integration Test: Order Book', async () => {
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
+  let wBTCToken: Contract;
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
@@ -38,12 +40,16 @@ describe('Integration Test: Order Book', async () => {
 
   const initialETHBalance = BigNumber.from('1000000000000000000');
   const initialFILBalance = BigNumber.from('100000000000000000000');
+  const initialBTCBalance = BigNumber.from('1000000000');
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
       await wFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
+      await wBTCToken
+        .connect(owner)
+        .transfer(signer.address, initialBTCBalance);
     });
 
   const createSampleETHOrders = async (user: SignerWithAddress) => {
@@ -55,11 +61,25 @@ describe('Integration Test: Order Book', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETHString, ethMaturities[0], Side.BORROW, '1000', '7800');
+      .createOrder(
+        hexETHString,
+        ethMaturities[0],
+        Side.BORROW,
+        '1000',
+        '7800',
+        hexETHString,
+      );
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETHString, ethMaturities[0], Side.LEND, '1000', '8200');
+      .createOrder(
+        hexETHString,
+        ethMaturities[0],
+        Side.LEND,
+        '1000',
+        '8200',
+        hexETHString,
+      );
   };
 
   const createSampleFILOrders = async (user: SignerWithAddress) => {
@@ -75,11 +95,32 @@ describe('Integration Test: Order Book', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexFILString, filMaturities[0], Side.BORROW, '1000', '7800');
+      .createOrder(
+        hexFILString,
+        filMaturities[0],
+        Side.BORROW,
+        '1000',
+        '7800',
+        hexETHString,
+      );
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '8200');
+      .createOrder(
+        hexFILString,
+        filMaturities[0],
+        Side.LEND,
+        '1000',
+        '8200',
+        hexETHString,
+      );
+  };
+
+  const depositBTCForFee = async (user: SignerWithAddress) => {
+    await wBTCToken
+      .connect(user)
+      .approve(tokenVault.address, initialBTCBalance);
+    await tokenVault.connect(user).deposit(hexBTCString, initialBTCBalance);
   };
 
   before('Deploy Contracts', async () => {
@@ -93,10 +134,12 @@ describe('Integration Test: Order Book', async () => {
       lendingMarketController,
       wETHToken,
       wFILToken,
+      wBTCToken,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
+    await tokenVault.registerCurrency(hexBTCString, wBTCToken.address, false);
 
     mockUniswapRouter = await ethers
       .getContractFactory('MockUniswapRouter')
@@ -111,10 +154,13 @@ describe('Integration Test: Order Book', async () => {
 
     await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
     await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapRouter.setToken(hexBTCString, wBTCToken.address);
     await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
     await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapQuoter.setToken(hexBTCString, wBTCToken.address);
 
     await tokenVault.setCollateralParameters(
+      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -154,7 +200,8 @@ describe('Integration Test: Order Book', async () => {
         await createSampleETHOrders(carol);
       });
 
-      it('Deposit ETH', async () => {
+      it('Deposit ETH & WBTC', async () => {
+        await depositBTCForFee(alice);
         await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
           value: depositAmount,
         });
@@ -170,10 +217,13 @@ describe('Integration Test: Order Book', async () => {
       it('Fill an order on the ETH market', async () => {
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateLendOrderWithETH(
+          .depositAndCreateOrder(
             hexETHString,
             ethMaturities[0],
+            Side.LEND,
+            orderAmount,
             '8000',
+            hexETHString,
             { value: orderAmount },
           );
 
@@ -185,6 +235,7 @@ describe('Integration Test: Order Book', async () => {
             Side.BORROW,
             orderAmount,
             '8000',
+            hexBTCString,
           );
 
         const aliceFV = await lendingMarketController.getFutureValue(
@@ -237,7 +288,9 @@ describe('Integration Test: Order Book', async () => {
         await createSampleFILOrders(carol);
       });
 
-      it('Deposit ETH', async () => {
+      it('Deposit ETH & WBTC', async () => {
+        await depositBTCForFee(alice);
+
         await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
           value: depositAmount,
         });
@@ -263,6 +316,7 @@ describe('Integration Test: Order Book', async () => {
             Side.LEND,
             orderAmount,
             '8000',
+            hexFILString,
           );
 
         await lendingMarketController
@@ -273,6 +327,7 @@ describe('Integration Test: Order Book', async () => {
             Side.BORROW,
             orderAmount,
             '0',
+            hexBTCString,
           );
 
         const aliceFV = await lendingMarketController.getFutureValue(
@@ -328,10 +383,11 @@ describe('Integration Test: Order Book', async () => {
         await createSampleETHOrders(carol);
       });
 
-      it('Deposit ETH', async () => {
+      it('Deposit ETH & WBTC', async () => {
         await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
           value: depositAmount,
         });
+        await depositBTCForFee(alice);
 
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
@@ -354,6 +410,7 @@ describe('Integration Test: Order Book', async () => {
             Side.LEND,
             orderAmountInFIL,
             '8000',
+            hexFILString,
           );
 
         await lendingMarketController
@@ -364,6 +421,7 @@ describe('Integration Test: Order Book', async () => {
             Side.BORROW,
             orderAmountInFIL,
             '0',
+            hexBTCString,
           );
 
         const aliceFV = await lendingMarketController.getFutureValue(
@@ -394,10 +452,13 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateLendOrderWithETH(
+          .depositAndCreateOrder(
             hexETHString,
             ethMaturities[0],
+            Side.LEND,
+            orderAmount,
             '8000',
+            hexETHString,
             { value: orderAmount },
           );
 
@@ -409,6 +470,7 @@ describe('Integration Test: Order Book', async () => {
             Side.BORROW,
             orderAmount,
             '0',
+            hexBTCString,
           );
 
         const aliceFV = await lendingMarketController.getFutureValue(
@@ -529,6 +591,7 @@ describe('Integration Test: Order Book', async () => {
           signer1 = input.signer1 === 'bob' ? bob : alice;
           signer2 = input.signer2 === 'bob' ? bob : alice;
 
+          await depositBTCForFee(signer2);
           await wFILToken
             .connect(alice)
             .approve(tokenVault.address, collateralAmount);
@@ -547,6 +610,7 @@ describe('Integration Test: Order Book', async () => {
                 input.side1,
                 collateralAmount,
                 '9001',
+                hexETHString,
               ),
           ).to.emit(filLendingMarkets[1], 'MakeOrder');
 
@@ -559,6 +623,7 @@ describe('Integration Test: Order Book', async () => {
                 input.side2,
                 collateralAmount,
                 '9001',
+                hexBTCString,
               ),
           ).to.emit(filLendingMarkets[1], 'TakeOrders');
         });
@@ -602,6 +667,7 @@ describe('Integration Test: Order Book', async () => {
           signer1 = input.signer1 === 'bob' ? bob : alice;
           signer2 = input.signer2 === 'bob' ? bob : alice;
 
+          await depositBTCForFee(signer2);
           await wFILToken
             .connect(alice)
             .approve(tokenVault.address, collateralAmount)
@@ -622,6 +688,7 @@ describe('Integration Test: Order Book', async () => {
                 input.side1,
                 collateralAmount,
                 '9002',
+                hexETHString,
               ),
           ).to.emit(filLendingMarkets[1], 'MakeOrder');
 
@@ -634,6 +701,7 @@ describe('Integration Test: Order Book', async () => {
                 input.side2,
                 collateralAmount.div(2),
                 '9002',
+                hexBTCString,
               ),
           ).to.emit(filLendingMarkets[1], 'TakeOrders');
         });
@@ -683,6 +751,7 @@ describe('Integration Test: Order Book', async () => {
           signer1 = input.signer1 === 'bob' ? bob : alice;
           signer2 = input.signer2 === 'bob' ? bob : alice;
 
+          await depositBTCForFee(signer2);
           await wFILToken
             .connect(alice)
             .approve(tokenVault.address, collateralAmount.mul(3))
@@ -703,6 +772,7 @@ describe('Integration Test: Order Book', async () => {
                 input.side1,
                 collateralAmount.div(2),
                 '9003',
+                hexETHString,
               ),
           ).to.emit(filLendingMarkets[1], 'MakeOrder');
           await expect(
@@ -714,6 +784,7 @@ describe('Integration Test: Order Book', async () => {
                 input.side1,
                 collateralAmount.div(2),
                 '9003',
+                hexETHString,
               ),
           ).to.emit(filLendingMarkets[1], 'MakeOrder');
 
@@ -726,6 +797,7 @@ describe('Integration Test: Order Book', async () => {
                 input.side2,
                 collateralAmount.mul(2),
                 '9003',
+                hexBTCString,
               ),
           ).to.emit(filLendingMarkets[1], 'TakeOrders');
         });
@@ -801,6 +873,7 @@ describe('Integration Test: Order Book', async () => {
             Side.BORROW,
             orderAmountInFIL,
             '8000',
+            hexETHString,
           );
 
         const aliceFV = await lendingMarketController.getFutureValue(
@@ -867,6 +940,7 @@ describe('Integration Test: Order Book', async () => {
             Side.LEND,
             orderAmountInFIL,
             '8000',
+            hexFILString,
           );
 
         const aliceFV = await lendingMarketController.getFutureValue(

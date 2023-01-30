@@ -174,7 +174,8 @@ interface ILendingMarketController {
         uint256 maturity,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 unitPrice
+        uint256 unitPrice,
+        bytes32 _feeCcy
     ) external returns (bool);
 
     function depositAndCreateOrder(
@@ -182,13 +183,8 @@ interface ILendingMarketController {
         uint256 maturity,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 unitPrice
-    ) external returns (bool);
-
-    function depositAndCreateLendOrderWithETH(
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 unitPrice
+        uint256 unitPrice,
+        bytes32 _feeCcy
     ) external payable returns (bool);
 
     function executeLiquidationCall(

@@ -200,13 +200,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     /**
      * @notice Gets the last price in USD for the selected currency.
      * @param _ccy Currency name in bytes32
-     * @return The last price in USD
+     * @return price The last price in USD
      */
-    function getLastUSDPrice(bytes32 _ccy) public view override returns (int256) {
+    function getLastUSDPrice(bytes32 _ccy) public view override returns (int256 price) {
         AggregatorV3Interface priceFeed = Storage.slot().usdPriceFeeds[_ccy];
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-
-        return price;
+        (, price, , , ) = priceFeed.latestRoundData();
     }
 
     /**
@@ -231,15 +229,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     /**
      * @notice Gets the last price in ETH for the selected currency.
      * @param _ccy Currency name in bytes32
-     * @return The last price in ETH
+     * @return price The last price in ETH
      */
-    function getLastETHPrice(bytes32 _ccy) public view override returns (int256) {
+    function getLastETHPrice(bytes32 _ccy) public view override returns (int256 price) {
         if (_isETH(_ccy)) return 1e18;
-
-        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-
-        return price;
+        price = _getLastETHPrice(_ccy);
     }
 
     /**
@@ -263,6 +257,22 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         return price;
     }
 
+    function convert(
+        bytes32 _fromCcy,
+        bytes32 _toCcy,
+        uint256 _amount
+    ) external view override returns (uint256 amount) {
+        if (_fromCcy == _toCcy) return _amount;
+        if (_amount == 0) return 0;
+
+        int256 fromPrice = _getLastETHPrice(_fromCcy);
+        int256 toPrice = _getLastETHPrice(_toCcy);
+
+        amount =
+            (_amount * uint256(fromPrice) * 10**Storage.slot().ethDecimals[_toCcy]) /
+            (10**Storage.slot().ethDecimals[_fromCcy] * uint256(toPrice));
+    }
+
     /**
      * @notice Gets the converted amount of currency in ETH.
      * @param _ccy Currency that has to be converted to ETH
@@ -278,10 +288,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_isETH(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
-        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-
-        amount = (_amount * uint256(price)) / 10**Storage.slot().ethDecimals[_ccy];
+        amount = (_amount * uint256(_getLastETHPrice(_ccy))) / 10**Storage.slot().ethDecimals[_ccy];
     }
 
     /**
@@ -299,9 +306,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_isETH(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
-        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-        amount = (_amount * price) / int256(10**Storage.slot().ethDecimals[_ccy]);
+        amount = (_amount * _getLastETHPrice(_ccy)) / int256(10**Storage.slot().ethDecimals[_ccy]);
     }
 
     /**
@@ -322,10 +327,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         for (uint256 i = 0; i < _amounts.length; i++) {
             if (_amounts[i] == 0) continue;
 
-            AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
-            (, int256 price, , , ) = priceFeed.latestRoundData();
-
-            amounts[i] = (_amounts[i] * uint256(price)) / 10**Storage.slot().ethDecimals[_ccy];
+            amounts[i] =
+                (_amounts[i] * uint256(_getLastETHPrice(_ccy))) /
+                10**Storage.slot().ethDecimals[_ccy];
         }
     }
 
@@ -343,14 +347,18 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     {
         if (_isETH(_ccy)) return _amountETH;
 
-        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-
-        amount = (_amountETH * 10**Storage.slot().ethDecimals[_ccy]) / uint256(price); // add decimals checks
+        amount =
+            (_amountETH * 10**Storage.slot().ethDecimals[_ccy]) /
+            uint256(_getLastETHPrice(_ccy));
         require(amount != 0, "Too small amount");
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {
         return _ccy == "ETH";
+    }
+
+    function _getLastETHPrice(bytes32 _ccy) internal view returns (int256 price) {
+        AggregatorV3Interface priceFeed = Storage.slot().ethPriceFeeds[_ccy];
+        (, price, , , ) = priceFeed.latestRoundData();
     }
 }

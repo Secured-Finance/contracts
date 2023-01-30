@@ -83,7 +83,7 @@ const mockRates: MockRate[] = [
   {
     name: 'BTC/ETH',
     key: hexBTCString,
-    decimals: 18,
+    decimals: 8,
     rate: btcToETHRate,
   },
   {

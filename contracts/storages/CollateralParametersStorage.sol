@@ -8,11 +8,13 @@ library CollateralParametersStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.collateralParameters");
 
     struct Storage {
-        // Liquidation threshold rate in basis point
+        // Order fee rate received by protocol (in basis point)
+        uint256 orderFeeRate;
+        // Liquidation threshold rate (in basis point)
         uint256 liquidationThresholdRate;
-        // Liquidation fee in basis point received by protocol
+        // Liquidation fee rate received by protocol (in basis point)
         uint256 liquidationProtocolFeeRate;
-        // Liquidation fee in basis point received by liquidators
+        // Liquidation fee rate received by liquidators (in basis point)
         uint256 liquidatorFeeRate;
         //  Uniswap router contract
         ISwapRouter uniswapRouter;

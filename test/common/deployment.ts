@@ -15,6 +15,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  ORDER_FEE_RATE,
 } from './constants';
 
 const deployContracts = async () => {
@@ -108,6 +109,7 @@ const deployContracts = async () => {
     proxyController.setReserveFundImpl(reserveFund.address, wETHToken.address),
     proxyController.setTokenVaultImpl(
       tokenVault.address,
+      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
