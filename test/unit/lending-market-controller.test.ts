@@ -18,6 +18,8 @@ const FutureValueVault = artifacts.require('FutureValueVault');
 const GenesisValueVault = artifacts.require('GenesisValueVault');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
+const LiquidationBot = artifacts.require('LiquidationBot');
+const LiquidationBot2 = artifacts.require('LiquidationBot2');
 
 // libraries
 const FundCalculationLogic = artifacts.require('FundCalculationLogic');
@@ -1690,12 +1692,40 @@ describe('LendingMarketController', () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(1);
         await mockTokenVault.mock.getDepositAmount.returns(1);
+
+        const isLiquidator = await lendingMarketControllerProxy.isLiquidator(
+          alice.address,
+        );
+
+        if (!isLiquidator) {
+          await lendingMarketControllerProxy
+            .connect(alice)
+            .registerLiquidator(true);
+        }
+      });
+
+      it('Register a liquidator', async () => {
+        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
+          .to.false;
+
+        await lendingMarketControllerProxy
+          .connect(owner)
+          .registerLiquidator(true);
+
+        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
+          .to.true;
+
+        await lendingMarketControllerProxy
+          .connect(owner)
+          .registerLiquidator(false);
+
+        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
+          .to.false;
       });
 
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        const debtAmount = orderAmount.mul('10000').div(orderRate);
         const liquidationAmount = ethers.BigNumber.from('300000000000000000');
 
         // Set up for the mocks
@@ -1827,7 +1857,7 @@ describe('LendingMarketController', () => {
           );
       });
 
-      it('Fail to liquidate lending position due to no debt', async () => {
+      it('Fail to liquidate a lending position due to no debt', async () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
@@ -1841,7 +1871,7 @@ describe('LendingMarketController', () => {
         ).to.be.revertedWith('No debt in the selected maturity');
       });
 
-      it('Fail to liquidate lending position due to no liquidation amount', async () => {
+      it('Fail to liquidate a lending position due to no liquidation amount', async () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(0);
 
@@ -1856,6 +1886,49 @@ describe('LendingMarketController', () => {
               '1',
             ),
         ).to.be.revertedWith('User has enough collateral');
+      });
+
+      it('Fail to liquidate a lending position due to unregistered liquidator', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeLiquidationCall(
+              targetCurrency,
+              targetCurrency,
+              maturities[0],
+              signers[0].address,
+              '1',
+            ),
+        ).to.be.revertedWith('Caller is not active');
+      });
+
+      it('Fail to liquidate a lending position due to bot hack', async () => {
+        await expect(
+          deployContract(owner, LiquidationBot, [
+            lendingMarketControllerProxy.address,
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            signers[0].address,
+            '1',
+          ]),
+        ).to.be.revertedWith('Caller is not active');
+      });
+
+      it('Fail to liquidate a lending position due to bot access', async () => {
+        const bot = await deployContract(owner, LiquidationBot2, [
+          lendingMarketControllerProxy.address,
+        ]);
+        await bot.registerLiquidator(true);
+        await expect(
+          bot.executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            signers[0].address,
+            '1',
+          ),
+        ).to.be.revertedWith('Caller must be EOA');
       });
     });
 

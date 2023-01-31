@@ -24,7 +24,7 @@ import { Signers } from '../common/signers';
 
 const ERROR_RANGE = BigNumber.from(1000);
 
-describe.only('Integration Test: Liquidations', async () => {
+describe('Integration Test: Liquidations', async () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -290,6 +290,8 @@ describe.only('Integration Test: Liquidations', async () => {
 
     ({ liquidatorFeeRate, liquidationProtocolFeeRate } =
       await tokenVault.getCollateralParameters());
+
+    await lendingMarketController.connect(owner).registerLiquidator(true);
   });
 
   beforeEach('Set maturities', async () => {
@@ -315,6 +317,7 @@ describe.only('Integration Test: Liquidations', async () => {
 
       const aliceBalanceBefore = await wFILToken.balanceOf(alice.address);
 
+      await lendingMarketController.connect(carol).registerLiquidator(true);
       await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
         value: depositAmount,
       });
@@ -855,6 +858,7 @@ describe.only('Integration Test: Liquidations', async () => {
 
       const aliceBalanceBefore = await wFILToken.balanceOf(alice.address);
 
+      await lendingMarketController.connect(carol).registerLiquidator(true);
       await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
         value: depositAmount,
       });

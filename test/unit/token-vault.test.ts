@@ -650,37 +650,104 @@ describe('TokenVault', () => {
         this.skip();
       }
 
+      const signer = signers[1];
       const value = ethers.BigNumber.from('30000000000000');
       const swapAmount = ethers.BigNumber.from('7000000000000');
 
       // Set up for the mocks
       await mockUniswapRouter.mock.exactOutputSingle.returns(value.div(3));
       await mockUniswapQuoter.mock.quoteExactInputSingle.returns(value);
+      await mockReserveFund.mock.isPaused.returns(true);
 
-      await tokenVaultCaller
-        .connect(signers[1])
-        .addDepositAmount(signers[1].address, targetCurrency, value);
+      await tokenVaultCaller.addDepositAmount(
+        signer.address,
+        targetCurrency,
+        value,
+      );
 
-      await tokenVaultCaller
-        .connect(owner)
-        .swapDepositAmounts(
-          owner.address,
-          signers[1].address,
-          targetCurrency,
-          previousCurrency,
-          swapAmount,
-          '1',
-        );
+      await tokenVaultCaller.swapDepositAmounts(
+        owner.address,
+        signer.address,
+        targetCurrency,
+        previousCurrency,
+        swapAmount,
+        '1',
+      );
 
       expect(
-        await tokenVaultProxy.getDepositAmount(
-          signers[1].address,
-          targetCurrency,
-        ),
+        await tokenVaultProxy.getDepositAmount(signer.address, targetCurrency),
       ).to.equal(value.div(3).mul(2));
       expect(
         await tokenVaultProxy.getDepositAmount(
-          signers[1].address,
+          signer.address,
+          previousCurrency,
+        ),
+      ).to.equal(swapAmount);
+
+      // Check fee amounts
+      const { liquidatorFeeRate, liquidationProtocolFeeRate } =
+        await tokenVaultProxy.getCollateralParameters();
+      const liquidatorFee = await tokenVaultProxy.getDepositAmount(
+        owner.address,
+        previousCurrency,
+      );
+      const protocolFee = await tokenVaultProxy.getDepositAmount(
+        mockReserveFund.address,
+        previousCurrency,
+      );
+      const amountOutWithFee = swapAmount
+        .mul('10000')
+        .div(
+          ethers.BigNumber.from('10000')
+            .sub(liquidatorFeeRate)
+            .sub(liquidationProtocolFeeRate),
+        );
+
+      expect(swapAmount).to.equal(
+        amountOutWithFee.sub(liquidatorFee).sub(protocolFee),
+      );
+    });
+
+    it('Swap the collateral amount and deposit using the reserve fund', async function () {
+      if (!previousCurrency) {
+        this.skip();
+      }
+
+      const signer = signers[4];
+      const value = ethers.BigNumber.from('30000000000000');
+      const swapAmount = ethers.BigNumber.from('7000000000000');
+
+      // Set up for the mocks
+      await mockUniswapRouter.mock.exactOutputSingle.returns(value.mul(2));
+      await mockUniswapQuoter.mock.quoteExactInputSingle.returns(value);
+      await mockReserveFund.mock.isPaused.returns(false);
+
+      await tokenVaultCaller.addDepositAmount(
+        signer.address,
+        targetCurrency,
+        value,
+      );
+      await tokenVaultCaller.addDepositAmount(
+        mockReserveFund.address,
+        targetCurrency,
+        value,
+      );
+
+      await tokenVaultCaller.swapDepositAmounts(
+        owner.address,
+        signer.address,
+        targetCurrency,
+        previousCurrency,
+        swapAmount,
+        '1',
+      );
+
+      expect(
+        await tokenVaultProxy.getDepositAmount(signer.address, targetCurrency),
+      ).to.equal('0');
+      expect(
+        await tokenVaultProxy.getDepositAmount(
+          signer.address,
           previousCurrency,
         ),
       ).to.equal(swapAmount);

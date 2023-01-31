@@ -43,15 +43,25 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
         contracts[0] = Contracts.TOKEN_VAULT;
     }
 
+    /**
+     * @notice Gets if the reserve fund is paused.
+     * @return The boolean if the reserve fund is paused
+     */
     function isPaused() public view override returns (bool) {
         return Storage.slot().paused;
     }
 
+    /**
+     * @notice Pauses the reserve fund.
+     */
     function pause() public override {
         Storage.slot().paused = true;
         emit Paused(msg.sender);
     }
 
+    /**
+     * @notice Unpauses the reserve fund.
+     */
     function unpause() public override {
         Storage.slot().paused = false;
         emit Unpaused(msg.sender);

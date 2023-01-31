@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
@@ -99,6 +100,24 @@ describe('ReserveFund', () => {
   beforeEach(async () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
+  });
+
+  describe('Pause', async () => {
+    it('Pause and Unpause', async () => {
+      expect(await reserveFundProxy.isPaused()).to.false;
+
+      await expect(reserveFundProxy.pause()).to.emit(
+        reserveFundProxy,
+        'Paused',
+      );
+      expect(await reserveFundProxy.isPaused()).to.true;
+
+      await expect(reserveFundProxy.unpause()).to.emit(
+        reserveFundProxy,
+        'Unpaused',
+      );
+      expect(await reserveFundProxy.isPaused()).to.false;
+    });
   });
 
   describe('Deposit', async () => {

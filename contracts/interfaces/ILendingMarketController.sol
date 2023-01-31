@@ -45,6 +45,8 @@ interface ILendingMarketController {
         uint256 amount
     );
 
+    function isLiquidator(address user) external view returns (bool);
+
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
@@ -194,6 +196,8 @@ interface ILendingMarketController {
         address user,
         uint24 poolFee
     ) external returns (bool);
+
+    function registerLiquidator(bool isLiquidator) external;
 
     function cancelOrder(
         bytes32 ccy,

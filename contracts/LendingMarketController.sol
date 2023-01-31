@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // interfaces
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
@@ -10,6 +11,7 @@ import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
+import {LiquidatorHandler} from "./libraries/LiquidatorHandler.sol";
 import {FundCalculationLogic} from "./libraries/logics/FundCalculationLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
@@ -97,6 +99,14 @@ contract LendingMarketController is
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.TOKEN_VAULT;
+    }
+
+    /**
+     * @notice Gets if the user is registered as a liquidator.
+     * @return The boolean if the user is registered as a liquidator or not
+     */
+    function isLiquidator(address _user) external view override returns (bool) {
+        return LiquidatorHandler.isRegistered(_user);
     }
 
     /**
@@ -648,6 +658,10 @@ contract LendingMarketController is
         address _user,
         uint24 _poolFee
     ) external override nonReentrant ifValidMaturity(_debtCcy, _debtMaturity) returns (bool) {
+        // Check if the caller is an EOA registered as an active liquidator to protect against flash loan attacks.
+        require(Address.isContract(msg.sender) == false, "Caller must be EOA");
+        require(LiquidatorHandler.isActive(msg.sender), "Caller is not active");
+
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
         cleanOrders(_debtCcy, _user);
@@ -678,6 +692,18 @@ contract LendingMarketController is
         }
 
         return true;
+    }
+
+    /**
+     * @notice Registers a user as a liquidator.
+     * @param _isLiquidator The boolean if the user is a liquidator or not
+     */
+    function registerLiquidator(bool _isLiquidator) external override {
+        if (_isLiquidator) {
+            LiquidatorHandler.register(msg.sender);
+        } else {
+            LiquidatorHandler.remove(msg.sender);
+        }
     }
 
     /**

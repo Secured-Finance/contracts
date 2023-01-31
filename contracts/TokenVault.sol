@@ -466,7 +466,13 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     ) external override onlyAcceptedContracts returns (uint256 amountOut) {
         require(isCollateral(_ccyFrom), "Not registered as collateral");
 
-        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
+        uint256 userDepositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
+        uint256 depositAmount = userDepositAmount;
+
+        if (!reserveFund().isPaused()) {
+            depositAmount += Storage.slot().depositAmounts[address(reserveFund())][_ccyFrom];
+        }
+
         require(depositAmount > 0, "No deposit amount in the selected currency");
 
         uint256 amountOutWithFee = (_amountOut * ProtocolTypes.PCT_DIGIT) /
@@ -513,7 +519,17 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             amountOut = _amountOut;
         }
 
-        DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountInWithFee);
+        if (amountInWithFee > userDepositAmount) {
+            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, userDepositAmount);
+            DepositManagementLogic.removeDepositAmount(
+                address(reserveFund()),
+                _ccyFrom,
+                amountInWithFee - userDepositAmount
+            );
+        } else {
+            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountInWithFee);
+        }
+
         DepositManagementLogic.addDepositAmount(_user, _ccyTo, amountOut);
         DepositManagementLogic.addDepositAmount(_liquidator, _ccyTo, liquidatorFee);
         DepositManagementLogic.addDepositAmount(address(reserveFund()), _ccyTo, protocolFee);

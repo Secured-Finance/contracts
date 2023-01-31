@@ -7,11 +7,7 @@ import {CollateralParametersStorage as Storage} from "../storages/CollateralPara
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 
 /**
- * @notice CollateralParametersHandler is an library to handle the parameters fro TokenVault contract.
- *
- * This manage the main collateral parameters like Margin Call ratio, Auto-Liquidation level,
- * Liquidation price, and Minimal collateral ratio.
- *
+ * @notice CollateralParametersHandler is an library to handle the main collateral parameters.
  */
 library CollateralParametersHandler {
     event UpdateOrderFeeRate(uint256 previousRate, uint256 ratio);
