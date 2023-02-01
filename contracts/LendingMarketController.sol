@@ -75,14 +75,8 @@ contract LendingMarketController is
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
-     * @param _orderFeeRate The order fee rate received by protocol
      */
-    function initialize(
-        address _owner,
-        address _resolver,
-        uint256 _orderFeeRate
-    ) public initializer onlyProxy {
-        FundCalculationLogic.updateOrderFeeRate(_orderFeeRate);
+    function initialize(address _owner, address _resolver) public initializer onlyProxy {
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
     }
@@ -356,10 +350,11 @@ contract LendingMarketController is
 
     /**
      * @notice Gets the order fee rate
+     * @param _ccy Currency name in bytes32
      * @return The order fee rate received by protocol
      */
-    function getOrderFeeRate() external view override returns (uint256) {
-        return Storage.slot().orderFeeRate;
+    function getOrderFeeRate(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().orderFeeRates[_ccy];
     }
 
     /**
@@ -477,17 +472,20 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _genesisDate The genesis date when the initial market is opened
      * @param _compoundFactor The initial compound factor when the initial market is opened
+     * @param _orderFeeRate The order fee rate received by protocol
      */
     function initializeLendingMarket(
         bytes32 _ccy,
         uint256 _genesisDate,
-        uint256 _compoundFactor
+        uint256 _compoundFactor,
+        uint256 _orderFeeRate
     ) external override onlyOwner {
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
         genesisValueVault().initialize(_ccy, 40, _compoundFactor);
         Storage.slot().genesisDates[_ccy] = _genesisDate;
+        FundCalculationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
     }
 
     /**
@@ -753,8 +751,8 @@ contract LendingMarketController is
      * @notice Updates the order fee rate
      * @param _orderFeeRate The order fee rate received by protocol
      */
-    function updateOrderFeeRate(uint256 _orderFeeRate) external override onlyOwner {
-        FundCalculationLogic.updateOrderFeeRate(_orderFeeRate);
+    function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) external override onlyOwner {
+        FundCalculationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
     }
 
     /**
@@ -866,6 +864,7 @@ contract LendingMarketController is
             require(activeOrderCount <= MAXIMUM_ORDER_COUNT, "Too many active orders");
 
             feeFutureValue = FundCalculationLogic.calculateOrderFeeAmount(
+                _ccy,
                 filledFutureValue,
                 _maturity
             );

@@ -110,7 +110,7 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
-    function getOrderFeeRate() external view returns (uint256);
+    function getOrderFeeRate(bytes32 ccy) external view returns (uint256);
 
     function calculateLentFundsFromOrders(bytes32 ccy, address user)
         external
@@ -166,7 +166,8 @@ interface ILendingMarketController {
     function initializeLendingMarket(
         bytes32 ccy,
         uint256 genesisDate,
-        uint256 compoundFactor
+        uint256 compoundFactor,
+        uint256 orderFeeRate
     ) external;
 
     function createLendingMarket(bytes32 ccy)
@@ -211,7 +212,7 @@ interface ILendingMarketController {
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    function updateOrderFeeRate(uint256 _orderFeeRate) external;
+    function updateOrderFeeRate(bytes32 ccy, uint256 orderFeeRate) external;
 
     function cleanAllOrders(address user) external;
 

@@ -105,7 +105,6 @@ const deployContracts = async () => {
     proxyController.setGenesisValueVaultImpl(genesisValueVault.address),
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
-      ORDER_FEE_RATE,
     ),
     proxyController.setReserveFundImpl(reserveFund.address, wETHToken.address),
     proxyController.setTokenVaultImpl(
@@ -232,21 +231,25 @@ const deployContracts = async () => {
       hexBTCString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexETHString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexFILString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexUSDCString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
   ]);
 

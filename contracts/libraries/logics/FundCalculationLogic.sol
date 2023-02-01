@@ -33,28 +33,28 @@ library FundCalculationLogic {
         uint256 minusDepositAmount;
     }
 
-    function updateOrderFeeRate(uint256 _orderFeeRate) internal {
+    function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) internal {
         require(_orderFeeRate <= ProtocolTypes.PCT_DIGIT, "Invalid order fee rate");
 
-        if (_orderFeeRate != Storage.slot().orderFeeRate) {
-            emit UpdateOrderFeeRate(Storage.slot().orderFeeRate, _orderFeeRate);
-            Storage.slot().orderFeeRate = _orderFeeRate;
+        if (_orderFeeRate != Storage.slot().orderFeeRates[_ccy]) {
+            emit UpdateOrderFeeRate(Storage.slot().orderFeeRates[_ccy], _orderFeeRate);
+            Storage.slot().orderFeeRates[_ccy] = _orderFeeRate;
         }
     }
 
-    function calculateOrderFeeAmount(uint256 _amount, uint256 _maturity)
-        public
-        view
-        returns (uint256 orderFeeAmount)
-    {
+    function calculateOrderFeeAmount(
+        bytes32 _ccy,
+        uint256 _amount,
+        uint256 _maturity
+    ) public view returns (uint256 orderFeeAmount) {
         require(block.timestamp < _maturity, "Invalid maturity");
         uint256 currentMaturity = _maturity - block.timestamp;
 
         // NOTE: The formula is:
         // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
-        // orderFeeAmount = _amount * actualRate
+        // orderFeeAmount = amount * actualRate
         orderFeeAmount =
-            (Storage.slot().orderFeeRate * currentMaturity * _amount) /
+            (Storage.slot().orderFeeRates[_ccy] * currentMaturity * _amount) /
             (ProtocolTypes.SECONDS_IN_YEAR * ProtocolTypes.PCT_DIGIT);
     }
 

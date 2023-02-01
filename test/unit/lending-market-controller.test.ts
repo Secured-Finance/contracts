@@ -106,10 +106,7 @@ describe('LendingMarketController', () => {
       await proxyController.getAddressResolverAddress();
 
     const lendingMarketControllerAddress = await proxyController
-      .setLendingMarketControllerImpl(
-        lendingMarketController.address,
-        ORDER_FEE_RATE,
-      )
+      .setLendingMarketControllerImpl(lendingMarketController.address)
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
@@ -215,6 +212,7 @@ describe('LendingMarketController', () => {
         targetCurrency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
       const res = await lendingMarketControllerProxy.getGenesisDate(
         targetCurrency,
@@ -250,6 +248,7 @@ describe('LendingMarketController', () => {
         targetCurrency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
@@ -278,6 +277,7 @@ describe('LendingMarketController', () => {
         targetCurrency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
@@ -327,6 +327,7 @@ describe('LendingMarketController', () => {
         currency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
       await lendingMarketControllerProxy.createLendingMarket(currency);
       await lendingMarketControllerProxy.createLendingMarket(currency);
@@ -1916,21 +1917,27 @@ describe('LendingMarketController', () => {
       });
 
       it('Update the order fee rate', async () => {
-        expect(await lendingMarketControllerProxy.getOrderFeeRate()).to.equal(
-          ORDER_FEE_RATE,
-        );
+        expect(
+          await lendingMarketControllerProxy.getOrderFeeRate(targetCurrency),
+        ).to.equal(ORDER_FEE_RATE);
 
-        await lendingMarketControllerProxy.updateOrderFeeRate('200');
-
-        expect(await lendingMarketControllerProxy.getOrderFeeRate()).to.equal(
+        await lendingMarketControllerProxy.updateOrderFeeRate(
+          targetCurrency,
           '200',
         );
 
-        await lendingMarketControllerProxy.updateOrderFeeRate(ORDER_FEE_RATE);
+        expect(
+          await lendingMarketControllerProxy.getOrderFeeRate(targetCurrency),
+        ).to.equal('200');
 
-        expect(await lendingMarketControllerProxy.getOrderFeeRate()).to.equal(
+        await lendingMarketControllerProxy.updateOrderFeeRate(
+          targetCurrency,
           ORDER_FEE_RATE,
         );
+
+        expect(
+          await lendingMarketControllerProxy.getOrderFeeRate(targetCurrency),
+        ).to.equal(ORDER_FEE_RATE);
       });
 
       it('Update beacon proxy implementations and calculate Genesis value', async () => {

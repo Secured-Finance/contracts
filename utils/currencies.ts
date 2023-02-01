@@ -12,6 +12,7 @@ export interface Currency {
   key: string;
   env: string | undefined;
   haircut: number;
+  orderFeeRate: number;
   isCollateral: boolean;
   args?: string[];
 }
@@ -35,6 +36,7 @@ const currencies: Currency[] = [
     key: hexFILString,
     env: process.env.TOKEN_EFIL,
     haircut: 5000,
+    orderFeeRate: 100,
     isCollateral: false,
     args: ['100000000000000000000000000'], // 100,000,000 eFIL
   },
@@ -44,6 +46,7 @@ const currencies: Currency[] = [
     key: hexUSDCString,
     env: process.env.TOKEN_USDC,
     haircut: 8000,
+    orderFeeRate: 100,
     isCollateral: true,
     args: ['100000000000000'], // 100,000,000 USDC
   },
@@ -53,6 +56,7 @@ const currencies: Currency[] = [
     key: hexBTCString,
     env: process.env.TOKEN_WBTC,
     haircut: 8000,
+    orderFeeRate: 100,
     isCollateral: false,
     args: ['1000000000000'], // 10,000 BTC
   },
@@ -62,6 +66,7 @@ const currencies: Currency[] = [
     key: hexETHString,
     env: process.env.TOKEN_WETH,
     haircut: 8000,
+    orderFeeRate: 100,
     isCollateral: true,
     args: undefined,
   },
