@@ -32,7 +32,6 @@ describe('Integration Test: Liquidations', async () => {
   let wETHToken: Contract;
   let wFILToken: Contract;
   let wUSDCToken: Contract;
-  let wBTCToken: Contract;
   let filToETHPriceFeed: Contract;
   let usdcToUSDPriceFeed: Contract;
 
@@ -47,7 +46,6 @@ describe('Integration Test: Liquidations', async () => {
 
   const initialFILBalance = BigNumber.from('1000000000000000000000');
   const initialUSDCBalance = BigNumber.from('1000000000000000');
-  const initialBTCBalance = BigNumber.from('1000000000');
 
   class LendingInfo {
     private address: string;
@@ -115,17 +113,11 @@ describe('Integration Test: Liquidations', async () => {
         await wUSDCToken
           .connect(owner)
           .transfer(signer.address, initialUSDCBalance);
-        await wBTCToken
-          .connect(owner)
-          .transfer(signer.address, initialBTCBalance);
       }
       await wFILToken
         .connect(signer)
         .approve(tokenVault.address, ethers.constants.MaxUint256);
       await wUSDCToken
-        .connect(signer)
-        .approve(tokenVault.address, ethers.constants.MaxUint256);
-      await wBTCToken
         .connect(signer)
         .approve(tokenVault.address, ethers.constants.MaxUint256);
     });
@@ -210,7 +202,6 @@ describe('Integration Test: Liquidations', async () => {
       wETHToken,
       wFILToken,
       wUSDCToken,
-      wBTCToken,
       filToETHPriceFeed,
       usdcToUSDPriceFeed,
     } = await deployContracts());

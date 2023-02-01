@@ -5,7 +5,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexBTCString, hexETHString, hexFILString } from '../../utils/strings';
+import { hexETHString, hexFILString } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -32,7 +32,6 @@ describe('Integration Test: Auto-rolls', async () => {
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
   let wFILToken: Contract;
-  let wBTCToken: Contract;
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
@@ -48,9 +47,6 @@ describe('Integration Test: Auto-rolls', async () => {
       await wFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
-      await wBTCToken
-        .connect(owner)
-        .transfer(signer.address, initialBTCBalance);
     });
 
   const createSampleETHOrders = async (
@@ -128,12 +124,10 @@ describe('Integration Test: Auto-rolls', async () => {
       lendingMarketController,
       wETHToken,
       wFILToken,
-      wBTCToken,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
-    await tokenVault.registerCurrency(hexBTCString, wBTCToken.address, false);
 
     mockUniswapRouter = await ethers
       .getContractFactory('MockUniswapRouter')
@@ -148,10 +142,8 @@ describe('Integration Test: Auto-rolls', async () => {
 
     await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
     await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
-    await mockUniswapRouter.setToken(hexBTCString, wBTCToken.address);
     await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
     await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
-    await mockUniswapQuoter.setToken(hexBTCString, wBTCToken.address);
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,

@@ -545,7 +545,7 @@ contract LendingMarketController is
      * In addition, converts the future value to the genesis value if there is future value in past maturity
      * before the execution of order creation.
      *
-     * @param _orderCcy Currency name in bytes32 of the selected market
+     * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
@@ -553,13 +553,13 @@ contract LendingMarketController is
      * @return True if the execution of the operation succeeds
      */
     function createOrder(
-        bytes32 _orderCcy,
+        bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_orderCcy, _maturity) returns (bool) {
-        _createOrder(_orderCcy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
 
         return true;
     }
@@ -567,7 +567,7 @@ contract LendingMarketController is
     /**
      * @notice Deposits funds and creates an order at the same time.
      *
-     * @param _orderCcy Currency name in bytes32 of the selected market
+     * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
@@ -575,14 +575,14 @@ contract LendingMarketController is
      * @return True if the execution of the operation succeeds
      */
     function depositAndCreateOrder(
-        bytes32 _orderCcy,
+        bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external payable override nonReentrant ifValidMaturity(_orderCcy, _maturity) returns (bool) {
-        tokenVault().depositFrom{value: msg.value}(msg.sender, _orderCcy, _amount);
-        _createOrder(_orderCcy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
+        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
 
         return true;
     }
@@ -897,7 +897,7 @@ contract LendingMarketController is
     }
 
     function _updateDepositAmount(
-        bytes32 _orderCcy,
+        bytes32 _ccy,
         uint256 _maturity,
         address _user,
         ProtocolTypes.Side _side,
@@ -905,19 +905,19 @@ contract LendingMarketController is
         uint256 _filledAmount,
         uint256 _feeFutureValue
     ) private returns (bool) {
-        address futureValueVault = Storage.slot().futureValueVaults[_orderCcy][
-            Storage.slot().maturityLendingMarkets[_orderCcy][_maturity]
+        address futureValueVault = Storage.slot().futureValueVaults[_ccy][
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ];
 
         if (_side == ProtocolTypes.Side.BORROW) {
-            tokenVault().addDepositAmount(_user, _orderCcy, _filledAmount);
+            tokenVault().addDepositAmount(_user, _ccy, _filledAmount);
             IFutureValueVault(futureValueVault).addBorrowFutureValue(
                 _user,
                 _filledFutureValue + _feeFutureValue,
                 _maturity
             );
         } else {
-            tokenVault().removeDepositAmount(_user, _orderCcy, _filledAmount);
+            tokenVault().removeDepositAmount(_user, _ccy, _filledAmount);
             IFutureValueVault(futureValueVault).addLendFutureValue(
                 _user,
                 _filledFutureValue - _feeFutureValue,
