@@ -106,15 +106,12 @@ describe('ReserveFund', () => {
     it('Pause and Unpause', async () => {
       expect(await reserveFundProxy.isPaused()).to.false;
 
-      await expect(reserveFundProxy.pause()).to.emit(
-        reserveFundProxy,
-        'Paused',
-      );
+      await expect(reserveFundProxy.pause()).to.emit(reserveFundProxy, 'Pause');
       expect(await reserveFundProxy.isPaused()).to.true;
 
       await expect(reserveFundProxy.unpause()).to.emit(
         reserveFundProxy,
-        'Unpaused',
+        'Unpause',
       );
       expect(await reserveFundProxy.isPaused()).to.false;
     });

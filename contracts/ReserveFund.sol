@@ -56,7 +56,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
      */
     function pause() public override {
         Storage.slot().paused = true;
-        emit Paused(msg.sender);
+        emit Pause(msg.sender);
     }
 
     /**
@@ -64,7 +64,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
      */
     function unpause() public override {
         Storage.slot().paused = false;
-        emit Unpaused(msg.sender);
+        emit Unpause(msg.sender);
     }
 
     /**

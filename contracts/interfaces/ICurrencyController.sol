@@ -19,12 +19,6 @@ interface ICurrencyController {
     event AddPriceFeed(bytes32 ccy, string secondCcy, address indexed priceFeed);
     event RemovePriceFeed(bytes32 ccy, string secondCcy, address indexed priceFeed);
 
-    function convert(
-        bytes32 _fromCcy,
-        bytes32 _toCcy,
-        uint256 _amount
-    ) external view returns (uint256 amount);
-
     function convertFromETH(bytes32 _ccy, uint256 _amountETH)
         external
         view

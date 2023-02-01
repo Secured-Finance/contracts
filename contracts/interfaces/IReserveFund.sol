@@ -2,8 +2,8 @@
 pragma solidity ^0.8.9;
 
 interface IReserveFund {
-    event Paused(address account);
-    event Unpaused(address account);
+    event Pause(address account);
+    event Unpause(address account);
 
     function isPaused() external view returns (bool);
 

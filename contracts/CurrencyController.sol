@@ -257,22 +257,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         return price;
     }
 
-    function convert(
-        bytes32 _fromCcy,
-        bytes32 _toCcy,
-        uint256 _amount
-    ) external view override returns (uint256 amount) {
-        if (_fromCcy == _toCcy) return _amount;
-        if (_amount == 0) return 0;
-
-        int256 fromPrice = _getLastETHPrice(_fromCcy);
-        int256 toPrice = _getLastETHPrice(_toCcy);
-
-        amount =
-            (_amount * uint256(fromPrice) * 10**Storage.slot().ethDecimals[_toCcy]) /
-            (10**Storage.slot().ethDecimals[_fromCcy] * uint256(toPrice));
-    }
-
     /**
      * @notice Gets the converted amount of currency in ETH.
      * @param _ccy Currency that has to be converted to ETH
