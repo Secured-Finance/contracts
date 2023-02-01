@@ -8,7 +8,6 @@ interface ITokenVault {
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
     event RegisterCurrency(bytes32 ccy, address tokenAddress, bool isCollateral);
     event UpdateCurrency(bytes32 ccy, bool isCollateral);
-    event PayOrderFee(address indexed user, bytes32 ccy, uint256 amount);
     event Swap(
         address indexed user,
         bytes32 ccyIn,
@@ -69,7 +68,6 @@ interface ITokenVault {
         );
 
     function setCollateralParameters(
-        uint256 orderFeeRate,
         uint256 liquidationThresholdRate,
         uint256 liquidationProtocolFeeRate,
         uint256 liquidatorFeeRate,
@@ -97,14 +95,6 @@ interface ITokenVault {
         address user,
         bytes32 ccy,
         uint256 amount
-    ) external;
-
-    function payOrderFee(
-        uint256 maturity,
-        address user,
-        bytes32 feeCcy,
-        bytes32 chargeableOrderCcy,
-        uint256 chargeableOrderAmount
     ) external;
 
     function swapDepositAmounts(

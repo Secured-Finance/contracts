@@ -29,22 +29,6 @@ contract TokenVaultCallerMock {
         tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
-    function payOrderFee(
-        uint256 _maturity,
-        address _user,
-        bytes32 _feeCcy,
-        bytes32 _chargeableOrderCcy,
-        uint256 _chargeableOrderAmount
-    ) external payable {
-        tokenVault.payOrderFee(
-            _maturity,
-            _user,
-            _feeCcy,
-            _chargeableOrderCcy,
-            _chargeableOrderAmount
-        );
-    }
-
     function swapDepositAmounts(
         address _liquidator,
         address _user,

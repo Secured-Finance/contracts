@@ -2,7 +2,6 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
-const ORDER_FEE_RATE = 100;
 const LIQUIDATION_THRESHOLD_RATE = 12500;
 const LIQUIDATION_PROTOCOL_FEE_RATE = 200;
 const LIQUIDATOR_FEE_RATE = 500;
@@ -35,7 +34,6 @@ const func: DeployFunction = async function ({
     await proxyController
       .setTokenVaultImpl(
         deployResult.address,
-        ORDER_FEE_RATE,
         LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,

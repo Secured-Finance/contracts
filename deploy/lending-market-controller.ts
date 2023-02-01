@@ -2,6 +2,8 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
+const ORDER_FEE_RATE = 100;
+
 const func: DeployFunction = async function ({
   getNamedAccounts,
   deployments,
@@ -29,7 +31,7 @@ const func: DeployFunction = async function ({
         );
 
       await proxyController
-        .setLendingMarketControllerImpl(deployResult.address)
+        .setLendingMarketControllerImpl(deployResult.address, ORDER_FEE_RATE)
         .then((tx) => tx.wait());
     },
   );

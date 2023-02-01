@@ -5,18 +5,12 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import {
-  hexBTCString,
-  hexETHString,
-  hexFILString,
-  hexUSDCString,
-} from '../../utils/strings';
+import { hexETHString, hexFILString, hexUSDCString } from '../../utils/strings';
 import {
   filToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  ORDER_FEE_RATE,
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -145,7 +139,6 @@ describe('Integration Test: Liquidations', async () => {
         Side.BORROW,
         '1000000000',
         '7990',
-        hexFILString,
       );
 
     await lendingMarketController
@@ -156,7 +149,6 @@ describe('Integration Test: Liquidations', async () => {
         Side.LEND,
         '1000000000',
         '8010',
-        hexFILString,
       );
 
     await lendingMarketController
@@ -167,7 +159,6 @@ describe('Integration Test: Liquidations', async () => {
         Side.BORROW,
         '1000000',
         '7990',
-        hexFILString,
       );
 
     await lendingMarketController
@@ -178,7 +169,6 @@ describe('Integration Test: Liquidations', async () => {
         Side.LEND,
         '1000000',
         '8010',
-        hexFILString,
       );
 
     if (usdcMaturities[0].gt(filMaturities[0])) {
@@ -228,7 +218,6 @@ describe('Integration Test: Liquidations', async () => {
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
     await tokenVault.registerCurrency(hexUSDCString, wUSDCToken.address, false);
-    await tokenVault.registerCurrency(hexBTCString, wBTCToken.address, false);
 
     mockUniswapRouter = await ethers
       .getContractFactory('MockUniswapRouter')
@@ -244,14 +233,11 @@ describe('Integration Test: Liquidations', async () => {
     await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
     await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
     await mockUniswapRouter.setToken(hexUSDCString, wUSDCToken.address);
-    await mockUniswapRouter.setToken(hexBTCString, wBTCToken.address);
     await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
     await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
     await mockUniswapQuoter.setToken(hexUSDCString, wUSDCToken.address);
-    await mockUniswapQuoter.setToken(hexBTCString, wBTCToken.address);
 
     await tokenVault.setCollateralParameters(
-      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -326,7 +312,6 @@ describe('Integration Test: Liquidations', async () => {
         .deposit(hexETHString, depositAmount.mul(3), {
           value: depositAmount.mul(3),
         });
-      await tokenVault.connect(bob).deposit(hexBTCString, initialBTCBalance);
 
       await lendingMarketController
         .connect(alice)
@@ -336,7 +321,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount,
           '8000',
-          hexETHString,
         );
 
       await lendingMarketController
@@ -347,7 +331,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount.mul(2),
           '8000',
-          hexFILString,
         );
 
       await expect(
@@ -359,7 +342,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.LEND,
             filledOrderAmount,
             '0',
-            hexBTCString,
           ),
       ).to.emit(lendingMarketController, 'FillOrder');
 
@@ -371,7 +353,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '10000000000000000000',
           '8001',
-          hexFILString,
         );
 
       expect(
@@ -492,7 +473,6 @@ describe('Integration Test: Liquidations', async () => {
         .deposit(hexETHString, depositAmount.mul(3), {
           value: depositAmount.mul(3),
         });
-      await tokenVault.connect(alice).deposit(hexBTCString, initialBTCBalance);
 
       await lendingMarketController
         .connect(bob)
@@ -502,7 +482,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           filledOrderAmount,
           '8000',
-          hexFILString,
         );
 
       await lendingMarketController
@@ -513,7 +492,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '10000000000000000000',
           '8001',
-          hexFILString,
         );
 
       await expect(
@@ -525,7 +503,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.BORROW,
             filledOrderAmount,
             '0',
-            hexBTCString,
           ),
       ).to.emit(lendingMarketController, 'FillOrder');
 
@@ -537,7 +514,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount.mul(2),
           '8000',
-          hexFILString,
         );
 
       expect(
@@ -597,7 +573,6 @@ describe('Integration Test: Liquidations', async () => {
         .deposit(hexETHString, depositAmount.mul(3), {
           value: depositAmount.mul(3),
         });
-      await tokenVault.connect(bob).deposit(hexBTCString, initialBTCBalance);
 
       await lendingMarketController
         .connect(alice)
@@ -607,7 +582,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount,
           '8000',
-          hexFILString,
         );
       await lendingMarketController
         .connect(owner)
@@ -617,7 +591,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount.mul(2),
           '8000',
-          hexFILString,
         );
 
       await expect(
@@ -629,7 +602,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.LEND,
             filledOrderAmount,
             '0',
-            hexBTCString,
           ),
       ).to.emit(lendingMarketController, 'FillOrder');
 
@@ -641,7 +613,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '10000000000000000000',
           '8001',
-          hexFILString,
         );
 
       expect(
@@ -729,7 +700,6 @@ describe('Integration Test: Liquidations', async () => {
         .deposit(hexETHString, depositAmount.mul(3), {
           value: depositAmount.mul(3),
         });
-      await tokenVault.connect(bob).deposit(hexBTCString, initialBTCBalance);
 
       await lendingMarketController
         .connect(alice)
@@ -739,7 +709,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount,
           '8000',
-          hexFILString,
         );
       await lendingMarketController
         .connect(owner)
@@ -749,7 +718,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount.mul(2),
           '8000',
-          hexFILString,
         );
 
       await expect(
@@ -761,7 +729,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.LEND,
             filledOrderAmount,
             '0',
-            hexBTCString,
           ),
       ).to.emit(lendingMarketController, 'FillOrder');
 
@@ -773,7 +740,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '10000000000000000000',
           '8001',
-          hexFILString,
         );
 
       expect(
@@ -799,7 +765,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           '1000000000',
           '7999',
-          hexFILString,
         );
 
       await lendingMarketController
@@ -810,7 +775,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '1000000000',
           '8001',
-          hexFILString,
         );
 
       const lendingInfoBefore = await lendingInfo.load('Before', {
@@ -825,7 +789,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount.mul(2),
           '8000',
-          hexFILString,
         );
 
       await expect(
@@ -867,7 +830,6 @@ describe('Integration Test: Liquidations', async () => {
         .deposit(hexETHString, depositAmount.mul(3), {
           value: depositAmount.mul(3),
         });
-      await tokenVault.connect(bob).deposit(hexBTCString, initialBTCBalance);
 
       await lendingMarketController
         .connect(alice)
@@ -877,7 +839,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount,
           '8000',
-          hexFILString,
         );
 
       await lendingMarketController
@@ -888,7 +849,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmount.mul(2),
           '8000',
-          hexFILString,
         );
 
       await expect(
@@ -900,7 +860,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.LEND,
             filledOrderAmount,
             '0',
-            hexBTCString,
           ),
       ).to.emit(lendingMarketController, 'FillOrder');
 
@@ -912,7 +871,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '10000000000000000000',
           '8001',
-          hexFILString,
         );
 
       expect(
@@ -1026,8 +984,6 @@ describe('Integration Test: Liquidations', async () => {
           value: depositAmountInETH.mul(5),
         });
 
-      await tokenVault.connect(bob).deposit(hexBTCString, initialBTCBalance);
-
       // Create order on FIL market
       await lendingMarketController
         .connect(alice)
@@ -1037,7 +993,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmountInFIL,
           '8000',
-          hexFILString,
         );
 
       await lendingMarketController
@@ -1048,7 +1003,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmountInFIL.mul(2),
           '8000',
-          hexFILString,
         );
 
       await expect(
@@ -1060,7 +1014,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.LEND,
             filledOrderAmountInFIL,
             '0',
-            hexBTCString,
           ),
       ).to.emit(lendingMarketController, 'FillOrder');
 
@@ -1072,7 +1025,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '10000000000000000000',
           '8001',
-          hexFILString,
         );
 
       expect(
@@ -1097,7 +1049,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmountInUSDC,
           '8000',
-          hexFILString,
         );
       await lendingMarketController
         .connect(owner)
@@ -1107,7 +1058,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.BORROW,
           filledOrderAmountInUSDC.mul(2),
           '8000',
-          hexFILString,
         );
 
       await expect(
@@ -1119,7 +1069,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.LEND,
             filledOrderAmountInUSDC,
             '0',
-            hexBTCString,
           ),
       ).to.emit(lendingMarketController, 'FillOrder');
 
@@ -1131,7 +1080,6 @@ describe('Integration Test: Liquidations', async () => {
           Side.LEND,
           '10000000000000',
           '8001',
-          hexFILString,
         );
 
       expect(

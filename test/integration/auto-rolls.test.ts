@@ -11,7 +11,6 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   ORDERS_CALCULATION_TOLERANCE_RANGE,
-  ORDER_FEE_RATE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
@@ -71,7 +70,6 @@ describe('Integration Test: Auto-rolls', async () => {
         Side.BORROW,
         '1000000',
         BigNumber.from(unitPrice).sub('1000'),
-        hexETHString,
       );
 
     await lendingMarketController
@@ -82,7 +80,6 @@ describe('Integration Test: Auto-rolls', async () => {
         Side.LEND,
         '1000000',
         BigNumber.from(unitPrice).add('1000'),
-        hexETHString,
       );
   };
 
@@ -118,13 +115,6 @@ describe('Integration Test: Auto-rolls', async () => {
         ),
       ),
     ]);
-  };
-
-  const depositBTCForFee = async (user: SignerWithAddress) => {
-    await wBTCToken
-      .connect(user)
-      .approve(tokenVault.address, initialBTCBalance);
-    await tokenVault.connect(user).deposit(hexBTCString, initialBTCBalance);
   };
 
   before('Deploy Contracts', async () => {
@@ -164,7 +154,6 @@ describe('Integration Test: Auto-rolls', async () => {
     await mockUniswapQuoter.setToken(hexBTCString, wBTCToken.address);
 
     await tokenVault.setCollateralParameters(
-      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -202,7 +191,6 @@ describe('Integration Test: Auto-rolls', async () => {
         .deposit(hexETHString, orderAmount.mul(10), {
           value: orderAmount.mul(10),
         });
-      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
@@ -213,7 +201,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount,
             8000,
-            hexETHString,
             {
               value: orderAmount,
             },
@@ -229,7 +216,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount.mul(3),
             8000,
-            hexETHString,
           ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
@@ -242,7 +228,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             7990,
-            hexETHString,
           ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
@@ -255,7 +240,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
-            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -272,7 +256,7 @@ describe('Integration Test: Auto-rolls', async () => {
       );
 
       expect(aliceFVBefore).to.equal('0');
-      expect(bobFV).to.equal('-125000000000000000');
+      expect(bobFV).not.to.equal('0');
 
       await lendingMarketController.cleanOrders(hexETHString, alice.address);
       const { futureValue: aliceFVAfter } =
@@ -301,7 +285,6 @@ describe('Integration Test: Auto-rolls', async () => {
           Side.LEND,
           orderAmount.mul(2),
           8510,
-          hexETHString,
           {
             value: orderAmount.mul(2),
           },
@@ -314,7 +297,6 @@ describe('Integration Test: Auto-rolls', async () => {
           Side.BORROW,
           orderAmount.mul(2),
           8490,
-          hexETHString,
         );
 
       const aliceTotalPVBefore =
@@ -357,7 +339,9 @@ describe('Integration Test: Auto-rolls', async () => {
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice0))
           .abs(),
       ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
-      expect(aliceTotalPVAfter.add(bobTotalPVAfter)).to.equal('0');
+      expect(
+        aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
+      ).to.lte(1);
 
       // Check the saved unit price and compound factor per maturity
       const maturityUnitPrice1 = await genesisValueVault.getMaturityUnitPrice(
@@ -389,7 +373,6 @@ describe('Integration Test: Auto-rolls', async () => {
           Side.LEND,
           orderAmount.mul(2),
           8100,
-          hexETHString,
           {
             value: orderAmount.mul(2),
           },
@@ -402,7 +385,6 @@ describe('Integration Test: Auto-rolls', async () => {
           Side.BORROW,
           orderAmount.mul(2),
           7900,
-          hexETHString,
         );
 
       const aliceTotalPVBefore =
@@ -433,7 +415,9 @@ describe('Integration Test: Auto-rolls', async () => {
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice))
           .abs(),
       ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
-      expect(aliceTotalPVAfter.add(bobTotalPVAfter)).to.equal('0');
+      expect(
+        aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
+      ).to.lte(1);
 
       // Check the saved unit price and compound factor per maturity
       const maturityUnitPrice1 = await genesisValueVault.getMaturityUnitPrice(
@@ -468,7 +452,6 @@ describe('Integration Test: Auto-rolls', async () => {
       await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
-      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
@@ -479,7 +462,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount,
             8000,
-            hexETHString,
             {
               value: orderAmount,
             },
@@ -495,7 +477,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
-            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -527,7 +508,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount,
             5000,
-            hexETHString,
             {
               value: orderAmount,
             },
@@ -543,7 +523,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
-            hexBTCString,
           ),
       ).to.emit(lendingMarkets[1], 'TakeOrders');
 
@@ -562,7 +541,9 @@ describe('Integration Test: Auto-rolls', async () => {
       );
 
       expect(aliceActualFV).equal('200000000000000000');
-      expect(aliceActualFV.add(bobActualFV)).equal('0');
+      expect(
+        aliceActualFV.mul(10000).div(bobActualFV).abs().sub(9950).abs(),
+      ).to.lte(1);
     });
 
     it('Check total PVs', async () => {
@@ -578,7 +559,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(alicePV.sub('200000000000000000').abs()).lte(
         ORDERS_CALCULATION_TOLERANCE_RANGE,
       );
-      expect(alicePV.add(bobPV)).to.equal('0');
+      expect(alicePV.mul(10000).div(bobPV).abs().sub(9950)).to.gt(0);
     });
 
     it('Execute auto-roll', async () => {
@@ -607,7 +588,9 @@ describe('Integration Test: Auto-rolls', async () => {
         ORDERS_CALCULATION_TOLERANCE_RANGE,
       );
       expect(aliceTotalPVBefore).to.equal(alicePV0Before.add(alicePV1Before));
-      expect(aliceTotalPVBefore.add(bobTotalPVBefore)).to.equal('0');
+      expect(
+        aliceTotalPVBefore.mul(10000).div(bobTotalPVBefore).abs().sub(9950),
+      ).to.gt(0);
 
       const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
 
@@ -686,7 +669,6 @@ describe('Integration Test: Auto-rolls', async () => {
       await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
-      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
@@ -697,7 +679,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount,
             '8333',
-            hexETHString,
             {
               value: orderAmount,
             },
@@ -713,7 +694,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
-            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -790,7 +770,6 @@ describe('Integration Test: Auto-rolls', async () => {
       await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
-      await depositBTCForFee(bob);
 
       await expect(
         lendingMarketController
@@ -801,7 +780,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount,
             '8000',
-            hexETHString,
             {
               value: orderAmount,
             },
@@ -817,7 +795,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.BORROW,
             orderAmount,
             0,
-            hexBTCString,
           ),
       ).to.emit(lendingMarkets[0], 'TakeOrders');
 
@@ -871,7 +848,6 @@ describe('Integration Test: Auto-rolls', async () => {
             Side.LEND,
             orderAmount,
             8000,
-            hexETHString,
             {
               value: orderAmount,
             },

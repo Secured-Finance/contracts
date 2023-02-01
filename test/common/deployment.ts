@@ -105,11 +105,11 @@ const deployContracts = async () => {
     proxyController.setGenesisValueVaultImpl(genesisValueVault.address),
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
+      ORDER_FEE_RATE,
     ),
     proxyController.setReserveFundImpl(reserveFund.address, wETHToken.address),
     proxyController.setTokenVaultImpl(
       tokenVault.address,
-      ORDER_FEE_RATE,
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,

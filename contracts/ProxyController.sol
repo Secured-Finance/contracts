@@ -80,7 +80,6 @@ contract ProxyController is IProxyController, Ownable {
     /**
      * @notice  Sets the implementation contract of TokenVault
      * @param newImpl The address of implementation contract
-     * @param orderFeeRate The order fee rate received by protocol
      * @param liquidationThresholdRate  The rate used as the auto liquidation threshold
      * @param liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param liquidatorFeeRate The liquidation fee rate received by liquidators
@@ -90,7 +89,6 @@ contract ProxyController is IProxyController, Ownable {
      */
     function setTokenVaultImpl(
         address newImpl,
-        uint256 orderFeeRate,
         uint256 liquidationThresholdRate,
         uint256 liquidationProtocolFeeRate,
         uint256 liquidatorFeeRate,
@@ -99,10 +97,9 @@ contract ProxyController is IProxyController, Ownable {
         address WETH9
     ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address,uint256,uint256,uint256,uint256,address,address,address)",
+            "initialize(address,address,uint256,uint256,uint256,address,address,address)",
             msg.sender,
             resolver,
-            orderFeeRate,
             liquidationThresholdRate,
             liquidationProtocolFeeRate,
             liquidatorFeeRate,
@@ -135,11 +132,15 @@ contract ProxyController is IProxyController, Ownable {
      * @notice Sets the implementation contract of LendingMarketController
      * @param newImpl The address of implementation contract
      */
-    function setLendingMarketControllerImpl(address newImpl) external onlyOwner {
+    function setLendingMarketControllerImpl(address newImpl, uint256 orderFeeRate)
+        external
+        onlyOwner
+    {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,address)",
+            "initialize(address,address,uint256)",
             msg.sender,
-            resolver
+            resolver,
+            orderFeeRate
         );
         _updateImpl(Contracts.LENDING_MARKET_CONTROLLER, newImpl, data);
     }

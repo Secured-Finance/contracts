@@ -23,43 +23,6 @@ library DepositManagementLogic {
         bool isEnoughDeposit;
     }
 
-    function calculateOrderFeeAmount(
-        bytes32 _fromCcy,
-        bytes32 _toCcy,
-        uint256 _amount,
-        uint256 _feeRate,
-        uint256 _maturity
-    ) public view returns (uint256 orderFeeAmount) {
-        require(block.timestamp < _maturity, "Invalid maturity");
-        uint256 currentMaturity = _maturity - block.timestamp;
-
-        // NOTE: The formula is:
-        // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
-        // orderFeeAmount = _amount * actualRate
-        uint256 orderFeeAmountInCcy = (_feeRate * currentMaturity * _amount) /
-            (ProtocolTypes.SECONDS_IN_YEAR * ProtocolTypes.PCT_DIGIT);
-
-        if (_fromCcy == "ETH" && _toCcy == "ETH") {
-            orderFeeAmount = orderFeeAmountInCcy;
-        } else if (_fromCcy == "ETH" && _toCcy != "ETH") {
-            orderFeeAmount = AddressResolverLib.currencyController().convertFromETH(
-                _toCcy,
-                orderFeeAmountInCcy
-            );
-        } else if (_fromCcy != "ETH" && _toCcy == "ETH") {
-            orderFeeAmount = AddressResolverLib.currencyController().convertToETH(
-                _fromCcy,
-                orderFeeAmountInCcy
-            );
-        } else {
-            orderFeeAmount = AddressResolverLib.currencyController().convert(
-                _fromCcy,
-                _toCcy,
-                orderFeeAmountInCcy
-            );
-        }
-    }
-
     function isCovered(
         address _user,
         bytes32 _unsettledOrderCcy,

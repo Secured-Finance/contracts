@@ -7,7 +7,6 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  ORDER_FEE_RATE,
 } from '../common/constants';
 
 // contracts
@@ -129,7 +128,6 @@ describe('TokenVault', () => {
     const tokenVaultAddress = await proxyController
       .setTokenVaultImpl(
         tokenVault.address,
-        ORDER_FEE_RATE,
         LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
@@ -201,7 +199,6 @@ describe('TokenVault', () => {
         uniswapQuoter: string,
       ) => {
         await tokenVaultProxy.setCollateralParameters(
-          ORDER_FEE_RATE,
           liquidationThresholdRate,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
@@ -253,17 +250,6 @@ describe('TokenVault', () => {
     it('Fail to call setCollateralParameters due to invalid rate', async () => {
       await expect(
         tokenVaultProxy.setCollateralParameters(
-          '10001',
-          '1',
-          '1',
-          '1',
-          mockUniswapRouter.address,
-          mockUniswapQuoter.address,
-        ),
-      ).to.be.revertedWith('Invalid order fee rate');
-      await expect(
-        tokenVaultProxy.setCollateralParameters(
-          '1',
           '0',
           '1',
           '1',
@@ -274,7 +260,6 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.setCollateralParameters(
           '1',
-          '1',
           '10001',
           '1',
           mockUniswapRouter.address,
@@ -283,7 +268,6 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Invalid liquidation protocol fee rate');
       await expect(
         tokenVaultProxy.setCollateralParameters(
-          '1',
           '1',
           '1',
           '10001',
@@ -296,7 +280,6 @@ describe('TokenVault', () => {
     it('Fail to call setCollateralParameters due to zero address', async () => {
       await expect(
         tokenVaultProxy.setCollateralParameters(
-          ORDER_FEE_RATE,
           LIQUIDATION_THRESHOLD_RATE,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
@@ -831,31 +814,6 @@ describe('TokenVault', () => {
         .false;
     });
 
-    it('Pay an order fee', async () => {
-      const signer = signers[1];
-
-      const value = ethers.BigNumber.from('10000000000000');
-      const convertedValue = ethers.BigNumber.from('20000000000000');
-      const { timestamp } = await ethers.provider.getBlock('latest');
-
-      // Set up for the mocks
-      await mockCurrencyController.mock.convert.returns(convertedValue);
-
-      await tokenVaultProxy
-        .connect(signer)
-        .deposit(targetCurrency, convertedValue);
-
-      await tokenVaultCaller
-        .connect(signer)
-        .payOrderFee(
-          timestamp + 100,
-          signer.address,
-          targetCurrency,
-          targetCurrency,
-          value,
-        );
-    });
-
     it('Get the liquidation amount', async () => {
       const signer = signers[3];
       const value = ethers.BigNumber.from('20000000000000');
@@ -933,30 +891,6 @@ describe('TokenVault', () => {
         'Invalid amount',
       );
     });
-
-    // it('Fail to pay an order fee due to invalid amount', async () => {
-    //   const signer = signers[1];
-
-    //   const value = ethers.BigNumber.from('10000000000000');
-    //   const convertedValue = ethers.BigNumber.from('20000000000000');
-    //   const { timestamp } = await ethers.provider.getBlock('latest');
-
-    //   // Set up for the mocks
-    //   await mockCurrencyController.mock.convert.returns(convertedValue);
-
-    //   await expect(
-    //     tokenVaultCaller
-    //       .connect(signer)
-    //       .payOrderFee(
-    //         timestamp + 100,
-    //         signer.address,
-    //         ethers.utils.formatBytes32String('ETH'),
-    //         ethers.utils.formatBytes32String('order'),
-    //         value,
-    //         { value: value },
-    //       ),
-    //   ).to.be.revertedWith('Invalid fee amount');
-    // });
 
     it('Deposit funds from Alice', async () => {
       const valueInETH = '10000';

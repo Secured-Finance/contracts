@@ -110,6 +110,8 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
+    function getOrderFeeRate() external view returns (uint256);
+
     function calculateLentFundsFromOrders(bytes32 ccy, address user)
         external
         view
@@ -176,8 +178,7 @@ interface ILendingMarketController {
         uint256 maturity,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 unitPrice,
-        bytes32 _feeCcy
+        uint256 unitPrice
     ) external returns (bool);
 
     function depositAndCreateOrder(
@@ -185,8 +186,7 @@ interface ILendingMarketController {
         uint256 maturity,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 unitPrice,
-        bytes32 _feeCcy
+        uint256 unitPrice
     ) external payable returns (bool);
 
     function executeLiquidationCall(
@@ -210,6 +210,8 @@ interface ILendingMarketController {
     function pauseLendingMarkets(bytes32 ccy) external returns (bool);
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
+
+    function updateOrderFeeRate(uint256 _orderFeeRate) external;
 
     function cleanAllOrders(address user) external;
 
