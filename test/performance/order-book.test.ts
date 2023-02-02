@@ -221,12 +221,6 @@ describe('Performance Test: Order Book', async () => {
               )
               .then((tx) => tx.wait());
 
-            // const PV = await lendingMarketController.getTotalPresentValue(
-            //   currencyKey,
-            //   signers[0].address,
-            // );
-            // console.log('PV:', PV.toString());
-
             const headerName = `GasConst(${name})`;
             if (!log[headerName]) {
               log[headerName] = {};

@@ -170,9 +170,11 @@ describe('Integration Test: Order Book', async () => {
       it('Fill an order on the ETH market', async () => {
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateLendOrderWithETH(
+          .depositAndCreateOrder(
             hexETHString,
             ethMaturities[0],
+            Side.LEND,
+            orderAmount,
             '8000',
             { value: orderAmount },
           );
@@ -187,21 +189,20 @@ describe('Integration Test: Order Book', async () => {
             '8000',
           );
 
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexETHString,
-          ethMaturities[0],
-          alice.address,
-        );
-        const bobFV = await lendingMarketController.getFutureValue(
-          hexETHString,
-          ethMaturities[0],
-          bob.address,
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController.getFutureValue(
+              hexETHString,
+              ethMaturities[0],
+              address,
+            ),
+          ),
         );
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(
           ORDERS_CALCULATION_TOLERANCE_RANGE,
         );
-        expect(aliceFV.add(bobFV)).to.equal('0');
+        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -217,7 +218,7 @@ describe('Integration Test: Order Book', async () => {
 
         expect(aliceDepositAmount).to.equal(depositAmount.add(orderAmount));
         expect(bobDepositAmount).to.equal('0');
-        expect(coverage.sub('4000').abs()).lte(1);
+        expect(coverage.sub('4010').abs()).lte(1);
       });
     });
 
@@ -237,7 +238,7 @@ describe('Integration Test: Order Book', async () => {
         await createSampleFILOrders(carol);
       });
 
-      it('Deposit ETH', async () => {
+      it('Deposit ETH ', async () => {
         await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
           value: depositAmount,
         });
@@ -275,21 +276,20 @@ describe('Integration Test: Order Book', async () => {
             '0',
           );
 
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexFILString,
-          filMaturities[0],
-          alice.address,
-        );
-        const bobFV = await lendingMarketController.getFutureValue(
-          hexFILString,
-          filMaturities[0],
-          bob.address,
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController.getFutureValue(
+              hexFILString,
+              filMaturities[0],
+              address,
+            ),
+          ),
         );
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(
           ORDERS_CALCULATION_TOLERANCE_RANGE,
         );
-        expect(aliceFV.add(bobFV)).to.equal('0');
+        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -305,7 +305,7 @@ describe('Integration Test: Order Book', async () => {
 
         expect(aliceFILDepositAmount).to.equal(orderAmount);
         expect(bobFILDepositAmount).to.equal('0');
-        expect(coverage.sub('8000').abs()).lte(1);
+        expect(coverage.sub('8020').abs()).lte(1);
       });
     });
 
@@ -328,7 +328,7 @@ describe('Integration Test: Order Book', async () => {
         await createSampleETHOrders(carol);
       });
 
-      it('Deposit ETH', async () => {
+      it('Deposit ETH ', async () => {
         await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
           value: depositAmount,
         });
@@ -366,21 +366,20 @@ describe('Integration Test: Order Book', async () => {
             '0',
           );
 
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexFILString,
-          filMaturities[0],
-          alice.address,
-        );
-        const bobFV = await lendingMarketController.getFutureValue(
-          hexFILString,
-          filMaturities[0],
-          bob.address,
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController.getFutureValue(
+              hexFILString,
+              filMaturities[0],
+              address,
+            ),
+          ),
         );
 
         const bobTotalCollateralAmountAfter =
           await tokenVault.getTotalCollateralAmount(bob.address);
 
-        expect(aliceFV.add(bobFV)).to.equal('0');
+        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
         expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(
           ORDERS_CALCULATION_TOLERANCE_RANGE,
         );
@@ -394,9 +393,11 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateLendOrderWithETH(
+          .depositAndCreateOrder(
             hexETHString,
             ethMaturities[0],
+            Side.LEND,
+            orderAmount,
             '8000',
             { value: orderAmount },
           );
@@ -411,21 +412,20 @@ describe('Integration Test: Order Book', async () => {
             '0',
           );
 
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexETHString,
-          ethMaturities[0],
-          alice.address,
-        );
-        const bobFV = await lendingMarketController.getFutureValue(
-          hexETHString,
-          ethMaturities[0],
-          bob.address,
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController.getFutureValue(
+              hexETHString,
+              ethMaturities[0],
+              address,
+            ),
+          ),
         );
 
         expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(
           ORDERS_CALCULATION_TOLERANCE_RANGE,
         );
-        expect(aliceFV.add(bobFV)).to.equal('0');
+        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -469,7 +469,7 @@ describe('Integration Test: Order Book', async () => {
               .div('10000'),
           ),
         );
-        expect(coverage.sub('5000').abs()).lte(1);
+        expect(coverage.sub('5012').abs()).lte(1);
       });
     });
   });
@@ -521,8 +521,7 @@ describe('Integration Test: Order Book', async () => {
             .connect(bob)
             .deposit(hexETHString, collateralAmount, {
               value: collateralAmount,
-            })
-            .then((tx) => tx.wait());
+            });
         });
 
         it(`Fill an order`, async () => {
@@ -564,15 +563,14 @@ describe('Integration Test: Order Book', async () => {
         });
 
         it(`Check orders`, async () => {
-          const aliceFV = await lendingMarketController.getFutureValue(
-            hexFILString,
-            filMaturities[1],
-            alice.address,
-          );
-          const bobFV = await lendingMarketController.getFutureValue(
-            hexFILString,
-            filMaturities[1],
-            bob.address,
+          const [aliceFV, bobFV] = await Promise.all(
+            [alice, bob].map(({ address }) =>
+              lendingMarketController.getFutureValue(
+                hexFILString,
+                filMaturities[1],
+                address,
+              ),
+            ),
           );
           const borrowOrderIds =
             await filLendingMarkets[1].getActiveBorrowOrderIds(bob.address);
@@ -580,7 +578,7 @@ describe('Integration Test: Order Book', async () => {
             alice.address,
           );
 
-          expect(aliceFV.abs()).to.equal(bobFV.abs());
+          expect(aliceFV.mul(10000).div(bobFV).abs().sub(9950).abs()).to.lte(1);
           expect(borrowOrderIds.length).to.equal(0);
           expect(lendOrderIds.length).to.equal(0);
         });
@@ -594,8 +592,7 @@ describe('Integration Test: Order Book', async () => {
             .connect(bob)
             .deposit(hexETHString, collateralAmount, {
               value: collateralAmount,
-            })
-            .then((tx) => tx.wait());
+            });
         });
 
         it(`Fill an order`, async () => {
@@ -604,14 +601,12 @@ describe('Integration Test: Order Book', async () => {
 
           await wFILToken
             .connect(alice)
-            .approve(tokenVault.address, collateralAmount)
-            .then((tx) => tx.wait());
+            .approve(tokenVault.address, collateralAmount);
           await tokenVault
             .connect(alice)
             .deposit(hexFILString, collateralAmount, {
               value: collateralAmount,
-            })
-            .then((tx) => tx.wait());
+            });
 
           await expect(
             lendingMarketController
@@ -639,15 +634,14 @@ describe('Integration Test: Order Book', async () => {
         });
 
         it(`Check orders`, async () => {
-          const aliceFV = await lendingMarketController.getFutureValue(
-            hexFILString,
-            filMaturities[1],
-            alice.address,
-          );
-          const bobFV = await lendingMarketController.getFutureValue(
-            hexFILString,
-            filMaturities[1],
-            bob.address,
+          const [aliceFV, bobFV] = await Promise.all(
+            [alice, bob].map(({ address }) =>
+              lendingMarketController.getFutureValue(
+                hexFILString,
+                filMaturities[1],
+                address,
+              ),
+            ),
           );
 
           if (input.label === 'lending') {
@@ -662,7 +656,7 @@ describe('Integration Test: Order Book', async () => {
             orderMaker = bob;
           }
 
-          expect(aliceFV.abs()).to.equal(bobFV.abs());
+          expect(aliceFV.mul(10000).div(bobFV).abs().sub(9950).abs()).to.lte(1);
           expect(orderIds.length).to.equal(1);
         });
       });
@@ -675,8 +669,7 @@ describe('Integration Test: Order Book', async () => {
             .connect(bob)
             .deposit(hexETHString, collateralAmount, {
               value: collateralAmount,
-            })
-            .then((tx) => tx.wait());
+            });
         });
 
         it(`Fill an order`, async () => {
@@ -685,14 +678,12 @@ describe('Integration Test: Order Book', async () => {
 
           await wFILToken
             .connect(alice)
-            .approve(tokenVault.address, collateralAmount.mul(3))
-            .then((tx) => tx.wait());
+            .approve(tokenVault.address, collateralAmount.mul(3));
           await tokenVault
             .connect(alice)
             .deposit(hexFILString, collateralAmount.mul(3), {
               value: collateralAmount.mul(3),
-            })
-            .then((tx) => tx.wait());
+            });
 
           await expect(
             lendingMarketController
@@ -731,15 +722,14 @@ describe('Integration Test: Order Book', async () => {
         });
 
         it(`Check orders`, async () => {
-          const aliceFV = await lendingMarketController.getFutureValue(
-            hexFILString,
-            filMaturities[1],
-            alice.address,
-          );
-          const bobFV = await lendingMarketController.getFutureValue(
-            hexFILString,
-            filMaturities[1],
-            bob.address,
+          const [aliceFV, bobFV] = await Promise.all(
+            [alice, bob].map(({ address }) =>
+              lendingMarketController.getFutureValue(
+                hexFILString,
+                filMaturities[1],
+                address,
+              ),
+            ),
           );
 
           if (input.label === 'borrowing') {
@@ -754,7 +744,7 @@ describe('Integration Test: Order Book', async () => {
             orderMaker = bob;
           }
 
-          expect(aliceFV.abs()).to.equal(bobFV.abs());
+          expect(aliceFV.mul(10000).div(bobFV).abs().sub(9950).abs()).to.lte(1);
           expect(orderIds.length).to.equal(1);
         });
       });

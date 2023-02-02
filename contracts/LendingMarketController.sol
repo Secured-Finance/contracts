@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 // interfaces
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
@@ -10,6 +11,7 @@ import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
+import {LiquidatorHandler} from "./libraries/LiquidatorHandler.sol";
 import {FundCalculationLogic} from "./libraries/logics/FundCalculationLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
@@ -81,17 +83,26 @@ contract LendingMarketController is
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](4);
+        contracts = new bytes32[](5);
         contracts[0] = Contracts.BEACON_PROXY_CONTROLLER;
         contracts[1] = Contracts.CURRENCY_CONTROLLER;
         contracts[2] = Contracts.GENESIS_VALUE_VAULT;
-        contracts[3] = Contracts.TOKEN_VAULT;
+        contracts[3] = Contracts.RESERVE_FUND;
+        contracts[4] = Contracts.TOKEN_VAULT;
     }
 
     // @inheritdoc MixinAddressResolver
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.TOKEN_VAULT;
+    }
+
+    /**
+     * @notice Gets if the user is registered as a liquidator.
+     * @return The boolean if the user is registered as a liquidator or not
+     */
+    function isLiquidator(address _user) external view override returns (bool) {
+        return LiquidatorHandler.isRegistered(_user);
     }
 
     /**
@@ -338,6 +349,15 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the order fee rate
+     * @param _ccy Currency name in bytes32
+     * @return The order fee rate received by protocol
+     */
+    function getOrderFeeRate(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().orderFeeRates[_ccy];
+    }
+
+    /**
      * @notice Gets the funds that are calculated from the user's lending order list for the selected currency.
      * @param _ccy Currency name in bytes32
      * @param _user User's address
@@ -452,17 +472,20 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _genesisDate The genesis date when the initial market is opened
      * @param _compoundFactor The initial compound factor when the initial market is opened
+     * @param _orderFeeRate The order fee rate received by protocol
      */
     function initializeLendingMarket(
         bytes32 _ccy,
         uint256 _genesisDate,
-        uint256 _compoundFactor
+        uint256 _compoundFactor,
+        uint256 _orderFeeRate
     ) external override onlyOwner {
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
         genesisValueVault().initialize(_ccy, 40, _compoundFactor);
         Storage.slot().genesisDates[_ccy] = _genesisDate;
+        FundCalculationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
     }
 
     /**
@@ -534,8 +557,8 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+
         return true;
     }
 
@@ -555,37 +578,10 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        tokenVault().depositFrom(msg.sender, _ccy, _amount);
-        _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
-        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
-        return true;
-    }
-
-    /**
-     * @notice Deposits funds and creates a lend order with ETH at the same time.
-     *
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
-     * @return True if the execution of the operation succeeds
-     */
-    function depositAndCreateLendOrderWithETH(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _unitPrice
     ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, msg.value);
-        _convertFutureValueToGenesisValue(_ccy, _maturity, msg.sender);
-        _createOrder(
-            _ccy,
-            _maturity,
-            msg.sender,
-            ProtocolTypes.Side.LEND,
-            msg.value,
-            _unitPrice,
-            false
-        );
+        tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
+        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+
         return true;
     }
 
@@ -628,6 +624,10 @@ contract LendingMarketController is
         address _user,
         uint24 _poolFee
     ) external override nonReentrant ifValidMaturity(_debtCcy, _debtMaturity) returns (bool) {
+        // Check if the caller is an EOA registered as an active liquidator to protect against flash loan attacks.
+        require(Address.isContract(msg.sender) == false, "Caller must be EOA");
+        require(LiquidatorHandler.isActive(msg.sender), "Caller is not active");
+
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
         cleanOrders(_debtCcy, _user);
@@ -641,21 +641,35 @@ contract LendingMarketController is
             _poolFee
         );
 
-        _createOrder(
+        uint256 filledAmount = _createOrder(
             _debtCcy,
             _debtMaturity,
             _user,
             ProtocolTypes.Side.LEND,
             liquidationAmount,
-            0,
+            0, // market order
             true
         );
 
-        emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, liquidationAmount);
+        if (filledAmount != 0) {
+            emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, liquidationAmount);
 
-        _convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
+            _convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
+        }
 
         return true;
+    }
+
+    /**
+     * @notice Registers a user as a liquidator.
+     * @param _isLiquidator The boolean if the user is a liquidator or not
+     */
+    function registerLiquidator(bool _isLiquidator) external override {
+        if (_isLiquidator) {
+            LiquidatorHandler.register(msg.sender);
+        } else {
+            LiquidatorHandler.remove(msg.sender);
+        }
     }
 
     /**
@@ -663,6 +677,7 @@ contract LendingMarketController is
      * - Updates the maturity at the beginning of the market array.
      * - Moves the beginning of the market array to the end of it (Market rotation).
      * - Update the compound factor in this contract using the next market unit price. (Auto-rolls)
+     * - Convert the future value held by reserve funds into the genesis value
      *
      * @param _ccy Currency name in bytes32 of the selected market
      */
@@ -700,6 +715,8 @@ contract LendingMarketController is
         delete Storage.slot().maturityLendingMarkets[_ccy][prevMaturity];
 
         emit RotateLendingMarkets(_ccy, prevMaturity, newLastMaturity);
+
+        _convertFutureValueToGenesisValue(_ccy, newLastMaturity, address(reserveFund()));
     }
 
     /**
@@ -728,6 +745,14 @@ contract LendingMarketController is
         }
 
         return true;
+    }
+
+    /**
+     * @notice Updates the order fee rate
+     * @param _orderFeeRate The order fee rate received by protocol
+     */
+    function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) external override onlyOwner {
+        FundCalculationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
     }
 
     /**
@@ -816,7 +841,7 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice,
         bool _isForced
-    ) private returns (bool isFilled) {
+    ) private returns (uint256 filledAmount) {
         require(_amount > 0, "Invalid amount");
         uint256 activeOrderCount = cleanOrders(_ccy, _user);
 
@@ -827,7 +852,9 @@ contract LendingMarketController is
         (uint256 filledFutureValue, uint256 remainingAmount) = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ).createOrder(_side, _user, _amount, _unitPrice, _isForced);
+        filledAmount = _amount - remainingAmount;
 
+        uint256 feeFutureValue;
         if (!_isForced) {
             // The case that an order was made, or taken partially
             if (filledFutureValue == 0 || remainingAmount > 0) {
@@ -835,35 +862,77 @@ contract LendingMarketController is
             }
 
             require(activeOrderCount <= MAXIMUM_ORDER_COUNT, "Too many active orders");
+
+            feeFutureValue = FundCalculationLogic.calculateOrderFeeAmount(
+                _ccy,
+                filledFutureValue,
+                _maturity
+            );
         }
 
         if (filledFutureValue != 0) {
-            address futureValueVault = Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ];
+            _updateDepositAmount(
+                _ccy,
+                _maturity,
+                _user,
+                _side,
+                filledFutureValue,
+                filledAmount,
+                feeFutureValue
+            );
 
-            if (_side == ProtocolTypes.Side.BORROW) {
-                tokenVault().addDepositAmount(_user, _ccy, _amount - remainingAmount);
-                IFutureValueVault(futureValueVault).addBorrowFutureValue(
-                    _user,
-                    filledFutureValue,
-                    _maturity
-                );
-            } else {
-                tokenVault().removeDepositAmount(_user, _ccy, _amount - remainingAmount);
-                IFutureValueVault(futureValueVault).addLendFutureValue(
-                    _user,
-                    filledFutureValue,
-                    _maturity
-                );
-            }
-
-            emit FillOrder(_user, _ccy, _side, _maturity, _amount, _unitPrice, filledFutureValue);
-
-            isFilled = true;
+            emit FillOrder(
+                _user,
+                _ccy,
+                _side,
+                _maturity,
+                filledAmount,
+                _unitPrice,
+                filledFutureValue
+            );
         }
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
+    }
+
+    function _updateDepositAmount(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _filledFutureValue,
+        uint256 _filledAmount,
+        uint256 _feeFutureValue
+    ) private returns (bool) {
+        address futureValueVault = Storage.slot().futureValueVaults[_ccy][
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ];
+
+        if (_side == ProtocolTypes.Side.BORROW) {
+            tokenVault().addDepositAmount(_user, _ccy, _filledAmount);
+            IFutureValueVault(futureValueVault).addBorrowFutureValue(
+                _user,
+                _filledFutureValue + _feeFutureValue,
+                _maturity
+            );
+        } else {
+            tokenVault().removeDepositAmount(_user, _ccy, _filledAmount);
+            IFutureValueVault(futureValueVault).addLendFutureValue(
+                _user,
+                _filledFutureValue - _feeFutureValue,
+                _maturity
+            );
+        }
+
+        if (_feeFutureValue > 0) {
+            IFutureValueVault(futureValueVault).addLendFutureValue(
+                address(reserveFund()),
+                _feeFutureValue,
+                _maturity
+            );
+        }
+
+        return true;
     }
 
     function _cleanOrders(

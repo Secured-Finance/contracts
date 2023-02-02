@@ -62,6 +62,7 @@ const func: DeployFunction = async function ({
           currency.key,
           genesisDate,
           process.env.INITIAL_COMPOUND_FACTOR,
+          currency.orderFeeRate,
         )
         .then((tx) => tx.wait());
     }

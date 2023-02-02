@@ -7,11 +7,7 @@ import {CollateralParametersStorage as Storage} from "../storages/CollateralPara
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 
 /**
- * @notice CollateralParametersHandler is an library to handle the parameters fro TokenVault contract.
- *
- * This manage the main collateral parameters like Margin Call ratio, Auto-Liquidation level,
- * Liquidation price, and Minimal collateral ratio.
- *
+ * @notice CollateralParametersHandler is an library to handle the main collateral parameters.
  */
 library CollateralParametersHandler {
     event UpdateAutoLiquidationThresholdRate(uint256 previousRate, uint256 ratio);
@@ -61,9 +57,9 @@ library CollateralParametersHandler {
     /**
      * @dev Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning
-     * @param _liquidationThresholdRate Auto liquidation threshold rate
-     * @param _liquidationProtocolFeeRate Liquidation fee received by protocol
-     * @param _liquidatorFeeRate Liquidation fee received by liquidators
+     * @param _liquidationThresholdRate The liquidation threshold rate
+     * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
+     * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _uniswapRouter Uniswap router contract address
      * @param _uniswapQuoter Uniswap quoter contract address
      * @notice Triggers only be contract owner

@@ -485,6 +485,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
         } else {
             _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
+            remainingAmount = _amount;
         }
     }
 

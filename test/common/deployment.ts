@@ -15,6 +15,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  ORDER_FEE_RATE,
 } from './constants';
 
 const deployContracts = async () => {
@@ -230,21 +231,25 @@ const deployContracts = async () => {
       hexBTCString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexETHString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexFILString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexUSDCString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
     ),
   ]);
 

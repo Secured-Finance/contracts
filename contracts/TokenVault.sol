@@ -50,7 +50,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
-     * @param _liquidationThresholdRate The rate used as the auto liquidation threshold
+     * @param _liquidationThresholdRate The liquidation threshold rate
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
      * @param _uniswapRouter Uniswap router contract address
@@ -442,7 +442,13 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     ) external override onlyAcceptedContracts returns (uint256 amountOut) {
         require(isCollateral(_ccyFrom), "Not registered as collateral");
 
-        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
+        uint256 userDepositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
+        uint256 depositAmount = userDepositAmount;
+
+        if (!reserveFund().isPaused()) {
+            depositAmount += Storage.slot().depositAmounts[address(reserveFund())][_ccyFrom];
+        }
+
         require(depositAmount > 0, "No deposit amount in the selected currency");
 
         uint256 amountOutWithFee = (_amountOut * ProtocolTypes.PCT_DIGIT) /
@@ -468,18 +474,13 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             depositAmount
         );
 
-        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
-            tokenIn: getTokenAddress(_ccyFrom),
-            tokenOut: getTokenAddress(_ccyTo),
-            fee: _poolFee,
-            recipient: address(this),
-            deadline: block.timestamp,
-            amountOut: amountOutWithFee,
-            amountInMaximum: depositAmount,
-            sqrtPriceLimitX96: 0
-        });
-
-        uint256 amountInWithFee = Params.uniswapRouter().exactOutputSingle(params);
+        uint256 amountInWithFee = _estimateUniswapOutput(
+            _ccyFrom,
+            _ccyTo,
+            amountOutWithFee,
+            depositAmount,
+            _poolFee
+        );
         uint256 liquidatorFee = (amountOutWithFee * Params.liquidatorFeeRate()) /
             ProtocolTypes.PCT_DIGIT;
 
@@ -494,7 +495,17 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             amountOut = _amountOut;
         }
 
-        DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountInWithFee);
+        if (amountInWithFee > userDepositAmount) {
+            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, userDepositAmount);
+            DepositManagementLogic.removeDepositAmount(
+                address(reserveFund()),
+                _ccyFrom,
+                amountInWithFee - userDepositAmount
+            );
+        } else {
+            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountInWithFee);
+        }
+
         DepositManagementLogic.addDepositAmount(_user, _ccyTo, amountOut);
         DepositManagementLogic.addDepositAmount(_liquidator, _ccyTo, liquidatorFee);
         DepositManagementLogic.addDepositAmount(address(reserveFund()), _ccyTo, protocolFee);
@@ -563,5 +574,26 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
 
         emit Withdraw(_user, _ccy, withdrawableAmount);
+    }
+
+    function _estimateUniswapOutput(
+        bytes32 _ccyFrom,
+        bytes32 _ccyTo,
+        uint256 _amountOut,
+        uint256 _amountInMaximum,
+        uint24 _poolFee
+    ) internal returns (uint256) {
+        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
+            tokenIn: getTokenAddress(_ccyFrom),
+            tokenOut: getTokenAddress(_ccyTo),
+            fee: _poolFee,
+            recipient: address(this),
+            deadline: block.timestamp,
+            amountOut: _amountOut,
+            amountInMaximum: _amountInMaximum,
+            sqrtPriceLimitX96: 0
+        });
+
+        return Params.uniswapRouter().exactOutputSingle(params);
     }
 }

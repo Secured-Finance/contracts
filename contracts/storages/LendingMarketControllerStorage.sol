@@ -21,6 +21,8 @@ library LendingMarketControllerStorage {
         mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
         // Mapping from user to active order existence per currency and maturity
         mapping(address => mapping(bytes32 => mapping(uint256 => bool))) activeOrderExistences;
+        // Mapping from currency to order fee rate received by protocol (in basis point)
+        mapping(bytes32 => uint256) orderFeeRates;
     }
 
     function slot() internal pure returns (Storage storage r) {

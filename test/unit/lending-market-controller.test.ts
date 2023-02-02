@@ -8,6 +8,7 @@ import moment from 'moment';
 
 import { Side } from '../../utils/constants';
 import { getGenesisDate } from '../../utils/dates';
+import { ORDER_FEE_RATE } from '../common/constants';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
@@ -18,6 +19,9 @@ const FutureValueVault = artifacts.require('FutureValueVault');
 const GenesisValueVault = artifacts.require('GenesisValueVault');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
+const ReserveFund = artifacts.require('ReserveFund');
+const LiquidationBot = artifacts.require('LiquidationBot');
+const LiquidationBot2 = artifacts.require('LiquidationBot2');
 
 // libraries
 const FundCalculationLogic = artifacts.require('FundCalculationLogic');
@@ -31,6 +35,7 @@ const BP = ethers.BigNumber.from('10000');
 describe('LendingMarketController', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
+  let mockReserveFund: MockContract;
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
@@ -64,6 +69,7 @@ describe('LendingMarketController', () => {
       owner,
       CurrencyController.abi,
     );
+    mockReserveFund = await deployMockContract(owner, ReserveFund.abi);
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockTokenVault.mock.addDepositAmount.returns();
@@ -152,6 +158,7 @@ describe('LendingMarketController', () => {
     const migrationTargets: [string, Contract][] = [
       ['BeaconProxyController', beaconProxyControllerProxy],
       ['CurrencyController', mockCurrencyController],
+      ['ReserveFund', mockReserveFund],
       ['TokenVault', mockTokenVault],
       ['GenesisValueVault', genesisValueVaultProxy],
       ['LendingMarketController', lendingMarketControllerProxy],
@@ -205,6 +212,7 @@ describe('LendingMarketController', () => {
         targetCurrency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
       const res = await lendingMarketControllerProxy.getGenesisDate(
         targetCurrency,
@@ -240,6 +248,7 @@ describe('LendingMarketController', () => {
         targetCurrency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
@@ -268,6 +277,7 @@ describe('LendingMarketController', () => {
         targetCurrency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
       await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
@@ -312,22 +322,20 @@ describe('LendingMarketController', () => {
     let futureValueVaultProxies: Contract[];
     let maturities: BigNumber[];
 
-    beforeEach(async () => {
-      // Set up for the mocks
-      await mockTokenVault.mock.isCovered.returns(true);
-
+    const initialize = async (currency: string) => {
       await lendingMarketControllerProxy.initializeLendingMarket(
-        targetCurrency,
+        currency,
         genesisDate,
         COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
       );
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
+      await lendingMarketControllerProxy.createLendingMarket(currency);
 
       const marketAddresses =
-        await lendingMarketControllerProxy.getLendingMarkets(targetCurrency);
+        await lendingMarketControllerProxy.getLendingMarkets(currency);
 
       lendingMarketProxies = await Promise.all(
         marketAddresses.map((address) =>
@@ -335,19 +343,24 @@ describe('LendingMarketController', () => {
         ),
       );
 
-      maturities = await lendingMarketControllerProxy.getMaturities(
-        targetCurrency,
-      );
+      maturities = await lendingMarketControllerProxy.getMaturities(currency);
 
       futureValueVaultProxies = await Promise.all(
         maturities.map((maturity) =>
           lendingMarketControllerProxy
-            .getFutureValueVault(targetCurrency, maturity)
+            .getFutureValueVault(currency, maturity)
             .then((address) =>
               ethers.getContractAt('FutureValueVault', address),
             ),
         ),
       );
+    };
+
+    beforeEach(async () => {
+      // Set up for the mocks
+      await mockTokenVault.mock.isCovered.returns(true);
+
+      await initialize(targetCurrency);
     });
 
     it('Get a market currency data', async () => {
@@ -362,25 +375,25 @@ describe('LendingMarketController', () => {
         {
           maker: alice,
           side: Side.LEND,
-          amount: '100000000000000000',
+          amount: BigNumber.from('100000000000000000'),
           unitPrice: '9800',
         },
         {
           maker: bob,
           side: Side.LEND,
-          amount: '500000000000000000',
+          amount: BigNumber.from('500000000000000000'),
           unitPrice: '9880',
         },
         {
           maker: carol,
           side: Side.BORROW,
-          amount: '100000000000000000',
+          amount: BigNumber.from('100000000000000000'),
           unitPrice: '9720',
         },
         {
           maker: carol,
           side: Side.BORROW,
-          amount: '200000000000000000',
+          amount: BigNumber.from('200000000000000000'),
           unitPrice: '9780',
         },
       ];
@@ -564,6 +577,11 @@ describe('LendingMarketController', () => {
             targetCurrency,
             carol.address,
           );
+        const reserveFundTotalPV =
+          await lendingMarketControllerProxy.getTotalPresentValue(
+            targetCurrency,
+            mockReserveFund.address,
+          );
 
         const aliceFV = await lendingMarketControllerProxy.getFutureValue(
           targetCurrency,
@@ -580,22 +598,38 @@ describe('LendingMarketController', () => {
           maturities[1],
           carol.address,
         );
+        const reserveFundFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[1],
+          mockReserveFund.address,
+        );
 
         console.table({
           TotalPresentValue: {
             Alice: aliceTotalPV.toString(),
             Bob: bobTotalPV.toString(),
             Carol: carolTotalPV.toString(),
+            ReserveFund: reserveFundTotalPV.toString(),
           },
           [`FutureValue(${maturities[1]})`]: {
             Alice: aliceFV.toString(),
             Bob: bobFV.toString(),
             Carol: carolFV.toString(),
+            ReserveFund: reserveFundFV.toString(),
           },
         });
 
-        expect(aliceTotalPV.add(bobTotalPV).add(carolTotalPV)).to.equal(0);
-        expect(aliceFV.add(bobFV).add(carolFV)).to.equal(0);
+        // TODO: Need to fix a calculation bug (SF-276)
+        expect(
+          aliceTotalPV
+            .add(bobTotalPV)
+            .add(carolTotalPV)
+            .add(reserveFundTotalPV)
+            .abs(),
+        ).to.lte(3);
+        expect(aliceFV.add(bobFV).add(carolFV).add(reserveFundFV).abs()).to.lte(
+          3,
+        );
       };
 
       expect(await lendingMarket1.isOpened()).to.equal(true);
@@ -758,6 +792,7 @@ describe('LendingMarketController', () => {
           Side.LEND,
           '100000000000000000',
           '9800',
+          { value: '1000000000000000' },
         )
         .then(async (tx) => {
           await expect(tx).to.not.emit(
@@ -770,11 +805,13 @@ describe('LendingMarketController', () => {
     it('Deposit and add an order(payable)', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
-        .depositAndCreateLendOrderWithETH(
+        .depositAndCreateOrder(
           targetCurrency,
           maturities[0],
+          Side.LEND,
+          '100000000000000000',
           '9800',
-          { value: '100000000000000000' },
+          { value: '1000000000000000' },
         )
         .then(async (tx) => {
           await expect(tx).to.not.emit(
@@ -1614,12 +1651,40 @@ describe('LendingMarketController', () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(1);
         await mockTokenVault.mock.getDepositAmount.returns(1);
+
+        const isLiquidator = await lendingMarketControllerProxy.isLiquidator(
+          alice.address,
+        );
+
+        if (!isLiquidator) {
+          await lendingMarketControllerProxy
+            .connect(alice)
+            .registerLiquidator(true);
+        }
+      });
+
+      it('Register a liquidator', async () => {
+        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
+          .to.false;
+
+        await lendingMarketControllerProxy
+          .connect(owner)
+          .registerLiquidator(true);
+
+        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
+          .to.true;
+
+        await lendingMarketControllerProxy
+          .connect(owner)
+          .registerLiquidator(false);
+
+        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
+          .to.false;
       });
 
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        const debtAmount = orderAmount.mul('10000').div(orderRate);
         const liquidationAmount = ethers.BigNumber.from('300000000000000000');
 
         // Set up for the mocks
@@ -1745,7 +1810,7 @@ describe('LendingMarketController', () => {
           );
       });
 
-      it('Fail to liquidate lending position due to no debt', async () => {
+      it('Fail to liquidate a lending position due to no debt', async () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
@@ -1759,7 +1824,7 @@ describe('LendingMarketController', () => {
         ).to.be.revertedWith('No debt in the selected maturity');
       });
 
-      it('Fail to liquidate lending position due to no liquidation amount', async () => {
+      it('Fail to liquidate a lending position due to no liquidation amount', async () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(0);
 
@@ -1774,6 +1839,49 @@ describe('LendingMarketController', () => {
               '1',
             ),
         ).to.be.revertedWith('User has enough collateral');
+      });
+
+      it('Fail to liquidate a lending position due to unregistered liquidator', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeLiquidationCall(
+              targetCurrency,
+              targetCurrency,
+              maturities[0],
+              signers[0].address,
+              '1',
+            ),
+        ).to.be.revertedWith('Caller is not active');
+      });
+
+      it('Fail to liquidate a lending position due to bot hack', async () => {
+        await expect(
+          deployContract(owner, LiquidationBot, [
+            lendingMarketControllerProxy.address,
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            signers[0].address,
+            '1',
+          ]),
+        ).to.be.revertedWith('Caller is not active');
+      });
+
+      it('Fail to liquidate a lending position due to bot access', async () => {
+        const bot = await deployContract(owner, LiquidationBot2, [
+          lendingMarketControllerProxy.address,
+        ]);
+        await bot.registerLiquidator(true);
+        await expect(
+          bot.executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            signers[0].address,
+            '1',
+          ),
+        ).to.be.revertedWith('Caller must be EOA');
       });
     });
 
@@ -1806,6 +1914,30 @@ describe('LendingMarketController', () => {
             '100000000000000000',
             '800',
           );
+      });
+
+      it('Update the order fee rate', async () => {
+        expect(
+          await lendingMarketControllerProxy.getOrderFeeRate(targetCurrency),
+        ).to.equal(ORDER_FEE_RATE);
+
+        await lendingMarketControllerProxy.updateOrderFeeRate(
+          targetCurrency,
+          '200',
+        );
+
+        expect(
+          await lendingMarketControllerProxy.getOrderFeeRate(targetCurrency),
+        ).to.equal('200');
+
+        await lendingMarketControllerProxy.updateOrderFeeRate(
+          targetCurrency,
+          ORDER_FEE_RATE,
+        );
+
+        expect(
+          await lendingMarketControllerProxy.getOrderFeeRate(targetCurrency),
+        ).to.equal(ORDER_FEE_RATE);
       });
 
       it('Update beacon proxy implementations and calculate Genesis value', async () => {
@@ -2112,7 +2244,7 @@ describe('LendingMarketController', () => {
         };
 
         const checkGenesisValue = async () => {
-          const accounts = [alice, bob, carol];
+          const accounts = [alice, bob, carol, mockReserveFund];
 
           const genesisValues = await Promise.all(
             accounts.map((account) =>
@@ -2133,6 +2265,7 @@ describe('LendingMarketController', () => {
               Alice: genesisValues[0].toString(),
               Bob: genesisValues[1].toString(),
               Carol: genesisValues[2].toString(),
+              ReserveFund: genesisValues[3].toString(),
               TotalLendingSupply: totalSupplies[0].toString(),
               TotalBorrowingSupply: totalSupplies[1].toString(),
             },

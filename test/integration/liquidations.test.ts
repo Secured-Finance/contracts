@@ -267,6 +267,8 @@ describe('Integration Test: Liquidations', async () => {
 
     ({ liquidatorFeeRate, liquidationProtocolFeeRate } =
       await tokenVault.getCollateralParameters());
+
+    await lendingMarketController.connect(owner).registerLiquidator(true);
   });
 
   beforeEach('Set maturities', async () => {
@@ -292,6 +294,7 @@ describe('Integration Test: Liquidations', async () => {
 
       const aliceBalanceBefore = await wFILToken.balanceOf(alice.address);
 
+      await lendingMarketController.connect(carol).registerLiquidator(true);
       await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
         value: depositAmount,
       });
@@ -310,6 +313,7 @@ describe('Integration Test: Liquidations', async () => {
           filledOrderAmount,
           '8000',
         );
+
       await lendingMarketController
         .connect(owner)
         .createOrder(
@@ -808,6 +812,7 @@ describe('Integration Test: Liquidations', async () => {
 
       const aliceBalanceBefore = await wFILToken.balanceOf(alice.address);
 
+      await lendingMarketController.connect(carol).registerLiquidator(true);
       await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
         value: depositAmount,
       });

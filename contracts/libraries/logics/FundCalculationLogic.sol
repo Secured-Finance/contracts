@@ -15,6 +15,8 @@ import {LendingMarketControllerStorage as Storage} from "../../storages/LendingM
 library FundCalculationLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    event UpdateOrderFeeRate(uint256 previousRate, uint256 ratio);
+
     struct CalculatedAmountVars {
         uint256 debtFVAmount;
         uint256 debtPVAmount;
@@ -29,6 +31,31 @@ library FundCalculationLogic {
         uint256[] amountsInETH;
         uint256 plusDepositAmount;
         uint256 minusDepositAmount;
+    }
+
+    function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) internal {
+        require(_orderFeeRate <= ProtocolTypes.PCT_DIGIT, "Invalid order fee rate");
+
+        if (_orderFeeRate != Storage.slot().orderFeeRates[_ccy]) {
+            emit UpdateOrderFeeRate(Storage.slot().orderFeeRates[_ccy], _orderFeeRate);
+            Storage.slot().orderFeeRates[_ccy] = _orderFeeRate;
+        }
+    }
+
+    function calculateOrderFeeAmount(
+        bytes32 _ccy,
+        uint256 _amount,
+        uint256 _maturity
+    ) public view returns (uint256 orderFeeAmount) {
+        require(block.timestamp < _maturity, "Invalid maturity");
+        uint256 currentMaturity = _maturity - block.timestamp;
+
+        // NOTE: The formula is:
+        // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+        // orderFeeAmount = amount * actualRate
+        orderFeeAmount =
+            (Storage.slot().orderFeeRates[_ccy] * currentMaturity * _amount) /
+            (ProtocolTypes.SECONDS_IN_YEAR * ProtocolTypes.PCT_DIGIT);
     }
 
     function convertToLiquidationAmountFromCollateral(

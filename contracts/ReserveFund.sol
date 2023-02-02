@@ -11,6 +11,8 @@ import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
+// storages
+import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
 
 /**
  * @notice Implements managing of the reserve fund.
@@ -28,6 +30,8 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
         address _resolver,
         address _WETH9
     ) public initializer onlyProxy {
+        Storage.slot().paused = false;
+
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
         ERC20Handler.initialize(_WETH9);
@@ -37,6 +41,30 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.TOKEN_VAULT;
+    }
+
+    /**
+     * @notice Gets if the reserve fund is paused.
+     * @return The boolean if the reserve fund is paused
+     */
+    function isPaused() public view override returns (bool) {
+        return Storage.slot().paused;
+    }
+
+    /**
+     * @notice Pauses the reserve fund.
+     */
+    function pause() public override {
+        Storage.slot().paused = true;
+        emit Pause(msg.sender);
+    }
+
+    /**
+     * @notice Unpauses the reserve fund.
+     */
+    function unpause() public override {
+        Storage.slot().paused = false;
+        emit Unpause(msg.sender);
     }
 
     /**

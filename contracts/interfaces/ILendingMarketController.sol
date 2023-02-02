@@ -45,6 +45,8 @@ interface ILendingMarketController {
         uint256 amount
     );
 
+    function isLiquidator(address user) external view returns (bool);
+
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
@@ -108,6 +110,8 @@ interface ILendingMarketController {
         view
         returns (int256 totalPresentValue);
 
+    function getOrderFeeRate(bytes32 ccy) external view returns (uint256);
+
     function calculateLentFundsFromOrders(bytes32 ccy, address user)
         external
         view
@@ -162,7 +166,8 @@ interface ILendingMarketController {
     function initializeLendingMarket(
         bytes32 ccy,
         uint256 genesisDate,
-        uint256 compoundFactor
+        uint256 compoundFactor,
+        uint256 orderFeeRate
     ) external;
 
     function createLendingMarket(bytes32 ccy)
@@ -183,12 +188,6 @@ interface ILendingMarketController {
         ProtocolTypes.Side side,
         uint256 amount,
         uint256 unitPrice
-    ) external returns (bool);
-
-    function depositAndCreateLendOrderWithETH(
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 unitPrice
     ) external payable returns (bool);
 
     function executeLiquidationCall(
@@ -198,6 +197,8 @@ interface ILendingMarketController {
         address user,
         uint24 poolFee
     ) external returns (bool);
+
+    function registerLiquidator(bool isLiquidator) external;
 
     function cancelOrder(
         bytes32 ccy,
@@ -210,6 +211,8 @@ interface ILendingMarketController {
     function pauseLendingMarkets(bytes32 ccy) external returns (bool);
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
+
+    function updateOrderFeeRate(bytes32 ccy, uint256 orderFeeRate) external;
 
     function cleanAllOrders(address user) external;
 
