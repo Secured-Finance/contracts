@@ -36,6 +36,16 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
 contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
+    struct SwapDepositAmountsVars {
+        uint256 userDepositAmount;
+        uint256 depositAmount;
+        uint256 amountOutWithFee;
+        uint256 estimatedAmountOut;
+        uint256 amountInWithFee;
+        uint256 liquidatorFee;
+        uint256 protocolFee;
+    }
+
     /**
      * @notice Modifier to check if currency hasn't been registered yet
      * @param _ccy Currency name in bytes32
@@ -438,79 +448,90 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         bytes32 _ccyFrom,
         bytes32 _ccyTo,
         uint256 _amountOut,
-        uint24 _poolFee
+        uint24 _poolFee,
+        uint256 _offsetAmount
     ) external override onlyAcceptedContracts returns (uint256 amountOut) {
+        SwapDepositAmountsVars memory vars;
+
         require(isCollateral(_ccyFrom), "Not registered as collateral");
 
-        uint256 userDepositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
-        uint256 depositAmount = userDepositAmount;
+        vars.userDepositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
+        vars.depositAmount = vars.userDepositAmount;
 
         if (!reserveFund().isPaused()) {
-            depositAmount += Storage.slot().depositAmounts[address(reserveFund())][_ccyFrom];
+            vars.depositAmount += Storage.slot().depositAmounts[address(reserveFund())][_ccyFrom];
         }
 
-        require(depositAmount > 0, "No deposit amount in the selected currency");
+        require(vars.depositAmount > 0, "No deposit amount in the selected currency");
 
-        uint256 amountOutWithFee = (_amountOut * ProtocolTypes.PCT_DIGIT) /
+        vars.amountOutWithFee =
+            (_amountOut * ProtocolTypes.PCT_DIGIT) /
             (ProtocolTypes.PCT_DIGIT -
                 Params.liquidatorFeeRate() -
                 Params.liquidationProtocolFeeRate());
 
-        uint256 estimatedAmountOut = Params.uniswapQuoter().quoteExactInputSingle(
+        vars.estimatedAmountOut = Params.uniswapQuoter().quoteExactInputSingle(
             getTokenAddress(_ccyFrom),
             getTokenAddress(_ccyTo),
             _poolFee,
-            depositAmount,
+            vars.depositAmount,
             0
         );
 
-        if (amountOutWithFee > estimatedAmountOut) {
-            amountOutWithFee = estimatedAmountOut;
+        if (vars.amountOutWithFee > vars.estimatedAmountOut) {
+            vars.amountOutWithFee = vars.estimatedAmountOut;
         }
 
-        ERC20Handler.safeApprove(
-            getTokenAddress(_ccyFrom),
-            address(Params.uniswapRouter()),
-            depositAmount
-        );
-
-        uint256 amountInWithFee = _estimateUniswapOutput(
+        vars.amountInWithFee = _executeSwap(
             _ccyFrom,
             _ccyTo,
-            amountOutWithFee,
-            depositAmount,
+            vars.amountOutWithFee,
+            vars.depositAmount,
             _poolFee
         );
-        uint256 liquidatorFee = (amountOutWithFee * Params.liquidatorFeeRate()) /
+        vars.liquidatorFee =
+            (vars.amountOutWithFee * Params.liquidatorFeeRate()) /
             ProtocolTypes.PCT_DIGIT;
 
-        uint256 protocolFee;
-        if (amountOutWithFee == estimatedAmountOut) {
-            protocolFee =
-                (amountOutWithFee * Params.liquidationProtocolFeeRate()) /
+        vars.protocolFee;
+        if (vars.amountOutWithFee == vars.estimatedAmountOut) {
+            vars.protocolFee =
+                (vars.amountOutWithFee * Params.liquidationProtocolFeeRate()) /
                 ProtocolTypes.PCT_DIGIT;
-            amountOut = amountOutWithFee - liquidatorFee - protocolFee;
+            amountOut =
+                vars.amountOutWithFee -
+                vars.liquidatorFee -
+                vars.protocolFee -
+                _offsetAmount;
         } else {
-            protocolFee = amountOutWithFee - _amountOut - liquidatorFee;
-            amountOut = _amountOut;
+            vars.protocolFee = vars.amountOutWithFee - _amountOut - vars.liquidatorFee;
+            amountOut = _amountOut - _offsetAmount;
         }
 
-        if (amountInWithFee > userDepositAmount) {
-            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, userDepositAmount);
+        if (vars.amountInWithFee > vars.userDepositAmount) {
+            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, vars.userDepositAmount);
             DepositManagementLogic.removeDepositAmount(
                 address(reserveFund()),
                 _ccyFrom,
-                amountInWithFee - userDepositAmount
+                vars.amountInWithFee - vars.userDepositAmount
             );
         } else {
-            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountInWithFee);
+            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, vars.amountInWithFee);
         }
 
         DepositManagementLogic.addDepositAmount(_user, _ccyTo, amountOut);
-        DepositManagementLogic.addDepositAmount(_liquidator, _ccyTo, liquidatorFee);
-        DepositManagementLogic.addDepositAmount(address(reserveFund()), _ccyTo, protocolFee);
+        DepositManagementLogic.addDepositAmount(_liquidator, _ccyTo, vars.liquidatorFee);
+        DepositManagementLogic.addDepositAmount(address(reserveFund()), _ccyTo, vars.protocolFee);
 
-        emit Swap(_user, _ccyFrom, _ccyTo, amountInWithFee, _amountOut, liquidatorFee, protocolFee);
+        emit Swap(
+            _user,
+            _ccyFrom,
+            _ccyTo,
+            vars.amountInWithFee,
+            _amountOut + _offsetAmount,
+            vars.liquidatorFee,
+            vars.protocolFee
+        );
     }
 
     /**
@@ -576,13 +597,19 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         emit Withdraw(_user, _ccy, withdrawableAmount);
     }
 
-    function _estimateUniswapOutput(
+    function _executeSwap(
         bytes32 _ccyFrom,
         bytes32 _ccyTo,
         uint256 _amountOut,
         uint256 _amountInMaximum,
         uint24 _poolFee
     ) internal returns (uint256) {
+        ERC20Handler.safeApprove(
+            getTokenAddress(_ccyFrom),
+            address(Params.uniswapRouter()),
+            _amountInMaximum
+        );
+
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
             tokenIn: getTokenAddress(_ccyFrom),
             tokenOut: getTokenAddress(_ccyTo),

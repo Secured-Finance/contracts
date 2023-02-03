@@ -1651,6 +1651,7 @@ describe('LendingMarketController', () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(1);
         await mockTokenVault.mock.getDepositAmount.returns(1);
+        await mockReserveFund.mock.isPaused.returns(true);
 
         const isLiquidator = await lendingMarketControllerProxy.isLiquidator(
           alice.address,
@@ -1741,7 +1742,7 @@ describe('LendingMarketController', () => {
                 targetCurrency,
                 targetCurrency,
                 maturities[0],
-                liquidationAmount,
+                '200000000000000000',
               ),
           );
       });
@@ -1754,6 +1755,71 @@ describe('LendingMarketController', () => {
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns('1');
         await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
+
+        await lendingMarketControllerProxy
+          .connect(signers[3])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            orderAmount,
+            orderRate,
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[4])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '200000000000000000',
+            '7999',
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[5])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '200000000000000000',
+            '8000',
+          )
+          .then((tx) =>
+            expect(tx).to.emit(lendingMarketControllerProxy, 'FillOrder'),
+          );
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            signers[3].address,
+            '1',
+          )
+          .then((tx) =>
+            expect(tx)
+              .to.emit(lendingMarketControllerProxy, 'Liquidate')
+              .withArgs(
+                signers[3].address,
+                targetCurrency,
+                targetCurrency,
+                maturities[0],
+                liquidationAmount,
+              ),
+          );
+      });
+
+      it('Liquidate lending position using funds in the reserve fund', async () => {
+        const orderAmount = ethers.BigNumber.from('100000000000000000');
+        const orderRate = ethers.BigNumber.from('8000');
+        const liquidationAmount = ethers.BigNumber.from('80000000000000000');
+
+        // Set up for the mocks
+        await mockCurrencyController.mock.convertFromETH.returns('1');
+        await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
+        await mockReserveFund.mock.isPaused.returns(false);
 
         await lendingMarketControllerProxy
           .connect(signers[3])

@@ -55,7 +55,8 @@ interface IGenesisValueVault {
     function initialize(
         bytes32 ccy,
         uint8 decimals,
-        uint256 compoundFactor
+        uint256 compoundFactor,
+        uint256 maturity
     ) external;
 
     function updateCompoundFactor(
@@ -70,5 +71,11 @@ interface IGenesisValueVault {
         address user,
         uint256 basisMaturity,
         int256 futureValue
+    ) external returns (bool);
+
+    function addGenesisValue(
+        bytes32 ccy,
+        address user,
+        int256 amount
     ) external returns (bool);
 }

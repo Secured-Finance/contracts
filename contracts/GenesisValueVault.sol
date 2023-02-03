@@ -102,7 +102,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             // genesisValue = featureValueInMaturity / compoundFactorInMaturity.
             // currentFeatureValue = genesisValue * currentCompoundFactor
             int256 genesisValue = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
-            return calculateFVFromGV(_ccy, 0, genesisValue);
+            return calculateFVFromGV(_ccy, Storage.slot().currentMaturity[_ccy], genesisValue);
         }
     }
 
@@ -111,9 +111,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _basisMaturity,
         int256 _futureValue
     ) public view override returns (int256) {
-        uint256 compoundFactor = Storage
-        .slot()
-        .maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
+        uint256 compoundFactor = _basisMaturity == Storage.slot().currentMaturity[_ccy]
+            ? getCompoundFactor(_ccy)
+            : Storage.slot().maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
 
         require(compoundFactor > 0, "Compound factor is not fixed yet");
 
@@ -129,7 +129,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _basisMaturity,
         int256 _genesisValue
     ) public view override returns (int256) {
-        uint256 compoundFactor = _basisMaturity == 0
+        uint256 compoundFactor = _basisMaturity == Storage.slot().currentMaturity[_ccy]
             ? getCompoundFactor(_ccy)
             : Storage.slot().maturityUnitPrices[_ccy][_basisMaturity].compoundFactor;
 
@@ -144,7 +144,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     function initialize(
         bytes32 _ccy,
         uint8 _decimals,
-        uint256 _compoundFactor
+        uint256 _compoundFactor,
+        uint256 _maturity
     ) external override onlyAcceptedContracts {
         require(_compoundFactor != 0, "Compound factor is zero");
         require(!isInitialized(_ccy), "Already initialized currency");
@@ -153,6 +154,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         Storage.slot().decimals[_ccy] = _decimals;
         Storage.slot().initialCompoundFactors[_ccy] = _compoundFactor;
         Storage.slot().compoundFactors[_ccy] = _compoundFactor;
+        Storage.slot().currentMaturity[_ccy] = _maturity;
     }
 
     function updateCompoundFactor(
@@ -215,37 +217,45 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         int256 _futureValue
     ) external override onlyAcceptedContracts returns (bool) {
         int256 amount = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
+        return addGenesisValue(_ccy, _user, amount);
+    }
+
+    function addGenesisValue(
+        bytes32 _ccy,
+        address _user,
+        int256 _amount
+    ) public override onlyAcceptedContracts returns (bool) {
         int256 balance = Storage.slot().balances[_ccy][_user];
 
-        if (amount >= 0) {
+        if (_amount >= 0) {
             if (balance >= 0) {
-                Storage.slot().totalLendingSupplies[_ccy] += uint256(amount);
+                Storage.slot().totalLendingSupplies[_ccy] += uint256(_amount);
             } else {
-                int256 diff = amount + balance;
+                int256 diff = _amount + balance;
                 if (diff >= 0) {
                     Storage.slot().totalLendingSupplies[_ccy] += uint256(diff);
-                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(amount - diff);
+                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(_amount - diff);
                 } else {
-                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(amount);
+                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(_amount);
                 }
             }
         } else {
             if (balance <= 0) {
-                Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-amount);
+                Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-_amount);
             } else {
-                int256 diff = amount + balance;
+                int256 diff = _amount + balance;
                 if (diff <= 0) {
                     Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-diff);
-                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-amount + diff);
+                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-_amount + diff);
                 } else {
-                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-amount);
+                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-_amount);
                 }
             }
         }
 
-        Storage.slot().balances[_ccy][_user] += amount;
+        Storage.slot().balances[_ccy][_user] += _amount;
 
-        emit Transfer(_ccy, address(0), _user, amount);
+        emit Transfer(_ccy, address(0), _user, _amount);
 
         return true;
     }
