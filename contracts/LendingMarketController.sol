@@ -483,7 +483,13 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        genesisValueVault().initialize(_ccy, 40, _compoundFactor);
+        genesisValueVault().initialize(
+            _ccy,
+            40,
+            _compoundFactor,
+            TimeLibrary.addMonths(_genesisDate, BASIS_TERM)
+        );
+
         Storage.slot().genesisDates[_ccy] = _genesisDate;
         FundCalculationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
     }
@@ -632,27 +638,32 @@ contract LendingMarketController is
         // and converted to actual funds first.
         cleanOrders(_debtCcy, _user);
 
-        uint256 liquidationAmount = FundCalculationLogic.convertToLiquidationAmountFromCollateral(
-            msg.sender,
-            _user,
-            _collateralCcy,
-            _debtCcy,
-            _debtMaturity,
-            _poolFee
-        );
+        (uint256 liquidationPVAmount, uint256 offsetPVAmount) = FundCalculationLogic
+            .convertToLiquidationAmountFromCollateral(
+                msg.sender,
+                _user,
+                _collateralCcy,
+                _debtCcy,
+                _debtMaturity,
+                _poolFee
+            );
 
-        uint256 filledAmount = _createOrder(
-            _debtCcy,
-            _debtMaturity,
-            _user,
-            ProtocolTypes.Side.LEND,
-            liquidationAmount,
-            0, // market order
-            true
-        );
+        uint256 executedPVAmount = offsetPVAmount;
+        if (liquidationPVAmount > 0) {
+            uint256 filledAmount = _createOrder(
+                _debtCcy,
+                _debtMaturity,
+                _user,
+                ProtocolTypes.Side.LEND,
+                liquidationPVAmount,
+                0, // market order
+                true
+            );
+            executedPVAmount += filledAmount;
+        }
 
-        if (filledAmount != 0) {
-            emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, liquidationAmount);
+        if (executedPVAmount != 0) {
+            emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, executedPVAmount);
 
             _convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
         }

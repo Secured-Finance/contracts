@@ -35,7 +35,8 @@ contract TokenVaultCallerMock {
         bytes32 _ccyIn,
         bytes32 _ccyOut,
         uint256 _amountOut,
-        uint24 _poolFee
+        uint24 _poolFee,
+        uint256 _offsetAmount
     ) public returns (uint256 amountIn) {
         return
             tokenVault.swapDepositAmounts(
@@ -44,7 +45,8 @@ contract TokenVaultCallerMock {
                 _ccyIn,
                 _ccyOut,
                 _amountOut,
-                _poolFee
+                _poolFee,
+                _offsetAmount
             );
     }
 

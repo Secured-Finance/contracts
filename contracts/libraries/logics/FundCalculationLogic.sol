@@ -18,6 +18,7 @@ library FundCalculationLogic {
     event UpdateOrderFeeRate(uint256 previousRate, uint256 ratio);
 
     struct CalculatedAmountVars {
+        address debtMarket;
         uint256 debtFVAmount;
         uint256 debtPVAmount;
         uint256 estimatedDebtPVAmount;
@@ -65,7 +66,7 @@ library FundCalculationLogic {
         bytes32 _debtCcy,
         uint256 _debtMaturity,
         uint24 _poolFee
-    ) public returns (uint256 liquidationAmount) {
+    ) public returns (uint256 liquidationPVAmount, uint256 offsetPVAmount) {
         CalculatedAmountVars memory vars;
 
         uint256 liquidationPVAmountInETH = AddressResolverLib.tokenVault().getLiquidationAmount(
@@ -76,13 +77,14 @@ library FundCalculationLogic {
         int256 futureValueAmount = calculateActualFutureValue(_debtCcy, _debtMaturity, _user);
         require(futureValueAmount < 0, "No debt in the selected maturity");
 
+        vars.debtMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity];
         vars.debtFVAmount = uint256(-futureValueAmount);
         vars.debtPVAmount = uint256(
             _calculatePVFromFVInMaturity(
                 _debtCcy,
                 _debtMaturity,
                 -futureValueAmount,
-                Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
+                vars.debtMarket
             )
         );
 
@@ -97,26 +99,86 @@ library FundCalculationLogic {
             ? vars.debtPVAmount
             : vars.liquidationPVAmount;
 
+        if (!AddressResolverLib.reserveFund().isPaused()) {
+            // Offset the user's debt using the future value amount and the genesis value amount hold by the reserve fund contract.
+            // Before this step, the target user's order must be cleaned up by `LendingMarketController#cleanOrders` function.
+            // If the target market is the nearest market(default market), the genesis value is used for the offset.
+            bool isDefaultMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
+                Storage.slot().lendingMarkets[_debtCcy][0];
+
+            if (isDefaultMarket) {
+                int256 offsetGVAmount = _offsetGenesisValue(
+                    _debtCcy,
+                    address(AddressResolverLib.reserveFund()),
+                    _user,
+                    AddressResolverLib.genesisValueVault().calculateGVFromFV(
+                        _debtCcy,
+                        _debtMaturity,
+                        int256(vars.liquidationPVAmount)
+                    )
+                );
+
+                if (offsetGVAmount > 0) {
+                    offsetPVAmount = uint256(
+                        _calculatePVFromFVInMaturity(
+                            _debtCcy,
+                            _debtMaturity,
+                            AddressResolverLib.genesisValueVault().calculateFVFromGV(
+                                _debtCcy,
+                                _debtMaturity,
+                                offsetGVAmount
+                            ),
+                            vars.debtMarket
+                        )
+                    );
+                }
+            }
+
+            uint256 offsetFVAmount = _offsetFutureValue(
+                _debtCcy,
+                _debtMaturity,
+                address(AddressResolverLib.reserveFund()),
+                _user,
+                _calculateFVFromPV(
+                    _debtCcy,
+                    _debtMaturity,
+                    vars.liquidationPVAmount - offsetPVAmount
+                )
+            );
+
+            if (offsetFVAmount > 0) {
+                offsetPVAmount += uint256(
+                    _calculatePVFromFVInMaturity(
+                        _debtCcy,
+                        _debtMaturity,
+                        int256(offsetFVAmount),
+                        vars.debtMarket
+                    )
+                );
+            }
+        }
+
         // Estimate the filled amount from actual orders in the order book using the future value of user debt.
         // If the estimated amount is less than the liquidation amount, the estimated amount is used as
-        // the liquidation amount because the user has only the original amount of the estimation as collateral.
+        // the liquidation amount.
         vars.estimatedDebtPVAmount = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
         ).estimateFilledAmount(ProtocolTypes.Side.LEND, vars.debtFVAmount);
 
-        liquidationAmount = vars.liquidationPVAmount > vars.estimatedDebtPVAmount
+        uint256 swapPVAmount = vars.liquidationPVAmount > vars.estimatedDebtPVAmount
             ? vars.estimatedDebtPVAmount
             : vars.liquidationPVAmount;
 
         // Swap collateral from deposited currency to debt currency using Uniswap.
         // This swapped collateral is used to unwind the debt.
-        liquidationAmount = AddressResolverLib.tokenVault().swapDepositAmounts(
+        liquidationPVAmount = AddressResolverLib.tokenVault().swapDepositAmounts(
             _liquidator,
             _user,
             _collateralCcy,
             _debtCcy,
-            liquidationAmount,
-            _poolFee
+            swapPVAmount,
+            _poolFee,
+            offsetPVAmount
         );
     }
 
@@ -523,6 +585,18 @@ library FundCalculationLogic {
         }
     }
 
+    function _calculateFVFromPV(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _presentValue
+    ) internal view returns (uint256) {
+        uint256 unitPrice = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity])
+            .getMidUnitPrice();
+
+        // NOTE: The formula is: futureValue = presentValue / unitPrice.
+        return (_presentValue * ProtocolTypes.PRICE_DIGIT) / unitPrice;
+    }
+
     function _calculatePVFromFVInMaturity(
         bytes32 _ccy,
         uint256 maturity,
@@ -556,7 +630,7 @@ library FundCalculationLogic {
         pure
         returns (int256)
     {
-        // NOTE: The formula is: futureValue = presentValue / unitPrice.
+        // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * int256(_unitPrice)) / int256(ProtocolTypes.PRICE_DIGIT);
     }
 
@@ -649,5 +723,82 @@ library FundCalculationLogic {
             )
         );
         borrowedAmount = inactiveAmount;
+    }
+
+    function _offsetFutureValue(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _lender,
+        address _borrower,
+        uint256 _maximumFVAmount
+    ) internal returns (uint256 offsetAmount) {
+        address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        address futureValueVault = Storage.slot().futureValueVaults[_ccy][market];
+
+        (int256 lenderFVAmount, uint256 lenderMaturity) = IFutureValueVault(futureValueVault)
+            .getFutureValue(_lender);
+        (int256 borrowerFVAmount, uint256 borrowerMaturity) = IFutureValueVault(futureValueVault)
+            .getFutureValue(_borrower);
+
+        if (lenderFVAmount <= 0 || borrowerFVAmount >= 0) {
+            return 0;
+        }
+
+        if (lenderMaturity == borrowerMaturity) {
+            offsetAmount = uint256(lenderFVAmount);
+
+            if (-borrowerFVAmount < lenderFVAmount) {
+                offsetAmount = uint256(-borrowerFVAmount);
+            }
+
+            if (_maximumFVAmount != 0 && offsetAmount > _maximumFVAmount) {
+                offsetAmount = _maximumFVAmount;
+            }
+
+            IFutureValueVault(futureValueVault).addBorrowFutureValue(
+                _lender,
+                offsetAmount,
+                lenderMaturity
+            );
+
+            IFutureValueVault(futureValueVault).addLendFutureValue(
+                _borrower,
+                offsetAmount,
+                borrowerMaturity
+            );
+        }
+    }
+
+    function _offsetGenesisValue(
+        bytes32 _ccy,
+        address _lender,
+        address _borrower,
+        int256 _maximumGVAmount
+    ) internal returns (int256 offsetAmount) {
+        int256 lenderGVAmount = AddressResolverLib.genesisValueVault().getGenesisValue(
+            _ccy,
+            _lender
+        );
+        int256 borrowerGVAmount = AddressResolverLib.genesisValueVault().getGenesisValue(
+            _ccy,
+            _borrower
+        );
+
+        if (lenderGVAmount <= 0 || borrowerGVAmount >= 0) {
+            return 0;
+        } else {
+            offsetAmount = lenderGVAmount;
+        }
+
+        if (-borrowerGVAmount < lenderGVAmount) {
+            offsetAmount = -borrowerGVAmount;
+        }
+
+        if (_maximumGVAmount != 0 && offsetAmount > _maximumGVAmount) {
+            offsetAmount = _maximumGVAmount;
+        }
+
+        AddressResolverLib.genesisValueVault().addGenesisValue(_ccy, _lender, -offsetAmount);
+        AddressResolverLib.genesisValueVault().addGenesisValue(_ccy, _borrower, offsetAmount);
     }
 }

@@ -655,6 +655,7 @@ describe('TokenVault', () => {
         previousCurrency,
         swapAmount,
         '1',
+        '0',
       );
 
       expect(
@@ -699,6 +700,7 @@ describe('TokenVault', () => {
       const signer = signers[4];
       const value = ethers.BigNumber.from('30000000000000');
       const swapAmount = ethers.BigNumber.from('7000000000000');
+      const offsetAmount = ethers.BigNumber.from('1000000');
 
       // Set up for the mocks
       await mockUniswapRouter.mock.exactOutputSingle.returns(value.mul(2));
@@ -723,6 +725,7 @@ describe('TokenVault', () => {
         previousCurrency,
         swapAmount,
         '1',
+        offsetAmount,
       );
 
       expect(
@@ -733,7 +736,7 @@ describe('TokenVault', () => {
           signer.address,
           previousCurrency,
         ),
-      ).to.equal(swapAmount);
+      ).to.equal(swapAmount.sub(offsetAmount));
 
       // Check fee amounts
       const { liquidatorFeeRate, liquidationProtocolFeeRate } =

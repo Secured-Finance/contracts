@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {CollateralParametersHandler as Params} from "./libraries/CollateralParametersHandler.sol";
@@ -431,6 +430,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _ccyTo Currency name to be converted to
      * @param _amountOut Amount to be converted to
      * @param _poolFee Uniswap pool fee
+     * @param _offsetAmount User's deposit amount to be offset against the reserve fund
      */
     function swapDepositAmounts(
         address _liquidator,
@@ -438,79 +438,35 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         bytes32 _ccyFrom,
         bytes32 _ccyTo,
         uint256 _amountOut,
-        uint24 _poolFee
+        uint24 _poolFee,
+        uint256 _offsetAmount
     ) external override onlyAcceptedContracts returns (uint256 amountOut) {
         require(isCollateral(_ccyFrom), "Not registered as collateral");
 
-        uint256 userDepositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
-        uint256 depositAmount = userDepositAmount;
+        uint256 amountIn;
+        uint256 liquidatorFee;
+        uint256 protocolFee;
 
-        if (!reserveFund().isPaused()) {
-            depositAmount += Storage.slot().depositAmounts[address(reserveFund())][_ccyFrom];
-        }
+        (amountOut, amountIn, liquidatorFee, protocolFee) = DepositManagementLogic
+            .swapDepositAmounts(
+                _liquidator,
+                _user,
+                _ccyFrom,
+                _ccyTo,
+                _amountOut,
+                _poolFee,
+                _offsetAmount
+            );
 
-        require(depositAmount > 0, "No deposit amount in the selected currency");
-
-        uint256 amountOutWithFee = (_amountOut * ProtocolTypes.PCT_DIGIT) /
-            (ProtocolTypes.PCT_DIGIT -
-                Params.liquidatorFeeRate() -
-                Params.liquidationProtocolFeeRate());
-
-        uint256 estimatedAmountOut = Params.uniswapQuoter().quoteExactInputSingle(
-            getTokenAddress(_ccyFrom),
-            getTokenAddress(_ccyTo),
-            _poolFee,
-            depositAmount,
-            0
-        );
-
-        if (amountOutWithFee > estimatedAmountOut) {
-            amountOutWithFee = estimatedAmountOut;
-        }
-
-        ERC20Handler.safeApprove(
-            getTokenAddress(_ccyFrom),
-            address(Params.uniswapRouter()),
-            depositAmount
-        );
-
-        uint256 amountInWithFee = _estimateUniswapOutput(
+        emit Swap(
+            _user,
             _ccyFrom,
             _ccyTo,
-            amountOutWithFee,
-            depositAmount,
-            _poolFee
+            amountIn,
+            amountOut + _offsetAmount,
+            liquidatorFee,
+            protocolFee
         );
-        uint256 liquidatorFee = (amountOutWithFee * Params.liquidatorFeeRate()) /
-            ProtocolTypes.PCT_DIGIT;
-
-        uint256 protocolFee;
-        if (amountOutWithFee == estimatedAmountOut) {
-            protocolFee =
-                (amountOutWithFee * Params.liquidationProtocolFeeRate()) /
-                ProtocolTypes.PCT_DIGIT;
-            amountOut = amountOutWithFee - liquidatorFee - protocolFee;
-        } else {
-            protocolFee = amountOutWithFee - _amountOut - liquidatorFee;
-            amountOut = _amountOut;
-        }
-
-        if (amountInWithFee > userDepositAmount) {
-            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, userDepositAmount);
-            DepositManagementLogic.removeDepositAmount(
-                address(reserveFund()),
-                _ccyFrom,
-                amountInWithFee - userDepositAmount
-            );
-        } else {
-            DepositManagementLogic.removeDepositAmount(_user, _ccyFrom, amountInWithFee);
-        }
-
-        DepositManagementLogic.addDepositAmount(_user, _ccyTo, amountOut);
-        DepositManagementLogic.addDepositAmount(_liquidator, _ccyTo, liquidatorFee);
-        DepositManagementLogic.addDepositAmount(address(reserveFund()), _ccyTo, protocolFee);
-
-        emit Swap(_user, _ccyFrom, _ccyTo, amountInWithFee, _amountOut, liquidatorFee, protocolFee);
     }
 
     /**
@@ -574,26 +530,5 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
 
         emit Withdraw(_user, _ccy, withdrawableAmount);
-    }
-
-    function _estimateUniswapOutput(
-        bytes32 _ccyFrom,
-        bytes32 _ccyTo,
-        uint256 _amountOut,
-        uint256 _amountInMaximum,
-        uint24 _poolFee
-    ) internal returns (uint256) {
-        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
-            tokenIn: getTokenAddress(_ccyFrom),
-            tokenOut: getTokenAddress(_ccyTo),
-            fee: _poolFee,
-            recipient: address(this),
-            deadline: block.timestamp,
-            amountOut: _amountOut,
-            amountInMaximum: _amountInMaximum,
-            sqrtPriceLimitX96: 0
-        });
-
-        return Params.uniswapRouter().exactOutputSingle(params);
     }
 }

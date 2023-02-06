@@ -447,7 +447,7 @@ describe('Integration Test: Liquidations', async () => {
       expect(reserveFundsAmountAfterDeposit).to.equal('1000');
     });
 
-    it('Take an order from the order book, Increase FIL exchange rate by 10%, Liquidate it once', async () => {
+    it('Take an order from the order book, Increase FIL exchange rate by 10%, Liquidate it once without using funds in the reserve fund', async () => {
       [alice, bob] = await getUsers(2);
 
       const lendingInfo = new LendingInfo(alice.address);
@@ -456,6 +456,7 @@ describe('Integration Test: Liquidations', async () => {
 
       const aliceBalanceBefore = await wFILToken.balanceOf(alice.address);
 
+      await reserveFund.pause();
       await tokenVault.connect(alice).deposit(hexETHString, depositAmount, {
         value: depositAmount,
       });
@@ -522,6 +523,12 @@ describe('Integration Test: Liquidations', async () => {
 
       await filToETHPriceFeed.updateAnswer(filToETHRate.mul('110').div('100'));
 
+      const rfFutureValueBefore = await lendingMarketController.getFutureValue(
+        hexFILString,
+        filMaturities[0],
+        reserveFund.address,
+      );
+
       const lendingInfoBefore = await lendingInfo.load('Before', {
         FIL: filMaturities[0],
       });
@@ -536,6 +543,14 @@ describe('Integration Test: Liquidations', async () => {
         ),
       ).to.emit(lendingMarketController, 'Liquidate');
 
+      await reserveFund.unpause();
+
+      const rfFutureValueAfter = await lendingMarketController.getFutureValue(
+        hexFILString,
+        filMaturities[0],
+        reserveFund.address,
+      );
+
       const lendingInfoAfter = await lendingInfo.load('After', {
         FIL: filMaturities[0],
       });
@@ -545,6 +560,7 @@ describe('Integration Test: Liquidations', async () => {
       expect(
         lendingInfoAfter.pvs[0].sub(lendingInfoBefore.pvs[0].div(2)).abs(),
       ).to.lt(ERROR_RANGE);
+      expect(rfFutureValueBefore).to.equal(rfFutureValueAfter);
     });
 
     it('Increase FIL exchange rate by 15%, Liquidate it twice', async () => {
@@ -621,6 +637,14 @@ describe('Integration Test: Liquidations', async () => {
 
       await filToETHPriceFeed.updateAnswer(filToETHRate.mul('115').div('100'));
 
+      const rfFutureValueBefore = await lendingMarketController.getFutureValue(
+        hexFILString,
+        filMaturities[0],
+        reserveFund.address,
+      );
+      // const tokenVaultBalanceBefore = await wETHToken.balanceOf(
+      //   tokenVault.address,
+      // );
       const lendingInfoBefore = await lendingInfo.load('Before', {
         FIL: filMaturities[0],
       });
@@ -635,9 +659,20 @@ describe('Integration Test: Liquidations', async () => {
         ),
       ).to.emit(lendingMarketController, 'Liquidate');
 
+      const rfFutureValueAfter = await lendingMarketController.getFutureValue(
+        hexFILString,
+        filMaturities[0],
+        reserveFund.address,
+      );
+      const tokenVaultBalanceAfter = await wETHToken.balanceOf(
+        tokenVault.address,
+      );
       const lendingInfoAfter1 = await lendingInfo.load('After1', {
         FIL: filMaturities[0],
       });
+
+      expect(rfFutureValueAfter.lt(rfFutureValueBefore));
+      expect(rfFutureValueAfter.gte(0));
 
       await expect(
         lendingMarketController.executeLiquidationCall(
@@ -649,11 +684,17 @@ describe('Integration Test: Liquidations', async () => {
         ),
       ).to.emit(lendingMarketController, 'Liquidate');
 
+      const tokenVaultBalanceAfter2 = await wETHToken.balanceOf(
+        tokenVault.address,
+      );
       const lendingInfoAfter2 = await lendingInfo.load('After2', {
         FIL: filMaturities[0],
       });
+
       lendingInfo.show();
 
+      expect(tokenVaultBalanceAfter2.lt(tokenVaultBalanceAfter));
+      expect(tokenVaultBalanceAfter2.gte(0));
       expect(lendingInfoAfter1.coverage.lt(lendingInfoBefore.coverage)).to.true;
       expect(lendingInfoAfter2.coverage.lt(lendingInfoAfter1.coverage)).to.true;
       expect(
@@ -674,7 +715,7 @@ describe('Integration Test: Liquidations', async () => {
       ).to.be.revertedWith('User has enough collateral');
     });
 
-    it('Roll a borrowing position by 25% rate, Liquidate it', async () => {
+    it('Roll a borrowing position by 25% rate, Liquidate it using the genesis value in the reserve fund for the offset', async () => {
       [alice, bob] = await getUsers(2);
 
       const lendingInfo = new LendingInfo(alice.address);

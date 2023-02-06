@@ -103,6 +103,7 @@ interface ITokenVault {
         bytes32 ccyFrom,
         bytes32 ccyTo,
         uint256 amountOut,
-        uint24 poolFee
+        uint24 poolFee,
+        uint256 offsetAmount
     ) external returns (uint256 amountIn);
 }
