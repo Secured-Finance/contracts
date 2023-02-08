@@ -66,10 +66,21 @@ library DepositManagementLogic {
     }
 
     function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256) {
-        (, , , uint256 lentAmount, , , uint256 borrowedAmount) = AddressResolverLib
-            .lendingMarketController()
-            .calculateFunds(_ccy, _user);
-        return Storage.slot().depositAmounts[_user][_ccy] + borrowedAmount - lentAmount;
+        (
+            uint256 workingLendOrdersAmount,
+            ,
+            ,
+            uint256 lentAmount,
+            ,
+            ,
+            uint256 borrowedAmount
+        ) = AddressResolverLib.lendingMarketController().calculateFunds(_ccy, _user);
+
+        return
+            Storage.slot().depositAmounts[_user][_ccy] +
+            borrowedAmount -
+            lentAmount -
+            workingLendOrdersAmount;
     }
 
     function getCollateralAmount(address _user)
@@ -145,17 +156,17 @@ library DepositManagementLogic {
 
         uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInETH(_user);
 
-        uint256 internalPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
+        uint256 actualPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
         uint256 minusCollateral = vars.workingLendOrdersAmount + vars.lentAmount;
-        uint256 plusCollateral = internalPlusCollateral + vars.collateralAmount;
+        uint256 plusCollateral = actualPlusCollateral + vars.collateralAmount;
 
         totalCollateral = plusCollateral >= minusCollateral ? plusCollateral - minusCollateral : 0;
         totalUsedCollateral =
             vars.workingBorrowOrdersAmount +
             vars.debtAmount +
             unsettledBorrowOrdersAmountInETH;
-        totalActualCollateral = internalPlusCollateral >= minusCollateral
-            ? internalPlusCollateral - minusCollateral
+        totalActualCollateral = actualPlusCollateral >= minusCollateral
+            ? actualPlusCollateral - minusCollateral
             : 0;
     }
 
