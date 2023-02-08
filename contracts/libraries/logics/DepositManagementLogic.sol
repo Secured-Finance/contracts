@@ -145,17 +145,17 @@ library DepositManagementLogic {
 
         uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInETH(_user);
 
-        uint256 actualPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
+        uint256 internalPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
         uint256 minusCollateral = vars.workingLendOrdersAmount + vars.lentAmount;
-        uint256 plusCollateral = actualPlusCollateral + vars.collateralAmount;
+        uint256 plusCollateral = internalPlusCollateral + vars.collateralAmount;
 
         totalCollateral = plusCollateral >= minusCollateral ? plusCollateral - minusCollateral : 0;
         totalUsedCollateral =
             vars.workingBorrowOrdersAmount +
             vars.debtAmount +
             unsettledBorrowOrdersAmountInETH;
-        totalActualCollateral = actualPlusCollateral >= minusCollateral
-            ? actualPlusCollateral - minusCollateral
+        totalActualCollateral = internalPlusCollateral >= minusCollateral
+            ? internalPlusCollateral - minusCollateral
             : 0;
     }
 

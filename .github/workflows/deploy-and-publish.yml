@@ -112,6 +112,7 @@ jobs:
           TOKEN_USDC: ${{ secrets.DEV_TOKEN_USDC }}
           TOKEN_WBTC: ${{ secrets.DEV_TOKEN_WBTC }}
           TOKEN_WETH: ${{ secrets.DEV_TOKEN_WETH }}
+          ENABLE_FAUCET: true
         run: npm run deploy development
       - name: Deploy for staging environment
         if: ${{ github.event.workflow.name == 'Merge into main' }}
@@ -124,6 +125,7 @@ jobs:
           TOKEN_USDC: ${{ secrets.STG_TOKEN_USDC }}
           TOKEN_WBTC: ${{ secrets.STG_TOKEN_WBTC }}
           TOKEN_WETH: ${{ secrets.STG_TOKEN_WETH }}
+          ENABLE_FAUCET: true
         run: npm run deploy staging
       - run: |
           git add .

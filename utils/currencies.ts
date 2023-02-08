@@ -94,7 +94,7 @@ const mockRates: MockRate[] = [
   {
     name: 'USDC/ETH',
     key: hexUSDCString,
-    decimals: 8,
+    decimals: 6,
     rate: usdcToETHRate,
   },
 ];

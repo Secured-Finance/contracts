@@ -531,7 +531,7 @@ library FundCalculationLogic {
 
             if (vars.ccy == _depositCcy) {
                 // plusDepositAmount: depositAmount + borrowedAmount
-                // minusDepositAmount: workingLendOrdersAmount + lentAmount;
+                // minusDepositAmount: workingLendOrdersAmount + lentAmount
                 vars.plusDepositAmount += vars.amounts[6];
                 vars.minusDepositAmount += vars.amounts[0] + vars.amounts[3];
             }
@@ -541,18 +541,22 @@ library FundCalculationLogic {
                 vars.amounts
             );
 
-            totalWorkingLendOrdersAmount += vars.amountsInETH[0];
             totalClaimableAmount += vars.amountsInETH[1];
             totalCollateralAmount += vars.amountsInETH[2];
             totalWorkingBorrowOrdersAmount += vars.amountsInETH[4];
             totalDebtAmount += vars.amountsInETH[5];
 
+            // NOTE: Lent amount and working lend orders amount are excluded here as they are not used
+            // for the collateral calculation.
+            // Those amounts need only to check whether there is enough deposit amount in the selected currency.
             if (vars.isCollateral[i]) {
+                totalWorkingLendOrdersAmount += vars.amountsInETH[0];
                 totalLentAmount += vars.amountsInETH[3];
                 totalBorrowedAmount += vars.amountsInETH[6];
             }
         }
 
+        // Check if the user has enough collateral in the selected currency.
         isEnoughDeposit = vars.plusDepositAmount >= vars.minusDepositAmount;
     }
 

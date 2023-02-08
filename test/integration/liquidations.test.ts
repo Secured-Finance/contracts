@@ -31,7 +31,7 @@ describe('Integration Test: Liquidations', async () => {
   let reserveFund: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
-  let wUSDCToken: Contract;
+  let usdcToken: Contract;
   let filToETHPriceFeed: Contract;
   let usdcToUSDPriceFeed: Contract;
 
@@ -110,14 +110,14 @@ describe('Integration Test: Liquidations', async () => {
         await wFILToken
           .connect(owner)
           .transfer(signer.address, initialFILBalance);
-        await wUSDCToken
+        await usdcToken
           .connect(owner)
           .transfer(signer.address, initialUSDCBalance);
       }
       await wFILToken
         .connect(signer)
         .approve(tokenVault.address, ethers.constants.MaxUint256);
-      await wUSDCToken
+      await usdcToken
         .connect(signer)
         .approve(tokenVault.address, ethers.constants.MaxUint256);
     });
@@ -201,14 +201,14 @@ describe('Integration Test: Liquidations', async () => {
       reserveFund,
       wETHToken,
       wFILToken,
-      wUSDCToken,
+      usdcToken,
       filToETHPriceFeed,
       usdcToUSDPriceFeed,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
-    await tokenVault.registerCurrency(hexUSDCString, wUSDCToken.address, false);
+    await tokenVault.registerCurrency(hexUSDCString, usdcToken.address, false);
 
     mockUniswapRouter = await ethers
       .getContractFactory('MockUniswapRouter')
@@ -223,10 +223,10 @@ describe('Integration Test: Liquidations', async () => {
 
     await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
     await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
-    await mockUniswapRouter.setToken(hexUSDCString, wUSDCToken.address);
+    await mockUniswapRouter.setToken(hexUSDCString, usdcToken.address);
     await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
     await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
-    await mockUniswapQuoter.setToken(hexUSDCString, wUSDCToken.address);
+    await mockUniswapQuoter.setToken(hexUSDCString, usdcToken.address);
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
@@ -245,7 +245,7 @@ describe('Integration Test: Liquidations', async () => {
     await wFILToken
       .connect(owner)
       .transfer(mockUniswapRouter.address, initialFILBalance);
-    await wUSDCToken
+    await usdcToken
       .connect(owner)
       .transfer(mockUniswapRouter.address, initialUSDCBalance);
 
@@ -994,7 +994,7 @@ describe('Integration Test: Liquidations', async () => {
     let lendingInfo: LendingInfo;
 
     const filledOrderAmountInFIL = BigNumber.from('200000000000000000000');
-    const filledOrderAmountInUSDC = BigNumber.from('60000000000');
+    const filledOrderAmountInUSDC = BigNumber.from('600000000');
     const depositAmountInETH = BigNumber.from('1500000000000000000');
 
     beforeEach(async () => {
@@ -1002,7 +1002,7 @@ describe('Integration Test: Liquidations', async () => {
       lendingInfo = new LendingInfo(alice.address);
 
       const aliceFILBalanceBefore = await wFILToken.balanceOf(alice.address);
-      const aliceUSDCBalanceBefore = await wUSDCToken.balanceOf(alice.address);
+      const aliceUSDCBalanceBefore = await usdcToken.balanceOf(alice.address);
 
       await tokenVault
         .connect(alice)
@@ -1122,7 +1122,7 @@ describe('Integration Test: Liquidations', async () => {
         .connect(alice)
         .withdraw(hexUSDCString, filledOrderAmountInUSDC);
 
-      const aliceUSDCBalanceAfter = await wUSDCToken.balanceOf(alice.address);
+      const aliceUSDCBalanceAfter = await usdcToken.balanceOf(alice.address);
       expect(aliceUSDCBalanceAfter.sub(aliceUSDCBalanceBefore)).to.equal(
         filledOrderAmountInUSDC,
       );

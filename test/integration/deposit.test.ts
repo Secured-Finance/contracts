@@ -4,7 +4,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexETHString, hexFILString } from '../../utils/strings';
+import { hexETHString, hexFILString, hexUSDCString } from '../../utils/strings';
 import {
   filToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
@@ -21,9 +21,11 @@ describe('Integration Test: Deposit', async () => {
   let carol: SignerWithAddress;
 
   let addressResolver: Contract;
+  let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
+  let usdcToken: Contract;
   let wFILToken: Contract;
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
@@ -34,6 +36,7 @@ describe('Integration Test: Deposit', async () => {
   let signers: Signers;
 
   const initialETHBalance = BigNumber.from('1000000000000000000');
+  const initialUSDCBalance = BigNumber.from('10000000000');
   const initialFILBalance = BigNumber.from('100000000000000000000');
 
   const getUsers = async (count: number) =>
@@ -41,6 +44,9 @@ describe('Integration Test: Deposit', async () => {
       await wFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
+      await usdcToken
+        .connect(owner)
+        .transfer(signer.address, initialUSDCBalance);
     });
 
   before('Deploy Contracts', async () => {
@@ -49,13 +55,16 @@ describe('Integration Test: Deposit', async () => {
 
     ({
       addressResolver,
+      currencyController,
       tokenVault,
       lendingMarketController,
       wETHToken,
+      usdcToken,
       wFILToken,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
+    await tokenVault.registerCurrency(hexUSDCString, usdcToken.address, false);
     await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
 
     mockUniswapRouter = await ethers
@@ -70,8 +79,10 @@ describe('Integration Test: Deposit', async () => {
       );
 
     await mockUniswapRouter.setToken(hexETHString, wETHToken.address);
+    await mockUniswapRouter.setToken(hexUSDCString, usdcToken.address);
     await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
     await mockUniswapQuoter.setToken(hexETHString, wETHToken.address);
+    await mockUniswapQuoter.setToken(hexUSDCString, usdcToken.address);
     await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
 
     await tokenVault.setCollateralParameters(
@@ -83,6 +94,7 @@ describe('Integration Test: Deposit', async () => {
     );
 
     await tokenVault.updateCurrency(hexETHString, true);
+    await tokenVault.updateCurrency(hexUSDCString, true);
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
@@ -233,7 +245,7 @@ describe('Integration Test: Deposit', async () => {
       [alice] = await getUsers(1);
     });
 
-    it('Deposit ETH', async () => {
+    it('Deposit ETH (Non-ERC20 collateral currency)', async () => {
       const totalCollateralAmountBefore =
         await tokenVault.getTotalDepositAmount(hexETHString);
       const collateralAmountBefore = await tokenVault
@@ -270,7 +282,7 @@ describe('Integration Test: Deposit', async () => {
       ).to.equal(initialETHBalance.div(5));
     });
 
-    it('Deposit FIL', async () => {
+    it('Deposit FIL (ERC20 non-collateral currency)', async () => {
       const totalCollateralAmountBefore =
         await tokenVault.getTotalDepositAmount(hexFILString);
       const collateralAmountBefore = await tokenVault
@@ -338,6 +350,48 @@ describe('Integration Test: Deposit', async () => {
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
       ).to.equal(initialETHBalance.div(5));
+    });
+
+    it('Deposit USDC (ERC20 collateral currency)', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexUSDCString);
+      const collateralAmountBefore = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+
+      await usdcToken
+        .connect(alice)
+        .approve(tokenVault.address, initialUSDCBalance.div(5));
+      await tokenVault
+        .connect(alice)
+        .deposit(hexUSDCString, initialUSDCBalance.div(5));
+
+      const collateralAmountAfter = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+      const tokenVaultBalance = await usdcToken.balanceOf(tokenVault.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexUSDCString,
+      );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexUSDCString,
+      );
+
+      const estimatedDepositAmountInETH = await currencyController[
+        'convertToETH(bytes32,uint256)'
+      ](hexUSDCString, initialUSDCBalance.div(5));
+
+      expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(
+        estimatedDepositAmountInETH,
+      );
+      expect(tokenVaultBalance).to.equal(initialUSDCBalance.div(5));
+      expect(currencies.includes(hexUSDCString)).to.equal(true);
+      expect(depositAmount).to.equal(initialUSDCBalance.div(5));
+      expect(
+        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
+      ).to.equal(initialUSDCBalance.div(5));
     });
   });
 

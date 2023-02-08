@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies, Currency } from '../utils/currencies';
+import { currencies } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -14,7 +14,7 @@ const func: DeployFunction = async function ({
   // Deploy mock tokens
   const log = {};
   const logHeader = 'Contract Addresses';
-  const mockCurrencies: Currency[] = [];
+
   for (const currency of currencies) {
     if (currency.env) {
       console.log(`${currency.symbol} uses the existing address`);
@@ -29,47 +29,52 @@ const func: DeployFunction = async function ({
     log[currency.symbol] = { [logHeader]: tokenDeployResult.address };
 
     await executeIfNewlyDeployment(currency.mock, tokenDeployResult);
-    mockCurrencies.push(currency);
   }
 
   console.table(log);
 
   // Deploy TokenFaucet
-  if (mockCurrencies.length > 0) {
+  if (process.env.ENABLE_FAUCET === 'true') {
     const faucetDeployResult = await deploy('TokenFaucet', { from: deployer });
-    await executeIfNewlyDeployment('TokenFaucet', faucetDeployResult);
 
-    const tokenFaucetContract = await ethers.getContractAt(
+    await executeIfNewlyDeployment(
       'TokenFaucet',
-      faucetDeployResult.address,
-    );
-
-    for (const currency of mockCurrencies) {
-      const mockToken = await deployments.get(currency.mock);
-
-      if (
-        currency.symbol !== 'WETH' &&
-        (await tokenFaucetContract.getCurrencyAddress(currency.key)) !==
-          mockToken.address
-      ) {
-        const mockTokenContract = await ethers.getContractAt(
-          currency.mock,
-          mockToken.address,
+      faucetDeployResult,
+      async () => {
+        const tokenFaucetContract = await ethers.getContractAt(
+          'TokenFaucet',
+          faucetDeployResult.address,
         );
 
-        await tokenFaucetContract
-          .registerCurrency(
-            currency.key,
-            mockToken.address,
-            ethers.BigNumber.from(currency.args?.[0]).div(100),
-          )
-          .then((tx) => tx.wait());
+        for (const currency of currencies) {
+          const mockToken =
+            currency.env || (await deployments.get(currency.mock)).address;
 
-        await mockTokenContract
-          .setMinterRole(faucetDeployResult.address)
-          .then((tx) => tx.wait());
-      }
-    }
+          if (
+            currency.symbol !== 'WETH' &&
+            (await tokenFaucetContract.getCurrencyAddress(currency.key)) !==
+              mockToken
+          ) {
+            const mockTokenContract = await ethers.getContractAt(
+              currency.mock,
+              mockToken,
+            );
+
+            await tokenFaucetContract
+              .registerCurrency(
+                currency.key,
+                mockToken,
+                ethers.BigNumber.from(currency.args?.[0]).div(100),
+              )
+              .then((tx) => tx.wait());
+
+            await mockTokenContract
+              .setMinterRole(faucetDeployResult.address)
+              .then((tx) => tx.wait());
+          }
+        }
+      },
+    );
   }
 };
 
