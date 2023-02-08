@@ -829,7 +829,7 @@ describe('Integration Test: Order Book', async () => {
       });
     });
 
-    describe('Place a lending order, Cancel orders', async () => {
+    describe('Place a lending order by a user who has a deposit, Cancel orders', async () => {
       const depositAmountInETH = initialETHBalance.div(5);
       const orderAmountInETH = depositAmountInETH.mul(4).div(5);
       const orderAmountInFIL = orderAmountInETH
@@ -844,19 +844,32 @@ describe('Integration Test: Order Book', async () => {
         await createSampleFILOrders(carol);
       });
 
-      it('Place a lending order on the FIL market', async () => {
-        await wFILToken
-          .connect(alice)
-          .approve(tokenVault.address, orderAmountInFIL);
-
+      it('Deposit ETH', async () => {
         await tokenVault
           .connect(alice)
           .deposit(hexETHString, orderAmountInETH, {
             value: orderAmountInETH,
           });
 
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETHString,
+        );
+
+        expect(aliceDepositAmount).to.equal(orderAmountInETH);
+      });
+
+      it('Place a lending order on the FIL market', async () => {
+        await wFILToken
+          .connect(alice)
+          .approve(tokenVault.address, orderAmountInFIL);
+
         const totalCollateralAmountBefore =
           await tokenVault.getTotalCollateralAmount(alice.address);
+        const depositAmountBefore = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETHString,
+        );
 
         await lendingMarketController
           .connect(alice)
@@ -870,7 +883,10 @@ describe('Integration Test: Order Book', async () => {
 
         const totalCollateralAmountAfter =
           await tokenVault.getTotalCollateralAmount(alice.address);
-
+        const depositAmountAfter = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETHString,
+        );
         const aliceFV = await lendingMarketController.getFutureValue(
           hexFILString,
           filMaturities[0],
@@ -884,6 +900,7 @@ describe('Integration Test: Order Book', async () => {
         expect(totalCollateralAmountBefore).to.equal(
           totalCollateralAmountAfter,
         );
+        expect(depositAmountBefore).to.equal(depositAmountAfter);
         expect(unusedCollateral).to.equal(totalCollateralAmountBefore);
         expect(aliceFV).to.equal('0');
         expect(coverage).to.equal('0');
