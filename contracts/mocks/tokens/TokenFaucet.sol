@@ -6,7 +6,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMockERC20} from "./IMockERC20.sol";
 
 contract TokenFaucet is Ownable {
-    uint256 private constant MINT_INTERVAL = 1 hours;
     mapping(bytes32 => address) currencies;
     mapping(bytes32 => uint256) mintableAmounts;
 
