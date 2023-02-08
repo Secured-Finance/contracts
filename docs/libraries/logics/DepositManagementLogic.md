@@ -16,6 +16,17 @@ struct CalculatedFundVars {
 }
 ```
 
+### SwapDepositAmountsVars
+
+```solidity
+struct SwapDepositAmountsVars {
+  uint256 userDepositAmount;
+  uint256 depositAmount;
+  uint256 amountOutWithFee;
+  uint256 estimatedAmountOut;
+}
+```
+
 ### isCovered
 
 ```solidity
@@ -88,6 +99,12 @@ Withdraws funds by the caller from unused collateral.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
+### swapDepositAmounts
+
+```solidity
+function swapDepositAmounts(address _liquidator, address _user, bytes32 _ccyFrom, bytes32 _ccyTo, uint256 _amountOut, uint24 _poolFee, uint256 _offsetAmount) public returns (uint256 amountOut, uint256 amountInWithFee, uint256 liquidatorFee, uint256 protocolFee)
+```
+
 ### _getTotalInternalDepositAmountInETH
 
 ```solidity
@@ -109,5 +126,11 @@ Gets the total of amount deposited in the user's collateral of all currencies
 
 ```solidity
 function _updateUsedCurrencies(address _user, bytes32 _ccy) internal
+```
+
+### _executeSwap
+
+```solidity
+function _executeSwap(bytes32 _ccyFrom, bytes32 _ccyTo, uint256 _amountOut, uint256 _amountInMaximum, uint24 _poolFee) internal returns (uint256)
 ```
 

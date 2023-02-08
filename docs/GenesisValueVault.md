@@ -113,7 +113,7 @@ function calculateFVFromGV(bytes32 _ccy, uint256 _basisMaturity, int256 _genesis
 ### initialize
 
 ```solidity
-function initialize(bytes32 _ccy, uint8 _decimals, uint256 _compoundFactor) external
+function initialize(bytes32 _ccy, uint8 _decimals, uint256 _compoundFactor, uint256 _maturity) external
 ```
 
 ### updateCompoundFactor
@@ -126,5 +126,11 @@ function updateCompoundFactor(bytes32 _ccy, uint256 _maturity, uint256 _nextMatu
 
 ```solidity
 function addGenesisValue(bytes32 _ccy, address _user, uint256 _basisMaturity, int256 _futureValue) external returns (bool)
+```
+
+### addGenesisValue
+
+```solidity
+function addGenesisValue(bytes32 _ccy, address _user, int256 _amount) public returns (bool)
 ```
 

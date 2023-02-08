@@ -40,7 +40,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | ---- | ---- | ----------- |
 | _owner | address | The address of the contract owner |
 | _resolver | address | The address of the Address Resolver contract |
-| _liquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
+| _liquidationThresholdRate | uint256 | The liquidation threshold rate |
 | _liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
 | _liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
 | _uniswapRouter | address | Uniswap router contract address |
@@ -427,7 +427,7 @@ Removes deposit amount.
 ### swapDepositAmounts
 
 ```solidity
-function swapDepositAmounts(address _liquidator, address _user, bytes32 _ccyFrom, bytes32 _ccyTo, uint256 _amountOut, uint24 _poolFee) external returns (uint256 amountOut)
+function swapDepositAmounts(address _liquidator, address _user, bytes32 _ccyFrom, bytes32 _ccyTo, uint256 _amountOut, uint24 _poolFee, uint256 _offsetAmount) external returns (uint256 amountOut)
 ```
 
 Swap the deposited amount to convert to a different currency using Uniswap for liquidation.
@@ -440,6 +440,7 @@ Swap the deposited amount to convert to a different currency using Uniswap for l
 | _ccyTo | bytes32 | Currency name to be converted to |
 | _amountOut | uint256 | Amount to be converted to |
 | _poolFee | uint24 | Uniswap pool fee |
+| _offsetAmount | uint256 | User's deposit amount to be offset against the reserve fund |
 
 ### setCollateralParameters
 

@@ -2,10 +2,7 @@
 
 ## CollateralParametersHandler
 
-CollateralParametersHandler is an library to handle the parameters fro TokenVault contract.
-
-This manage the main collateral parameters like Margin Call ratio, Auto-Liquidation level,
-Liquidation price, and Minimal collateral ratio.
+CollateralParametersHandler is an library to handle the main collateral parameters.
 
 ### UpdateAutoLiquidationThresholdRate
 
@@ -102,9 +99,9 @@ solves the issue of frontrunning during parameters tuning_
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _liquidationThresholdRate | uint256 | Auto liquidation threshold rate |
-| _liquidationProtocolFeeRate | uint256 | Liquidation fee received by protocol |
-| _liquidatorFeeRate | uint256 | Liquidation fee received by liquidators |
+| _liquidationThresholdRate | uint256 | The liquidation threshold rate |
+| _liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
+| _liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
 | _uniswapRouter | address | Uniswap router contract address |
 | _uniswapQuoter | address | Uniswap quoter contract address |
 

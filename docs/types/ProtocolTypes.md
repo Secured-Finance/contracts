@@ -22,6 +22,12 @@ uint256 PCT_DIGIT
 uint256 DAYS_IN_YEAR
 ```
 
+### SECONDS_IN_MONTH
+
+```solidity
+uint256 SECONDS_IN_MONTH
+```
+
 ### SECONDS_IN_YEAR
 
 ```solidity
@@ -34,30 +40,6 @@ uint256 SECONDS_IN_YEAR
 enum Side {
   LEND,
   BORROW
-}
-```
-
-### Ccy
-
-```solidity
-enum Ccy {
-  ETH,
-  FIL,
-  USDC,
-  BTC
-}
-```
-
-### CollateralState
-
-```solidity
-enum CollateralState {
-  EMPTY,
-  AVAILABLE,
-  IN_USE,
-  MARGIN_CALL,
-  LIQUIDATION_IN_PROGRESS,
-  LIQUIDATION
 }
 ```
 

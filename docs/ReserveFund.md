@@ -30,6 +30,34 @@ Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
 
+### isPaused
+
+```solidity
+function isPaused() public view returns (bool)
+```
+
+Gets if the reserve fund is paused.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the reserve fund is paused |
+
+### pause
+
+```solidity
+function pause() public
+```
+
+Pauses the reserve fund.
+
+### unpause
+
+```solidity
+function unpause() public
+```
+
+Unpauses the reserve fund.
+
 ### deposit
 
 ```solidity

@@ -2,10 +2,17 @@
 
 ## FundCalculationLogic
 
+### UpdateOrderFeeRate
+
+```solidity
+event UpdateOrderFeeRate(uint256 previousRate, uint256 ratio)
+```
+
 ### CalculatedAmountVars
 
 ```solidity
 struct CalculatedAmountVars {
+  address debtMarket;
   uint256 debtFVAmount;
   uint256 debtPVAmount;
   uint256 estimatedDebtPVAmount;
@@ -26,10 +33,22 @@ struct CalculatedTotalFundInETHVars {
 }
 ```
 
+### updateOrderFeeRate
+
+```solidity
+function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) internal
+```
+
+### calculateOrderFeeAmount
+
+```solidity
+function calculateOrderFeeAmount(bytes32 _ccy, uint256 _amount, uint256 _maturity) public view returns (uint256 orderFeeAmount)
+```
+
 ### convertToLiquidationAmountFromCollateral
 
 ```solidity
-function convertToLiquidationAmountFromCollateral(address _liquidator, address _user, bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, uint24 _poolFee) public returns (uint256 liquidationAmount)
+function convertToLiquidationAmountFromCollateral(address _liquidator, address _user, bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, uint24 _poolFee) public returns (uint256 liquidationPVAmount, uint256 offsetPVAmount)
 ```
 
 ### calculateActualFutureValue
@@ -92,6 +111,12 @@ function calculateTotalFundsInETH(address _user, bytes32 _depositCcy, uint256 _d
 function _calculateCurrentFVFromFVInMaturity(bytes32 _ccy, uint256 maturity, int256 futureValueInMaturity, address lendingMarketInMaturity) internal view returns (int256 futureValue)
 ```
 
+### _calculateFVFromPV
+
+```solidity
+function _calculateFVFromPV(bytes32 _ccy, uint256 _maturity, uint256 _presentValue) internal view returns (uint256)
+```
+
 ### _calculatePVFromFVInMaturity
 
 ```solidity
@@ -120,5 +145,17 @@ function _calculateLentFundsFromOrders(bytes32 _ccy, address _market, address _u
 
 ```solidity
 function _calculateBorrowedFundsFromOrders(bytes32 _ccy, address _market, address _user) internal view returns (uint256 workingOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+```
+
+### _offsetFutureValue
+
+```solidity
+function _offsetFutureValue(bytes32 _ccy, uint256 _maturity, address _lender, address _borrower, uint256 _maximumFVAmount) internal returns (uint256 offsetAmount)
+```
+
+### _offsetGenesisValue
+
+```solidity
+function _offsetGenesisValue(bytes32 _ccy, address _lender, address _borrower, int256 _maximumGVAmount) internal returns (int256 offsetAmount)
 ```
 

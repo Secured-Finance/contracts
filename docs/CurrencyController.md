@@ -173,7 +173,7 @@ Removes existing Chainlink price feed.
 ### getLastUSDPrice
 
 ```solidity
-function getLastUSDPrice(bytes32 _ccy) public view returns (int256)
+function getLastUSDPrice(bytes32 _ccy) public view returns (int256 price)
 ```
 
 Gets the last price in USD for the selected currency.
@@ -184,7 +184,7 @@ Gets the last price in USD for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | int256 | The last price in USD |
+| price | int256 | The last price in USD |
 
 ### getHistoricalUSDPrice
 
@@ -206,7 +206,7 @@ Gets the historical price in USD for the selected currency.
 ### getLastETHPrice
 
 ```solidity
-function getLastETHPrice(bytes32 _ccy) public view returns (int256)
+function getLastETHPrice(bytes32 _ccy) public view returns (int256 price)
 ```
 
 Gets the last price in ETH for the selected currency.
@@ -217,7 +217,7 @@ Gets the last price in ETH for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | int256 | The last price in ETH |
+| price | int256 | The last price in ETH |
 
 ### getHistoricalETHPrice
 
@@ -308,5 +308,11 @@ Gets the converted amount to the selected currency from ETH.
 
 ```solidity
 function _isETH(bytes32 _ccy) internal pure returns (bool)
+```
+
+### _getLastETHPrice
+
+```solidity
+function _getLastETHPrice(bytes32 _ccy) internal view returns (int256 price)
 ```
 

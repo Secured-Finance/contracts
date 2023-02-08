@@ -84,6 +84,18 @@ Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
+### isLiquidator
+
+```solidity
+function isLiquidator(address _user) external view returns (bool)
+```
+
+Gets if the user is registered as a liquidator.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the user is registered as a liquidator or not |
+
 ### getGenesisDate
 
 ```solidity
@@ -339,6 +351,22 @@ Gets the total present value of the account converted to ETH.
 | ---- | ---- | ----------- |
 | totalPresentValue | int256 | The total present value in ETH |
 
+### getOrderFeeRate
+
+```solidity
+function getOrderFeeRate(bytes32 _ccy) external view returns (uint256)
+```
+
+Gets the order fee rate
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The order fee rate received by protocol |
+
 ### calculateLentFundsFromOrders
 
 ```solidity
@@ -435,7 +463,7 @@ Gets if the lending market is initialized.
 ### initializeLendingMarket
 
 ```solidity
-function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor) external
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate) external
 ```
 
 Initialize the lending market to set a genesis date and compound factor
@@ -445,6 +473,7 @@ Initialize the lending market to set a genesis date and compound factor
 | _ccy | bytes32 | Currency name in bytes32 |
 | _genesisDate | uint256 | The genesis date when the initial market is opened |
 | _compoundFactor | uint256 | The initial compound factor when the initial market is opened |
+| _orderFeeRate | uint256 | The order fee rate received by protocol |
 
 ### createLendingMarket
 
@@ -491,7 +520,7 @@ before the execution of order creation.
 ### depositAndCreateOrder
 
 ```solidity
-function depositAndCreateOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external returns (bool)
+function depositAndCreateOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external payable returns (bool)
 ```
 
 Deposits funds and creates an order at the same time.
@@ -502,24 +531,6 @@ Deposits funds and creates an order at the same time.
 | _maturity | uint256 | The maturity of the selected market |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | True if the execution of the operation succeeds |
-
-### depositAndCreateLendOrderWithETH
-
-```solidity
-function depositAndCreateLendOrderWithETH(bytes32 _ccy, uint256 _maturity, uint256 _unitPrice) external payable returns (bool)
-```
-
-Deposits funds and creates a lend order with ETH at the same time.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
 
 | Name | Type | Description |
@@ -564,6 +575,18 @@ if the collateral is insufficient._
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
+### registerLiquidator
+
+```solidity
+function registerLiquidator(bool _isLiquidator) external
+```
+
+Registers a user as a liquidator.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _isLiquidator | bool | The boolean if the user is a liquidator or not |
+
 ### rotateLendingMarkets
 
 ```solidity
@@ -574,6 +597,7 @@ Rotates the lending markets. In this rotation, the following actions are happene
 - Updates the maturity at the beginning of the market array.
 - Moves the beginning of the market array to the end of it (Market rotation).
 - Update the compound factor in this contract using the next market unit price. (Auto-rolls)
+- Convert the future value held by reserve funds into the genesis value
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -610,6 +634,19 @@ Unpauses previously deployed lending market by currency
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
+
+### updateOrderFeeRate
+
+```solidity
+function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) external
+```
+
+Updates the order fee rate
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 |  |
+| _orderFeeRate | uint256 | The order fee rate received by protocol |
 
 ### cleanAllOrders
 
@@ -657,7 +694,13 @@ Converts the future value to the genesis value if there is balance in the past m
 ### _createOrder
 
 ```solidity
-function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _isForced) private returns (bool isFilled)
+function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _isForced) private returns (uint256 filledAmount)
+```
+
+### _updateDepositAmount
+
+```solidity
+function _updateDepositAmount(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledFutureValue, uint256 _filledAmount, uint256 _feeFutureValue) private returns (bool)
 ```
 
 ### _cleanOrders

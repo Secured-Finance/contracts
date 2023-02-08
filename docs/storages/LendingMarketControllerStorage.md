@@ -18,6 +18,7 @@ struct Storage {
   mapping(bytes32 => uint256) genesisDates;
   mapping(address => struct EnumerableSet.Bytes32Set) usedCurrencies;
   mapping(address => mapping(bytes32 => mapping(uint256 => bool))) activeOrderExistences;
+  mapping(bytes32 => uint256) orderFeeRates;
 }
 ```
 
