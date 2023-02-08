@@ -849,6 +849,15 @@ describe('Integration Test: Order Book', async () => {
           .connect(alice)
           .approve(tokenVault.address, orderAmountInFIL);
 
+        await tokenVault
+          .connect(alice)
+          .deposit(hexETHString, orderAmountInETH, {
+            value: orderAmountInETH,
+          });
+
+        const totalCollateralAmountBefore =
+          await tokenVault.getTotalCollateralAmount(alice.address);
+
         await lendingMarketController
           .connect(alice)
           .depositAndCreateOrder(
@@ -858,6 +867,9 @@ describe('Integration Test: Order Book', async () => {
             orderAmountInFIL,
             '8000',
           );
+
+        const totalCollateralAmountAfter =
+          await tokenVault.getTotalCollateralAmount(alice.address);
 
         const aliceFV = await lendingMarketController.getFutureValue(
           hexFILString,
@@ -869,7 +881,10 @@ describe('Integration Test: Order Book', async () => {
         );
         const coverage = await tokenVault.getCoverage(alice.address);
 
-        expect(unusedCollateral).to.equal('0');
+        expect(totalCollateralAmountBefore).to.equal(
+          totalCollateralAmountAfter,
+        );
+        expect(unusedCollateral).to.equal(totalCollateralAmountBefore);
         expect(aliceFV).to.equal('0');
         expect(coverage).to.equal('0');
       });

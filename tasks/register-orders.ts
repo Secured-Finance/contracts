@@ -1,8 +1,32 @@
-import BigNumber from 'bignumber.js';
+import BigNumberJS from 'bignumber.js';
+import { BigNumber } from 'ethers';
 import { task, types } from 'hardhat/config';
 import { Side } from '../utils/constants';
 import { currencies } from '../utils/currencies';
 import { toBytes32 } from '../utils/strings';
+
+const ERC20_ABI = [
+  {
+    inputs: [
+      { internalType: 'address', name: '', type: 'address' },
+      { internalType: 'address', name: '', type: 'address' },
+    ],
+    name: 'allowance',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'address', name: 'guy', type: 'address' },
+      { internalType: 'uint256', name: 'wad', type: 'uint256' },
+    ],
+    name: 'approve',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+];
 
 task('register-orders', 'Registers order data into the selected lending market')
   .addParam('collateralCurrency', 'Target collateral currency with short name')
@@ -73,23 +97,23 @@ task('register-orders', 'Registers order data into the selected lending market')
         return results;
       };
 
-      // Create random amounts and rats
+      // Create random amounts and unit prices
       const orders: { side: number; amount: string; unitPrice: string }[] = [];
-      let totalBorrowAmount = BigNumber(0);
-      let totalLendAmount = BigNumber(0);
+      let totalBorrowAmount = BigNumber.from(0);
+      let totalLendAmount = BigNumber.from(0);
 
       for (const [dAmount, dUnitPrice] of boxMuller(orderCount)) {
-        const orderAmount = BigNumber(dAmount)
+        const orderAmount = BigNumberJS(dAmount)
           .times(amount)
           .div(2)
           .plus(amount)
           .dp(0);
-        const orderUnitPrice = BigNumber(dUnitPrice)
+        const orderUnitPrice = BigNumberJS(dUnitPrice)
           .times(midUnitPrice)
           .div(20)
           .plus(midUnitPrice)
           .dp(0);
-        const orderSide = orderUnitPrice.gte(midUnitPrice)
+        const orderSide = orderUnitPrice.gte(midUnitPrice.toString())
           ? Side.LEND
           : Side.BORROW;
 
@@ -107,9 +131,9 @@ task('register-orders', 'Registers order data into the selected lending market')
           });
 
           if (orderSide === Side.BORROW) {
-            totalBorrowAmount = totalBorrowAmount.plus(orderAmount);
+            totalBorrowAmount = totalBorrowAmount.add(orderAmount.toFixed());
           } else {
-            totalLendAmount = totalLendAmount.plus(orderAmount);
+            totalLendAmount = totalLendAmount.add(orderAmount.toFixed());
           }
         }
       }
@@ -125,18 +149,15 @@ task('register-orders', 'Registers order data into the selected lending market')
         );
 
         if (currency) {
-          const token = await deployments
-            .get(currency.mock)
-            .then(({ address }) =>
-              ethers.getContractAt(currency.mock, address),
-            );
+          const tokenAddress = await tokenVault.getTokenAddress(currency.key);
+          const token = await ethers.getContractAt(ERC20_ABI, tokenAddress);
 
           const allowance = await token.allowance(
             owner.address,
             tokenVault.address,
           );
 
-          if (totalLendAmount.gt(allowance.toString())) {
+          if (allowance.lt(ethers.constants.MaxUint256)) {
             await token
               .approve(tokenVault.address, ethers.constants.MaxUint256)
               .then((tx) => tx.wait());
@@ -150,18 +171,15 @@ task('register-orders', 'Registers order data into the selected lending market')
         );
 
         if (currency) {
-          const token = await deployments
-            .get(currency.mock)
-            .then(({ address }) =>
-              ethers.getContractAt(currency.mock, address),
-            );
+          const tokenAddress = await tokenVault.getTokenAddress(currency.key);
+          const token = await ethers.getContractAt(ERC20_ABI, tokenAddress);
 
           const allowance = await token.allowance(
             owner.address,
             tokenVault.address,
           );
 
-          if (totalBorrowAmount.gt(allowance.toString())) {
+          if (allowance.lt(ethers.constants.MaxUint256)) {
             await token
               .approve(tokenVault.address, ethers.constants.MaxUint256)
               .then((tx) => tx.wait());
@@ -169,18 +187,12 @@ task('register-orders', 'Registers order data into the selected lending market')
         }
       }
 
-      const depositValue = BigNumber(totalBorrowAmount.toString())
-        .times(2)
-        .dp(0);
-
+      const depositValue = totalBorrowAmount.mul(2);
       const depositValueInETH = await currencyController[
         'convertToETH(bytes32,uint256)'
-      ](marketCurrencyName, depositValue.toFixed());
-      if (
-        BigNumber(depositValueInETH.toString())
-          .times(2)
-          .lt(availableAmountInETH.toString())
-      ) {
+      ](marketCurrencyName, depositValue);
+
+      if (BigNumber.from(depositValueInETH).mul(2).lt(availableAmountInETH)) {
         console.log('Skipped deposit');
         console.log(
           'The current amount available is',
@@ -190,20 +202,21 @@ task('register-orders', 'Registers order data into the selected lending market')
         const depositValueInCollateralCurrency =
           await currencyController.convertFromETH(
             collateralCurrencyName,
-            depositValueInETH.toString(),
+            depositValueInETH,
           );
 
+        console.log(
+          'depositValueInCollateralCurrency:',
+          depositValueInCollateralCurrency.toString(),
+        );
+
         await tokenVault
-          .deposit(
-            collateralCurrencyName,
-            depositValueInCollateralCurrency.toString(),
-            {
-              value:
-                collateralCurrency === 'ETH'
-                  ? depositValueInCollateralCurrency.toString()
-                  : 0,
-            },
-          )
+          .deposit(collateralCurrencyName, depositValueInCollateralCurrency, {
+            value:
+              collateralCurrency === 'ETH'
+                ? depositValueInCollateralCurrency
+                : 0,
+          })
           .then((tx) => tx.wait());
 
         console.log(
@@ -213,29 +226,24 @@ task('register-orders', 'Registers order data into the selected lending market')
 
       // Create orders
       for (const order of orders) {
+        const msg = `> Creating an order... [${
+          order.side === Side.LEND ? 'LEND' : 'BORROW'
+        }, ${order.amount}, ${order.unitPrice}]`;
+        process.stdout.write(msg);
+
         if (order.side === Side.LEND) {
-          if (marketCurrency === 'ETH') {
-            await lendingMarketController
-              .depositAndCreateLendOrderWithETH(
-                marketCurrencyName,
-                maturity,
-                order.unitPrice,
-                {
-                  value: order.amount,
-                },
-              )
-              .then((tx) => tx.wait());
-          } else {
-            await lendingMarketController
-              .depositAndCreateOrder(
-                marketCurrencyName,
-                maturity,
-                order.side,
-                order.amount,
-                order.unitPrice,
-              )
-              .then((tx) => tx.wait());
-          }
+          await lendingMarketController
+            .depositAndCreateOrder(
+              marketCurrencyName,
+              maturity,
+              order.side,
+              order.amount,
+              order.unitPrice,
+              {
+                value: marketCurrency === 'ETH' ? order.amount : 0,
+              },
+            )
+            .then((tx) => tx.wait());
         } else {
           await lendingMarketController
             .createOrder(
@@ -247,6 +255,8 @@ task('register-orders', 'Registers order data into the selected lending market')
             )
             .then((tx) => tx.wait());
         }
+
+        process.stdout.write('\r\x1b[K');
       }
 
       console.table(

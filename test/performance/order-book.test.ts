@@ -19,7 +19,7 @@ describe('Performance Test: Order Book', async () => {
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
-  let wUSDCToken: Contract;
+  let usdcToken: Contract;
 
   let lendingMarkets: Contract[] = [];
   let maturities: BigNumber[];
@@ -32,11 +32,11 @@ describe('Performance Test: Order Book', async () => {
       tokenVault,
       lendingMarketController,
       wETHToken,
-      wUSDCToken,
+      usdcToken,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETHString, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexUSDCString, wUSDCToken.address, false);
+    await tokenVault.registerCurrency(hexUSDCString, usdcToken.address, false);
 
     const mockUniswapRouter = await ethers
       .getContractFactory('MockSwapRouter')
@@ -119,7 +119,7 @@ describe('Performance Test: Order Book', async () => {
                 contract = wETHToken;
                 break;
               case hexUSDCString:
-                contract = wUSDCToken;
+                contract = usdcToken;
                 break;
             }
 
