@@ -3,9 +3,15 @@ pragma solidity ^0.8.9;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// interfaces
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
+// libraries
+import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
+import {RoundingInt256} from "./libraries/math/RoundingInt256.sol";
+// utils
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
+// storages
 import {CurrencyControllerStorage as Storage, Currency} from "./storages/CurrencyControllerStorage.sol";
 
 /**
@@ -16,6 +22,8 @@ import {CurrencyControllerStorage as Storage, Currency} from "./storages/Currenc
  */
 contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using RoundingUint256 for uint256;
+    using RoundingInt256 for int256;
 
     /**
      * @notice Modifier to check if the currency is supported.
@@ -272,7 +280,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_isETH(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
-        amount = (_amount * uint256(_getLastETHPrice(_ccy))) / 10**Storage.slot().ethDecimals[_ccy];
+        amount = (_amount * uint256(_getLastETHPrice(_ccy))).div(
+            10**Storage.slot().ethDecimals[_ccy]
+        );
     }
 
     /**
@@ -290,7 +300,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_isETH(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
-        amount = (_amount * _getLastETHPrice(_ccy)) / int256(10**Storage.slot().ethDecimals[_ccy]);
+        amount = (_amount * _getLastETHPrice(_ccy)).div(
+            int256(10**Storage.slot().ethDecimals[_ccy])
+        );
     }
 
     /**

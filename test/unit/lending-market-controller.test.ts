@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
+import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
@@ -561,7 +562,7 @@ describe('LendingMarketController', () => {
       const midUnitPrice = await lendingMarket1.getMidUnitPrice();
       expect(midUnitPrice.toString()).to.equal('9800');
 
-      const showLendingInfo = async () => {
+      const showLendingInfo = async (checkValues = false) => {
         const aliceTotalPV =
           await lendingMarketControllerProxy.getTotalPresentValue(
             targetCurrency,
@@ -619,17 +620,18 @@ describe('LendingMarketController', () => {
           },
         });
 
-        // TODO: Need to fix a calculation bug (SF-276)
-        expect(
-          aliceTotalPV
-            .add(bobTotalPV)
-            .add(carolTotalPV)
-            .add(reserveFundTotalPV)
-            .abs(),
-        ).to.lte(3);
-        expect(aliceFV.add(bobFV).add(carolFV).add(reserveFundFV).abs()).to.lte(
-          3,
-        );
+        if (checkValues) {
+          expect(
+            aliceTotalPV
+              .add(bobTotalPV)
+              .add(carolTotalPV)
+              .add(reserveFundTotalPV)
+              .abs(),
+          ).to.lte(3);
+          expect(aliceFV.add(bobFV).add(carolFV).add(reserveFundFV)).to.equal(
+            0,
+          );
+        }
       };
 
       expect(await lendingMarket1.isOpened()).to.equal(true);
@@ -779,8 +781,12 @@ describe('LendingMarketController', () => {
         targetCurrency,
         carol.address,
       );
+      await lendingMarketControllerProxy.cleanOrders(
+        targetCurrency,
+        mockReserveFund.address,
+      );
 
-      await showLendingInfo();
+      await showLendingInfo(true);
     });
 
     it('Deposit and add an order', async () => {
@@ -1815,9 +1821,10 @@ describe('LendingMarketController', () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
         const liquidationAmount = ethers.BigNumber.from('80000000000000000');
+        const offsetAmount = ethers.BigNumber.from('3000000000');
 
         // Set up for the mocks
-        await mockCurrencyController.mock.convertFromETH.returns('1');
+        await mockCurrencyController.mock.convertFromETH.returns(offsetAmount);
         await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
         await mockReserveFund.mock.isPaused.returns(false);
 
@@ -1871,7 +1878,7 @@ describe('LendingMarketController', () => {
                 targetCurrency,
                 targetCurrency,
                 maturities[0],
-                liquidationAmount,
+                liquidationAmount.add(offsetAmount),
               ),
           );
       });
@@ -2092,9 +2099,11 @@ describe('LendingMarketController', () => {
         const [aliceInitialFV] = await futureValueVault1.getFutureValue(
           alice.address,
         );
-        const aliceExpectedGV = aliceInitialFV
-          .mul(ethers.BigNumber.from('10').pow(gvDecimals))
-          .div(initialCF);
+        // Use bignumber.js to round off the result
+        const aliceExpectedGV = BigNumberJS(aliceInitialFV.toString())
+          .times(BigNumberJS('10').pow(gvDecimals.toString()))
+          .div(initialCF.toString())
+          .dp(0);
 
         await time.increaseTo(maturities[0].toString());
         await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
@@ -2170,7 +2179,7 @@ describe('LendingMarketController', () => {
 
         expect(aliceGVBefore.toString()).to.equal(aliceGVAfter.toString());
         expect(aliceGVBefore.toString()).to.equal(aliceGVAfter.toString());
-        expect(aliceGVBefore.toString()).to.equal(aliceExpectedGV.toString());
+        expect(aliceGVBefore.toString()).to.equal(aliceExpectedGV.toFixed());
       });
 
       it('Rotate markets multiple times', async () => {
@@ -2307,9 +2316,12 @@ describe('LendingMarketController', () => {
           await lendingMarketControllerProxy.cleanAllOrders(alice.address);
           await lendingMarketControllerProxy.cleanAllOrders(bob.address);
           await lendingMarketControllerProxy.cleanAllOrders(carol.address);
+          await lendingMarketControllerProxy.cleanAllOrders(
+            mockReserveFund.address,
+          );
         };
 
-        const checkGenesisValue = async () => {
+        const checkGenesisValue = async (checkTotalSupply = false) => {
           const accounts = [alice, bob, carol, mockReserveFund];
 
           const genesisValues = await Promise.all(
@@ -2349,6 +2361,10 @@ describe('LendingMarketController', () => {
               )
               .toString(),
           );
+
+          if (checkTotalSupply) {
+            expect(totalSupplies[0]).to.equal(totalSupplies[1]);
+          }
         };
 
         await checkGenesisValue();
@@ -2481,6 +2497,9 @@ describe('LendingMarketController', () => {
         await rotateLendingMarkets();
         await cleanAllOrders();
         await checkGenesisValue();
+
+        await cleanAllOrders();
+        await checkGenesisValue(true);
       });
 
       it('Calculate the total funds from inactive lending order list', async () => {

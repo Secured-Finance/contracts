@@ -40,19 +40,11 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
-     * @notice Gets the total lending supply.
+     * @notice Gets the total supply.
      * @param _maturity The maturity of the market
      */
-    function getTotalLendingSupply(uint256 _maturity) external view override returns (uint256) {
-        return Storage.slot().totalLendingSupply[_maturity];
-    }
-
-    /**
-     * @notice Gets the total borrowing supply.
-     * @param _maturity The maturity of the market
-     */
-    function getTotalBorrowingSupply(uint256 _maturity) external view override returns (uint256) {
-        return Storage.slot().totalBorrowingSupply[_maturity];
+    function getTotalSupply(uint256 _maturity) external view override returns (uint256) {
+        return Storage.slot().totalSupply[_maturity];
     }
 
     /**
@@ -91,50 +83,92 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
 
     /**
      * @notice Adds the future value amount for lending deals.
+     * @dev Since the total supply can be determined by totaling only the amounts on one side of the order
+     * when the order is fulfilled, the total supply is incremented only when the executor of the original order
+     * is the taker.
      * @param _user User's address
      * @param _amount The amount to add
      * @param _maturity The maturity of the market
+     * @param _isTaker The boolean if the original order is created by a taker
      */
     function addLendFutureValue(
         address _user,
         uint256 _amount,
-        uint256 _maturity
-    ) external override onlyAcceptedContracts returns (bool) {
+        uint256 _maturity,
+        bool _isTaker
+    ) public override onlyAcceptedContracts returns (bool) {
         require(_user != address(0), "add to the zero address of lender");
         require(
             !hasFutureValueInPastMaturity(_user, _maturity),
             "lender has the future value in past maturity"
         );
 
+        int256 previousBalance = Storage.slot().balances[_user];
+
         Storage.slot().futureValueMaturities[_user] = _maturity;
-        Storage.slot().totalLendingSupply[_maturity] += _amount;
         Storage.slot().balances[_user] += int256(_amount);
         emit Transfer(address(0), _user, int256(_amount));
+
+        if (_isTaker) {
+            int256 currentBalance = Storage.slot().balances[_user];
+            _updateTotalSupply(_maturity, previousBalance, currentBalance);
+        }
 
         return true;
     }
 
     /**
      * @notice Adds the future value amount for borrowing deals.
+     * @dev Since the total supply can be determined by totaling only the amounts on one side of the order
+     * when the order is fulfilled, the total supply is incremented only when the executor of the original order
+     * is the taker.
      * @param _user User's address
      * @param _amount The amount to add
      * @param _maturity The maturity of the market
+     * @param _isTaker The boolean if the original order is created by a taker
      */
     function addBorrowFutureValue(
         address _user,
         uint256 _amount,
-        uint256 _maturity
-    ) external override onlyAcceptedContracts returns (bool) {
+        uint256 _maturity,
+        bool _isTaker
+    ) public override onlyAcceptedContracts returns (bool) {
         require(_user != address(0), "add to the zero address of borrower");
         require(
             !hasFutureValueInPastMaturity(_user, _maturity),
             "borrower has the future value in past maturity"
         );
 
+        int256 previousBalance = Storage.slot().balances[_user];
         Storage.slot().futureValueMaturities[_user] = _maturity;
-        Storage.slot().totalBorrowingSupply[_maturity] += _amount;
         Storage.slot().balances[_user] -= int256(_amount);
         emit Transfer(address(0), _user, -int256(_amount));
+
+        if (_isTaker) {
+            int256 currentBalance = Storage.slot().balances[_user];
+            _updateTotalSupply(_maturity, previousBalance, currentBalance);
+        }
+
+        return true;
+    }
+
+    /**
+     * @notice Offsets the future value amount.
+     * @param _lender Lender's address
+     * @param _borrower Borrower's address
+     * @param _amount The amount to add
+     * @param _maturity The maturity of the market
+     */
+    function offsetFutureValue(
+        address _lender,
+        address _borrower,
+        uint256 _amount,
+        uint256 _maturity
+    ) external override onlyAcceptedContracts returns (bool) {
+        addBorrowFutureValue(_lender, _amount, _maturity, false);
+        addLendFutureValue(_borrower, _amount, _maturity, false);
+
+        Storage.slot().totalSupply[_maturity] -= _amount;
 
         return true;
     }
@@ -145,6 +179,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      * @return removedAmount Removed future value amount
      * @return currentAmount Current future value amount after update
      * @return maturity Maturity of future value
+     * @return isAllRemoved The boolean if the all future value amount in the selected maturity is removed
      */
     function removeFutureValue(address _user, uint256 _activeMaturity)
         external
@@ -153,7 +188,8 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         returns (
             int256 removedAmount,
             int256 currentAmount,
-            uint256 maturity
+            uint256 maturity,
+            bool isAllRemoved
         )
     {
         currentAmount = Storage.slot().balances[_user];
@@ -162,16 +198,35 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
             removedAmount = currentAmount;
             maturity = Storage.slot().futureValueMaturities[_user];
 
+            isAllRemoved = false;
             if (removedAmount >= 0) {
-                Storage.slot().totalLendingSupply[maturity] -= uint256(removedAmount);
+                Storage.slot().removedLendingSupply[maturity] += uint256(removedAmount);
             } else {
-                Storage.slot().totalBorrowingSupply[maturity] -= uint256(-removedAmount);
+                Storage.slot().removedBorrowingSupply[maturity] += uint256(-removedAmount);
             }
 
             Storage.slot().balances[_user] = 0;
             currentAmount = 0;
 
             emit Transfer(_user, address(0), removedAmount);
+        }
+
+        isAllRemoved =
+            Storage.slot().removedLendingSupply[maturity] == Storage.slot().totalSupply[maturity] &&
+            Storage.slot().removedBorrowingSupply[maturity] == Storage.slot().totalSupply[maturity];
+    }
+
+    function _updateTotalSupply(
+        uint256 _maturity,
+        int256 _previous,
+        int256 _current
+    ) private {
+        uint256 absPrevious = _previous >= 0 ? uint256(_previous) : uint256(-_previous);
+        uint256 absCurrent = _current >= 0 ? uint256(_current) : uint256(-_current);
+        if (absPrevious > absCurrent) {
+            Storage.slot().totalSupply[_maturity] -= absPrevious - absCurrent;
+        } else {
+            Storage.slot().totalSupply[_maturity] += absCurrent - absPrevious;
         }
     }
 }

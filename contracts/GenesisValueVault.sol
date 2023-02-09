@@ -5,6 +5,8 @@ pragma solidity ^0.8.9;
 import {IGenesisValueVault} from "./interfaces/IGenesisValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
+import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
+import {RoundingInt256} from "./libraries/math/RoundingInt256.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
@@ -17,6 +19,9 @@ import {GenesisValueVaultStorage as Storage, MaturityUnitPrice} from "./storages
  * @notice Implements the management of the genesis value as an amount for Lending deals.
  */
 contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyable {
+    using RoundingUint256 for uint256;
+    using RoundingInt256 for int256;
+
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
@@ -58,6 +63,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return Storage.slot().balances[_ccy][_user];
     }
 
+    function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        override
+        returns (int256)
+    {
+        return Storage.slot().maturityBalances[_ccy][_maturity];
+    }
+
     function getCurrentMaturity(bytes32 _ccy) public view override returns (uint256) {
         return Storage.slot().currentMaturity[_ccy];
     }
@@ -84,8 +98,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // NOTE: The formula is:
         // futureValue = genesisValue * currentCompoundFactor.
         return
-            (getGenesisValue(_ccy, _user) * int256(getCompoundFactor(_ccy))) /
-            int256(10**decimals(_ccy));
+            (getGenesisValue(_ccy, _user) * int256(getCompoundFactor(_ccy))).div(
+                int256(10**decimals(_ccy))
+            );
     }
 
     function calculateCurrentFVFromFVInMaturity(
@@ -120,7 +135,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
         bool isPlus = _futureValue > 0;
         uint256 absFv = uint256(isPlus ? _futureValue : -_futureValue);
-        uint256 absGv = (absFv * 10**decimals(_ccy)) / compoundFactor;
+        uint256 absGv = (absFv * 10**decimals(_ccy)).div(compoundFactor);
         return isPlus ? int256(absGv) : -int256(absGv);
     }
 
@@ -136,7 +151,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         require(compoundFactor > 0, "Compound factor is not fixed yet");
         bool isPlus = _genesisValue > 0;
         uint256 absGv = uint256(isPlus ? _genesisValue : -_genesisValue);
-        uint256 absFv = (absGv * compoundFactor) / 10**decimals(_ccy);
+        uint256 absFv = (absGv * compoundFactor).div(10**decimals(_ccy));
 
         return isPlus ? int256(absFv) : -int256(absFv);
     }
@@ -157,12 +172,23 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         Storage.slot().currentMaturity[_ccy] = _maturity;
     }
 
-    function updateCompoundFactor(
+    function executeAutoRoll(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _nextMaturity,
+        uint256 _unitPrice,
+        uint256 _totalFVAmount
+    ) external override onlyAcceptedContracts {
+        _updateCompoundFactor(_ccy, _maturity, _nextMaturity, _unitPrice);
+        _registerMaximumTotalSupply(_ccy, _maturity, _totalFVAmount);
+    }
+
+    function _updateCompoundFactor(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _nextMaturity,
         uint256 _unitPrice
-    ) external override onlyAcceptedContracts {
+    ) private {
         require(_unitPrice != 0, "unitPrice is zero");
         require(
             Storage.slot().maturityUnitPrices[_ccy][_maturity].next == 0,
@@ -210,53 +236,87 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         );
     }
 
-    function addGenesisValue(
+    function updateGenesisValue(
         bytes32 _ccy,
         address _user,
         uint256 _basisMaturity,
-        int256 _futureValue
+        int256 _fvAmount
     ) external override onlyAcceptedContracts returns (bool) {
-        int256 amount = calculateGVFromFV(_ccy, _basisMaturity, _futureValue);
-        return addGenesisValue(_ccy, _user, amount);
+        int256 amount = calculateGVFromFV(_ccy, _basisMaturity, _fvAmount);
+
+        if (amount > 0) {
+            return addLendGenesisValue(_ccy, _user, _basisMaturity, uint256(amount));
+        } else {
+            return addBorrowGenesisValue(_ccy, _user, _basisMaturity, uint256(-amount));
+        }
     }
 
-    function addGenesisValue(
+    function addLendGenesisValue(
         bytes32 _ccy,
         address _user,
-        int256 _amount
+        uint256 _maturity,
+        uint256 _absAmount
     ) public override onlyAcceptedContracts returns (bool) {
         int256 balance = Storage.slot().balances[_ccy][_user];
+        int256 amount = int256(_absAmount);
 
-        if (_amount >= 0) {
-            if (balance >= 0) {
-                Storage.slot().totalLendingSupplies[_ccy] += uint256(_amount);
-            } else {
-                int256 diff = _amount + balance;
-                if (diff >= 0) {
-                    Storage.slot().totalLendingSupplies[_ccy] += uint256(diff);
-                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(_amount - diff);
-                } else {
-                    Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(_amount);
-                }
-            }
+        if (balance >= 0) {
+            Storage.slot().totalLendingSupplies[_ccy] += _absAmount;
         } else {
-            if (balance <= 0) {
-                Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-_amount);
+            int256 diff = amount + balance;
+            if (diff >= 0) {
+                Storage.slot().totalLendingSupplies[_ccy] += uint256(diff);
+                Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(-balance);
             } else {
-                int256 diff = _amount + balance;
-                if (diff <= 0) {
-                    Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-diff);
-                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-_amount + diff);
-                } else {
-                    Storage.slot().totalLendingSupplies[_ccy] -= uint256(-_amount);
-                }
+                Storage.slot().totalBorrowingSupplies[_ccy] -= _absAmount;
             }
         }
 
-        Storage.slot().balances[_ccy][_user] += _amount;
+        Storage.slot().balances[_ccy][_user] += amount;
+        Storage.slot().maturityBalances[_ccy][_maturity] += amount;
 
-        emit Transfer(_ccy, address(0), _user, _amount);
+        emit Transfer(_ccy, address(0), _user, amount);
 
         return true;
+    }
+
+    function addBorrowGenesisValue(
+        bytes32 _ccy,
+        address _user,
+        uint256 _maturity,
+        uint256 _absAmount
+    ) public override onlyAcceptedContracts returns (bool) {
+        int256 balance = Storage.slot().balances[_ccy][_user];
+        int256 amount = -int256(_absAmount);
+
+        if (balance <= 0) {
+            Storage.slot().totalBorrowingSupplies[_ccy] += _absAmount;
+        } else {
+            int256 diff = amount + balance;
+            if (diff <= 0) {
+                Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-diff);
+                Storage.slot().totalLendingSupplies[_ccy] -= uint256(balance);
+            } else {
+                Storage.slot().totalLendingSupplies[_ccy] -= _absAmount;
+            }
+        }
+
+        Storage.slot().balances[_ccy][_user] += amount;
+        Storage.slot().maturityBalances[_ccy][_maturity] += amount;
+
+        emit Transfer(_ccy, address(0), _user, amount);
+
+        return true;
+    }
+
+    function _registerMaximumTotalSupply(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 totalFVAmount
+    ) private {
+        require(Storage.slot().maximumTotalSupply[_ccy][_maturity] == 0, "Already registered");
+
+        Storage.slot().maximumTotalSupply[_ccy][_maturity] = (totalFVAmount * 10**decimals(_ccy))
+            .div(getCompoundFactor(_ccy));
     }
 }

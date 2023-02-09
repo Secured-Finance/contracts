@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 // types
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {RoundingUint256} from "./math/RoundingUint256.sol";
 
 struct RemainingOrder {
     uint48 orderId;
@@ -28,6 +29,7 @@ struct OrderItem {
  *
  */
 library OrderStatisticsTreeLib {
+    using RoundingUint256 for uint256;
     uint256 private constant EMPTY = 0;
 
     struct Node {
@@ -460,7 +462,9 @@ library OrderStatisticsTreeLib {
             if (totalDroppedAmountInFV > targetFutureValue) {
                 uint256 filledAmountInFV = cursorNodeAmountInFV -
                     (totalDroppedAmountInFV - targetFutureValue);
-                droppedAmount += (cursorNodeAmountInPV * filledAmountInFV) / cursorNodeAmountInFV;
+                droppedAmount += (cursorNodeAmountInPV * filledAmountInFV).div(
+                    cursorNodeAmountInFV
+                );
             } else {
                 droppedAmount += cursorNodeAmountInPV;
             }
@@ -488,7 +492,9 @@ library OrderStatisticsTreeLib {
             if (totalDroppedAmountInFV > targetFutureValue) {
                 uint256 filledAmountInFV = cursorNodeAmountInFV -
                     (totalDroppedAmountInFV - targetFutureValue);
-                droppedAmount += (cursorNodeAmountInPV * filledAmountInFV) / cursorNodeAmountInFV;
+                droppedAmount += (cursorNodeAmountInPV * filledAmountInFV).div(
+                    cursorNodeAmountInFV
+                );
             } else {
                 droppedAmount += cursorNodeAmountInPV;
             }
@@ -980,6 +986,6 @@ library OrderStatisticsTreeLib {
         pure
         returns (uint256)
     {
-        return (amount * ProtocolTypes.PRICE_DIGIT) / unitPrice;
+        return (amount * ProtocolTypes.PRICE_DIGIT).div(unitPrice);
     }
 }
