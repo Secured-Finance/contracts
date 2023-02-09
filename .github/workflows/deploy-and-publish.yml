@@ -207,7 +207,9 @@ jobs:
           npm publish
       - name: Push
         shell: bash
-        run: git push
+        run: |
+          git pull
+          git push
       - name: Merge main into develop
         shell: bash
         if: github.event.workflow.name == 'Merge into main'
