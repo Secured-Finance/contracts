@@ -10,7 +10,6 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
@@ -254,9 +253,7 @@ describe('Integration Test: Auto-rolls', async () => {
       const { futureValue: aliceFVAfter } =
         await futureValueVaults[0].getFutureValue(alice.address);
 
-      expect(aliceFVAfter.sub(aliceActualFV).abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceFVAfter).to.equal(aliceActualFV.abs());
 
       // Check present value
       const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
@@ -330,7 +327,7 @@ describe('Integration Test: Auto-rolls', async () => {
         aliceTotalPVAfter
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice0))
           .abs(),
-      ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
+      ).lte(1);
       expect(
         aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
       ).to.lte(1);
@@ -406,7 +403,7 @@ describe('Integration Test: Auto-rolls', async () => {
         aliceTotalPVAfter
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice))
           .abs(),
-      ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
+      ).lte(1);
       expect(
         aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
       ).to.lte(1);
@@ -481,9 +478,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('125000000000000000').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceActualFV).equal('125000000000000000');
     });
 
     it('Fill an order on the second closest maturity market', async () => {
@@ -533,9 +528,7 @@ describe('Integration Test: Auto-rolls', async () => {
       );
 
       expect(aliceActualFV).equal('200000000000000000');
-      expect(
-        aliceActualFV.mul(10000).div(bobActualFV).abs().sub(9950).abs(),
-      ).to.lte(1);
+      expect(aliceActualFV.mul(10000).div(bobActualFV).abs()).to.equal('9949');
     });
 
     it('Check total PVs', async () => {
@@ -548,9 +541,7 @@ describe('Integration Test: Auto-rolls', async () => {
         bob.address,
       );
 
-      expect(alicePV.sub('200000000000000000').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(alicePV.sub('200000000000000000').abs()).lte(1);
       expect(alicePV.mul(10000).div(bobPV).abs().sub(9950)).to.gt(0);
     });
 
@@ -576,9 +567,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(alicePV0Before.sub(orderAmount)).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(alicePV0Before.sub(orderAmount)).lte(1);
       expect(aliceTotalPVBefore).to.equal(alicePV0Before.add(alicePV1Before));
       expect(
         aliceTotalPVBefore.mul(10000).div(bobTotalPVBefore).abs().sub(9950),
@@ -612,9 +601,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       expect(alicePV0After).to.equal('0');
       expect(alicePV1After).to.equal(aliceTotalPVAfter);
-      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(1);
     });
 
     it('Clean orders', async () => {
@@ -696,9 +683,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('1200048001920076803071').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceActualFV).to.equal('1200048001920076803072');
     });
 
     for (let i = 0; i < 9; i++) {
@@ -742,9 +727,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
         expect(alicePV0After).to.equal('0');
         expect(alicePV1After).to.equal(aliceTotalPVAfter);
-        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
-        );
+        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(2);
       });
     }
   });
@@ -797,9 +780,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('125000000000000000').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceActualFV).to.equal('125000000000000000');
     });
 
     it('Advance time', async () => {
@@ -891,9 +872,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       expect(alicePV0After).to.equal('0');
       expect(alicePV1After).to.equal(aliceTotalPVAfter);
-      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(1);
     });
   });
 });

@@ -39,7 +39,7 @@ describe('Performance Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexUSDCString, usdcToken.address, false);
 
     const mockUniswapRouter = await ethers
-      .getContractFactory('MockSwapRouter')
+      .getContractFactory('MockUniswapRouter')
       .then((factory) =>
         factory.deploy(addressResolver.address, wETHToken.address),
       );
