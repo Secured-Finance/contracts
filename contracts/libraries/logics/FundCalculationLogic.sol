@@ -208,14 +208,14 @@ library FundCalculationLogic {
                     Storage.slot().futureValueVaults[_ccy][currentMarket]
                 ).getFutureValue(_user);
 
-                if (isDefaultMarket && (i == 0 || currentMaturity != fvMaturity)) {
+                if (isDefaultMarket && (currentMaturity != fvMaturity)) {
                     futureValue += _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         fvMaturity,
                         futureValueInMaturity,
                         currentMarket
                     );
-                } else if (!isDefaultMarket && currentMaturity == fvMaturity) {
+                } else if (_maturity == fvMaturity) {
                     futureValue += futureValueInMaturity;
                 }
 
@@ -224,14 +224,14 @@ library FundCalculationLogic {
                     currentMarket
                 ).getTotalAmountFromBorrowOrders(_user);
 
-                if (isDefaultMarket && (i == 0 || currentMaturity != borrowOrdersMaturity)) {
+                if (isDefaultMarket && (currentMaturity != borrowOrdersMaturity)) {
                     futureValue -= _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         borrowOrdersMaturity,
                         int256(borrowFVInMaturity),
                         currentMarket
                     );
-                } else if (!isDefaultMarket && currentMaturity == borrowOrdersMaturity) {
+                } else if (_maturity == borrowOrdersMaturity) {
                     futureValue -= int256(borrowFVInMaturity);
                 }
 
@@ -240,14 +240,14 @@ library FundCalculationLogic {
                     currentMarket
                 ).getTotalAmountFromLendOrders(_user);
 
-                if ((isDefaultMarket && (i == 0 || currentMaturity != lendOrdersMaturity))) {
+                if ((isDefaultMarket && (currentMaturity != lendOrdersMaturity))) {
                     futureValue += _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         lendOrdersMaturity,
                         int256(lendFVInMaturity),
                         currentMarket
                     );
-                } else if (!isDefaultMarket && currentMaturity == lendOrdersMaturity) {
+                } else if (_maturity == lendOrdersMaturity) {
                     futureValue += int256(lendFVInMaturity);
                 }
             }

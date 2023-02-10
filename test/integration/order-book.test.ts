@@ -199,7 +199,7 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
-        expect(bobFV.mul(10000).div(aliceFV).abs()).to.equal('9975');
+        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -284,7 +284,7 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
-        expect(bobFV.mul(10000).div(aliceFV).abs()).to.equal('9975');
+        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -416,7 +416,7 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(1);
-        expect(bobFV.mul(10000).div(aliceFV).abs()).to.equal('9975');
+        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
       it('Check collateral', async () => {

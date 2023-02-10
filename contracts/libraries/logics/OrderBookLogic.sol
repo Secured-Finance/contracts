@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {OrderStatisticsTreeLib, RemainingOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
-import {OrderStatisticsTreeLib, RemainingOrder, OrderItem} from "../../libraries/OrderStatisticsTreeLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage, MarketOrder} from "../../storages/LendingMarketStorage.sol";
 
 library OrderBookLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
+    using RoundingUint256 for uint256;
 
     function getHighestBorrowUnitPrice() public view returns (uint256) {
         return Storage.slot().borrowOrders[Storage.slot().maturity].last();
@@ -172,9 +174,9 @@ library OrderBookLogic {
                 .lendOrders[marketOrder.maturity]
                 .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
             inactiveAmount += orderItem.amount;
-            inactiveFutureValue +=
-                (orderItem.amount * ProtocolTypes.PRICE_DIGIT) /
-                marketOrder.unitPrice;
+            inactiveFutureValue += (orderItem.amount * ProtocolTypes.PRICE_DIGIT).div(
+                marketOrder.unitPrice
+            );
         }
     }
 
@@ -217,9 +219,9 @@ library OrderBookLogic {
                 .borrowOrders[marketOrder.maturity]
                 .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
             inactiveAmount += orderItem.amount;
-            inactiveFutureValue +=
-                (orderItem.amount * ProtocolTypes.PRICE_DIGIT) /
-                marketOrder.unitPrice;
+            inactiveFutureValue += (orderItem.amount * ProtocolTypes.PRICE_DIGIT).div(
+                marketOrder.unitPrice
+            );
         }
     }
 

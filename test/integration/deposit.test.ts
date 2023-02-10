@@ -541,7 +541,7 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(coverage.sub('4000').abs()).lte(1);
-      expect(bobFV.mul(10000).div(aliceFV).abs()).to.equal('9975');
+      expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
     });
 
     it('Withdraw by borrower', async () => {
@@ -654,7 +654,7 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(coverage.sub('4010').abs()).lte(1);
-      expect(bobFV.mul(10000).div(aliceFV).abs()).to.equal('9975');
+      expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
     });
 
     it('Withdraw by borrower', async () => {
@@ -792,7 +792,7 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(coverage.sub('5000').abs()).lte(1);
-      expect(bobFV.mul(10000).div(aliceFV).abs()).to.equal('9975');
+      expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
     });
 
     it('Fill an order on the ETH market', async () => {
@@ -839,7 +839,7 @@ describe('Integration Test: Deposit', async () => {
         bob.address,
       );
 
-      expect(bobFV.mul(10000).div(aliceFV).abs()).to.equal(9975);
+      expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
     });
 
     it('Withdraw by Alice', async () => {
