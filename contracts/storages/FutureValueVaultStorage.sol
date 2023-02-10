@@ -10,10 +10,12 @@ library FutureValueVaultStorage {
         mapping(address => int256) balances;
         // Mapping from user to maturity
         mapping(address => uint256) futureValueMaturities;
-        // Mapping from maturity to total amount supplied of lending
-        mapping(uint256 => uint256) totalLendingSupply;
-        // Mapping from maturity to total amount supplied of borrowing
-        mapping(uint256 => uint256) totalBorrowingSupply;
+        // Mapping from maturity to the total amount supplied
+        mapping(uint256 => uint256) totalSupply;
+        // Mapping from maturity to the total removed amount of lending
+        mapping(uint256 => uint256) removedLendingSupply;
+        // Mapping from maturity to the total removed amount of borrowing
+        mapping(uint256 => uint256) removedBorrowingSupply;
     }
 
     function slot() internal pure returns (Storage storage r) {

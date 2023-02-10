@@ -10,7 +10,6 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
@@ -199,9 +198,7 @@ describe('Performance Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('1250000000000000000000000').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceActualFV.sub('1250000000000000000000000').abs()).lte(1);
     });
 
     for (let i = 0; i < 600; i++) {
@@ -249,9 +246,7 @@ describe('Performance Test: Auto-rolls', async () => {
 
         expect(alicePV0After).to.equal('0');
         expect(alicePV1After).to.equal(aliceTotalPVAfter);
-        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
-        );
+        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(2);
       });
     }
 
@@ -289,9 +284,7 @@ describe('Performance Test: Auto-rolls', async () => {
         ellen.address,
       );
 
-      expect(ellenActualFV.sub('1050089257586894886065314').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(ellenActualFV.sub('1050089257586894886065314').abs()).lte(1);
     });
   });
 });

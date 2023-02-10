@@ -10,7 +10,6 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
@@ -23,10 +22,12 @@ describe('Integration Test: Auto-rolls', async () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
+  let dave: SignerWithAddress;
 
   let addressResolver: Contract;
   let futureValueVaults: Contract[];
   let genesisValueVault: Contract;
+  let reserveFund: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarkets: Contract[] = [];
@@ -40,7 +41,6 @@ describe('Integration Test: Auto-rolls', async () => {
   let signers: Signers;
 
   const initialFILBalance = BigNumber.from('100000000000000000000');
-  const initialBTCBalance = BigNumber.from('1000000000');
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
@@ -120,6 +120,7 @@ describe('Integration Test: Auto-rolls', async () => {
     ({
       addressResolver,
       genesisValueVault,
+      reserveFund,
       tokenVault,
       lendingMarketController,
       wETHToken,
@@ -254,9 +255,7 @@ describe('Integration Test: Auto-rolls', async () => {
       const { futureValue: aliceFVAfter } =
         await futureValueVaults[0].getFutureValue(alice.address);
 
-      expect(aliceFVAfter.sub(aliceActualFV).abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceFVAfter).to.equal(aliceActualFV.abs());
 
       // Check present value
       const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
@@ -330,7 +329,7 @@ describe('Integration Test: Auto-rolls', async () => {
         aliceTotalPVAfter
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice0))
           .abs(),
-      ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
+      ).lte(1);
       expect(
         aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
       ).to.lte(1);
@@ -406,7 +405,7 @@ describe('Integration Test: Auto-rolls', async () => {
         aliceTotalPVAfter
           .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice))
           .abs(),
-      ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
+      ).lte(1);
       expect(
         aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
       ).to.lte(1);
@@ -481,9 +480,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('125000000000000000').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceActualFV).equal('125000000000000000');
     });
 
     it('Fill an order on the second closest maturity market', async () => {
@@ -533,9 +530,7 @@ describe('Integration Test: Auto-rolls', async () => {
       );
 
       expect(aliceActualFV).equal('200000000000000000');
-      expect(
-        aliceActualFV.mul(10000).div(bobActualFV).abs().sub(9950).abs(),
-      ).to.lte(1);
+      expect(aliceActualFV.mul(10000).div(bobActualFV).abs()).to.equal('9949');
     });
 
     it('Check total PVs', async () => {
@@ -548,9 +543,7 @@ describe('Integration Test: Auto-rolls', async () => {
         bob.address,
       );
 
-      expect(alicePV.sub('200000000000000000').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(alicePV.sub('200000000000000000').abs()).lte(1);
       expect(alicePV.mul(10000).div(bobPV).abs().sub(9950)).to.gt(0);
     });
 
@@ -576,9 +569,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(alicePV0Before.sub(orderAmount)).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(alicePV0Before.sub(orderAmount)).lte(1);
       expect(aliceTotalPVBefore).to.equal(alicePV0Before.add(alicePV1Before));
       expect(
         aliceTotalPVBefore.mul(10000).div(bobTotalPVBefore).abs().sub(9950),
@@ -612,9 +603,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       expect(alicePV0After).to.equal('0');
       expect(alicePV1After).to.equal(aliceTotalPVAfter);
-      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(1);
     });
 
     it('Clean orders', async () => {
@@ -696,9 +685,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('1200048001920076803071').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceActualFV).to.equal('1200048001920076803072');
     });
 
     for (let i = 0; i < 9; i++) {
@@ -742,11 +729,137 @@ describe('Integration Test: Auto-rolls', async () => {
 
         expect(alicePV0After).to.equal('0');
         expect(alicePV1After).to.equal(aliceTotalPVAfter);
-        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
-        );
+        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(2);
       });
     }
+  });
+
+  describe('Execute auto-roll with many orders, Check the FV and GV', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+
+    before(async () => {
+      [alice, bob, carol, dave] = await getUsers(4);
+    });
+
+    it('Fill an order', async () => {
+      await tokenVault
+        .connect(dave)
+        .deposit(hexETHString, orderAmount.mul(10), {
+          value: orderAmount.mul(10),
+        });
+
+      for (const [i, user] of [alice, bob, carol].entries()) {
+        await expect(
+          lendingMarketController
+            .connect(user)
+            .depositAndCreateOrder(
+              hexETHString,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              8000 + i,
+              {
+                value: orderAmount,
+              },
+            ),
+        ).to.emit(lendingMarkets[0], 'MakeOrder');
+      }
+
+      await expect(
+        lendingMarketController
+          .connect(dave)
+          .createOrder(
+            hexETHString,
+            maturities[0],
+            Side.BORROW,
+            orderAmount.mul(3),
+            0,
+          ),
+      ).to.emit(lendingMarkets[0], 'TakeOrders');
+
+      // Check present value
+      const daveActualFV = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[0],
+        dave.address,
+      );
+
+      const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
+      const davePV = await lendingMarketController.getTotalPresentValue(
+        hexETHString,
+        dave.address,
+      );
+
+      expect(davePV.sub(daveActualFV.mul(midUnitPrice).div(BP)).abs()).lte(1);
+    });
+
+    it('Check future values', async () => {
+      const checkFutureValue = async () => {
+        for (const { address } of [alice, bob, carol]) {
+          await lendingMarketController.cleanOrders(hexETHString, address);
+        }
+
+        const [
+          aliceFVAmount,
+          bobFVAmount,
+          carolFVAmount,
+          daveFVAmount,
+          reserveFundFVAmount,
+        ] = await Promise.all(
+          [alice, bob, carol, dave, reserveFund].map(({ address }) =>
+            futureValueVaults[0].getFutureValue(address),
+          ),
+        ).then((results) => results.map(({ futureValue }) => futureValue));
+
+        expect(
+          aliceFVAmount
+            .add(bobFVAmount)
+            .add(carolFVAmount)
+            .add(reserveFundFVAmount)
+            .abs(),
+        ).to.equal(daveFVAmount.abs());
+      };
+
+      await checkFutureValue();
+    });
+
+    it('Execute auto-roll, Check genesis values', async () => {
+      const reserveFundGVAmountBefore = await genesisValueVault.getGenesisValue(
+        hexETHString,
+        reserveFund.address,
+      );
+
+      // Auto-roll
+      await createSampleETHOrders(owner, maturities[1], '8000');
+      await time.increaseTo(maturities[0].toString());
+      await lendingMarketController
+        .connect(owner)
+        .rotateLendingMarkets(hexETHString);
+
+      for (const { address } of [alice, bob, carol, dave, reserveFund]) {
+        await lendingMarketController.cleanOrders(hexETHString, address);
+      }
+
+      const [
+        aliceGVAmount,
+        bobGVAmount,
+        carolGVAmount,
+        daveGVAmount,
+        reserveFundGVAmount,
+      ] = await Promise.all(
+        [alice, bob, carol, dave, reserveFund].map(({ address }) =>
+          genesisValueVault.getGenesisValue(hexETHString, address),
+        ),
+      );
+
+      expect(
+        aliceGVAmount
+          .add(bobGVAmount)
+          .add(carolGVAmount)
+          .add(reserveFundGVAmount.sub(reserveFundGVAmountBefore))
+          .abs(),
+      ).to.equal(daveGVAmount.abs());
+    });
   });
 
   describe('Execute auto-roll well past maturity', async () => {
@@ -797,9 +910,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(aliceActualFV.sub('125000000000000000').abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceActualFV).to.equal('125000000000000000');
     });
 
     it('Advance time', async () => {
@@ -891,9 +1002,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       expect(alicePV0After).to.equal('0');
       expect(alicePV1After).to.equal(aliceTotalPVAfter);
-      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(
-        ORDERS_CALCULATION_TOLERANCE_RANGE,
-      );
+      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(1);
     });
   });
 });

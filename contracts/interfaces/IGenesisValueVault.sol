@@ -23,6 +23,11 @@ interface IGenesisValueVault {
 
     function getGenesisValue(bytes32 ccy, address user) external view returns (int256);
 
+    function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        returns (int256);
+
     function getCurrentMaturity(bytes32 ccy) external view returns (uint256);
 
     function getCompoundFactor(bytes32 ccy) external view returns (uint256);
@@ -59,23 +64,32 @@ interface IGenesisValueVault {
         uint256 maturity
     ) external;
 
-    function updateCompoundFactor(
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 nextMaturity,
-        uint256 unitPrice
+    function executeAutoRoll(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _nextMaturity,
+        uint256 _unitPrice,
+        uint256 _totalFVAmount
     ) external;
 
-    function addGenesisValue(
+    function updateGenesisValue(
         bytes32 ccy,
         address user,
         uint256 basisMaturity,
-        int256 futureValue
+        int256 fvAmount
     ) external returns (bool);
 
-    function addGenesisValue(
-        bytes32 ccy,
-        address user,
-        int256 amount
+    function addLendGenesisValue(
+        bytes32 _ccy,
+        address _user,
+        uint256 _maturity,
+        uint256 _absAmount
+    ) external returns (bool);
+
+    function addBorrowGenesisValue(
+        bytes32 _ccy,
+        address _user,
+        uint256 _maturity,
+        uint256 _absAmount
     ) external returns (bool);
 }

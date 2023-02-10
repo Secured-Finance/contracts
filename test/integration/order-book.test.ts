@@ -10,7 +10,6 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  ORDERS_CALCULATION_TOLERANCE_RANGE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
@@ -199,9 +198,7 @@ describe('Integration Test: Order Book', async () => {
           ),
         );
 
-        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
-        );
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
         expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
@@ -286,9 +283,7 @@ describe('Integration Test: Order Book', async () => {
           ),
         );
 
-        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
-        );
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
         expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
@@ -380,11 +375,9 @@ describe('Integration Test: Order Book', async () => {
           await tokenVault.getTotalCollateralAmount(bob.address);
 
         expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
-        expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
-        );
+        expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(1);
         expect(bobTotalCollateralAmountAfter.sub(orderAmountInETH.div(2))).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
+          1,
         );
       });
 
@@ -422,9 +415,7 @@ describe('Integration Test: Order Book', async () => {
           ),
         );
 
-        expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(
-          ORDERS_CALCULATION_TOLERANCE_RANGE,
-        );
+        expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(1);
         expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
       });
 
@@ -805,7 +796,7 @@ describe('Integration Test: Order Book', async () => {
 
         expect(
           unusedCollateral.sub(depositAmountInETH.sub(orderAmountInETH)),
-        ).lte(ORDERS_CALCULATION_TOLERANCE_RANGE);
+        ).lte(1);
         expect(aliceFV).to.equal('0');
         expect(coverage.sub('8000').abs()).lte(1);
       });

@@ -655,7 +655,6 @@ describe('Integration Test: Deposit', async () => {
 
       expect(coverage.sub('4010').abs()).lte(1);
       expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
-      // expect(aliceFV.abs()).to.equal(bobFV.abs());
     });
 
     it('Withdraw by borrower', async () => {

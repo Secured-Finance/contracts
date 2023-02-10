@@ -21,8 +21,12 @@ library GenesisValueVaultStorage {
         mapping(bytes32 => mapping(address => int256)) balances;
         mapping(bytes32 => uint256) totalLendingSupplies;
         mapping(bytes32 => uint256) totalBorrowingSupplies;
+        // Mapping from maturity balance per currency
+        mapping(bytes32 => mapping(uint256 => int256)) maturityBalances;
         // Mapping from maturity to rate per currency
         mapping(bytes32 => mapping(uint256 => MaturityUnitPrice)) maturityUnitPrices;
+        // Mapping from maturity to maximum total supply per currency
+        mapping(bytes32 => mapping(uint256 => uint256)) maximumTotalSupply;
     }
 
     function slot() internal pure returns (Storage storage r) {
