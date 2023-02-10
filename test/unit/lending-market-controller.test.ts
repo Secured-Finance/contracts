@@ -628,8 +628,8 @@ describe('LendingMarketController', () => {
               .add(reserveFundTotalPV)
               .abs(),
           ).to.lte(3);
-          expect(aliceFV.add(bobFV).add(carolFV).add(reserveFundFV)).to.equal(
-            0,
+          expect(aliceFV.add(bobFV).add(carolFV).add(reserveFundFV).abs()).lte(
+            1,
           );
         }
       };

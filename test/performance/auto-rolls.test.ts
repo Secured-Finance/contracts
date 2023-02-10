@@ -201,7 +201,7 @@ describe('Performance Test: Auto-rolls', async () => {
       expect(aliceActualFV.sub('1250000000000000000000000').abs()).lte(1);
     });
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 600; i++) {
       it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
         const alicePV0Before = await lendingMarketController.getPresentValue(
           hexFILString,

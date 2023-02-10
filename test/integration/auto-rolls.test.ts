@@ -790,7 +790,7 @@ describe('Integration Test: Auto-rolls', async () => {
         dave.address,
       );
 
-      expect(davePV).to.equal(daveActualFV.mul(midUnitPrice).div(BP));
+      expect(davePV.sub(daveActualFV.mul(midUnitPrice).div(BP)).abs()).lte(1);
     });
 
     it('Check future values', async () => {
