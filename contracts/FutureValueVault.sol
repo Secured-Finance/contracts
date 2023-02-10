@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {FutureValueVaultStorage as Storage} from "./storages/FutureValueVaultStorage.sol";
 // interfaces
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
@@ -17,6 +18,9 @@ import {Proxyable} from "./utils/Proxyable.sol";
  * @notice Implements the management of the future value as an amount for Lending deals in each currency.
  */
 contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable {
+    using SafeCast for uint256;
+    using SafeCast for int256;
+
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
@@ -106,8 +110,8 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         int256 previousBalance = Storage.slot().balances[_user];
 
         Storage.slot().futureValueMaturities[_user] = _maturity;
-        Storage.slot().balances[_user] += int256(_amount);
-        emit Transfer(address(0), _user, int256(_amount));
+        Storage.slot().balances[_user] += _amount.toInt256();
+        emit Transfer(address(0), _user, _amount.toInt256());
 
         if (_isTaker) {
             int256 currentBalance = Storage.slot().balances[_user];
@@ -141,8 +145,8 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
 
         int256 previousBalance = Storage.slot().balances[_user];
         Storage.slot().futureValueMaturities[_user] = _maturity;
-        Storage.slot().balances[_user] -= int256(_amount);
-        emit Transfer(address(0), _user, -int256(_amount));
+        Storage.slot().balances[_user] -= _amount.toInt256();
+        emit Transfer(address(0), _user, -(_amount.toInt256()));
 
         if (_isTaker) {
             int256 currentBalance = Storage.slot().balances[_user];
@@ -200,9 +204,9 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
 
             isAllRemoved = false;
             if (removedAmount >= 0) {
-                Storage.slot().removedLendingSupply[maturity] += uint256(removedAmount);
+                Storage.slot().removedLendingSupply[maturity] += removedAmount.toUint256();
             } else {
-                Storage.slot().removedBorrowingSupply[maturity] += uint256(-removedAmount);
+                Storage.slot().removedBorrowingSupply[maturity] += (-removedAmount).toUint256();
             }
 
             Storage.slot().balances[_user] = 0;
@@ -221,8 +225,9 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         int256 _previous,
         int256 _current
     ) private {
-        uint256 absPrevious = _previous >= 0 ? uint256(_previous) : uint256(-_previous);
-        uint256 absCurrent = _current >= 0 ? uint256(_current) : uint256(-_current);
+        uint256 absPrevious = _previous >= 0 ? _previous.toUint256() : (-_previous).toUint256();
+        uint256 absCurrent = _current >= 0 ? _current.toUint256() : (-_current).toUint256();
+
         if (absPrevious > absCurrent) {
             Storage.slot().totalSupply[_maturity] -= absPrevious - absCurrent;
         } else {

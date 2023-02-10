@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 // interfaces
 import {IGenesisValueVault} from "./interfaces/IGenesisValueVault.sol";
 // libraries
@@ -19,6 +21,8 @@ import {GenesisValueVaultStorage as Storage, MaturityUnitPrice} from "./storages
  * @notice Implements the management of the genesis value as an amount for Lending deals.
  */
 contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyable {
+    using SafeCast for uint256;
+    using SafeCast for int256;
     using RoundingUint256 for uint256;
     using RoundingInt256 for int256;
 
@@ -98,8 +102,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         // NOTE: The formula is:
         // futureValue = genesisValue * currentCompoundFactor.
         return
-            (getGenesisValue(_ccy, _user) * int256(getCompoundFactor(_ccy))).div(
-                int256(10**decimals(_ccy))
+            (getGenesisValue(_ccy, _user) * getCompoundFactor(_ccy).toInt256()).div(
+                (10**decimals(_ccy)).toInt256()
             );
     }
 
@@ -134,9 +138,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
         bool isPlus = _futureValue > 0;
-        uint256 absFv = uint256(isPlus ? _futureValue : -_futureValue);
+        uint256 absFv = (isPlus ? _futureValue : -_futureValue).toUint256();
         uint256 absGv = (absFv * 10**decimals(_ccy)).div(compoundFactor);
-        return isPlus ? int256(absGv) : -int256(absGv);
+        return isPlus ? absGv.toInt256() : -(absGv.toInt256());
     }
 
     function calculateFVFromGV(
@@ -150,10 +154,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         require(compoundFactor > 0, "Compound factor is not fixed yet");
         bool isPlus = _genesisValue > 0;
-        uint256 absGv = uint256(isPlus ? _genesisValue : -_genesisValue);
+        uint256 absGv = (isPlus ? _genesisValue : -_genesisValue).toUint256();
         uint256 absFv = (absGv * compoundFactor).div(10**decimals(_ccy));
 
-        return isPlus ? int256(absFv) : -int256(absFv);
+        return isPlus ? absFv.toInt256() : -(absFv.toInt256());
     }
 
     function initialize(
@@ -245,9 +249,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         int256 amount = calculateGVFromFV(_ccy, _basisMaturity, _fvAmount);
 
         if (amount > 0) {
-            return addLendGenesisValue(_ccy, _user, _basisMaturity, uint256(amount));
+            return addLendGenesisValue(_ccy, _user, _basisMaturity, amount.toUint256());
         } else {
-            return addBorrowGenesisValue(_ccy, _user, _basisMaturity, uint256(-amount));
+            return addBorrowGenesisValue(_ccy, _user, _basisMaturity, (-amount).toUint256());
         }
     }
 
@@ -258,15 +262,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _absAmount
     ) public override onlyAcceptedContracts returns (bool) {
         int256 balance = Storage.slot().balances[_ccy][_user];
-        int256 amount = int256(_absAmount);
+        int256 amount = _absAmount.toInt256();
 
         if (balance >= 0) {
             Storage.slot().totalLendingSupplies[_ccy] += _absAmount;
         } else {
             int256 diff = amount + balance;
             if (diff >= 0) {
-                Storage.slot().totalLendingSupplies[_ccy] += uint256(diff);
-                Storage.slot().totalBorrowingSupplies[_ccy] -= uint256(-balance);
+                Storage.slot().totalLendingSupplies[_ccy] += diff.toUint256();
+                Storage.slot().totalBorrowingSupplies[_ccy] -= (-balance).toUint256();
             } else {
                 Storage.slot().totalBorrowingSupplies[_ccy] -= _absAmount;
             }
@@ -287,15 +291,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _absAmount
     ) public override onlyAcceptedContracts returns (bool) {
         int256 balance = Storage.slot().balances[_ccy][_user];
-        int256 amount = -int256(_absAmount);
+        int256 amount = -(_absAmount.toInt256());
 
         if (balance <= 0) {
             Storage.slot().totalBorrowingSupplies[_ccy] += _absAmount;
         } else {
             int256 diff = amount + balance;
             if (diff <= 0) {
-                Storage.slot().totalBorrowingSupplies[_ccy] += uint256(-diff);
-                Storage.slot().totalLendingSupplies[_ccy] -= uint256(balance);
+                Storage.slot().totalBorrowingSupplies[_ccy] += (-diff).toUint256();
+                Storage.slot().totalLendingSupplies[_ccy] -= balance.toUint256();
             } else {
                 Storage.slot().totalLendingSupplies[_ccy] -= _absAmount;
             }

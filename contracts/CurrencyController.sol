@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
 // libraries
@@ -22,6 +23,8 @@ import {CurrencyControllerStorage as Storage, Currency} from "./storages/Currenc
  */
 contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using SafeCast for uint256;
+    using SafeCast for int256;
     using RoundingUint256 for uint256;
     using RoundingInt256 for int256;
 
@@ -280,7 +283,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_isETH(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
-        amount = (_amount * uint256(_getLastETHPrice(_ccy))).div(
+        amount = (_amount * _getLastETHPrice(_ccy).toUint256()).div(
             10**Storage.slot().ethDecimals[_ccy]
         );
     }
@@ -301,7 +304,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_amount == 0) return 0;
 
         amount = (_amount * _getLastETHPrice(_ccy)).div(
-            int256(10**Storage.slot().ethDecimals[_ccy])
+            (10**Storage.slot().ethDecimals[_ccy]).toInt256()
         );
     }
 
@@ -324,7 +327,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             if (_amounts[i] == 0) continue;
 
             amounts[i] =
-                (_amounts[i] * uint256(_getLastETHPrice(_ccy))) /
+                (_amounts[i] * _getLastETHPrice(_ccy).toUint256()) /
                 10**Storage.slot().ethDecimals[_ccy];
         }
     }
@@ -345,7 +348,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
         amount =
             (_amountETH * 10**Storage.slot().ethDecimals[_ccy]) /
-            uint256(_getLastETHPrice(_ccy));
+            _getLastETHPrice(_ccy).toUint256();
         require(amount != 0, "Too small amount");
     }
 

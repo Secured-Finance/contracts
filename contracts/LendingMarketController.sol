@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
@@ -42,6 +43,8 @@ contract LendingMarketController is
     Proxyable
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using SafeCast for int256;
+
     uint256 private constant BASIS_TERM = 3;
     uint256 private constant MAXIMUM_ORDER_COUNT = 20;
 
@@ -857,14 +860,14 @@ contract LendingMarketController is
                         _ccy,
                         _user,
                         basisMaturity,
-                        uint256(maturityGVAmount)
+                        maturityGVAmount.toUint256()
                     );
                 } else {
                     genesisValueVault().addLendGenesisValue(
                         _ccy,
                         _user,
                         basisMaturity,
-                        uint256(-maturityGVAmount)
+                        (-maturityGVAmount).toUint256()
                     );
                 }
             } else {

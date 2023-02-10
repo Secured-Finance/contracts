@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
@@ -16,6 +17,8 @@ import {LendingMarketControllerStorage as Storage} from "../../storages/LendingM
 
 library FundCalculationLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using SafeCast for uint256;
+    using SafeCast for int256;
     using RoundingUint256 for uint256;
     using RoundingInt256 for int256;
 
@@ -83,15 +86,13 @@ library FundCalculationLogic {
         require(futureValueAmount < 0, "No debt in the selected maturity");
 
         vars.debtMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity];
-        vars.debtFVAmount = uint256(-futureValueAmount);
-        vars.debtPVAmount = uint256(
-            _calculatePVFromFVInMaturity(
-                _debtCcy,
-                _debtMaturity,
-                -futureValueAmount,
-                vars.debtMarket
-            )
-        );
+        vars.debtFVAmount = (-futureValueAmount).toUint256();
+        vars.debtPVAmount = _calculatePVFromFVInMaturity(
+            _debtCcy,
+            _debtMaturity,
+            -futureValueAmount,
+            vars.debtMarket
+        ).toUint256();
 
         vars.liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
             _debtCcy,
@@ -117,28 +118,27 @@ library FundCalculationLogic {
                     _debtMaturity,
                     address(AddressResolverLib.reserveFund()),
                     _user,
-                    uint256(
-                        AddressResolverLib.genesisValueVault().calculateGVFromFV(
+                    AddressResolverLib
+                        .genesisValueVault()
+                        .calculateGVFromFV(
                             _debtCcy,
                             _debtMaturity,
-                            int256(vars.liquidationPVAmount)
+                            vars.liquidationPVAmount.toInt256()
                         )
-                    )
+                        .toUint256()
                 );
 
                 if (vars.offsetGVAmount > 0) {
-                    offsetPVAmount = uint256(
-                        _calculatePVFromFVInMaturity(
+                    offsetPVAmount = _calculatePVFromFVInMaturity(
+                        _debtCcy,
+                        _debtMaturity,
+                        AddressResolverLib.genesisValueVault().calculateFVFromGV(
                             _debtCcy,
                             _debtMaturity,
-                            AddressResolverLib.genesisValueVault().calculateFVFromGV(
-                                _debtCcy,
-                                _debtMaturity,
-                                int256(vars.offsetGVAmount)
-                            ),
-                            vars.debtMarket
-                        )
-                    );
+                            vars.offsetGVAmount.toInt256()
+                        ),
+                        vars.debtMarket
+                    ).toUint256();
                 }
             }
 
@@ -155,14 +155,12 @@ library FundCalculationLogic {
             );
 
             if (offsetFVAmount > 0) {
-                offsetPVAmount += uint256(
-                    _calculatePVFromFVInMaturity(
-                        _debtCcy,
-                        _debtMaturity,
-                        int256(offsetFVAmount),
-                        vars.debtMarket
-                    )
-                );
+                offsetPVAmount += _calculatePVFromFVInMaturity(
+                    _debtCcy,
+                    _debtMaturity,
+                    offsetFVAmount.toInt256(),
+                    vars.debtMarket
+                ).toUint256();
             }
         }
 
@@ -228,11 +226,11 @@ library FundCalculationLogic {
                     futureValue -= _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         borrowOrdersMaturity,
-                        int256(borrowFVInMaturity),
+                        borrowFVInMaturity.toInt256(),
                         currentMarket
                     );
                 } else if (_maturity == borrowOrdersMaturity) {
-                    futureValue -= int256(borrowFVInMaturity);
+                    futureValue -= borrowFVInMaturity.toInt256();
                 }
 
                 // Get FV from inactive lend orders
@@ -244,11 +242,11 @@ library FundCalculationLogic {
                     futureValue += _calculateCurrentFVFromFVInMaturity(
                         _ccy,
                         lendOrdersMaturity,
-                        int256(lendFVInMaturity),
+                        lendFVInMaturity.toInt256(),
                         currentMarket
                     );
                 } else if (_maturity == lendOrdersMaturity) {
-                    futureValue += int256(lendFVInMaturity);
+                    futureValue += lendFVInMaturity.toInt256();
                 }
             }
         }
@@ -304,7 +302,7 @@ library FundCalculationLogic {
                     presentValue -= _calculatePVFromFVInMaturity(
                         _ccy,
                         borrowOrdersMaturity,
-                        int256(borrowFVInMaturity),
+                        borrowFVInMaturity.toInt256(),
                         currentMarket
                     );
                 }
@@ -321,7 +319,7 @@ library FundCalculationLogic {
                     presentValue += _calculatePVFromFVInMaturity(
                         _ccy,
                         lendOrdersMaturity,
-                        int256(lendFVInMaturity),
+                        lendFVInMaturity.toInt256(),
                         currentMarket
                     );
                 }
@@ -355,7 +353,7 @@ library FundCalculationLogic {
             totalPresentValue -= _calculatePVFromFVInMaturity(
                 _ccy,
                 borrowOrdersMaturity,
-                int256(borrowFVInMaturity),
+                borrowFVInMaturity.toInt256(),
                 market
             );
 
@@ -366,7 +364,7 @@ library FundCalculationLogic {
             totalPresentValue += _calculatePVFromFVInMaturity(
                 _ccy,
                 lendOrdersMaturity,
-                int256(lendFVInMaturity),
+                lendFVInMaturity.toInt256(),
                 market
             );
         }
@@ -479,10 +477,10 @@ library FundCalculationLogic {
         int256 totalPresentValue = _getTotalPresentValue(_ccy, _user);
         if (totalPresentValue >= 0) {
             // Add to claimableAmount
-            claimableAmount += uint256(totalPresentValue);
+            claimableAmount += totalPresentValue.toUint256();
         } else {
             // Add to debtAmount
-            debtAmount += uint256(-totalPresentValue);
+            debtAmount += (-totalPresentValue).toUint256();
         }
 
         if (claimableAmount > 0) {
@@ -585,8 +583,8 @@ library FundCalculationLogic {
             uint256 currentUnitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0])
                 .getMidUnitPrice();
 
-            futureValue = (presetValue * int256(ProtocolTypes.PRICE_DIGIT)).div(
-                int256(currentUnitPrice)
+            futureValue = (presetValue * ProtocolTypes.PRICE_DIGIT.toInt256()).div(
+                currentUnitPrice.toInt256()
             );
         } else {
             futureValue = AddressResolverLib.genesisValueVault().calculateCurrentFVFromFVInMaturity(
@@ -643,7 +641,7 @@ library FundCalculationLogic {
         returns (int256)
     {
         // NOTE: The formula is: presentValue = futureValue * unitPrice.
-        return (_futureValue * int256(_unitPrice)).div(int256(ProtocolTypes.PRICE_DIGIT));
+        return (_futureValue * _unitPrice.toInt256()).div(ProtocolTypes.PRICE_DIGIT.toInt256());
     }
 
     function _getTotalPresentValue(bytes32 _ccy, address _user)
@@ -694,14 +692,12 @@ library FundCalculationLogic {
         ) = ILendingMarket(_market).getTotalAmountFromLendOrders(_user);
 
         workingOrdersAmount = activeAmount;
-        claimableAmount = uint256(
-            _calculatePVFromFVInMaturity(
-                _ccy,
-                maturity,
-                int256(inactiveFutureValueInMaturity),
-                _market
-            )
-        );
+        claimableAmount = _calculatePVFromFVInMaturity(
+            _ccy,
+            maturity,
+            inactiveFutureValueInMaturity.toInt256(),
+            _market
+        ).toUint256();
         lentAmount = inactiveAmount;
     }
 
@@ -726,14 +722,12 @@ library FundCalculationLogic {
         ) = ILendingMarket(_market).getTotalAmountFromBorrowOrders(_user);
 
         workingOrdersAmount = activeAmount;
-        debtAmount = uint256(
-            _calculatePVFromFVInMaturity(
-                _ccy,
-                maturity,
-                int256(inactiveFutureValueInMaturity),
-                _market
-            )
-        );
+        debtAmount = _calculatePVFromFVInMaturity(
+            _ccy,
+            maturity,
+            inactiveFutureValueInMaturity.toInt256(),
+            _market
+        ).toUint256();
         borrowedAmount = inactiveAmount;
     }
 
@@ -757,10 +751,10 @@ library FundCalculationLogic {
         }
 
         if (lenderMaturity == borrowerMaturity) {
-            offsetAmount = uint256(lenderFVAmount);
+            offsetAmount = lenderFVAmount.toUint256();
 
             if (-borrowerFVAmount < lenderFVAmount) {
-                offsetAmount = uint256(-borrowerFVAmount);
+                offsetAmount = (-borrowerFVAmount).toUint256();
             }
 
             if (_maximumFVAmount != 0 && offsetAmount > _maximumFVAmount) {
@@ -795,11 +789,11 @@ library FundCalculationLogic {
         if (lenderGVAmount <= 0 || borrowerGVAmount >= 0) {
             return 0;
         } else {
-            offsetAmount = uint256(lenderGVAmount);
+            offsetAmount = lenderGVAmount.toUint256();
         }
 
         if (-borrowerGVAmount < lenderGVAmount) {
-            offsetAmount = uint256(-borrowerGVAmount);
+            offsetAmount = (-borrowerGVAmount).toUint256();
         }
 
         if (_maximumGVAmount != 0 && offsetAmount > _maximumGVAmount) {
