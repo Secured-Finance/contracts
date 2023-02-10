@@ -28,7 +28,9 @@ library FundCalculationLogic {
         address debtMarket;
         uint256 debtFVAmount;
         uint256 debtPVAmount;
+        int256 futureValueAmount;
         uint256 estimatedDebtPVAmount;
+        uint256 liquidationPVAmountInETH;
         uint256 liquidationPVAmount;
         uint256 offsetGVAmount;
     }
@@ -77,26 +79,24 @@ library FundCalculationLogic {
     ) public returns (uint256 liquidationPVAmount, uint256 offsetPVAmount) {
         CalculatedAmountVars memory vars;
 
-        uint256 liquidationPVAmountInETH = AddressResolverLib.tokenVault().getLiquidationAmount(
-            _user
-        );
-        require(liquidationPVAmountInETH != 0, "User has enough collateral");
+        vars.liquidationPVAmountInETH = AddressResolverLib.tokenVault().getLiquidationAmount(_user);
+        require(vars.liquidationPVAmountInETH != 0, "User has enough collateral");
 
-        int256 futureValueAmount = calculateActualFutureValue(_debtCcy, _debtMaturity, _user);
-        require(futureValueAmount < 0, "No debt in the selected maturity");
+        vars.futureValueAmount = calculateActualFutureValue(_debtCcy, _debtMaturity, _user);
+        require(vars.futureValueAmount < 0, "No debt in the selected maturity");
 
         vars.debtMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity];
-        vars.debtFVAmount = (-futureValueAmount).toUint256();
+        vars.debtFVAmount = (-vars.futureValueAmount).toUint256();
         vars.debtPVAmount = _calculatePVFromFVInMaturity(
             _debtCcy,
             _debtMaturity,
-            -futureValueAmount,
+            -vars.futureValueAmount,
             vars.debtMarket
         ).toUint256();
 
         vars.liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
             _debtCcy,
-            liquidationPVAmountInETH
+            vars.liquidationPVAmountInETH
         );
 
         // If the debt amount is less than the liquidation amount, the debt amount is used as the liquidation amount.
