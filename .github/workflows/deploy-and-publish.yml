@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - develop
+      # For testing
+      - SF-327
   workflow_run:
     workflows: ['Merge into main', 'Reset smart contracts']
     types: [completed]
@@ -24,63 +26,64 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
-      - name: Set env for development environment
-        if: ${{ github.event.workflow.name != 'Merge into main' }}
-        run: |
-          echo "NETWORK=development" >> $GITHUB_ENV
-          echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ secrets.DEV_UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
-          echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ secrets.DEV_UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
-          echo "TOKEN_EFIL=${{ secrets.DEV_TOKEN_EFIL }}" >> $GITHUB_ENV
-          echo "TOKEN_USDC=${{ secrets.DEV_TOKEN_USDC }}" >> $GITHUB_ENV
-          echo "TOKEN_WBTC=${{ secrets.DEV_TOKEN_WBTC }}" >> $GITHUB_ENV
-          echo "TOKEN_WETH=${{ secrets.DEV_TOKEN_WETH }}" >> $GITHUB_ENV
-          echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
-          echo "ALCHEMY_API_KEY=${{ secrets.DEV_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
-          echo "TENDERLY_USER=${{ secrets.DEV_TENDERLY_USER }}" >> $GITHUB_ENV
-          echo "TENDERLY_PROJECT=${{ secrets.DEV_TENDERLY_PROJECT }}" >> $GITHUB_ENV
-          echo "TENDERLY_ACCESS_KEY=${{ secrets.DEV_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
-      - name: Set env for staging environment
-        if: ${{ github.event.workflow.name == 'Merge into main' }}
-        run: |
-          echo "NETWORK=staging" >> $GITHUB_ENV
-          echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ secrets.STG_UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
-          echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ secrets.STG_UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
-          echo "TOKEN_EFIL=${{ secrets.STG_TOKEN_EFIL }}" >> $GITHUB_ENV
-          echo "TOKEN_USDC=${{ secrets.STG_TOKEN_USDC }}" >> $GITHUB_ENV
-          echo "TOKEN_WBTC=${{ secrets.STG_TOKEN_WBTC }}" >> $GITHUB_ENV
-          echo "TOKEN_WETH=${{ secrets.STG_TOKEN_WETH }}" >> $GITHUB_ENV
-          echo "PRIVATE_KEY=${{ secrets.STG_PRIVATE_KEY }}" >> $GITHUB_ENV
-          echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
-          echo "TENDERLY_USER=${{ secrets.STG_TENDERLY_USER }}" >> $GITHUB_ENV
-          echo "TENDERLY_PROJECT=${{ secrets.STG_TENDERLY_PROJECT }}" >> $GITHUB_ENV
-          echo "TENDERLY_ACCESS_KEY=${{ secrets.STG_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
-      - name: Install Dependencies
-        run: npm ci
-      - name: Build Smart Contracts
-        run: npm run compile
-      - name: Create a fork environment
-        run: |
-          FORK_ID=$(npm run fork $NETWORK | tail -n 1)
-          echo "fork id is $FORK_ID"
-          echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
-      - name: Deploy for fork environment
-        run: npm run deploy $NETWORK
-        env:
-          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-      - name: Check diff
-        shell: bash
-        id: diff
-        run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
-      - name: Run a Loan Test on fork environment
-        if: steps.diff.outputs.count > 0
-        env:
-          USE_DEFAULT_ACCOUNTS: true
-          FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-        run: npx hardhat --network $NETWORK test "scripts/zc-e2e.ts" --bail
-      - name: Delete the fork environment
-        run: npm run unfork --forkid $FORK_ID
-  deploy:
+      # For testing
+      # - name: Set env for development environment
+      #   if: ${{ github.event.workflow.name != 'Merge into main' }}
+      #   run: |
+      #     echo "NETWORK=development" >> $GITHUB_ENV
+      #     echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ secrets.DEV_UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
+      #     echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ secrets.DEV_UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
+      #     echo "TOKEN_EFIL=${{ secrets.DEV_TOKEN_EFIL }}" >> $GITHUB_ENV
+      #     echo "TOKEN_USDC=${{ secrets.DEV_TOKEN_USDC }}" >> $GITHUB_ENV
+      #     echo "TOKEN_WBTC=${{ secrets.DEV_TOKEN_WBTC }}" >> $GITHUB_ENV
+      #     echo "TOKEN_WETH=${{ secrets.DEV_TOKEN_WETH }}" >> $GITHUB_ENV
+      #     echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
+      #     echo "ALCHEMY_API_KEY=${{ secrets.DEV_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      #     echo "TENDERLY_USER=${{ secrets.DEV_TENDERLY_USER }}" >> $GITHUB_ENV
+      #     echo "TENDERLY_PROJECT=${{ secrets.DEV_TENDERLY_PROJECT }}" >> $GITHUB_ENV
+      #     echo "TENDERLY_ACCESS_KEY=${{ secrets.DEV_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
+      # - name: Set env for staging environment
+      #   if: ${{ github.event.workflow.name == 'Merge into main' }}
+      #   run: |
+      #     echo "NETWORK=staging" >> $GITHUB_ENV
+      #     echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ secrets.STG_UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
+      #     echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ secrets.STG_UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
+      #     echo "TOKEN_EFIL=${{ secrets.STG_TOKEN_EFIL }}" >> $GITHUB_ENV
+      #     echo "TOKEN_USDC=${{ secrets.STG_TOKEN_USDC }}" >> $GITHUB_ENV
+      #     echo "TOKEN_WBTC=${{ secrets.STG_TOKEN_WBTC }}" >> $GITHUB_ENV
+      #     echo "TOKEN_WETH=${{ secrets.STG_TOKEN_WETH }}" >> $GITHUB_ENV
+      #     echo "PRIVATE_KEY=${{ secrets.STG_PRIVATE_KEY }}" >> $GITHUB_ENV
+      #     echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      #     echo "TENDERLY_USER=${{ secrets.STG_TENDERLY_USER }}" >> $GITHUB_ENV
+      #     echo "TENDERLY_PROJECT=${{ secrets.STG_TENDERLY_PROJECT }}" >> $GITHUB_ENV
+      #     echo "TENDERLY_ACCESS_KEY=${{ secrets.STG_TENDERLY_ACCESS_KEY }}" >> $GITHUB_ENV
+      # - name: Install Dependencies
+      #   run: npm ci
+      # - name: Build Smart Contracts
+      #   run: npm run compile
+      # - name: Create a fork environment
+      #   run: |
+      #     FORK_ID=$(npm run fork $NETWORK | tail -n 1)
+      #     echo "fork id is $FORK_ID"
+      #     echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
+      # - name: Deploy for fork environment
+      #   run: npm run deploy $NETWORK
+      #   env:
+      #     FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+      # - name: Check diff
+      #   shell: bash
+      #   id: diff
+      #   run: |
+      #     echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+      # - name: Run a Loan Test on fork environment
+      #   if: steps.diff.outputs.count > 0
+      #   env:
+      #     USE_DEFAULT_ACCOUNTS: true
+      #     FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
+      #   run: npx hardhat --network $NETWORK test "scripts/zc-e2e.ts" --bail
+      # - name: Delete the fork environment
+      #   run: npm run unfork --forkid $FORK_ID
+  publish:
     name: Deploy Smart Contracts
     runs-on: ubuntu-latest
     needs: [test]
@@ -97,6 +100,14 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
+      - name: 'Setup for npm'
+        run: |
+          npm set @secured-finance:registry=https://npm.pkg.github.com
+          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+      - name: 'Setup for git'
+        run: |
+          git config user.name "SF Machine User[bot]"
+          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
       - name: Install Dependencies
         run: npm ci
       - name: Build Smart Contracts
@@ -131,55 +142,15 @@ jobs:
           git add .
       - name: Check diff
         shell: bash
-        id: diff
+        id: deploymentDiff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
       - name: Commit and push
         shell: bash
-        if: steps.diff.outputs.count > 0
+        if: steps.deploymentDiff.outputs.count > 0
         run: |
-          git config user.name "SF Machine User[bot]"
-          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
           git commit -m "chore: update smart contracts"
           git push
-  publish:
-    name: Publish to NPM
-    runs-on: ubuntu-latest
-    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'canceled') }}
-    needs: [test, deploy]
-    steps:
-      - name: Check conditional job statues
-        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-        run: exit 1
-      - name: Generate token
-        id: generate_token
-        uses: tibdex/github-app-token@v1
-        with:
-          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
-          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ steps.generate_token.outputs.token }}
-      - uses: actions/setup-node@v3
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-      - name: Install Dependencies
-        run: npm ci
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-      - name: 'Setup for npm'
-        run: |
-          npm set @secured-finance:registry=https://npm.pkg.github.com
-          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-      - name: 'Setup for git'
-        run: |
-          git config user.name "SF Machine User[bot]"
-          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
       - name: Update documents
         if: ${{ github.event.workflow.name != 'Merge into main' }}
         run: |
@@ -187,12 +158,12 @@ jobs:
           git add .
       - name: Check diff
         shell: bash
-        id: diff
+        id: docgenDiff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
-      - name: Commit
+      - name: Commit and push
         shell: bash
-        if: steps.diff.outputs.count > 0
+        if: steps.docgenDiff.outputs.count > 0
         run: |
           git commit -m "chore: update docs"
       - name: Version and Publish
@@ -205,10 +176,6 @@ jobs:
             npm version prerelease --preid beta -m "chore: upgrade to %s"
           fi
           npm publish
-      - name: Push
-        shell: bash
-        run: |
-          git pull
           git push
       - name: Merge main into develop
         shell: bash

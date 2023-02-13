@@ -63,6 +63,8 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
      * @notice Unpauses the reserve fund.
      */
     function unpause() public override {
+        // For testing
+        Storage.slot().paused = true;
         Storage.slot().paused = false;
         emit Unpause(msg.sender);
     }
