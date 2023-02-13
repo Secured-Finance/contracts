@@ -149,7 +149,7 @@ jobs:
         shell: bash
         if: steps.deploymentDiff.outputs.count > 0
         run: |
-          git commit -m "chore: update smart contracts"
+          git commit -m "chore: update smart contracts" --no-verify
           git push
       - name: Update documents
         if: ${{ github.event.workflow.name != 'Merge into main' }}
@@ -165,7 +165,8 @@ jobs:
         shell: bash
         if: steps.docgenDiff.outputs.count > 0
         run: |
-          git commit -m "chore: update docs"
+          git commit -m "chore: update docs" --no-verify
+          git push
       - name: Version and Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
