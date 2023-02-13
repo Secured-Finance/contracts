@@ -15,8 +15,11 @@ struct CalculatedAmountVars {
   address debtMarket;
   uint256 debtFVAmount;
   uint256 debtPVAmount;
+  int256 futureValueAmount;
   uint256 estimatedDebtPVAmount;
+  uint256 liquidationPVAmountInETH;
   uint256 liquidationPVAmount;
+  uint256 offsetGVAmount;
 }
 ```
 
@@ -156,6 +159,6 @@ function _offsetFutureValue(bytes32 _ccy, uint256 _maturity, address _lender, ad
 ### _offsetGenesisValue
 
 ```solidity
-function _offsetGenesisValue(bytes32 _ccy, address _lender, address _borrower, int256 _maximumGVAmount) internal returns (int256 offsetAmount)
+function _offsetGenesisValue(bytes32 _ccy, uint256 _maturity, address _lender, address _borrower, uint256 _maximumGVAmount) internal returns (uint256 offsetAmount)
 ```
 

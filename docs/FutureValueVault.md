@@ -38,25 +38,13 @@ Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
-### getTotalLendingSupply
+### getTotalSupply
 
 ```solidity
-function getTotalLendingSupply(uint256 _maturity) external view returns (uint256)
+function getTotalSupply(uint256 _maturity) external view returns (uint256)
 ```
 
-Gets the total lending supply.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _maturity | uint256 | The maturity of the market |
-
-### getTotalBorrowingSupply
-
-```solidity
-function getTotalBorrowingSupply(uint256 _maturity) external view returns (uint256)
-```
-
-Gets the total borrowing supply.
+Gets the total supply.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -99,35 +87,60 @@ Gets if the account has the future value amount in the selected maturity.
 ### addLendFutureValue
 
 ```solidity
-function addLendFutureValue(address _user, uint256 _amount, uint256 _maturity) external returns (bool)
+function addLendFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public returns (bool)
 ```
 
 Adds the future value amount for lending deals.
+
+_Since the total supply can be determined by totaling only the amounts on one side of the order
+when the order is fulfilled, the total supply is incremented only when the executor of the original order
+is the taker._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
 | _amount | uint256 | The amount to add |
 | _maturity | uint256 | The maturity of the market |
+| _isTaker | bool | The boolean if the original order is created by a taker |
 
 ### addBorrowFutureValue
 
 ```solidity
-function addBorrowFutureValue(address _user, uint256 _amount, uint256 _maturity) external returns (bool)
+function addBorrowFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public returns (bool)
 ```
 
 Adds the future value amount for borrowing deals.
 
+_Since the total supply can be determined by totaling only the amounts on one side of the order
+when the order is fulfilled, the total supply is incremented only when the executor of the original order
+is the taker._
+
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
+| _amount | uint256 | The amount to add |
+| _maturity | uint256 | The maturity of the market |
+| _isTaker | bool | The boolean if the original order is created by a taker |
+
+### offsetFutureValue
+
+```solidity
+function offsetFutureValue(address _lender, address _borrower, uint256 _amount, uint256 _maturity) external returns (bool)
+```
+
+Offsets the future value amount.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _lender | address | Lender's address |
+| _borrower | address | Borrower's address |
 | _amount | uint256 | The amount to add |
 | _maturity | uint256 | The maturity of the market |
 
 ### removeFutureValue
 
 ```solidity
-function removeFutureValue(address _user, uint256 _activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity)
+function removeFutureValue(address _user, uint256 _activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
 ```
 
 Remove all future values if there is an amount in the past maturity.
@@ -142,4 +155,11 @@ Remove all future values if there is an amount in the past maturity.
 | removedAmount | int256 | Removed future value amount |
 | currentAmount | int256 | Current future value amount after update |
 | maturity | uint256 | Maturity of future value |
+| isAllRemoved | bool | The boolean if the all future value amount in the selected maturity is removed |
+
+### _updateTotalSupply
+
+```solidity
+function _updateTotalSupply(uint256 _maturity, int256 _previous, int256 _current) private
+```
 

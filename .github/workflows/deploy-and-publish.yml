@@ -80,7 +80,7 @@ jobs:
         run: npx hardhat --network $NETWORK test "scripts/zc-e2e.ts" --bail
       - name: Delete the fork environment
         run: npm run unfork --forkid $FORK_ID
-  deploy:
+  publish:
     name: Deploy Smart Contracts
     runs-on: ubuntu-latest
     needs: [test]
@@ -97,6 +97,14 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
+      - name: 'Setup for npm'
+        run: |
+          npm set @secured-finance:registry=https://npm.pkg.github.com
+          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+      - name: 'Setup for git'
+        run: |
+          git config user.name "SF Machine User[bot]"
+          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
       - name: Install Dependencies
         run: npm ci
       - name: Build Smart Contracts
@@ -131,55 +139,15 @@ jobs:
           git add .
       - name: Check diff
         shell: bash
-        id: diff
+        id: deploymentDiff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
       - name: Commit and push
         shell: bash
-        if: steps.diff.outputs.count > 0
+        if: steps.deploymentDiff.outputs.count > 0
         run: |
-          git config user.name "SF Machine User[bot]"
-          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
-          git commit -m "chore: update smart contracts"
+          git commit -m "chore: update smart contracts" --no-verify
           git push
-  publish:
-    name: Publish to NPM
-    runs-on: ubuntu-latest
-    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'canceled') }}
-    needs: [test, deploy]
-    steps:
-      - name: Check conditional job statues
-        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-        run: exit 1
-      - name: Generate token
-        id: generate_token
-        uses: tibdex/github-app-token@v1
-        with:
-          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
-          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ steps.generate_token.outputs.token }}
-      - uses: actions/setup-node@v3
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-      - name: Install Dependencies
-        run: npm ci
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-      - name: 'Setup for npm'
-        run: |
-          npm set @secured-finance:registry=https://npm.pkg.github.com
-          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
-      - name: 'Setup for git'
-        run: |
-          git config user.name "SF Machine User[bot]"
-          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
       - name: Update documents
         if: ${{ github.event.workflow.name != 'Merge into main' }}
         run: |
@@ -187,14 +155,15 @@ jobs:
           git add .
       - name: Check diff
         shell: bash
-        id: diff
+        id: docgenDiff
         run: |
           echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
-      - name: Commit
+      - name: Commit and push
         shell: bash
-        if: steps.diff.outputs.count > 0
+        if: steps.docgenDiff.outputs.count > 0
         run: |
-          git commit -m "chore: update docs"
+          git commit -m "chore: update docs" --no-verify
+          git push
       - name: Version and Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -205,10 +174,6 @@ jobs:
             npm version prerelease --preid beta -m "chore: upgrade to %s"
           fi
           npm publish
-      - name: Push
-        shell: bash
-        run: |
-          git pull
           git push
       - name: Merge main into develop
         shell: bash

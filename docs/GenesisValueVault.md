@@ -68,6 +68,12 @@ function getTotalBorrowingSupply(bytes32 _ccy) external view returns (uint256)
 function getGenesisValue(bytes32 _ccy, address _user) public view returns (int256)
 ```
 
+### getMaturityGenesisValue
+
+```solidity
+function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity) external view returns (int256)
+```
+
 ### getCurrentMaturity
 
 ```solidity
@@ -116,21 +122,39 @@ function calculateFVFromGV(bytes32 _ccy, uint256 _basisMaturity, int256 _genesis
 function initialize(bytes32 _ccy, uint8 _decimals, uint256 _compoundFactor, uint256 _maturity) external
 ```
 
-### updateCompoundFactor
+### executeAutoRoll
 
 ```solidity
-function updateCompoundFactor(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice) external
+function executeAutoRoll(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice, uint256 _totalFVAmount) external
 ```
 
-### addGenesisValue
+### _updateCompoundFactor
 
 ```solidity
-function addGenesisValue(bytes32 _ccy, address _user, uint256 _basisMaturity, int256 _futureValue) external returns (bool)
+function _updateCompoundFactor(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice) private
 ```
 
-### addGenesisValue
+### updateGenesisValue
 
 ```solidity
-function addGenesisValue(bytes32 _ccy, address _user, int256 _amount) public returns (bool)
+function updateGenesisValue(bytes32 _ccy, address _user, uint256 _basisMaturity, int256 _fvAmount) external returns (bool)
+```
+
+### addLendGenesisValue
+
+```solidity
+function addLendGenesisValue(bytes32 _ccy, address _user, uint256 _maturity, uint256 _absAmount) public returns (bool)
+```
+
+### addBorrowGenesisValue
+
+```solidity
+function addBorrowGenesisValue(bytes32 _ccy, address _user, uint256 _maturity, uint256 _absAmount) public returns (bool)
+```
+
+### _registerMaximumTotalSupply
+
+```solidity
+function _registerMaximumTotalSupply(bytes32 _ccy, uint256 _maturity, uint256 totalFVAmount) private
 ```
 
