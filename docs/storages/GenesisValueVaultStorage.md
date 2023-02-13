@@ -31,7 +31,9 @@ struct Storage {
   mapping(bytes32 => mapping(address => int256)) balances;
   mapping(bytes32 => uint256) totalLendingSupplies;
   mapping(bytes32 => uint256) totalBorrowingSupplies;
+  mapping(bytes32 => mapping(uint256 => int256)) maturityBalances;
   mapping(bytes32 => mapping(uint256 => struct MaturityUnitPrice)) maturityUnitPrices;
+  mapping(bytes32 => mapping(uint256 => uint256)) maximumTotalSupply;
 }
 ```
 
