@@ -30,7 +30,7 @@ const QuickSort = artifacts.require('QuickSort');
 
 const { deployContract, deployMockContract } = waffle;
 
-const COMPOUND_FACTOR = '1020100000000000000';
+const COMPOUND_FACTOR = '1000000000000000000';
 const BP = ethers.BigNumber.from('10000');
 
 describe('LendingMarketController', () => {

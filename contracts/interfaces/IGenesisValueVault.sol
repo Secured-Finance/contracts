@@ -74,7 +74,7 @@ interface IGenesisValueVault {
         uint256 toMaturity
     ) external view returns (int256 fluctuation);
 
-    function initialize(
+    function initializeCurrencySetting(
         bytes32 ccy,
         uint8 decimals,
         uint256 compoundFactor,

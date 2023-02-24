@@ -451,9 +451,9 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        genesisValueVault().initialize(
+        genesisValueVault().initializeCurrencySetting(
             _ccy,
-            40,
+            36,
             _compoundFactor,
             TimeLibrary.addMonths(_genesisDate, BASIS_TERM)
         );

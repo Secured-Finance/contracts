@@ -175,7 +175,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return isPlus ? absFv.toInt256() : -(absFv.toInt256());
     }
 
-    function initialize(
+    function initializeCurrencySetting(
         bytes32 _ccy,
         uint8 _decimals,
         uint256 _compoundFactor,

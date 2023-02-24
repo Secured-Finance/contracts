@@ -1035,16 +1035,6 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it(`Execute auto-roll`, async () => {
-      const alicePV0Before = await lendingMarketController.getPresentValue(
-        hexETHString,
-        maturities[0],
-        alice.address,
-      );
-      const alicePV1Before = await lendingMarketController.getPresentValue(
-        hexETHString,
-        maturities[1],
-        alice.address,
-      );
       const aliceFV0Before = await lendingMarketController.getFutureValue(
         hexETHString,
         maturities[0],
