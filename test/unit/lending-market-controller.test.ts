@@ -339,10 +339,9 @@ describe('LendingMarketController', () => {
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
       );
-      await lendingMarketControllerProxy.createLendingMarket(currency);
-      await lendingMarketControllerProxy.createLendingMarket(currency);
-      await lendingMarketControllerProxy.createLendingMarket(currency);
-      await lendingMarketControllerProxy.createLendingMarket(currency);
+      for (let i = 0; i < 4; i++) {
+        await lendingMarketControllerProxy.createLendingMarket(currency);
+      }
 
       const marketAddresses =
         await lendingMarketControllerProxy.getLendingMarkets(currency);
@@ -601,17 +600,6 @@ describe('LendingMarketController', () => {
             ),
           ),
         );
-
-        // const futureValues1: any[] = [];
-        // for (const account of accounts) {
-        //   console.log('getFutureValue====================================>');
-        //   const fv = await lendingMarketControllerProxy.getFutureValue(
-        //     targetCurrency,
-        //     maturities[1],
-        //     account.address,
-        //   );
-        //   futureValues1.push(fv);
-        // }
 
         const genesisValues = await Promise.all(
           accounts.map((account) =>
@@ -2206,7 +2194,7 @@ describe('LendingMarketController', () => {
         expect(aliceGVBefore.toString()).to.equal(aliceExpectedGV.toFixed());
       });
 
-      it('Rotate markets multiple times', async () => {
+      it('Rotate markets multiple times under condition without lending position', async () => {
         await lendingMarketControllerProxy
           .connect(alice)
           .createOrder(
@@ -2312,6 +2300,134 @@ describe('LendingMarketController', () => {
         );
       });
 
+      it('Rotate markets multiple times under condition where users have lending positions that are offset after the auto-rolls every time', async () => {
+        const accounts = [alice, bob];
+
+        const getGenesisValues = () =>
+          Promise.all(
+            accounts.map((account) =>
+              lendingMarketControllerProxy.getGenesisValue(
+                targetCurrency,
+                account.address,
+              ),
+            ),
+          );
+
+        let unitPrice = BigNumber.from('8000');
+        for (let i = 0; i < 4; i++) {
+          await expect(
+            lendingMarketControllerProxy
+              .connect(alice)
+              .createOrder(
+                targetCurrency,
+                maturities[i],
+                i % 2 == 0 ? Side.LEND : Side.BORROW,
+                '100000000000000000',
+                unitPrice,
+              ),
+          ).to.not.emit(lendingMarketControllerProxy, 'FillOrder');
+
+          await expect(
+            lendingMarketControllerProxy
+              .connect(bob)
+              .createOrder(
+                targetCurrency,
+                maturities[i],
+                i % 2 == 0 ? Side.BORROW : Side.LEND,
+                '100000000000000000',
+                unitPrice,
+              ),
+          ).to.emit(lendingMarketControllerProxy, 'FillOrder');
+
+          unitPrice = unitPrice.mul('100').div('130');
+        }
+
+        const gvLog = {};
+        let lastAliceGV: BigNumber | undefined;
+        let lastBobGV: BigNumber | undefined;
+
+        for (let i = 0; i < 4; i++) {
+          await lendingMarketControllerProxy
+            .connect(carol)
+            .createOrder(
+              targetCurrency,
+              maturities[1],
+              Side.LEND,
+              '100000000000000000',
+              '8200',
+            );
+          await lendingMarketControllerProxy
+            .connect(carol)
+            .createOrder(
+              targetCurrency,
+              maturities[1],
+              Side.BORROW,
+              '100000000000000000',
+              '7800',
+            );
+
+          await time.increaseTo(maturities[0].toString());
+          await lendingMarketControllerProxy.rotateLendingMarkets(
+            targetCurrency,
+          );
+
+          maturities = await lendingMarketControllerProxy.getMaturities(
+            targetCurrency,
+          );
+
+          const genesisValues = await getGenesisValues();
+          gvLog[`GenesisValue(${maturities[1]})`] = {
+            Alice: genesisValues[0].toString(),
+            Bob: genesisValues[1].toString(),
+          };
+
+          if (lastAliceGV && lastBobGV) {
+            // Check if the lending positions are offset.
+            expect(genesisValues[0].add(lastAliceGV).abs()).lt(
+              genesisValues[0].sub(lastAliceGV).abs(),
+            );
+            expect(genesisValues[1].add(lastBobGV).abs()).lt(
+              genesisValues[1].sub(lastBobGV).abs(),
+            );
+          }
+
+          lastAliceGV = genesisValues[0];
+          lastBobGV = genesisValues[1];
+        }
+
+        console.table(gvLog);
+
+        const reserveFundGVBefore =
+          await lendingMarketControllerProxy.getGenesisValue(
+            targetCurrency,
+            mockReserveFund.address,
+          );
+
+        await lendingMarketControllerProxy.cleanOrders(
+          targetCurrency,
+          alice.address,
+        );
+
+        const reserveFundGVAfter =
+          await lendingMarketControllerProxy.getGenesisValue(
+            targetCurrency,
+            mockReserveFund.address,
+          );
+
+        // Check if the auto-roll fee is collected.
+        expect(reserveFundGVBefore).lt(reserveFundGVAfter);
+
+        await lendingMarketControllerProxy.cleanOrders(
+          targetCurrency,
+          bob.address,
+        );
+        const genesisValuesAfter = await getGenesisValues();
+
+        // These values may differ by 2 (number of fee payments) depending on the residual amount calculation logic of the genesis value.
+        expect(lastAliceGV?.sub(genesisValuesAfter[0]).abs()).lte(2);
+        expect(lastBobGV?.sub(genesisValuesAfter[1]).abs()).lte(2);
+      });
+
       it('Calculate the genesis value per maturity', async () => {
         maturities = await lendingMarketControllerProxy.getMaturities(
           targetCurrency,
@@ -2329,13 +2445,9 @@ describe('LendingMarketController', () => {
         };
 
         const cleanAllOrders = async () => {
-          // console.log('\ncleanAllOrders: alice===============================');
           await lendingMarketControllerProxy.cleanAllOrders(alice.address);
-          // console.log('\ncleanAllOrders: bob===============================');
           await lendingMarketControllerProxy.cleanAllOrders(bob.address);
-          // console.log('\ncleanAllOrders: carol===============================');
           await lendingMarketControllerProxy.cleanAllOrders(carol.address);
-          // console.log('\ncleanAllOrders: rf===============================');
           await lendingMarketControllerProxy.cleanAllOrders(
             mockReserveFund.address,
           );
