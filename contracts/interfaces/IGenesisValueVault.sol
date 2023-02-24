@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {MaturityUnitPrice} from "../storages/GenesisValueVaultStorage.sol";
+import {AutoRollLog} from "../storages/GenesisValueVaultStorage.sol";
 
 interface IGenesisValueVault {
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
-    event CompoundFactorUpdated(
+    event AutoRollExecuted(
         bytes32 indexed ccy,
-        uint256 compoundFactor,
+        uint256 lendingCompoundFactor,
+        uint256 borrowingCompoundFactor,
         uint256 unitPrice,
         uint256 currentMaturity,
         uint256 previousMaturity
@@ -30,18 +31,21 @@ interface IGenesisValueVault {
 
     function getCurrentMaturity(bytes32 ccy) external view returns (uint256);
 
-    function getCompoundFactor(bytes32 ccy) external view returns (uint256);
+    function getLendingCompoundFactor(bytes32 ccy) external view returns (uint256);
 
-    function getMaturityUnitPrice(bytes32 ccy, uint256 maturity)
+    function getBorrowingCompoundFactor(bytes32 ccy) external view returns (uint256);
+
+    function getAutoRollLog(bytes32 ccy, uint256 maturity)
         external
         view
-        returns (MaturityUnitPrice memory);
+        returns (AutoRollLog memory);
 
     function getGenesisValueInFutureValue(bytes32 ccy, address user) external view returns (int256);
 
-    function calculateCurrentFVFromFVInMaturity(
+    function calculateFVFromFV(
         bytes32 _ccy,
         uint256 _basisMaturity,
+        uint256 _destinationMaturity,
         int256 _futureValue
     ) external view returns (int256);
 
@@ -57,6 +61,19 @@ interface IGenesisValueVault {
         int256 genesisValue
     ) external view returns (int256);
 
+    function calculateBalanceFluctuationByAutoRolls(
+        bytes32 ccy,
+        address user,
+        uint256 maturity
+    ) external view returns (int256 fluctuation);
+
+    function calculateBalanceFluctuationByAutoRolls(
+        bytes32 ccy,
+        int256 balance,
+        uint256 fromMaturity,
+        uint256 toMaturity
+    ) external view returns (int256 fluctuation);
+
     function initialize(
         bytes32 ccy,
         uint8 decimals,
@@ -65,31 +82,38 @@ interface IGenesisValueVault {
     ) external;
 
     function executeAutoRoll(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _nextMaturity,
-        uint256 _unitPrice,
-        uint256 _totalFVAmount
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 nextMaturity,
+        uint256 unitPrice,
+        uint256 feeRate,
+        uint256 totalFVAmount
     ) external;
 
-    function updateGenesisValue(
+    function updateGenesisValueWithFutureValue(
         bytes32 ccy,
         address user,
         uint256 basisMaturity,
         int256 fvAmount
-    ) external returns (bool);
+    ) external;
 
-    function addLendGenesisValue(
-        bytes32 _ccy,
-        address _user,
-        uint256 _maturity,
-        uint256 _absAmount
-    ) external returns (bool);
+    function updateGenesisValueWithResidualAmount(
+        bytes32 ccy,
+        address user,
+        uint256 basisMaturity
+    ) external;
 
-    function addBorrowGenesisValue(
-        bytes32 _ccy,
-        address _user,
-        uint256 _maturity,
-        uint256 _absAmount
-    ) external returns (bool);
+    function offsetGenesisValue(
+        bytes32 ccy,
+        uint256 maturity,
+        address lender,
+        address borrower,
+        int256 maximumGVAmount
+    ) external returns (int256 offsetAmount);
+
+    function cleanUpGenesisValue(
+        bytes32 ccy,
+        address user,
+        uint256 maturity
+    ) external returns (bool isCleanedUp);
 }
