@@ -327,36 +327,35 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         bytes32 _ccy,
         address _user,
         uint256 _maturity
-    ) external override onlyAcceptedContracts returns (bool) {
+    ) external override onlyAcceptedContracts {
         uint256 maturity = _maturity == 0 ? getCurrentMaturity(_ccy) : _maturity;
-        int256 fluctuation = _calculateBalanceFluctuationByAutoRolls(_ccy, _user, maturity);
+        int256 fluctuation = _getBalanceFluctuationByAutoRolls(_ccy, _user, maturity);
 
         if (fluctuation < 0) {
+            address reserveFundAddr = address(reserveFund());
+
             _updateTotalSupplies(_ccy, fluctuation, Storage.slot().balances[_ccy][_user]);
             _updateTotalSupplies(
                 _ccy,
                 -fluctuation,
-                Storage.slot().balances[_ccy][address(reserveFund())]
+                Storage.slot().balances[_ccy][reserveFundAddr]
             );
 
             Storage.slot().userMaturities[_ccy][_user] = maturity;
             Storage.slot().balances[_ccy][_user] += fluctuation;
-            Storage.slot().balances[_ccy][address(reserveFund())] += -fluctuation;
+            Storage.slot().balances[_ccy][reserveFundAddr] += -fluctuation;
 
-            // TODO: emits a event here
-            return true;
-        } else {
-            return false;
+            emit Transfer(_ccy, _user, reserveFundAddr, -fluctuation);
         }
     }
 
-    function calculateBalanceFluctuationByAutoRolls(
+    function getBalanceFluctuationByAutoRolls(
         bytes32 _ccy,
         address _user,
         uint256 _maturity
     ) external view override returns (int256 fluctuation) {
         uint256 maturity = _maturity == 0 ? getCurrentMaturity(_ccy) : _maturity;
-        fluctuation = _calculateBalanceFluctuationByAutoRolls(_ccy, _user, maturity);
+        fluctuation = _getBalanceFluctuationByAutoRolls(_ccy, _user, maturity);
     }
 
     function calculateBalanceFluctuationByAutoRolls(
@@ -388,16 +387,18 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         Storage.slot().balances[_ccy][_user] += _amount;
         Storage.slot().maturityBalances[_ccy][_maturity] += _amount;
 
+        emit Transfer(_ccy, address(0), _user, _amount);
+
         // Note: `fluctuation` is always 0 or less because the genesis value fluctuates
         // only when it is negative.
         // Here, only the opposite amount of the fluctuation is added to the reserve fund as a fee.
         if (fluctuation < 0) {
+            address reserveFundAddr = address(reserveFund());
             Storage.slot().balances[_ccy][_user] += fluctuation;
-            Storage.slot().balances[_ccy][address(reserveFund())] += -fluctuation;
-            // TODO: emits a event here
-        }
+            Storage.slot().balances[_ccy][reserveFundAddr] += -fluctuation;
 
-        emit Transfer(_ccy, address(0), _user, _amount);
+            emit Transfer(_ccy, _user, reserveFundAddr, -fluctuation);
+        }
     }
 
     function _updateTotalSupplies(
@@ -450,7 +451,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         address _user,
         uint256 _maturity
     ) private view returns (int256 balance, int256 fluctuation) {
-        fluctuation = _calculateBalanceFluctuationByAutoRolls(_ccy, _user, _maturity);
+        fluctuation = _getBalanceFluctuationByAutoRolls(_ccy, _user, _maturity);
         balance = Storage.slot().balances[_ccy][_user] + fluctuation;
     }
 
@@ -463,7 +464,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
      * @param _user User's address
      * @return fluctuation The fluctuated genesis value amount
      */
-    function _calculateBalanceFluctuationByAutoRolls(
+    function _getBalanceFluctuationByAutoRolls(
         bytes32 _ccy,
         address _user,
         uint256 _maturity

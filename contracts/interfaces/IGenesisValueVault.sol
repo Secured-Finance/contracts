@@ -61,7 +61,7 @@ interface IGenesisValueVault {
         int256 genesisValue
     ) external view returns (int256);
 
-    function calculateBalanceFluctuationByAutoRolls(
+    function getBalanceFluctuationByAutoRolls(
         bytes32 ccy,
         address user,
         uint256 maturity
@@ -115,5 +115,5 @@ interface IGenesisValueVault {
         bytes32 ccy,
         address user,
         uint256 maturity
-    ) external returns (bool isCleanedUp);
+    ) external;
 }
