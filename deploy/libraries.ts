@@ -26,12 +26,12 @@ const func: DeployFunction = async function ({
     return result;
   });
 
-  await deploy('FundCalculationLogic', {
+  await deploy('FundManagementLogic', {
     from: deployer,
     libraries: {
       QuickSort: quickSort.address,
     },
-  }).then((result) => executeIfNewlyDeployment('FundCalculationLogic', result));
+  }).then((result) => executeIfNewlyDeployment('FundManagementLogic', result));
 };
 
 func.tags = ['Libraries'];

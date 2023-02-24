@@ -12,9 +12,8 @@ import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
-import {QuickSort} from "./libraries/QuickSort.sol";
 import {LiquidatorHandler} from "./libraries/LiquidatorHandler.sol";
-import {FundCalculationLogic} from "./libraries/logics/FundCalculationLogic.sol";
+import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLendingMarketManager} from "./mixins/MixinLendingMarketManager.sol";
@@ -302,7 +301,7 @@ contract LendingMarketController is
         uint256 _maturity,
         address _user
     ) external view override returns (int256 futureValue) {
-        futureValue = FundCalculationLogic.calculateActualFunds(_ccy, _maturity, _user).futureValue;
+        futureValue = FundManagementLogic.calculateActualFunds(_ccy, _maturity, _user).futureValue;
     }
 
     /**
@@ -317,7 +316,7 @@ contract LendingMarketController is
         uint256 _maturity,
         address _user
     ) external view override returns (int256 presentValue) {
-        presentValue = FundCalculationLogic
+        presentValue = FundManagementLogic
             .calculateActualFunds(_ccy, _maturity, _user)
             .presentValue;
     }
@@ -334,7 +333,7 @@ contract LendingMarketController is
         override
         returns (int256 totalPresentValue)
     {
-        totalPresentValue = FundCalculationLogic.calculateActualFunds(_ccy, 0, _user).presentValue;
+        totalPresentValue = FundManagementLogic.calculateActualFunds(_ccy, 0, _user).presentValue;
     }
 
     /**
@@ -352,7 +351,7 @@ contract LendingMarketController is
 
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
-            int256 amount = FundCalculationLogic.calculateActualFunds(ccy, 0, _user).presentValue;
+            int256 amount = FundManagementLogic.calculateActualFunds(ccy, 0, _user).presentValue;
             totalPresentValue += currencyController().convertToETH(ccy, amount);
         }
     }
@@ -363,7 +362,7 @@ contract LendingMarketController is
         override
         returns (int256 genesisValue)
     {
-        genesisValue = FundCalculationLogic.calculateActualFunds(_ccy, 0, _user).genesisValue;
+        genesisValue = FundManagementLogic.calculateActualFunds(_ccy, 0, _user).genesisValue;
     }
 
     /**
@@ -394,7 +393,7 @@ contract LendingMarketController is
         )
     {
         if (Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-            return FundCalculationLogic.calculateFunds(_ccy, _user);
+            return FundManagementLogic.calculateFunds(_ccy, _user);
         }
     }
 
@@ -422,7 +421,7 @@ contract LendingMarketController is
             bool isEnoughDeposit
         )
     {
-        return FundCalculationLogic.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
+        return FundManagementLogic.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
     }
 
     /**
@@ -608,7 +607,7 @@ contract LendingMarketController is
         // and converted to actual funds first.
         cleanOrders(_debtCcy, _user);
 
-        (uint256 liquidationPVAmount, uint256 offsetPVAmount) = FundCalculationLogic
+        (uint256 liquidationPVAmount, uint256 offsetPVAmount) = FundManagementLogic
             .convertToLiquidationAmountFromCollateral(
                 msg.sender,
                 _user,
@@ -635,7 +634,7 @@ contract LendingMarketController is
         if (executedPVAmount != 0) {
             emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, executedPVAmount);
 
-            _convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
+            FundManagementLogic.convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
         }
 
         return true;
@@ -700,7 +699,11 @@ contract LendingMarketController is
 
         emit RotateLendingMarkets(_ccy, prevMaturity, newLastMaturity);
 
-        _convertFutureValueToGenesisValue(_ccy, newLastMaturity, address(reserveFund()));
+        FundManagementLogic.convertFutureValueToGenesisValue(
+            _ccy,
+            newLastMaturity,
+            address(reserveFund())
+        );
     }
 
     /**
@@ -753,17 +756,14 @@ contract LendingMarketController is
         returns (uint256 totalActiveOrderCount)
     {
         bool futureValueExists = false;
-        uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
-        if (maturities.length > 0) {
-            maturities = QuickSort.sort(maturities);
-        }
+        uint256[] memory maturities = FundManagementLogic.getUsedMaturities(_ccy, _user);
 
         for (uint256 j = 0; j < maturities.length; j++) {
             ILendingMarket market = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][maturities[j]]
             );
             uint256 activeMaturity = market.getMaturity();
-            int256 currentFutureValue = _convertFutureValueToGenesisValue(
+            int256 currentFutureValue = FundManagementLogic.convertFutureValueToGenesisValue(
                 _ccy,
                 activeMaturity,
                 _user
@@ -773,7 +773,11 @@ contract LendingMarketController is
             totalActiveOrderCount += activeOrderCount;
 
             if (isCleaned) {
-                currentFutureValue = _convertFutureValueToGenesisValue(_ccy, activeMaturity, _user);
+                currentFutureValue = FundManagementLogic.convertFutureValueToGenesisValue(
+                    _ccy,
+                    activeMaturity,
+                    _user
+                );
             }
 
             if (currentFutureValue != 0) {
@@ -798,49 +802,6 @@ contract LendingMarketController is
         ) {
             Storage.slot().usedCurrencies[_user].remove(_ccy);
         }
-    }
-
-    /**
-     * @notice Converts the future value to the genesis value if there is balance in the past maturity.
-     * @param _ccy Currency for pausing all lending markets
-     * @param _user User's address
-     * @return Current future value amount after update
-     */
-    function _convertFutureValueToGenesisValue(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    ) private returns (int256) {
-        address futureValueVault = Storage.slot().futureValueVaults[_ccy][
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ];
-        (
-            int256 removedAmount,
-            int256 currentAmount,
-            uint256 basisMaturity,
-            bool isAllRemoved
-        ) = IFutureValueVault(futureValueVault).removeFutureValue(_user, _maturity);
-
-        if (removedAmount != 0) {
-            // Overwrite the `removedAmount` with the unsettled amount left of the Genesis Value
-            // to handle the fractional amount generated by the lazy evaluation.
-            if (isAllRemoved) {
-                genesisValueVault().updateGenesisValueWithResidualAmount(
-                    _ccy,
-                    _user,
-                    basisMaturity
-                );
-            } else {
-                genesisValueVault().updateGenesisValueWithFutureValue(
-                    _ccy,
-                    _user,
-                    basisMaturity,
-                    removedAmount
-                );
-            }
-        }
-
-        return currentAmount;
     }
 
     function _createOrder(
@@ -881,7 +842,7 @@ contract LendingMarketController is
         }
 
         if (filledFutureValue != 0) {
-            _updateDepositAmount(
+            FundManagementLogic.updateDepositAmount(
                 _ccy,
                 _maturity,
                 _user,
@@ -903,54 +864,6 @@ contract LendingMarketController is
         }
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
-    }
-
-    function _updateDepositAmount(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _filledFutureValue,
-        uint256 _filledAmount,
-        uint256 _feeFutureValue
-    ) private returns (bool) {
-        address futureValueVault = Storage.slot().futureValueVaults[_ccy][
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ];
-
-        if (_side == ProtocolTypes.Side.BORROW) {
-            tokenVault().addDepositAmount(_user, _ccy, _filledAmount);
-            IFutureValueVault(futureValueVault).addBorrowFutureValue(
-                _user,
-                _filledFutureValue + _feeFutureValue,
-                _maturity,
-                true
-            );
-        } else {
-            tokenVault().removeDepositAmount(_user, _ccy, _filledAmount);
-            IFutureValueVault(futureValueVault).addLendFutureValue(
-                _user,
-                _filledFutureValue - _feeFutureValue,
-                _maturity,
-                true
-            );
-        }
-
-        if (_feeFutureValue > 0) {
-            address reserveFundAddr = address(reserveFund());
-            IFutureValueVault(futureValueVault).addLendFutureValue(
-                reserveFundAddr,
-                _feeFutureValue,
-                _maturity,
-                _side == ProtocolTypes.Side.LEND
-            );
-
-            if (!Storage.slot().usedMaturities[_ccy][reserveFundAddr].contains(_maturity)) {
-                Storage.slot().usedMaturities[_ccy][reserveFundAddr].add(_maturity);
-            }
-        }
-
-        return true;
     }
 
     function _cleanOrders(

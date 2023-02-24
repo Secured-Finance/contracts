@@ -10,13 +10,11 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const fundCalculationLogic = await deployments.get('FundCalculationLogic');
-  const quickSort = await deployments.get('QuickSort');
+  const fundManagementLogic = await deployments.get('FundManagementLogic');
   const deployResult = await deploy('LendingMarketController', {
     from: deployer,
     libraries: {
-      FundCalculationLogic: fundCalculationLogic.address,
-      QuickSort: quickSort.address,
+      FundManagementLogic: fundManagementLogic.address,
     },
   });
 

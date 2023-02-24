@@ -80,8 +80,8 @@ describe('LendingMarketController', () => {
 
     // Deploy libraries
     const quickSort = await deployContract(owner, QuickSort);
-    const fundCalculationLogic = await ethers
-      .getContractFactory('FundCalculationLogic', {
+    const fundManagementLogic = await ethers
+      .getContractFactory('FundManagementLogic', {
         libraries: {
           QuickSort: quickSort.address,
         },
@@ -100,8 +100,7 @@ describe('LendingMarketController', () => {
     const lendingMarketController = await ethers
       .getContractFactory('LendingMarketController', {
         libraries: {
-          FundCalculationLogic: fundCalculationLogic.address,
-          QuickSort: quickSort.address,
+          FundManagementLogic: fundManagementLogic.address,
         },
       })
       .then((factory) => factory.deploy());

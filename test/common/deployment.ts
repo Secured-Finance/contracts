@@ -26,8 +26,8 @@ const deployContracts = async () => {
       ethers.getContractFactory(library).then((factory) => factory.deploy()),
     ),
   );
-  const fundCalculationLogic = await ethers
-    .getContractFactory('FundCalculationLogic', {
+  const fundManagementLogic = await ethers
+    .getContractFactory('FundManagementLogic', {
       libraries: {
         QuickSort: quickSort.address,
       },
@@ -65,8 +65,7 @@ const deployContracts = async () => {
     ethers
       .getContractFactory('LendingMarketController', {
         libraries: {
-          FundCalculationLogic: fundCalculationLogic.address,
-          QuickSort: quickSort.address,
+          FundManagementLogic: fundManagementLogic.address,
         },
       })
       .then((factory) => factory.deploy()),
