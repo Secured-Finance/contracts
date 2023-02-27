@@ -4,40 +4,39 @@ pragma solidity ^0.8.9;
 interface IFutureValueVault {
     event Transfer(address indexed from, address indexed to, int256 value);
 
-    function getTotalSupply(uint256 _maturity) external view returns (uint256);
+    function getTotalSupply(uint256 maturity) external view returns (uint256);
 
-    function getFutureValue(address _user)
+    function getFutureValue(address user)
         external
         view
         returns (int256 futureValue, uint256 maturity);
 
-    function hasFutureValueInPastMaturity(address _user, uint256 _maturity)
+    function hasFutureValueInPastMaturity(address user, uint256 maturity)
         external
         view
         returns (bool);
 
     function addLendFutureValue(
-        address _user,
-        uint256 _amount,
-        uint256 _maturity,
+        address user,
+        uint256 amount,
+        uint256 maturity,
         bool isTaker
     ) external returns (bool);
 
     function addBorrowFutureValue(
-        address _user,
-        uint256 _amount,
-        uint256 _maturity,
+        address user,
+        uint256 amount,
+        uint256 maturity,
         bool isTaker
     ) external returns (bool);
 
     function offsetFutureValue(
-        address _lender,
-        address _borrower,
-        uint256 _amount,
-        uint256 _maturity
-    ) external returns (bool);
+        address lender,
+        address borrower,
+        uint256 maximumFVAmount
+    ) external returns (uint256 offsetAmount);
 
-    function removeFutureValue(address _user, uint256 _maturity)
+    function removeFutureValue(address user, uint256 activeMaturity)
         external
         returns (
             int256 removedAmount,

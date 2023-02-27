@@ -188,8 +188,8 @@ describe('ZC e2e test', async () => {
       bobSigner.address,
     );
 
-    const { workingOrdersAmount: workingOrdersAmountBefore } =
-      await lendingMarketController.calculateBorrowedFundsFromOrders(
+    const { workingBorrowOrdersAmount: workingOrdersAmountBefore } =
+      await lendingMarketController.calculateFunds(
         targetCurrency,
         bobSigner.address,
       );
@@ -243,8 +243,8 @@ describe('ZC e2e test', async () => {
     ).to.equal(calculatedFV.toString());
 
     // Check the future value and working amount of Bob
-    const { workingOrdersAmount: workingOrdersAmountAfter } =
-      await lendingMarketController.calculateBorrowedFundsFromOrders(
+    const { workingBorrowOrdersAmount: workingOrdersAmountAfter } =
+      await lendingMarketController.calculateFunds(
         targetCurrency,
         bobSigner.address,
       );
