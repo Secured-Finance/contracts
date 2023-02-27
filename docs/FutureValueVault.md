@@ -125,17 +125,8 @@ is the taker._
 ### offsetFutureValue
 
 ```solidity
-function offsetFutureValue(address _lender, address _borrower, uint256 _amount, uint256 _maturity) external returns (bool)
+function offsetFutureValue(address _lender, address _borrower, uint256 _maximumFVAmount) external returns (uint256 offsetAmount)
 ```
-
-Offsets the future value amount.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _lender | address | Lender's address |
-| _borrower | address | Borrower's address |
-| _amount | uint256 | The amount to add |
-| _maturity | uint256 | The maturity of the market |
 
 ### removeFutureValue
 
