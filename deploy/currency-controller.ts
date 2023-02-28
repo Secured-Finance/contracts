@@ -1,6 +1,6 @@
 import { DeployFunction, DeployResult } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies, mockRates } from '../utils/currencies';
+import { currencies, mockRates, priceOracles } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -42,26 +42,38 @@ const func: DeployFunction = async function ({
       // Set up for CurrencyController
       const priceFeeds: Record<string, DeployResult> = {};
 
+      const currencyKeyMap = {};
+      currencies.forEach((c) => (currencyKeyMap[c.key] = c));
       for (const rate of mockRates) {
-        const priceFeed = await deploy('MockV3Aggregator', {
-          from: deployer,
-          args: [rate.decimals, rate.key, rate.rate.toString()],
-        });
-        console.log(
-          `Deployed MockV3Aggregator ${rate.name} price feed at`,
-          priceFeed.address,
-        );
-        priceFeeds[rate.key] = priceFeed;
+        if (!currencyKeyMap[rate.key].env || !priceOracles[rate.key]) {
+          const priceFeed = await deploy('MockV3Aggregator', {
+            from: deployer,
+            args: [rate.decimals, rate.key, rate.rate.toString()],
+          });
+          console.log(
+            `Deployed MockV3Aggregator ${rate.name} price feed at`,
+            priceFeed.address,
+          );
+          priceFeeds[rate.key] = priceFeed;
+        }
       }
 
       for (const currency of currencies) {
+        const priceFeedAddress =
+          currency.env && priceOracles[currency.key]
+            ? priceOracles[currency.key]
+            : priceFeeds[currency.key].address;
         await currencyControllerContract
-          .addCurrency(
-            currency.key,
-            priceFeeds[currency.key].address,
-            currency.haircut,
-          )
+          .addCurrency(currency.key, priceFeedAddress, currency.haircut)
           .then((tx) => tx.wait());
+        console.log(
+          `${currency.symbol} refers to ${
+            priceFeedAddress === priceOracles[currency.key]
+              ? 'External Oracle'
+              : 'MockV3Aggregator'
+          } at`,
+          priceFeedAddress,
+        );
       }
     },
   );

@@ -99,4 +99,11 @@ const mockRates: MockRate[] = [
   },
 ];
 
-export { currencies, mockRates };
+const priceOracles = {
+  [hexFILString]: process.env.FIL_TO_ETH_RATE,
+  [hexETHString]: process.env.ETH_TO_USD_RATE,
+  [hexBTCString]: process.env.BTC_TO_ETH_RATE,
+  [hexUSDCString]: process.env.USDC_TO_ETH_RATE,
+};
+
+export { currencies, mockRates, priceOracles };
