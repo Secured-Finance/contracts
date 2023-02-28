@@ -108,7 +108,6 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         );
 
         int256 previousBalance = Storage.slot().balances[_user];
-
         Storage.slot().futureValueMaturities[_user] = _maturity;
         Storage.slot().balances[_user] += _amount.toInt256();
         emit Transfer(address(0), _user, _amount.toInt256());

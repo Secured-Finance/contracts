@@ -29,10 +29,11 @@ library FundManagementLogic {
         uint256 debtFVAmount;
         uint256 debtPVAmount;
         int256 futureValueAmount;
-        uint256 estimatedDebtPVAmount;
+        uint256 estimatedLiquidationPVAmount;
         uint256 liquidationPVAmountInETH;
-        uint256 liquidationPVAmount;
+        uint256 liquidationFVAmount;
         int256 offsetGVAmount;
+        uint256 offsetFVAmount;
     }
 
     struct CalculatedTotalFundInETHVars {
@@ -152,16 +153,20 @@ library FundManagementLogic {
             vars.debtMarket
         ).toUint256();
 
-        vars.liquidationPVAmount = AddressResolverLib.currencyController().convertFromETH(
+        vars.liquidationFVAmount = _calculateFVFromPV(
             _debtCcy,
-            vars.liquidationPVAmountInETH
+            _debtMaturity,
+            AddressResolverLib.currencyController().convertFromETH(
+                _debtCcy,
+                vars.liquidationPVAmountInETH
+            )
         );
 
         // If the debt amount is less than the liquidation amount, the debt amount is used as the liquidation amount.
         // In that case, the actual liquidation ratio is under the liquidation threshold ratio.
-        vars.liquidationPVAmount = vars.liquidationPVAmount > vars.debtPVAmount
-            ? vars.debtPVAmount
-            : vars.liquidationPVAmount;
+        if (vars.liquidationFVAmount > vars.debtFVAmount) {
+            vars.liquidationFVAmount = vars.debtFVAmount;
+        }
 
         if (!AddressResolverLib.reserveFund().isPaused()) {
             // Offset the user's debt using the future value amount and the genesis value amount hold by the reserve fund contract.
@@ -179,7 +184,7 @@ library FundManagementLogic {
                     AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _debtCcy,
                         _debtMaturity,
-                        vars.liquidationPVAmount.toInt256()
+                        vars.liquidationFVAmount.toInt256()
                     )
                 );
 
@@ -197,23 +202,20 @@ library FundManagementLogic {
                 }
             }
 
-            uint256 offsetFVAmount = _offsetFutureValue(
+            vars.offsetFVAmount = _offsetFutureValue(
                 _debtCcy,
                 _debtMaturity,
                 address(AddressResolverLib.reserveFund()),
                 _user,
-                _calculateFVFromPV(
-                    _debtCcy,
-                    _debtMaturity,
-                    vars.liquidationPVAmount - offsetPVAmount
-                )
+                vars.liquidationFVAmount -
+                    _calculateFVFromPV(_debtCcy, _debtMaturity, offsetPVAmount)
             );
 
-            if (offsetFVAmount > 0) {
+            if (vars.offsetFVAmount > 0) {
                 offsetPVAmount += _calculatePVFromFVInMaturity(
                     _debtCcy,
                     _debtMaturity,
-                    offsetFVAmount.toInt256(),
+                    vars.offsetFVAmount.toInt256(),
                     vars.debtMarket
                 ).toUint256();
             }
@@ -222,13 +224,13 @@ library FundManagementLogic {
         // Estimate the filled amount from actual orders in the order book using the future value of user debt.
         // If the estimated amount is less than the liquidation amount, the estimated amount is used as
         // the liquidation amount.
-        vars.estimatedDebtPVAmount = ILendingMarket(
+        vars.estimatedLiquidationPVAmount = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
-        ).estimateFilledAmount(ProtocolTypes.Side.LEND, vars.debtFVAmount);
-
-        uint256 swapPVAmount = vars.liquidationPVAmount > vars.estimatedDebtPVAmount
-            ? vars.estimatedDebtPVAmount
-            : vars.liquidationPVAmount;
+        ).estimateFilledAmount(
+                ProtocolTypes.Side.LEND,
+                vars.liquidationFVAmount -
+                    _calculateFVFromPV(_debtCcy, _debtMaturity, offsetPVAmount)
+            );
 
         // Swap collateral from deposited currency to debt currency using Uniswap.
         // This swapped collateral is used to unwind the debt.
@@ -237,7 +239,7 @@ library FundManagementLogic {
             _user,
             _collateralCcy,
             _debtCcy,
-            swapPVAmount,
+            vars.estimatedLiquidationPVAmount + offsetPVAmount,
             _poolFee,
             offsetPVAmount
         );

@@ -62,7 +62,7 @@ describe('Performance Test: Auto-rolls', async () => {
         maturity,
         Side.BORROW,
         '1000000',
-        BigNumber.from(unitPrice).sub('100'),
+        BigNumber.from(unitPrice).add('100'),
       );
 
     await lendingMarketController
@@ -72,7 +72,7 @@ describe('Performance Test: Auto-rolls', async () => {
         maturity,
         Side.LEND,
         '1000000',
-        BigNumber.from(unitPrice).add('100'),
+        BigNumber.from(unitPrice).sub('100'),
       );
   };
 
