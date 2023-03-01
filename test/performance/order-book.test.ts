@@ -21,7 +21,6 @@ describe('Performance Test: Order Book', async () => {
   let wETHToken: Contract;
   let usdcToken: Contract;
 
-  let lendingMarkets: Contract[] = [];
   let maturities: BigNumber[];
 
   before('Deploy Contracts', async () => {
@@ -66,16 +65,6 @@ describe('Performance Test: Order Book', async () => {
         .createLendingMarket(hexFILString)
         .then((tx) => tx.wait());
     }
-
-    lendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexFILString)
-      .then((addresses: string[]) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
 
     // Deploy Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
@@ -183,7 +172,7 @@ describe('Performance Test: Order Book', async () => {
                   maturities[0],
                   Side.LEND,
                   orderAmount,
-                  String(8000 + i),
+                  String(10000 - i),
                 )
                 .then((tx) => tx.wait());
 

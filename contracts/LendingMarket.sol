@@ -109,7 +109,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The highest borrow price per future value
      */
     function getBorrowUnitPrice() public view override returns (uint256) {
-        return OrderBookLogic.getHighestBorrowUnitPrice();
+        return OrderBookLogic.getLowestBorrowingUnitPrice();
     }
 
     /**
@@ -117,7 +117,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The lowest lend price per future value
      */
     function getLendUnitPrice() public view override returns (uint256) {
-        return OrderBookLogic.getLowestLendUnitPrice();
+        return OrderBookLogic.getHighestLendingUnitPrice();
     }
 
     /**
@@ -471,8 +471,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         bool isExists = _unitPrice == 0 ||
             (
                 _side == ProtocolTypes.Side.LEND
-                    ? OrderBookLogic.getHighestBorrowUnitPrice() >= _unitPrice
-                    : OrderBookLogic.getLowestLendUnitPrice() <= _unitPrice
+                    ? OrderBookLogic.getLowestBorrowingUnitPrice() <= _unitPrice
+                    : OrderBookLogic.getHighestLendingUnitPrice() >= _unitPrice
             );
 
         if (isExists) {

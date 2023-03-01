@@ -11,51 +11,13 @@ library OrderBookLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
-    function getHighestBorrowUnitPrice() public view returns (uint256) {
-        return Storage.slot().borrowOrders[Storage.slot().maturity].last();
+    function getHighestLendingUnitPrice() public view returns (uint256) {
+        return Storage.slot().lendOrders[Storage.slot().maturity].last();
     }
 
-    function getLowestLendUnitPrice() public view returns (uint256) {
-        uint256 unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].first();
+    function getLowestBorrowingUnitPrice() public view returns (uint256) {
+        uint256 unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].first();
         return unitPrice == 0 ? ProtocolTypes.PRICE_DIGIT : unitPrice;
-    }
-
-    function getBorrowOrderBook(uint256 _limit)
-        public
-        view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
-    {
-        unitPrices = new uint256[](_limit);
-        amounts = new uint256[](_limit);
-        quantities = new uint256[](_limit);
-
-        uint256 unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].last();
-        unitPrices[0] = unitPrice;
-        amounts[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
-            unitPrice
-        );
-        quantities[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
-            unitPrice
-        );
-
-        for (uint256 i = 1; i < unitPrices.length; i++) {
-            if (unitPrice == 0) {
-                break;
-            }
-
-            unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].prev(unitPrice);
-            unitPrices[i] = unitPrice;
-            amounts[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
-                unitPrice
-            );
-            quantities[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
-                unitPrice
-            );
-        }
     }
 
     function getLendOrderBook(uint256 _limit)
@@ -71,7 +33,7 @@ library OrderBookLogic {
         amounts = new uint256[](_limit);
         quantities = new uint256[](_limit);
 
-        uint256 unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].first();
+        uint256 unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].last();
         unitPrices[0] = unitPrice;
         amounts[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
             unitPrice
@@ -83,12 +45,50 @@ library OrderBookLogic {
                 break;
             }
 
-            unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].next(unitPrice);
+            unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].prev(unitPrice);
             unitPrices[i] = unitPrice;
             amounts[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
                 unitPrice
             );
             quantities[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(
+                unitPrice
+            );
+        }
+    }
+
+    function getBorrowOrderBook(uint256 _limit)
+        public
+        view
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        )
+    {
+        unitPrices = new uint256[](_limit);
+        amounts = new uint256[](_limit);
+        quantities = new uint256[](_limit);
+
+        uint256 unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].first();
+        unitPrices[0] = unitPrice;
+        amounts[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
+            unitPrice
+        );
+        quantities[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
+            unitPrice
+        );
+
+        for (uint256 i = 1; i < unitPrices.length; i++) {
+            if (unitPrice == 0) {
+                break;
+            }
+
+            unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].next(unitPrice);
+            unitPrices[i] = unitPrice;
+            amounts[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
+                unitPrice
+            );
+            quantities[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
                 unitPrice
             );
         }
@@ -320,12 +320,12 @@ library OrderBookLogic {
     {
         if (_side == ProtocolTypes.Side.BORROW) {
             return
-                Storage.slot().lendOrders[Storage.slot().maturity].estimateDroppedAmountFromLeft(
+                Storage.slot().lendOrders[Storage.slot().maturity].estimateDroppedAmountFromRight(
                     _futureValue
                 );
         } else {
             return
-                Storage.slot().borrowOrders[Storage.slot().maturity].estimateDroppedAmountFromRight(
+                Storage.slot().borrowOrders[Storage.slot().maturity].estimateDroppedAmountFromLeft(
                     _futureValue
                 );
         }
@@ -383,12 +383,12 @@ library OrderBookLogic {
             (filledFutureValue, remainingAmount, remainingOrder) = Storage
                 .slot()
                 .lendOrders[Storage.slot().maturity]
-                .dropLeft(_amount, _unitPrice);
+                .dropRight(_amount, _unitPrice);
         } else if (_side == ProtocolTypes.Side.LEND) {
             (filledFutureValue, remainingAmount, remainingOrder) = Storage
                 .slot()
                 .borrowOrders[Storage.slot().maturity]
-                .dropRight(_amount, _unitPrice);
+                .dropLeft(_amount, _unitPrice);
         }
     }
 

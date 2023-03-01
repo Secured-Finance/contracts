@@ -489,12 +489,12 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.BORROW,
           '1000',
-          '7800',
+          '8200',
         );
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '8200');
+        .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '7800');
     });
 
     it('Fill an order', async () => {
@@ -525,7 +525,7 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.LEND,
           orderAmount,
-          '8000',
+          '0',
         );
 
       const coverage = await tokenVault.getCoverage(alice.address);
@@ -602,12 +602,12 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.BORROW,
           '1000',
-          '7800',
+          '8200',
         );
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '8200');
+        .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '7800');
     });
 
     it('Fill an order', async () => {
@@ -638,7 +638,7 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.BORROW,
           orderAmount,
-          '8000',
+          '0',
         );
 
       const coverage = await tokenVault.getCoverage(alice.address);
@@ -717,12 +717,12 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.BORROW,
           '1000',
-          '7800',
+          '8200',
         );
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '8200');
+        .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '7800');
 
       await lendingMarketController
         .connect(carol)
@@ -731,7 +731,7 @@ describe('Integration Test: Deposit', async () => {
           ethMaturities[0],
           Side.BORROW,
           '1000',
-          '7800',
+          '8200',
         );
 
       await lendingMarketController
@@ -741,7 +741,7 @@ describe('Integration Test: Deposit', async () => {
           ethMaturities[0],
           Side.LEND,
           '1000',
-          '8200',
+          '7800',
           { value: '1000' },
         );
     });
@@ -776,7 +776,7 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.LEND,
           orderAmountInFIL,
-          '8000',
+          '0',
         );
 
       const coverage = await tokenVault.getCoverage(alice.address);
@@ -825,7 +825,7 @@ describe('Integration Test: Deposit', async () => {
           ethMaturities[0],
           Side.LEND,
           orderAmount,
-          '8000',
+          '0',
         );
 
       const aliceFV = await lendingMarketController.getFutureValue(

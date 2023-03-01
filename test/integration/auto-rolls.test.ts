@@ -67,7 +67,7 @@ describe('Integration Test: Auto-rolls', async () => {
         maturity,
         Side.BORROW,
         '1000000',
-        BigNumber.from(unitPrice).sub('1000'),
+        BigNumber.from(unitPrice).add('1000'),
       );
 
     await lendingMarketController
@@ -77,7 +77,7 @@ describe('Integration Test: Auto-rolls', async () => {
         maturity,
         Side.LEND,
         '1000000',
-        BigNumber.from(unitPrice).add('1000'),
+        BigNumber.from(unitPrice).sub('1000'),
       );
   };
 
@@ -222,7 +222,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.BORROW,
             orderAmount,
-            7990,
+            8010,
           ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
@@ -277,7 +277,7 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
-          8510,
+          8490,
           {
             value: orderAmount.mul(2),
           },
@@ -289,7 +289,7 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          8490,
+          8510,
         );
 
       const aliceFVBefore = await lendingMarketController.getFutureValue(
@@ -375,7 +375,7 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
-          8100,
+          7900,
           {
             value: orderAmount.mul(2),
           },
@@ -387,7 +387,7 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          7900,
+          8100,
         );
 
       const aliceFVBefore = await lendingMarketController.getFutureValue(
@@ -833,7 +833,7 @@ describe('Integration Test: Auto-rolls', async () => {
               maturities[0],
               Side.LEND,
               orderAmount,
-              8000 + i,
+              8000 - i,
               {
                 value: orderAmount,
               },
