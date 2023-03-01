@@ -10,10 +10,11 @@ struct CalculatedAmountVars {
   uint256 debtFVAmount;
   uint256 debtPVAmount;
   int256 futureValueAmount;
-  uint256 estimatedDebtPVAmount;
+  uint256 estimatedLiquidationPVAmount;
   uint256 liquidationPVAmountInETH;
-  uint256 liquidationPVAmount;
+  uint256 liquidationFVAmount;
   int256 offsetGVAmount;
+  uint256 offsetFVAmount;
 }
 ```
 
