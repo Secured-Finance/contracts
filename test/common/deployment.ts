@@ -11,6 +11,7 @@ import {
   toBytes32,
 } from '../../utils/strings';
 import {
+  AUTO_ROLL_FEE_RATE,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -20,15 +21,18 @@ import {
 
 const deployContracts = async () => {
   // Deploy libraries
-  const [depositManagementLogic, fundCalculationLogic, orderBookLogic] =
-    await Promise.all(
-      ['DepositManagementLogic', 'FundCalculationLogic', 'OrderBookLogic'].map(
-        (library) =>
-          ethers
-            .getContractFactory(library)
-            .then((factory) => factory.deploy()),
-      ),
-    );
+  const [depositManagementLogic, orderBookLogic, quickSort] = await Promise.all(
+    ['DepositManagementLogic', 'OrderBookLogic', 'QuickSort'].map((library) =>
+      ethers.getContractFactory(library).then((factory) => factory.deploy()),
+    ),
+  );
+  const fundManagementLogic = await ethers
+    .getContractFactory('FundManagementLogic', {
+      libraries: {
+        QuickSort: quickSort.address,
+      },
+    })
+    .then((factory) => factory.deploy());
 
   // Deploy contracts
   const [
@@ -61,7 +65,7 @@ const deployContracts = async () => {
     ethers
       .getContractFactory('LendingMarketController', {
         libraries: {
-          FundCalculationLogic: fundCalculationLogic.address,
+          FundManagementLogic: fundManagementLogic.address,
         },
       })
       .then((factory) => factory.deploy()),
@@ -232,24 +236,28 @@ const deployContracts = async () => {
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
+      AUTO_ROLL_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexETHString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
+      AUTO_ROLL_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexFILString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
+      AUTO_ROLL_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
       hexUSDCString,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
+      AUTO_ROLL_FEE_RATE,
     ),
   ]);
 

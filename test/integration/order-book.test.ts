@@ -54,11 +54,11 @@ describe('Integration Test: Order Book', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETHString, ethMaturities[0], Side.BORROW, '1000', '7800');
+      .createOrder(hexETHString, ethMaturities[0], Side.BORROW, '1000', '8200');
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETHString, ethMaturities[0], Side.LEND, '1000', '8200');
+      .createOrder(hexETHString, ethMaturities[0], Side.LEND, '1000', '7800');
   };
 
   const createSampleFILOrders = async (user: SignerWithAddress) => {
@@ -74,11 +74,11 @@ describe('Integration Test: Order Book', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexFILString, filMaturities[0], Side.BORROW, '1000', '7800');
+      .createOrder(hexFILString, filMaturities[0], Side.BORROW, '1000', '8200');
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '8200');
+      .createOrder(hexFILString, filMaturities[0], Side.LEND, '1000', '7800');
   };
 
   before('Deploy Contracts', async () => {

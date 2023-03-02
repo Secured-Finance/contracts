@@ -114,8 +114,8 @@ task('register-orders', 'Registers order data into the selected lending market')
           .plus(midUnitPrice)
           .dp(0);
         const orderSide = orderUnitPrice.gte(midUnitPrice.toString())
-          ? Side.LEND
-          : Side.BORROW;
+          ? Side.BORROW
+          : Side.LEND;
 
         if (
           orderAmount.lte('0') ||
@@ -294,18 +294,18 @@ task('register-orders', 'Registers order data into the selected lending market')
       };
 
       const orderBook = [
-        ...getOrderBookObject(lendUnitPrices)
+        ...getOrderBookObject(borrowUnitPrices)
           .filter(({ unitPrice }) => unitPrice.toString() !== '0')
-          .sort((a, b) => (a.unitPrice.gte(b.unitPrice) ? -1 : 1))
+          .sort((a, b) => (a.unitPrice.lte(b.unitPrice) ? -1 : 1))
           .map(({ unitPrice, amount, quantity }) => ({
-            Lend: amount.toString(),
+            Borrow: amount.toString(),
             UnitPrice: unitPrice.toString(),
             Quantity: quantity.toString(),
           })),
-        ...getOrderBookObject(borrowUnitPrices)
+        ...getOrderBookObject(lendUnitPrices)
           .filter(({ unitPrice }) => unitPrice.toString() !== '0')
           .map(({ unitPrice, amount, quantity }) => ({
-            Borrow: amount.toString(),
+            Lend: amount.toString(),
             UnitPrice: unitPrice.toString(),
             Quantity: quantity.toString(),
           })),

@@ -19,9 +19,19 @@ const func: DeployFunction = async function ({
     from: deployer,
   }).then((result) => executeIfNewlyDeployment('OrderBookLogic', result));
 
-  await deploy('FundCalculationLogic', {
+  const quickSort = await deploy('QuickSort', {
     from: deployer,
-  }).then((result) => executeIfNewlyDeployment('FundCalculationLogic', result));
+  }).then((result) => {
+    executeIfNewlyDeployment('QuickSort', result);
+    return result;
+  });
+
+  await deploy('FundManagementLogic', {
+    from: deployer,
+    libraries: {
+      QuickSort: quickSort.address,
+    },
+  }).then((result) => executeIfNewlyDeployment('FundManagementLogic', result));
 };
 
 func.tags = ['Libraries'];

@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
+import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
@@ -7,6 +8,7 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexETHString, hexFILString } from '../../utils/strings';
 import {
+  AUTO_ROLL_FEE_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -65,7 +67,7 @@ describe('Integration Test: Auto-rolls', async () => {
         maturity,
         Side.BORROW,
         '1000000',
-        BigNumber.from(unitPrice).sub('1000'),
+        BigNumber.from(unitPrice).add('1000'),
       );
 
     await lendingMarketController
@@ -75,7 +77,7 @@ describe('Integration Test: Auto-rolls', async () => {
         maturity,
         Side.LEND,
         '1000000',
-        BigNumber.from(unitPrice).add('1000'),
+        BigNumber.from(unitPrice).sub('1000'),
       );
   };
 
@@ -220,7 +222,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.BORROW,
             orderAmount,
-            7990,
+            8010,
           ),
       ).to.emit(lendingMarkets[0], 'MakeOrder');
 
@@ -275,7 +277,7 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
-          8510,
+          8490,
           {
             value: orderAmount.mul(2),
           },
@@ -287,16 +289,14 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          8490,
+          8510,
         );
 
-      const aliceTotalPVBefore =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          alice.address,
-        );
-
-      const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
+      const aliceFVBefore = await lendingMarketController.getFutureValue(
+        hexETHString,
+        0,
+        alice.address,
+      );
 
       // Auto-roll
       await executeAutoRoll();
@@ -313,45 +313,57 @@ describe('Integration Test: Auto-rolls', async () => {
       );
       expect(aliceActualFV).to.equal('0');
 
-      // Check present value
-      const aliceTotalPVAfter =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          alice.address,
-        );
-      const bobTotalPVAfter =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          bob.address,
-        );
+      // Check future value * genesis value
+      const aliceFVAfter = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
 
-      expect(
-        aliceTotalPVAfter
-          .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice0))
-          .abs(),
-      ).lte(1);
-      expect(
-        aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
-      ).to.lte(1);
+      const aliceGVAfter = await lendingMarketController.getGenesisValue(
+        hexETHString,
+        alice.address,
+      );
+
+      const { lendingCompoundFactor: lendingCF0 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[0]);
+      const { lendingCompoundFactor: lendingCF1 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[1]);
+      const gvDecimals = await genesisValueVault.decimals(hexETHString);
+
+      expect(aliceFVAfter).to.equal(
+        BigNumberJS(aliceFVBefore.toString())
+          .times(lendingCF1.toString())
+          .div(lendingCF0.toString())
+          .dp(0)
+          .toFixed(),
+      );
+      expect(aliceGVAfter).to.equal(
+        BigNumberJS(aliceFVBefore.toString())
+          .times(BigNumberJS(10).pow(gvDecimals.toString()))
+          .div(lendingCF0.toString())
+          .dp(0)
+          .toFixed(),
+      );
 
       // Check the saved unit price and compound factor per maturity
-      const maturityUnitPrice1 = await genesisValueVault.getMaturityUnitPrice(
+      const autoRollLog1 = await genesisValueVault.getAutoRollLog(
         hexETHString,
         maturities[0],
       );
-      const maturityUnitPrice2 = await genesisValueVault.getMaturityUnitPrice(
+      const autoRollLog2 = await genesisValueVault.getAutoRollLog(
         hexETHString,
-        maturityUnitPrice1.next.toString(),
+        autoRollLog1.next.toString(),
       );
 
-      expect(maturityUnitPrice1.prev).to.equal('0');
-      expect(maturityUnitPrice2.prev).to.equal(maturities[0]);
-      expect(maturityUnitPrice2.next).to.equal('0');
-      expect(maturityUnitPrice2.unitPrice).to.equal('8500');
-      expect(maturityUnitPrice2.compoundFactor).to.equal(
-        maturityUnitPrice1.compoundFactor
-          .mul('10000')
-          .div(maturityUnitPrice2.unitPrice),
+      expect(autoRollLog1.prev).to.equal('0');
+      expect(autoRollLog2.prev).to.equal(maturities[0]);
+      expect(autoRollLog2.next).to.equal('0');
+      expect(autoRollLog2.unitPrice).to.equal('8500');
+      expect(autoRollLog2.lendingCompoundFactor).to.equal(
+        autoRollLog1.lendingCompoundFactor
+          .mul(BP.pow(2).sub(autoRollLog2.unitPrice.mul(AUTO_ROLL_FEE_RATE)))
+          .div(autoRollLog2.unitPrice.mul(BP)),
       );
     });
 
@@ -363,7 +375,7 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
-          8100,
+          7900,
           {
             value: orderAmount.mul(2),
           },
@@ -375,59 +387,56 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          7900,
+          8100,
         );
 
-      const aliceTotalPVBefore =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          alice.address,
-        );
-
-      const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
+      const aliceFVBefore = await lendingMarketController.getFutureValue(
+        hexETHString,
+        0,
+        alice.address,
+      );
 
       // Auto-roll
       await executeAutoRoll('8000');
 
-      // Check present value
-      const aliceTotalPVAfter =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          alice.address,
-        );
-      const bobTotalPVAfter =
-        await lendingMarketController.getTotalPresentValue(
-          hexETHString,
-          bob.address,
-        );
+      // Check future value
+      const aliceFVAfter = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
 
-      expect(
-        aliceTotalPVAfter
-          .sub(aliceTotalPVBefore.mul('10000').div(midUnitPrice))
-          .abs(),
-      ).lte(1);
-      expect(
-        aliceTotalPVAfter.mul(10000).div(bobTotalPVAfter).abs().sub(9975).abs(),
-      ).to.lte(1);
+      const { lendingCompoundFactor: lendingCF0 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[0]);
+      const { lendingCompoundFactor: lendingCF1 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[1]);
+
+      expect(aliceFVAfter).to.equal(
+        BigNumberJS(aliceFVBefore.toString())
+          .times(lendingCF1.toString())
+          .div(lendingCF0.toString())
+          .dp(0)
+          .toFixed(),
+      );
 
       // Check the saved unit price and compound factor per maturity
-      const maturityUnitPrice1 = await genesisValueVault.getMaturityUnitPrice(
+      const autoRollLog1 = await genesisValueVault.getAutoRollLog(
         hexETHString,
         maturities[0],
       );
-      const maturityUnitPrice2 = await genesisValueVault.getMaturityUnitPrice(
+      const autoRollLog2 = await genesisValueVault.getAutoRollLog(
         hexETHString,
-        maturityUnitPrice1.next.toString(),
+        autoRollLog1.next.toString(),
       );
 
-      expect(maturityUnitPrice1.prev).not.to.equal('0');
-      expect(maturityUnitPrice2.prev).to.equal(maturities[0]);
-      expect(maturityUnitPrice2.next).to.equal('0');
-      expect(maturityUnitPrice2.unitPrice).to.equal('8000');
-      expect(maturityUnitPrice2.compoundFactor).to.equal(
-        maturityUnitPrice1.compoundFactor
-          .mul('10000')
-          .div(maturityUnitPrice2.unitPrice),
+      expect(autoRollLog1.prev).not.to.equal('0');
+      expect(autoRollLog2.prev).to.equal(maturities[0]);
+      expect(autoRollLog2.next).to.equal('0');
+      expect(autoRollLog2.unitPrice).to.equal('8000');
+      expect(autoRollLog2.lendingCompoundFactor).to.equal(
+        autoRollLog1.lendingCompoundFactor
+          .mul(BP.pow(2).sub(autoRollLog2.unitPrice.mul(AUTO_ROLL_FEE_RATE)))
+          .div(BP.mul(autoRollLog2.unitPrice)),
       );
     });
   });
@@ -530,7 +539,14 @@ describe('Integration Test: Auto-rolls', async () => {
       );
 
       expect(aliceActualFV).equal('200000000000000000');
-      expect(aliceActualFV.mul(10000).div(bobActualFV).abs()).to.equal('9949');
+      expect(
+        BigNumberJS(aliceActualFV.toString())
+          .times(10000)
+          .div(bobActualFV.toString())
+          .dp(0)
+          .abs()
+          .toFixed(),
+      ).to.equal('9950');
     });
 
     it('Check total PVs', async () => {
@@ -568,14 +584,22 @@ describe('Integration Test: Auto-rolls', async () => {
         maturities[1],
         alice.address,
       );
+      const aliceFV0Before = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[0],
+        alice.address,
+      );
+      const aliceFV1Before = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
 
       expect(alicePV0Before.sub(orderAmount)).lte(1);
       expect(aliceTotalPVBefore).to.equal(alicePV0Before.add(alicePV1Before));
       expect(
         aliceTotalPVBefore.mul(10000).div(bobTotalPVBefore).abs().sub(9950),
       ).to.gt(0);
-
-      const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
 
       // Auto-roll
       await executeAutoRoll();
@@ -596,14 +620,33 @@ describe('Integration Test: Auto-rolls', async () => {
         maturities[1],
         alice.address,
       );
-      const aliceTotalPV = alicePV0Before
-        .mul('10000')
-        .div(midUnitPrice0)
-        .add(alicePV1Before);
 
       expect(alicePV0After).to.equal('0');
       expect(alicePV1After).to.equal(aliceTotalPVAfter);
-      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(1);
+
+      // Check future value
+      const { lendingCompoundFactor: lendingCF0 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[0]);
+      const { lendingCompoundFactor: lendingCF1 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[1]);
+      const aliceFV1After = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
+
+      expect(
+        aliceFV1After
+          .sub(
+            BigNumberJS(aliceFV0Before.toString())
+              .times(lendingCF1.toString())
+              .div(lendingCF0.toString())
+              .plus(aliceFV1Before.toString())
+              .dp(0)
+              .toFixed(),
+          )
+          .abs(),
+      ).lte(1);
     });
 
     it('Clean orders', async () => {
@@ -701,6 +744,16 @@ describe('Integration Test: Auto-rolls', async () => {
           alice.address,
         );
         const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
+        const aliceFV0Before = await lendingMarketController.getFutureValue(
+          hexETHString,
+          maturities[0],
+          alice.address,
+        );
+        const aliceFV1Before = await lendingMarketController.getFutureValue(
+          hexETHString,
+          maturities[1],
+          alice.address,
+        );
 
         // Auto-roll
         await executeAutoRoll('8333');
@@ -729,7 +782,30 @@ describe('Integration Test: Auto-rolls', async () => {
 
         expect(alicePV0After).to.equal('0');
         expect(alicePV1After).to.equal(aliceTotalPVAfter);
-        expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(2);
+
+        // Check future value
+        const { lendingCompoundFactor: lendingCF0 } =
+          await genesisValueVault.getAutoRollLog(hexETHString, maturities[0]);
+        const { lendingCompoundFactor: lendingCF1 } =
+          await genesisValueVault.getAutoRollLog(hexETHString, maturities[1]);
+        const aliceFV1After = await lendingMarketController.getFutureValue(
+          hexETHString,
+          maturities[1],
+          alice.address,
+        );
+
+        expect(
+          aliceFV1After
+            .sub(
+              BigNumberJS(aliceFV0Before.toString())
+                .times(lendingCF1.toString())
+                .div(lendingCF0.toString())
+                .plus(aliceFV1Before.toString())
+                .dp(0)
+                .toFixed(),
+            )
+            .abs(),
+        ).lte(1);
       });
     }
   });
@@ -757,7 +833,7 @@ describe('Integration Test: Auto-rolls', async () => {
               maturities[0],
               Side.LEND,
               orderAmount,
-              8000 + i,
+              8000 - i,
               {
                 value: orderAmount,
               },
@@ -848,7 +924,7 @@ describe('Integration Test: Auto-rolls', async () => {
         reserveFundGVAmount,
       ] = await Promise.all(
         [alice, bob, carol, dave, reserveFund].map(({ address }) =>
-          genesisValueVault.getGenesisValue(hexETHString, address),
+          lendingMarketController.getGenesisValue(hexETHString, address),
         ),
       );
 
@@ -959,17 +1035,16 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it(`Execute auto-roll`, async () => {
-      const alicePV0Before = await lendingMarketController.getPresentValue(
+      const aliceFV0Before = await lendingMarketController.getFutureValue(
         hexETHString,
         maturities[0],
         alice.address,
       );
-      const alicePV1Before = await lendingMarketController.getPresentValue(
+      const aliceFV1Before = await lendingMarketController.getFutureValue(
         hexETHString,
         maturities[1],
         alice.address,
       );
-      const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
 
       // Auto-roll
       await createSampleETHOrders(carol, maturities[1], '8000');
@@ -995,14 +1070,32 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      const aliceTotalPV = alicePV0Before
-        .mul('10000')
-        .div(midUnitPrice0)
-        .add(alicePV1Before);
-
       expect(alicePV0After).to.equal('0');
       expect(alicePV1After).to.equal(aliceTotalPVAfter);
-      expect(aliceTotalPVAfter.sub(aliceTotalPV).abs()).lte(1);
+
+      // Check future value
+      const { lendingCompoundFactor: lendingCF0 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[0]);
+      const { lendingCompoundFactor: lendingCF1 } =
+        await genesisValueVault.getAutoRollLog(hexETHString, maturities[1]);
+      const aliceFV1After = await lendingMarketController.getFutureValue(
+        hexETHString,
+        maturities[1],
+        alice.address,
+      );
+
+      expect(
+        aliceFV1After
+          .sub(
+            BigNumberJS(aliceFV0Before.toString())
+              .times(lendingCF1.toString())
+              .div(lendingCF0.toString())
+              .plus(aliceFV1Before.toString())
+              .dp(0)
+              .toFixed(),
+          )
+          .abs(),
+      ).lte(1);
     });
   });
 });

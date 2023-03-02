@@ -351,59 +351,11 @@ Gets the total present value of the account converted to ETH.
 | ---- | ---- | ----------- |
 | totalPresentValue | int256 | The total present value in ETH |
 
-### getOrderFeeRate
+### getGenesisValue
 
 ```solidity
-function getOrderFeeRate(bytes32 _ccy) external view returns (uint256)
+function getGenesisValue(bytes32 _ccy, address _user) external view returns (int256 genesisValue)
 ```
-
-Gets the order fee rate
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | The order fee rate received by protocol |
-
-### calculateLentFundsFromOrders
-
-```solidity
-function calculateLentFundsFromOrders(bytes32 _ccy, address _user) external view returns (uint256 workingOrdersAmount, uint256 claimableAmount, uint256 lentAmount)
-```
-
-Gets the funds that are calculated from the user's lending order list for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| workingOrdersAmount | uint256 | The working orders amount on the order book |
-| claimableAmount | uint256 | The claimable amount due to the lending orders being filled on the order book |
-| lentAmount | uint256 | The lent amount due to the lend orders being filled on the order book |
-
-### calculateBorrowedFundsFromOrders
-
-```solidity
-function calculateBorrowedFundsFromOrders(bytes32 _ccy, address _user) external view returns (uint256 workingOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
-```
-
-Gets the funds that are calculated from the user's borrowing order list for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| workingOrdersAmount | uint256 | The working orders amount on the order book |
-| debtAmount | uint256 | The debt amount due to the borrow orders being filled on the order book |
-| borrowedAmount | uint256 | The borrowed amount due to the borrow orders being filled on the order book |
 
 ### calculateFunds
 
@@ -463,7 +415,7 @@ Gets if the lending market is initialized.
 ### initializeLendingMarket
 
 ```solidity
-function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate) external
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _autoRollFeeRate) external
 ```
 
 Initialize the lending market to set a genesis date and compound factor
@@ -474,6 +426,7 @@ Initialize the lending market to set a genesis date and compound factor
 | _genesisDate | uint256 | The genesis date when the initial market is opened |
 | _compoundFactor | uint256 | The initial compound factor when the initial market is opened |
 | _orderFeeRate | uint256 | The order fee rate received by protocol |
+| _autoRollFeeRate | uint256 | The auto roll fee rate received by protocol |
 
 ### createLendingMarket
 
@@ -635,19 +588,6 @@ Unpauses previously deployed lending market by currency
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### updateOrderFeeRate
-
-```solidity
-function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) external
-```
-
-Updates the order fee rate
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 |  |
-| _orderFeeRate | uint256 | The order fee rate received by protocol |
-
 ### cleanAllOrders
 
 ```solidity
@@ -673,34 +613,10 @@ Cleans user's orders to remove order ids that are already filled on the order bo
 | _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
 
-### _convertFutureValueToGenesisValue
-
-```solidity
-function _convertFutureValueToGenesisValue(bytes32 _ccy, uint256 _maturity, address _user) private returns (int256)
-```
-
-Converts the future value to the genesis value if there is balance in the past maturity.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency for pausing all lending markets |
-| _maturity | uint256 |  |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | int256 | Current future value amount after update |
-
 ### _createOrder
 
 ```solidity
 function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _isForced) private returns (uint256 filledAmount)
-```
-
-### _updateDepositAmount
-
-```solidity
-function _updateDepositAmount(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledFutureValue, uint256 _filledAmount, uint256 _feeFutureValue) private returns (bool)
 ```
 
 ### _cleanOrders

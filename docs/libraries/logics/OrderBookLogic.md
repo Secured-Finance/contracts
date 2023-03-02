@@ -2,28 +2,28 @@
 
 ## OrderBookLogic
 
-### getHighestBorrowUnitPrice
+### getHighestLendingUnitPrice
 
 ```solidity
-function getHighestBorrowUnitPrice() public view returns (uint256)
+function getHighestLendingUnitPrice() public view returns (uint256)
 ```
 
-### getLowestLendUnitPrice
+### getLowestBorrowingUnitPrice
 
 ```solidity
-function getLowestLendUnitPrice() public view returns (uint256)
-```
-
-### getBorrowOrderBook
-
-```solidity
-function getBorrowOrderBook(uint256 _limit) public view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLowestBorrowingUnitPrice() public view returns (uint256)
 ```
 
 ### getLendOrderBook
 
 ```solidity
 function getLendOrderBook(uint256 _limit) public view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+```
+
+### getBorrowOrderBook
+
+```solidity
+function getBorrowOrderBook(uint256 _limit) public view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
 ```
 
 ### getOrder

@@ -108,7 +108,6 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         );
 
         int256 previousBalance = Storage.slot().balances[_user];
-
         Storage.slot().futureValueMaturities[_user] = _maturity;
         Storage.slot().balances[_user] += _amount.toInt256();
         emit Transfer(address(0), _user, _amount.toInt256());
@@ -156,25 +155,33 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         return true;
     }
 
-    /**
-     * @notice Offsets the future value amount.
-     * @param _lender Lender's address
-     * @param _borrower Borrower's address
-     * @param _amount The amount to add
-     * @param _maturity The maturity of the market
-     */
     function offsetFutureValue(
         address _lender,
         address _borrower,
-        uint256 _amount,
-        uint256 _maturity
-    ) external override onlyAcceptedContracts returns (bool) {
-        addBorrowFutureValue(_lender, _amount, _maturity, false);
-        addLendFutureValue(_borrower, _amount, _maturity, false);
+        uint256 _maximumFVAmount
+    ) external override onlyAcceptedContracts returns (uint256 offsetAmount) {
+        (int256 lenderFVAmount, uint256 lenderMaturity) = getFutureValue(_lender);
+        (int256 borrowerFVAmount, uint256 borrowerMaturity) = getFutureValue(_borrower);
 
-        Storage.slot().totalSupply[_maturity] -= _amount;
+        if (lenderFVAmount <= 0 || borrowerFVAmount >= 0) {
+            return 0;
+        }
 
-        return true;
+        if (lenderMaturity == borrowerMaturity) {
+            offsetAmount = lenderFVAmount.toUint256();
+
+            if (-borrowerFVAmount < lenderFVAmount) {
+                offsetAmount = (-borrowerFVAmount).toUint256();
+            }
+
+            if (_maximumFVAmount != 0 && offsetAmount > _maximumFVAmount) {
+                offsetAmount = _maximumFVAmount;
+            }
+
+            addBorrowFutureValue(_lender, offsetAmount, lenderMaturity, false);
+            addLendFutureValue(_borrower, offsetAmount, lenderMaturity, false);
+            Storage.slot().totalSupply[lenderMaturity] -= offsetAmount;
+        }
     }
 
     /**

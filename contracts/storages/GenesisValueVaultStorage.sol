@@ -8,13 +8,22 @@ struct MaturityUnitPrice {
     uint256 prev;
 }
 
+struct AutoRollLog {
+    uint256 unitPrice;
+    uint256 lendingCompoundFactor;
+    uint256 borrowingCompoundFactor;
+    uint256 next;
+    uint256 prev;
+}
+
 library GenesisValueVaultStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.genesisValueVault");
 
     struct Storage {
         mapping(bytes32 => bool) isInitialized;
         mapping(bytes32 => uint256) initialCompoundFactors;
-        mapping(bytes32 => uint256) compoundFactors;
+        mapping(bytes32 => uint256) lendingCompoundFactors;
+        mapping(bytes32 => uint256) borrowingCompoundFactors;
         mapping(bytes32 => uint256) currentMaturity;
         mapping(bytes32 => uint8) decimals;
         // Mapping from user to balance per currency
@@ -23,8 +32,10 @@ library GenesisValueVaultStorage {
         mapping(bytes32 => uint256) totalBorrowingSupplies;
         // Mapping from maturity balance per currency
         mapping(bytes32 => mapping(uint256 => int256)) maturityBalances;
-        // Mapping from maturity to rate per currency
-        mapping(bytes32 => mapping(uint256 => MaturityUnitPrice)) maturityUnitPrices;
+        // Mapping from maturity to auto-roll log per currency
+        mapping(bytes32 => mapping(uint256 => AutoRollLog)) autoRollLogs;
+        // Mapping from user to maturity per currency
+        mapping(bytes32 => mapping(address => uint256)) userMaturities;
         // Mapping from maturity to maximum total supply per currency
         mapping(bytes32 => mapping(uint256 => uint256)) maximumTotalSupply;
     }
