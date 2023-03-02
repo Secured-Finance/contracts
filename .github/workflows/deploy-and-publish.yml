@@ -83,6 +83,7 @@ jobs:
   publish:
     name: Deploy Smart Contracts
     runs-on: ubuntu-latest
+    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'canceled') }}
     needs: [test]
     steps:
       - name: Generate token
