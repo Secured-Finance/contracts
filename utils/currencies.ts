@@ -19,10 +19,11 @@ export interface Currency {
 }
 
 export interface MockRate {
-  name: string;
-  key: string;
-  decimals: number;
-  rate: BigNumber;
+  [key: string]: {
+    name: string;
+    decimals: number;
+    rate: BigNumber;
+  };
 }
 
 const filToETHRate = BigNumber.from('3803677700000000');
@@ -77,32 +78,28 @@ const currencies: Currency[] = [
   },
 ];
 
-const mockRates: MockRate[] = [
-  {
+const mockRates: MockRate = {
+  [hexFILString]: {
     name: 'FIL/ETH',
-    key: hexFILString,
     decimals: 18,
     rate: filToETHRate,
   },
-  {
+  [hexETHString]: {
     name: 'ETH/USD',
-    key: hexETHString,
     decimals: 8,
     rate: ethToUSDRate,
   },
-  {
+  [hexBTCString]: {
     name: 'BTC/ETH',
-    key: hexBTCString,
     decimals: 8,
     rate: btcToETHRate,
   },
-  {
+  [hexUSDCString]: {
     name: 'USDC/ETH',
-    key: hexUSDCString,
     decimals: 6,
     rate: usdcToETHRate,
   },
-];
+};
 
 const priceOracles = {
   [hexFILString]: process.env.FIL_TO_ETH_RATE,

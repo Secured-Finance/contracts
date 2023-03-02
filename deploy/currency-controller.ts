@@ -40,40 +40,29 @@ const func: DeployFunction = async function ({
       );
 
       // Set up for CurrencyController
-      const priceFeeds: Record<string, DeployResult> = {};
+      const mockPriceFeeds: Record<string, DeployResult> = {};
 
-      const currencyKeyMap = {};
-      currencies.forEach((c) => (currencyKeyMap[c.key] = c));
-      for (const rate of mockRates) {
-        if (!currencyKeyMap[rate.key].env || !priceOracles[rate.key]) {
+      // Use MockV3Aggregator for a currency when a price feed is not set
+      for (const currency of currencies) {
+        if (!priceOracles[currency.key]) {
+          const rate = mockRates[currency.key];
           const priceFeed = await deploy('MockV3Aggregator', {
             from: deployer,
-            args: [rate.decimals, rate.key, rate.rate.toString()],
+            args: [rate.decimals, currency.key, rate.rate.toString()],
           });
           console.log(
             `Deployed MockV3Aggregator ${rate.name} price feed at`,
             priceFeed.address,
           );
-          priceFeeds[rate.key] = priceFeed;
+          mockPriceFeeds[currency.key] = priceFeed;
         }
-      }
 
-      for (const currency of currencies) {
-        const priceFeedAddress =
-          currency.env && priceOracles[currency.key]
-            ? priceOracles[currency.key]
-            : priceFeeds[currency.key].address;
+        const priceFeedAddress = mockPriceFeeds[currency.key]
+          ? mockPriceFeeds[currency.key].address
+          : priceOracles[currency.key];
         await currencyControllerContract
           .addCurrency(currency.key, priceFeedAddress, currency.haircut)
           .then((tx) => tx.wait());
-        console.log(
-          `${currency.symbol} refers to ${
-            priceFeedAddress === priceOracles[currency.key]
-              ? 'External Oracle'
-              : 'MockV3Aggregator'
-          } at`,
-          priceFeedAddress,
-        );
       }
     },
   );

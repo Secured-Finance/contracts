@@ -164,15 +164,14 @@ const deployContracts = async () => {
   const priceFeeds: Record<string, Contract> = {};
   const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
 
-  for (const rate of mockRates) {
-    priceFeeds[rate.key] = await MockV3Aggregator.deploy(
-      rate.decimals,
-      rate.key,
-      rate.rate,
-    );
-  }
-
   for (const currency of currencies) {
+    const mockRate = mockRates[currency.key];
+    priceFeeds[currency.key] = await MockV3Aggregator.deploy(
+      mockRate.decimals,
+      currency.key,
+      mockRate.rate,
+    );
+
     await currencyControllerProxy.addCurrency(
       currency.key,
       priceFeeds[currency.key].address,
