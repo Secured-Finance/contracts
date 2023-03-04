@@ -1,6 +1,6 @@
 import { DeployFunction, DeployResult } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies, mockRates } from '../utils/currencies';
+import { currencies, mockRates, priceOracles } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -40,27 +40,28 @@ const func: DeployFunction = async function ({
       );
 
       // Set up for CurrencyController
-      const priceFeeds: Record<string, DeployResult> = {};
+      const mockPriceFeeds: Record<string, DeployResult> = {};
 
-      for (const rate of mockRates) {
-        const priceFeed = await deploy('MockV3Aggregator', {
-          from: deployer,
-          args: [rate.decimals, rate.key, rate.rate.toString()],
-        });
-        console.log(
-          `Deployed MockV3Aggregator ${rate.name} price feed at`,
-          priceFeed.address,
-        );
-        priceFeeds[rate.key] = priceFeed;
-      }
-
+      // Use MockV3Aggregator for a currency when a price feed is not set
       for (const currency of currencies) {
+        if (!priceOracles[currency.key]) {
+          const rate = mockRates[currency.key];
+          const priceFeed = await deploy('MockV3Aggregator', {
+            from: deployer,
+            args: [rate.decimals, currency.key, rate.rate.toString()],
+          });
+          console.log(
+            `Deployed MockV3Aggregator ${rate.name} price feed at`,
+            priceFeed.address,
+          );
+          mockPriceFeeds[currency.key] = priceFeed;
+        }
+
+        const priceFeedAddress = mockPriceFeeds[currency.key]
+          ? mockPriceFeeds[currency.key].address
+          : priceOracles[currency.key];
         await currencyControllerContract
-          .addCurrency(
-            currency.key,
-            priceFeeds[currency.key].address,
-            currency.haircut,
-          )
+          .addCurrency(currency.key, priceFeedAddress, currency.haircut)
           .then((tx) => tx.wait());
       }
     },
