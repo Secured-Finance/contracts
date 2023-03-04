@@ -324,7 +324,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -503,7 +503,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -617,7 +617,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -769,7 +769,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -890,7 +890,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -1053,7 +1053,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInFIL,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -1108,7 +1108,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInUSDC,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)

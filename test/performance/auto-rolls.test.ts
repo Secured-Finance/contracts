@@ -180,7 +180,7 @@ describe('Performance Test: Auto-rolls', async () => {
             orderAmount,
             '8000',
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -192,7 +192,7 @@ describe('Performance Test: Auto-rolls', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const aliceActualFV = await lendingMarketController.getFutureValue(
@@ -284,7 +284,7 @@ describe('Performance Test: Auto-rolls', async () => {
             orderAmount,
             '9523',
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -296,7 +296,7 @@ describe('Performance Test: Auto-rolls', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const ellenActualFV = await lendingMarketController.getFutureValue(

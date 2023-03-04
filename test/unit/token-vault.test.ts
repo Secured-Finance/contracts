@@ -237,7 +237,7 @@ describe('TokenVault', () => {
           mockERC20.address,
           true,
         ),
-      ).to.emit(tokenVaultProxy, 'RegisterCurrency');
+      ).to.emit(tokenVaultProxy, 'CurrencyRegistered');
 
       expect(await tokenVaultProxy.isRegisteredCurrency(targetCurrency)).true;
 

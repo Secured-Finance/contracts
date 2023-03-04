@@ -538,7 +538,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount,
                 '9001',
               ),
-          ).to.emit(filLendingMarkets[1], 'MakeOrder');
+          ).to.emit(filLendingMarkets[1], 'OrderMade');
 
           await expect(
             lendingMarketController
@@ -550,7 +550,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount,
                 '9001',
               ),
-          ).to.emit(filLendingMarkets[1], 'TakeOrders');
+          ).to.emit(filLendingMarkets[1], 'OrdersTaken');
         });
 
         it(`Check orders`, async () => {
@@ -609,7 +609,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount,
                 '9002',
               ),
-          ).to.emit(filLendingMarkets[1], 'MakeOrder');
+          ).to.emit(filLendingMarkets[1], 'OrderMade');
 
           await expect(
             lendingMarketController
@@ -621,7 +621,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount.div(2),
                 '9002',
               ),
-          ).to.emit(filLendingMarkets[1], 'TakeOrders');
+          ).to.emit(filLendingMarkets[1], 'OrdersTaken');
         });
 
         it(`Check orders`, async () => {
@@ -686,7 +686,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount.div(2),
                 '9003',
               ),
-          ).to.emit(filLendingMarkets[1], 'MakeOrder');
+          ).to.emit(filLendingMarkets[1], 'OrderMade');
           await expect(
             lendingMarketController
               .connect(signer1)
@@ -697,7 +697,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount.div(2),
                 '9003',
               ),
-          ).to.emit(filLendingMarkets[1], 'MakeOrder');
+          ).to.emit(filLendingMarkets[1], 'OrderMade');
 
           await expect(
             lendingMarketController
@@ -709,7 +709,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount.mul(2),
                 '9003',
               ),
-          ).to.emit(filLendingMarkets[1], 'TakeOrders');
+          ).to.emit(filLendingMarkets[1], 'OrdersTaken');
         });
 
         it(`Check orders`, async () => {

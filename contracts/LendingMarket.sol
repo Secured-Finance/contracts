@@ -325,7 +325,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         prevMaturity = Storage.slot().maturity;
         Storage.slot().maturity = _maturity;
 
-        emit OpenMarket(_maturity, prevMaturity);
+        emit MarketOpened(_maturity, prevMaturity);
     }
 
     /**
@@ -350,7 +350,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     {
         (side, removedAmount, unitPrice) = OrderBookLogic.removeOrder(_user, _orderId);
 
-        emit ILendingMarket.CancelOrder(
+        emit ILendingMarket.OrderCanceled(
             _orderId,
             msg.sender,
             side,
@@ -409,7 +409,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ) = OrderBookLogic.cleanBorrowOrders(_user, maturity);
 
         if (removedLendOrderAmount > 0) {
-            emit CleanOrders(
+            emit OrdersCleaned(
                 lendOrderIds,
                 _user,
                 ProtocolTypes.Side.LEND,
@@ -419,7 +419,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         }
 
         if (removedBorrowOrderAmount > 0) {
-            emit CleanOrders(
+            emit OrdersCleaned(
                 borrowOrderIds,
                 _user,
                 ProtocolTypes.Side.BORROW,
@@ -521,7 +521,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     ) private returns (uint48 orderId) {
         orderId = OrderBookLogic.insertOrder(_side, _user, _amount, _unitPrice, _isInterruption);
 
-        emit ILendingMarket.MakeOrder(
+        emit ILendingMarket.OrderMade(
             orderId,
             _originalOrderId,
             _user,
@@ -556,7 +556,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             _unitPrice
         );
 
-        emit ILendingMarket.TakeOrders(
+        emit ILendingMarket.OrdersTaken(
             _user,
             _side,
             Storage.slot().ccy,

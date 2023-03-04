@@ -6,8 +6,8 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 interface ITokenVault {
     event Deposit(address indexed user, bytes32 ccy, uint256 amount);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
-    event RegisterCurrency(bytes32 ccy, address tokenAddress, bool isCollateral);
-    event UpdateCurrency(bytes32 ccy, bool isCollateral);
+    event CurrencyRegistered(bytes32 ccy, address tokenAddress, bool isCollateral);
+    event CurrencyUpdated(bytes32 ccy, bool isCollateral);
     event Swap(
         address indexed user,
         bytes32 ccyIn,
