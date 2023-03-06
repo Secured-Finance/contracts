@@ -44,10 +44,12 @@ interface ILendingMarket {
 
     event OpenMarket(uint256 maturity, uint256 prevMaturity);
 
+    event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingPrice);
+
     struct Market {
         bytes32 ccy;
         uint256 maturity;
-        uint256 genesisDate;
+        uint256 openingDate;
         uint256 borrowUnitPrice;
         uint256 lendUnitPrice;
         uint256 midUnitPrice;
@@ -83,9 +85,17 @@ interface ILendingMarket {
 
     function getCurrency() external view returns (bytes32);
 
+    function getOpeningDate() external view returns (uint256);
+
+    function isItayosePeriod() external view returns (bool);
+
+    function getOpeningUnitPrice() external view returns (uint256);
+
     function isMatured() external view returns (bool);
 
     function isOpened() external view returns (bool);
+
+    function isPreOrderPeriod() external returns (bool);
 
     function getOrder(uint48 _orderId)
         external
@@ -134,7 +144,7 @@ interface ILendingMarket {
         view
         returns (uint256 amount);
 
-    function openMarket(uint256 maturity) external returns (uint256);
+    function openMarket(uint256 maturity, uint256 openingDate) external returns (uint256);
 
     function cancelOrder(address user, uint48 orderId)
         external
@@ -143,6 +153,15 @@ interface ILendingMarket {
             uint256,
             uint256
         );
+
+    function createPreOrder(
+        ProtocolTypes.Side side,
+        address user,
+        uint256 amount,
+        uint256 unitPrice
+    ) external;
+
+    function executeItayoseCall() external;
 
     function cleanOrders(address _user)
         external

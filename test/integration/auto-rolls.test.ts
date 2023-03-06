@@ -38,7 +38,10 @@ describe('Integration Test: Auto-rolls', async () => {
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
+  let genesisDate: number;
   let maturities: BigNumber[];
+  let filLendingMarkets: Contract[] = [];
+  let ethLendingMarkets: Contract[] = [];
 
   let signers: Signers;
 
@@ -89,6 +92,13 @@ describe('Integration Test: Auto-rolls', async () => {
     await lendingMarketController
       .connect(owner)
       .rotateLendingMarkets(hexETHString);
+
+    await lendingMarketController
+      .connect(owner)
+      .executeMultiItayoseCall(
+        [hexETHString],
+        maturities[maturities.length - 1],
+      );
   };
 
   const resetContractInstances = async () => {
@@ -120,6 +130,7 @@ describe('Integration Test: Auto-rolls', async () => {
     [owner] = await signers.get(1);
 
     ({
+      genesisDate,
       addressResolver,
       genesisValueVault,
       reserveFund,
@@ -158,11 +169,47 @@ describe('Integration Test: Auto-rolls', async () => {
 
     await tokenVault.updateCurrency(hexETHString, true);
 
-    // Deploy Lending Markets for ETH market
+    // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexFILString);
-      await lendingMarketController.createLendingMarket(hexETHString);
+      await lendingMarketController.createLendingMarket(
+        hexFILString,
+        genesisDate,
+      );
+      await lendingMarketController.createLendingMarket(
+        hexETHString,
+        genesisDate,
+      );
     }
+
+    filLendingMarkets = await lendingMarketController
+      .getLendingMarkets(hexFILString)
+      .then((addresses) =>
+        Promise.all(
+          addresses.map((address) =>
+            ethers.getContractAt('LendingMarket', address),
+          ),
+        ),
+      );
+
+    ethLendingMarkets = await lendingMarketController
+      .getLendingMarkets(hexETHString)
+      .then((addresses) =>
+        Promise.all(
+          addresses.map((address) =>
+            ethers.getContractAt('LendingMarket', address),
+          ),
+        ),
+      );
+
+    // Deploy inactive Lending Markets for Itayose
+    await lendingMarketController.createLendingMarket(
+      hexFILString,
+      await filLendingMarkets[0].getMaturity(),
+    );
+    await lendingMarketController.createLendingMarket(
+      hexETHString,
+      await ethLendingMarkets[0].getMaturity(),
+    );
   });
 
   beforeEach('Reset contract instances', async () => {
@@ -912,6 +959,10 @@ describe('Integration Test: Auto-rolls', async () => {
         .connect(owner)
         .rotateLendingMarkets(hexETHString);
 
+      await lendingMarkets[lendingMarkets.length - 1]
+        .connect(owner)
+        .executeItayoseCall();
+
       for (const { address } of [alice, bob, carol, dave, reserveFund]) {
         await lendingMarketController.cleanOrders(hexETHString, address);
       }
@@ -1052,6 +1103,8 @@ describe('Integration Test: Auto-rolls', async () => {
       await lendingMarketController
         .connect(owner)
         .rotateLendingMarkets(hexETHString);
+
+      await lendingMarkets[0].connect(owner).executeItayoseCall();
 
       // Check present value
       const aliceTotalPVAfter =

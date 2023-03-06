@@ -466,10 +466,11 @@ contract LendingMarketController is
     /**
      * @notice Deploys new Lending Market and save address at lendingMarkets mapping.
      * @param _ccy Main currency for new lending market
+     * @param _openingDate Timestamp when the lending market opens
      * @notice Reverts on deployment market with existing currency and term
      * @return market The proxy contract address of created lending market
      */
-    function createLendingMarket(bytes32 _ccy)
+    function createLendingMarket(bytes32 _ccy, uint256 _openingDate)
         external
         override
         onlyOwner
@@ -481,21 +482,18 @@ contract LendingMarketController is
         );
         require(currencyController().currencyExists(_ccy), "Non supported currency");
 
-        uint256 genesisDate = Storage.slot().genesisDates[_ccy];
+        uint256 basisDate = Storage.slot().genesisDates[_ccy];
 
         if (Storage.slot().lendingMarkets[_ccy].length > 0) {
-            genesisDate = ILendingMarket(
+            basisDate = ILendingMarket(
                 Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
             ).getMaturity();
         }
 
-        uint256 nextMaturity = TimeLibrary.addMonths(genesisDate, BASIS_TERM);
+        uint256 nextMaturity = TimeLibrary.addMonths(basisDate, BASIS_TERM);
+        require(_openingDate < nextMaturity, "Market opening date must be before maturity date");
 
-        market = beaconProxyController().deployLendingMarket(
-            _ccy,
-            Storage.slot().genesisDates[_ccy],
-            nextMaturity
-        );
+        market = beaconProxyController().deployLendingMarket(_ccy, nextMaturity, _openingDate);
         futureValueVault = beaconProxyController().deployFutureValueVault();
 
         Storage.slot().lendingMarkets[_ccy].push(market);
@@ -507,6 +505,7 @@ contract LendingMarketController is
             market,
             futureValueVault,
             Storage.slot().lendingMarkets[_ccy].length,
+            _openingDate,
             nextMaturity
         );
     }
@@ -556,6 +555,50 @@ contract LendingMarketController is
     ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+
+        return true;
+    }
+
+    function createPreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+        uint256 activeOrderCount = cleanOrders(_ccy, msg.sender);
+        require(activeOrderCount + 1 <= MAXIMUM_ORDER_COUNT, "Too many active orders");
+
+        if (!Storage.slot().usedMaturities[_ccy][msg.sender].contains(_maturity)) {
+            Storage.slot().usedMaturities[_ccy][msg.sender].add(_maturity);
+        }
+        require(tokenVault().isCovered(msg.sender, _ccy, _amount, _side), "Not enough collateral");
+
+        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createPreOrder(
+            _side,
+            msg.sender,
+            _amount,
+            _unitPrice
+        );
+
+        Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+
+        return true;
+    }
+
+    function executeMultiItayoseCall(bytes32[] memory _currencies, uint256 _maturity)
+        external
+        override
+        returns (bool)
+    {
+        for (uint256 i; i < _currencies.length; i++) {
+            ILendingMarket market = ILendingMarket(
+                Storage.slot().maturityLendingMarkets[_currencies[i]][_maturity]
+            );
+            if (market.isItayosePeriod()) {
+                market.executeItayoseCall();
+            }
+        }
 
         return true;
     }
@@ -670,13 +713,20 @@ contract LendingMarketController is
         address[] storage markets = Storage.slot().lendingMarkets[_ccy];
         address currentMarketAddr = markets[0];
         address nextMarketAddr = markets[1];
+        uint256 nextMaturity = ILendingMarket(nextMarketAddr).getMaturity();
 
         // Reopen the market matured with new maturity
         uint256 newLastMaturity = TimeLibrary.addMonths(
             ILendingMarket(markets[markets.length - 1]).getMaturity(),
             BASIS_TERM
         );
-        uint256 prevMaturity = ILendingMarket(currentMarketAddr).openMarket(newLastMaturity);
+
+        // The market that is moved to the last of the list opens again when the next market is matured.
+        // Just before the opening, the moved market needs the Itayose execution.
+        uint256 prevMaturity = ILendingMarket(currentMarketAddr).openMarket(
+            newLastMaturity,
+            nextMaturity
+        );
 
         // Rotate the order of the market
         for (uint256 i = 0; i < markets.length; i++) {
@@ -689,7 +739,7 @@ contract LendingMarketController is
         genesisValueVault().executeAutoRoll(
             _ccy,
             prevMaturity,
-            ILendingMarket(nextMarketAddr).getMaturity(),
+            nextMaturity,
             ILendingMarket(nextMarketAddr).getMidUnitPrice(),
             getAutoRollFeeRate(_ccy),
             IFutureValueVault(futureValueVault).getTotalSupply(prevMaturity)
@@ -738,7 +788,7 @@ contract LendingMarketController is
      * @notice Cleans user's all orders to remove order ids that are already filled on the order book.
      * @param _user User's address
      */
-    function cleanAllOrders(address _user) public override {
+    function cleanAllOrders(address _user) external override {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
         for (uint256 i = 0; i < ccySet.length(); i++) {
             cleanOrders(ccySet.at(i), _user);

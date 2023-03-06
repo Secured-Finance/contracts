@@ -21,12 +21,14 @@ describe('Performance Test: Order Book', async () => {
   let wETHToken: Contract;
   let usdcToken: Contract;
 
+  let genesisDate: number;
   let maturities: BigNumber[];
 
   before('Deploy Contracts', async () => {
     signers = await ethers.getSigners();
 
     ({
+      genesisDate,
       addressResolver,
       tokenVault,
       lendingMarketController,
@@ -59,20 +61,16 @@ describe('Performance Test: Order Book', async () => {
     await tokenVault.updateCurrency(hexETHString, true);
     await tokenVault.updateCurrency(hexUSDCString, true);
 
-    // Deploy Lending Markets for FIL market
+    // Deploy Lending Markets
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexFILString)
-        .then((tx) => tx.wait());
-    }
-
-    // Deploy Lending Markets for ETH market
-    for (let i = 0; i < 8; i++) {
-      await lendingMarketController
-        .createLendingMarket(hexETHString)
+        .createLendingMarket(hexFILString, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexUSDCString)
+        .createLendingMarket(hexETHString, genesisDate)
+        .then((tx) => tx.wait());
+      await lendingMarketController
+        .createLendingMarket(hexUSDCString, genesisDate)
         .then((tx) => tx.wait());
     }
   });

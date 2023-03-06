@@ -38,6 +38,7 @@ describe('Integration Test: Liquidations', async () => {
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
+  let genesisDate: number;
   let filMaturities: BigNumber[];
   let usdcMaturities: BigNumber[];
 
@@ -178,6 +179,13 @@ describe('Integration Test: Liquidations', async () => {
 
     await lendingMarketController
       .connect(owner)
+      .executeMultiItayoseCall(
+        [hexFILString, hexUSDCString],
+        usdcMaturities[usdcMaturities.length - 1],
+      );
+
+    await lendingMarketController
+      .connect(owner)
       .cancelOrder(hexFILString, filMaturities[1], '1');
     await lendingMarketController
       .connect(owner)
@@ -195,6 +203,7 @@ describe('Integration Test: Liquidations', async () => {
     signers = new Signers(await ethers.getSigners());
 
     ({
+      genesisDate,
       addressResolver,
       tokenVault,
       lendingMarketController,
@@ -252,10 +261,10 @@ describe('Integration Test: Liquidations', async () => {
     // Deploy Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexFILString)
+        .createLendingMarket(hexFILString, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexUSDCString)
+        .createLendingMarket(hexUSDCString, genesisDate)
         .then((tx) => tx.wait());
     }
 

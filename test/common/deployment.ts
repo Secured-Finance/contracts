@@ -261,6 +261,7 @@ const deployContracts = async () => {
   ]);
 
   return {
+    genesisDate,
     // contracts
     addressResolver: addressResolverProxy,
     beaconProxyController: beaconProxyControllerProxy,

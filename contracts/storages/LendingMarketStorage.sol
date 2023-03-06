@@ -17,10 +17,14 @@ library LendingMarketStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarket");
 
     struct Storage {
-        uint48 lastOrderId;
         bytes32 ccy;
-        uint256 genesisDate;
+        uint48 lastOrderId;
+        uint256 openingDate;
         uint256 maturity;
+        // Mapping from maturity to opening unit price
+        mapping(uint256 => uint256) openingUnitPrices;
+        // Mapping from maturity to boolean if the market is ready or not
+        mapping(uint256 => bool) isReady;
         // Mapping from user to active lend order ids
         mapping(address => uint48[]) activeLendOrderIds;
         // Mapping from user to active borrow order ids
@@ -29,6 +33,8 @@ library LendingMarketStorage {
         mapping(address => uint256) userCurrentMaturities;
         // Mapping from orderId to order
         mapping(uint256 => MarketOrder) orders;
+        // Mapping from orderId to boolean for pre-order or not
+        mapping(uint256 => bool) isPreOrder;
         // Mapping from maturity to lending orders
         mapping(uint256 => OrderStatisticsTreeLib.Tree) lendOrders;
         // Mapping from maturity to borrowing orders
