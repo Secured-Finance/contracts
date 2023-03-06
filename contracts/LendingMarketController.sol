@@ -559,13 +559,24 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+     * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
     function createPreOrder(
         bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    ) public override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         uint256 activeOrderCount = cleanOrders(_ccy, msg.sender);
         require(activeOrderCount + 1 <= MAXIMUM_ORDER_COUNT, "Too many active orders");
 
@@ -582,6 +593,29 @@ contract LendingMarketController is
         );
 
         Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+
+        return true;
+    }
+
+    /**
+     * @notice Deposits funds and creates a pre-order at the same time.
+     *
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @return True if the execution of the operation succeeds
+     */
+    function depositAndCreatePreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external payable override returns (bool) {
+        tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
+        createPreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
 
         return true;
     }

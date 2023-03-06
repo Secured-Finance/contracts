@@ -527,6 +527,14 @@ contract LendingMarket is
         }
     }
 
+    /**
+     * @notice Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+     * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
+     *
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     */
     function createPreOrder(
         ProtocolTypes.Side _side,
         address _user,
@@ -539,6 +547,11 @@ contract LendingMarket is
         Storage.slot().isPreOrder[orderId] = true;
     }
 
+    /**
+     * @notice Executes Itayose to aggregate pre-orders and determine the opening unit price.
+     * After this action, the market opens.
+     * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
+     */
     function executeItayoseCall() external nonReentrant whenNotPaused ifItayosePeriod {
         (uint256 openingUnitPrice, uint256 totalOffsetAmount) = OrderBookLogic
             .getOpeningUnitPrice();

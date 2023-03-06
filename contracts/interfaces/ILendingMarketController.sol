@@ -182,6 +182,14 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external returns (bool);
 
+    function depositAndCreatePreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external payable returns (bool);
+
     function executeMultiItayoseCall(bytes32[] memory currencies, uint256 maturity)
         external
         returns (bool);

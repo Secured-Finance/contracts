@@ -40,8 +40,6 @@ describe('Integration Test: Auto-rolls', async () => {
 
   let genesisDate: number;
   let maturities: BigNumber[];
-  let filLendingMarkets: Contract[] = [];
-  let ethLendingMarkets: Contract[] = [];
 
   let signers: Signers;
 
@@ -181,34 +179,16 @@ describe('Integration Test: Auto-rolls', async () => {
       );
     }
 
-    filLendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexFILString)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
-
-    ethLendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexETHString)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
+    maturities = await lendingMarketController.getMaturities(hexETHString);
 
     // Deploy inactive Lending Markets for Itayose
     await lendingMarketController.createLendingMarket(
       hexFILString,
-      await filLendingMarkets[0].getMaturity(),
+      maturities[0],
     );
     await lendingMarketController.createLendingMarket(
       hexETHString,
-      await ethLendingMarkets[0].getMaturity(),
+      maturities[0],
     );
   });
 
@@ -778,7 +758,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(aliceActualFV).to.equal('1200048001920076803072');
     });
 
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i <= 9; i++) {
       it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
         const alicePV0Before = await lendingMarketController.getPresentValue(
           hexETHString,
