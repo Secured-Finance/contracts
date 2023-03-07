@@ -656,10 +656,10 @@ describe('LendingMarketController', () => {
 
       await expect(
         lendingMarketControllerProxy.cleanOrders(targetCurrency, alice.address),
-      ).to.emit(lendingMarketControllerProxy, 'OrdersAsyncFilled');
+      ).to.emit(lendingMarketControllerProxy, 'OrdersFilledInAsync');
       await expect(
         lendingMarketControllerProxy.cleanOrders(targetCurrency, bob.address),
-      ).to.not.emit(lendingMarketControllerProxy, 'OrdersAsyncFilled');
+      ).to.not.emit(lendingMarketControllerProxy, 'OrdersFilledInAsync');
 
       await showLendingInfo();
       await time.increaseTo(maturities[0].toString());
@@ -1756,7 +1756,7 @@ describe('LendingMarketController', () => {
           )
           .then((tx) =>
             expect(tx)
-              .to.emit(lendingMarketControllerProxy, 'Liquidate')
+              .to.emit(lendingMarketControllerProxy, 'LiquidationExecuted')
               .withArgs(
                 signers[0].address,
                 targetCurrency,
@@ -1820,7 +1820,7 @@ describe('LendingMarketController', () => {
           )
           .then((tx) =>
             expect(tx)
-              .to.emit(lendingMarketControllerProxy, 'Liquidate')
+              .to.emit(lendingMarketControllerProxy, 'LiquidationExecuted')
               .withArgs(
                 signers[3].address,
                 targetCurrency,
@@ -1886,7 +1886,7 @@ describe('LendingMarketController', () => {
           )
           .then((tx) =>
             expect(tx)
-              .to.emit(lendingMarketControllerProxy, 'Liquidate')
+              .to.emit(lendingMarketControllerProxy, 'LiquidationExecuted')
               .withArgs(
                 signers[3].address,
                 targetCurrency,

@@ -21,7 +21,7 @@ interface ILendingMarketController {
         uint256 unitPrice,
         uint256 filledFutureValue
     );
-    event OrdersAsyncFilled(
+    event OrdersFilledInAsync(
         address indexed taker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
@@ -37,7 +37,7 @@ interface ILendingMarketController {
         uint256 amount,
         uint256 unitPrice
     );
-    event Liquidate(
+    event LiquidationExecuted(
         address indexed user,
         bytes32 collateralCcy,
         bytes32 indexed debtCcy,

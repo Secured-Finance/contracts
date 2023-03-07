@@ -632,7 +632,13 @@ contract LendingMarketController is
         }
 
         if (executedPVAmount != 0) {
-            emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, executedPVAmount);
+            emit LiquidationExecuted(
+                _user,
+                _collateralCcy,
+                _debtCcy,
+                _debtMaturity,
+                executedPVAmount
+            );
 
             FundManagementLogic.convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
         }
@@ -906,7 +912,7 @@ contract LendingMarketController is
                 userCurrentMaturity,
                 false
             );
-            emit OrdersAsyncFilled(
+            emit OrdersFilledInAsync(
                 _user,
                 _ccy,
                 ProtocolTypes.Side.LEND,
@@ -922,7 +928,7 @@ contract LendingMarketController is
                 userCurrentMaturity,
                 false
             );
-            emit OrdersAsyncFilled(
+            emit OrdersFilledInAsync(
                 _user,
                 _ccy,
                 ProtocolTypes.Side.BORROW,
