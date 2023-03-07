@@ -4,34 +4,34 @@
 
 CollateralParametersHandler is an library to handle the main collateral parameters.
 
-### UpdateAutoLiquidationThresholdRate
+### AutoLiquidationThresholdRateUpdated
 
 ```solidity
-event UpdateAutoLiquidationThresholdRate(uint256 previousRate, uint256 ratio)
+event AutoLiquidationThresholdRateUpdated(uint256 previousRate, uint256 ratio)
 ```
 
-### UpdateLiquidationProtocolFeeRate
+### LiquidationProtocolFeeRateUpdated
 
 ```solidity
-event UpdateLiquidationProtocolFeeRate(uint256 previousRate, uint256 ratio)
+event LiquidationProtocolFeeRateUpdated(uint256 previousRate, uint256 ratio)
 ```
 
-### UpdateLiquidatorFeeRate
+### LiquidatorFeeRateUpdated
 
 ```solidity
-event UpdateLiquidatorFeeRate(uint256 previousRate, uint256 ratio)
+event LiquidatorFeeRateUpdated(uint256 previousRate, uint256 ratio)
 ```
 
-### UpdateUniswapRouter
+### UniswapRouterUpdated
 
 ```solidity
-event UpdateUniswapRouter(address previousUniswapRouter, address uniswapRouter)
+event UniswapRouterUpdated(address previousUniswapRouter, address uniswapRouter)
 ```
 
-### UpdateUniswapQuoter
+### UniswapQuoterUpdated
 
 ```solidity
-event UpdateUniswapQuoter(address previousUniswapQuoter, address uniswapQuoter)
+event UniswapQuoterUpdated(address previousUniswapQuoter, address uniswapQuoter)
 ```
 
 ### liquidationThresholdRate
