@@ -1,5 +1,6 @@
 import moment from 'moment';
 
+// Returns 1st of Mar, Jun, Sep, or Dec.
 const getGenesisDate = (input?: moment.MomentInput): number => {
   const now = moment(input);
   const month = now.month() + 1;
