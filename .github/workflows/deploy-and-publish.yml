@@ -34,6 +34,10 @@ jobs:
           echo "TOKEN_USDC=${{ secrets.DEV_TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ secrets.DEV_TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ secrets.DEV_TOKEN_WETH }}" >> $GITHUB_ENV
+          echo "FIL_TO_ETH_RATE=${{ secrets.DEV_FIL_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "ETH_TO_USD_RATE=${{ secrets.DEV_ETH_TO_USD_RATE }}" >> $GITHUB_ENV
+          echo "BTC_TO_ETH_RATE=${{ secrets.DEV_BTC_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "USDC_TO_ETH_RATE=${{ secrets.DEV_USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.DEV_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "TENDERLY_USER=${{ secrets.DEV_TENDERLY_USER }}" >> $GITHUB_ENV
@@ -49,6 +53,10 @@ jobs:
           echo "TOKEN_USDC=${{ secrets.STG_TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ secrets.STG_TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ secrets.STG_TOKEN_WETH }}" >> $GITHUB_ENV
+          echo "FIL_TO_ETH_RATE=${{ secrets.STG_FIL_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "ETH_TO_USD_RATE=${{ secrets.STG_ETH_TO_USD_RATE }}" >> $GITHUB_ENV
+          echo "BTC_TO_ETH_RATE=${{ secrets.STG_BTC_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "USDC_TO_ETH_RATE=${{ secrets.STG_USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.STG_PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "TENDERLY_USER=${{ secrets.STG_TENDERLY_USER }}" >> $GITHUB_ENV
@@ -121,6 +129,10 @@ jobs:
           TOKEN_USDC: ${{ secrets.DEV_TOKEN_USDC }}
           TOKEN_WBTC: ${{ secrets.DEV_TOKEN_WBTC }}
           TOKEN_WETH: ${{ secrets.DEV_TOKEN_WETH }}
+          FIL_TO_ETH_RATE: ${{ secrets.DEV_FIL_TO_ETH_RATE }}
+          ETH_TO_USD_RATE: ${{ secrets.DEV_ETH_TO_USD_RATE }}
+          BTC_TO_ETH_RATE: ${{ secrets.DEV_BTC_TO_ETH_RATE }}
+          USDC_TO_ETH_RATE: ${{ secrets.DEV_USDC_TO_ETH_RATE }}
           ENABLE_FAUCET: true
         run: npm run deploy development
       - name: Deploy for staging environment
@@ -134,6 +146,10 @@ jobs:
           TOKEN_USDC: ${{ secrets.STG_TOKEN_USDC }}
           TOKEN_WBTC: ${{ secrets.STG_TOKEN_WBTC }}
           TOKEN_WETH: ${{ secrets.STG_TOKEN_WETH }}
+          FIL_TO_ETH_RATE: ${{ secrets.STG_FIL_TO_ETH_RATE }}
+          ETH_TO_USD_RATE: ${{ secrets.STG_ETH_TO_USD_RATE }}
+          BTC_TO_ETH_RATE: ${{ secrets.STG_BTC_TO_ETH_RATE }}
+          USDC_TO_ETH_RATE: ${{ secrets.STG_USDC_TO_ETH_RATE }}
           ENABLE_FAUCET: true
         run: npm run deploy staging
       - run: |
