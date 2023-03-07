@@ -65,7 +65,7 @@ describe('CurrencyController', () => {
           9000,
         ),
       )
-        .to.emit(currencyControllerProxy, 'AddPriceFeed')
+        .to.emit(currencyControllerProxy, 'PriceFeedAdded')
         .withArgs(currency, 'USD', mockPriceFeed.address);
 
       await currencyControllerProxy.currencyExists(currency).then((exists) => {
@@ -99,7 +99,7 @@ describe('CurrencyController', () => {
           8000,
         ),
       )
-        .to.emit(currencyControllerProxy, 'AddPriceFeed')
+        .to.emit(currencyControllerProxy, 'PriceFeedAdded')
         .withArgs(currency, 'ETH', mockPriceFeed.address);
 
       await currencyControllerProxy
@@ -160,7 +160,7 @@ describe('CurrencyController', () => {
 
     it('Update a currency support', async () => {
       await expect(currencyControllerProxy.removeCurrency(currency))
-        .to.emit(currencyControllerProxy, 'RemoveCurrency')
+        .to.emit(currencyControllerProxy, 'CurrencyRemoved')
         .withArgs(currency);
 
       expect(await currencyControllerProxy.currencyExists(currency)).to.false;
@@ -168,7 +168,7 @@ describe('CurrencyController', () => {
 
     it('Update a haircut', async () => {
       await expect(currencyControllerProxy.updateHaircut(currency, 10))
-        .to.emit(currencyControllerProxy, 'UpdateHaircut')
+        .to.emit(currencyControllerProxy, 'HaircutUpdated')
         .withArgs(currency, 10);
 
       expect(await currencyControllerProxy.getHaircut(currency)).to.equal(10);
@@ -191,7 +191,7 @@ describe('CurrencyController', () => {
           true,
         ),
       )
-        .to.emit(currencyControllerProxy, 'AddPriceFeed')
+        .to.emit(currencyControllerProxy, 'PriceFeedAdded')
         .withArgs(currency, 'ETH', newMockPriceFeed.address);
 
       expect(await currencyControllerProxy.getLastETHPrice(currency)).to.equal(
@@ -219,7 +219,7 @@ describe('CurrencyController', () => {
           false,
         ),
       )
-        .to.emit(currencyControllerProxy, 'AddPriceFeed')
+        .to.emit(currencyControllerProxy, 'PriceFeedAdded')
         .withArgs(currency, 'USD', newMockPriceFeed.address);
 
       expect(await currencyControllerProxy.getLastUSDPrice(currency)).to.equal(
@@ -246,10 +246,10 @@ describe('CurrencyController', () => {
           newMockPriceFeed.address,
           true,
         ),
-      ).to.emit(currencyControllerProxy, 'AddPriceFeed');
+      ).to.emit(currencyControllerProxy, 'PriceFeedAdded');
 
       await expect(currencyControllerProxy.removePriceFeed(currency, true))
-        .to.emit(currencyControllerProxy, 'RemovePriceFeed')
+        .to.emit(currencyControllerProxy, 'PriceFeedRemoved')
         .withArgs(currency, 'ETH', newMockPriceFeed.address);
     });
 
@@ -269,10 +269,10 @@ describe('CurrencyController', () => {
           newMockPriceFeed.address,
           false,
         ),
-      ).to.emit(currencyControllerProxy, 'AddPriceFeed');
+      ).to.emit(currencyControllerProxy, 'PriceFeedAdded');
 
       await expect(currencyControllerProxy.removePriceFeed(currency, false))
-        .to.emit(currencyControllerProxy, 'RemovePriceFeed')
+        .to.emit(currencyControllerProxy, 'PriceFeedRemoved')
         .withArgs(currency, 'USD', newMockPriceFeed.address);
     });
 

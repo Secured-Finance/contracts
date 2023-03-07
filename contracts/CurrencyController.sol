@@ -67,7 +67,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         } else {
             require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
         }
-        emit AddCurrency(_ccy, _haircut);
+        emit CurrencyAdded(_ccy, _haircut);
     }
 
     /**
@@ -76,7 +76,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      */
     function removeCurrency(bytes32 _ccy) public override onlyOwner {
         Storage.slot().currencies.remove(_ccy);
-        emit RemoveCurrency(_ccy);
+        emit CurrencyRemoved(_ccy);
     }
 
     /**
@@ -95,7 +95,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
         Storage.slot().haircuts[_ccy] = _haircut;
 
-        emit UpdateHaircut(_ccy, _haircut);
+        emit HaircutUpdated(_ccy, _haircut);
     }
 
     /**
@@ -168,11 +168,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             require(!_isETH(_ccy), "Can't link to ETH");
             Storage.slot().ethPriceFeeds[_ccy] = priceFeed;
             Storage.slot().ethDecimals[_ccy] = decimals;
-            emit AddPriceFeed(_ccy, "ETH", _priceFeedAddr);
+            emit PriceFeedAdded(_ccy, "ETH", _priceFeedAddr);
         } else {
             Storage.slot().usdPriceFeeds[_ccy] = priceFeed;
             Storage.slot().usdDecimals[_ccy] = decimals;
-            emit AddPriceFeed(_ccy, "USD", _priceFeedAddr);
+            emit PriceFeedAdded(_ccy, "USD", _priceFeedAddr);
         }
 
         return true;
@@ -196,7 +196,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             delete Storage.slot().ethPriceFeeds[_ccy];
             delete Storage.slot().ethDecimals[_ccy];
 
-            emit RemovePriceFeed(_ccy, "ETH", priceFeed);
+            emit PriceFeedRemoved(_ccy, "ETH", priceFeed);
         } else {
             address priceFeed = address(Storage.slot().usdPriceFeeds[_ccy]);
 
@@ -204,7 +204,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
             delete Storage.slot().usdPriceFeeds[_ccy];
             delete Storage.slot().usdDecimals[_ccy];
 
-            emit RemovePriceFeed(_ccy, "USD", priceFeed);
+            emit PriceFeedRemoved(_ccy, "USD", priceFeed);
         }
     }
 

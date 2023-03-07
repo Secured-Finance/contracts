@@ -324,7 +324,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -379,12 +379,15 @@ describe('Integration Test: Liquidations', async () => {
           10,
         )
         .then(async (tx) => {
-          await expect(tx).to.emit(lendingMarketController, 'Liquidate');
+          await expect(tx).to.emit(
+            lendingMarketController,
+            'LiquidationExecuted',
+          );
           return tx.wait();
         });
 
       const { amount } = receipt.events.find(
-        ({ event }) => event === 'Liquidate',
+        ({ event }) => event === 'LiquidationExecuted',
       ).args;
 
       const lendingInfoAfter = await lendingInfo.load('After', {
@@ -503,7 +506,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -548,7 +551,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'Liquidate');
+      ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       await reserveFund.unpause();
 
@@ -617,7 +620,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -664,7 +667,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'Liquidate');
+      ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       const rfFutureValueAfter = await lendingMarketController.getFutureValue(
         hexFILString,
@@ -689,7 +692,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'Liquidate');
+      ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       const tokenVaultBalanceAfter2 = await wETHToken.balanceOf(
         tokenVault.address,
@@ -769,7 +772,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -838,7 +841,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'Liquidate');
+      ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         FIL: filMaturities[1],
@@ -890,7 +893,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmount,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -947,7 +950,9 @@ describe('Integration Test: Liquidations', async () => {
         .then((tx) => tx.wait());
 
       const { user, collateralCcy, debtCcy, debtMaturity, amount } =
-        receipt.events.find(({ event }) => event === 'Liquidate').args;
+        receipt.events.find(
+          ({ event }) => event === 'LiquidationExecuted',
+        ).args;
 
       expect(user).to.equal(alice.address);
       expect(collateralCcy).to.equal(hexETHString);
@@ -1053,7 +1058,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInFIL,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -1108,7 +1113,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInUSDC,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'FillOrder');
+      ).to.emit(lendingMarketController, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -1155,7 +1160,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'Liquidate');
+      ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         FIL: filMaturities[0],
@@ -1194,7 +1199,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'Liquidate');
+      ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         FIL: filMaturities[0],

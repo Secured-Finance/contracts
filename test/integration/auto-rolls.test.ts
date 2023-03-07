@@ -200,7 +200,7 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -212,7 +212,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount.mul(3),
             8000,
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -224,7 +224,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount,
             8010,
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -236,7 +236,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const { futureValue: aliceFVBefore } =
@@ -466,7 +466,7 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -478,7 +478,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       await createSampleETHOrders(carol, maturities[0], '8000');
 
@@ -510,7 +510,7 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[1], 'MakeOrder');
+      ).to.emit(lendingMarkets[1], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -522,7 +522,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[1], 'TakeOrders');
+      ).to.emit(lendingMarkets[1], 'OrdersTaken');
 
       await createSampleETHOrders(carol, maturities[1], '5000');
 
@@ -707,7 +707,7 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -719,7 +719,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const aliceActualFV = await lendingMarketController.getFutureValue(
@@ -838,7 +838,7 @@ describe('Integration Test: Auto-rolls', async () => {
                 value: orderAmount,
               },
             ),
-        ).to.emit(lendingMarkets[0], 'MakeOrder');
+        ).to.emit(lendingMarkets[0], 'OrderMade');
       }
 
       await expect(
@@ -851,7 +851,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount.mul(3),
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check present value
       const daveActualFV = await lendingMarketController.getFutureValue(
@@ -965,7 +965,7 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -977,7 +977,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const aliceActualFV = await lendingMarketController.getFutureValue(

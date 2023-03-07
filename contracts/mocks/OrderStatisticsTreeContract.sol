@@ -8,8 +8,8 @@ contract OrderStatisticsTreeContract {
 
     OrderStatisticsTreeLib.Tree tree;
 
-    event InsertOrder(string action, uint256 amount, uint256 value, uint256 orderId);
-    event RemoveOrder(string action, uint256 value, uint256 _id);
+    event OrderInserted(string action, uint256 amount, uint256 value, uint256 orderId);
+    event OrderRemoved(string action, uint256 value, uint256 _id);
 
     event Drop(
         uint256 droppedAmountInFV,
@@ -79,12 +79,12 @@ contract OrderStatisticsTreeContract {
         address user,
         uint256 amount
     ) public {
-        emit InsertOrder("insert", amount, value, orderId);
+        emit OrderInserted("insert", amount, value, orderId);
         tree.insertOrder(value, orderId, user, amount, false);
     }
 
     function removeAmountValue(uint256 value, uint48 orderId) public {
-        emit RemoveOrder("delete", value, orderId);
+        emit OrderRemoved("delete", value, orderId);
         tree.removeOrder(value, orderId);
     }
 
