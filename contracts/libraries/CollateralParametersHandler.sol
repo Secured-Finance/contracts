@@ -10,11 +10,11 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
  * @notice CollateralParametersHandler is an library to handle the main collateral parameters.
  */
 library CollateralParametersHandler {
-    event UpdateAutoLiquidationThresholdRate(uint256 previousRate, uint256 ratio);
-    event UpdateLiquidationProtocolFeeRate(uint256 previousRate, uint256 ratio);
-    event UpdateLiquidatorFeeRate(uint256 previousRate, uint256 ratio);
-    event UpdateUniswapRouter(address previousUniswapRouter, address uniswapRouter);
-    event UpdateUniswapQuoter(address previousUniswapQuoter, address uniswapQuoter);
+    event AutoLiquidationThresholdRateUpdated(uint256 previousRate, uint256 ratio);
+    event LiquidationProtocolFeeRateUpdated(uint256 previousRate, uint256 ratio);
+    event LiquidatorFeeRateUpdated(uint256 previousRate, uint256 ratio);
+    event UniswapRouterUpdated(address previousUniswapRouter, address uniswapRouter);
+    event UniswapQuoterUpdated(address previousUniswapQuoter, address uniswapQuoter);
 
     /**
      * @dev Gets the liquidation threshold rate
@@ -81,7 +81,7 @@ library CollateralParametersHandler {
         require(_uniswapQuoter != address(0), "Invalid Uniswap Quoter");
 
         if (_liquidationThresholdRate != Storage.slot().liquidationThresholdRate) {
-            emit UpdateAutoLiquidationThresholdRate(
+            emit AutoLiquidationThresholdRateUpdated(
                 Storage.slot().liquidationThresholdRate,
                 _liquidationThresholdRate
             );
@@ -89,7 +89,7 @@ library CollateralParametersHandler {
         }
 
         if (_liquidationProtocolFeeRate != Storage.slot().liquidationProtocolFeeRate) {
-            emit UpdateLiquidationProtocolFeeRate(
+            emit LiquidationProtocolFeeRateUpdated(
                 Storage.slot().liquidationProtocolFeeRate,
                 _liquidationProtocolFeeRate
             );
@@ -98,16 +98,16 @@ library CollateralParametersHandler {
 
         if (_liquidatorFeeRate != Storage.slot().liquidatorFeeRate) {
             Storage.slot().liquidatorFeeRate = _liquidatorFeeRate;
-            emit UpdateLiquidatorFeeRate(Storage.slot().liquidatorFeeRate, _liquidatorFeeRate);
+            emit LiquidatorFeeRateUpdated(Storage.slot().liquidatorFeeRate, _liquidatorFeeRate);
         }
 
         if (_uniswapRouter != address(Storage.slot().uniswapRouter)) {
-            emit UpdateUniswapRouter(address(Storage.slot().uniswapRouter), _uniswapRouter);
+            emit UniswapRouterUpdated(address(Storage.slot().uniswapRouter), _uniswapRouter);
             Storage.slot().uniswapRouter = ISwapRouter(_uniswapRouter);
         }
 
         if (_uniswapQuoter != address(Storage.slot().uniswapQuoter)) {
-            emit UpdateUniswapQuoter(address(Storage.slot().uniswapQuoter), _uniswapQuoter);
+            emit UniswapQuoterUpdated(address(Storage.slot().uniswapQuoter), _uniswapQuoter);
             Storage.slot().uniswapQuoter = IQuoter(_uniswapQuoter);
         }
     }

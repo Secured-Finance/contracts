@@ -331,7 +331,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             Storage.slot().collateralCurrencies.add(_ccy);
         }
 
-        emit RegisterCurrency(_ccy, _tokenAddress, _isCollateral);
+        emit CurrencyRegistered(_ccy, _tokenAddress, _isCollateral);
     }
 
     /**
@@ -350,7 +350,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             Storage.slot().collateralCurrencies.remove(_ccy);
         }
 
-        emit UpdateCurrency(_ccy, _isCollateral);
+        emit CurrencyUpdated(_ccy, _isCollateral);
     }
 
     /**

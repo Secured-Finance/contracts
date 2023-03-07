@@ -219,7 +219,7 @@ describe('LendingMarket', () => {
                   order.unitPrice,
                   lendingMarketCount - 1,
                 ),
-            ).to.emit(lendingMarket, 'MakeOrder');
+            ).to.emit(lendingMarket, 'OrderMade');
           }
 
           // Increase 47 hours

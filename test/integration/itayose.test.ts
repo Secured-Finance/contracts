@@ -157,7 +157,7 @@ describe('Integration Test: Itayose', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -169,7 +169,7 @@ describe('Integration Test: Itayose', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const { futureValue: aliceFVBefore } =
@@ -212,7 +212,7 @@ describe('Integration Test: Itayose', async () => {
         lendingMarketController
           .connect(owner)
           .rotateLendingMarkets(hexETHString),
-      ).to.emit(lendingMarketController, 'RotateLendingMarkets');
+      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
     });
 
     it('Execute Itayose without pre-order', async () => {
@@ -263,7 +263,7 @@ describe('Integration Test: Itayose', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'MakeOrder');
+      ).to.emit(lendingMarkets[0], 'OrderMade');
 
       await expect(
         lendingMarketController
@@ -275,7 +275,7 @@ describe('Integration Test: Itayose', async () => {
             orderAmount,
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'TakeOrders');
+      ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const { futureValue: aliceFVBefore } =
@@ -361,7 +361,7 @@ describe('Integration Test: Itayose', async () => {
         lendingMarketController
           .connect(owner)
           .rotateLendingMarkets(hexETHString),
-      ).to.emit(lendingMarketController, 'RotateLendingMarkets');
+      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
     });
 
     it('Execute Itayose with pre-order', async () => {

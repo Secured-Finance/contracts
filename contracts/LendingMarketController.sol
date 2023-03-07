@@ -500,7 +500,7 @@ contract LendingMarketController is
         Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
         Storage.slot().futureValueVaults[_ccy][market] = futureValueVault;
 
-        emit CreateLendingMarket(
+        emit LendingMarketCreated(
             _ccy,
             market,
             futureValueVault,
@@ -652,7 +652,7 @@ contract LendingMarketController is
         (ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) = ILendingMarket(market)
             .cancelOrder(msg.sender, _orderId);
 
-        emit CancelOrder(_orderId, msg.sender, _ccy, side, _maturity, amount, unitPrice);
+        emit OrderCanceled(_orderId, msg.sender, _ccy, side, _maturity, amount, unitPrice);
 
         return true;
     }
@@ -709,7 +709,13 @@ contract LendingMarketController is
         }
 
         if (executedPVAmount != 0) {
-            emit Liquidate(_user, _collateralCcy, _debtCcy, _debtMaturity, executedPVAmount);
+            emit LiquidationExecuted(
+                _user,
+                _collateralCcy,
+                _debtCcy,
+                _debtMaturity,
+                executedPVAmount
+            );
 
             FundManagementLogic.convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
         }
@@ -781,7 +787,7 @@ contract LendingMarketController is
 
         Storage.slot().maturityLendingMarkets[_ccy][newLastMaturity] = currentMarketAddr;
 
-        emit RotateLendingMarkets(_ccy, prevMaturity, newLastMaturity);
+        emit LendingMarketsRotated(_ccy, prevMaturity, newLastMaturity);
 
         FundManagementLogic.convertFutureValueToGenesisValue(
             _ccy,
@@ -936,7 +942,7 @@ contract LendingMarketController is
                 feeFutureValue
             );
 
-            emit FillOrder(
+            emit OrderFilled(
                 _user,
                 _ccy,
                 _side,
@@ -990,7 +996,7 @@ contract LendingMarketController is
                 userCurrentMaturity,
                 false
             );
-            emit FillOrdersAsync(
+            emit OrdersFilledInAsync(
                 _user,
                 _ccy,
                 ProtocolTypes.Side.LEND,
@@ -1006,7 +1012,7 @@ contract LendingMarketController is
                 userCurrentMaturity,
                 false
             );
-            emit FillOrdersAsync(
+            emit OrdersFilledInAsync(
                 _user,
                 _ccy,
                 ProtocolTypes.Side.BORROW,

@@ -374,7 +374,7 @@ contract LendingMarket is
         Storage.slot().maturity = _maturity;
         Storage.slot().openingDate = _openingDate;
 
-        emit OpenMarket(_maturity, prevMaturity);
+        emit MarketOpened(_maturity, prevMaturity);
     }
 
     /**
@@ -399,7 +399,7 @@ contract LendingMarket is
     {
         (side, removedAmount, unitPrice) = OrderBookLogic.removeOrder(_user, _orderId);
 
-        emit ILendingMarket.CancelOrder(
+        emit OrderCanceled(
             _orderId,
             msg.sender,
             side,
@@ -458,7 +458,7 @@ contract LendingMarket is
         ) = OrderBookLogic.cleanBorrowOrders(_user, maturity);
 
         if (removedLendOrderAmount > 0) {
-            emit CleanOrders(
+            emit OrdersCleaned(
                 lendOrderIds,
                 _user,
                 ProtocolTypes.Side.LEND,
@@ -468,7 +468,7 @@ contract LendingMarket is
         }
 
         if (removedBorrowOrderAmount > 0) {
-            emit CleanOrders(
+            emit OrdersCleaned(
                 borrowOrderIds,
                 _user,
                 ProtocolTypes.Side.BORROW,
@@ -638,7 +638,7 @@ contract LendingMarket is
     ) private returns (uint48 orderId) {
         orderId = OrderBookLogic.insertOrder(_side, _user, _amount, _unitPrice, _isInterruption);
 
-        emit MakeOrder(
+        emit OrderMade(
             orderId,
             _originalOrderId,
             _user,
@@ -673,7 +673,7 @@ contract LendingMarket is
             _unitPrice
         );
 
-        emit TakeOrders(
+        emit OrdersTaken(
             _user,
             _side,
             Storage.slot().ccy,

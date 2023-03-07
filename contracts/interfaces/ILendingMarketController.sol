@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "../types/ProtocolTypes.sol";
 
 interface ILendingMarketController {
-    event CreateLendingMarket(
+    event LendingMarketCreated(
         bytes32 indexed ccy,
         address indexed marketAddr,
         address futureValueVault,
@@ -12,8 +12,8 @@ interface ILendingMarketController {
         uint256 openingDate,
         uint256 maturity
     );
-    event RotateLendingMarkets(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event FillOrder(
+    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event OrderFilled(
         address indexed taker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
@@ -22,14 +22,14 @@ interface ILendingMarketController {
         uint256 unitPrice,
         uint256 filledFutureValue
     );
-    event FillOrdersAsync(
+    event OrdersFilledInAsync(
         address indexed taker,
         bytes32 indexed ccy,
         ProtocolTypes.Side side,
         uint256 indexed maturity,
         uint256 filledFutureValue
     );
-    event CancelOrder(
+    event OrderCanceled(
         uint48 orderId,
         address indexed maker,
         bytes32 indexed ccy,
@@ -38,7 +38,7 @@ interface ILendingMarketController {
         uint256 amount,
         uint256 unitPrice
     );
-    event Liquidate(
+    event LiquidationExecuted(
         address indexed user,
         bytes32 collateralCcy,
         bytes32 indexed debtCcy,

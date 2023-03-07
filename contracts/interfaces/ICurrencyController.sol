@@ -11,13 +11,13 @@ import {Currency} from "../storages/CurrencyControllerStorage.sol";
  * contract owner is not able to add a new currency into the protocol
  */
 interface ICurrencyController {
-    event AddCurrency(bytes32 indexed ccy, uint256 haircut);
-    event RemoveCurrency(bytes32 indexed ccy);
+    event CurrencyAdded(bytes32 indexed ccy, uint256 haircut);
+    event CurrencyRemoved(bytes32 indexed ccy);
 
-    event UpdateHaircut(bytes32 indexed ccy, uint256 haircut);
+    event HaircutUpdated(bytes32 indexed ccy, uint256 haircut);
 
-    event AddPriceFeed(bytes32 ccy, string secondCcy, address indexed priceFeed);
-    event RemovePriceFeed(bytes32 ccy, string secondCcy, address indexed priceFeed);
+    event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
+    event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
 
     function convertFromETH(bytes32 _ccy, uint256 _amountETH)
         external

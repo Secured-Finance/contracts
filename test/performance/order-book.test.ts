@@ -215,9 +215,9 @@ describe('Performance Test: Order Book', async () => {
             log[headerName][test] = receipt.gasUsed.toString();
 
             const orderFilledEvent = receipt.events.find(
-              ({ event }) => event === 'FillOrder',
+              ({ event }) => event === 'OrderFilled',
             );
-            expect(orderFilledEvent?.event).to.equal('FillOrder');
+            expect(orderFilledEvent?.event).to.equal('OrderFilled');
             const { taker, ccy, side, maturity, amount, unitPrice } =
               orderFilledEvent.args;
             expect(taker).to.equal(signers[0].address);

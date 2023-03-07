@@ -5,7 +5,7 @@ import "../types/ProtocolTypes.sol";
 import {MarketOrder} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
-    event CancelOrder(
+    event OrderCanceled(
         uint48 orderId,
         address indexed maker,
         ProtocolTypes.Side side,
@@ -14,7 +14,7 @@ interface ILendingMarket {
         uint256 amount,
         uint256 unitPrice
     );
-    event MakeOrder(
+    event OrderMade(
         uint48 orderId,
         uint48 originalOrderId,
         address indexed maker,
@@ -24,7 +24,7 @@ interface ILendingMarket {
         uint256 amount,
         uint256 unitPrice
     );
-    event TakeOrders(
+    event OrdersTaken(
         address indexed taker,
         ProtocolTypes.Side side,
         bytes32 ccy,
@@ -34,7 +34,7 @@ interface ILendingMarket {
         uint256 filledFutureValue
     );
 
-    event CleanOrders(
+    event OrdersCleaned(
         uint48[] orderIds,
         address indexed maker,
         ProtocolTypes.Side side,
@@ -42,7 +42,7 @@ interface ILendingMarket {
         uint256 maturity
     );
 
-    event OpenMarket(uint256 maturity, uint256 prevMaturity);
+    event MarketOpened(uint256 maturity, uint256 prevMaturity);
 
     event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingPrice);
 
