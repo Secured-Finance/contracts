@@ -1,0 +1,40 @@
+name: Open markets
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+
+jobs:
+  deploy:
+    name: Open markets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Set env for development environment
+        if: ${{ github.event.inputs.network == 'development' }}
+        run: |
+          echo "PRIVATE_KEY=${{ secrets.DEV_PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.DEV_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      - name: Set env for staging environment
+        if: ${{ github.event.inputs.network == 'staging' }}
+        run: |
+          echo "NETWORK=staging" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.STG_ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+      - name: Build Smart Contracts
+        run: npm run compile
+      - name: Run task
+        shell: bash
+        run: npx hardhat open-markets --network ${{ github.event.inputs.network }}
