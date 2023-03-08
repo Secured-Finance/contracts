@@ -42,13 +42,13 @@ describe('OrderStatisticsTree - drop values', () => {
   const tests: Test[] = [
     {
       label: 'Lending',
-      method: 'dropValuesFromFirst',
+      method: 'dropValuesFromLast',
       marketOrderConditions: lendingMarketOrders,
       limitOrderConditions: lendingLimitOrders,
     },
     {
       label: 'Borrowing',
-      method: 'dropValuesFromLast',
+      method: 'dropValuesFromFirst',
       marketOrderConditions: borrowingMarketOrders,
       limitOrderConditions: borrowingLimitOrders,
     },
