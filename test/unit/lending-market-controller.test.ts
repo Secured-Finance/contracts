@@ -25,6 +25,9 @@ const LiquidationBot = artifacts.require('LiquidationBot');
 const LiquidationBot2 = artifacts.require('LiquidationBot2');
 
 // libraries
+const LendingMarketOperationLogic = artifacts.require(
+  'LendingMarketOperationLogic',
+);
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const QuickSort = artifacts.require('QuickSort');
 
@@ -80,6 +83,10 @@ describe('LendingMarketController', () => {
 
     // Deploy libraries
     const quickSort = await deployContract(owner, QuickSort);
+    const lendingMarketOperationLogic = await deployContract(
+      owner,
+      LendingMarketOperationLogic,
+    );
     const fundManagementLogic = await ethers
       .getContractFactory('FundManagementLogic', {
         libraries: {
@@ -101,6 +108,7 @@ describe('LendingMarketController', () => {
       .getContractFactory('LendingMarketController', {
         libraries: {
           FundManagementLogic: fundManagementLogic.address,
+          LendingMarketOperationLogic: lendingMarketOperationLogic.address,
         },
       })
       .then((factory) => factory.deploy());

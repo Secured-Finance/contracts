@@ -1,4 +1,4 @@
-import { DeployFunction } from 'hardhat-deploy/types';
+import { DeployFunction, DeployResult } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
@@ -9,27 +9,27 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy('DepositManagementLogic', {
-    from: deployer,
-  }).then((result) =>
-    executeIfNewlyDeployment('DepositManagementLogic', result),
-  );
+  const deployResults: Record<string, DeployResult> = {};
 
-  await deploy('OrderBookLogic', {
-    from: deployer,
-  }).then((result) => executeIfNewlyDeployment('OrderBookLogic', result));
-
-  const quickSort = await deploy('QuickSort', {
-    from: deployer,
-  }).then((result) => {
-    executeIfNewlyDeployment('QuickSort', result);
-    return result;
-  });
+  for (const libName of [
+    'QuickSort',
+    'DepositManagementLogic',
+    'LendingMarketOperationLogic',
+    'OrderBookLogic',
+  ]) {
+    const deployResult = await deploy(libName, {
+      from: deployer,
+    }).then((result) => {
+      executeIfNewlyDeployment(libName, result);
+      return result;
+    });
+    deployResults[libName] = deployResult;
+  }
 
   await deploy('FundManagementLogic', {
     from: deployer,
     libraries: {
-      QuickSort: quickSort.address,
+      QuickSort: deployResults['QuickSort'].address,
     },
   }).then((result) => executeIfNewlyDeployment('FundManagementLogic', result));
 };

@@ -11,10 +11,15 @@ const func: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
 
   const fundManagementLogic = await deployments.get('FundManagementLogic');
+  const lendingMarketOperationLogic = await deployments.get(
+    'LendingMarketOperationLogic',
+  );
+
   const deployResult = await deploy('LendingMarketController', {
     from: deployer,
     libraries: {
       FundManagementLogic: fundManagementLogic.address,
+      LendingMarketOperationLogic: lendingMarketOperationLogic.address,
     },
   });
 

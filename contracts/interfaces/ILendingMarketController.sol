@@ -154,9 +154,7 @@ interface ILendingMarketController {
         uint256 autoRollFeeRate
     ) external;
 
-    function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate)
-        external
-        returns (address market, address futureValue);
+    function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external;
 
     function createOrder(
         bytes32 ccy,

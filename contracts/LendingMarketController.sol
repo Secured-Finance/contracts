@@ -11,16 +11,15 @@ import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "./libraries/BokkyPooBahsDateTimeLibrary.sol";
 import {LiquidatorHandler} from "./libraries/LiquidatorHandler.sol";
 import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
+import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLendingMarketManager} from "./mixins/MixinLendingMarketManager.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
-import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
@@ -41,15 +40,11 @@ contract LendingMarketController is
     MixinLendingMarketManager,
     MixinAddressResolver,
     ReentrancyGuard,
-    Ownable,
     Proxyable
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeCast for int256;
-
-    uint256 private constant BASIS_TERM = 3;
-    uint256 private constant MAXIMUM_ORDER_COUNT = 20;
 
     /**
      * @notice Modifier to check if the currency has a lending market.
@@ -83,7 +78,7 @@ contract LendingMarketController is
      * @param _resolver The address of the Address Resolver contract
      */
     function initialize(address _owner, address _resolver) public initializer onlyProxy {
-        _transferOwnership(_owner);
+        MixinLendingMarketManager._initialize(_owner);
         registerAddressResolver(_resolver);
     }
 
@@ -451,14 +446,7 @@ contract LendingMarketController is
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        genesisValueVault().initializeCurrencySetting(
-            _ccy,
-            36,
-            _compoundFactor,
-            TimeLibrary.addMonths(_genesisDate, BASIS_TERM)
-        );
-
-        Storage.slot().genesisDates[_ccy] = _genesisDate;
+        LendingMarketOperationLogic.initializeCurrencySetting(_ccy, _genesisDate, _compoundFactor);
         updateOrderFeeRate(_ccy, _orderFeeRate);
         updateAutoRollFeeRate(_ccy, _autoRollFeeRate);
     }
@@ -468,37 +456,10 @@ contract LendingMarketController is
      * @param _ccy Main currency for new lending market
      * @param _openingDate Timestamp when the lending market opens
      * @notice Reverts on deployment market with existing currency and term
-     * @return market The proxy contract address of created lending market
      */
-    function createLendingMarket(bytes32 _ccy, uint256 _openingDate)
-        external
-        override
-        onlyOwner
-        returns (address market, address futureValueVault)
-    {
-        require(
-            genesisValueVault().isInitialized(_ccy),
-            "Lending market hasn't been initialized in the currency"
-        );
-        require(currencyController().currencyExists(_ccy), "Non supported currency");
-
-        uint256 basisDate = Storage.slot().genesisDates[_ccy];
-
-        if (Storage.slot().lendingMarkets[_ccy].length > 0) {
-            basisDate = ILendingMarket(
-                Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
-            ).getMaturity();
-        }
-
-        uint256 nextMaturity = TimeLibrary.addMonths(basisDate, BASIS_TERM);
-        require(_openingDate < nextMaturity, "Market opening date must be before maturity date");
-
-        market = beaconProxyController().deployLendingMarket(_ccy, nextMaturity, _openingDate);
-        futureValueVault = beaconProxyController().deployFutureValueVault();
-
-        Storage.slot().lendingMarkets[_ccy].push(market);
-        Storage.slot().maturityLendingMarkets[_ccy][nextMaturity] = market;
-        Storage.slot().futureValueVaults[_ccy][market] = futureValueVault;
+    function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external override onlyOwner {
+        (address market, address futureValueVault, uint256 maturity) = LendingMarketOperationLogic
+            .createLendingMarket(_ccy, _openingDate);
 
         emit LendingMarketCreated(
             _ccy,
@@ -506,7 +467,7 @@ contract LendingMarketController is
             futureValueVault,
             Storage.slot().lendingMarkets[_ccy].length,
             _openingDate,
-            nextMaturity
+            maturity
         );
     }
 
@@ -578,7 +539,10 @@ contract LendingMarketController is
         uint256 _unitPrice
     ) public override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         uint256 activeOrderCount = cleanOrders(_ccy, msg.sender);
-        require(activeOrderCount + 1 <= MAXIMUM_ORDER_COUNT, "Too many active orders");
+        require(
+            activeOrderCount + 1 <= ProtocolTypes.MAXIMUM_ORDER_COUNT,
+            "Too many active orders"
+        );
 
         if (!Storage.slot().usedMaturities[_ccy][msg.sender].contains(_maturity)) {
             Storage.slot().usedMaturities[_ccy][msg.sender].add(_maturity);
@@ -625,15 +589,7 @@ contract LendingMarketController is
         override
         returns (bool)
     {
-        for (uint256 i; i < _currencies.length; i++) {
-            ILendingMarket market = ILendingMarket(
-                Storage.slot().maturityLendingMarkets[_currencies[i]][_maturity]
-            );
-            if (market.isItayosePeriod()) {
-                market.executeItayoseCall();
-            }
-        }
-
+        LendingMarketOperationLogic.executeMultiItayoseCall(_currencies, _maturity);
         return true;
     }
 
@@ -750,50 +706,16 @@ contract LendingMarketController is
         nonReentrant
         hasLendingMarket(_ccy)
     {
-        address[] storage markets = Storage.slot().lendingMarkets[_ccy];
-        address currentMarketAddr = markets[0];
-        address nextMarketAddr = markets[1];
-        uint256 nextMaturity = ILendingMarket(nextMarketAddr).getMaturity();
-
-        // Reopen the market matured with new maturity
-        uint256 newLastMaturity = TimeLibrary.addMonths(
-            ILendingMarket(markets[markets.length - 1]).getMaturity(),
-            BASIS_TERM
-        );
-
-        // The market that is moved to the last of the list opens again when the next market is matured.
-        // Just before the opening, the moved market needs the Itayose execution.
-        uint256 prevMaturity = ILendingMarket(currentMarketAddr).openMarket(
-            newLastMaturity,
-            nextMaturity
-        );
-
-        // Rotate the order of the market
-        for (uint256 i = 0; i < markets.length; i++) {
-            address marketAddr = (markets.length - 1) == i ? currentMarketAddr : markets[i + 1];
-            markets[i] = marketAddr;
-        }
-
-        address futureValueVault = Storage.slot().futureValueVaults[_ccy][currentMarketAddr];
-
-        genesisValueVault().executeAutoRoll(
-            _ccy,
-            prevMaturity,
-            nextMaturity,
-            ILendingMarket(nextMarketAddr).getMidUnitPrice(),
-            getAutoRollFeeRate(_ccy),
-            IFutureValueVault(futureValueVault).getTotalSupply(prevMaturity)
-        );
-
-        Storage.slot().maturityLendingMarkets[_ccy][newLastMaturity] = currentMarketAddr;
-
-        emit LendingMarketsRotated(_ccy, prevMaturity, newLastMaturity);
+        (uint256 fromMaturity, uint256 toMaturity) = LendingMarketOperationLogic
+            .rotateLendingMarkets(_ccy, getAutoRollFeeRate(_ccy));
 
         FundManagementLogic.convertFutureValueToGenesisValue(
             _ccy,
-            newLastMaturity,
+            toMaturity,
             address(reserveFund())
         );
+
+        emit LendingMarketsRotated(_ccy, fromMaturity, toMaturity);
     }
 
     /**
@@ -926,7 +848,10 @@ contract LendingMarketController is
                 activeOrderCount += 1;
             }
 
-            require(activeOrderCount <= MAXIMUM_ORDER_COUNT, "Too many active orders");
+            require(
+                activeOrderCount <= ProtocolTypes.MAXIMUM_ORDER_COUNT,
+                "Too many active orders"
+            );
 
             feeFutureValue = _calculateOrderFeeAmount(_ccy, filledFutureValue, _maturity);
         }

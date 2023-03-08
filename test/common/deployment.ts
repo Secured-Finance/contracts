@@ -21,8 +21,18 @@ import {
 
 const deployContracts = async () => {
   // Deploy libraries
-  const [depositManagementLogic, orderBookLogic, quickSort] = await Promise.all(
-    ['DepositManagementLogic', 'OrderBookLogic', 'QuickSort'].map((library) =>
+  const [
+    depositManagementLogic,
+    lendingMarketOperationLogic,
+    orderBookLogic,
+    quickSort,
+  ] = await Promise.all(
+    [
+      'DepositManagementLogic',
+      'LendingMarketOperationLogic',
+      'OrderBookLogic',
+      'QuickSort',
+    ].map((library) =>
       ethers.getContractFactory(library).then((factory) => factory.deploy()),
     ),
   );
@@ -66,6 +76,7 @@ const deployContracts = async () => {
       .getContractFactory('LendingMarketController', {
         libraries: {
           FundManagementLogic: fundManagementLogic.address,
+          LendingMarketOperationLogic: lendingMarketOperationLogic.address,
         },
       })
       .then((factory) => factory.deploy()),
