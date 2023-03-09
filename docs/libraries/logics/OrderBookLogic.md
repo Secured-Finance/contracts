@@ -92,10 +92,16 @@ function cleanBorrowOrders(address _user, uint256 _maturity) public returns (uin
 function removeOrder(address _user, uint48 _orderId) public returns (enum ProtocolTypes.Side, uint256, uint256)
 ```
 
-### nextOrderId
+### getOpeningUnitPrice
 
 ```solidity
-function nextOrderId() private returns (uint48)
+function getOpeningUnitPrice() public view returns (uint256 openingUnitPrice, uint256 totalOffsetAmount)
+```
+
+### _nextOrderId
+
+```solidity
+function _nextOrderId() private returns (uint48)
 ```
 
 Increases and returns id of last order in order book.
@@ -104,9 +110,9 @@ Increases and returns id of last order in order book.
 | ---- | ---- | ----------- |
 | [0] | uint48 | The new order id |
 
-### removeOrderIdFromOrders
+### _removeOrderIdFromOrders
 
 ```solidity
-function removeOrderIdFromOrders(uint48[] orders, uint256 orderId) private
+function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) private
 ```
 

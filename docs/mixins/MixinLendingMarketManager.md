@@ -14,6 +14,12 @@ event OrderFeeRateUpdated(uint256 previousRate, uint256 rate)
 event AutoRollFeeRateUpdated(uint256 previousRate, uint256 rate)
 ```
 
+### _initialize
+
+```solidity
+function _initialize(address _owner) internal
+```
+
 ### getOrderFeeRate
 
 ```solidity

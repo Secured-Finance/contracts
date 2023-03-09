@@ -10,6 +10,18 @@ directly by the user.
 
 _The market orders is stored in structured red-black trees and doubly linked lists in each node._
 
+### PRE_ORDER_PERIOD
+
+```solidity
+uint256 PRE_ORDER_PERIOD
+```
+
+### ITAYOSE_PERIOD
+
+```solidity
+uint256 ITAYOSE_PERIOD
+```
+
 ### onlyMaker
 
 ```solidity
@@ -39,10 +51,22 @@ modifier ifMatured()
 
 Modifier to check if the market is matured.
 
+### ifItayosePeriod
+
+```solidity
+modifier ifItayosePeriod()
+```
+
+### ifPreOrderPeriod
+
+```solidity
+modifier ifPreOrderPeriod()
+```
+
 ### initialize
 
 ```solidity
-function initialize(address _resolver, bytes32 _ccy, uint256 _maturity, uint256 _genesisDate) public
+function initialize(address _resolver, bytes32 _ccy, uint256 _maturity, uint256 _openingDate) public
 ```
 
 Initializes the contract.
@@ -54,7 +78,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _resolver | address | The address of the Address Resolver contract |
 | _ccy | bytes32 | The main currency for the order book |
 | _maturity | uint256 | The initial maturity of the market |
-| _genesisDate | uint256 | The initial date when the first market open |
+| _openingDate | uint256 | The timestamp when the market opens |
 
 ### requiredContracts
 
@@ -91,7 +115,7 @@ Gets the market data.
 ### getBorrowUnitPrice
 
 ```solidity
-function getBorrowUnitPrice() public view returns (uint256)
+function getBorrowUnitPrice() external view returns (uint256)
 ```
 
 Gets the highest borrow price per future value.
@@ -103,7 +127,7 @@ Gets the highest borrow price per future value.
 ### getLendUnitPrice
 
 ```solidity
-function getLendUnitPrice() public view returns (uint256)
+function getLendUnitPrice() external view returns (uint256)
 ```
 
 Gets the lowest lend price per future value.
@@ -184,6 +208,18 @@ Gets the market currency.
 | ---- | ---- | ----------- |
 | currency | bytes32 | The market currency |
 
+### getOpeningDate
+
+```solidity
+function getOpeningDate() external view returns (uint256)
+```
+
+### getOpeningUnitPrice
+
+```solidity
+function getOpeningUnitPrice() external view returns (uint256)
+```
+
 ### isMatured
 
 ```solidity
@@ -207,6 +243,18 @@ Gets if the market is opened.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the market is opened or not |
+
+### isItayosePeriod
+
+```solidity
+function isItayosePeriod() public view returns (bool)
+```
+
+### isPreOrderPeriod
+
+```solidity
+function isPreOrderPeriod() public view returns (bool)
+```
 
 ### getOrder
 
@@ -312,7 +360,7 @@ using the future value amount.
 ### openMarket
 
 ```solidity
-function openMarket(uint256 _maturity) external returns (uint256 prevMaturity)
+function openMarket(uint256 _maturity, uint256 _openingDate) external returns (uint256 prevMaturity)
 ```
 
 Opens market
@@ -320,6 +368,7 @@ Opens market
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _maturity | uint256 | The new maturity |
+| _openingDate | uint256 | The timestamp when the market opens |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -392,6 +441,33 @@ and places new order if not match it.
 | filledFutureValue | uint256 | The total FV amount of the filled order amount on the order book |
 | remainingAmount | uint256 | The remaining amount that is not filled in the order book |
 
+### createPreOrder
+
+```solidity
+function createPreOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external
+```
+
+Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _user | address |  |
+| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+
+### executeItayoseCall
+
+```solidity
+function executeItayoseCall() external
+```
+
+Executes Itayose to aggregate pre-orders and determine the opening unit price.
+After this action, the market opens.
+
+_If the opening date had already passed when this contract was created, this Itayose need not be executed._
+
 ### pauseMarket
 
 ```solidity
@@ -407,6 +483,12 @@ function unpauseMarket() external
 ```
 
 Unpauses the lending market.
+
+### _updateUserMaturity
+
+```solidity
+function _updateUserMaturity(address _user) private
+```
 
 ### _makeOrder
 

@@ -12,18 +12,6 @@ a new maturity date is set and the compound factor is updated.
 
 The users mainly call this contract to create orders to lend or borrow funds.
 
-### BASIS_TERM
-
-```solidity
-uint256 BASIS_TERM
-```
-
-### MAXIMUM_ORDER_COUNT
-
-```solidity
-uint256 MAXIMUM_ORDER_COUNT
-```
-
 ### hasLendingMarket
 
 ```solidity
@@ -431,7 +419,7 @@ Initialize the lending market to set a genesis date and compound factor
 ### createLendingMarket
 
 ```solidity
-function createLendingMarket(bytes32 _ccy) external returns (address market, address futureValueVault)
+function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external
 ```
 
 Deploys new Lending Market and save address at lendingMarkets mapping.
@@ -440,11 +428,7 @@ Reverts on deployment market with existing currency and term
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Main currency for new lending market |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| market | address | The proxy contract address of created lending market |
-| futureValueVault | address |  |
+| _openingDate | uint256 | Timestamp when the lending market opens |
 
 ### createOrder
 
@@ -489,6 +473,53 @@ Deposits funds and creates an order at the same time.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
+
+### createPreOrder
+
+```solidity
+function createPreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) public returns (bool)
+```
+
+Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
+### depositAndCreatePreOrder
+
+```solidity
+function depositAndCreatePreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external payable returns (bool)
+```
+
+Deposits funds and creates a pre-order at the same time.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
+| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
+### executeMultiItayoseCall
+
+```solidity
+function executeMultiItayoseCall(bytes32[] _currencies, uint256 _maturity) external returns (bool)
+```
 
 ### cancelOrder
 
@@ -591,7 +622,7 @@ Unpauses previously deployed lending market by currency
 ### cleanAllOrders
 
 ```solidity
-function cleanAllOrders(address _user) public
+function cleanAllOrders(address _user) external
 ```
 
 Cleans user's all orders to remove order ids that are already filled on the order book.

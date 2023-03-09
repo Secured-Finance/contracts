@@ -23,14 +23,17 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  uint48 lastOrderId;
   bytes32 ccy;
-  uint256 genesisDate;
+  uint48 lastOrderId;
+  uint256 openingDate;
   uint256 maturity;
+  mapping(uint256 => uint256) openingUnitPrices;
+  mapping(uint256 => bool) isReady;
   mapping(address => uint48[]) activeLendOrderIds;
   mapping(address => uint48[]) activeBorrowOrderIds;
   mapping(address => uint256) userCurrentMaturities;
   mapping(uint256 => struct MarketOrder) orders;
+  mapping(uint256 => bool) isPreOrder;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) lendOrders;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) borrowOrders;
 }
