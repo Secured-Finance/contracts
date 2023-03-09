@@ -1,0 +1,60 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - develop
+          - main
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.MACHINE_USER_APP_ID }}
+          private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ steps.generate_token.outputs.token }}
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+      - name: 'Setup for npm'
+        run: |
+          npm set @secured-finance:registry=https://npm.pkg.github.com
+          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
+      - name: 'Setup for git'
+        run: |
+          git config user.name "SF Machine User[bot]"
+          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
+      - name: Install Dependencies
+        run: npm ci
+      - name: Version and Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ '${{ github.event.inputs.branch }}' = 'main' ]; then
+            npm version patch -m "chore: upgrade to %s"
+          else
+            npm version prerelease --preid beta -m "chore: upgrade to %s"
+          fi
+          npm publish
+          git push
+      - name: Merge main into develop
+        shell: bash
+        if: ${{ github.event.inputs.branch == 'main' }}
+        run: |
+          git switch develop
+          git merge main
+          git push

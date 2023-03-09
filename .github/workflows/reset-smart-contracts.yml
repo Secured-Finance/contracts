@@ -11,16 +11,12 @@ on:
         options:
           - development
           - staging
-      compoundFactor:
-        description: 'Initial Compound Factor'
-        default: '1000000000000000000'
-        required: false
-        type: string
 
 jobs:
   deploy:
     name: Reset Smart Contracts
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.network }}
     steps:
       - name: Generate token
         id: generate_token
@@ -38,32 +34,22 @@ jobs:
         run: npm ci
       - name: Build Smart Contracts
         run: npm run compile
-      - name: Deploy for development environment
-        if: ${{ github.event.inputs.network == 'development' }}
+      - name: Deploy smart contracts
         env:
-          PRIVATE_KEY: ${{ secrets.DEV_PRIVATE_KEY }}
-          ALCHEMY_API_KEY: ${{ secrets.DEV_ALCHEMY_API_KEY }}
-          INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
-          UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.DEV_UNISWAP_SWAP_ROUTER_CONTRACT }}
-          UNISWAP_SWAP_QUOTER_CONTRACT: ${{ secrets.DEV_UNISWAP_SWAP_QUOTER_CONTRACT }}
-          TOKEN_EFIL: ${{ secrets.DEV_TOKEN_EFIL }}
-          TOKEN_USDC: ${{ secrets.DEV_TOKEN_USDC }}
-          TOKEN_WBTC: ${{ secrets.DEV_TOKEN_WBTC }}
-          TOKEN_WETH: ${{ secrets.DEV_TOKEN_WETH }}
-        run: npm run deploy:force development
-      - name: Deploy for staging environment
-        if: ${{ github.event.inputs.network == 'staging' }}
-        env:
-          PRIVATE_KEY: ${{ secrets.STG_PRIVATE_KEY }}
-          ALCHEMY_API_KEY: ${{ secrets.STG_ALCHEMY_API_KEY }}
-          INITIAL_COMPOUND_FACTOR: ${{ github.event.inputs.compoundFactor }}
-          UNISWAP_SWAP_ROUTER_CONTRACT: ${{ secrets.STG_UNISWAP_SWAP_ROUTER_CONTRACT }}
-          UNISWAP_SWAP_QUOTER_CONTRACT: ${{ secrets.STG_UNISWAP_SWAP_QUOTER_CONTRACT }}
-          TOKEN_EFIL: ${{ secrets.STG_TOKEN_EFIL }}
-          TOKEN_USDC: ${{ secrets.STG_TOKEN_USDC }}
-          TOKEN_WBTC: ${{ secrets.STG_TOKEN_WBTC }}
-          TOKEN_WETH: ${{ secrets.STG_TOKEN_WETH }}
-        run: npm run deploy:force staging
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+          INITIAL_COMPOUND_FACTOR: ${{ vars.INITIAL_COMPOUND_FACTOR }}
+          UNISWAP_SWAP_ROUTER_CONTRACT: ${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}
+          UNISWAP_SWAP_QUOTER_CONTRACT: ${{ vars.UNISWAP_SWAP_QUOTER_CONTRACT }}
+          TOKEN_EFIL: ${{ vars.TOKEN_EFIL }}
+          TOKEN_USDC: ${{ vars.TOKEN_USDC }}
+          TOKEN_WBTC: ${{ vars.TOKEN_WBTC }}
+          TOKEN_WETH: ${{ vars.TOKEN_WETH }}
+          FIL_TO_ETH_RATE: ${{ vars.FIL_TO_ETH_RATE }}
+          ETH_TO_USD_RATE: ${{ vars.ETH_TO_USD_RATE }}
+          BTC_TO_ETH_RATE: ${{ vars.BTC_TO_ETH_RATE }}
+          USDC_TO_ETH_RATE: ${{ vars.USDC_TO_ETH_RATE }}
+        run: npm run deploy:force ${{ github.event.inputs.network }}
       - name: Commit and push
         shell: bash
         run: |
