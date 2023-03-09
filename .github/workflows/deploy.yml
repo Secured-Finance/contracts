@@ -115,7 +115,7 @@ jobs:
           echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
-          echo "ENABLE_FAUCET=true >> $GITHUB_ENV
+          echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
       - name: Deploy smart contracts
         run: npm run deploy $NETWORK
       - run: |
