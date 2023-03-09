@@ -539,7 +539,7 @@ library OrderStatisticsTreeLib {
             cursor = next(self, cursor);
         }
 
-        if (totalAmount >= amount || value == limitValue) {
+        if (totalAmount > 0) {
             if (totalAmount > amount) {
                 cursor = value;
                 // Update order ids in the node.
@@ -627,7 +627,7 @@ library OrderStatisticsTreeLib {
             cursor = prev(self, cursor);
         }
 
-        if (totalAmount >= amount || value == limitValue) {
+        if (totalAmount > 0) {
             if (totalAmount > amount) {
                 cursor = value;
                 // Update order ids in the node.
