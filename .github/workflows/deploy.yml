@@ -132,7 +132,7 @@ jobs:
           git commit -m "chore: update smart contracts" --no-verify
           git push
       - name: Update documents
-        if: $NETWORK == 'development'
+        if: ${{ vas.NETWORK == 'development' }}
         run: |
           npm run docgen
           git add .
@@ -149,7 +149,7 @@ jobs:
           git push
       - name: Merge main into develop
         shell: bash
-        if: $NETWORK == 'staging'
+        if: ${{ vas.NETWORK == 'staging' }}
         run: |
           git switch develop
           git merge main
