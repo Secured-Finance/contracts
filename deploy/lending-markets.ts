@@ -1,3 +1,4 @@
+import { Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
@@ -7,6 +8,10 @@ import { getGenesisDate } from '../utils/dates';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
 
+// NOTE: Active markets are 8.
+// The last market is a inactive market for Itayose.
+const MARKET_COUNT = 9;
+
 const func: DeployFunction = async function ({
   getNamedAccounts,
   deployments,
@@ -14,6 +19,8 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  const genesisDate =
+    process.env.MARKET_BASIS_DATE || getGenesisDate().toString();
 
   const orderBookLogic = await deployments.get('OrderBookLogic');
   const deployResult = await deploy('LendingMarket', {
@@ -28,10 +35,10 @@ const func: DeployFunction = async function ({
     .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
   // Get contracts from proxyController
-  const beaconProxyController = await proxyController
+  const beaconProxyController: Contract = await proxyController
     .getAddress(toBytes32('BeaconProxyController'))
     .then((address) => ethers.getContractAt('BeaconProxyController', address));
-  const lendingMarketController = await proxyController
+  const lendingMarketController: Contract = await proxyController
     .getAddress(toBytes32('LendingMarketController'))
     .then((address) =>
       ethers.getContractAt('LendingMarketController', address),
@@ -43,20 +50,11 @@ const func: DeployFunction = async function ({
       .then((tx) => tx.wait());
   });
 
-  const MARKET_COUNT = 8;
-
   for (const currency of currencies) {
     const isInitialized =
       await lendingMarketController.isInitializedLendingMarket(currency.key);
 
     if (!isInitialized) {
-      let genesisDate = process.env.MARKET_BASIS_DATE;
-
-      if (!genesisDate) {
-        // genesisDate will be 1st of Mar, Jun, Sep, or Dec.
-        genesisDate = getGenesisDate().toString();
-      }
-
       await lendingMarketController
         .initializeLendingMarket(
           currency.key,
@@ -68,7 +66,7 @@ const func: DeployFunction = async function ({
         .then((tx) => tx.wait());
     }
 
-    const lendingMarkets = await lendingMarketController
+    const lendingMarkets: Contract[] = await lendingMarketController
       .getLendingMarkets(currency.key)
       .then((addresses) =>
         Promise.all(
@@ -78,37 +76,59 @@ const func: DeployFunction = async function ({
         ),
       );
 
-    const market: Record<string, string>[] = [];
+    const marketLog: Record<string, string | undefined>[] = [];
 
-    if (lendingMarkets.length >= MARKET_COUNT) {
-      console.log(`Skipped deploying ${currency.symbol} lending markets`);
-      for (let i = 0; i < lendingMarkets.length; i++) {
-        const { maturity } = await lendingMarkets[i].getMarket();
-        market.push({
-          Address: lendingMarkets[i].address,
-          Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
-        });
-      }
-    } else {
+    if (lendingMarkets.length > 0) {
+      console.log(
+        `Skipped deploying ${lendingMarkets.length} ${currency.symbol} lending markets`,
+      );
+    }
+
+    for (let i = 0; i < lendingMarkets.length; i++) {
+      const { maturity, openingDate } = await lendingMarkets[i].getMarket();
+      marketLog.push({
+        [`MarketAddress(${currency.symbol})`]: lendingMarkets[i].address,
+        OpeningDate: moment
+          .unix(openingDate.toString())
+          .format('LLL')
+          .toString(),
+        Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
+      });
+    }
+
+    if (lendingMarkets.length < MARKET_COUNT) {
       const count = MARKET_COUNT - lendingMarkets.length;
+      let nearestMaturity = await lendingMarkets[0]?.getMaturity();
 
       for (let i = 0; i < count; i++) {
+        let openingDate =
+          i === count - 1 ? nearestMaturity.toString() : genesisDate;
+
         const receipt = await lendingMarketController
-          .createLendingMarket(currency.key)
+          .createLendingMarket(currency.key, openingDate)
           .then((tx) => tx.wait());
 
         const { marketAddr, futureValueVault, maturity } = receipt.events.find(
           ({ event }) => event === 'LendingMarketCreated',
         ).args;
-        market.push({
-          MarketAddress: marketAddr,
+
+        if (!nearestMaturity && i === 0) {
+          nearestMaturity = maturity;
+        }
+
+        marketLog.push({
+          [`MarketAddress(${currency.symbol})`]: marketAddr,
           FutureValueVaultAddress: futureValueVault,
+          OpeningDate: moment
+            .unix(Number(openingDate))
+            .format('LLL')
+            .toString(),
           Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
         });
       }
-      console.log(`Deployed ${currency.symbol} lending markets:`);
+      console.log(`Deployed ${count} ${currency.symbol} lending markets.`);
     }
-    console.table(market);
+    console.table(marketLog);
   }
 };
 

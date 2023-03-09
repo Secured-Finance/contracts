@@ -34,6 +34,7 @@ describe('Performance Test: Auto-rolls', async () => {
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
+  let genesisDate: number;
   let maturities: BigNumber[];
 
   let signers: Signers;
@@ -81,6 +82,7 @@ describe('Performance Test: Auto-rolls', async () => {
     [owner] = await signers.get(1);
 
     ({
+      genesisDate,
       addressResolver,
       genesisValueVault,
       tokenVault,
@@ -115,10 +117,20 @@ describe('Performance Test: Auto-rolls', async () => {
 
     await tokenVault.updateCurrency(hexFILString, true);
 
-    // Deploy Lending Markets for ETH market
+    // Deploy active Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexFILString);
+      await lendingMarketController.createLendingMarket(
+        hexFILString,
+        genesisDate,
+      );
     }
+    maturities = await lendingMarketController.getMaturities(hexFILString);
+
+    // Deploy inactive Lending Markets for Itayose
+    await lendingMarketController.createLendingMarket(
+      hexFILString,
+      maturities[0],
+    );
   });
 
   beforeEach('Reset contract instances', async () => {
@@ -223,6 +235,9 @@ describe('Performance Test: Auto-rolls', async () => {
         await lendingMarketController
           .connect(owner)
           .rotateLendingMarkets(hexFILString);
+        await lendingMarkets[lendingMarkets.length - 1]
+          .connect(owner)
+          .executeItayoseCall();
 
         // Check present value
         const aliceTotalPVAfter =

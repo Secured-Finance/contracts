@@ -38,6 +38,7 @@ describe('Integration Test: Auto-rolls', async () => {
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
+  let genesisDate: number;
   let maturities: BigNumber[];
 
   let signers: Signers;
@@ -89,6 +90,13 @@ describe('Integration Test: Auto-rolls', async () => {
     await lendingMarketController
       .connect(owner)
       .rotateLendingMarkets(hexETHString);
+
+    await lendingMarketController
+      .connect(owner)
+      .executeMultiItayoseCall(
+        [hexETHString],
+        maturities[maturities.length - 1],
+      );
   };
 
   const resetContractInstances = async () => {
@@ -120,6 +128,7 @@ describe('Integration Test: Auto-rolls', async () => {
     [owner] = await signers.get(1);
 
     ({
+      genesisDate,
       addressResolver,
       genesisValueVault,
       reserveFund,
@@ -158,11 +167,29 @@ describe('Integration Test: Auto-rolls', async () => {
 
     await tokenVault.updateCurrency(hexETHString, true);
 
-    // Deploy Lending Markets for ETH market
+    // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexFILString);
-      await lendingMarketController.createLendingMarket(hexETHString);
+      await lendingMarketController.createLendingMarket(
+        hexFILString,
+        genesisDate,
+      );
+      await lendingMarketController.createLendingMarket(
+        hexETHString,
+        genesisDate,
+      );
     }
+
+    maturities = await lendingMarketController.getMaturities(hexETHString);
+
+    // Deploy inactive Lending Markets for Itayose
+    await lendingMarketController.createLendingMarket(
+      hexFILString,
+      maturities[0],
+    );
+    await lendingMarketController.createLendingMarket(
+      hexETHString,
+      maturities[0],
+    );
   });
 
   beforeEach('Reset contract instances', async () => {
@@ -731,7 +758,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(aliceActualFV).to.equal('1200048001920076803072');
     });
 
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i <= 9; i++) {
       it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
         const alicePV0Before = await lendingMarketController.getPresentValue(
           hexETHString,
@@ -912,6 +939,10 @@ describe('Integration Test: Auto-rolls', async () => {
         .connect(owner)
         .rotateLendingMarkets(hexETHString);
 
+      await lendingMarkets[lendingMarkets.length - 1]
+        .connect(owner)
+        .executeItayoseCall();
+
       for (const { address } of [alice, bob, carol, dave, reserveFund]) {
         await lendingMarketController.cleanOrders(hexETHString, address);
       }
@@ -1052,6 +1083,8 @@ describe('Integration Test: Auto-rolls', async () => {
       await lendingMarketController
         .connect(owner)
         .rotateLendingMarkets(hexETHString);
+
+      await lendingMarkets[0].connect(owner).executeItayoseCall();
 
       // Check present value
       const aliceTotalPVAfter =

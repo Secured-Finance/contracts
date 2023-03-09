@@ -9,6 +9,7 @@ interface ILendingMarketController {
         address indexed marketAddr,
         address futureValueVault,
         uint256 index,
+        uint256 openingDate,
         uint256 maturity
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
@@ -153,9 +154,7 @@ interface ILendingMarketController {
         uint256 autoRollFeeRate
     ) external;
 
-    function createLendingMarket(bytes32 ccy)
-        external
-        returns (address market, address futureValue);
+    function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external;
 
     function createOrder(
         bytes32 ccy,
@@ -172,6 +171,26 @@ interface ILendingMarketController {
         uint256 amount,
         uint256 unitPrice
     ) external payable returns (bool);
+
+    function createPreOrder(
+        bytes32 ccy,
+        uint256 maturity,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice
+    ) external returns (bool);
+
+    function depositAndCreatePreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external payable returns (bool);
+
+    function executeMultiItayoseCall(bytes32[] memory currencies, uint256 maturity)
+        external
+        returns (bool);
 
     function executeLiquidationCall(
         bytes32 collateralCcy,

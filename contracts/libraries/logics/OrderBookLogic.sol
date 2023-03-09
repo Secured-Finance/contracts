@@ -174,9 +174,18 @@ library OrderBookLogic {
                 .lendOrders[marketOrder.maturity]
                 .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
             inactiveAmount += orderItem.amount;
-            inactiveFutureValue += (orderItem.amount * ProtocolTypes.PRICE_DIGIT).div(
-                marketOrder.unitPrice
-            );
+
+            // Check if the order is filled by Itayose.
+            // If the order is filled by Itayose, the opening unit price is used instead of the order's one.
+            uint256 unitPrice = marketOrder.unitPrice;
+            if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
+                uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
+                if (openingUnitPrice < unitPrice) {
+                    unitPrice = openingUnitPrice;
+                }
+            }
+
+            inactiveFutureValue += (orderItem.amount * ProtocolTypes.PRICE_DIGIT).div(unitPrice);
         }
     }
 
@@ -219,9 +228,18 @@ library OrderBookLogic {
                 .borrowOrders[marketOrder.maturity]
                 .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
             inactiveAmount += orderItem.amount;
-            inactiveFutureValue += (orderItem.amount * ProtocolTypes.PRICE_DIGIT).div(
-                marketOrder.unitPrice
-            );
+
+            // Check if the order is filled by Itayose.
+            // If the order is filled by Itayose, the opening unit price is used instead of the order's one.
+            uint256 unitPrice = marketOrder.unitPrice;
+            if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
+                uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
+                if (openingUnitPrice > unitPrice) {
+                    unitPrice = openingUnitPrice;
+                }
+            }
+
+            inactiveFutureValue += (orderItem.amount * ProtocolTypes.PRICE_DIGIT).div(unitPrice);
         }
     }
 
@@ -338,7 +356,7 @@ library OrderBookLogic {
         uint256 _unitPrice,
         bool _isInterruption
     ) public returns (uint48 orderId) {
-        orderId = nextOrderId();
+        orderId = _nextOrderId();
         Storage.slot().orders[orderId] = MarketOrder(
             _side,
             _unitPrice,
@@ -478,28 +496,74 @@ library OrderBookLogic {
                 marketOrder.unitPrice,
                 _orderId
             );
-            removeOrderIdFromOrders(Storage.slot().activeLendOrderIds[_user], _orderId);
+            _removeOrderIdFromOrders(Storage.slot().activeLendOrderIds[_user], _orderId);
         } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
             removedAmount = Storage.slot().borrowOrders[Storage.slot().maturity].removeOrder(
                 marketOrder.unitPrice,
                 _orderId
             );
-            removeOrderIdFromOrders(Storage.slot().activeBorrowOrderIds[_user], _orderId);
+            _removeOrderIdFromOrders(Storage.slot().activeBorrowOrderIds[_user], _orderId);
         }
 
         return (marketOrder.side, removedAmount, marketOrder.unitPrice);
+    }
+
+    function getOpeningUnitPrice()
+        public
+        view
+        returns (uint256 openingUnitPrice, uint256 totalOffsetAmount)
+    {
+        uint256 lendUnitPrice = getHighestLendingUnitPrice();
+        uint256 borrowUnitPrice = getLowestBorrowingUnitPrice();
+        uint256 lendAmount = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
+            lendUnitPrice
+        );
+        uint256 borrowAmount = Storage
+            .slot()
+            .borrowOrders[Storage.slot().maturity]
+            .getNodeTotalAmount(borrowUnitPrice);
+
+        OrderStatisticsTreeLib.Tree storage borrowOrders = Storage.slot().borrowOrders[
+            Storage.slot().maturity
+        ];
+        OrderStatisticsTreeLib.Tree storage lendOrders = Storage.slot().lendOrders[
+            Storage.slot().maturity
+        ];
+
+        while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {
+            if (lendAmount > borrowAmount) {
+                openingUnitPrice = lendUnitPrice;
+                totalOffsetAmount += borrowAmount;
+                lendAmount -= borrowAmount;
+                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
+                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
+            } else if (lendAmount < borrowAmount) {
+                openingUnitPrice = borrowUnitPrice;
+                totalOffsetAmount += lendAmount;
+                borrowAmount -= lendAmount;
+                lendUnitPrice = lendOrders.prev(lendUnitPrice);
+                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
+            } else {
+                openingUnitPrice = (lendUnitPrice + borrowUnitPrice) / 2;
+                totalOffsetAmount += lendAmount;
+                lendUnitPrice = lendOrders.prev(lendUnitPrice);
+                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
+                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
+                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
+            }
+        }
     }
 
     /**
      * @notice Increases and returns id of last order in order book.
      * @return The new order id
      */
-    function nextOrderId() private returns (uint48) {
+    function _nextOrderId() private returns (uint48) {
         Storage.slot().lastOrderId++;
         return Storage.slot().lastOrderId;
     }
 
-    function removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) private {
+    function _removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) private {
         uint256 lastOrderIndex = orders.length - 1;
         for (uint256 i = 0; i <= lastOrderIndex; i++) {
             if (orders[i] == orderId) {

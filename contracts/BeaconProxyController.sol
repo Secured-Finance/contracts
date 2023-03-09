@@ -105,20 +105,20 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
      * @notice Deploys new LendingMarket
      * @param _ccy Main currency for new lending market
      * @param _maturity The initial maturity of the market
-     * @param _genesisDate The initial date when the first market open
+     * @param _openingDate The timestamp when the market opens
      * @return market The proxy contract address of created lending market
      */
     function deployLendingMarket(
         bytes32 _ccy,
-        uint256 _genesisDate,
-        uint256 _maturity
+        uint256 _maturity,
+        uint256 _openingDate
     ) external override onlyLendingMarketController returns (address market) {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,bytes32,uint256,uint256)",
             address(resolver()),
             _ccy,
             _maturity,
-            _genesisDate
+            _openingDate
         );
         market = _createProxy(BeaconContracts.LENDING_MARKET, data);
     }

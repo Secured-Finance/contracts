@@ -29,6 +29,7 @@ describe('Integration Test: Order Book', async () => {
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
+  let genesisDate: number;
   let filLendingMarkets: Contract[] = [];
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
@@ -86,6 +87,7 @@ describe('Integration Test: Order Book', async () => {
     [owner] = await signers.get(1);
 
     ({
+      genesisDate,
       addressResolver,
       currencyController,
       tokenVault,
@@ -125,8 +127,14 @@ describe('Integration Test: Order Book', async () => {
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexFILString);
-      await lendingMarketController.createLendingMarket(hexETHString);
+      await lendingMarketController.createLendingMarket(
+        hexFILString,
+        genesisDate,
+      );
+      await lendingMarketController.createLendingMarket(
+        hexETHString,
+        genesisDate,
+      );
     }
 
     filLendingMarkets = await lendingMarketController

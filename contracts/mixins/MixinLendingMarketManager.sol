@@ -5,14 +5,20 @@ pragma solidity ^0.8.9;
 import {RoundingUint256} from "../libraries/math/RoundingUint256.sol";
 // types
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+// utils
+import {Ownable} from "../utils/Ownable.sol";
 // storages
 import {LendingMarketManagerStorage as Storage} from "../storages/LendingMarketManagerStorage.sol";
 
-contract MixinLendingMarketManager {
+contract MixinLendingMarketManager is Ownable {
     using RoundingUint256 for uint256;
 
     event OrderFeeRateUpdated(uint256 previousRate, uint256 rate);
     event AutoRollFeeRateUpdated(uint256 previousRate, uint256 rate);
+
+    function _initialize(address _owner) internal {
+        _transferOwnership(_owner);
+    }
 
     /**
      * @notice Gets the order fee rate
@@ -37,7 +43,7 @@ contract MixinLendingMarketManager {
      * @param _ccy Currency name in bytes32
      * @param _orderFeeRate The order fee rate received by protocol
      */
-    function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) public {
+    function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) public onlyOwner {
         require(_orderFeeRate <= ProtocolTypes.PCT_DIGIT, "Invalid order fee rate");
         uint256 previousRate = Storage.slot().orderFeeRates[_ccy];
 
@@ -53,7 +59,7 @@ contract MixinLendingMarketManager {
      * @param _ccy Currency name in bytes32
      * @param _autoRollFeeRate The order fee rate received by protocol
      */
-    function updateAutoRollFeeRate(bytes32 _ccy, uint256 _autoRollFeeRate) public {
+    function updateAutoRollFeeRate(bytes32 _ccy, uint256 _autoRollFeeRate) public onlyOwner {
         require(_autoRollFeeRate <= ProtocolTypes.PCT_DIGIT, "Invalid auto-roll fee rate");
         uint256 previousRate = Storage.slot().autoRollFeeRates[_ccy];
 

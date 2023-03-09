@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 // interfaces
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
@@ -25,7 +26,16 @@ import {LendingMarketStorage as Storage, RemainingOrder} from "./storages/Lendin
  *
  * @dev The market orders is stored in structured red-black trees and doubly linked lists in each node.
  */
-contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
+contract LendingMarket is
+    ILendingMarket,
+    MixinAddressResolver,
+    Pausable,
+    Proxyable,
+    ReentrancyGuard
+{
+    uint256 private constant PRE_ORDER_PERIOD = 48 hours;
+    uint256 private constant ITAYOSE_PERIOD = 1 hours;
+
     /**
      * @notice Modifier to make a function callable only by order maker.
      * @param _orderId Market order id
@@ -53,25 +63,39 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         _;
     }
 
+    modifier ifItayosePeriod() {
+        require(isItayosePeriod(), "Not in the Itayose period");
+        _;
+    }
+
+    modifier ifPreOrderPeriod() {
+        require(isPreOrderPeriod(), "Not in the pre-order period");
+        _;
+    }
+
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _resolver The address of the Address Resolver contract
      * @param _ccy The main currency for the order book
      * @param _maturity The initial maturity of the market
-     * @param _genesisDate The initial date when the first market open
+     * @param _openingDate The timestamp when the market opens
      */
     function initialize(
         address _resolver,
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _genesisDate
+        uint256 _openingDate
     ) public initializer onlyBeacon {
         registerAddressResolver(_resolver);
 
         Storage.slot().ccy = _ccy;
         Storage.slot().maturity = _maturity;
-        Storage.slot().genesisDate = _genesisDate;
+        Storage.slot().openingDate = _openingDate;
+
+        if (block.timestamp >= (_openingDate - ITAYOSE_PERIOD)) {
+            Storage.slot().isReady[Storage.slot().maturity] = true;
+        }
 
         buildCache();
     }
@@ -97,9 +121,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             Market({
                 ccy: Storage.slot().ccy,
                 maturity: Storage.slot().maturity,
-                genesisDate: Storage.slot().genesisDate,
-                borrowUnitPrice: getBorrowUnitPrice(),
-                lendUnitPrice: getLendUnitPrice(),
+                openingDate: Storage.slot().openingDate,
+                borrowUnitPrice: OrderBookLogic.getLowestBorrowingUnitPrice(),
+                lendUnitPrice: OrderBookLogic.getHighestLendingUnitPrice(),
                 midUnitPrice: getMidUnitPrice()
             });
     }
@@ -108,7 +132,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the highest borrow price per future value.
      * @return The highest borrow price per future value
      */
-    function getBorrowUnitPrice() public view override returns (uint256) {
+    function getBorrowUnitPrice() external view override returns (uint256) {
         return OrderBookLogic.getLowestBorrowingUnitPrice();
     }
 
@@ -116,7 +140,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the lowest lend price per future value.
      * @return The lowest lend price per future value
      */
-    function getLendUnitPrice() public view override returns (uint256) {
+    function getLendUnitPrice() external view override returns (uint256) {
         return OrderBookLogic.getHighestLendingUnitPrice();
     }
 
@@ -125,8 +149,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The mid price per future value
      */
     function getMidUnitPrice() public view override returns (uint256) {
-        uint256 borrowUnitPrice = getBorrowUnitPrice();
-        uint256 lendUnitPrice = getLendUnitPrice();
+        uint256 borrowUnitPrice = OrderBookLogic.getLowestBorrowingUnitPrice();
+        uint256 lendUnitPrice = OrderBookLogic.getHighestLendingUnitPrice();
         return (borrowUnitPrice + lendUnitPrice) / 2;
     }
 
@@ -182,6 +206,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return Storage.slot().ccy;
     }
 
+    function getOpeningDate() external view override returns (uint256) {
+        return Storage.slot().openingDate;
+    }
+
+    function getOpeningUnitPrice() external view override returns (uint256) {
+        return Storage.slot().openingUnitPrices[Storage.slot().maturity];
+    }
+
     /**
      * @notice Gets if the market is matured.
      * @return The boolean if the market is matured or not
@@ -195,7 +227,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The boolean if the market is opened or not
      */
     function isOpened() public view override returns (bool) {
-        return !isMatured() && block.timestamp >= Storage.slot().genesisDate;
+        return
+            Storage.slot().isReady[Storage.slot().maturity] &&
+            !isMatured() &&
+            block.timestamp >= Storage.slot().openingDate;
+    }
+
+    function isItayosePeriod() public view returns (bool) {
+        return
+            block.timestamp >= (Storage.slot().openingDate - ITAYOSE_PERIOD) &&
+            !Storage.slot().isReady[Storage.slot().maturity];
+    }
+
+    function isPreOrderPeriod() public view override returns (bool) {
+        return
+            block.timestamp >= (Storage.slot().openingDate - PRE_ORDER_PERIOD) &&
+            block.timestamp < (Storage.slot().openingDate - ITAYOSE_PERIOD);
     }
 
     /**
@@ -313,9 +360,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     /**
      * @notice Opens market
      * @param _maturity The new maturity
+     * @param _openingDate The timestamp when the market opens
      * @return prevMaturity The previous maturity updated
      */
-    function openMarket(uint256 _maturity)
+    function openMarket(uint256 _maturity, uint256 _openingDate)
         external
         override
         ifMatured
@@ -324,6 +372,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     {
         prevMaturity = Storage.slot().maturity;
         Storage.slot().maturity = _maturity;
+        Storage.slot().openingDate = _openingDate;
 
         emit MarketOpened(_maturity, prevMaturity);
     }
@@ -350,7 +399,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     {
         (side, removedAmount, unitPrice) = OrderBookLogic.removeOrder(_user, _orderId);
 
-        emit ILendingMarket.OrderCanceled(
+        emit OrderCanceled(
             _orderId,
             msg.sender,
             side,
@@ -454,19 +503,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ifOpened
         returns (uint256 filledFutureValue, uint256 remainingAmount)
     {
-        uint256 userMaturity = Storage.slot().userCurrentMaturities[_user];
         require(_amount > 0, "Can't place empty amount");
-        require(
-            userMaturity == Storage.slot().maturity ||
-                (userMaturity != Storage.slot().maturity &&
-                    Storage.slot().activeLendOrderIds[_user].length == 0 &&
-                    Storage.slot().activeBorrowOrderIds[_user].length == 0),
-            "Order found in past maturity."
-        );
-
-        if (userMaturity != Storage.slot().maturity) {
-            Storage.slot().userCurrentMaturities[_user] = Storage.slot().maturity;
-        }
+        _updateUserMaturity(_user);
 
         bool isExists = _unitPrice == 0 ||
             (
@@ -490,6 +528,70 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+     * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
+     *
+     * @param _side Order position type, Borrow or Lend
+     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     */
+    function createPreOrder(
+        ProtocolTypes.Side _side,
+        address _user,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external override whenNotPaused onlyAcceptedContracts ifPreOrderPeriod {
+        require(_amount > 0, "Can't place empty amount");
+        _updateUserMaturity(_user);
+        uint48 orderId = _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
+        Storage.slot().isPreOrder[orderId] = true;
+    }
+
+    /**
+     * @notice Executes Itayose to aggregate pre-orders and determine the opening unit price.
+     * After this action, the market opens.
+     * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
+     */
+    function executeItayoseCall() external nonReentrant whenNotPaused ifItayosePeriod {
+        (uint256 openingUnitPrice, uint256 totalOffsetAmount) = OrderBookLogic
+            .getOpeningUnitPrice();
+
+        if (totalOffsetAmount > 0) {
+            ProtocolTypes.Side[2] memory sides = [
+                ProtocolTypes.Side.LEND,
+                ProtocolTypes.Side.BORROW
+            ];
+
+            for (uint256 i; i < sides.length; i++) {
+                (RemainingOrder memory remainingOrder, , ) = OrderBookLogic.dropOrders(
+                    sides[i],
+                    totalOffsetAmount,
+                    0
+                );
+
+                if (remainingOrder.amount > 0) {
+                    // Make a new order for the remaining amount of a partially filled order
+                    _makeOrder(
+                        sides[i] == ProtocolTypes.Side.BORROW
+                            ? ProtocolTypes.Side.LEND
+                            : ProtocolTypes.Side.BORROW,
+                        remainingOrder.maker,
+                        remainingOrder.amount,
+                        remainingOrder.unitPrice,
+                        true,
+                        remainingOrder.orderId
+                    );
+                }
+            }
+
+            emit ItayoseExecuted(Storage.slot().ccy, Storage.slot().maturity, openingUnitPrice);
+        }
+
+        Storage.slot().isReady[Storage.slot().maturity] = true;
+        Storage.slot().openingUnitPrices[Storage.slot().maturity] = openingUnitPrice;
+    }
+
+    /**
      * @notice Pauses the lending market.
      */
     function pauseMarket() external override onlyAcceptedContracts {
@@ -501,6 +603,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      */
     function unpauseMarket() external override onlyAcceptedContracts {
         _unpause();
+    }
+
+    function _updateUserMaturity(address _user) private {
+        uint256 userMaturity = Storage.slot().userCurrentMaturities[_user];
+        require(
+            userMaturity == Storage.slot().maturity ||
+                (userMaturity != Storage.slot().maturity &&
+                    Storage.slot().activeLendOrderIds[_user].length == 0 &&
+                    Storage.slot().activeBorrowOrderIds[_user].length == 0),
+            "Order found in past maturity."
+        );
+
+        if (userMaturity != Storage.slot().maturity) {
+            Storage.slot().userCurrentMaturities[_user] = Storage.slot().maturity;
+        }
     }
 
     /**
@@ -521,7 +638,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     ) private returns (uint48 orderId) {
         orderId = OrderBookLogic.insertOrder(_side, _user, _amount, _unitPrice, _isInterruption);
 
-        emit ILendingMarket.OrderMade(
+        emit OrderMade(
             orderId,
             _originalOrderId,
             _user,
@@ -556,7 +673,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             _unitPrice
         );
 
-        emit ILendingMarket.OrdersTaken(
+        emit OrdersTaken(
             _user,
             _side,
             Storage.slot().ccy,

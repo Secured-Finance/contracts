@@ -25,6 +25,9 @@ const LiquidationBot = artifacts.require('LiquidationBot');
 const LiquidationBot2 = artifacts.require('LiquidationBot2');
 
 // libraries
+const LendingMarketOperationLogic = artifacts.require(
+  'LendingMarketOperationLogic',
+);
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const QuickSort = artifacts.require('QuickSort');
 
@@ -80,6 +83,10 @@ describe('LendingMarketController', () => {
 
     // Deploy libraries
     const quickSort = await deployContract(owner, QuickSort);
+    const lendingMarketOperationLogic = await deployContract(
+      owner,
+      LendingMarketOperationLogic,
+    );
     const fundManagementLogic = await ethers
       .getContractFactory('FundManagementLogic', {
         libraries: {
@@ -101,6 +108,7 @@ describe('LendingMarketController', () => {
       .getContractFactory('LendingMarketController', {
         libraries: {
           FundManagementLogic: fundManagementLogic.address,
+          LendingMarketOperationLogic: lendingMarketOperationLogic.address,
         },
       })
       .then((factory) => factory.deploy());
@@ -258,7 +266,10 @@ describe('LendingMarketController', () => {
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
       );
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
+      await lendingMarketControllerProxy.createLendingMarket(
+        targetCurrency,
+        genesisDate,
+      );
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
         targetCurrency,
       );
@@ -288,10 +299,22 @@ describe('LendingMarketController', () => {
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
       );
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
-      await lendingMarketControllerProxy.createLendingMarket(targetCurrency);
+      await lendingMarketControllerProxy.createLendingMarket(
+        targetCurrency,
+        genesisDate,
+      );
+      await lendingMarketControllerProxy.createLendingMarket(
+        targetCurrency,
+        genesisDate,
+      );
+      await lendingMarketControllerProxy.createLendingMarket(
+        targetCurrency,
+        genesisDate,
+      );
+      await lendingMarketControllerProxy.createLendingMarket(
+        targetCurrency,
+        genesisDate,
+      );
 
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
         targetCurrency,
@@ -339,8 +362,11 @@ describe('LendingMarketController', () => {
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
       );
-      for (let i = 0; i < 4; i++) {
-        await lendingMarketControllerProxy.createLendingMarket(currency);
+      for (let i = 0; i < 5; i++) {
+        await lendingMarketControllerProxy.createLendingMarket(
+          currency,
+          genesisDate,
+        );
       }
 
       const marketAddresses =
@@ -764,14 +790,17 @@ describe('LendingMarketController', () => {
       expect(rotatedMaturities[2].toString()).to.equal(
         maturities[3].toString(),
       );
-      expect(rotatedMaturities[3].toString()).to.equal(newMaturity.toString());
+      expect(rotatedMaturities[3].toString()).to.equal(
+        maturities[4].toString(),
+      );
+      expect(rotatedMaturities[4].toString()).to.equal(newMaturity.toString());
 
       // Check market data
       expect(market.ccy).to.equal(targetCurrency);
       expect(market.maturity.toString()).to.equal(
         moment.unix(genesisDate).add(3, 'M').unix().toString(),
       );
-      expect(market.genesisDate).to.equal(genesisDate);
+      expect(market.openingDate).to.equal(genesisDate);
       expect(market.borrowUnitPrice.toString()).to.equal('8880');
       expect(market.lendUnitPrice.toString()).to.equal('8720');
       expect(market.midUnitPrice.toString()).to.equal('8800');
@@ -780,7 +809,7 @@ describe('LendingMarketController', () => {
       expect(rotatedMarket.maturity.toString()).to.equal(
         newMaturity.toString(),
       );
-      expect(rotatedMarket.genesisDate).to.equal(genesisDate);
+      expect(rotatedMarket.openingDate).to.equal(maturities[1]);
       expect(rotatedMarket.borrowUnitPrice.toString()).to.equal('10000');
       expect(rotatedMarket.lendUnitPrice.toString()).to.equal('0');
       expect(rotatedMarket.midUnitPrice.toString()).to.equal('5000');
@@ -1972,7 +2001,7 @@ describe('LendingMarketController', () => {
       });
     });
 
-    describe('Management', async () => {
+    describe('Administrator', async () => {
       it('Pause lending markets', async () => {
         await lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency);
 
@@ -2135,22 +2164,35 @@ describe('LendingMarketController', () => {
               '100000000000000000',
               '8000',
             ),
-        ).to.be.revertedWith('Invalid maturity');
+        ).to.be.revertedWith('Market is not opened');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .createOrder(
+              targetCurrency,
+              newMaturities[newMaturities.length - 1],
+              Side.LEND,
+              '100000000000000000',
+              '8000',
+            ),
+        ).to.be.revertedWith('Market is not opened');
 
         await lendingMarketControllerProxy
           .connect(alice)
           .createOrder(
             targetCurrency,
-            newMaturities[newMaturities.length - 1],
+            newMaturities[newMaturities.length - 2],
             Side.LEND,
             '100000000000000000',
             '8000',
           );
+
         await lendingMarketControllerProxy
           .connect(carol)
           .createOrder(
             targetCurrency,
-            newMaturities[newMaturities.length - 1],
+            newMaturities[newMaturities.length - 2],
             Side.BORROW,
             '100000000000000000',
             '8000',
@@ -2755,6 +2797,112 @@ describe('LendingMarketController', () => {
         expect(bobFunds.workingBorrowOrdersAmount).to.equal('0');
         expect(bobFunds.debtAmount).to.equal('30562500000000000');
         expect(bobFunds.borrowedAmount).to.equal('30000000000000000');
+      });
+
+      it('Execute Itayose call ', async () => {
+        await mockCurrencyController.mock.getCurrencies.returns([
+          targetCurrency,
+        ]);
+        const lendingMarket = lendingMarketProxies[0];
+
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.BORROW,
+            '50000000000000000',
+            '8000',
+          );
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.BORROW,
+            '100000000000000000',
+            '8800',
+          );
+
+        await time.increaseTo(maturities[0].toString());
+        await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+        maturities = await lendingMarketControllerProxy.getMaturities(
+          targetCurrency,
+        );
+
+        await time.increaseTo(maturities[0].sub(172800).toString());
+
+        const orders = [
+          {
+            side: Side.BORROW,
+            unitPrice: '8500',
+            amount: '300000000000000',
+            user: carol,
+          },
+          {
+            side: Side.BORROW,
+            unitPrice: '8000',
+            amount: '100000000000000',
+            user: alice,
+          },
+          {
+            side: Side.LEND,
+            unitPrice: '8300',
+            amount: '200000000000000',
+            user: bob,
+          },
+          {
+            side: Side.LEND,
+            unitPrice: '7800',
+            amount: '300000000000000',
+            user: carol,
+          },
+        ];
+
+        for (const order of orders) {
+          await expect(
+            lendingMarketControllerProxy
+              .connect(order.user)
+              .createPreOrder(
+                targetCurrency,
+                maturities[maturities.length - 1],
+                order.side,
+                order.amount,
+                order.unitPrice,
+              ),
+          ).to.emit(lendingMarket, 'OrderMade');
+        }
+
+        await time.increaseTo(maturities[maturities.length - 2].toString());
+
+        await expect(
+          lendingMarketControllerProxy.executeMultiItayoseCall(
+            [targetCurrency],
+            maturities[maturities.length - 1],
+          ),
+        ).to.emit(lendingMarket, 'ItayoseExecuted');
+
+        const openingPrice = await lendingMarket.getOpeningUnitPrice();
+
+        expect(openingPrice).to.equal('8300');
+
+        const [aliceFV, bobFV, carolFV] = await Promise.all(
+          [alice, bob, carol].map((account) =>
+            lendingMarketControllerProxy.getFutureValue(
+              targetCurrency,
+              maturities[maturities.length - 1],
+              account.address,
+            ),
+          ),
+        );
+
+        expect(aliceFV).to.equal(
+          BigNumber.from('-100000000000000').mul(BP).div(openingPrice),
+        );
+        expect(bobFV).to.equal(
+          BigNumber.from('100000000000000').mul(BP).div(openingPrice),
+        );
+        expect(carolFV).to.equal('0');
       });
     });
   });
