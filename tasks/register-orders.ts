@@ -205,11 +205,6 @@ task('register-orders', 'Registers order data into the selected lending market')
             depositValueInETH,
           );
 
-        console.log(
-          'depositValueInCollateralCurrency:',
-          depositValueInCollateralCurrency.toString(),
-        );
-
         await tokenVault
           .deposit(collateralCurrencyName, depositValueInCollateralCurrency, {
             value:
