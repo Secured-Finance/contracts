@@ -110,7 +110,7 @@ task('register-orders', 'Registers order data into the selected lending market')
           .dp(0);
         const orderUnitPrice = BigNumberJS(dUnitPrice)
           .times(midUnitPrice)
-          .div(20)
+          .div(40)
           .plus(midUnitPrice)
           .dp(0);
         const orderSide = orderUnitPrice.gte(midUnitPrice.toString())
@@ -204,11 +204,6 @@ task('register-orders', 'Registers order data into the selected lending market')
             collateralCurrencyName,
             depositValueInETH,
           );
-
-        console.log(
-          'depositValueInCollateralCurrency:',
-          depositValueInCollateralCurrency.toString(),
-        );
 
         await tokenVault
           .deposit(collateralCurrencyName, depositValueInCollateralCurrency, {
