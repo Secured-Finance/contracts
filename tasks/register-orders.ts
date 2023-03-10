@@ -110,7 +110,7 @@ task('register-orders', 'Registers order data into the selected lending market')
           .dp(0);
         const orderUnitPrice = BigNumberJS(dUnitPrice)
           .times(midUnitPrice)
-          .div(40)
+          .div(20)
           .plus(midUnitPrice)
           .dp(0);
         const orderSide = orderUnitPrice.gte(midUnitPrice.toString())
