@@ -1,10 +1,5 @@
 import { BigNumber } from 'ethers';
-import {
-  hexBTCString,
-  hexETHString,
-  hexFILString,
-  hexUSDCString,
-} from './strings';
+import { hexWFIL, hexEFIL, hexUSDC, hexWBTC, hexWETH } from './strings';
 
 export interface Currency {
   symbol: string;
@@ -26,16 +21,28 @@ export interface MockRate {
   };
 }
 
-const filToETHRate = BigNumber.from('3803677700000000');
-const ethToUSDRate = BigNumber.from('149164000000');
-const btcToETHRate = BigNumber.from('13087292239235700000');
+const wFilToETHRate = BigNumber.from('3803677700000000');
+const eFilToETHRate = BigNumber.from('3803677700000000');
+const wEthToUSDRate = BigNumber.from('149164000000');
+const wBtcToETHRate = BigNumber.from('13087292239235700000');
 const usdcToETHRate = BigNumber.from('670403046311442');
 
 const currencies: Currency[] = [
   {
+    symbol: 'wFIL',
+    mock: 'MockWFIL',
+    key: hexWFIL,
+    env: process.env.TOKEN_WFIL,
+    haircut: 5000,
+    orderFeeRate: 100,
+    autoRollFeeRate: 250,
+    isCollateral: false,
+    args: ['100000000000000000000000000'], // 100,000,000 wFIL
+  },
+  {
     symbol: 'eFIL',
     mock: 'MockEFIL',
-    key: hexFILString,
+    key: hexEFIL,
     env: process.env.TOKEN_EFIL,
     haircut: 5000,
     orderFeeRate: 100,
@@ -46,7 +53,7 @@ const currencies: Currency[] = [
   {
     symbol: 'USDC',
     mock: 'MockUSDC',
-    key: hexUSDCString,
+    key: hexUSDC,
     env: process.env.TOKEN_USDC,
     haircut: 8000,
     orderFeeRate: 100,
@@ -57,7 +64,7 @@ const currencies: Currency[] = [
   {
     symbol: 'WBTC',
     mock: 'MockWBTC',
-    key: hexBTCString,
+    key: hexWBTC,
     env: process.env.TOKEN_WBTC,
     haircut: 8000,
     orderFeeRate: 100,
@@ -68,7 +75,7 @@ const currencies: Currency[] = [
   {
     symbol: 'WETH',
     mock: 'MockWETH9',
-    key: hexETHString,
+    key: hexWETH,
     env: process.env.TOKEN_WETH,
     haircut: 8000,
     orderFeeRate: 100,
@@ -79,22 +86,27 @@ const currencies: Currency[] = [
 ];
 
 const mockRates: MockRate = {
-  [hexFILString]: {
-    name: 'FIL/ETH',
+  [hexWFIL]: {
+    name: 'WFIL/ETH',
     decimals: 18,
-    rate: filToETHRate,
+    rate: wFilToETHRate,
   },
-  [hexETHString]: {
-    name: 'ETH/USD',
+  [hexEFIL]: {
+    name: 'EFIL/ETH',
+    decimals: 18,
+    rate: eFilToETHRate,
+  },
+  [hexWETH]: {
+    name: 'WETH/USD',
     decimals: 8,
-    rate: ethToUSDRate,
+    rate: wEthToUSDRate,
   },
-  [hexBTCString]: {
-    name: 'BTC/ETH',
+  [hexWBTC]: {
+    name: 'WBTC/ETH',
     decimals: 8,
-    rate: btcToETHRate,
+    rate: wBtcToETHRate,
   },
-  [hexUSDCString]: {
+  [hexUSDC]: {
     name: 'USDC/ETH',
     decimals: 6,
     rate: usdcToETHRate,
@@ -102,10 +114,11 @@ const mockRates: MockRate = {
 };
 
 const priceOracles = {
-  [hexFILString]: process.env.FIL_TO_ETH_RATE,
-  [hexETHString]: process.env.ETH_TO_USD_RATE,
-  [hexBTCString]: process.env.BTC_TO_ETH_RATE,
-  [hexUSDCString]: process.env.USDC_TO_ETH_RATE,
+  [hexWFIL]: process.env.WFIL_TO_ETH_RATE,
+  [hexEFIL]: process.env.EFIL_TO_ETH_RATE,
+  [hexWETH]: process.env.WETH_TO_USD_RATE,
+  [hexWBTC]: process.env.WBTC_TO_ETH_RATE,
+  [hexUSDC]: process.env.USDC_TO_ETH_RATE,
 };
 
 export { currencies, mockRates, priceOracles };

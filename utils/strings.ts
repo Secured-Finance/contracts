@@ -6,16 +6,10 @@ import { utils } from 'ethers';
 const toBytes32 = (key) => utils.formatBytes32String(key);
 const fromBytes32 = (key) => utils.parseBytes32String(key);
 
-const hexFILString = toBytes32('FIL');
-const hexETHString = toBytes32('ETH');
-const hexBTCString = toBytes32('BTC');
-const hexUSDCString = toBytes32('USDC');
+const hexWFIL = toBytes32('WFIL');
+const hexEFIL = toBytes32('EFIL');
+const hexWETH = toBytes32('WETH');
+const hexWBTC = toBytes32('WBTC');
+const hexUSDC = toBytes32('USDC');
 
-export {
-  toBytes32,
-  fromBytes32,
-  hexFILString,
-  hexBTCString,
-  hexETHString,
-  hexUSDCString,
-};
+export { toBytes32, fromBytes32, hexWFIL, hexEFIL, hexWBTC, hexWETH, hexUSDC };

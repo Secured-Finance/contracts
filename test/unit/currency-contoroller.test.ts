@@ -51,8 +51,8 @@ describe('CurrencyController', () => {
   });
 
   describe('Initialize', async () => {
-    it('Add ETH as a supported currency', async () => {
-      const currency = ethers.utils.formatBytes32String('ETH');
+    it('Add WETH as a supported currency', async () => {
+      const currency = ethers.utils.formatBytes32String('WETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
@@ -288,7 +288,7 @@ describe('CurrencyController', () => {
 
       await expect(
         currencyControllerProxy.linkPriceFeed(
-          ethers.utils.formatBytes32String('ETH'),
+          ethers.utils.formatBytes32String('WETH'),
           newMockPriceFeed.address,
           true,
         ),
@@ -308,7 +308,7 @@ describe('CurrencyController', () => {
     });
 
     it('Fail to remove an ETH price feed due to invalid PriceFeed', async () => {
-      const dummyCurrency = ethers.utils.formatBytes32String('ETH');
+      const dummyCurrency = ethers.utils.formatBytes32String('WETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);

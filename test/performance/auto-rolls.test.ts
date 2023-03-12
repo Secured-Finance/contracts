@@ -6,7 +6,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexFILString } from '../../utils/strings';
+import { hexEFIL } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -30,7 +30,7 @@ describe('Performance Test: Auto-rolls', async () => {
   let lendingMarketController: Contract;
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
-  let wFILToken: Contract;
+  let eFILToken: Contract;
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
@@ -43,7 +43,7 @@ describe('Performance Test: Auto-rolls', async () => {
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
-      await wFILToken
+      await eFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
     });
@@ -53,13 +53,13 @@ describe('Performance Test: Auto-rolls', async () => {
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    await wFILToken.connect(user).approve(tokenVault.address, '3000000');
-    await tokenVault.connect(user).deposit(hexFILString, '3000000');
+    await eFILToken.connect(user).approve(tokenVault.address, '3000000');
+    await tokenVault.connect(user).deposit(hexEFIL, '3000000');
 
     await lendingMarketController
       .connect(user)
       .createOrder(
-        hexFILString,
+        hexEFIL,
         maturity,
         Side.BORROW,
         '1000000',
@@ -69,7 +69,7 @@ describe('Performance Test: Auto-rolls', async () => {
     await lendingMarketController
       .connect(user)
       .createOrder(
-        hexFILString,
+        hexEFIL,
         maturity,
         Side.LEND,
         '1000000',
@@ -88,10 +88,10 @@ describe('Performance Test: Auto-rolls', async () => {
       tokenVault,
       lendingMarketController,
       wETHToken,
-      wFILToken,
+      eFILToken,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexFILString, wFILToken.address, false);
+    await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
 
     mockUniswapRouter = await ethers
       .getContractFactory('MockUniswapRouter')
@@ -104,8 +104,8 @@ describe('Performance Test: Auto-rolls', async () => {
         factory.deploy(addressResolver.address, wETHToken.address),
       );
 
-    await mockUniswapRouter.setToken(hexFILString, wFILToken.address);
-    await mockUniswapQuoter.setToken(hexFILString, wFILToken.address);
+    await mockUniswapRouter.setToken(hexEFIL, eFILToken.address);
+    await mockUniswapQuoter.setToken(hexEFIL, eFILToken.address);
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
@@ -115,28 +115,22 @@ describe('Performance Test: Auto-rolls', async () => {
       mockUniswapQuoter.address,
     );
 
-    await tokenVault.updateCurrency(hexFILString, true);
+    await tokenVault.updateCurrency(hexEFIL, true);
 
     // Deploy active Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(
-        hexFILString,
-        genesisDate,
-      );
+      await lendingMarketController.createLendingMarket(hexEFIL, genesisDate);
     }
-    maturities = await lendingMarketController.getMaturities(hexFILString);
+    maturities = await lendingMarketController.getMaturities(hexEFIL);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createLendingMarket(
-      hexFILString,
-      maturities[0],
-    );
+    await lendingMarketController.createLendingMarket(hexEFIL, maturities[0]);
   });
 
   beforeEach('Reset contract instances', async () => {
-    maturities = await lendingMarketController.getMaturities(hexFILString);
+    maturities = await lendingMarketController.getMaturities(hexEFIL);
     lendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexFILString)
+      .getLendingMarkets(hexEFIL)
       .then((addresses) =>
         Promise.all(
           addresses.map((address) =>
@@ -165,28 +159,28 @@ describe('Performance Test: Auto-rolls', async () => {
 
     before(async () => {
       [alice, bob, carol, dave, ellen] = await getUsers(5);
-      await wFILToken
+      await eFILToken
         .connect(alice)
         .approve(tokenVault.address, initialFILBalance);
-      await wFILToken
+      await eFILToken
         .connect(bob)
         .approve(tokenVault.address, initialFILBalance);
-      await wFILToken
+      await eFILToken
         .connect(dave)
         .approve(tokenVault.address, initialFILBalance);
-      await wFILToken
+      await eFILToken
         .connect(ellen)
         .approve(tokenVault.address, initialFILBalance);
     });
 
     it('Fill an order', async () => {
-      await tokenVault.connect(bob).deposit(hexFILString, orderAmount.mul(2));
+      await tokenVault.connect(bob).deposit(hexEFIL, orderAmount.mul(2));
 
       await expect(
         lendingMarketController
           .connect(alice)
           .depositAndCreateOrder(
-            hexFILString,
+            hexEFIL,
             maturities[0],
             Side.LEND,
             orderAmount,
@@ -197,18 +191,12 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(
-            hexFILString,
-            maturities[0],
-            Side.BORROW,
-            orderAmount,
-            0,
-          ),
+          .createOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexFILString,
+        hexEFIL,
         maturities[0],
         alice.address,
       );
@@ -219,12 +207,12 @@ describe('Performance Test: Auto-rolls', async () => {
     for (let i = 0; i < 800; i++) {
       it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
         const aliceFV0Before = await lendingMarketController.getFutureValue(
-          hexFILString,
+          hexEFIL,
           maturities[0],
           alice.address,
         );
         const aliceFV1Before = await lendingMarketController.getFutureValue(
-          hexFILString,
+          hexEFIL,
           maturities[1],
           alice.address,
         );
@@ -234,7 +222,7 @@ describe('Performance Test: Auto-rolls', async () => {
         await time.increaseTo(maturities[0].toString());
         await lendingMarketController
           .connect(owner)
-          .rotateLendingMarkets(hexFILString);
+          .rotateLendingMarkets(hexEFIL);
         await lendingMarkets[lendingMarkets.length - 1]
           .connect(owner)
           .executeItayoseCall();
@@ -242,16 +230,16 @@ describe('Performance Test: Auto-rolls', async () => {
         // Check present value
         const aliceTotalPVAfter =
           await lendingMarketController.getTotalPresentValue(
-            hexFILString,
+            hexEFIL,
             alice.address,
           );
         const alicePV0After = await lendingMarketController.getPresentValue(
-          hexFILString,
+          hexEFIL,
           maturities[0],
           alice.address,
         );
         const alicePV1After = await lendingMarketController.getPresentValue(
-          hexFILString,
+          hexEFIL,
           maturities[1],
           alice.address,
         );
@@ -262,11 +250,11 @@ describe('Performance Test: Auto-rolls', async () => {
 
         // Check future value
         const { lendingCompoundFactor: lendingCF0 } =
-          await genesisValueVault.getAutoRollLog(hexFILString, maturities[0]);
+          await genesisValueVault.getAutoRollLog(hexEFIL, maturities[0]);
         const { lendingCompoundFactor: lendingCF1 } =
-          await genesisValueVault.getAutoRollLog(hexFILString, maturities[1]);
+          await genesisValueVault.getAutoRollLog(hexEFIL, maturities[1]);
         const aliceFV1After = await lendingMarketController.getFutureValue(
-          hexFILString,
+          hexEFIL,
           maturities[1],
           alice.address,
         );
@@ -287,13 +275,13 @@ describe('Performance Test: Auto-rolls', async () => {
     }
 
     it('Fill an order', async () => {
-      await tokenVault.connect(dave).deposit(hexFILString, orderAmount.mul(2));
+      await tokenVault.connect(dave).deposit(hexEFIL, orderAmount.mul(2));
 
       await expect(
         lendingMarketController
           .connect(ellen)
           .depositAndCreateOrder(
-            hexFILString,
+            hexEFIL,
             maturities[0],
             Side.LEND,
             orderAmount,
@@ -304,18 +292,12 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(dave)
-          .createOrder(
-            hexFILString,
-            maturities[0],
-            Side.BORROW,
-            orderAmount,
-            0,
-          ),
+          .createOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
       const ellenActualFV = await lendingMarketController.getFutureValue(
-        hexFILString,
+        hexEFIL,
         maturities[0],
         ellen.address,
       );

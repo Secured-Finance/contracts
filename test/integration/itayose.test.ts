@@ -5,7 +5,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexETHString } from '../../utils/strings';
+import { hexWETH } from '../../utils/strings';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
@@ -24,7 +24,7 @@ describe('Integration Test: Itayose', async () => {
   let lendingMarketController: Contract;
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
-  let wFILToken: Contract;
+  let eFILToken: Contract;
 
   let genesisDate: number;
   let maturities: BigNumber[];
@@ -35,7 +35,7 @@ describe('Integration Test: Itayose', async () => {
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
-      await wFILToken
+      await eFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
     });
@@ -45,14 +45,14 @@ describe('Integration Test: Itayose', async () => {
     maturity: BigNumber,
     unitPrice: string,
   ) => {
-    await tokenVault.connect(user).deposit(hexETHString, '3000000', {
+    await tokenVault.connect(user).deposit(hexWETH, '3000000', {
       value: '3000000',
     });
 
     await lendingMarketController
       .connect(user)
       .createOrder(
-        hexETHString,
+        hexWETH,
         maturity,
         Side.BORROW,
         '1000000',
@@ -62,7 +62,7 @@ describe('Integration Test: Itayose', async () => {
     await lendingMarketController
       .connect(user)
       .createOrder(
-        hexETHString,
+        hexWETH,
         maturity,
         Side.LEND,
         '1000000',
@@ -71,10 +71,10 @@ describe('Integration Test: Itayose', async () => {
   };
 
   const resetContractInstances = async () => {
-    maturities = await lendingMarketController.getMaturities(hexETHString);
+    maturities = await lendingMarketController.getMaturities(hexWETH);
     [lendingMarkets, futureValueVaults] = await Promise.all([
       lendingMarketController
-        .getLendingMarkets(hexETHString)
+        .getLendingMarkets(hexWETH)
         .then((addresses) =>
           Promise.all(
             addresses.map((address) =>
@@ -85,7 +85,7 @@ describe('Integration Test: Itayose', async () => {
       Promise.all(
         maturities.map((maturity) =>
           lendingMarketController
-            .getFutureValueVault(hexETHString, maturity)
+            .getFutureValueVault(hexWETH, maturity)
             .then((address) =>
               ethers.getContractAt('FutureValueVault', address),
             ),
@@ -103,26 +103,20 @@ describe('Integration Test: Itayose', async () => {
       tokenVault,
       lendingMarketController,
       wETHToken,
-      wFILToken,
+      eFILToken,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexETHString, wETHToken.address, true);
+    await tokenVault.registerCurrency(hexWETH, wETHToken.address, true);
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(
-        hexETHString,
-        genesisDate,
-      );
+      await lendingMarketController.createLendingMarket(hexWETH, genesisDate);
     }
 
-    maturities = await lendingMarketController.getMaturities(hexETHString);
+    maturities = await lendingMarketController.getMaturities(hexWETH);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createLendingMarket(
-      hexETHString,
-      maturities[0],
-    );
+    await lendingMarketController.createLendingMarket(hexWETH, maturities[0]);
   });
 
   describe('Execute Itayose on the single market without pre-order', async () => {
@@ -134,21 +128,19 @@ describe('Integration Test: Itayose', async () => {
     });
 
     it('Fill an order', async () => {
-      await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
+      await tokenVault.connect(bob).deposit(hexWETH, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
 
-      await tokenVault
-        .connect(carol)
-        .deposit(hexETHString, orderAmount.mul(10), {
-          value: orderAmount.mul(10),
-        });
+      await tokenVault.connect(carol).deposit(hexWETH, orderAmount.mul(10), {
+        value: orderAmount.mul(10),
+      });
 
       await expect(
         lendingMarketController
           .connect(alice)
           .depositAndCreateOrder(
-            hexETHString,
+            hexWETH,
             maturities[0],
             Side.LEND,
             orderAmount,
@@ -162,13 +154,7 @@ describe('Integration Test: Itayose', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(
-            hexETHString,
-            maturities[0],
-            Side.BORROW,
-            orderAmount,
-            0,
-          ),
+          .createOrder(hexWETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
@@ -186,7 +172,7 @@ describe('Integration Test: Itayose', async () => {
       await lendingMarketController
         .connect(carol)
         .depositAndCreateOrder(
-          hexETHString,
+          hexWETH,
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
@@ -198,7 +184,7 @@ describe('Integration Test: Itayose', async () => {
       await lendingMarketController
         .connect(carol)
         .createOrder(
-          hexETHString,
+          hexWETH,
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
@@ -209,9 +195,7 @@ describe('Integration Test: Itayose', async () => {
       await createSampleETHOrders(owner, maturities[1], '8000');
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketController
-          .connect(owner)
-          .rotateLendingMarkets(hexETHString),
+        lendingMarketController.connect(owner).rotateLendingMarkets(hexWETH),
       ).to.emit(lendingMarketController, 'LendingMarketsRotated');
     });
 
@@ -240,21 +224,19 @@ describe('Integration Test: Itayose', async () => {
     });
 
     it('Fill an order', async () => {
-      await tokenVault.connect(bob).deposit(hexETHString, orderAmount.mul(2), {
+      await tokenVault.connect(bob).deposit(hexWETH, orderAmount.mul(2), {
         value: orderAmount.mul(2),
       });
 
-      await tokenVault
-        .connect(carol)
-        .deposit(hexETHString, orderAmount.mul(10), {
-          value: orderAmount.mul(10),
-        });
+      await tokenVault.connect(carol).deposit(hexWETH, orderAmount.mul(10), {
+        value: orderAmount.mul(10),
+      });
 
       await expect(
         lendingMarketController
           .connect(alice)
           .depositAndCreateOrder(
-            hexETHString,
+            hexWETH,
             maturities[0],
             Side.LEND,
             orderAmount,
@@ -268,13 +250,7 @@ describe('Integration Test: Itayose', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(
-            hexETHString,
-            maturities[0],
-            Side.BORROW,
-            orderAmount,
-            0,
-          ),
+          .createOrder(hexWETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
@@ -292,18 +268,16 @@ describe('Integration Test: Itayose', async () => {
       // Move to 48 hours before maturity.
       await time.increaseTo(maturities[0].sub('172800').toString());
 
-      await tokenVault
-        .connect(ellen)
-        .deposit(hexETHString, orderAmount.mul(4), {
-          value: orderAmount.mul(4),
-        });
+      await tokenVault.connect(ellen).deposit(hexWETH, orderAmount.mul(4), {
+        value: orderAmount.mul(4),
+      });
 
       const maturity = maturities[maturities.length - 1];
 
       await lendingMarketController
         .connect(dave)
         .depositAndCreatePreOrder(
-          hexETHString,
+          hexWETH,
           maturity,
           Side.LEND,
           orderAmount,
@@ -314,7 +288,7 @@ describe('Integration Test: Itayose', async () => {
       await lendingMarketController
         .connect(dave)
         .depositAndCreatePreOrder(
-          hexETHString,
+          hexWETH,
           maturity,
           Side.LEND,
           orderAmount.div(2),
@@ -324,18 +298,18 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(ellen)
-        .createPreOrder(hexETHString, maturity, Side.BORROW, orderAmount, 7300);
+        .createPreOrder(hexWETH, maturity, Side.BORROW, orderAmount, 7300);
 
       await lendingMarketController
         .connect(ellen)
-        .createPreOrder(hexETHString, maturity, Side.BORROW, orderAmount, 7500);
+        .createPreOrder(hexWETH, maturity, Side.BORROW, orderAmount, 7500);
     });
 
     it('Execute auto-roll', async () => {
       await lendingMarketController
         .connect(carol)
         .depositAndCreateOrder(
-          hexETHString,
+          hexWETH,
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
@@ -347,7 +321,7 @@ describe('Integration Test: Itayose', async () => {
       await lendingMarketController
         .connect(carol)
         .createOrder(
-          hexETHString,
+          hexWETH,
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
@@ -358,9 +332,7 @@ describe('Integration Test: Itayose', async () => {
       await createSampleETHOrders(owner, maturities[1], '8000');
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketController
-          .connect(owner)
-          .rotateLendingMarkets(hexETHString),
+        lendingMarketController.connect(owner).rotateLendingMarkets(hexWETH),
       ).to.emit(lendingMarketController, 'LendingMarketsRotated');
     });
 
