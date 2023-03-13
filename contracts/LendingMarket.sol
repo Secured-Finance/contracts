@@ -548,6 +548,28 @@ contract LendingMarket is
     }
 
     /**
+     * @notice Unwind orders using future value amount.
+     * @param _side Order position type, Borrow or Lend
+     * @param _user User's address
+     * @param _futureValue Amount of future value unwound
+     */
+    function unwindOrder(
+        ProtocolTypes.Side _side,
+        address _user,
+        uint256 _futureValue
+    )
+        external
+        override
+        whenNotPaused
+        onlyAcceptedContracts
+        ifOpened
+        returns (uint256 filledAmount, uint256 filledFutureValue)
+    {
+        require(_futureValue > 0, "Can't place empty future value amount");
+        return _unwindOrder(_side, _user, _futureValue);
+    }
+
+    /**
      * @notice Executes Itayose to aggregate pre-orders and determine the opening unit price.
      * After this action, the market opens.
      * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
@@ -700,6 +722,43 @@ contract LendingMarket is
         if (remainingAmount > 0 && _unitPrice != 0 && !_ignoreRemainingAmount) {
             // Make a new order for the remaining amount of input
             _makeOrder(_side, _user, remainingAmount, _unitPrice, false, 0);
+        }
+    }
+
+    function _unwindOrder(
+        ProtocolTypes.Side _side,
+        address _user,
+        uint256 _futureValue
+    ) private returns (uint256 filledAmount, uint256 filledFutureValue) {
+        RemainingOrder memory remainingOrder;
+
+        (remainingOrder, filledAmount, filledFutureValue) = OrderBookLogic.dropOrders(
+            _side,
+            _futureValue
+        );
+
+        emit OrdersTaken(
+            _user,
+            _side,
+            Storage.slot().ccy,
+            Storage.slot().maturity,
+            filledAmount,
+            0,
+            filledFutureValue
+        );
+
+        if (remainingOrder.amount > 0) {
+            // Make a new order for the remaining amount of a partially filled order
+            _makeOrder(
+                _side == ProtocolTypes.Side.BORROW
+                    ? ProtocolTypes.Side.LEND
+                    : ProtocolTypes.Side.BORROW,
+                remainingOrder.maker,
+                remainingOrder.amount,
+                remainingOrder.unitPrice,
+                true,
+                remainingOrder.orderId
+            );
         }
     }
 }

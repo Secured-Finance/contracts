@@ -4,8 +4,13 @@ import { artifacts } from 'hardhat';
 import {
   borrowingLimitOrders,
   borrowingMarketOrders,
+  borrowingUnwindOrders,
 } from './data/borrowing-orders';
-import { lendingLimitOrders, lendingMarketOrders } from './data/lending-orders';
+import {
+  lendingLimitOrders,
+  lendingMarketOrders,
+  lendingUnwindOrders,
+} from './data/lending-orders';
 
 const OrderStatisticsTree = artifacts.require(
   'OrderStatisticsTreeContract.sol',
@@ -31,11 +36,24 @@ export interface Condition {
   }[];
 }
 
+export interface UnwindCondition {
+  title: string;
+  orders: Order[];
+  inputs: {
+    title: string;
+    droppedAmount: number;
+    limitFutureValue: number;
+    filledAmount: number;
+    filledFutureValue: number;
+  }[];
+}
+
 interface Test {
   label: string;
   method: string;
   marketOrderConditions: Condition[];
   limitOrderConditions: Condition[];
+  lendingUnwindOrders: UnwindCondition[];
 }
 
 describe('OrderStatisticsTree - drop values', () => {
@@ -45,12 +63,14 @@ describe('OrderStatisticsTree - drop values', () => {
       method: 'dropValuesFromLast',
       marketOrderConditions: lendingMarketOrders,
       limitOrderConditions: lendingLimitOrders,
+      lendingUnwindOrders: lendingUnwindOrders,
     },
     {
       label: 'Borrowing',
       method: 'dropValuesFromFirst',
       marketOrderConditions: borrowingMarketOrders,
       limitOrderConditions: borrowingLimitOrders,
+      lendingUnwindOrders: borrowingUnwindOrders,
     },
   ];
 
@@ -75,7 +95,7 @@ describe('OrderStatisticsTree - drop values', () => {
                 }
                 const totalAmountBefore = await getTotalAmount('<Before>');
 
-                await ost[test.method](input.targetAmount, 0);
+                await ost[test.method](input.targetAmount, 0, 0);
                 const totalAmountAfter = await getTotalAmount('<After>');
 
                 expect(
@@ -102,10 +122,10 @@ describe('OrderStatisticsTree - drop values', () => {
                 }
                 await getTotalAmount('<Before>');
 
-                await ost[test.method](input.targetAmount / 2, 0);
+                await ost[test.method](input.targetAmount / 2, 0, 0);
                 await getTotalAmount('<After data is dropped 1>');
 
-                await ost[test.method](input.targetAmount / 2, 0);
+                await ost[test.method](input.targetAmount / 2, 0, 0);
                 await getTotalAmount('<After data is dropped 2>');
               });
             }
@@ -128,7 +148,7 @@ describe('OrderStatisticsTree - drop values', () => {
                 }
                 const totalAmountBefore = await getTotalAmount('<Before>');
 
-                await ost[test.method](input.targetAmount, 0);
+                await ost[test.method](input.targetAmount, 0, 0);
                 const totalAmountAfter1 = await getTotalAmount(
                   '<After data is dropped>',
                 );
@@ -149,7 +169,7 @@ describe('OrderStatisticsTree - drop values', () => {
                   '<After data is inserted again>',
                 );
 
-                await ost[test.method](input.targetAmount, 0);
+                await ost[test.method](input.targetAmount, 0, 0);
                 const totalAmountAfter3 = await getTotalAmount(
                   '<After data is dropped again>',
                 );
@@ -185,6 +205,7 @@ describe('OrderStatisticsTree - drop values', () => {
                 await ost[test.method](
                   input.targetAmount,
                   input?.limitValue || 0,
+                  0,
                 );
                 const totalAmountAfter = await getTotalAmount('<After>');
 
@@ -192,6 +213,46 @@ describe('OrderStatisticsTree - drop values', () => {
                   totalAmountBefore?.sub(totalAmountAfter).toNumber(),
                 ).equal(input.droppedAmount);
                 expect(await ost.valueExists(input.droppedValue)).to.be.false;
+              });
+            }
+          });
+        }
+      });
+    });
+
+    describe(`${test.label} unwind orders`, async () => {
+      describe('Drop nodes from the tree', async () => {
+        for (const condition of test.lendingUnwindOrders) {
+          describe(condition.title, async () => {
+            for (const input of condition.inputs) {
+              const title = `${input.title}: Unwind future value ${input?.limitFutureValue}`;
+
+              it(title, async () => {
+                for (const order of condition.orders) {
+                  await ost.insertAmountValue(
+                    order.unitPrice,
+                    order.orderId,
+                    constants.AddressZero,
+                    order.amount,
+                  );
+                }
+                const totalAmountBefore = await getTotalAmount('<Before>');
+
+                const { droppedAmountInPV, droppedAmountInFV } = await ost[
+                  test.method
+                ](0, 0, input.limitFutureValue).then(
+                  ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+                );
+
+                const totalAmountAfter = await getTotalAmount('<After>');
+
+                expect(droppedAmountInPV.toNumber()).equal(input.filledAmount);
+                expect(droppedAmountInFV.toNumber()).equal(
+                  input.filledFutureValue,
+                );
+                expect(
+                  totalAmountBefore?.sub(totalAmountAfter).toNumber(),
+                ).equal(input.droppedAmount);
               });
             }
           });
@@ -250,7 +311,7 @@ describe('OrderStatisticsTree - drop values', () => {
           const totalAmountBefore = await getTotalAmount('<Before>');
 
           const { remainingOrderAmountInPV } = await ost
-            .dropValuesFromFirst(test.estimatedPVAmount, 0)
+            .dropValuesFromFirst(test.estimatedPVAmount, 0, 0)
             .then(
               ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
             );
@@ -315,7 +376,7 @@ describe('OrderStatisticsTree - drop values', () => {
           const totalAmountBefore = await getTotalAmount('<Before>');
 
           const { remainingOrderAmountInPV } = await ost
-            .dropValuesFromLast(test.estimatedPVAmount, 0)
+            .dropValuesFromLast(test.estimatedPVAmount, 0, 0)
             .then(
               ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
             );

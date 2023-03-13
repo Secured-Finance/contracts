@@ -506,45 +506,71 @@ library OrderStatisticsTreeLib {
     function dropLeft(
         Tree storage self,
         uint256 amount,
-        uint256 limitValue
+        uint256 limitValue,
+        uint256 limitFutureValue
     )
         internal
         returns (
+            uint256 totalFilledAmount,
             uint256 filledFutureValue,
             uint256 remainingAmount,
             RemainingOrder memory remainingOrder
         )
     {
-        require(amount != EMPTY, "OrderStatisticsTree(408) - Amount to drop cannot be zero");
         uint256 value;
         uint256 cursor = first(self);
-        uint256 lastNode = last(self);
         uint256 cursorNodeAmount = 0;
         uint256 totalAmount = 0;
 
         require(cursor <= limitValue || limitValue == 0, "Insufficient limit value");
 
         // Find a node whose total amount is over the amount of the argument.
+        uint256 amountDiff;
+        uint256 futureValueDiff;
         while (
-            totalAmount < amount && cursor != EMPTY && (limitValue == 0 || cursor <= limitValue)
+            (totalAmount < amount || amount == EMPTY) &&
+            (filledFutureValue < limitFutureValue || limitFutureValue == EMPTY) &&
+            cursor != EMPTY &&
+            (cursor <= limitValue || limitValue == EMPTY)
         ) {
             cursorNodeAmount = self.nodes[cursor].orderTotalAmount;
             totalAmount += cursorNodeAmount;
             value = cursor;
 
-            uint256 filledAmount = cursorNodeAmount -
-                (totalAmount > amount ? totalAmount - amount : 0);
-            filledFutureValue += _calculateFutureValue(cursor, filledAmount);
+            filledFutureValue += _calculateFutureValue(cursor, cursorNodeAmount);
+            totalFilledAmount += cursorNodeAmount;
+
+            if (totalAmount > amount && amount != EMPTY) {
+                amountDiff = totalAmount - amount;
+                futureValueDiff = _calculateFutureValue(cursor, amountDiff);
+            } else if (filledFutureValue > limitFutureValue && limitFutureValue != EMPTY) {
+                futureValueDiff = filledFutureValue - limitFutureValue;
+                amountDiff = _calculatePresentValue(cursor, futureValueDiff);
+            }
 
             cursor = next(self, cursor);
         }
 
+        if (amountDiff > 0) {
+            totalFilledAmount -= amountDiff;
+        }
+        if (futureValueDiff > 0) {
+            filledFutureValue -= futureValueDiff;
+        }
+
         if (totalAmount > 0) {
-            if (totalAmount > amount) {
+            if (amountDiff > 0) {
                 cursor = value;
                 // Update order ids in the node.
-                uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
-                remainingOrder = fillOrders(self, cursor, filledNodeAmount);
+                remainingOrder = fillOrders(self, cursor, cursorNodeAmount - amountDiff);
+            } else if (futureValueDiff > 0) {
+                cursor = value;
+                // Update order ids in the node.
+                remainingOrder = fillOrders(
+                    self,
+                    cursor,
+                    cursorNodeAmount - _calculatePresentValue(cursor, futureValueDiff)
+                );
             }
 
             self.nodes[cursor].left = 0;
@@ -570,69 +596,88 @@ library OrderStatisticsTreeLib {
             remainingAmount = amount - totalAmount;
         }
 
+        uint256 lastNode = last(self);
+
         if (lastNode == value && self.nodes[lastNode].orderTotalAmount == 0) {
             // The case that all node is dropped.
             self.root = EMPTY;
-        } else if (value > self.root || (value == self.root && amount >= totalAmount)) {
+        } else if (value > self.root || (value == self.root && totalFilledAmount >= totalAmount)) {
             // The case that the root node is dropped
             self.root = cursor;
             self.nodes[cursor].parent = 0;
         }
 
-        if (self.nodes[self.root].left == 0 && self.nodes[self.root].right != 0) {
-            if (self.nodes[self.nodes[self.root].right].left != 0) {
-                rotateRight(self, self.nodes[self.root].right);
-            }
-            rotateLeft(self, self.root);
-        }
-
-        if (self.nodes[self.root].red) {
-            self.nodes[self.root].red = false;
-        }
+        rotateTreeToLeft(self);
     }
 
     function dropRight(
         Tree storage self,
         uint256 amount,
-        uint256 limitValue
+        uint256 limitValue,
+        uint256 limitFutureValue
     )
         internal
         returns (
+            uint256 totalFilledAmount,
             uint256 filledFutureValue,
             uint256 remainingAmount,
             RemainingOrder memory remainingOrder
         )
     {
-        require(amount != EMPTY, "OrderStatisticsTree(408) - Amount to drop cannot be zero");
         uint256 value;
         uint256 cursor = last(self);
-        uint256 firstNode = first(self);
         uint256 cursorNodeAmount = 0;
         uint256 totalAmount = 0;
 
         require(cursor >= limitValue || limitValue == 0, "Insufficient limit value");
 
         // Find a node whose total amount is over the amount of the argument.
+        uint256 amountDiff;
+        uint256 futureValueDiff;
         while (
-            totalAmount < amount && cursor != EMPTY && (limitValue == 0 || cursor >= limitValue)
+            (totalAmount < amount || amount == EMPTY) &&
+            (filledFutureValue < limitFutureValue || limitFutureValue == EMPTY) &&
+            cursor != EMPTY &&
+            (cursor >= limitValue || limitValue == EMPTY)
         ) {
             cursorNodeAmount = self.nodes[cursor].orderTotalAmount;
             totalAmount += cursorNodeAmount;
             value = cursor;
 
-            uint256 filledAmount = cursorNodeAmount -
-                (totalAmount > amount ? totalAmount - amount : 0);
-            filledFutureValue += _calculateFutureValue(cursor, filledAmount);
+            filledFutureValue += _calculateFutureValue(cursor, cursorNodeAmount);
+            totalFilledAmount += cursorNodeAmount;
+
+            if (totalAmount > amount && amount != EMPTY) {
+                amountDiff = totalAmount - amount;
+                futureValueDiff = _calculateFutureValue(cursor, amountDiff);
+            } else if (filledFutureValue > limitFutureValue && limitFutureValue != EMPTY) {
+                futureValueDiff = filledFutureValue - limitFutureValue;
+                amountDiff = _calculatePresentValue(cursor, futureValueDiff);
+            }
 
             cursor = prev(self, cursor);
         }
 
+        if (amountDiff > 0) {
+            totalFilledAmount -= amountDiff;
+        }
+        if (futureValueDiff > 0) {
+            filledFutureValue -= futureValueDiff;
+        }
+
         if (totalAmount > 0) {
-            if (totalAmount > amount) {
+            if (amountDiff > 0) {
                 cursor = value;
                 // Update order ids in the node.
-                uint256 filledNodeAmount = cursorNodeAmount - (totalAmount - amount);
-                remainingOrder = fillOrders(self, cursor, filledNodeAmount);
+                remainingOrder = fillOrders(self, cursor, cursorNodeAmount - amountDiff);
+            } else if (futureValueDiff > 0) {
+                cursor = value;
+                // Update order ids in the node.
+                remainingOrder = fillOrders(
+                    self,
+                    cursor,
+                    cursorNodeAmount - _calculatePresentValue(cursor, futureValueDiff)
+                );
             }
 
             self.nodes[cursor].right = 0;
@@ -658,15 +703,34 @@ library OrderStatisticsTreeLib {
             remainingAmount = amount - totalAmount;
         }
 
+        uint256 firstNode = first(self);
+
         if (firstNode == value && self.nodes[firstNode].orderTotalAmount == 0) {
             // The case that all node is dropped.
             self.root = EMPTY;
-        } else if (value < self.root || (value == self.root && amount >= totalAmount)) {
+        } else if (value < self.root || (value == self.root && totalFilledAmount >= totalAmount)) {
             // The case that the root node is dropped
             self.root = cursor;
             self.nodes[cursor].parent = 0;
         }
 
+        rotateTreeToRight(self);
+    }
+
+    function rotateTreeToLeft(Tree storage self) internal {
+        if (self.nodes[self.root].left == 0 && self.nodes[self.root].right != 0) {
+            if (self.nodes[self.nodes[self.root].right].left != 0) {
+                rotateRight(self, self.nodes[self.root].right);
+            }
+            rotateLeft(self, self.root);
+        }
+
+        if (self.nodes[self.root].red) {
+            self.nodes[self.root].red = false;
+        }
+    }
+
+    function rotateTreeToRight(Tree storage self) internal {
         if (self.nodes[self.root].right == 0 && self.nodes[self.root].left != 0) {
             if (self.nodes[self.nodes[self.root].left].right != 0) {
                 rotateLeft(self, self.nodes[self.root].left);
@@ -987,5 +1051,13 @@ library OrderStatisticsTreeLib {
         returns (uint256)
     {
         return (amount * ProtocolTypes.PRICE_DIGIT).div(unitPrice);
+    }
+
+    function _calculatePresentValue(uint256 unitPrice, uint256 amount)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (amount * unitPrice).div(ProtocolTypes.PRICE_DIGIT);
     }
 }

@@ -1647,6 +1647,262 @@ describe('LendingMarketController', () => {
       });
     });
 
+    describe('Unwind', async () => {
+      it('Unwind a lending order', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindOrder(targetCurrency, maturities[0]),
+        )
+          .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+          .withArgs(
+            alice.address,
+            targetCurrency,
+            Side.BORROW,
+            maturities[0],
+            '10000000000000000',
+            '0',
+            '12500000000000000',
+          );
+
+        const aliveFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+        expect(aliveFV).to.equal('0');
+      });
+
+      it('Unwind a borrowing order', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '20000000000000000',
+              '8200',
+            ),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '5000000000000000',
+              '8000',
+            ),
+        ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '5000000000000000',
+              '8000',
+            ),
+        ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindOrder(targetCurrency, maturities[0]),
+        )
+          .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+          .withArgs(
+            alice.address,
+            targetCurrency,
+            Side.LEND,
+            maturities[0],
+            '10250000000000000',
+            '0',
+            '12500000000000000',
+          );
+
+        const aliveFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+        expect(aliveFV).to.equal('0');
+      });
+
+      it("Unwind a order at the order book that don't has enough orders", async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '9000000000000000',
+              '8000',
+            ),
+        ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindOrder(targetCurrency, maturities[0]),
+        )
+          .to.emit(lendingMarketControllerProxy, 'OrderFilled')
+          .withArgs(
+            alice.address,
+            targetCurrency,
+            Side.BORROW,
+            maturities[0],
+            '9000000000000000',
+            '0',
+            '11250000000000000',
+          );
+
+        const aliveFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+        expect(aliveFV).to.equal('1250000000000000');
+      });
+
+      it("Unwind a order ta the order book that don't has any orders", async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindOrder(targetCurrency, maturities[0]),
+        ).to.not.emit(lendingMarketControllerProxy, 'OrderFilled');
+
+        const aliveFV = await lendingMarketControllerProxy.getFutureValue(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+
+        expect(aliveFV).to.equal('-12500000000000000');
+      });
+
+      it('Fail to execute unwinding due to no future values user has', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindOrder(targetCurrency, maturities[0]),
+        ).to.be.revertedWith('Future Value is zero');
+      });
+
+      it('Fail to execute unwinding due to invalid maturity', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindOrder(targetCurrency, '1'),
+        ).to.be.revertedWith('Invalid maturity');
+      });
+    });
+
     describe('Failure', async () => {
       it('Fail to create an order due to insufficient collateral', async () => {
         await mockTokenVault.mock.isCovered.returns(false);
