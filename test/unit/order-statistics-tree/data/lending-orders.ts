@@ -1,4 +1,4 @@
-import { Condition } from '../drop.test';
+import { Condition, UnwindCondition } from '../drop.test';
 
 const lendingMarketOrders: Condition[] = [
   {
@@ -408,4 +408,158 @@ const lendingLimitOrders: Condition[] = [
   },
 ];
 
-export { lendingMarketOrders, lendingLimitOrders };
+const lendingUnwindOrders: UnwindCondition[] = [
+  {
+    title: '1 nodes in the tree',
+    orders: [{ unitPrice: 8000, orderId: 1, amount: 200000000 }],
+    inputs: [
+      {
+        title: 'Fill 1 node partially',
+        limitFutureValue: 125000000,
+        droppedAmount: 200000000,
+        filledAmount: 100000000,
+        filledFutureValue: 125000000,
+      },
+      {
+        title: 'Drop all nodes',
+        limitFutureValue: 250000000,
+        droppedAmount: 200000000,
+        filledAmount: 200000000,
+        filledFutureValue: 250000000,
+      },
+      {
+        title: 'Drop all nodes without limits and amounts',
+        limitFutureValue: 0,
+        droppedAmount: 200000000,
+        filledAmount: 200000000,
+        filledFutureValue: 250000000,
+      },
+      {
+        title: 'Drop all nodes by an exceeding amount',
+        limitFutureValue: 300000000,
+        droppedAmount: 200000000,
+        filledAmount: 200000000,
+        filledFutureValue: 250000000,
+      },
+    ],
+  },
+  {
+    title: '2 nodes in the tree',
+    orders: [
+      { unitPrice: 8000, orderId: 1, amount: 200000000 },
+      { unitPrice: 7900, orderId: 2, amount: 790000000 },
+    ],
+    inputs: [
+      {
+        title: 'Fill 1 node partially',
+        limitFutureValue: 125000000,
+        droppedAmount: 200000000,
+        filledAmount: 100000000,
+        filledFutureValue: 125000000,
+      },
+      {
+        title: 'Drop 1 node',
+        limitFutureValue: 250000000,
+        droppedAmount: 200000000,
+        filledAmount: 200000000,
+        filledFutureValue: 250000000,
+      },
+      {
+        title: 'Drop 1 node, Fill 1 node partially',
+        limitFutureValue: 350000000,
+        droppedAmount: 990000000,
+        filledAmount: 279000000,
+        filledFutureValue: 350000000,
+      },
+      {
+        title: 'Drop all nodes',
+        limitFutureValue: 1250000000,
+        droppedAmount: 990000000,
+        filledAmount: 990000000,
+        filledFutureValue: 1250000000,
+      },
+      {
+        title: 'Drop all nodes without limits and amounts',
+        limitFutureValue: 0,
+        droppedAmount: 990000000,
+        filledAmount: 990000000,
+        filledFutureValue: 1250000000,
+      },
+      {
+        title: 'Drop all nodes by an exceeding amount',
+        limitFutureValue: 2000000000,
+        droppedAmount: 990000000,
+        filledAmount: 990000000,
+        filledFutureValue: 1250000000,
+      },
+    ],
+  },
+  {
+    title: '3 nodes in the tree',
+    orders: [
+      { unitPrice: 8000, orderId: 1, amount: 200000000 },
+      { unitPrice: 7900, orderId: 2, amount: 790000000 },
+      { unitPrice: 7800, orderId: 3, amount: 780000000 },
+    ],
+    inputs: [
+      {
+        title: 'Fill 1 node partially',
+        limitFutureValue: 125000000,
+        droppedAmount: 200000000,
+        filledAmount: 100000000,
+        filledFutureValue: 125000000,
+      },
+      {
+        title: 'Drop 1 node',
+        limitFutureValue: 250000000,
+        droppedAmount: 200000000,
+        filledAmount: 200000000,
+        filledFutureValue: 250000000,
+      },
+      {
+        title: 'Drop 1 node, Fill 1 node partially',
+        limitFutureValue: 350000000,
+        droppedAmount: 990000000,
+        filledAmount: 279000000,
+        filledFutureValue: 350000000,
+      },
+      {
+        title: 'Drop 2 nodes',
+        limitFutureValue: 1250000000,
+        droppedAmount: 990000000,
+        filledAmount: 990000000,
+        filledFutureValue: 1250000000,
+      },
+      {
+        title: 'Drop 2 nodes, Fill 1 node partially',
+        limitFutureValue: 1350000000,
+        droppedAmount: 1770000000,
+        filledAmount: 1068000000,
+        filledFutureValue: 1350000000,
+      },
+      {
+        title: 'Drop all nodes',
+        limitFutureValue: 2250000000,
+        droppedAmount: 1770000000,
+        filledAmount: 1770000000,
+        filledFutureValue: 2250000000,
+      },
+      {
+        title: 'Drop all nodes without limits and amounts',
+        limitFutureValue: 0,
+        droppedAmount: 1770000000,
+        filledAmount: 1770000000,
+        filledFutureValue: 2250000000,
+      },
+      {
+        title: 'Drop all nodes by an exceeding amount',
+        limitFutureValue: 3000000000,
+        droppedAmount: 1770000000,
+        filledAmount: 1770000000,
+        filledFutureValue: 2250000000,
+      },
+    ],
+  },
+];
+
+export { lendingMarketOrders, lendingLimitOrders, lendingUnwindOrders };
