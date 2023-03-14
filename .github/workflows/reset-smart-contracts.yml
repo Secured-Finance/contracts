@@ -26,35 +26,63 @@ jobs:
           private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
       - uses: actions/checkout@v3
         with:
+          ref: ${{ (github.event.inputs.network == 'staging' && 'main') || 'develop' }}
           token: ${{ steps.generate_token.outputs.token }}
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
+      - name: 'Setup for git'
+        run: |
+          git config user.name "SF Machine User[bot]"
+          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
       - name: Install Dependencies
         run: npm ci
       - name: Build Smart Contracts
         run: npm run compile
+      - name: Set environment variables
+        run: |
+          echo "INITIAL_COMPOUND_FACTOR=${{ secrets.INITIAL_COMPOUND_FACTOR }}" >> $GITHUB_ENV
+          echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
+          echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ vars.UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
+          echo "TOKEN_EFIL=${{ vars.TOKEN_EFIL }}" >> $GITHUB_ENV
+          echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
+          echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
+          echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
+          echo "FIL_TO_ETH_RATE=${{ vars.FIL_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "ETH_TO_USD_RATE=${{ vars.ETH_TO_USD_RATE }}" >> $GITHUB_ENV
+          echo "BTC_TO_ETH_RATE=${{ vars.BTC_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
+          echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
+          echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
       - name: Deploy smart contracts
-        env:
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-          INITIAL_COMPOUND_FACTOR: ${{ vars.INITIAL_COMPOUND_FACTOR }}
-          UNISWAP_SWAP_ROUTER_CONTRACT: ${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}
-          UNISWAP_SWAP_QUOTER_CONTRACT: ${{ vars.UNISWAP_SWAP_QUOTER_CONTRACT }}
-          TOKEN_EFIL: ${{ vars.TOKEN_EFIL }}
-          TOKEN_USDC: ${{ vars.TOKEN_USDC }}
-          TOKEN_WBTC: ${{ vars.TOKEN_WBTC }}
-          TOKEN_WETH: ${{ vars.TOKEN_WETH }}
-          FIL_TO_ETH_RATE: ${{ vars.FIL_TO_ETH_RATE }}
-          ETH_TO_USD_RATE: ${{ vars.ETH_TO_USD_RATE }}
-          BTC_TO_ETH_RATE: ${{ vars.BTC_TO_ETH_RATE }}
-          USDC_TO_ETH_RATE: ${{ vars.USDC_TO_ETH_RATE }}
         run: npm run deploy:force ${{ github.event.inputs.network }}
       - name: Commit and push
         shell: bash
         run: |
           git add .
-          git config user.name "SF Machine User[bot]"
-          git config user.email "${{ secrets.MACHINE_USER_APP_ID }}+sf-machine-user[bot]@users.noreply.github.com"
-          git commit -m "chore: reset smart contracts"
+          git commit -m "chore: reset smart contracts" --no-verify
+          git push
+      - name: Update documents
+        if: ${{ github.event.inputs.network == 'development' }}
+        run: |
+          npm run docgen
+          git add .
+      - name: Check diff
+        shell: bash
+        id: docgenDiff
+        run: |
+          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+      - name: Commit and push
+        shell: bash
+        if: steps.docgenDiff.outputs.count > 0
+        run: |
+          git commit -m "chore: update docs" --no-verify
+          git push
+      - name: Merge main into develop
+        shell: bash
+        if: ${{ github.event.inputs.network == 'staging' }}
+        run: |
+          git switch develop
+          git merge main
           git push
