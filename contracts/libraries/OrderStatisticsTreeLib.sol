@@ -238,7 +238,9 @@ library OrderStatisticsTreeLib {
                 probe = self.nodes[cursor].right;
             }
             uint256 cursorParent = self.nodes[cursor].parent;
-            self.nodes[probe].parent = cursorParent;
+            if (probe != EMPTY) {
+                self.nodes[probe].parent = cursorParent;
+            }
             if (cursorParent != EMPTY) {
                 if (cursor == self.nodes[cursorParent].left) {
                     self.nodes[cursorParent].left = probe;
