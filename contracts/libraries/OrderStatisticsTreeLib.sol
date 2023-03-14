@@ -238,9 +238,7 @@ library OrderStatisticsTreeLib {
                 probe = self.nodes[cursor].right;
             }
             uint256 cursorParent = self.nodes[cursor].parent;
-            if (probe != EMPTY) {
-                self.nodes[probe].parent = cursorParent;
-            }
+            self.nodes[probe].parent = cursorParent;
             if (cursorParent != EMPTY) {
                 if (cursor == self.nodes[cursorParent].left) {
                     self.nodes[cursorParent].left = probe;
@@ -579,18 +577,20 @@ library OrderStatisticsTreeLib {
 
             uint256 parent = self.nodes[cursor].parent;
 
-            while (parent != EMPTY) {
-                if (parent > cursor) {
-                    // Relink the nodes
-                    if (self.nodes[cursor].parent != parent) {
-                        self.nodes[cursor].parent = parent;
-                        self.nodes[parent].left = cursor;
+            if (cursor != EMPTY) {
+                while (parent != EMPTY) {
+                    if (parent > cursor) {
+                        // Relink the nodes
+                        if (self.nodes[cursor].parent != parent) {
+                            self.nodes[cursor].parent = parent;
+                            self.nodes[parent].left = cursor;
+                        }
+
+                        cursor = parent;
                     }
 
-                    cursor = parent;
+                    parent = self.nodes[parent].parent;
                 }
-
-                parent = self.nodes[parent].parent;
             }
         }
 
@@ -686,18 +686,20 @@ library OrderStatisticsTreeLib {
 
             uint256 parent = self.nodes[cursor].parent;
 
-            while (parent != EMPTY) {
-                if (parent < cursor) {
-                    // Relink the nodes
-                    if (self.nodes[cursor].parent != parent) {
-                        self.nodes[cursor].parent = parent;
-                        self.nodes[parent].right = cursor;
+            if (cursor != EMPTY) {
+                while (parent != EMPTY) {
+                    if (parent < cursor) {
+                        // Relink the nodes
+                        if (self.nodes[cursor].parent != parent) {
+                            self.nodes[cursor].parent = parent;
+                            self.nodes[parent].right = cursor;
+                        }
+
+                        cursor = parent;
                     }
 
-                    cursor = parent;
+                    parent = self.nodes[parent].parent;
                 }
-
-                parent = self.nodes[parent].parent;
             }
         }
 
@@ -814,10 +816,6 @@ library OrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId
     ) internal returns (uint256 amount) {
-        require(
-            isActiveOrderId(self, value, orderId),
-            "OrderStatisticsTree(410) - Order does not exist."
-        );
         amount = _removeOrder(self, value, orderId);
         remove(self, value);
     }
