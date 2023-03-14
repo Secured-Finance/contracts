@@ -86,7 +86,7 @@ describe('ZC e2e test', async () => {
       ['address'],
     );
 
-    // Transfer mock wFIL token
+    // Transfer mock eFIL token
     if (!process.env.TOKEN_EFIL) {
       eFILToken
         .connect(ownerSigner)
