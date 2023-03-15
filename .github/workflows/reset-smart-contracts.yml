@@ -26,6 +26,7 @@ jobs:
           private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           ref: ${{ (github.event.inputs.network == 'staging' && 'main') || 'develop' }}
           token: ${{ steps.generate_token.outputs.token }}
       - uses: actions/setup-node@v3
