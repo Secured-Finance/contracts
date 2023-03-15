@@ -257,9 +257,7 @@ describe('Integration Test: Order Book', async () => {
 
       before(async () => {
         [alice, bob, carol, dave] = await getUsers(4);
-        filMaturities = await lendingMarketController.getMaturities(
-          hexEFIL,
-        );
+        filMaturities = await lendingMarketController.getMaturities(hexEFIL);
         await createSampleFILOrders(carol);
       });
 
@@ -332,11 +330,9 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Unwind all orders', async () => {
-        await tokenVault
-          .connect(dave)
-          .deposit(hexWETH, depositAmount.mul(2), {
-            value: depositAmount.mul(2),
-          });
+        await tokenVault.connect(dave).deposit(hexWETH, depositAmount.mul(2), {
+          value: depositAmount.mul(2),
+        });
 
         await lendingMarketController
           .connect(dave)
@@ -358,9 +354,7 @@ describe('Integration Test: Order Book', async () => {
         await eFILToken
           .connect(alice)
           .approve(tokenVault.address, orderAmount.div(30));
-        await tokenVault
-          .connect(alice)
-          .deposit(hexEFIL, orderAmount.div(30));
+        await tokenVault.connect(alice).deposit(hexEFIL, orderAmount.div(30));
 
         await expect(
           lendingMarketController
@@ -391,12 +385,8 @@ describe('Integration Test: Order Book', async () => {
 
       before(async () => {
         [alice, bob, carol, dave] = await getUsers(4);
-        filMaturities = await lendingMarketController.getMaturities(
-          hexEFIL,
-        );
-        ethMaturities = await lendingMarketController.getMaturities(
-          hexWETH,
-        );
+        filMaturities = await lendingMarketController.getMaturities(hexEFIL);
+        ethMaturities = await lendingMarketController.getMaturities(hexWETH);
         await createSampleFILOrders(carol);
         await createSampleETHOrders(carol);
       });
@@ -548,11 +538,9 @@ describe('Integration Test: Order Book', async () => {
           alice.address,
         );
 
-        await tokenVault
-          .connect(dave)
-          .deposit(hexWETH, depositAmount.mul(2), {
-            value: depositAmount.mul(2),
-          });
+        await tokenVault.connect(dave).deposit(hexWETH, depositAmount.mul(2), {
+          value: depositAmount.mul(2),
+        });
 
         await lendingMarketController
           .connect(dave)

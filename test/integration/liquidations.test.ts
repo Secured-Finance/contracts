@@ -61,7 +61,7 @@ describe('Integration Test: Liquidations', async () => {
         switch (key) {
           case 'USDC':
             return hexUSDC;
-          case 'FIL':
+          case 'EFIL':
             return hexEFIL;
           default:
             return hexWETH;
@@ -93,7 +93,7 @@ describe('Integration Test: Liquidations', async () => {
           obj[`PV(${key})`] = pvs[idx].toString();
           return obj;
         }, {}),
-        'Deposit(FIL)': filDeposit.toString(),
+        'Deposit(EFIL)': filDeposit.toString(),
         'Deposit(ETH)': ethDeposit.toString(),
         'Deposit(USDC)': usdcDeposit.toString(),
       };
@@ -369,7 +369,7 @@ describe('Integration Test: Liquidations', async () => {
         );
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
         const reserveFundDepositBefore = await tokenVault.getDepositAmount(
           reserveFund.address,
@@ -398,7 +398,7 @@ describe('Integration Test: Liquidations', async () => {
         ).args;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
         lendingInfo.show();
 
@@ -566,7 +566,7 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
 
         await expect(
@@ -586,7 +586,7 @@ describe('Integration Test: Liquidations', async () => {
         );
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
         lendingInfo.show();
 
@@ -697,7 +697,7 @@ describe('Integration Test: Liquidations', async () => {
             reserveFund.address,
           );
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
 
         await expect(
@@ -719,7 +719,7 @@ describe('Integration Test: Liquidations', async () => {
           tokenVault.address,
         );
         const lendingInfoAfter1 = await lendingInfo.load('After1', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
 
         expect(rfFutureValueAfter.lt(rfFutureValueBefore));
@@ -739,7 +739,7 @@ describe('Integration Test: Liquidations', async () => {
           tokenVault.address,
         );
         const lendingInfoAfter2 = await lendingInfo.load('After2', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
 
         lendingInfo.show();
@@ -884,7 +884,7 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          FIL: filMaturities[1],
+          EFIL: filMaturities[1],
         });
 
         await expect(
@@ -898,7 +898,7 @@ describe('Integration Test: Liquidations', async () => {
         ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          FIL: filMaturities[1],
+          EFIL: filMaturities[1],
         });
         lendingInfo.show();
 
@@ -995,7 +995,7 @@ describe('Integration Test: Liquidations', async () => {
         await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul('3'));
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
         const reserveFundDepositBefore = await tokenVault.getDepositAmount(
           reserveFund.address,
@@ -1025,7 +1025,7 @@ describe('Integration Test: Liquidations', async () => {
         expect(amount.lt(filledOrderAmount.div(2))).to.true;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          FIL: filMaturities[0],
+          EFIL: filMaturities[0],
         });
         lendingInfo.show();
 
@@ -1205,7 +1205,7 @@ describe('Integration Test: Liquidations', async () => {
 
     it('Take orders from both FIL & USDC markets, Liquidate the larger position', async () => {
       await lendingInfo.load('Before1', {
-        FIL: filMaturities[0],
+        EFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
@@ -1214,7 +1214,7 @@ describe('Integration Test: Liquidations', async () => {
       );
 
       const lendingInfoBefore = await lendingInfo.load('Before2', {
-        FIL: filMaturities[0],
+        EFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
@@ -1229,7 +1229,7 @@ describe('Integration Test: Liquidations', async () => {
       ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
-        FIL: filMaturities[0],
+        EFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
       lendingInfo.show();
@@ -1246,7 +1246,7 @@ describe('Integration Test: Liquidations', async () => {
 
     it('Take orders from both FIL & USDC markets, Liquidate the smaller position', async () => {
       await lendingInfo.load('Before1', {
-        FIL: filMaturities[0],
+        EFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
@@ -1255,7 +1255,7 @@ describe('Integration Test: Liquidations', async () => {
       );
 
       const lendingInfoBefore = await lendingInfo.load('Before2', {
-        FIL: filMaturities[0],
+        EFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
@@ -1270,7 +1270,7 @@ describe('Integration Test: Liquidations', async () => {
       ).to.emit(lendingMarketController, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
-        FIL: filMaturities[0],
+        EFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
       lendingInfo.show();

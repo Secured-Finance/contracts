@@ -22,13 +22,13 @@ on:
       marketCurrency:
         description: 'MarketCurrency'
         required: true
-        default: 'FIL'
+        default: 'EFIL'
         type: choice
         options:
-          - FIL
-          - ETH
+          - EFIL
+          - WETH
           - USDC
-          - BTC
+          - WBTC
       maturity:
         description: 'Maturity'
         required: true

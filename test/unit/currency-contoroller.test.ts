@@ -86,7 +86,7 @@ describe('CurrencyController', () => {
     });
 
     it('Add a currency except for ETH as a supported currency', async () => {
-      const currency = ethers.utils.formatBytes32String('FIL');
+      const currency = ethers.utils.formatBytes32String('EFIL');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
@@ -107,8 +107,8 @@ describe('CurrencyController', () => {
         .then((decimals) => expect(decimals).to.equal(18));
     });
 
-    it('Fail to add ETH as a supported currency due to the invalid price feed', async () => {
-      const currency = ethers.utils.formatBytes32String('ETH');
+    it('Fail to add WETH as a supported currency due to the invalid price feed', async () => {
+      const currency = ethers.utils.formatBytes32String('WETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, -1, 0, 0, 0);
@@ -123,8 +123,8 @@ describe('CurrencyController', () => {
       ).to.be.revertedWith('Invalid PriceFeed');
     });
 
-    it('Fail to add ETH as a supported currency due to the invalid decimals', async () => {
-      const currency = ethers.utils.formatBytes32String('ETH');
+    it('Fail to add WETH as a supported currency due to the invalid decimals', async () => {
+      const currency = ethers.utils.formatBytes32String('WETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
@@ -276,7 +276,7 @@ describe('CurrencyController', () => {
         .withArgs(currency, 'USD', newMockPriceFeed.address);
     });
 
-    it('Fail to update an ETH price feed due to the none ETH currency', async () => {
+    it('Fail to update an ETH price feed due to the none WETH currency', async () => {
       // Set up for the mocks
       const newMockPriceFeed = await deployMockContract(
         owner,

@@ -143,7 +143,7 @@ task('register-orders', 'Registers order data into the selected lending market')
         owner.address,
       );
 
-      if (marketCurrency !== 'ETH') {
+      if (marketCurrency !== 'WETH') {
         const currency = currencies.find(
           ({ key }) => key === marketCurrencyName,
         );
@@ -235,7 +235,7 @@ task('register-orders', 'Registers order data into the selected lending market')
               order.amount,
               order.unitPrice,
               {
-                value: marketCurrency === 'ETH' ? order.amount : 0,
+                value: marketCurrency === 'WETH' ? order.amount : 0,
               },
             )
             .then((tx) => tx.wait());
