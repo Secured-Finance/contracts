@@ -165,7 +165,7 @@ task('register-orders', 'Registers order data into the selected lending market')
         }
       }
 
-      if (collateralCurrency !== 'ETH') {
+      if (collateralCurrency !== 'WETH') {
         const currency = currencies.find(
           ({ key }) => key === collateralCurrencyName,
         );
@@ -208,7 +208,7 @@ task('register-orders', 'Registers order data into the selected lending market')
         await tokenVault
           .deposit(collateralCurrencyName, depositValueInCollateralCurrency, {
             value:
-              collateralCurrency === 'ETH'
+              collateralCurrency === 'WETH'
                 ? depositValueInCollateralCurrency
                 : 0,
           })

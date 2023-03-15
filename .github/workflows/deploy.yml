@@ -103,9 +103,9 @@ jobs:
           echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
-          echo "EFIL_TO_ETH_RATE=${{ vars.FIL_TO_ETH_RATE }}" >> $GITHUB_ENV
-          echo "WETH_TO_USD_RATE=${{ vars.ETH_TO_USD_RATE }}" >> $GITHUB_ENV
-          echo "WBTC_TO_ETH_RATE=${{ vars.BTC_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "EFIL_TO_ETH_RATE=${{ vars.EFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "WETH_TO_USD_RATE=${{ vars.WETH_TO_USD_RATE }}" >> $GITHUB_ENV
+          echo "WBTC_TO_ETH_RATE=${{ vars.WBTC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV

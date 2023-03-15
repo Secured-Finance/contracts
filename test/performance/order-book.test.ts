@@ -83,7 +83,7 @@ describe('Performance Test: Order Book', async () => {
     const currencies = [
       {
         key: hexWETH,
-        name: 'ETH',
+        name: 'WETH',
         orderAmount: BigNumber.from('500000000000000000'),
       },
       {

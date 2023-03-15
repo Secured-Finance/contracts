@@ -14,10 +14,10 @@ on:
       collateralCurrency:
         description: 'CollateralCurrency'
         required: true
-        default: 'ETH'
+        default: 'WETH'
         type: choice
         options:
-          - ETH
+          - WETH
           - USDC
       marketCurrency:
         description: 'MarketCurrency'

@@ -276,7 +276,7 @@ describe('CurrencyController', () => {
         .withArgs(currency, 'USD', newMockPriceFeed.address);
     });
 
-    it('Fail to update an ETH price feed due to the none WETH currency', async () => {
+    it('Fail to link an ETH price feed with WETH currency', async () => {
       // Set up for the mocks
       const newMockPriceFeed = await deployMockContract(
         owner,
