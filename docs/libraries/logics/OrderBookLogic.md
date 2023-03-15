@@ -74,6 +74,12 @@ function insertOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amou
 function dropOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) public returns (struct RemainingOrder remainingOrder, uint256 filledFutureValue, uint256 remainingAmount)
 ```
 
+### dropOrders
+
+```solidity
+function dropOrders(enum ProtocolTypes.Side _side, uint256 _futureValue) public returns (struct RemainingOrder remainingOrder, uint256 filledAmount, uint256 filledFutureValue)
+```
+
 ### cleanLendOrders
 
 ```solidity

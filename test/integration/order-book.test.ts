@@ -19,6 +19,7 @@ describe('Integration Test: Order Book', async () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
+  let dave: SignerWithAddress;
 
   let addressResolver: Contract;
   let currencyController: Contract;
@@ -139,7 +140,7 @@ describe('Integration Test: Order Book', async () => {
   });
 
   describe('Market orders', async () => {
-    describe('Add orders using the same currency as the collateral, Fill the order', async () => {
+    describe('Add orders using the same currency as the collateral, Fill the order, Unwind the ETH order', async () => {
       const orderAmount = initialETHBalance.div(5);
       const depositAmount = orderAmount.mul(3).div(2);
 
@@ -213,9 +214,40 @@ describe('Integration Test: Order Book', async () => {
         expect(bobDepositAmount).to.equal('0');
         expect(coverage.sub('4010').abs()).lte(1);
       });
+
+      it('Unwind all orders', async () => {
+        await lendingMarketController
+          .connect(carol)
+          .depositAndCreateOrder(
+            hexWETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount.mul(2),
+            '8000',
+            { value: orderAmount.mul(2) },
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .unwindOrder(hexWETH, ethMaturities[0]),
+        ).to.emit(lendingMarketController, 'OrderFilled');
+
+        const aliceFV = await lendingMarketController.getFutureValue(
+          hexWETH,
+          ethMaturities[0],
+          alice.address,
+        );
+
+        expect(aliceFV).to.equal(0);
+
+        await lendingMarketController
+          .connect(carol)
+          .cancelOrder(hexWETH, ethMaturities[0], '5');
+      });
     });
 
-    describe('Add orders using the different currency as the collateral, Fill the order', async () => {
+    describe('Add orders using the different currency as the collateral, Fill the order, Unwind the non-ETH order', async () => {
       const depositAmount = initialETHBalance.div(5);
       const orderAmount = depositAmount
         .mul(4)
@@ -224,8 +256,10 @@ describe('Integration Test: Order Book', async () => {
         .div(eFilToETHRate);
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
-        filMaturities = await lendingMarketController.getMaturities(hexEFIL);
+        [alice, bob, carol, dave] = await getUsers(4);
+        filMaturities = await lendingMarketController.getMaturities(
+          hexEFIL,
+        );
         await createSampleFILOrders(carol);
       });
 
@@ -296,9 +330,59 @@ describe('Integration Test: Order Book', async () => {
         expect(bobFILDepositAmount).to.equal('0');
         expect(coverage.sub('8020').abs()).lte(1);
       });
+
+      it('Unwind all orders', async () => {
+        await tokenVault
+          .connect(dave)
+          .deposit(hexWETH, depositAmount.mul(2), {
+            value: depositAmount.mul(2),
+          });
+
+        await lendingMarketController
+          .connect(dave)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount.mul(2),
+            '8000',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .unwindOrder(hexEFIL, filMaturities[0]),
+        ).to.be.revertedWith('Not enough collateral in the selected currency');
+
+        // Deposit the amount that is not enough due to fees being deducted.
+        await eFILToken
+          .connect(alice)
+          .approve(tokenVault.address, orderAmount.div(30));
+        await tokenVault
+          .connect(alice)
+          .deposit(hexEFIL, orderAmount.div(30));
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .unwindOrder(hexEFIL, filMaturities[0]),
+        ).to.emit(lendingMarketController, 'OrderFilled');
+
+        const aliceFV = await lendingMarketController.getFutureValue(
+          hexEFIL,
+          filMaturities[0],
+          alice.address,
+        );
+
+        expect(aliceFV).to.equal(0);
+
+        await lendingMarketController
+          .connect(dave)
+          .cancelOrder(hexEFIL, filMaturities[0], '5');
+      });
     });
 
-    describe('Fill orders on multiple markets', async () => {
+    describe('Fill orders on multiple markets, Unwind partially', async () => {
       const depositAmount = initialETHBalance.div(5);
       const orderAmountInETH = depositAmount.mul(2).div(5);
       const orderAmountInFIL = orderAmountInETH
@@ -306,9 +390,13 @@ describe('Integration Test: Order Book', async () => {
         .div(eFilToETHRate);
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(3);
-        filMaturities = await lendingMarketController.getMaturities(hexEFIL);
-        ethMaturities = await lendingMarketController.getMaturities(hexWETH);
+        [alice, bob, carol, dave] = await getUsers(4);
+        filMaturities = await lendingMarketController.getMaturities(
+          hexEFIL,
+        );
+        ethMaturities = await lendingMarketController.getMaturities(
+          hexWETH,
+        );
         await createSampleFILOrders(carol);
         await createSampleETHOrders(carol);
       });
@@ -451,6 +539,44 @@ describe('Integration Test: Order Book', async () => {
           ),
         );
         expect(coverage.sub('5012').abs()).lte(1);
+      });
+
+      it('Unwind orders partially', async () => {
+        const aliceFVBefore = await lendingMarketController.getFutureValue(
+          hexEFIL,
+          filMaturities[0],
+          alice.address,
+        );
+
+        await tokenVault
+          .connect(dave)
+          .deposit(hexWETH, depositAmount.mul(2), {
+            value: depositAmount.mul(2),
+          });
+
+        await lendingMarketController
+          .connect(dave)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmountInFIL.div(2),
+            '8000',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .unwindOrder(hexEFIL, filMaturities[0]),
+        ).to.emit(lendingMarketController, 'OrderFilled');
+
+        const aliceFVAfter = await lendingMarketController.getFutureValue(
+          hexEFIL,
+          filMaturities[0],
+          alice.address,
+        );
+
+        expect(aliceFVAfter.abs()).to.lte(aliceFVBefore.abs());
       });
     });
   });
@@ -834,15 +960,17 @@ describe('Integration Test: Order Book', async () => {
           hexWETH,
         );
 
-        await lendingMarketController
-          .connect(alice)
-          .depositAndCreateOrder(
-            hexEFIL,
-            filMaturities[0],
-            Side.LEND,
-            orderAmountInFIL,
-            '8000',
-          );
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexEFIL,
+              filMaturities[0],
+              Side.LEND,
+              orderAmountInFIL,
+              '8000',
+            ),
+        ).to.not.emit(lendingMarketController, 'OrderFilled');
 
         const totalCollateralAmountAfter =
           await tokenVault.getTotalCollateralAmount(alice.address);

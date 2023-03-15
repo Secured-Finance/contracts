@@ -1,33 +1,31 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - develop
-  workflow_run:
-    workflows: ['Merge into main', 'Reset smart contracts']
-    types: [completed]
-    branches:
-      - main
-      - develop
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
 
 jobs:
   test:
     name: Test on a Fork
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'secured-finance-machine-user[bot]' && github.event.workflow.name != 'Reset Smart Contracts'}}
-    environment: ${{ (github.event.workflow.name == 'Merge into main' && 'staging') || 'development' }}
+    environment: ${{ github.event.inputs.network }}
     steps:
-      - name: Check conditional job statues
-        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-        run: exit 1
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ (github.event.inputs.network == 'staging' && 'main') || 'develop' }}
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
       - name: Set environment variables
         run: |
-          echo "NETWORK=${{ vars.NETWORK }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ vars.UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
           echo "TOKEN_EFIL=${{ vars.TOKEN_EFIL }}" >> $GITHUB_ENV
@@ -49,11 +47,11 @@ jobs:
         run: npm run compile
       - name: Create a fork environment
         run: |
-          FORK_ID=$(npm run fork $NETWORK | tail -n 1)
+          FORK_ID=$(npm run fork ${{ github.event.inputs.network }} | tail -n 1)
           echo "fork id is $FORK_ID"
           echo "FORK_ID=$FORK_ID" >> $GITHUB_ENV
       - name: Deploy for fork environment
-        run: npm run deploy $NETWORK
+        run: npm run deploy ${{ github.event.inputs.network }}
         env:
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
       - name: Check diff
@@ -66,14 +64,14 @@ jobs:
         env:
           USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
-        run: npx hardhat --network $NETWORK test "scripts/zc-e2e.ts" --bail
+        run: npx hardhat --network ${{ github.event.inputs.network }} test "scripts/zc-e2e.ts" --bail
       - name: Delete the fork environment
         run: npm run unfork --forkid $FORK_ID
   deploy:
     name: Deploy Smart Contracts
     runs-on: ubuntu-latest
-    if: ${{ always() && github.actor != 'secured-finance-machine-user[bot]' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'canceled') }}
-    environment: ${{ (github.event.workflow.name == 'Merge into main' && 'staging') || 'development' }}
+    if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'canceled') }}
+    environment: ${{ github.event.inputs.network }}
     needs: [test]
     steps:
       - name: Generate token
@@ -84,14 +82,11 @@ jobs:
           private_key: ${{ secrets.MACHINE_USER_PRIVATE_KEY }}
       - uses: actions/checkout@v3
         with:
+          ref: ${{ (github.event.inputs.network == 'staging' && 'main') || 'develop' }}
           token: ${{ steps.generate_token.outputs.token }}
       - uses: actions/setup-node@v3
         with:
           node-version-file: '.nvmrc'
-      - name: 'Setup for npm'
-        run: |
-          npm set @secured-finance:registry=https://npm.pkg.github.com
-          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}"
       - name: 'Setup for git'
         run: |
           git config user.name "SF Machine User[bot]"
@@ -102,7 +97,6 @@ jobs:
         run: npm run compile
       - name: Set environment variables
         run: |
-          echo "NETWORK=${{ vars.NETWORK }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ vars.UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
           echo "TOKEN_EFIL=${{ vars.TOKEN_EFIL }}" >> $GITHUB_ENV
@@ -117,8 +111,8 @@ jobs:
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV
           echo "ENABLE_FAUCET=true" >> $GITHUB_ENV
       - name: Deploy smart contracts
-        run: npm run deploy $NETWORK
-      - run: |
+        run: |
+          npm run deploy ${{ github.event.inputs.network }}
           git add .
       - name: Check diff
         shell: bash
@@ -132,7 +126,7 @@ jobs:
           git commit -m "chore: update smart contracts" --no-verify
           git push
       - name: Update documents
-        if: ${{ vars.NETWORK == 'development' }}
+        if: ${{ github.event.inputs.network == 'development' }}
         run: |
           npm run docgen
           git add .
@@ -149,7 +143,7 @@ jobs:
           git push
       - name: Merge main into develop
         shell: bash
-        if: ${{ vars.NETWORK == 'staging' }}
+        if: ${{ github.event.inputs.network == 'staging' }}
         run: |
           git switch develop
           git merge main

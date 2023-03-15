@@ -161,6 +161,12 @@ interface ILendingMarket {
         uint256 unitPrice
     ) external;
 
+    function unwindOrder(
+        ProtocolTypes.Side _side,
+        address _user,
+        uint256 _futureValue
+    ) external returns (uint256 filledAmount, uint256 filledFutureValue);
+
     function executeItayoseCall() external;
 
     function cleanOrders(address _user)

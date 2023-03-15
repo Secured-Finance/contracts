@@ -188,6 +188,8 @@ interface ILendingMarketController {
         uint256 _unitPrice
     ) external payable returns (bool);
 
+    function unwindOrder(bytes32 _ccy, uint256 _maturity) external returns (bool);
+
     function executeMultiItayoseCall(bytes32[] memory currencies, uint256 maturity)
         external
         returns (bool);

@@ -197,13 +197,25 @@ function estimateDroppedAmountFromRight(struct OrderStatisticsTreeLib.Tree self,
 ### dropLeft
 
 ```solidity
-function dropLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue) internal returns (uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
+function dropLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 totalFilledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
 ```
 
 ### dropRight
 
 ```solidity
-function dropRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue) internal returns (uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
+function dropRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 totalFilledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
+```
+
+### rotateTreeToLeft
+
+```solidity
+function rotateTreeToLeft(struct OrderStatisticsTreeLib.Tree self) internal
+```
+
+### rotateTreeToRight
+
+```solidity
+function rotateTreeToRight(struct OrderStatisticsTreeLib.Tree self) internal
 ```
 
 ### getFutureValue
@@ -316,5 +328,11 @@ _Internal function to link an Object to another._
 
 ```solidity
 function _calculateFutureValue(uint256 unitPrice, uint256 amount) internal pure returns (uint256)
+```
+
+### _calculatePresentValue
+
+```solidity
+function _calculatePresentValue(uint256 unitPrice, uint256 amount) internal pure returns (uint256)
 ```
 

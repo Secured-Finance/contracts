@@ -515,6 +515,19 @@ Deposits funds and creates a pre-order at the same time.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
+### unwindOrder
+
+```solidity
+function unwindOrder(bytes32 _ccy, uint256 _maturity) external returns (bool)
+```
+
+Unwind all orders by creating an opposite position order.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
+
 ### executeMultiItayoseCall
 
 ```solidity

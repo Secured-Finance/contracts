@@ -457,6 +457,20 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
 
+### unwindOrder
+
+```solidity
+function unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledAmount, uint256 filledFutureValue)
+```
+
+Unwind orders using future value amount.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
+| _user | address | User's address |
+| _futureValue | uint256 | Amount of future value unwound |
+
 ### executeItayoseCall
 
 ```solidity
@@ -522,4 +536,10 @@ Takes the market order.
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taken |
 | _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after taking orders |
+
+### _unwindOrder
+
+```solidity
+function _unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) private returns (uint256 filledAmount, uint256 filledFutureValue)
+```
 

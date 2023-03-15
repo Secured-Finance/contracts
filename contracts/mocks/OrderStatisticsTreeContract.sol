@@ -12,6 +12,7 @@ contract OrderStatisticsTreeContract {
     event OrderRemoved(string action, uint256 value, uint256 _id);
 
     event Drop(
+        uint256 droppedAmountInPV,
         uint256 droppedAmountInFV,
         uint256 remainingOrderAmountInPV,
         uint256 remainingOrderUnitPrice
@@ -104,19 +105,41 @@ contract OrderStatisticsTreeContract {
         return tree.estimateDroppedAmountFromRight(targetFutureValue);
     }
 
-    function dropValuesFromFirst(uint256 value, uint256 limitValue) public {
-        (uint256 droppedAmountInFV, , RemainingOrder memory remainingOrder) = tree.dropLeft(
-            value,
-            limitValue
+    function dropValuesFromFirst(
+        uint256 value,
+        uint256 limitValue,
+        uint256 limitFutureValue
+    ) public {
+        (
+            uint256 droppedAmountInPV,
+            uint256 droppedAmountInFV,
+            ,
+            RemainingOrder memory remainingOrder
+        ) = tree.dropLeft(value, limitValue, limitFutureValue);
+        emit Drop(
+            droppedAmountInPV,
+            droppedAmountInFV,
+            remainingOrder.amount,
+            remainingOrder.unitPrice
         );
-        emit Drop(droppedAmountInFV, remainingOrder.amount, remainingOrder.unitPrice);
     }
 
-    function dropValuesFromLast(uint256 value, uint256 limitValue) public {
-        (uint256 droppedAmountInFV, , RemainingOrder memory remainingOrder) = tree.dropRight(
-            value,
-            limitValue
+    function dropValuesFromLast(
+        uint256 value,
+        uint256 limitValue,
+        uint256 limitFutureValue
+    ) public {
+        (
+            uint256 droppedAmountInPV,
+            uint256 droppedAmountInFV,
+            ,
+            RemainingOrder memory remainingOrder
+        ) = tree.dropRight(value, limitValue, limitFutureValue);
+        emit Drop(
+            droppedAmountInPV,
+            droppedAmountInFV,
+            remainingOrder.amount,
+            remainingOrder.unitPrice
         );
-        emit Drop(droppedAmountInFV, remainingOrder.amount, remainingOrder.unitPrice);
     }
 }

@@ -584,6 +584,61 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Unwind all orders by creating an opposite position order.
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     */
+    function unwindOrder(bytes32 _ccy, uint256 _maturity)
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        returns (bool)
+    {
+        cleanOrders(_ccy, msg.sender);
+
+        address currentMarket = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        (int256 futureValue, uint256 fvMaturity) = IFutureValueVault(
+            Storage.slot().futureValueVaults[_ccy][currentMarket]
+        ).getFutureValue(msg.sender);
+
+        require(futureValue != 0, "Future Value is zero");
+        require(_maturity == fvMaturity, "Invalid maturity");
+
+        uint256 filledAmount;
+        uint256 filledFutureValue;
+        ProtocolTypes.Side side;
+
+        if (futureValue > 0) {
+            side = ProtocolTypes.Side.BORROW;
+            (filledAmount, filledFutureValue) = ILendingMarket(
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ).unwindOrder(side, msg.sender, futureValue.toUint256());
+        } else if (futureValue < 0) {
+            side = ProtocolTypes.Side.LEND;
+            (filledAmount, filledFutureValue) = ILendingMarket(
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ).unwindOrder(side, msg.sender, (-futureValue).toUint256());
+        }
+
+        if (filledAmount > 0) {
+            FundManagementLogic.updateDepositAmount(
+                _ccy,
+                _maturity,
+                msg.sender,
+                side,
+                filledFutureValue,
+                filledAmount,
+                0
+            );
+
+            emit OrderFilled(msg.sender, _ccy, side, _maturity, filledAmount, 0, filledFutureValue);
+        }
+
+        return true;
+    }
+
     function executeMultiItayoseCall(bytes32[] memory _currencies, uint256 _maturity)
         external
         override
