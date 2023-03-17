@@ -3200,9 +3200,70 @@ describe('LendingMarketController', () => {
         expect(autoRollLog.unitPrice).to.equal('8571');
       });
 
+      it('Rotate markets using the estimated auto-roll price', async () => {
+        const calculateUnitPrice = async (
+          currentUnitPrice: number,
+          maturity: BigNumber,
+          destinationTimestamp: BigNumber,
+        ) => {
+          const { timestamp } = await ethers.provider.getBlock('latest');
+          const currentDuration = maturity.sub(timestamp);
+          const destinationDuration = maturity.sub(destinationTimestamp);
+
+          return BigNumber.from(currentUnitPrice)
+            .mul(currentDuration)
+            .mul(BP)
+            .div(
+              BigNumber.from(BP)
+                .sub(currentUnitPrice)
+                .mul(destinationDuration)
+                .add(currentDuration.mul(currentUnitPrice)),
+            );
+        };
+
+        const estimatedUnitPrice = await calculateUnitPrice(
+          8000,
+          maturities[1],
+          maturities[0],
+        );
+
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.LEND,
+            '100000000000000000',
+            '8000',
+          );
+        await lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.BORROW,
+            '100000000000000000',
+            '8000',
+          );
+
+        await time.increaseTo(maturities[0].toString());
+
+        await expect(
+          lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
+        ).to.emit(lendingMarketControllerProxy, 'LendingMarketsRotated');
+
+        const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
+          targetCurrency,
+          maturities[1],
+        );
+
+        expect(autoRollLog.prev).to.equal(maturities[0]);
+        expect(autoRollLog.unitPrice.sub(estimatedUnitPrice.abs())).to.lte(1);
+      });
+
       it('Rotate markets using the past auto-roll price as an order is filled on dates too old', async () => {
-        // Move to 12 hours (43200 sec) before maturity.
-        await time.increaseTo(maturities[0].sub(43200).toString());
+        // Move to 6 hours (21600 sec) before maturity.
+        await time.increaseTo(maturities[0].sub('21600').toString());
 
         await lendingMarketControllerProxy
           .connect(alice)
@@ -3262,6 +3323,9 @@ describe('LendingMarketController', () => {
       });
 
       it('Rotate markets using the past auto-roll price as no orders are filled', async () => {
+        // Move to 6 hours (21600 sec) before maturity.
+        await time.increaseTo(maturities[0].sub('21600').toString());
+
         await lendingMarketControllerProxy
           .connect(alice)
           .createOrder(

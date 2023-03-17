@@ -32,7 +32,7 @@ library LendingMarketControllerStorage {
         // Mapping from maturity to total amount struct per currency
         mapping(bytes32 => mapping(uint256 => TotalAmount)) totalAmountsForObservePeriod;
         // Mapping from maturity to latest filled unit price per currency
-        mapping(bytes32 => mapping(uint256 => uint256)) latestFilledUnitPrice;
+        mapping(bytes32 => mapping(uint256 => uint256)) estimatedAutoRollUnitPrice;
     }
 
     function slot() internal pure returns (Storage storage r) {

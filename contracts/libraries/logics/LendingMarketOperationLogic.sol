@@ -77,8 +77,7 @@ library LendingMarketOperationLogic {
                 Storage.slot().maturityLendingMarkets[_currencies[i]][_maturity]
             );
             if (market.isItayosePeriod()) {
-                uint256 openingUnitPrice = market.executeItayoseCall();
-                Storage.slot().latestFilledUnitPrice[_currencies[i]][_maturity] = openingUnitPrice;
+                market.executeItayoseCall();
             }
         }
     }
@@ -134,12 +133,16 @@ library LendingMarketOperationLogic {
             Storage.slot().lendingMarkets[_ccy][1] ==
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ) {
-            if (Storage.slot().totalAmountsForObservePeriod[_ccy][_maturity].amount == 0) {
-                Storage.slot().latestFilledUnitPrice[_ccy][_maturity] = _filledUnitPrice;
-            }
-
             uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0])
                 .getMaturity();
+
+            if (Storage.slot().totalAmountsForObservePeriod[_ccy][_maturity].amount == 0) {
+                Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _estimateUnitPrice(
+                    _filledUnitPrice,
+                    _maturity,
+                    nearestMaturity
+                );
+            }
 
             if (
                 (block.timestamp < nearestMaturity) &&
@@ -168,13 +171,32 @@ library LendingMarketOperationLogic {
             autoRollUnitPrice = (totalAmount.amount * ProtocolTypes.PRICE_DIGIT).div(
                 totalAmount.futureValue
             );
-        } else if (Storage.slot().latestFilledUnitPrice[_ccy][_maturity] != 0) {
-            autoRollUnitPrice = Storage.slot().latestFilledUnitPrice[_ccy][_maturity];
+        } else if (Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] != 0) {
+            autoRollUnitPrice = Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity];
         } else {
             autoRollUnitPrice = AddressResolverLib
                 .genesisValueVault()
                 .getLatestAutoRollLog(_ccy)
                 .unitPrice;
         }
+    }
+
+    function _estimateUnitPrice(
+        uint256 _unitPrice,
+        uint256 _currentMaturity,
+        uint256 _destinationMaturity
+    ) internal view returns (uint256) {
+        // NOTE:The formula is:
+        // 1) currentDuration = targetMarketMaturity - currentTimestamp
+        // 2) destinationDuration = targetMarketMaturity - destinationTimestamp
+        // 3) unitPrice = (currentUnitPrice * currentDuration)
+        //      / ((1 - currentUnitPrice) * destinationDuration + currentUnitPrice * currentDuration)
+
+        uint256 currentDuration = _currentMaturity - block.timestamp;
+        uint256 destinationDuration = _currentMaturity - _destinationMaturity;
+        return
+            (ProtocolTypes.PRICE_DIGIT * _unitPrice * currentDuration) /
+            (((ProtocolTypes.PRICE_DIGIT - _unitPrice) * destinationDuration) +
+                (_unitPrice * currentDuration));
     }
 }
