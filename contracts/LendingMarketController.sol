@@ -76,9 +76,14 @@ contract LendingMarketController is
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
+     * @param _observationPeriod The observation period to calculate the volume-weighted average price of transactions
      */
-    function initialize(address _owner, address _resolver) public initializer onlyProxy {
-        MixinLendingMarketManager._initialize(_owner);
+    function initialize(
+        address _owner,
+        address _resolver,
+        uint256 _observationPeriod
+    ) public initializer onlyProxy {
+        MixinLendingMarketManager._initialize(_owner, _observationPeriod);
         registerAddressResolver(_resolver);
     }
 
@@ -606,18 +611,19 @@ contract LendingMarketController is
         require(futureValue != 0, "Future Value is zero");
         require(_maturity == fvMaturity, "Invalid maturity");
 
+        uint256 filledUnitPrice;
         uint256 filledAmount;
         uint256 filledFutureValue;
         ProtocolTypes.Side side;
 
         if (futureValue > 0) {
             side = ProtocolTypes.Side.BORROW;
-            (filledAmount, filledFutureValue) = ILendingMarket(
+            (filledUnitPrice, filledAmount, filledFutureValue) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ).unwindOrder(side, msg.sender, futureValue.toUint256());
         } else if (futureValue < 0) {
             side = ProtocolTypes.Side.LEND;
-            (filledAmount, filledFutureValue) = ILendingMarket(
+            (filledUnitPrice, filledAmount, filledFutureValue) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ).unwindOrder(side, msg.sender, (-futureValue).toUint256());
         }
@@ -634,6 +640,15 @@ contract LendingMarketController is
             );
 
             emit OrderFilled(msg.sender, _ccy, side, _maturity, filledAmount, 0, filledFutureValue);
+
+            LendingMarketOperationLogic.updateOrderLogs(
+                _ccy,
+                _maturity,
+                getObservationPeriod(),
+                filledUnitPrice,
+                filledAmount,
+                filledFutureValue
+            );
         }
 
         return true;
@@ -891,9 +906,17 @@ contract LendingMarketController is
             require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
         }
 
-        (uint256 filledFutureValue, uint256 remainingAmount) = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).createOrder(_side, _user, _amount, _unitPrice, _isForced);
+        (
+            uint256 filledUnitPrice,
+            uint256 filledFutureValue,
+            uint256 remainingAmount
+        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
+                _side,
+                _user,
+                _amount,
+                _unitPrice,
+                _isForced
+            );
         filledAmount = _amount - remainingAmount;
 
         uint256 feeFutureValue;
@@ -929,6 +952,15 @@ contract LendingMarketController is
                 _maturity,
                 filledAmount,
                 _unitPrice,
+                filledFutureValue
+            );
+
+            LendingMarketOperationLogic.updateOrderLogs(
+                _ccy,
+                _maturity,
+                getObservationPeriod(),
+                filledUnitPrice,
+                _amount,
                 filledFutureValue
             );
         }

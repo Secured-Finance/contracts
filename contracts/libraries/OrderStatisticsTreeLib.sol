@@ -511,13 +511,13 @@ library OrderStatisticsTreeLib {
     )
         internal
         returns (
+            uint256 value,
             uint256 totalFilledAmount,
             uint256 filledFutureValue,
             uint256 remainingAmount,
             RemainingOrder memory remainingOrder
         )
     {
-        uint256 value;
         uint256 cursor = first(self);
         uint256 cursorNodeAmount = 0;
         uint256 totalAmount = 0;
@@ -620,13 +620,13 @@ library OrderStatisticsTreeLib {
     )
         internal
         returns (
+            uint256 value,
             uint256 totalFilledAmount,
             uint256 filledFutureValue,
             uint256 remainingAmount,
             RemainingOrder memory remainingOrder
         )
     {
-        uint256 value;
         uint256 cursor = last(self);
         uint256 cursorNodeAmount = 0;
         uint256 totalAmount = 0;
