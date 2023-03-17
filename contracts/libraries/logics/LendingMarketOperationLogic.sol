@@ -7,12 +7,15 @@ import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../../libraries/BokkyPooBahsDateTimeLibrary.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, TotalAmount} from "../../storages/LendingMarketControllerStorage.sol";
 
 library LendingMarketOperationLogic {
+    using RoundingUint256 for uint256;
+
     function initializeCurrencySetting(
         bytes32 _ccy,
         uint256 _genesisDate,
@@ -74,7 +77,8 @@ library LendingMarketOperationLogic {
                 Storage.slot().maturityLendingMarkets[_currencies[i]][_maturity]
             );
             if (market.isItayosePeriod()) {
-                market.executeItayoseCall();
+                uint256 openingUnitPrice = market.executeItayoseCall();
+                Storage.slot().latestFilledUnitPrice[_currencies[i]][_maturity] = openingUnitPrice;
             }
         }
     }
@@ -110,11 +114,67 @@ library LendingMarketOperationLogic {
             _ccy,
             fromMaturity,
             nextMaturity,
-            ILendingMarket(nextMarketAddr).getMidUnitPrice(),
+            _calculateAutoRollUnitPrice(_ccy, nextMaturity),
             _autoRollFeeRate,
             IFutureValueVault(futureValueVault).getTotalSupply(fromMaturity)
         );
 
         Storage.slot().maturityLendingMarkets[_ccy][toMaturity] = currentMarketAddr;
+    }
+
+    function updateOrderLogs(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _observationPeriod,
+        uint256 _filledUnitPrice,
+        uint256 _filledAmount,
+        uint256 _filledFutureValue
+    ) external {
+        if (
+            Storage.slot().lendingMarkets[_ccy][1] ==
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ) {
+            if (Storage.slot().totalAmountsForObservePeriod[_ccy][_maturity].amount == 0) {
+                Storage.slot().latestFilledUnitPrice[_ccy][_maturity] = _filledUnitPrice;
+            }
+
+            uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0])
+                .getMaturity();
+
+            if (
+                (block.timestamp < nearestMaturity) &&
+                (block.timestamp >= (nearestMaturity - _observationPeriod))
+            ) {
+                Storage
+                .slot()
+                .totalAmountsForObservePeriod[_ccy][_maturity].amount += _filledAmount;
+                Storage
+                .slot()
+                .totalAmountsForObservePeriod[_ccy][_maturity].futureValue += _filledFutureValue;
+            }
+        }
+    }
+
+    function _calculateAutoRollUnitPrice(bytes32 _ccy, uint256 _maturity)
+        internal
+        view
+        returns (uint256 autoRollUnitPrice)
+    {
+        TotalAmount memory totalAmount = Storage.slot().totalAmountsForObservePeriod[_ccy][
+            _maturity
+        ];
+
+        if (totalAmount.futureValue != 0) {
+            autoRollUnitPrice = (totalAmount.amount * ProtocolTypes.PRICE_DIGIT).div(
+                totalAmount.futureValue
+            );
+        } else if (Storage.slot().latestFilledUnitPrice[_ccy][_maturity] != 0) {
+            autoRollUnitPrice = Storage.slot().latestFilledUnitPrice[_ccy][_maturity];
+        } else {
+            autoRollUnitPrice = AddressResolverLib
+                .genesisValueVault()
+                .getLatestAutoRollLog(_ccy)
+                .unitPrice;
+        }
     }
 }

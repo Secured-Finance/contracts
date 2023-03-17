@@ -124,14 +124,16 @@ describe('Integration Test: Liquidations', async () => {
     });
 
   const rotateAllMarkets = async () => {
+    await time.increaseTo(usdcMaturities[0].sub('21600').toString());
+
     await lendingMarketController
       .connect(owner)
       .createOrder(
         hexFILString,
         filMaturities[1],
         Side.BORROW,
-        '1000000000',
-        '8010',
+        '100000000',
+        '8000',
       );
 
     await lendingMarketController
@@ -140,8 +142,8 @@ describe('Integration Test: Liquidations', async () => {
         hexFILString,
         filMaturities[1],
         Side.LEND,
-        '1000000000',
-        '7990',
+        '100000000',
+        '8000',
       );
 
     await lendingMarketController
@@ -150,8 +152,8 @@ describe('Integration Test: Liquidations', async () => {
         hexUSDCString,
         usdcMaturities[1],
         Side.BORROW,
-        '1000000',
-        '8010',
+        '100000',
+        '8000',
       );
 
     await lendingMarketController
@@ -160,15 +162,11 @@ describe('Integration Test: Liquidations', async () => {
         hexUSDCString,
         usdcMaturities[1],
         Side.LEND,
-        '1000000',
-        '7990',
+        '100000',
+        '8000',
       );
 
-    if (usdcMaturities[0].gt(filMaturities[0])) {
-      await time.increaseTo(usdcMaturities[0].toString());
-    } else {
-      await time.increaseTo(filMaturities[0].toString());
-    }
+    await time.increaseTo(usdcMaturities[0].toString());
 
     await lendingMarketController
       .connect(owner)
@@ -183,20 +181,6 @@ describe('Integration Test: Liquidations', async () => {
         [hexFILString, hexUSDCString],
         usdcMaturities[usdcMaturities.length - 1],
       );
-
-    await lendingMarketController
-      .connect(owner)
-      .cancelOrder(hexFILString, filMaturities[1], '1');
-    await lendingMarketController
-      .connect(owner)
-      .cancelOrder(hexFILString, filMaturities[1], '2');
-
-    await lendingMarketController
-      .connect(owner)
-      .cancelOrder(hexUSDCString, usdcMaturities[1], '1');
-    await lendingMarketController
-      .connect(owner)
-      .cancelOrder(hexUSDCString, usdcMaturities[1], '2');
   };
 
   const resetContractInstances = async () => {

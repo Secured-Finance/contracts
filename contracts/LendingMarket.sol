@@ -486,7 +486,8 @@ contract LendingMarket is
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
      * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after taking orders
-     * @return filledFutureValue The total FV amount of the filled order amount on the order book
+     * @return filledUnitPrice Last unit price of the filled order
+     * @return filledFutureValue The total FV amount of the filled order on the order book
      * @return remainingAmount The remaining amount that is not filled in the order book
      */
     function createOrder(
@@ -501,7 +502,11 @@ contract LendingMarket is
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (uint256 filledFutureValue, uint256 remainingAmount)
+        returns (
+            uint256 filledUnitPrice,
+            uint256 filledFutureValue,
+            uint256 remainingAmount
+        )
     {
         require(_amount > 0, "Can't place empty amount");
         _updateUserMaturity(_user);
@@ -514,7 +519,7 @@ contract LendingMarket is
             );
 
         if (isExists) {
-            (filledFutureValue, remainingAmount) = _takeOrder(
+            (filledUnitPrice, filledFutureValue, remainingAmount) = _takeOrder(
                 _side,
                 _user,
                 _amount,
@@ -552,6 +557,9 @@ contract LendingMarket is
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _futureValue Amount of future value unwound
+     * @return filledUnitPrice Last unit price of the filled order
+     * @return filledAmount The total amount of the filled order on the order book
+     * @return filledFutureValue The total FV amount of the filled order on the order book
      */
     function unwindOrder(
         ProtocolTypes.Side _side,
@@ -563,7 +571,11 @@ contract LendingMarket is
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (uint256 filledAmount, uint256 filledFutureValue)
+        returns (
+            uint256 filledUnitPrice,
+            uint256 filledAmount,
+            uint256 filledFutureValue
+        )
     {
         require(_futureValue > 0, "Can't place empty future value amount");
         return _unwindOrder(_side, _user, _futureValue);
@@ -573,10 +585,18 @@ contract LendingMarket is
      * @notice Executes Itayose to aggregate pre-orders and determine the opening unit price.
      * After this action, the market opens.
      * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
+     * @return openingUnitPrice The opening price when Itayose is executed
      */
-    function executeItayoseCall() external nonReentrant whenNotPaused ifItayosePeriod {
-        (uint256 openingUnitPrice, uint256 totalOffsetAmount) = OrderBookLogic
-            .getOpeningUnitPrice();
+    function executeItayoseCall()
+        external
+        override
+        nonReentrant
+        whenNotPaused
+        ifItayosePeriod
+        returns (uint256 openingUnitPrice)
+    {
+        uint256 totalOffsetAmount;
+        (openingUnitPrice, totalOffsetAmount) = OrderBookLogic.getOpeningUnitPrice();
 
         if (totalOffsetAmount > 0) {
             ProtocolTypes.Side[2] memory sides = [
@@ -585,7 +605,7 @@ contract LendingMarket is
             ];
 
             for (uint256 i; i < sides.length; i++) {
-                (RemainingOrder memory remainingOrder, , ) = OrderBookLogic.dropOrders(
+                (, RemainingOrder memory remainingOrder, , ) = OrderBookLogic.dropOrders(
                     sides[i],
                     totalOffsetAmount,
                     0
@@ -686,14 +706,18 @@ contract LendingMarket is
         uint256 _amount,
         uint256 _unitPrice,
         bool _ignoreRemainingAmount
-    ) private returns (uint256 filledFutureValue, uint256 remainingAmount) {
+    )
+        private
+        returns (
+            uint256 filledUnitPrice,
+            uint256 filledFutureValue,
+            uint256 remainingAmount
+        )
+    {
         RemainingOrder memory remainingOrder;
 
-        (remainingOrder, filledFutureValue, remainingAmount) = OrderBookLogic.dropOrders(
-            _side,
-            _amount,
-            _unitPrice
-        );
+        (filledUnitPrice, remainingOrder, filledFutureValue, remainingAmount) = OrderBookLogic
+            .dropOrders(_side, _amount, _unitPrice);
 
         emit OrdersTaken(
             _user,
@@ -729,13 +753,18 @@ contract LendingMarket is
         ProtocolTypes.Side _side,
         address _user,
         uint256 _futureValue
-    ) private returns (uint256 filledAmount, uint256 filledFutureValue) {
+    )
+        private
+        returns (
+            uint256 filledUnitPrice,
+            uint256 filledAmount,
+            uint256 filledFutureValue
+        )
+    {
         RemainingOrder memory remainingOrder;
 
-        (remainingOrder, filledAmount, filledFutureValue) = OrderBookLogic.dropOrders(
-            _side,
-            _futureValue
-        );
+        (filledUnitPrice, remainingOrder, filledAmount, filledFutureValue) = OrderBookLogic
+            .dropOrders(_side, _futureValue);
 
         emit OrdersTaken(
             _user,

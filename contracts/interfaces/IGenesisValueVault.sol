@@ -40,6 +40,8 @@ interface IGenesisValueVault {
         view
         returns (AutoRollLog memory);
 
+    function getLatestAutoRollLog(bytes32 _ccy) external view returns (AutoRollLog memory);
+
     function getGenesisValueInFutureValue(bytes32 ccy, address user) external view returns (int256);
 
     function calculateFVFromFV(

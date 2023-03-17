@@ -96,7 +96,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     }
 
     function getAutoRollLog(bytes32 _ccy, uint256 _maturity)
-        public
+        external
         view
         override
         returns (AutoRollLog memory)
@@ -104,8 +104,17 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return Storage.slot().autoRollLogs[_ccy][_maturity];
     }
 
+    function getLatestAutoRollLog(bytes32 _ccy)
+        external
+        view
+        override
+        returns (AutoRollLog memory)
+    {
+        return Storage.slot().autoRollLogs[_ccy][Storage.slot().currentMaturity[_ccy]];
+    }
+
     function getGenesisValueInFutureValue(bytes32 _ccy, address _user)
-        public
+        external
         view
         override
         returns (int256)
@@ -123,7 +132,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _basisMaturity,
         uint256 _destinationMaturity,
         int256 _futureValue
-    ) public view override returns (int256) {
+    ) external view override returns (int256) {
         if (_futureValue == 0) {
             return 0;
         } else if (_basisMaturity == _destinationMaturity) {
