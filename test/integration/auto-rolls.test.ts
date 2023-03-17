@@ -698,7 +698,7 @@ describe('Integration Test: Auto-rolls', async () => {
     });
   });
 
-  describe('Execute auto-rolls more times than the number of markets', async () => {
+  describe('Execute auto-rolls more times than the number of markets using the past auto-roll price', async () => {
     const orderAmount = BigNumber.from('1000000000000000000000');
 
     before(async () => {
@@ -739,6 +739,8 @@ describe('Integration Test: Auto-rolls', async () => {
           ),
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
+      await createSampleETHOrders(owner, maturities[1], '8333');
+
       // Check future value
       const aliceActualFV = await lendingMarketController.getFutureValue(
         hexETHString,
@@ -751,17 +753,6 @@ describe('Integration Test: Auto-rolls', async () => {
 
     for (let i = 0; i <= 9; i++) {
       it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
-        const alicePV0Before = await lendingMarketController.getPresentValue(
-          hexETHString,
-          maturities[0],
-          alice.address,
-        );
-        const alicePV1Before = await lendingMarketController.getPresentValue(
-          hexETHString,
-          maturities[1],
-          alice.address,
-        );
-        const midUnitPrice0 = await lendingMarkets[0].getMidUnitPrice();
         const aliceFV0Before = await lendingMarketController.getFutureValue(
           hexETHString,
           maturities[0],
@@ -774,7 +765,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
         // Auto-roll
-        await executeAutoRoll('8333');
+        await executeAutoRoll();
 
         // Check present value
         const aliceTotalPVAfter =
@@ -792,11 +783,6 @@ describe('Integration Test: Auto-rolls', async () => {
           maturities[1],
           alice.address,
         );
-
-        const aliceTotalPV = alicePV0Before
-          .mul('10000')
-          .div(midUnitPrice0)
-          .add(alicePV1Before);
 
         expect(alicePV0After).to.equal('0');
         expect(alicePV1After).to.equal(aliceTotalPVAfter);
