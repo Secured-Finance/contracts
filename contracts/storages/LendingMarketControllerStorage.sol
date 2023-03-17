@@ -3,9 +3,9 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-struct TotalAmount {
-    uint256 amount;
-    uint256 futureValue;
+struct ObservationPeriodLog {
+    uint256 totalAmount;
+    uint256 totalFutureValue;
 }
 
 library LendingMarketControllerStorage {
@@ -29,9 +29,9 @@ library LendingMarketControllerStorage {
         mapping(bytes32 => mapping(address => EnumerableSet.UintSet)) usedMaturities;
         // Mapping from user to active order existence per currency and maturity
         mapping(address => mapping(bytes32 => mapping(uint256 => bool))) activeOrderExistences;
-        // Mapping from maturity to total amount struct per currency
-        mapping(bytes32 => mapping(uint256 => TotalAmount)) totalAmountsForObservePeriod;
-        // Mapping from maturity to latest filled unit price per currency
+        // Mapping from maturity to observation period log per currency
+        mapping(bytes32 => mapping(uint256 => ObservationPeriodLog)) observationPeriodLogs;
+        // Mapping from maturity to latest estimated auto roll unit price per currency
         mapping(bytes32 => mapping(uint256 => uint256)) estimatedAutoRollUnitPrice;
     }
 

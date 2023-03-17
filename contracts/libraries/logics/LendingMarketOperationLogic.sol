@@ -11,7 +11,7 @@ import {RoundingUint256} from "../math/RoundingUint256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage, TotalAmount} from "../../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
 library LendingMarketOperationLogic {
     using RoundingUint256 for uint256;
@@ -136,7 +136,7 @@ library LendingMarketOperationLogic {
             uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0])
                 .getMaturity();
 
-            if (Storage.slot().totalAmountsForObservePeriod[_ccy][_maturity].amount == 0) {
+            if (Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount == 0) {
                 Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _estimateUnitPrice(
                     _filledUnitPrice,
                     _maturity,
@@ -148,12 +148,10 @@ library LendingMarketOperationLogic {
                 (block.timestamp < nearestMaturity) &&
                 (block.timestamp >= (nearestMaturity - _observationPeriod))
             ) {
+                Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount += _filledAmount;
                 Storage
                 .slot()
-                .totalAmountsForObservePeriod[_ccy][_maturity].amount += _filledAmount;
-                Storage
-                .slot()
-                .totalAmountsForObservePeriod[_ccy][_maturity].futureValue += _filledFutureValue;
+                .observationPeriodLogs[_ccy][_maturity].totalFutureValue += _filledFutureValue;
             }
         }
     }
@@ -163,13 +161,11 @@ library LendingMarketOperationLogic {
         view
         returns (uint256 autoRollUnitPrice)
     {
-        TotalAmount memory totalAmount = Storage.slot().totalAmountsForObservePeriod[_ccy][
-            _maturity
-        ];
+        ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][_maturity];
 
-        if (totalAmount.futureValue != 0) {
-            autoRollUnitPrice = (totalAmount.amount * ProtocolTypes.PRICE_DIGIT).div(
-                totalAmount.futureValue
+        if (log.totalFutureValue != 0) {
+            autoRollUnitPrice = (log.totalAmount * ProtocolTypes.PRICE_DIGIT).div(
+                log.totalFutureValue
             );
         } else if (Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] != 0) {
             autoRollUnitPrice = Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity];
