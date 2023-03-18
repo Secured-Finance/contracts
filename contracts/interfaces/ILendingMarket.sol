@@ -165,9 +165,15 @@ interface ILendingMarket {
         ProtocolTypes.Side _side,
         address _user,
         uint256 _futureValue
-    ) external returns (uint256 filledAmount, uint256 filledFutureValue);
+    )
+        external
+        returns (
+            uint256 filledUnitPrice,
+            uint256 filledAmount,
+            uint256 filledFutureValue
+        );
 
-    function executeItayoseCall() external;
+    function executeItayoseCall() external returns (uint256 openingUnitPrice);
 
     function cleanOrders(address _user)
         external
@@ -187,7 +193,13 @@ interface ILendingMarket {
         uint256 amount,
         uint256 unitPrice,
         bool ignoreRemainingAmount
-    ) external returns (uint256 executedRate, uint256 remainingAmount);
+    )
+        external
+        returns (
+            uint256 filledUnitPrice,
+            uint256 filledFutureValue,
+            uint256 remainingAmount
+        );
 
     function pauseMarket() external;
 

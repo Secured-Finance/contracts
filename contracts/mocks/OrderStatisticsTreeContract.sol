@@ -111,6 +111,7 @@ contract OrderStatisticsTreeContract {
         uint256 limitFutureValue
     ) public {
         (
+            ,
             uint256 droppedAmountInPV,
             uint256 droppedAmountInFV,
             ,
@@ -130,6 +131,7 @@ contract OrderStatisticsTreeContract {
         uint256 limitFutureValue
     ) public {
         (
+            ,
             uint256 droppedAmountInPV,
             uint256 droppedAmountInFV,
             ,

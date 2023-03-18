@@ -15,9 +15,11 @@ contract MixinLendingMarketManager is Ownable {
 
     event OrderFeeRateUpdated(uint256 previousRate, uint256 rate);
     event AutoRollFeeRateUpdated(uint256 previousRate, uint256 rate);
+    event ObservationPeriodUpdated(uint256 previousPeriod, uint256 period);
 
-    function _initialize(address _owner) internal {
+    function _initialize(address _owner, uint256 _observationPeriod) internal {
         _transferOwnership(_owner);
+        _updateObservationPeriod(_observationPeriod);
     }
 
     /**
@@ -36,6 +38,14 @@ contract MixinLendingMarketManager is Ownable {
      */
     function getAutoRollFeeRate(bytes32 _ccy) public view returns (uint256) {
         return Storage.slot().autoRollFeeRates[_ccy];
+    }
+
+    /**
+     * @notice Gets the observation period
+     * @return The observation period to calculate the volume-weighted average price of transactions
+     */
+    function getObservationPeriod() public view returns (uint256) {
+        return Storage.slot().observationPeriod;
     }
 
     /**
@@ -67,6 +77,24 @@ contract MixinLendingMarketManager is Ownable {
             Storage.slot().autoRollFeeRates[_ccy] = _autoRollFeeRate;
 
             emit AutoRollFeeRateUpdated(previousRate, _autoRollFeeRate);
+        }
+    }
+
+    /**
+     * @notice Updates the observation period
+     * @param _observationPeriod The observation period to calculate the volume-weighted average price of transactions
+     */
+    function updateObservationPeriod(uint256 _observationPeriod) public onlyOwner {
+        _updateObservationPeriod(_observationPeriod);
+    }
+
+    function _updateObservationPeriod(uint256 _observationPeriod) internal {
+        uint256 previousPeriod = Storage.slot().observationPeriod;
+
+        if (_observationPeriod != previousPeriod) {
+            Storage.slot().observationPeriod = _observationPeriod;
+
+            emit ObservationPeriodUpdated(previousPeriod, _observationPeriod);
         }
     }
 

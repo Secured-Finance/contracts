@@ -7,12 +7,15 @@ import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../../libraries/BokkyPooBahsDateTimeLibrary.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
-import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
+import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
 library LendingMarketOperationLogic {
+    using RoundingUint256 for uint256;
+
     function initializeCurrencySetting(
         bytes32 _ccy,
         uint256 _genesisDate,
@@ -110,11 +113,86 @@ library LendingMarketOperationLogic {
             _ccy,
             fromMaturity,
             nextMaturity,
-            ILendingMarket(nextMarketAddr).getMidUnitPrice(),
+            _calculateAutoRollUnitPrice(_ccy, nextMaturity),
             _autoRollFeeRate,
             IFutureValueVault(futureValueVault).getTotalSupply(fromMaturity)
         );
 
         Storage.slot().maturityLendingMarkets[_ccy][toMaturity] = currentMarketAddr;
+    }
+
+    function updateOrderLogs(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _observationPeriod,
+        uint256 _filledUnitPrice,
+        uint256 _filledAmount,
+        uint256 _filledFutureValue
+    ) external {
+        if (
+            Storage.slot().lendingMarkets[_ccy][1] ==
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ) {
+            uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0])
+                .getMaturity();
+
+            if (Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount == 0) {
+                Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _estimateUnitPrice(
+                    _filledUnitPrice,
+                    _maturity,
+                    nearestMaturity
+                );
+            }
+
+            if (
+                (block.timestamp < nearestMaturity) &&
+                (block.timestamp >= (nearestMaturity - _observationPeriod))
+            ) {
+                Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount += _filledAmount;
+                Storage
+                .slot()
+                .observationPeriodLogs[_ccy][_maturity].totalFutureValue += _filledFutureValue;
+            }
+        }
+    }
+
+    function _calculateAutoRollUnitPrice(bytes32 _ccy, uint256 _maturity)
+        internal
+        view
+        returns (uint256 autoRollUnitPrice)
+    {
+        ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][_maturity];
+
+        if (log.totalFutureValue != 0) {
+            autoRollUnitPrice = (log.totalAmount * ProtocolTypes.PRICE_DIGIT).div(
+                log.totalFutureValue
+            );
+        } else if (Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] != 0) {
+            autoRollUnitPrice = Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity];
+        } else {
+            autoRollUnitPrice = AddressResolverLib
+                .genesisValueVault()
+                .getLatestAutoRollLog(_ccy)
+                .unitPrice;
+        }
+    }
+
+    function _estimateUnitPrice(
+        uint256 _unitPrice,
+        uint256 _currentMaturity,
+        uint256 _destinationMaturity
+    ) internal view returns (uint256) {
+        // NOTE:The formula is:
+        // 1) currentDuration = targetMarketMaturity - currentTimestamp
+        // 2) destinationDuration = targetMarketMaturity - destinationTimestamp
+        // 3) unitPrice = (currentUnitPrice * currentDuration)
+        //      / ((1 - currentUnitPrice) * destinationDuration + currentUnitPrice * currentDuration)
+
+        uint256 currentDuration = _currentMaturity - block.timestamp;
+        uint256 destinationDuration = _currentMaturity - _destinationMaturity;
+        return
+            (ProtocolTypes.PRICE_DIGIT * _unitPrice * currentDuration) /
+            (((ProtocolTypes.PRICE_DIGIT - _unitPrice) * destinationDuration) +
+                (_unitPrice * currentDuration));
     }
 }

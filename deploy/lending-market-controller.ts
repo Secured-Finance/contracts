@@ -34,7 +34,10 @@ const func: DeployFunction = async function ({
         );
 
       await proxyController
-        .setLendingMarketControllerImpl(deployResult.address)
+        .setLendingMarketControllerImpl(
+          deployResult.address,
+          process.env.MARKET_OBSERVATION_PERIOD,
+        )
         .then((tx) => tx.wait());
     },
   );

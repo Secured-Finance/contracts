@@ -20,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           ref: ${{ (github.event.inputs.network == 'staging' && 'main') || 'develop' }}
       - uses: actions/setup-node@v3
         with:
@@ -97,6 +98,8 @@ jobs:
         run: npm run compile
       - name: Set environment variables
         run: |
+          echo "INITIAL_COMPOUND_FACTOR=${{ vars.INITIAL_COMPOUND_FACTOR }}" >> $GITHUB_ENV
+          echo "MARKET_OBSERVATION_PERIOD=${{ vars.MARKET_OBSERVATION_PERIOD }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ vars.UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
           echo "TOKEN_EFIL=${{ vars.TOKEN_EFIL }}" >> $GITHUB_ENV

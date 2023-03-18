@@ -392,18 +392,19 @@ library OrderBookLogic {
     )
         public
         returns (
+            uint256 filledUnitPrice,
             RemainingOrder memory remainingOrder,
             uint256 filledFutureValue,
             uint256 remainingAmount
         )
     {
         if (_side == ProtocolTypes.Side.BORROW) {
-            (, filledFutureValue, remainingAmount, remainingOrder) = Storage
+            (filledUnitPrice, , filledFutureValue, remainingAmount, remainingOrder) = Storage
                 .slot()
                 .lendOrders[Storage.slot().maturity]
                 .dropRight(_amount, _unitPrice, 0);
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (, filledFutureValue, remainingAmount, remainingOrder) = Storage
+            (filledUnitPrice, , filledFutureValue, remainingAmount, remainingOrder) = Storage
                 .slot()
                 .borrowOrders[Storage.slot().maturity]
                 .dropLeft(_amount, _unitPrice, 0);
@@ -413,18 +414,19 @@ library OrderBookLogic {
     function dropOrders(ProtocolTypes.Side _side, uint256 _futureValue)
         public
         returns (
+            uint256 filledUnitPrice,
             RemainingOrder memory remainingOrder,
             uint256 filledAmount,
             uint256 filledFutureValue
         )
     {
         if (_side == ProtocolTypes.Side.BORROW) {
-            (filledAmount, filledFutureValue, , remainingOrder) = Storage
+            (filledUnitPrice, filledAmount, filledFutureValue, , remainingOrder) = Storage
                 .slot()
                 .lendOrders[Storage.slot().maturity]
                 .dropRight(0, 0, _futureValue);
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (filledAmount, filledFutureValue, , remainingOrder) = Storage
+            (filledUnitPrice, filledAmount, filledFutureValue, , remainingOrder) = Storage
                 .slot()
                 .borrowOrders[Storage.slot().maturity]
                 .dropLeft(0, 0, _futureValue);
