@@ -128,13 +128,7 @@ describe('Integration Test: Liquidations', async () => {
 
     await lendingMarketController
       .connect(owner)
-      .createOrder(
-        hexEFIL,
-        filMaturities[1],
-        Side.BORROW,
-        '100000000',
-        '8000',
-      );
+      .createOrder(hexEFIL, filMaturities[1], Side.BORROW, '100000000', '8000');
 
     await lendingMarketController
       .connect(owner)
@@ -148,13 +142,7 @@ describe('Integration Test: Liquidations', async () => {
 
     await lendingMarketController
       .connect(owner)
-      .createOrder(
-        hexUSDC,
-        usdcMaturities[1],
-        Side.BORROW,
-        '100000',
-        '8000',
-      );
+      .createOrder(hexUSDC, usdcMaturities[1], Side.BORROW, '100000', '8000');
 
     await lendingMarketController
       .connect(owner)
