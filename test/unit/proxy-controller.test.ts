@@ -2,8 +2,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
-import { hexBTCString, toBytes32 } from '../../utils/strings';
-import { btcToETHRate } from '../common/constants';
+import { hexWBTC, toBytes32 } from '../../utils/strings';
+import { wBtcToETHRate } from '../common/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -141,18 +141,18 @@ describe('ProxyController', () => {
       );
 
       // Set up for CurrencyController
-      const btcToETHPriceFeed = await MockV3Aggregator.new(
+      const wBtcToETHPriceFeed = await MockV3Aggregator.new(
         18,
-        hexBTCString,
-        btcToETHRate,
+        hexWBTC,
+        wBtcToETHRate,
       );
       await currencyControllerProxy1.addCurrency(
-        hexBTCString,
-        btcToETHPriceFeed.address,
+        hexWBTC,
+        wBtcToETHPriceFeed.address,
         HAIRCUT,
       );
 
-      const haircut1 = await currencyControllerProxy1.getHaircut(hexBTCString);
+      const haircut1 = await currencyControllerProxy1.getHaircut(hexWBTC);
       haircut1.toString().should.be.equal(HAIRCUT.toString());
 
       // update (second time)
@@ -166,7 +166,7 @@ describe('ProxyController', () => {
         currencyControllerProxyAddress2,
       );
 
-      const haircut2 = await currencyControllerProxy2.getHaircut(hexBTCString);
+      const haircut2 = await currencyControllerProxy2.getHaircut(hexWBTC);
       haircut2.toString().should.be.equal(HAIRCUT.toString());
     });
 

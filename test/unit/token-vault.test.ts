@@ -291,10 +291,10 @@ describe('TokenVault', () => {
   });
 
   describe('Deposit & Withdraw', async () => {
-    const ETH = ethers.utils.formatBytes32String('ETH');
+    const WETH = ethers.utils.formatBytes32String('WETH');
 
     before(async () => {
-      await tokenVaultProxy.registerCurrency(ETH, mockWETH.address, true);
+      await tokenVaultProxy.registerCurrency(WETH, mockWETH.address, true);
     });
 
     beforeEach(async () => {
@@ -340,22 +340,22 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy
           .connect(alice)
-          .deposit(ETH, valueInETH, { value: valueInETH }),
+          .deposit(WETH, valueInETH, { value: valueInETH }),
       )
         .to.emit(tokenVaultProxy, 'Deposit')
-        .withArgs(alice.address, ETH, valueInETH);
+        .withArgs(alice.address, WETH, valueInETH);
 
       const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
-      expect(currencies.includes(ETH)).to.true;
+      expect(currencies.includes(WETH)).to.true;
 
       const collateralAmount = await tokenVaultProxy.getDepositAmount(
         alice.address,
-        ETH,
+        WETH,
       );
       expect(collateralAmount).to.equal(valueInETH);
 
       const totalCollateralAmount = await tokenVaultProxy.getTotalDepositAmount(
-        ETH,
+        WETH,
       );
       expect(totalCollateralAmount).to.equal(collateralAmount);
     });
@@ -890,7 +890,7 @@ describe('TokenVault', () => {
     });
 
     it('Fail to call deposit due to invalid amount', async () => {
-      await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
+      await expect(tokenVaultProxy.deposit(WETH, '100')).to.be.revertedWith(
         'Invalid amount',
       );
     });

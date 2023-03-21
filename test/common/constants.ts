@@ -8,7 +8,8 @@ export const LIQUIDATOR_FEE_RATE = 500;
 export const INITIAL_COMPOUND_FACTOR = '1000000000000000000';
 export const MARKET_OBSERVATION_PERIOD = 21600;
 
-export const filToETHRate = BigNumber.from('3803677700000000');
-export const ethToUSDRate = BigNumber.from('149164000000');
-export const btcToETHRate = BigNumber.from('13087292239235700000');
+export const wFilToETHRate = BigNumber.from('3803677700000000');
+export const eFilToETHRate = BigNumber.from('3803677700000000');
+export const wEthToUSDRate = BigNumber.from('149164000000');
+export const wBtcToETHRate = BigNumber.from('13087292239235700000');
 export const usdcToETHRate = BigNumber.from('670403046311442');

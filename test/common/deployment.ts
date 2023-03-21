@@ -4,10 +4,11 @@ import moment from 'moment';
 
 import { currencies, mockRates } from '../../utils/currencies';
 import {
-  hexBTCString,
-  hexETHString,
-  hexFILString,
-  hexUSDCString,
+  hexWFIL,
+  hexEFIL,
+  hexWETH,
+  hexWBTC,
+  hexUSDC,
   toBytes32,
 } from '../../utils/strings';
 import {
@@ -84,6 +85,9 @@ const deployContracts = async () => {
   ]);
 
   const wFILToken = await ethers
+    .getContractFactory('MockWFIL')
+    .then((factory) => factory.deploy('10000000000000000000000000000'));
+  const eFILToken = await ethers
     .getContractFactory('MockEFIL')
     .then((factory) => factory.deploy('10000000000000000000000000000'));
   const usdcToken = await ethers
@@ -244,28 +248,35 @@ const deployContracts = async () => {
   const genesisDate = moment(timestamp * 1000).unix();
   await Promise.all([
     lendingMarketControllerProxy.initializeLendingMarket(
-      hexBTCString,
+      hexWBTC,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       AUTO_ROLL_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
-      hexETHString,
+      hexWETH,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       AUTO_ROLL_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
-      hexFILString,
+      hexWFIL,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       AUTO_ROLL_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
-      hexUSDCString,
+      hexEFIL,
+      genesisDate,
+      INITIAL_COMPOUND_FACTOR,
+      ORDER_FEE_RATE,
+      AUTO_ROLL_FEE_RATE,
+    ),
+    lendingMarketControllerProxy.initializeLendingMarket(
+      hexUSDC,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
@@ -284,14 +295,16 @@ const deployContracts = async () => {
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
     reserveFund: reserveFundProxy,
-    wETHToken,
     wFILToken,
-    usdcToken,
+    eFILToken,
+    wETHToken,
     wBTCToken,
-    btcToETHPriceFeed: priceFeeds[hexBTCString],
-    ethToUSDPriceFeed: priceFeeds[hexETHString],
-    filToETHPriceFeed: priceFeeds[hexFILString],
-    usdcToUSDPriceFeed: priceFeeds[hexUSDCString],
+    usdcToken,
+    wFilToETHPriceFeed: priceFeeds[hexWFIL],
+    eFilToETHPriceFeed: priceFeeds[hexEFIL],
+    wEthToUSDPriceFeed: priceFeeds[hexWETH],
+    wBtcToETHPriceFeed: priceFeeds[hexWBTC],
+    usdcToUSDPriceFeed: priceFeeds[hexUSDC],
   };
 };
 
