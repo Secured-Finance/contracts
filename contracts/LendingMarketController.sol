@@ -81,8 +81,10 @@ contract LendingMarketController is
     function initialize(
         address _owner,
         address _resolver,
+        uint256 _marketBasePeriod,
         uint256 _observationPeriod
     ) public initializer onlyProxy {
+        Storage.slot().marketBasePeriod = _marketBasePeriod;
         MixinLendingMarketManager._initialize(_owner, _observationPeriod);
         registerAddressResolver(_resolver);
     }

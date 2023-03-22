@@ -15,6 +15,7 @@ library LendingMarketControllerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketController");
 
     struct Storage {
+        uint256 marketBasePeriod;
         // Mapping from currency to lending market contract addresses
         mapping(bytes32 => address[]) lendingMarkets;
         // Mapping from lending market contract address to future value vault contract address per currency

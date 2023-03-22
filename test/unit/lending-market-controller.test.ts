@@ -12,6 +12,7 @@ import { getGenesisDate } from '../../utils/dates';
 import {
   AUTO_ROLL_FEE_RATE,
   INITIAL_COMPOUND_FACTOR,
+  MARKET_BASE_PERIOD,
   MARKET_OBSERVATION_PERIOD,
   ORDER_FEE_RATE,
 } from '../common/constants';
@@ -126,6 +127,7 @@ describe('LendingMarketController', () => {
     const lendingMarketControllerAddress = await proxyController
       .setLendingMarketControllerImpl(
         lendingMarketController.address,
+        MARKET_BASE_PERIOD,
         MARKET_OBSERVATION_PERIOD,
       )
       .then((tx) => tx.wait())
@@ -293,8 +295,9 @@ describe('LendingMarketController', () => {
       expect(markets[0]).to.exist;
       expect(markets[0]).to.not.equal(ethers.constants.AddressZero);
       expect(markets[0]).to.equal(market);
-      expect(maturities[0].toString()).to.equal(
-        moment.unix(genesisDate).add(3, 'M').unix().toString(),
+      expect(moment.unix(maturities[0]).day()).to.equal(5);
+      expect(moment.unix(maturities[0]).month()).to.equal(
+        moment.unix(genesisDate).add(3, 'M').month(),
       );
     });
 
@@ -306,22 +309,13 @@ describe('LendingMarketController', () => {
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
       );
-      await lendingMarketControllerProxy.createLendingMarket(
-        targetCurrency,
-        genesisDate,
-      );
-      await lendingMarketControllerProxy.createLendingMarket(
-        targetCurrency,
-        genesisDate,
-      );
-      await lendingMarketControllerProxy.createLendingMarket(
-        targetCurrency,
-        genesisDate,
-      );
-      await lendingMarketControllerProxy.createLendingMarket(
-        targetCurrency,
-        genesisDate,
-      );
+
+      for (let i = 0; i < 9; i++) {
+        await lendingMarketControllerProxy.createLendingMarket(
+          targetCurrency,
+          genesisDate,
+        );
+      }
 
       const markets = await lendingMarketControllerProxy.getLendingMarkets(
         targetCurrency,
@@ -330,8 +324,8 @@ describe('LendingMarketController', () => {
         targetCurrency,
       );
 
-      expect(markets.length).to.equal(4);
-      expect(maturities.length).to.equal(4);
+      expect(markets.length).to.equal(9);
+      expect(maturities.length).to.equal(9);
       markets.forEach((market) => {
         expect(market).to.not.equal(ethers.constants.AddressZero);
         expect(market).to.exist;
@@ -345,12 +339,12 @@ describe('LendingMarketController', () => {
       );
 
       maturities.forEach((maturity, i) => {
-        expect(maturity.toString()).to.equal(
+        expect(moment.unix(maturity).day()).to.equal(5);
+        expect(moment.unix(maturity).month()).to.equal(
           moment
             .unix(genesisDate)
             .add(3 * (i + 1), 'M')
-            .unix()
-            .toString(),
+            .month(),
         );
       });
     });
@@ -591,8 +585,9 @@ describe('LendingMarketController', () => {
       ).to.emit(lendingMarketControllerProxy, 'OrderFilled');
 
       const maturity = await lendingMarket1.getMaturity();
-      expect(maturity.toString()).to.equal(
-        moment.unix(genesisDate).add(3, 'M').unix().toString(),
+      expect(moment.unix(maturity).day()).to.equal(5);
+      expect(moment.unix(maturity).month()).to.equal(
+        moment.unix(genesisDate).add(3, 'M').month(),
       );
 
       const borrowUnitPrice = await lendingMarket1.getBorrowUnitPrice();
@@ -804,8 +799,9 @@ describe('LendingMarketController', () => {
 
       // Check market data
       expect(market.ccy).to.equal(targetCurrency);
-      expect(market.maturity.toString()).to.equal(
-        moment.unix(genesisDate).add(3, 'M').unix().toString(),
+      expect(moment.unix(market.maturity.toString()).day()).to.equal(5);
+      expect(moment.unix(market.maturity.toString()).month()).to.equal(
+        moment.unix(genesisDate).add(3, 'M').month(),
       );
       expect(market.openingDate).to.equal(genesisDate);
       expect(market.borrowUnitPrice.toString()).to.equal('8880');

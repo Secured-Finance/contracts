@@ -25,7 +25,7 @@ library LendingMarketOperationLogic {
             _ccy,
             36,
             _compoundFactor,
-            TimeLibrary.addMonths(_genesisDate, ProtocolTypes.BASIS_TERM)
+            calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
         );
 
         Storage.slot().genesisDates[_ccy] = _genesisDate;
@@ -48,15 +48,15 @@ library LendingMarketOperationLogic {
             "Non supported currency"
         );
 
-        uint256 basisDate = Storage.slot().genesisDates[_ccy];
-
-        if (Storage.slot().lendingMarkets[_ccy].length > 0) {
-            basisDate = ILendingMarket(
+        if (Storage.slot().lendingMarkets[_ccy].length == 0) {
+            maturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy);
+        } else {
+            uint256 lastMaturity = ILendingMarket(
                 Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
             ).getMaturity();
+            maturity = calculateNextMaturity(lastMaturity, Storage.slot().marketBasePeriod);
         }
 
-        maturity = TimeLibrary.addMonths(basisDate, ProtocolTypes.BASIS_TERM);
         require(_openingDate < maturity, "Market opening date must be before maturity date");
 
         market = AddressResolverLib.beaconProxyController().deployLendingMarket(
@@ -92,9 +92,9 @@ library LendingMarketOperationLogic {
         uint256 nextMaturity = ILendingMarket(nextMarketAddr).getMaturity();
 
         // Reopen the market matured with new maturity
-        toMaturity = TimeLibrary.addMonths(
+        toMaturity = calculateNextMaturity(
             ILendingMarket(markets[markets.length - 1]).getMaturity(),
-            ProtocolTypes.BASIS_TERM
+            Storage.slot().marketBasePeriod
         );
 
         // The market that is moved to the last of the list opens again when the next market is matured.
@@ -154,6 +154,36 @@ library LendingMarketOperationLogic {
                 .observationPeriodLogs[_ccy][_maturity].totalFutureValue += _filledFutureValue;
             }
         }
+    }
+
+    function calculateNextMaturity(uint256 _timestamp, uint256 _period)
+        public
+        pure
+        returns (uint256)
+    {
+        if (_period == 0) {
+            return TimeLibrary.addDays(_timestamp, 7);
+        } else {
+            return _getLastFridayAfterMonths(_timestamp, _period);
+        }
+    }
+
+    function _getLastFridayAfterMonths(uint256 _timestamp, uint256 _months)
+        internal
+        pure
+        returns (uint256 lastFridayTimestamp)
+    {
+        (uint256 year, uint256 month, ) = TimeLibrary.timestampToDate(
+            TimeLibrary.addMonths(_timestamp, _months + 1)
+        );
+        uint256 thirdMonthEndTimestamp = TimeLibrary.timestampFromDate(year, month, 0);
+        uint256 dayOfWeek = TimeLibrary.getDayOfWeek(thirdMonthEndTimestamp);
+        uint256 diff = (dayOfWeek < TimeLibrary.DOW_FRI ? 7 : 0) + dayOfWeek - TimeLibrary.DOW_FRI;
+        lastFridayTimestamp = TimeLibrary.subDays(thirdMonthEndTimestamp, diff);
+
+        require(lastFridayTimestamp > 0, "Invalid Timestamp");
+
+        return lastFridayTimestamp;
     }
 
     function _calculateAutoRollUnitPrice(bytes32 _ccy, uint256 _maturity)

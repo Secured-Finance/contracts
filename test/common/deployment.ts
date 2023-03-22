@@ -4,11 +4,11 @@ import moment from 'moment';
 
 import { currencies, mockRates } from '../../utils/currencies';
 import {
-  hexWFIL,
   hexEFIL,
-  hexWETH,
-  hexWBTC,
   hexUSDC,
+  hexWBTC,
+  hexWETH,
+  hexWFIL,
   toBytes32,
 } from '../../utils/strings';
 import {
@@ -17,6 +17,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  MARKET_BASE_PERIOD,
   MARKET_OBSERVATION_PERIOD,
   ORDER_FEE_RATE,
 } from './constants';
@@ -125,6 +126,7 @@ const deployContracts = async () => {
     proxyController.setGenesisValueVaultImpl(genesisValueVault.address),
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
+      MARKET_BASE_PERIOD,
       MARKET_OBSERVATION_PERIOD,
     ),
     proxyController.setReserveFundImpl(reserveFund.address, wETHToken.address),
