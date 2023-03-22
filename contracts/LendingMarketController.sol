@@ -76,6 +76,7 @@ contract LendingMarketController is
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
+     * @param _marketBasePeriod The base period for market maturity
      * @param _observationPeriod The observation period to calculate the volume-weighted average price of transactions
      */
     function initialize(
