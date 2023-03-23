@@ -71,13 +71,31 @@ library LendingMarketOperationLogic {
         Storage.slot().futureValueVaults[_ccy][market] = futureValueVault;
     }
 
-    function executeMultiItayoseCall(bytes32[] memory _currencies, uint256 _maturity) external {
+    function executeItayoseCalls(bytes32[] memory _currencies, uint256 _maturity) external {
         for (uint256 i; i < _currencies.length; i++) {
-            ILendingMarket market = ILendingMarket(
-                Storage.slot().maturityLendingMarkets[_currencies[i]][_maturity]
-            );
+            bytes32 ccy = _currencies[i];
+            address marketAddr = Storage.slot().maturityLendingMarkets[ccy][_maturity];
+            ILendingMarket market = ILendingMarket(marketAddr);
+
             if (market.isItayosePeriod()) {
-                market.executeItayoseCall();
+                (uint256 openingUnitPrice, uint256 openingDate) = market.executeItayoseCall();
+
+                // Save the openingUnitPrice as first compound factor
+                // if it is a first Itayose call at the nearest market.
+                if (openingUnitPrice > 0 && Storage.slot().lendingMarkets[ccy][0] == marketAddr) {
+                    // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
+                    uint256 convertedUnitPrice = _convertUnitPrice(
+                        openingUnitPrice,
+                        _maturity,
+                        openingDate,
+                        Storage.slot().genesisDates[ccy]
+                    );
+
+                    AddressResolverLib.genesisValueVault().updateInitialCompoundFactor(
+                        ccy,
+                        convertedUnitPrice
+                    );
+                }
             }
         }
     }
@@ -137,9 +155,10 @@ library LendingMarketOperationLogic {
                 .getMaturity();
 
             if (Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount == 0) {
-                Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _estimateUnitPrice(
+                Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _convertUnitPrice(
                     _filledUnitPrice,
                     _maturity,
+                    block.timestamp,
                     nearestMaturity
                 );
             }
@@ -207,19 +226,20 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function _estimateUnitPrice(
+    function _convertUnitPrice(
         uint256 _unitPrice,
-        uint256 _currentMaturity,
-        uint256 _destinationMaturity
-    ) internal view returns (uint256) {
+        uint256 _maturity,
+        uint256 _currentTimestamp,
+        uint256 _destinationTimestamp
+    ) internal pure returns (uint256) {
         // NOTE:The formula is:
-        // 1) currentDuration = targetMarketMaturity - currentTimestamp
-        // 2) destinationDuration = targetMarketMaturity - destinationTimestamp
+        // 1) currentDuration = maturity - currentTimestamp
+        // 2) destinationDuration = maturity - destinationTimestamp
         // 3) unitPrice = (currentUnitPrice * currentDuration)
         //      / ((1 - currentUnitPrice) * destinationDuration + currentUnitPrice * currentDuration)
 
-        uint256 currentDuration = _currentMaturity - block.timestamp;
-        uint256 destinationDuration = _currentMaturity - _destinationMaturity;
+        uint256 currentDuration = _maturity - _currentTimestamp;
+        uint256 destinationDuration = _maturity - _destinationTimestamp;
         return
             (ProtocolTypes.PRICE_DIGIT * _unitPrice * currentDuration) /
             (((ProtocolTypes.PRICE_DIGIT - _unitPrice) * destinationDuration) +

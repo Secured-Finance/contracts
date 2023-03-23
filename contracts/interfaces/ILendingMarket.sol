@@ -173,7 +173,7 @@ interface ILendingMarket {
             uint256 filledFutureValue
         );
 
-    function executeItayoseCall() external returns (uint256 openingUnitPrice);
+    function executeItayoseCall() external returns (uint256 openingUnitPrice, uint256 openingDate);
 
     function cleanOrders(address _user)
         external

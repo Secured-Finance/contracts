@@ -82,7 +82,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
     await lendingMarketController
       .connect(owner)
-      .executeMultiItayoseCall([hexWETH], maturities[maturities.length - 1]);
+      .executeItayoseCalls([hexWETH], maturities[maturities.length - 1]);
   };
 
   const resetContractInstances = async () => {
@@ -864,9 +864,10 @@ describe('Integration Test: Auto-rolls', async () => {
         .connect(owner)
         .rotateLendingMarkets(hexWETH);
 
-      await lendingMarkets[lendingMarkets.length - 1]
-        .connect(owner)
-        .executeItayoseCall();
+      await lendingMarketController.executeItayoseCalls(
+        [hexWETH],
+        maturities[maturities.length - 1],
+      );
 
       for (const { address } of users) {
         await lendingMarketController.cleanOrders(hexWETH, address);
@@ -1003,7 +1004,10 @@ describe('Integration Test: Auto-rolls', async () => {
         .connect(owner)
         .rotateLendingMarkets(hexWETH);
 
-      await lendingMarkets[0].connect(owner).executeItayoseCall();
+      await lendingMarketController.executeItayoseCalls(
+        [hexWETH],
+        maturities[maturities.length - 1],
+      );
 
       // Check present value
       const aliceTotalPVAfter =

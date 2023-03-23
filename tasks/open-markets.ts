@@ -44,7 +44,10 @@ task(
       ]);
 
       if (isItayosePeriod) {
-        await lendingMarket.executeItayoseCall().then((tx) => tx.wait());
+        await lendingMarketController.executeItayoseCalls(
+          [currency.key],
+          maturity,
+        );
         console.log(
           `Successfully executed ${currency.symbol} market Itayose call with maturity ${maturity}`,
         );

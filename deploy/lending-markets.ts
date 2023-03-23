@@ -19,8 +19,7 @@ const func: DeployFunction = async function ({
 }: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
-  const genesisDate =
-    process.env.MARKET_BASIS_DATE || getGenesisDate().toString();
+  const genesisDate = getGenesisDate().toString();
 
   const orderBookLogic = await deployments.get('OrderBookLogic');
   const deployResult = await deploy('LendingMarket', {
@@ -102,7 +101,9 @@ const func: DeployFunction = async function ({
 
       for (let i = 0; i < count; i++) {
         let openingDate =
-          i === count - 1 ? nearestMaturity.toString() : genesisDate;
+          i === count - 1
+            ? nearestMaturity.toString()
+            : process.env.INITIAL_MARKET_OPENING_DATE || genesisDate;
 
         const receipt = await lendingMarketController
           .createLendingMarket(currency.key, openingDate)
