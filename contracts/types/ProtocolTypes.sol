@@ -14,7 +14,6 @@ library ProtocolTypes {
     uint256 internal constant SECONDS_IN_MONTH = 2592000; // 60 * 60 * 24 * 30 * 12
     uint256 internal constant SECONDS_IN_YEAR = 31536000; // 60 * 60 * 24 * 365
 
-    uint256 internal constant BASIS_TERM = 3;
     uint256 internal constant MAXIMUM_ORDER_COUNT = 20;
 
     // Lending market common types

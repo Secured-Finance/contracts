@@ -76,13 +76,16 @@ contract LendingMarketController is
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
+     * @param _marketBasePeriod The base period for market maturity
      * @param _observationPeriod The observation period to calculate the volume-weighted average price of transactions
      */
     function initialize(
         address _owner,
         address _resolver,
+        uint256 _marketBasePeriod,
         uint256 _observationPeriod
     ) public initializer onlyProxy {
+        Storage.slot().marketBasePeriod = _marketBasePeriod;
         MixinLendingMarketManager._initialize(_owner, _observationPeriod);
         registerAddressResolver(_resolver);
     }
