@@ -17,6 +17,8 @@ jobs:
     name: Test on a Fork
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.network }}
+    outputs:
+      diff: ${{ steps.diff.outputs.count }} 
     steps:
       - uses: actions/checkout@v3
         with:
@@ -63,9 +65,9 @@ jobs:
         shell: bash
         id: diff
         run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+          echo "count=$(git diff --staged --name-only . | wc -l)" >> $GITHUB_OUTPUT
       - name: Run a Loan Test on fork environment
-        if: steps.diff.outputs.count > 0
+        if: ${{ steps.diff.outputs.count > 0 }}
         env:
           USE_DEFAULT_ACCOUNTS: true
           FORK_RPC_ENDPOINT: https://rpc.tenderly.co/fork/${{ env.FORK_ID }}
@@ -78,6 +80,9 @@ jobs:
     if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'canceled') }}
     environment: ${{ github.event.inputs.network }}
     needs: [test]
+    outputs:
+      deploymentDiff: ${{ steps.deploymentDiff.outputs.count }} 
+      docgenDiff: ${{ steps.docgenDiff.outputs.count }}
     steps:
       - name: Generate token
         id: generate_token
@@ -126,10 +131,10 @@ jobs:
         shell: bash
         id: deploymentDiff
         run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+          echo "count=$(git diff --staged --name-only . | wc -l)" >> $GITHUB_OUTPUT
       - name: Commit and push
         shell: bash
-        if: steps.deploymentDiff.outputs.count > 0
+        if: ${{ steps.deploymentDiff.outputs.count > 0 }}
         run: |
           git commit -m "chore: update smart contracts" --no-verify
           git push
@@ -142,10 +147,10 @@ jobs:
         shell: bash
         id: docgenDiff
         run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+          echo "count=$(git diff --staged --name-only . | wc -l)" >> $GITHUB_OUTPUT
       - name: Commit and push
         shell: bash
-        if: steps.docgenDiff.outputs.count > 0
+        if: ${{ steps.docgenDiff.outputs.count > 0 }}
         run: |
           git commit -m "chore: update docs" --no-verify
           git push
