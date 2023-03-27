@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 // interfaces
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
@@ -26,13 +25,7 @@ import {LendingMarketStorage as Storage, RemainingOrder} from "./storages/Lendin
  *
  * @dev The market orders is stored in structured red-black trees and doubly linked lists in each node.
  */
-contract LendingMarket is
-    ILendingMarket,
-    MixinAddressResolver,
-    Pausable,
-    Proxyable,
-    ReentrancyGuard
-{
+contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
     uint256 private constant PRE_ORDER_PERIOD = 48 hours;
     uint256 private constant ITAYOSE_PERIOD = 1 hours;
 
@@ -586,14 +579,15 @@ contract LendingMarket is
      * After this action, the market opens.
      * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
      * @return openingUnitPrice The opening price when Itayose is executed
+     * @return openingDate The timestamp when the market opens
      */
     function executeItayoseCall()
         external
         override
-        nonReentrant
         whenNotPaused
+        onlyAcceptedContracts
         ifItayosePeriod
-        returns (uint256 openingUnitPrice)
+        returns (uint256 openingUnitPrice, uint256 openingDate)
     {
         uint256 totalOffsetAmount;
         (openingUnitPrice, totalOffsetAmount) = OrderBookLogic.getOpeningUnitPrice();
@@ -631,6 +625,7 @@ contract LendingMarket is
 
         Storage.slot().isReady[Storage.slot().maturity] = true;
         Storage.slot().openingUnitPrices[Storage.slot().maturity] = openingUnitPrice;
+        openingDate = Storage.slot().openingDate;
     }
 
     /**

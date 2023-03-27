@@ -190,7 +190,7 @@ interface ILendingMarketController {
 
     function unwindOrder(bytes32 _ccy, uint256 _maturity) external returns (bool);
 
-    function executeMultiItayoseCall(bytes32[] memory currencies, uint256 maturity)
+    function executeItayoseCalls(bytes32[] memory currencies, uint256 maturity)
         external
         returns (bool);
 

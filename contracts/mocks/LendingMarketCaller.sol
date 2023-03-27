@@ -43,4 +43,11 @@ contract LendingMarketCaller {
             _unitPrice
         );
     }
+
+    function executeItayoseCall(uint256 _index)
+        external
+        returns (uint256 openingUnitPrice, uint256 openingDate)
+    {
+        return ILendingMarket(lendingMarkets[_index]).executeItayoseCall();
+    }
 }

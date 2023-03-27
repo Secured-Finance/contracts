@@ -83,6 +83,8 @@ interface IGenesisValueVault {
         uint256 maturity
     ) external;
 
+    function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice) external;
+
     function executeAutoRoll(
         bytes32 ccy,
         uint256 maturity,

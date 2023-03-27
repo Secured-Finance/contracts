@@ -28,6 +28,7 @@ jobs:
       - name: Set environment variables
         run: |
           echo "INITIAL_COMPOUND_FACTOR=${{ vars.INITIAL_COMPOUND_FACTOR }}" >> $GITHUB_ENV
+          echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
           echo "MARKET_OBSERVATION_PERIOD=${{ vars.MARKET_OBSERVATION_PERIOD }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
@@ -103,6 +104,7 @@ jobs:
       - name: Set environment variables
         run: |
           echo "INITIAL_COMPOUND_FACTOR=${{ vars.INITIAL_COMPOUND_FACTOR }}" >> $GITHUB_ENV
+          echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
           echo "MARKET_OBSERVATION_PERIOD=${{ vars.MARKET_OBSERVATION_PERIOD }}" >> $GITHUB_ENV
           echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV

@@ -204,7 +204,10 @@ describe('Integration Test: Itayose', async () => {
       expect(await lendingMarket.isOpened()).to.false;
 
       // Itayose
-      await lendingMarket.connect(owner).executeItayoseCall();
+      await lendingMarketController.executeItayoseCalls(
+        [hexWETH],
+        maturities[maturities.length - 1],
+      );
       const marketInfo = await lendingMarket.getMarket();
 
       expect(await lendingMarket.isOpened()).to.true;
@@ -341,7 +344,10 @@ describe('Integration Test: Itayose', async () => {
       expect(await lendingMarket.isOpened()).to.false;
 
       // Itayose
-      await lendingMarket.connect(owner).executeItayoseCall();
+      await lendingMarketController.executeItayoseCalls(
+        [hexWETH],
+        maturities[maturities.length - 1],
+      );
       const marketInfo = await lendingMarket.getMarket();
       const openingUnitPrice = await lendingMarket.getOpeningUnitPrice();
 

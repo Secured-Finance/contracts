@@ -223,9 +223,10 @@ describe('Performance Test: Auto-rolls', async () => {
         await lendingMarketController
           .connect(owner)
           .rotateLendingMarkets(hexEFIL);
-        await lendingMarkets[lendingMarkets.length - 1]
-          .connect(owner)
-          .executeItayoseCall();
+        await lendingMarketController.executeItayoseCalls(
+          [hexEFIL],
+          maturities[maturities.length - 1],
+        );
 
         // Check present value
         const aliceTotalPVAfter =

@@ -200,10 +200,38 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         Storage.slot().borrowingCompoundFactors[_ccy] = _compoundFactor;
         Storage.slot().currentMaturity[_ccy] = _maturity;
 
-        // TODO: These values need to be updated by the first Itayose.
-        Storage.slot().autoRollLogs[_ccy][_maturity].lendingCompoundFactor = _compoundFactor;
-        Storage.slot().autoRollLogs[_ccy][_maturity].borrowingCompoundFactor = _compoundFactor;
-        Storage.slot().autoRollLogs[_ccy][_maturity].unitPrice = ProtocolTypes.PRICE_DIGIT;
+        // Update autoRollLogs by initial compound factor.
+        // These values are updated by the first Itayose call of the nearest maturity market
+        // if it is executed.
+        Storage.slot().autoRollLogs[_ccy][_maturity] = AutoRollLog({
+            unitPrice: ProtocolTypes.PRICE_DIGIT,
+            lendingCompoundFactor: _compoundFactor,
+            borrowingCompoundFactor: _compoundFactor,
+            prev: 0,
+            next: 0
+        });
+    }
+
+    function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice)
+        external
+        override
+        onlyAcceptedContracts
+    {
+        uint256 maturity = Storage.slot().currentMaturity[_ccy];
+
+        require(
+            Storage.slot().autoRollLogs[_ccy][maturity].prev == 0,
+            "First autoRollLog already finalized"
+        );
+
+        _updateCompoundFactor(_ccy, _unitPrice, 0);
+        Storage.slot().autoRollLogs[_ccy][maturity] = AutoRollLog({
+            unitPrice: _unitPrice,
+            lendingCompoundFactor: Storage.slot().lendingCompoundFactors[_ccy],
+            borrowingCompoundFactor: Storage.slot().borrowingCompoundFactors[_ccy],
+            prev: 0,
+            next: 0
+        });
     }
 
     function executeAutoRoll(
@@ -214,7 +242,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _feeRate,
         uint256 _totalFVAmount
     ) external override onlyAcceptedContracts {
-        _updateCompoundFactor(_ccy, _maturity, _nextMaturity, _unitPrice, _feeRate);
+        _updateCompoundFactor(_ccy, _unitPrice, _feeRate);
+        _updateAutoRollLogs(_ccy, _maturity, _nextMaturity, _unitPrice);
         _registerMaximumTotalSupply(_ccy, _maturity, _totalFVAmount);
 
         emit AutoRollExecuted(
@@ -227,17 +256,15 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         );
     }
 
-    function _updateCompoundFactor(
+    function _updateAutoRollLogs(
         bytes32 _ccy,
         uint256 _maturity,
         uint256 _nextMaturity,
-        uint256 _unitPrice,
-        uint256 _feeRate
+        uint256 _unitPrice
     ) private {
         require(_unitPrice != 0, "unitPrice is zero");
-        require(_feeRate <= ProtocolTypes.PCT_DIGIT, "Invalid fee rate");
-        require(Storage.slot().autoRollLogs[_ccy][_maturity].next == 0, "already updated maturity");
-        require(_nextMaturity > _maturity, "invalid maturity");
+        require(Storage.slot().autoRollLogs[_ccy][_maturity].next == 0, "Already updated maturity");
+        require(_nextMaturity > _maturity, "Invalid maturity");
         require(
             Storage.slot().autoRollLogs[_ccy][_nextMaturity].lendingCompoundFactor == 0,
             "Existed maturity"
@@ -252,23 +279,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             "Invalid borrowing compound factor"
         );
 
-        Storage.slot().autoRollLogs[_ccy][_maturity].next = _nextMaturity;
-
-        // Save actual compound factor here due to calculating the genesis value from future value.
-        // NOTE: The formula is:
-        // autoRollRate = 1 / unitPrice
-        // newLendingCompoundFactor = currentLendingCompoundFactor * (autoRollRate - feeRate)
-        // newBorrowingCompoundFactor = currentBorrowingCompoundFactor * (autoRollRate + feeRate)
-        Storage.slot().lendingCompoundFactors[_ccy] =
-            (Storage.slot().lendingCompoundFactors[_ccy] *
-                (ProtocolTypes.PRICE_DIGIT * ProtocolTypes.PCT_DIGIT - _feeRate * _unitPrice)) /
-            (ProtocolTypes.PCT_DIGIT * _unitPrice);
-        Storage.slot().borrowingCompoundFactors[_ccy] =
-            (Storage.slot().borrowingCompoundFactors[_ccy] *
-                (ProtocolTypes.PRICE_DIGIT * ProtocolTypes.PCT_DIGIT + _feeRate * _unitPrice)) /
-            (ProtocolTypes.PCT_DIGIT * _unitPrice);
-
         Storage.slot().currentMaturity[_ccy] = _nextMaturity;
+
+        Storage.slot().autoRollLogs[_ccy][_maturity].next = _nextMaturity;
         Storage.slot().autoRollLogs[_ccy][_nextMaturity] = AutoRollLog({
             unitPrice: _unitPrice,
             lendingCompoundFactor: Storage.slot().lendingCompoundFactors[_ccy],
@@ -540,5 +553,28 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
                 )
                 .toInt256() -
             _balance;
+    }
+
+    function _updateCompoundFactor(
+        bytes32 _ccy,
+        uint256 _unitPrice,
+        uint256 _feeRate
+    ) private {
+        require(_feeRate <= ProtocolTypes.PCT_DIGIT, "Invalid fee rate");
+
+        // Save actual compound factor here due to calculating the genesis value from future value.
+        // NOTE: The formula is:
+        // autoRollRate = 1 / unitPrice
+        // newLendingCompoundFactor = currentLendingCompoundFactor * (autoRollRate - feeRate)
+        // newBorrowingCompoundFactor = currentBorrowingCompoundFactor * (autoRollRate + feeRate)
+        Storage.slot().lendingCompoundFactors[_ccy] =
+            (Storage.slot().lendingCompoundFactors[_ccy] *
+                (ProtocolTypes.PRICE_DIGIT * ProtocolTypes.PCT_DIGIT - _feeRate * _unitPrice)) /
+            (ProtocolTypes.PCT_DIGIT * _unitPrice);
+
+        Storage.slot().borrowingCompoundFactors[_ccy] =
+            (Storage.slot().borrowingCompoundFactors[_ccy] *
+                (ProtocolTypes.PRICE_DIGIT * ProtocolTypes.PCT_DIGIT + _feeRate * _unitPrice)) /
+            (ProtocolTypes.PCT_DIGIT * _unitPrice);
     }
 }

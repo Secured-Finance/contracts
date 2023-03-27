@@ -657,12 +657,13 @@ contract LendingMarketController is
         return true;
     }
 
-    function executeMultiItayoseCall(bytes32[] memory _currencies, uint256 _maturity)
+    function executeItayoseCalls(bytes32[] memory _currencies, uint256 _maturity)
         external
         override
+        nonReentrant
         returns (bool)
     {
-        LendingMarketOperationLogic.executeMultiItayoseCall(_currencies, _maturity);
+        LendingMarketOperationLogic.executeItayoseCalls(_currencies, _maturity);
         return true;
     }
 

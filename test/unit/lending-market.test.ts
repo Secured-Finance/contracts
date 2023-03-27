@@ -225,10 +225,9 @@ describe('LendingMarket', () => {
           // Increase 47 hours
           await time.increase(169200);
 
-          await expect(lendingMarket.executeItayoseCall()).to.emit(
-            lendingMarket,
-            'ItayoseExecuted',
-          );
+          await expect(
+            lendingMarketCaller.executeItayoseCall(lendingMarketCount - 1),
+          ).to.emit(lendingMarket, 'ItayoseExecuted');
 
           const openingPrice = await lendingMarket.getOpeningUnitPrice();
 
@@ -240,10 +239,9 @@ describe('LendingMarket', () => {
         // Increase 47 hours
         await time.increase(169200);
 
-        await expect(lendingMarket.executeItayoseCall()).to.not.emit(
-          lendingMarket,
-          'ItayoseExecuted',
-        );
+        await expect(
+          lendingMarketCaller.executeItayoseCall(lendingMarketCount - 1),
+        ).to.not.emit(lendingMarket, 'ItayoseExecuted');
       });
 
       it('Fail to create a pre-order due to not in the pre-order period', async () => {
@@ -269,9 +267,9 @@ describe('LendingMarket', () => {
       });
 
       it('Fail to execute the Itayose call due to not in the Itayose period ', async () => {
-        await expect(lendingMarket.executeItayoseCall()).to.be.revertedWith(
-          'Not in the Itayose period',
-        );
+        await expect(
+          lendingMarketCaller.executeItayoseCall(lendingMarketCount - 1),
+        ).to.be.revertedWith('Not in the Itayose period');
       });
     });
   });

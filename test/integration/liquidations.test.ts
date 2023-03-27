@@ -161,7 +161,7 @@ describe('Integration Test: Liquidations', async () => {
 
     await lendingMarketController
       .connect(owner)
-      .executeMultiItayoseCall(
+      .executeItayoseCalls(
         [hexEFIL, hexUSDC],
         usdcMaturities[usdcMaturities.length - 1],
       );
