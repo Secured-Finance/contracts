@@ -17,6 +17,8 @@ jobs:
     name: Reset Smart Contracts
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.network }}
+    outputs:
+      docgenDiff: ${{ steps.docgenDiff.outputs.count }} 
     steps:
       - name: Generate token
         id: generate_token
@@ -76,10 +78,10 @@ jobs:
         shell: bash
         id: docgenDiff
         run: |
-          echo "::set-output name=count::$(git diff --staged --name-only . | wc -l)"
+          echo "count=$(git diff --staged --name-only . | wc -l)" >> $GITHUB_OUTPUT
       - name: Commit and push
         shell: bash
-        if: steps.docgenDiff.outputs.count > 0
+        if: ${{ steps.docgenDiff.outputs.count > 0 }}
         run: |
           git commit -m "chore: update docs" --no-verify
           git push
