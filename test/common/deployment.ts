@@ -288,6 +288,7 @@ const deployContracts = async () => {
 
   return {
     genesisDate,
+    fundManagementLogic,
     // contracts
     addressResolver: addressResolverProxy,
     beaconProxyController: beaconProxyControllerProxy,

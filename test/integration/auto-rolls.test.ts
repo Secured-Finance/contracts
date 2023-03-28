@@ -240,7 +240,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(aliceFVBefore).to.equal('0');
       expect(bobFV).not.to.equal('0');
 
-      await lendingMarketController.cleanOrders(hexWETH, alice.address);
+      await lendingMarketController.cleanUpFunds(hexWETH, alice.address);
       const { futureValue: aliceFVAfter } =
         await futureValueVaults[0].getFutureValue(alice.address);
 
@@ -636,7 +636,7 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      await lendingMarketController.cleanOrders(hexWETH, alice.address);
+      await lendingMarketController.cleanUpFunds(hexWETH, alice.address);
 
       const alicePV0After = await lendingMarketController.getPresentValue(
         hexWETH,
@@ -830,7 +830,7 @@ describe('Integration Test: Auto-rolls', async () => {
     it('Check future values', async () => {
       const checkFutureValue = async () => {
         for (const { address } of [owner, alice, bob, carol]) {
-          await lendingMarketController.cleanOrders(hexWETH, address);
+          await lendingMarketController.cleanUpFunds(hexWETH, address);
         }
 
         const gvAmounts = await Promise.all(
@@ -870,7 +870,7 @@ describe('Integration Test: Auto-rolls', async () => {
       );
 
       for (const { address } of users) {
-        await lendingMarketController.cleanOrders(hexWETH, address);
+        await lendingMarketController.cleanUpFunds(hexWETH, address);
       }
 
       const [

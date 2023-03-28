@@ -99,7 +99,7 @@ contract TokenVaultCallerMock {
         return lendingMarketController.calculateFunds(_ccy, _user);
     }
 
-    function cleanOrders(bytes32 _ccy, address _user) public returns (uint256 activeOrderCount) {
-        return lendingMarketController.cleanOrders(_ccy, _user);
+    function cleanUpFunds(bytes32 _ccy, address _user) public returns (uint256 activeOrderCount) {
+        return lendingMarketController.cleanUpFunds(_ccy, _user);
     }
 }

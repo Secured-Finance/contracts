@@ -404,10 +404,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Cleans own orders to remove order ids that are already filled on the order book.
+     * @notice Cleans up own orders to remove order ids that are already filled on the order book.
      * @dev The order list per user is not updated in real-time when an order is filled.
      * This function removes the filled order from that order list per user to reduce gas costs
-     * for calculating if the collateral is enough or not.
+     * for lazy evaluation if the collateral is enough or not.
      *
      * @param _user User address
      * @return activeLendOrderCount The total amount of active lend order on the order book
@@ -418,7 +418,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return removedBorrowOrderAmount The total PV amount of the removed borrow order amount from the order book
      * @return maturity The maturity of the removed orders
      */
-    function cleanOrders(address _user)
+    function cleanUpOrders(address _user)
         external
         override
         returns (

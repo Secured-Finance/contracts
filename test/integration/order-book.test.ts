@@ -30,6 +30,8 @@ describe('Integration Test: Order Book', async () => {
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
+  let fundManagementLogic: Contract;
+
   let genesisDate: number;
   let filLendingMarkets: Contract[] = [];
   let filMaturities: BigNumber[];
@@ -85,6 +87,7 @@ describe('Integration Test: Order Book', async () => {
 
     ({
       genesisDate,
+      fundManagementLogic,
       addressResolver,
       currencyController,
       tokenVault,
@@ -231,7 +234,10 @@ describe('Integration Test: Order Book', async () => {
           lendingMarketController
             .connect(alice)
             .unwindOrder(hexWETH, ethMaturities[0]),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         const aliceFV = await lendingMarketController.getFutureValue(
           hexWETH,
@@ -360,7 +366,10 @@ describe('Integration Test: Order Book', async () => {
           lendingMarketController
             .connect(alice)
             .unwindOrder(hexEFIL, filMaturities[0]),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         const aliceFV = await lendingMarketController.getFutureValue(
           hexEFIL,
@@ -556,7 +565,10 @@ describe('Integration Test: Order Book', async () => {
           lendingMarketController
             .connect(alice)
             .unwindOrder(hexEFIL, filMaturities[0]),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         const aliceFVAfter = await lendingMarketController.getFutureValue(
           hexEFIL,
@@ -958,7 +970,10 @@ describe('Integration Test: Order Book', async () => {
               orderAmountInFIL,
               '8000',
             ),
-        ).to.not.emit(lendingMarketController, 'OrderFilled');
+        ).to.not.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         const totalCollateralAmountAfter =
           await tokenVault.getTotalCollateralAmount(alice.address);

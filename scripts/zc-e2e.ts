@@ -218,11 +218,11 @@ describe('ZC e2e test', async () => {
       )
       .then((tx) => tx.wait());
 
-    await lendingMarketController.cleanOrders(
+    await lendingMarketController.cleanUpFunds(
       targetCurrency,
       aliceSigner.address,
     );
-    await lendingMarketController.cleanOrders(
+    await lendingMarketController.cleanUpFunds(
       targetCurrency,
       bobSigner.address,
     );

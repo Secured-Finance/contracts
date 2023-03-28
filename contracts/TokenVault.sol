@@ -525,7 +525,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     ) internal {
         require(_amount > 0, "Invalid amount");
 
-        lendingMarketController().cleanOrders(_ccy, _user);
+        lendingMarketController().cleanUpFunds(_ccy, _user);
         uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
 
