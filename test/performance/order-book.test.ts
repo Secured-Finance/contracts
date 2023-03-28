@@ -97,8 +97,21 @@ describe('Performance Test: Order Book', async () => {
 
     for (const { key: currencyKey, name, orderAmount } of currencies) {
       let contract: Contract;
+      let lendingMarkets: Contract[] = [];
 
       describe(`Take orders on the ${name} market`, async () => {
+        before('Set lending markets', async () => {
+          lendingMarkets = await lendingMarketController
+            .getLendingMarkets(currencyKey)
+            .then((addresses) =>
+              Promise.all(
+                addresses.map((address) =>
+                  ethers.getContractAt('LendingMarket', address),
+                ),
+              ),
+            );
+        });
+
         for (const test of tests) {
           it(`${test} orders`, async () => {
             switch (currencyKey) {
@@ -197,7 +210,7 @@ describe('Performance Test: Order Book', async () => {
                 .then((tx) => tx.wait());
             }
 
-            const receipt = await lendingMarketController
+            const tx = await lendingMarketController
               .connect(signers[0])
               .createOrder(
                 currencyKey,
@@ -205,27 +218,27 @@ describe('Performance Test: Order Book', async () => {
                 Side.BORROW,
                 totalAmount,
                 '0',
-              )
-              .then((tx) => tx.wait());
+              );
+
+            await expect(tx)
+              .to.emit(lendingMarkets[0], 'OrdersTaken')
+              .withArgs(
+                signers[0].address,
+                Side.BORROW,
+                currencyKey,
+                maturities[0],
+                totalAmount,
+                '0',
+                () => true,
+              );
+
+            const receipt = await tx.wait();
 
             const headerName = `GasConst(${name})`;
             if (!log[headerName]) {
               log[headerName] = {};
             }
             log[headerName][test] = receipt.gasUsed.toString();
-
-            const orderFilledEvent = receipt.events.find(
-              ({ event }) => event === 'OrderFilled',
-            );
-            expect(orderFilledEvent?.event).to.equal('OrderFilled');
-            const { taker, ccy, side, maturity, amount, unitPrice } =
-              orderFilledEvent.args;
-            expect(taker).to.equal(signers[0].address);
-            expect(ccy).to.equal(currencyKey);
-            expect(side).to.equal(Side.BORROW);
-            expect(maturity).to.equal(maturities[0]);
-            expect(amount).to.equal(totalAmount);
-            expect(unitPrice).to.equal('0');
           });
         }
       });

@@ -79,7 +79,7 @@ describe('TokenVault', () => {
     await mockERC20.mock.transferFrom.returns(true);
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
-    await mockLendingMarketController.mock.cleanOrders.returns(0);
+    await mockLendingMarketController.mock.cleanUpFunds.returns(0);
     await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(0);
     await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
       0,

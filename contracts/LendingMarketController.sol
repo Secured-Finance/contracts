@@ -546,7 +546,7 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice
     ) public override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        uint256 activeOrderCount = cleanOrders(_ccy, msg.sender);
+        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
         require(
             activeOrderCount + 1 <= ProtocolTypes.MAXIMUM_ORDER_COUNT,
             "Too many active orders"
@@ -604,7 +604,7 @@ contract LendingMarketController is
         ifValidMaturity(_ccy, _maturity)
         returns (bool)
     {
-        cleanOrders(_ccy, msg.sender);
+        FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
 
         address currentMarket = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         (int256 futureValue, uint256 fvMaturity) = IFutureValueVault(
@@ -632,7 +632,7 @@ contract LendingMarketController is
         }
 
         if (filledAmount > 0) {
-            FundManagementLogic.updateDepositAmount(
+            FundManagementLogic.updateFunds(
                 _ccy,
                 _maturity,
                 msg.sender,
@@ -641,8 +641,6 @@ contract LendingMarketController is
                 filledAmount,
                 0
             );
-
-            emit OrderFilled(msg.sender, _ccy, side, _maturity, filledAmount, 0, filledFutureValue);
 
             LendingMarketOperationLogic.updateOrderLogs(
                 _ccy,
@@ -679,10 +677,7 @@ contract LendingMarketController is
         uint48 _orderId
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
         address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        (ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) = ILendingMarket(market)
-            .cancelOrder(msg.sender, _orderId);
-
-        emit OrderCanceled(_orderId, msg.sender, _ccy, side, _maturity, amount, unitPrice);
+        ILendingMarket(market).cancelOrder(msg.sender, _orderId);
 
         return true;
     }
@@ -712,7 +707,7 @@ contract LendingMarketController is
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
-        cleanOrders(_debtCcy, _user);
+        FundManagementLogic.cleanUpFunds(_debtCcy, _user);
 
         (uint256 liquidationPVAmount, uint256 offsetPVAmount) = FundManagementLogic
             .convertToLiquidationAmountFromCollateral(
@@ -821,73 +816,29 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Cleans user's all orders to remove order ids that are already filled on the order book.
+     * @notice Clean up all funds of the user
      * @param _user User's address
      */
-    function cleanAllOrders(address _user) external override {
+    function cleanUpAllFunds(address _user) external override {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
         for (uint256 i = 0; i < ccySet.length(); i++) {
-            cleanOrders(ccySet.at(i), _user);
+            FundManagementLogic.cleanUpFunds(ccySet.at(i), _user);
         }
     }
 
     /**
-     * @notice Cleans user's orders to remove order ids that are already filled on the order book for a selected currency.
+     * @notice Clean up user funds used for lazy evaluation by the following actions:
+     * - Removes order IDs that is already filled on the order book.
+     * - Convert Future values that have already been auto-rolled to Genesis values.
      * @param _ccy Currency name in bytes32
      * @param _user User's address
      */
-    function cleanOrders(bytes32 _ccy, address _user)
-        public
+    function cleanUpFunds(bytes32 _ccy, address _user)
+        external
         override
         returns (uint256 totalActiveOrderCount)
     {
-        bool futureValueExists = false;
-        uint256[] memory maturities = FundManagementLogic.getUsedMaturities(_ccy, _user);
-
-        for (uint256 j = 0; j < maturities.length; j++) {
-            ILendingMarket market = ILendingMarket(
-                Storage.slot().maturityLendingMarkets[_ccy][maturities[j]]
-            );
-            uint256 activeMaturity = market.getMaturity();
-            int256 currentFutureValue = FundManagementLogic.convertFutureValueToGenesisValue(
-                _ccy,
-                activeMaturity,
-                _user
-            );
-            (uint256 activeOrderCount, bool isCleaned) = _cleanOrders(_ccy, activeMaturity, _user);
-
-            totalActiveOrderCount += activeOrderCount;
-
-            if (isCleaned) {
-                currentFutureValue = FundManagementLogic.convertFutureValueToGenesisValue(
-                    _ccy,
-                    activeMaturity,
-                    _user
-                );
-            }
-
-            if (currentFutureValue != 0) {
-                futureValueExists = true;
-            }
-
-            if (currentFutureValue == 0 && activeOrderCount == 0) {
-                Storage.slot().usedMaturities[_ccy][_user].remove(maturities[j]);
-            }
-
-            genesisValueVault().cleanUpGenesisValue(
-                _ccy,
-                _user,
-                j == maturities.length - 1 ? 0 : maturities[j + 1]
-            );
-        }
-
-        if (
-            totalActiveOrderCount == 0 &&
-            !futureValueExists &&
-            genesisValueVault().getGenesisValue(_ccy, _user) == 0
-        ) {
-            Storage.slot().usedCurrencies[_user].remove(_ccy);
-        }
+        return FundManagementLogic.cleanUpFunds(_ccy, _user);
     }
 
     function _createOrder(
@@ -900,7 +851,7 @@ contract LendingMarketController is
         bool _isForced
     ) private returns (uint256 filledAmount) {
         require(_amount > 0, "Invalid amount");
-        uint256 activeOrderCount = cleanOrders(_ccy, _user);
+        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
 
         if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
             Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
@@ -939,7 +890,7 @@ contract LendingMarketController is
         }
 
         if (filledFutureValue != 0) {
-            FundManagementLogic.updateDepositAmount(
+            FundManagementLogic.updateFunds(
                 _ccy,
                 _maturity,
                 _user,
@@ -947,16 +898,6 @@ contract LendingMarketController is
                 filledFutureValue,
                 filledAmount,
                 feeFutureValue
-            );
-
-            emit OrderFilled(
-                _user,
-                _ccy,
-                _side,
-                _maturity,
-                filledAmount,
-                _unitPrice,
-                filledFutureValue
             );
 
             LendingMarketOperationLogic.updateOrderLogs(
@@ -970,74 +911,5 @@ contract LendingMarketController is
         }
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
-    }
-
-    function _cleanOrders(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    ) private returns (uint256 activeOrderCount, bool isCleaned) {
-        address futureValueVault = getFutureValueVault(_ccy, _maturity);
-
-        (
-            uint256 activeLendOrderCount,
-            uint256 activeBorrowOrderCount,
-            uint256 removedLendOrderFutureValue,
-            uint256 removedBorrowOrderFutureValue,
-            uint256 removedLendOrderAmount,
-            uint256 removedBorrowOrderAmount,
-            uint256 userCurrentMaturity
-        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).cleanOrders(
-                _user
-            );
-
-        if (removedLendOrderAmount > removedBorrowOrderAmount) {
-            tokenVault().removeDepositAmount(
-                _user,
-                _ccy,
-                removedLendOrderAmount - removedBorrowOrderAmount
-            );
-        } else if (removedLendOrderAmount < removedBorrowOrderAmount) {
-            tokenVault().addDepositAmount(
-                _user,
-                _ccy,
-                removedBorrowOrderAmount - removedLendOrderAmount
-            );
-        }
-
-        if (removedLendOrderFutureValue > 0) {
-            IFutureValueVault(futureValueVault).addLendFutureValue(
-                _user,
-                removedLendOrderFutureValue,
-                userCurrentMaturity,
-                false
-            );
-            emit OrdersFilledInAsync(
-                _user,
-                _ccy,
-                ProtocolTypes.Side.LEND,
-                userCurrentMaturity,
-                removedLendOrderFutureValue
-            );
-        }
-
-        if (removedBorrowOrderFutureValue > 0) {
-            IFutureValueVault(futureValueVault).addBorrowFutureValue(
-                _user,
-                removedBorrowOrderFutureValue,
-                userCurrentMaturity,
-                false
-            );
-            emit OrdersFilledInAsync(
-                _user,
-                _ccy,
-                ProtocolTypes.Side.BORROW,
-                userCurrentMaturity,
-                removedBorrowOrderFutureValue
-            );
-        }
-
-        isCleaned = (removedLendOrderFutureValue + removedBorrowOrderFutureValue) > 0;
-        activeOrderCount = activeLendOrderCount + activeBorrowOrderCount;
     }
 }

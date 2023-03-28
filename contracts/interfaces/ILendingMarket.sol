@@ -175,7 +175,7 @@ interface ILendingMarket {
 
     function executeItayoseCall() external returns (uint256 openingUnitPrice, uint256 openingDate);
 
-    function cleanOrders(address _user)
+    function cleanUpOrders(address _user)
         external
         returns (
             uint256 activeLendOrderCount,

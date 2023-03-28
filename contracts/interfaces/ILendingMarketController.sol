@@ -13,31 +13,6 @@ interface ILendingMarketController {
         uint256 maturity
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event OrderFilled(
-        address indexed taker,
-        bytes32 indexed ccy,
-        ProtocolTypes.Side side,
-        uint256 indexed maturity,
-        uint256 amount,
-        uint256 unitPrice,
-        uint256 filledFutureValue
-    );
-    event OrdersFilledInAsync(
-        address indexed taker,
-        bytes32 indexed ccy,
-        ProtocolTypes.Side side,
-        uint256 indexed maturity,
-        uint256 filledFutureValue
-    );
-    event OrderCanceled(
-        uint48 orderId,
-        address indexed maker,
-        bytes32 indexed ccy,
-        ProtocolTypes.Side side,
-        uint256 maturity,
-        uint256 amount,
-        uint256 unitPrice
-    );
     event LiquidationExecuted(
         address indexed user,
         bytes32 collateralCcy,
@@ -216,7 +191,7 @@ interface ILendingMarketController {
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    function cleanAllOrders(address user) external;
+    function cleanUpAllFunds(address user) external;
 
-    function cleanOrders(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
+    function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 }

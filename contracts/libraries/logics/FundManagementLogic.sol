@@ -5,6 +5,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
+import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
@@ -85,6 +86,24 @@ library FundManagementLogic {
         uint256 lentAmount;
     }
 
+    event OrderFilled(
+        address indexed taker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 amount,
+        uint256 futureValue
+    );
+
+    event OrdersFilledInAsync(
+        address indexed taker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 amount,
+        uint256 futureValue
+    );
+
     /**
      * @notice Converts the future value to the genesis value if there is balance in the past maturity.
      * @param _ccy Currency for pausing all lending markets
@@ -95,7 +114,7 @@ library FundManagementLogic {
         bytes32 _ccy,
         uint256 _maturity,
         address _user
-    ) external returns (int256) {
+    ) public returns (int256) {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy][
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ];
@@ -170,7 +189,7 @@ library FundManagementLogic {
 
         if (!AddressResolverLib.reserveFund().isPaused()) {
             // Offset the user's debt using the future value amount and the genesis value amount hold by the reserve fund contract.
-            // Before this step, the target user's order must be cleaned up by `LendingMarketController#cleanOrders` function.
+            // Before this step, the target user's order must be cleaned up by `LendingMarketController#cleanUpFunds` function.
             // If the target market is the nearest market(default market), the genesis value is used for the offset.
             bool isDefaultMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
                 Storage.slot().lendingMarkets[_debtCcy][0];
@@ -245,7 +264,7 @@ library FundManagementLogic {
         );
     }
 
-    function updateDepositAmount(
+    function updateFunds(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
@@ -289,6 +308,8 @@ library FundManagementLogic {
                 Storage.slot().usedMaturities[_ccy][reserveFundAddr].add(_maturity);
             }
         }
+
+        emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledFutureValue);
     }
 
     function calculateActualFunds(
@@ -512,6 +533,132 @@ library FundManagementLogic {
         if (maturities.length > 0) {
             maturities = QuickSort.sort(maturities);
         }
+    }
+
+    function cleanUpFunds(bytes32 _ccy, address _user)
+        public
+        returns (uint256 totalActiveOrderCount)
+    {
+        bool futureValueExists = false;
+        uint256[] memory maturities = getUsedMaturities(_ccy, _user);
+
+        for (uint256 j = 0; j < maturities.length; j++) {
+            ILendingMarket market = ILendingMarket(
+                Storage.slot().maturityLendingMarkets[_ccy][maturities[j]]
+            );
+            uint256 activeMaturity = market.getMaturity();
+            int256 currentFutureValue = convertFutureValueToGenesisValue(
+                _ccy,
+                activeMaturity,
+                _user
+            );
+            (uint256 activeOrderCount, bool isCleaned) = _cleanUpOrders(
+                _ccy,
+                activeMaturity,
+                _user
+            );
+
+            totalActiveOrderCount += activeOrderCount;
+
+            if (isCleaned) {
+                currentFutureValue = convertFutureValueToGenesisValue(_ccy, activeMaturity, _user);
+            }
+
+            if (currentFutureValue != 0) {
+                futureValueExists = true;
+            }
+
+            if (currentFutureValue == 0 && activeOrderCount == 0) {
+                Storage.slot().usedMaturities[_ccy][_user].remove(maturities[j]);
+            }
+
+            AddressResolverLib.genesisValueVault().cleanUpGenesisValue(
+                _ccy,
+                _user,
+                j == maturities.length - 1 ? 0 : maturities[j + 1]
+            );
+        }
+
+        if (
+            totalActiveOrderCount == 0 &&
+            !futureValueExists &&
+            AddressResolverLib.genesisValueVault().getGenesisValue(_ccy, _user) == 0
+        ) {
+            Storage.slot().usedCurrencies[_user].remove(_ccy);
+        }
+    }
+
+    function _cleanUpOrders(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) internal returns (uint256 activeOrderCount, bool isCleaned) {
+        address futureValueVault = Storage.slot().futureValueVaults[_ccy][
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ];
+
+        (
+            uint256 activeLendOrderCount,
+            uint256 activeBorrowOrderCount,
+            uint256 removedLendOrderFutureValue,
+            uint256 removedBorrowOrderFutureValue,
+            uint256 removedLendOrderAmount,
+            uint256 removedBorrowOrderAmount,
+            uint256 userCurrentMaturity
+        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).cleanUpOrders(
+                _user
+            );
+
+        if (removedLendOrderAmount > removedBorrowOrderAmount) {
+            AddressResolverLib.tokenVault().removeDepositAmount(
+                _user,
+                _ccy,
+                removedLendOrderAmount - removedBorrowOrderAmount
+            );
+        } else if (removedLendOrderAmount < removedBorrowOrderAmount) {
+            AddressResolverLib.tokenVault().addDepositAmount(
+                _user,
+                _ccy,
+                removedBorrowOrderAmount - removedLendOrderAmount
+            );
+        }
+
+        if (removedLendOrderFutureValue > 0) {
+            IFutureValueVault(futureValueVault).addLendFutureValue(
+                _user,
+                removedLendOrderFutureValue,
+                userCurrentMaturity,
+                false
+            );
+            emit OrdersFilledInAsync(
+                _user,
+                _ccy,
+                ProtocolTypes.Side.LEND,
+                userCurrentMaturity,
+                removedLendOrderAmount,
+                removedLendOrderFutureValue
+            );
+        }
+
+        if (removedBorrowOrderFutureValue > 0) {
+            IFutureValueVault(futureValueVault).addBorrowFutureValue(
+                _user,
+                removedBorrowOrderFutureValue,
+                userCurrentMaturity,
+                false
+            );
+            emit OrdersFilledInAsync(
+                _user,
+                _ccy,
+                ProtocolTypes.Side.BORROW,
+                userCurrentMaturity,
+                removedBorrowOrderAmount,
+                removedBorrowOrderFutureValue
+            );
+        }
+
+        isCleaned = (removedLendOrderFutureValue + removedBorrowOrderFutureValue) > 0;
+        activeOrderCount = activeLendOrderCount + activeBorrowOrderCount;
     }
 
     function _getFundsFromFutureValueVault(

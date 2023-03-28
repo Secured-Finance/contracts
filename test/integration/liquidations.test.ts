@@ -35,6 +35,8 @@ describe('Integration Test: Liquidations', async () => {
   let eFilToETHPriceFeed: Contract;
   let usdcToUSDPriceFeed: Contract;
 
+  let fundManagementLogic: Contract;
+
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
 
@@ -185,6 +187,7 @@ describe('Integration Test: Liquidations', async () => {
 
     ({
       genesisDate,
+      fundManagementLogic,
       addressResolver,
       tokenVault,
       lendingMarketController,
@@ -302,7 +305,10 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         await lendingMarketController
           .connect(owner)
@@ -500,7 +506,10 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         await lendingMarketController
           .connect(owner)
@@ -632,7 +641,10 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         await lendingMarketController
           .connect(owner)
@@ -798,7 +810,10 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         await lendingMarketController
           .connect(owner)
@@ -930,7 +945,10 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(lendingMarketController, 'OrderFilled');
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
 
         await lendingMarketController
           .connect(owner)
@@ -1102,7 +1120,10 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInFIL,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'OrderFilled');
+      ).to.emit(
+        fundManagementLogic.attach(lendingMarketController.address),
+        'OrderFilled',
+      );
 
       await lendingMarketController
         .connect(owner)
@@ -1155,7 +1176,10 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInUSDC,
             '0',
           ),
-      ).to.emit(lendingMarketController, 'OrderFilled');
+      ).to.emit(
+        fundManagementLogic.attach(lendingMarketController.address),
+        'OrderFilled',
+      );
 
       await lendingMarketController
         .connect(owner)
