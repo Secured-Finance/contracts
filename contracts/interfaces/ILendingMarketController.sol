@@ -13,6 +13,7 @@ interface ILendingMarketController {
         uint256 maturity
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event RedemptionExecuted(address indexed user, int256 amount);
     event LiquidationExecuted(
         address indexed user,
         bytes32 collateralCcy,
@@ -20,6 +21,7 @@ interface ILendingMarketController {
         uint256 indexed debtMaturity,
         uint256 amount
     );
+    event EmergencyTerminationExecuted(uint256 timestamp);
 
     function isLiquidator(address user) external view returns (bool);
 
@@ -168,6 +170,8 @@ interface ILendingMarketController {
     function executeItayoseCalls(bytes32[] memory currencies, uint256 maturity)
         external
         returns (bool);
+
+    function executeRedemption() external returns (bool);
 
     function executeLiquidationCall(
         bytes32 collateralCcy,
