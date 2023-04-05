@@ -4,7 +4,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexEFIL, hexWETH } from '../../utils/strings';
+import { hexEFIL, hexETH } from '../../utils/strings';
 import {
   eFilToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
@@ -51,17 +51,17 @@ describe('Integration Test: Order Book', async () => {
     });
 
   const createSampleETHOrders = async (user: SignerWithAddress) => {
-    await tokenVault.connect(user).deposit(hexWETH, initialETHBalance.div(3), {
+    await tokenVault.connect(user).deposit(hexETH, initialETHBalance.div(3), {
       value: initialETHBalance.div(3),
     });
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexWETH, ethMaturities[0], Side.BORROW, '1000', '8200');
+      .createOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexWETH, ethMaturities[0], Side.LEND, '1000', '7800');
+      .createOrder(hexETH, ethMaturities[0], Side.LEND, '1000', '7800');
   };
 
   const createSampleFILOrders = async (user: SignerWithAddress) => {
@@ -69,7 +69,7 @@ describe('Integration Test: Order Book', async () => {
       .connect(user)
       .approve(tokenVault.address, initialFILBalance);
     await tokenVault.connect(user).deposit(hexEFIL, initialFILBalance);
-    await tokenVault.connect(user).deposit(hexWETH, initialETHBalance.div(3), {
+    await tokenVault.connect(user).deposit(hexETH, initialETHBalance.div(3), {
       value: initialETHBalance.div(3),
     });
 
@@ -97,7 +97,7 @@ describe('Integration Test: Order Book', async () => {
       eFILToken,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexWETH, wETHToken.address, false);
+    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
 
     mockUniswapRouter = await ethers
@@ -111,9 +111,9 @@ describe('Integration Test: Order Book', async () => {
         factory.deploy(addressResolver.address, wETHToken.address),
       );
 
-    await mockUniswapRouter.setToken(hexWETH, wETHToken.address);
+    await mockUniswapRouter.setToken(hexETH, wETHToken.address);
     await mockUniswapRouter.setToken(hexEFIL, eFILToken.address);
-    await mockUniswapQuoter.setToken(hexWETH, wETHToken.address);
+    await mockUniswapQuoter.setToken(hexETH, wETHToken.address);
     await mockUniswapQuoter.setToken(hexEFIL, eFILToken.address);
 
     await tokenVault.setCollateralParameters(
@@ -124,12 +124,12 @@ describe('Integration Test: Order Book', async () => {
       mockUniswapQuoter.address,
     );
 
-    await tokenVault.updateCurrency(hexWETH, true);
+    await tokenVault.updateCurrency(hexETH, true);
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
       await lendingMarketController.createLendingMarket(hexEFIL, genesisDate);
-      await lendingMarketController.createLendingMarket(hexWETH, genesisDate);
+      await lendingMarketController.createLendingMarket(hexETH, genesisDate);
     }
 
     filLendingMarkets = await lendingMarketController
@@ -150,18 +150,18 @@ describe('Integration Test: Order Book', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        ethMaturities = await lendingMarketController.getMaturities(hexWETH);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
         await createSampleETHOrders(carol);
       });
 
       it('Deposit ETH', async () => {
-        await tokenVault.connect(alice).deposit(hexWETH, depositAmount, {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
         });
 
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
 
         expect(aliceDepositAmount).to.equal(depositAmount);
@@ -171,7 +171,7 @@ describe('Integration Test: Order Book', async () => {
         await lendingMarketController
           .connect(bob)
           .depositAndCreateOrder(
-            hexWETH,
+            hexETH,
             ethMaturities[0],
             Side.LEND,
             orderAmount,
@@ -182,7 +182,7 @@ describe('Integration Test: Order Book', async () => {
         const { blockHash } = await lendingMarketController
           .connect(alice)
           .createOrder(
-            hexWETH,
+            hexETH,
             ethMaturities[0],
             Side.BORROW,
             orderAmount,
@@ -199,7 +199,7 @@ describe('Integration Test: Order Book', async () => {
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
             lendingMarketController.getFutureValue(
-              hexWETH,
+              hexETH,
               ethMaturities[0],
               address,
             ),
@@ -214,11 +214,11 @@ describe('Integration Test: Order Book', async () => {
         const coverage = await tokenVault.getCoverage(alice.address);
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
         const bobDepositAmount = await tokenVault.getDepositAmount(
           bob.address,
-          hexWETH,
+          hexETH,
         );
 
         expect(aliceDepositAmount).to.equal(depositAmount.add(orderAmount));
@@ -229,7 +229,7 @@ describe('Integration Test: Order Book', async () => {
         await lendingMarketController
           .connect(carol)
           .depositAndCreateOrder(
-            hexWETH,
+            hexETH,
             ethMaturities[0],
             Side.BORROW,
             orderAmount.mul(2),
@@ -240,14 +240,14 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .unwindOrder(hexWETH, ethMaturities[0]),
+            .unwindOrder(hexETH, ethMaturities[0]),
         ).to.emit(
           fundManagementLogic.attach(lendingMarketController.address),
           'OrderFilled',
         );
 
         const aliceFV = await lendingMarketController.getFutureValue(
-          hexWETH,
+          hexETH,
           ethMaturities[0],
           alice.address,
         );
@@ -256,7 +256,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(carol)
-          .cancelOrder(hexWETH, ethMaturities[0], '5');
+          .cancelOrder(hexETH, ethMaturities[0], '5');
       });
     });
 
@@ -275,13 +275,13 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Deposit ETH ', async () => {
-        await tokenVault.connect(alice).deposit(hexWETH, depositAmount, {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
         });
 
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
 
         expect(aliceDepositAmount).to.equal(depositAmount);
@@ -349,7 +349,7 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Unwind all orders', async () => {
-        await tokenVault.connect(dave).deposit(hexWETH, depositAmount.mul(2), {
+        await tokenVault.connect(dave).deposit(hexETH, depositAmount.mul(2), {
           value: depositAmount.mul(2),
         });
 
@@ -408,19 +408,19 @@ describe('Integration Test: Order Book', async () => {
       before(async () => {
         [alice, bob, carol, dave] = await getUsers(4);
         filMaturities = await lendingMarketController.getMaturities(hexEFIL);
-        ethMaturities = await lendingMarketController.getMaturities(hexWETH);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
         await createSampleFILOrders(carol);
         await createSampleETHOrders(carol);
       });
 
       it('Deposit ETH ', async () => {
-        await tokenVault.connect(alice).deposit(hexWETH, depositAmount, {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
         });
 
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
 
         expect(aliceDepositAmount).to.equal(depositAmount);
@@ -484,7 +484,7 @@ describe('Integration Test: Order Book', async () => {
         await lendingMarketController
           .connect(bob)
           .depositAndCreateOrder(
-            hexWETH,
+            hexETH,
             ethMaturities[0],
             Side.LEND,
             orderAmount,
@@ -494,13 +494,7 @@ describe('Integration Test: Order Book', async () => {
 
         const { blockHash } = await lendingMarketController
           .connect(alice)
-          .createOrder(
-            hexWETH,
-            ethMaturities[0],
-            Side.BORROW,
-            orderAmount,
-            '0',
-          );
+          .createOrder(hexETH, ethMaturities[0], Side.BORROW, orderAmount, '0');
 
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
@@ -512,7 +506,7 @@ describe('Integration Test: Order Book', async () => {
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
             lendingMarketController.getFutureValue(
-              hexWETH,
+              hexETH,
               ethMaturities[0],
               address,
             ),
@@ -535,11 +529,11 @@ describe('Integration Test: Order Book', async () => {
         );
         const aliceETHDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
         const bobETHDepositAmount = await tokenVault.getDepositAmount(
           bob.address,
-          hexWETH,
+          hexETH,
         );
         const aliceTotalCollateralAmount =
           await tokenVault.getTotalCollateralAmount(alice.address);
@@ -547,7 +541,7 @@ describe('Integration Test: Order Book', async () => {
           await tokenVault.getTotalCollateralAmount(bob.address);
 
         const filHaircut = await currencyController.getHaircut(hexEFIL);
-        const ethHaircut = await currencyController.getHaircut(hexWETH);
+        const ethHaircut = await currencyController.getHaircut(hexETH);
 
         expect(aliceFILDepositAmount).to.equal(orderAmountInFIL);
         expect(aliceETHDepositAmount).to.equal(
@@ -573,7 +567,7 @@ describe('Integration Test: Order Book', async () => {
           alice.address,
         );
 
-        await tokenVault.connect(dave).deposit(hexWETH, depositAmount.mul(2), {
+        await tokenVault.connect(dave).deposit(hexETH, depositAmount.mul(2), {
           value: depositAmount.mul(2),
         });
 
@@ -652,7 +646,7 @@ describe('Integration Test: Order Book', async () => {
         it(`Create users`, async () => {
           [alice, bob] = await getUsers(2);
 
-          await tokenVault.connect(bob).deposit(hexWETH, collateralAmount, {
+          await tokenVault.connect(bob).deposit(hexETH, collateralAmount, {
             value: collateralAmount,
           });
         });
@@ -727,7 +721,7 @@ describe('Integration Test: Order Book', async () => {
         it(`Create users`, async () => {
           [alice, bob] = await getUsers(2);
 
-          await tokenVault.connect(bob).deposit(hexWETH, collateralAmount, {
+          await tokenVault.connect(bob).deposit(hexETH, collateralAmount, {
             value: collateralAmount,
           });
         });
@@ -807,7 +801,7 @@ describe('Integration Test: Order Book', async () => {
         it(`Create users`, async () => {
           [alice, bob] = await getUsers(2);
 
-          await tokenVault.connect(bob).deposit(hexWETH, collateralAmount, {
+          await tokenVault.connect(bob).deposit(hexETH, collateralAmount, {
             value: collateralAmount,
           });
         });
@@ -911,13 +905,13 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Deposit ETH', async () => {
-        await tokenVault.connect(alice).deposit(hexWETH, depositAmountInETH, {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmountInETH, {
           value: depositAmountInETH,
         });
 
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
 
         expect(aliceDepositAmount).to.equal(depositAmountInETH);
@@ -984,13 +978,13 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Deposit ETH', async () => {
-        await tokenVault.connect(alice).deposit(hexWETH, orderAmountInETH, {
+        await tokenVault.connect(alice).deposit(hexETH, orderAmountInETH, {
           value: orderAmountInETH,
         });
 
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
 
         expect(aliceDepositAmount).to.equal(orderAmountInETH);
@@ -1005,7 +999,7 @@ describe('Integration Test: Order Book', async () => {
           await tokenVault.getTotalCollateralAmount(alice.address);
         const depositAmountBefore = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
 
         await expect(
@@ -1027,7 +1021,7 @@ describe('Integration Test: Order Book', async () => {
           await tokenVault.getTotalCollateralAmount(alice.address);
         const depositAmountAfter = await tokenVault.getDepositAmount(
           alice.address,
-          hexWETH,
+          hexETH,
         );
         const aliceFV = await lendingMarketController.getFutureValue(
           hexEFIL,

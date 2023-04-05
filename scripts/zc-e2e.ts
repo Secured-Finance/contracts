@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { Contract, Wallet } from 'ethers';
 import { deployments, ethers } from 'hardhat';
 import { Side } from '../utils/constants';
-import { hexEFIL, hexWETH, toBytes32 } from '../utils/strings';
+import { hexEFIL, hexETH, toBytes32 } from '../utils/strings';
 
 describe('ZC e2e test', async () => {
   const targetCurrency = hexEFIL;
@@ -101,7 +101,7 @@ describe('ZC e2e test', async () => {
     );
     const bobDepositAmountBefore = await tokenVault.getDepositAmount(
       bobSigner.address,
-      hexWETH,
+      hexETH,
     );
 
     // Deposit ETH by Alice
@@ -135,14 +135,14 @@ describe('ZC e2e test', async () => {
     if (bobDepositAmountBefore.toString() === '0') {
       await tokenVault
         .connect(bobSigner)
-        .deposit(hexWETH, depositAmountInETH, {
+        .deposit(hexETH, depositAmountInETH, {
           value: depositAmountInETH,
         })
         .then((tx) => tx.wait());
 
       const bobDepositAmountAfter = await tokenVault.getDepositAmount(
         bobSigner.address,
-        hexWETH,
+        hexETH,
       );
       expect(
         bobDepositAmountAfter.sub(bobDepositAmountBefore).toString(),

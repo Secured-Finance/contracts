@@ -11,7 +11,7 @@ export const MARKET_OBSERVATION_PERIOD = 21600;
 
 export const wFilToETHRate = BigNumber.from('3803677700000000');
 export const eFilToETHRate = BigNumber.from('3803677700000000');
-export const wEthToUSDRate = BigNumber.from('149164000000');
+export const ethToUSDRate = BigNumber.from('149164000000');
 export const wBtcToETHRate = BigNumber.from('13087292239235700000');
 export const usdcToETHRate = BigNumber.from('670403046311442');
 

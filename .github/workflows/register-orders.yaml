@@ -14,10 +14,10 @@ on:
       collateralCurrency:
         description: 'CollateralCurrency'
         required: true
-        default: 'WETH'
+        default: 'ETH'
         type: choice
         options:
-          - WETH
+          - ETH
           - USDC
       marketCurrency:
         description: 'MarketCurrency'
@@ -26,7 +26,7 @@ on:
         type: choice
         options:
           - EFIL
-          - WETH
+          - ETH
           - USDC
           - WBTC
       maturity:
