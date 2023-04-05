@@ -15,6 +15,7 @@ import {
   MARKET_BASE_PERIOD,
   MARKET_OBSERVATION_PERIOD,
   ORDER_FEE_RATE,
+  PRICE_DIGIT,
 } from '../common/constants';
 
 // contracts
@@ -39,7 +40,7 @@ const QuickSort = artifacts.require('QuickSort');
 
 const { deployContract, deployMockContract } = waffle;
 
-const BP = ethers.BigNumber.from('10000');
+const BP = ethers.BigNumber.from(PRICE_DIGIT);
 
 describe('LendingMarketController', () => {
   let mockCurrencyController: MockContract;
@@ -2852,7 +2853,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.BORROW,
             '100000000000000000',
-            '7501',
+            '7500',
           );
         await lendingMarketControllerProxy
           .connect(dave)
@@ -2861,7 +2862,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.LEND,
             '500000000000000000',
-            '7500',
+            '7499',
           );
 
         const aliceFunds = await lendingMarketControllerProxy.calculateFunds(
@@ -2910,7 +2911,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.BORROW,
             '500000000000000000',
-            '8151',
+            '8150',
           );
         await lendingMarketControllerProxy
           .connect(dave)
@@ -2919,7 +2920,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.LEND,
             '500000000000000000',
-            '8150',
+            '8149',
           );
 
         const aliceFunds = await lendingMarketControllerProxy.calculateFunds(

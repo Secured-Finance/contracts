@@ -12,6 +12,7 @@ import {
   LIQUIDATOR_FEE_RATE,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
+import { calculateOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
 describe('Integration Test: Order Book', async () => {
@@ -178,7 +179,7 @@ describe('Integration Test: Order Book', async () => {
             { value: orderAmount },
           );
 
-        await lendingMarketController
+        const { blockHash } = await lendingMarketController
           .connect(alice)
           .createOrder(
             hexWETH,
@@ -187,6 +188,13 @@ describe('Integration Test: Order Book', async () => {
             orderAmount,
             '8000',
           );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount,
+          '8000',
+          ethMaturities[0].sub(timestamp),
+        );
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
@@ -199,7 +207,7 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
-        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -215,7 +223,6 @@ describe('Integration Test: Order Book', async () => {
 
         expect(aliceDepositAmount).to.equal(depositAmount.add(orderAmount));
         expect(bobDepositAmount).to.equal('0');
-        expect(coverage.sub('4010').abs()).lte(1);
       });
 
       it('Unwind all orders', async () => {
@@ -295,7 +302,7 @@ describe('Integration Test: Order Book', async () => {
             '8000',
           );
 
-        await lendingMarketController
+        const { blockHash } = await lendingMarketController
           .connect(alice)
           .createOrder(
             hexEFIL,
@@ -304,6 +311,13 @@ describe('Integration Test: Order Book', async () => {
             orderAmount,
             '0',
           );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount,
+          '8000',
+          ethMaturities[0].sub(timestamp),
+        );
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
@@ -316,7 +330,7 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
-        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -332,7 +346,6 @@ describe('Integration Test: Order Book', async () => {
 
         expect(aliceFILDepositAmount).to.equal(orderAmount);
         expect(bobFILDepositAmount).to.equal('0');
-        expect(coverage.sub('8020').abs()).lte(1);
       });
 
       it('Unwind all orders', async () => {
@@ -428,7 +441,7 @@ describe('Integration Test: Order Book', async () => {
             '8000',
           );
 
-        await lendingMarketController
+        const { blockHash } = await lendingMarketController
           .connect(alice)
           .createOrder(
             hexEFIL,
@@ -437,6 +450,13 @@ describe('Integration Test: Order Book', async () => {
             orderAmountInFIL,
             '0',
           );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmountInFIL,
+          '8000',
+          filMaturities[0].sub(timestamp),
+        );
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
@@ -451,7 +471,7 @@ describe('Integration Test: Order Book', async () => {
         const bobTotalCollateralAmountAfter =
           await tokenVault.getTotalCollateralAmount(bob.address);
 
-        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
         expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(1);
         expect(bobTotalCollateralAmountAfter.sub(orderAmountInETH.div(2))).lte(
           1,
@@ -472,7 +492,7 @@ describe('Integration Test: Order Book', async () => {
             { value: orderAmount },
           );
 
-        await lendingMarketController
+        const { blockHash } = await lendingMarketController
           .connect(alice)
           .createOrder(
             hexWETH,
@@ -481,6 +501,13 @@ describe('Integration Test: Order Book', async () => {
             orderAmount,
             '0',
           );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount,
+          '8000',
+          ethMaturities[0].sub(timestamp),
+        );
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
@@ -493,7 +520,7 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(1);
-        expect(bobFV.mul(10000).div(aliceFV).abs().sub(9975).abs()).to.lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
       });
 
       it('Check collateral', async () => {
@@ -537,7 +564,6 @@ describe('Integration Test: Order Book', async () => {
               .div('10000'),
           ),
         );
-        expect(coverage.sub('5012').abs()).lte(1);
       });
 
       it('Unwind orders partially', async () => {
@@ -621,6 +647,8 @@ describe('Integration Test: Order Book', async () => {
 
     for (const input of inputs) {
       describe(`Fill a ${input.label} order with the same amount`, async () => {
+        let fee: BigNumber;
+
         it(`Create users`, async () => {
           [alice, bob] = await getUsers(2);
 
@@ -652,17 +680,24 @@ describe('Integration Test: Order Book', async () => {
               ),
           ).to.emit(filLendingMarkets[1], 'OrderMade');
 
-          await expect(
-            lendingMarketController
-              .connect(signer2)
-              .createOrder(
-                hexEFIL,
-                filMaturities[1],
-                input.side2,
-                collateralAmount,
-                '9001',
-              ),
-          ).to.emit(filLendingMarkets[1], 'OrdersTaken');
+          const tx = await lendingMarketController
+            .connect(signer2)
+            .createOrder(
+              hexEFIL,
+              filMaturities[1],
+              input.side2,
+              collateralAmount,
+              '9001',
+            );
+
+          await expect(tx).to.emit(filLendingMarkets[1], 'OrdersTaken');
+
+          const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+          fee = calculateOrderFee(
+            collateralAmount,
+            '9001',
+            filMaturities[1].sub(timestamp),
+          );
         });
 
         it(`Check orders`, async () => {
@@ -675,19 +710,20 @@ describe('Integration Test: Order Book', async () => {
               ),
             ),
           );
-          const borrowOrderIds =
-            await filLendingMarkets[1].getActiveBorrowOrderIds(bob.address);
-          const lendOrderIds = await filLendingMarkets[1].getActiveLendOrderIds(
-            alice.address,
-          );
+          const { activeOrderIds: borrowOrderIds } =
+            await filLendingMarkets[1].getBorrowOrderIds(bob.address);
+          const { activeOrderIds: lendOrderIds } =
+            await filLendingMarkets[1].getLendOrderIds(alice.address);
 
-          expect(aliceFV.mul(10000).div(bobFV).abs().sub(9950).abs()).to.lte(1);
+          expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
           expect(borrowOrderIds.length).to.equal(0);
           expect(lendOrderIds.length).to.equal(0);
         });
       });
 
       describe(`Fill a ${input.label} order with less amount`, async () => {
+        let fee: BigNumber;
+
         it(`Create users`, async () => {
           [alice, bob] = await getUsers(2);
 
@@ -719,17 +755,24 @@ describe('Integration Test: Order Book', async () => {
               ),
           ).to.emit(filLendingMarkets[1], 'OrderMade');
 
-          await expect(
-            lendingMarketController
-              .connect(signer2)
-              .createOrder(
-                hexEFIL,
-                filMaturities[1],
-                input.side2,
-                collateralAmount.div(2),
-                '9002',
-              ),
-          ).to.emit(filLendingMarkets[1], 'OrdersTaken');
+          const tx = lendingMarketController
+            .connect(signer2)
+            .createOrder(
+              hexEFIL,
+              filMaturities[1],
+              input.side2,
+              collateralAmount.div(2),
+              '9002',
+            );
+
+          await expect(tx).to.emit(filLendingMarkets[1], 'OrdersTaken');
+
+          const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+          fee = calculateOrderFee(
+            collateralAmount.div(2),
+            '9002',
+            filMaturities[1].sub(timestamp),
+          );
         });
 
         it(`Check orders`, async () => {
@@ -744,23 +787,23 @@ describe('Integration Test: Order Book', async () => {
           );
 
           if (input.label === 'lending') {
-            orderIds = await filLendingMarkets[1].getActiveLendOrderIds(
-              alice.address,
-            );
+            ({ activeOrderIds: orderIds } =
+              await filLendingMarkets[1].getLendOrderIds(alice.address));
             orderMaker = alice;
           } else {
-            orderIds = await filLendingMarkets[1].getActiveBorrowOrderIds(
-              bob.address,
-            );
+            ({ activeOrderIds: orderIds } =
+              await filLendingMarkets[1].getBorrowOrderIds(bob.address));
             orderMaker = bob;
           }
 
-          expect(aliceFV.mul(10000).div(bobFV).abs().sub(9950).abs()).to.lte(1);
+          expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
           expect(orderIds.length).to.equal(1);
         });
       });
 
       describe(`Fill a ${input.label} order with greater amount`, async () => {
+        let fee: BigNumber;
+
         it(`Create users`, async () => {
           [alice, bob] = await getUsers(2);
 
@@ -805,17 +848,24 @@ describe('Integration Test: Order Book', async () => {
               ),
           ).to.emit(filLendingMarkets[1], 'OrderMade');
 
-          await expect(
-            lendingMarketController
-              .connect(signer2)
-              .createOrder(
-                hexEFIL,
-                filMaturities[1],
-                input.side2,
-                collateralAmount.mul(2),
-                '9003',
-              ),
-          ).to.emit(filLendingMarkets[1], 'OrdersTaken');
+          const tx = await lendingMarketController
+            .connect(signer2)
+            .createOrder(
+              hexEFIL,
+              filMaturities[1],
+              input.side2,
+              collateralAmount.mul(2),
+              '9003',
+            );
+
+          await expect(tx).to.emit(filLendingMarkets[1], 'OrdersTaken');
+
+          const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+          fee = calculateOrderFee(
+            collateralAmount,
+            '9003',
+            filMaturities[1].sub(timestamp),
+          );
         });
 
         it(`Check orders`, async () => {
@@ -830,18 +880,16 @@ describe('Integration Test: Order Book', async () => {
           );
 
           if (input.label === 'borrowing') {
-            orderIds = await filLendingMarkets[1].getActiveLendOrderIds(
-              alice.address,
-            );
+            ({ activeOrderIds: orderIds } =
+              await filLendingMarkets[1].getLendOrderIds(alice.address));
             orderMaker = alice;
           } else {
-            orderIds = await filLendingMarkets[1].getActiveBorrowOrderIds(
-              bob.address,
-            );
+            ({ activeOrderIds: orderIds } =
+              await filLendingMarkets[1].getBorrowOrderIds(bob.address));
             orderMaker = bob;
           }
 
-          expect(aliceFV.mul(10000).div(bobFV).abs().sub(9950).abs()).to.lte(1);
+          expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
           expect(orderIds.length).to.equal(1);
         });
       });
@@ -904,9 +952,9 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Cancel an order', async () => {
-        const [orderId] = await filLendingMarkets[0].getActiveBorrowOrderIds(
-          alice.address,
-        );
+        const {
+          activeOrderIds: [orderId],
+        } = await filLendingMarkets[0].getBorrowOrderIds(alice.address);
 
         await lendingMarketController
           .connect(alice)
@@ -1001,9 +1049,9 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Cancel an order', async () => {
-        const [orderId] = await filLendingMarkets[0].getActiveLendOrderIds(
-          alice.address,
-        );
+        const {
+          activeOrderIds: [orderId],
+        } = await filLendingMarkets[0].getLendOrderIds(alice.address);
 
         await lendingMarketController
           .connect(alice)

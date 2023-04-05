@@ -7,6 +7,7 @@ import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {OrderBookLogic} from "./libraries/logics/OrderBookLogic.sol";
+import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types
@@ -26,6 +27,8 @@ import {LendingMarketStorage as Storage, RemainingOrder} from "./storages/Lendin
  * @dev The market orders is stored in structured red-black trees and doubly linked lists in each node.
  */
 contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
+    using RoundingUint256 for uint256;
+
     uint256 private constant PRE_ORDER_PERIOD = 48 hours;
     uint256 private constant ITAYOSE_PERIOD = 1 hours;
 
@@ -144,7 +147,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     function getMidUnitPrice() public view override returns (uint256) {
         uint256 borrowUnitPrice = OrderBookLogic.getLowestBorrowingUnitPrice();
         uint256 lendUnitPrice = OrderBookLogic.getHighestLendingUnitPrice();
-        return (borrowUnitPrice + lendUnitPrice) / 2;
+        return (borrowUnitPrice + lendUnitPrice).div(2);
     }
 
     /**
@@ -309,29 +312,29 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the order ids of active lending order on the order book
+     * @notice Gets active and inactive order IDs in the lending order book
      * @param _user User's address
      */
-    function getActiveLendOrderIds(address _user)
+    function getLendOrderIds(address _user)
         external
         view
         override
-        returns (uint48[] memory activeOrderIds)
+        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
     {
-        (activeOrderIds, ) = OrderBookLogic.getActiveLendOrderIds(_user);
+        (activeOrderIds, inActiveOrderIds) = OrderBookLogic.getLendOrderIds(_user);
     }
 
     /**
-     * @notice Gets the order ids of active borrowing order on the order book
+     * @notice Gets active and inactive order IDs in the borrowing order book
      * @param _user User's address
      */
-    function getActiveBorrowOrderIds(address _user)
+    function getBorrowOrderIds(address _user)
         external
         view
         override
-        returns (uint48[] memory activeOrderIds)
+        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
     {
-        (activeOrderIds, ) = OrderBookLogic.getActiveBorrowOrderIds(_user);
+        (activeOrderIds, inActiveOrderIds) = OrderBookLogic.getBorrowOrderIds(_user);
     }
 
     /**

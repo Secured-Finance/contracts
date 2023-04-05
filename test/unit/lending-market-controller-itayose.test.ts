@@ -14,6 +14,7 @@ import {
   MARKET_BASE_PERIOD,
   MARKET_OBSERVATION_PERIOD,
   ORDER_FEE_RATE,
+  PRICE_DIGIT,
 } from '../common/constants';
 
 // contracts
@@ -36,7 +37,7 @@ const QuickSort = artifacts.require('QuickSort');
 
 const { deployContract, deployMockContract } = waffle;
 
-const BP = ethers.BigNumber.from('10000');
+const BP = ethers.BigNumber.from(PRICE_DIGIT);
 
 describe('LendingMarketController - Itayose', () => {
   let mockCurrencyController: MockContract;
