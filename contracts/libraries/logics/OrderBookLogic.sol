@@ -143,9 +143,7 @@ library OrderBookLogic {
             uint256 maturity
         )
     {
-        (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = getActiveLendOrderIds(
-            _user
-        );
+        (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = getLendOrderIds(_user);
 
         maturity = Storage.slot().userCurrentMaturities[_user];
 
@@ -199,10 +197,9 @@ library OrderBookLogic {
             uint256 maturity
         )
     {
-        (
-            uint48[] memory activeOrderIds,
-            uint48[] memory inActiveOrderIds
-        ) = getActiveBorrowOrderIds(_user);
+        (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = getBorrowOrderIds(
+            _user
+        );
 
         for (uint256 i = 0; i < activeOrderIds.length; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
@@ -243,7 +240,7 @@ library OrderBookLogic {
         }
     }
 
-    function getActiveLendOrderIds(address _user)
+    function getLendOrderIds(address _user)
         public
         view
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
@@ -287,7 +284,7 @@ library OrderBookLogic {
         }
     }
 
-    function getActiveBorrowOrderIds(address _user)
+    function getBorrowOrderIds(address _user)
         public
         view
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
@@ -445,7 +442,7 @@ library OrderBookLogic {
         (
             uint48[] memory activeLendOrderIds,
             uint48[] memory inActiveLendOrderIds
-        ) = getActiveLendOrderIds(_user);
+        ) = getLendOrderIds(_user);
 
         Storage.slot().activeLendOrderIds[_user] = activeLendOrderIds;
         activeOrderCount = activeLendOrderIds.length;
@@ -480,7 +477,7 @@ library OrderBookLogic {
         (
             uint48[] memory activeBorrowOrderIds,
             uint48[] memory inActiveBorrowOrderIds
-        ) = getActiveBorrowOrderIds(_user);
+        ) = getBorrowOrderIds(_user);
 
         Storage.slot().activeBorrowOrderIds[_user] = activeBorrowOrderIds;
         activeOrderCount = activeBorrowOrderIds.length;

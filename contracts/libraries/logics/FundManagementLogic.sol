@@ -59,7 +59,6 @@ library FundManagementLogic {
     struct CalculateActualFundsVars {
         bool isTotal;
         address market;
-        uint256 maturity;
         bool isDefaultMarket;
         uint256[] maturities;
     }
@@ -165,7 +164,7 @@ library FundManagementLogic {
 
         vars.debtMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity];
         vars.debtFVAmount = (-vars.futureValueAmount).toUint256();
-        vars.debtPVAmount = _calculatePVFromFVInMaturity(
+        vars.debtPVAmount = _calculatePVFromFVInMaturityByAutoRollLog(
             _debtCcy,
             _debtMaturity,
             -vars.futureValueAmount,
@@ -208,7 +207,7 @@ library FundManagementLogic {
                 );
 
                 if (vars.offsetGVAmount > 0) {
-                    offsetPVAmount = _calculatePVFromFVInMaturity(
+                    offsetPVAmount = _calculatePVFromFVInMaturityByAutoRollLog(
                         _debtCcy,
                         _debtMaturity,
                         AddressResolverLib.genesisValueVault().calculateFVFromGV(
@@ -231,7 +230,7 @@ library FundManagementLogic {
             );
 
             if (vars.offsetFVAmount > 0) {
-                offsetPVAmount += _calculatePVFromFVInMaturity(
+                offsetPVAmount += _calculatePVFromFVInMaturityByAutoRollLog(
                     _debtCcy,
                     _debtMaturity,
                     vars.offsetFVAmount.toInt256(),
@@ -322,11 +321,11 @@ library FundManagementLogic {
         if (_maturity == 0) {
             vars.isTotal = true;
             vars.market = Storage.slot().lendingMarkets[_ccy][0];
+            vars.isDefaultMarket = true;
         } else {
             vars.isTotal = false;
             vars.market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
             vars.isDefaultMarket = vars.market == Storage.slot().lendingMarkets[_ccy][0];
-            vars.maturity = _maturity;
         }
         actualFunds.genesisValue = AddressResolverLib.genesisValueVault().getGenesisValue(
             _ccy,
@@ -340,7 +339,7 @@ library FundManagementLogic {
             uint256 currentMaturity = ILendingMarket(currentMarket).getMaturity();
             bool isDefaultMarket = currentMarket == Storage.slot().lendingMarkets[_ccy][0];
 
-            if (vars.isTotal || vars.isDefaultMarket || currentMarket == vars.market) {
+            if (vars.isDefaultMarket || currentMarket == vars.market) {
                 // Get PV from Future Value Vault
                 FutureValueVaultFunds memory futureValueVaultFunds = _getFundsFromFutureValueVault(
                     _ccy,
@@ -405,7 +404,7 @@ library FundManagementLogic {
         }
 
         // Add PV from Genesis Value Vault if the market is that the lending position is rolled to.
-        if ((vars.isTotal || vars.isDefaultMarket) && actualFunds.genesisValue != 0) {
+        if (vars.isDefaultMarket && actualFunds.genesisValue != 0) {
             int256 futureValue = AddressResolverLib.genesisValueVault().calculateFVFromGV(
                 _ccy,
                 0,
@@ -675,7 +674,7 @@ library FundManagementLogic {
 
         if (futureValueInMaturity != 0) {
             if (currentMaturity != fvMaturity) {
-                if (vars.isTotal || vars.isDefaultMarket) {
+                if (vars.isDefaultMarket) {
                     // genesis value
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
@@ -684,15 +683,17 @@ library FundManagementLogic {
                     );
                 }
             } else if (currentMaturity == fvMaturity) {
-                if (
-                    vars.isTotal ||
-                    (vars.isDefaultMarket && isDefaultMarket) ||
-                    !vars.isDefaultMarket
-                ) {
+                if (vars.isTotal && !isDefaultMarket) {
                     (funds.presentValue, funds.futureValue) = _calculatePVandFVFromFVInMaturity(
                         _ccy,
                         fvMaturity,
-                        vars.maturity,
+                        futureValueInMaturity
+                    );
+                } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
+                    funds.futureValue = futureValueInMaturity;
+                    funds.presentValue = _calculatePVFromFVInMaturity(
+                        _ccy,
+                        fvMaturity,
                         futureValueInMaturity
                     );
                 }
@@ -719,7 +720,7 @@ library FundManagementLogic {
 
         if (borrowFVInMaturity != 0) {
             if (currentMaturity != borrowOrdersMaturity) {
-                if (vars.isTotal || vars.isDefaultMarket) {
+                if (vars.isDefaultMarket) {
                     funds.genesisValue = AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
                         borrowOrdersMaturity,
@@ -727,16 +728,18 @@ library FundManagementLogic {
                     );
                 }
             } else if (currentMaturity == borrowOrdersMaturity) {
-                if (
-                    vars.isTotal ||
-                    (vars.isDefaultMarket && isDefaultMarket) ||
-                    !vars.isDefaultMarket
-                ) {
+                if (vars.isTotal && !isDefaultMarket) {
                     (funds.presentValue, funds.futureValue) = _calculatePVandFVFromFVInMaturity(
                         _ccy,
                         borrowOrdersMaturity,
-                        vars.maturity,
                         borrowFVInMaturity.toInt256()
+                    );
+                } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
+                    funds.futureValue = borrowFVInMaturity.toInt256();
+                    funds.presentValue = _calculatePVFromFVInMaturity(
+                        _ccy,
+                        borrowOrdersMaturity,
+                        funds.futureValue
                     );
                 }
             }
@@ -762,7 +765,7 @@ library FundManagementLogic {
 
         if (lendFVInMaturity != 0) {
             if (currentMaturity != lendOrdersMaturity) {
-                if (vars.isTotal || vars.isDefaultMarket) {
+                if (vars.isDefaultMarket) {
                     funds.genesisValue += AddressResolverLib.genesisValueVault().calculateGVFromFV(
                         _ccy,
                         lendOrdersMaturity,
@@ -770,16 +773,18 @@ library FundManagementLogic {
                     );
                 }
             } else if (currentMaturity == lendOrdersMaturity) {
-                if (
-                    vars.isTotal ||
-                    (vars.isDefaultMarket && isDefaultMarket) ||
-                    !vars.isDefaultMarket
-                ) {
+                if (vars.isTotal && !isDefaultMarket) {
                     (funds.presentValue, funds.futureValue) = _calculatePVandFVFromFVInMaturity(
                         _ccy,
                         lendOrdersMaturity,
-                        vars.maturity,
                         lendFVInMaturity.toInt256()
+                    );
+                } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
+                    funds.futureValue = lendFVInMaturity.toInt256();
+                    funds.presentValue = _calculatePVFromFVInMaturity(
+                        _ccy,
+                        lendOrdersMaturity,
+                        funds.futureValue
                     );
                 }
             }
@@ -789,22 +794,15 @@ library FundManagementLogic {
     function _calculatePVandFVFromFVInMaturity(
         bytes32 _ccy,
         uint256 _basisMaturity,
-        uint256 _destinationMaturity,
         int256 _futureValueInBasisMaturity
     ) internal view returns (int256 presetValue, int256 futureValue) {
-        require(_basisMaturity >= _destinationMaturity, "Invalid destination maturity");
-
-        address destinationMarket = _destinationMaturity == 0
-            ? Storage.slot().lendingMarkets[_ccy][0]
-            : Storage.slot().maturityLendingMarkets[_ccy][_destinationMaturity];
+        address destinationMarket = Storage.slot().lendingMarkets[_ccy][0];
         uint256 unitPriceInDestinationMaturity = ILendingMarket(destinationMarket)
             .getMidUnitPrice();
 
         if (
-            AddressResolverLib
-                .genesisValueVault()
-                .getAutoRollLog(_ccy, _destinationMaturity)
-                .unitPrice == 0
+            AddressResolverLib.genesisValueVault().getAutoRollLog(_ccy, _basisMaturity).unitPrice ==
+            0
         ) {
             uint256 unitPriceInBasisMaturity = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_basisMaturity]
@@ -817,11 +815,22 @@ library FundManagementLogic {
             futureValue = AddressResolverLib.genesisValueVault().calculateFVFromFV(
                 _ccy,
                 _basisMaturity,
-                _destinationMaturity,
+                0,
                 _futureValueInBasisMaturity
             );
             presetValue = _calculatePVFromFV(futureValue, unitPriceInDestinationMaturity);
         }
+    }
+
+    function _calculatePVFromFVInMaturity(
+        bytes32 _ccy,
+        uint256 _maturity,
+        int256 _futureValue
+    ) internal view returns (int256 presetValue) {
+        uint256 unitPriceInBasisMaturity = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).getMidUnitPrice();
+        presetValue = _calculatePVFromFV(_futureValue, unitPriceInBasisMaturity);
     }
 
     function _calculateFVFromPV(
@@ -836,7 +845,7 @@ library FundManagementLogic {
         return (_presentValue * ProtocolTypes.PRICE_DIGIT).div(unitPrice);
     }
 
-    function _calculatePVFromFVInMaturity(
+    function _calculatePVFromFVInMaturityByAutoRollLog(
         bytes32 _ccy,
         uint256 maturity,
         int256 futureValueInMaturity,

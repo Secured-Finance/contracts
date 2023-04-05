@@ -14,3 +14,7 @@ export const eFilToETHRate = BigNumber.from('3803677700000000');
 export const wEthToUSDRate = BigNumber.from('149164000000');
 export const wBtcToETHRate = BigNumber.from('13087292239235700000');
 export const usdcToETHRate = BigNumber.from('670403046311442');
+
+export const SECONDS_IN_YEAR = 31536000;
+export const PRICE_DIGIT = 10000;
+export const PCT_DIGIT = 10000;

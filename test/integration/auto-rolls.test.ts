@@ -12,12 +12,13 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  PRICE_DIGIT,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
 import { Signers } from '../common/signers';
 
-const BP = ethers.BigNumber.from('10000');
+const BP = ethers.BigNumber.from(PRICE_DIGIT);
 
 describe('Integration Test: Auto-rolls', async () => {
   let owner: SignerWithAddress;
@@ -534,31 +535,32 @@ describe('Integration Test: Auto-rolls', async () => {
         bob.address,
       );
 
-      expect(alicePV.sub('200000000000000000').abs()).lte(1);
+      expect(alicePV).equal('200000000000000000');
       expect(alicePV.mul(10000).div(bobPV).abs().sub(9950)).to.gt(0);
     });
 
     it('Execute auto-roll', async () => {
-      const aliceTotalPVBefore =
-        await lendingMarketController.getTotalPresentValue(
-          hexWETH,
-          alice.address,
-        );
-      const bobTotalPVBefore =
-        await lendingMarketController.getTotalPresentValue(
-          hexWETH,
-          bob.address,
-        );
-      const alicePV0Before = await lendingMarketController.getPresentValue(
-        hexWETH,
-        maturities[0],
-        alice.address,
+      const [alicePVs, bobPVs] = await Promise.all(
+        [alice, bob].map(async (user) =>
+          Promise.all([
+            lendingMarketController.getTotalPresentValue(hexWETH, user.address),
+            lendingMarketController.getPresentValue(
+              hexWETH,
+              maturities[0],
+              user.address,
+            ),
+            lendingMarketController.getPresentValue(
+              hexWETH,
+              maturities[1],
+              user.address,
+            ),
+          ]),
+        ),
       );
-      const alicePV1Before = await lendingMarketController.getPresentValue(
-        hexWETH,
-        maturities[1],
-        alice.address,
-      );
+
+      const [aliceTotalPVBefore, alicePV0Before, alicePV1Before] = alicePVs;
+      const [bobTotalPVBefore, bobPV0Before, bobPV1Before] = bobPVs;
+
       const aliceFV0Before = await lendingMarketController.getFutureValue(
         hexWETH,
         maturities[0],
@@ -570,8 +572,9 @@ describe('Integration Test: Auto-rolls', async () => {
         alice.address,
       );
 
-      expect(alicePV0Before.sub(orderAmount)).lte(1);
+      expect(alicePV0Before).equal(orderAmount);
       expect(aliceTotalPVBefore).to.equal(alicePV0Before.add(alicePV1Before));
+      expect(bobTotalPVBefore).to.equal(bobPV0Before.add(bobPV1Before));
       expect(
         aliceTotalPVBefore.mul(10000).div(bobTotalPVBefore).abs().sub(9950),
       ).to.gt(0);

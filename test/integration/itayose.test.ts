@@ -9,8 +9,6 @@ import { hexWETH } from '../../utils/strings';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
-const BP = ethers.BigNumber.from('10000');
-
 describe('Integration Test: Itayose', async () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;

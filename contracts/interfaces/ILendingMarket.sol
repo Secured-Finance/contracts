@@ -129,15 +129,15 @@ interface ILendingMarket {
             uint256 maturity
         );
 
-    function getActiveLendOrderIds(address _user)
+    function getLendOrderIds(address _user)
         external
         view
-        returns (uint48[] memory activeOrderIds);
+        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
 
-    function getActiveBorrowOrderIds(address _user)
+    function getBorrowOrderIds(address _user)
         external
         view
-        returns (uint48[] memory activeOrderIds);
+        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
 
     function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
         external
