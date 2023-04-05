@@ -61,7 +61,7 @@ const currencies: Currency[] = [
     args: ['1000000000000'], // 10,000 BTC
   },
   {
-    symbol: 'ETH',
+    symbol: 'WETH',
     mock: 'MockWETH9',
     key: hexETH,
     env: process.env.TOKEN_WETH,
