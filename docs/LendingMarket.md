@@ -315,25 +315,25 @@ Calculates and gets the active and inactive amounts from the user orders of borr
 | inactiveFutureValue | uint256 | The total future value amount of inactive orders filled on the order book |
 | maturity | uint256 | The maturity of market that orders were placed. |
 
-### getActiveLendOrderIds
+### getLendOrderIds
 
 ```solidity
-function getActiveLendOrderIds(address _user) external view returns (uint48[] activeOrderIds)
+function getLendOrderIds(address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
-Gets the order ids of active lending order on the order book
+Gets active and inactive order IDs in the lending order book
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
 
-### getActiveBorrowOrderIds
+### getBorrowOrderIds
 
 ```solidity
-function getActiveBorrowOrderIds(address _user) external view returns (uint48[] activeOrderIds)
+function getBorrowOrderIds(address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
-Gets the order ids of active borrowing order on the order book
+Gets active and inactive order IDs in the borrowing order book
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -393,17 +393,17 @@ Cancels the order.
 | removedAmount | uint256 | The removed order amount from the order book by canceling |
 | unitPrice | uint256 | The canceled order unit price |
 
-### cleanOrders
+### cleanUpOrders
 
 ```solidity
-function cleanOrders(address _user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
+function cleanUpOrders(address _user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
 ```
 
-Cleans own orders to remove order ids that are already filled on the order book.
+Cleans up own orders to remove order ids that are already filled on the order book.
 
 _The order list per user is not updated in real-time when an order is filled.
 This function removes the filled order from that order list per user to reduce gas costs
-for calculating if the collateral is enough or not._
+for lazy evaluation if the collateral is enough or not._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -422,7 +422,7 @@ for calculating if the collateral is enough or not._
 ### createOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) external returns (uint256 filledFutureValue, uint256 remainingAmount)
+function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) external returns (uint256 filledUnitPrice, uint256 filledFutureValue, uint256 remainingAmount)
 ```
 
 Creates the order. Takes the order if the order is matched,
@@ -438,7 +438,8 @@ and places new order if not match it.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| filledFutureValue | uint256 | The total FV amount of the filled order amount on the order book |
+| filledUnitPrice | uint256 | Last unit price of the filled order |
+| filledFutureValue | uint256 | The total FV amount of the filled order on the order book |
 | remainingAmount | uint256 | The remaining amount that is not filled in the order book |
 
 ### createPreOrder
@@ -460,7 +461,7 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 ### unwindOrder
 
 ```solidity
-function unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledAmount, uint256 filledFutureValue)
+function unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue)
 ```
 
 Unwind orders using future value amount.
@@ -471,16 +472,27 @@ Unwind orders using future value amount.
 | _user | address | User's address |
 | _futureValue | uint256 | Amount of future value unwound |
 
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| filledUnitPrice | uint256 | Last unit price of the filled order |
+| filledAmount | uint256 | The total amount of the filled order on the order book |
+| filledFutureValue | uint256 | The total FV amount of the filled order on the order book |
+
 ### executeItayoseCall
 
 ```solidity
-function executeItayoseCall() external
+function executeItayoseCall() external returns (uint256 openingUnitPrice, uint256 openingDate)
 ```
 
 Executes Itayose to aggregate pre-orders and determine the opening unit price.
 After this action, the market opens.
 
 _If the opening date had already passed when this contract was created, this Itayose need not be executed._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| openingUnitPrice | uint256 | The opening price when Itayose is executed |
+| openingDate | uint256 | The timestamp when the market opens |
 
 ### pauseMarket
 
@@ -524,7 +536,7 @@ Makes new market order.
 ### _takeOrder
 
 ```solidity
-function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (uint256 filledFutureValue, uint256 remainingAmount)
+function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (uint256 filledUnitPrice, uint256 filledFutureValue, uint256 remainingAmount)
 ```
 
 Takes the market order.
@@ -540,6 +552,6 @@ Takes the market order.
 ### _unwindOrder
 
 ```solidity
-function _unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) private returns (uint256 filledAmount, uint256 filledFutureValue)
+function _unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) private returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue)
 ```
 

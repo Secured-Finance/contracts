@@ -40,7 +40,7 @@ Modifier to check if there is a market in the maturity.
 ### initialize
 
 ```solidity
-function initialize(address _owner, address _resolver) public
+function initialize(address _owner, address _resolver, uint256 _marketBasePeriod, uint256 _observationPeriod) public
 ```
 
 Initializes the contract.
@@ -51,6 +51,8 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | ---- | ---- | ----------- |
 | _owner | address | The address of the contract owner |
 | _resolver | address | The address of the Address Resolver contract |
+| _marketBasePeriod | uint256 | The base period for market maturity |
+| _observationPeriod | uint256 | The observation period to calculate the volume-weighted average price of transactions |
 
 ### requiredContracts
 
@@ -528,10 +530,10 @@ Unwind all orders by creating an opposite position order.
 | _ccy | bytes32 | Currency name in bytes32 of the selected market |
 | _maturity | uint256 | The maturity of the selected market |
 
-### executeMultiItayoseCall
+### executeItayoseCalls
 
 ```solidity
-function executeMultiItayoseCall(bytes32[] _currencies, uint256 _maturity) external returns (bool)
+function executeItayoseCalls(bytes32[] _currencies, uint256 _maturity) external returns (bool)
 ```
 
 ### cancelOrder
@@ -632,25 +634,27 @@ Unpauses previously deployed lending market by currency
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### cleanAllOrders
+### cleanUpAllFunds
 
 ```solidity
-function cleanAllOrders(address _user) external
+function cleanUpAllFunds(address _user) external
 ```
 
-Cleans user's all orders to remove order ids that are already filled on the order book.
+Clean up all funds of the user
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
 
-### cleanOrders
+### cleanUpFunds
 
 ```solidity
-function cleanOrders(bytes32 _ccy, address _user) public returns (uint256 totalActiveOrderCount)
+function cleanUpFunds(bytes32 _ccy, address _user) external returns (uint256 totalActiveOrderCount)
 ```
 
-Cleans user's orders to remove order ids that are already filled on the order book for a selected currency.
+Clean up user funds used for lazy evaluation by the following actions:
+- Removes order IDs that is already filled on the order book.
+- Convert Future values that have already been auto-rolled to Genesis values.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -661,11 +665,5 @@ Cleans user's orders to remove order ids that are already filled on the order bo
 
 ```solidity
 function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _isForced) private returns (uint256 filledAmount)
-```
-
-### _cleanOrders
-
-```solidity
-function _cleanOrders(bytes32 _ccy, uint256 _maturity, address _user) private returns (uint256 activeOrderCount, bool isCleaned)
 ```
 

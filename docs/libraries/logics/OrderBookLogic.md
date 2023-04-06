@@ -44,16 +44,16 @@ function getTotalAmountFromLendOrders(address _user) public view returns (uint25
 function getTotalAmountFromBorrowOrders(address _user) public view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
-### getActiveLendOrderIds
+### getLendOrderIds
 
 ```solidity
-function getActiveLendOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
+function getLendOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
-### getActiveBorrowOrderIds
+### getBorrowOrderIds
 
 ```solidity
-function getActiveBorrowOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
+function getBorrowOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
 ### estimateFilledAmount
@@ -71,13 +71,13 @@ function insertOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amou
 ### dropOrders
 
 ```solidity
-function dropOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) public returns (struct RemainingOrder remainingOrder, uint256 filledFutureValue, uint256 remainingAmount)
+function dropOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) public returns (uint256 filledUnitPrice, struct RemainingOrder remainingOrder, uint256 filledFutureValue, uint256 remainingAmount)
 ```
 
 ### dropOrders
 
 ```solidity
-function dropOrders(enum ProtocolTypes.Side _side, uint256 _futureValue) public returns (struct RemainingOrder remainingOrder, uint256 filledAmount, uint256 filledFutureValue)
+function dropOrders(enum ProtocolTypes.Side _side, uint256 _futureValue) public returns (uint256 filledUnitPrice, struct RemainingOrder remainingOrder, uint256 filledAmount, uint256 filledFutureValue)
 ```
 
 ### cleanLendOrders

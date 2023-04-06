@@ -34,12 +34,6 @@ uint256 SECONDS_IN_MONTH
 uint256 SECONDS_IN_YEAR
 ```
 
-### BASIS_TERM
-
-```solidity
-uint256 BASIS_TERM
-```
-
 ### MAXIMUM_ORDER_COUNT
 
 ```solidity

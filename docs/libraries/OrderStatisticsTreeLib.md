@@ -197,13 +197,13 @@ function estimateDroppedAmountFromRight(struct OrderStatisticsTreeLib.Tree self,
 ### dropLeft
 
 ```solidity
-function dropLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 totalFilledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
+function dropLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 value, uint256 totalFilledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
 ```
 
 ### dropRight
 
 ```solidity
-function dropRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 totalFilledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
+function dropRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 value, uint256 totalFilledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct RemainingOrder remainingOrder)
 ```
 
 ### rotateTreeToLeft

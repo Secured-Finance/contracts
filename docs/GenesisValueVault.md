@@ -65,7 +65,7 @@ function getTotalBorrowingSupply(bytes32 _ccy) external view returns (uint256)
 ### getGenesisValue
 
 ```solidity
-function getGenesisValue(bytes32 _ccy, address _user) public view returns (int256 balance)
+function getGenesisValue(bytes32 _ccy, address _user) public view returns (int256)
 ```
 
 ### getMaturityGenesisValue
@@ -95,19 +95,25 @@ function getBorrowingCompoundFactor(bytes32 _ccy) public view returns (uint256)
 ### getAutoRollLog
 
 ```solidity
-function getAutoRollLog(bytes32 _ccy, uint256 _maturity) public view returns (struct AutoRollLog)
+function getAutoRollLog(bytes32 _ccy, uint256 _maturity) external view returns (struct AutoRollLog)
+```
+
+### getLatestAutoRollLog
+
+```solidity
+function getLatestAutoRollLog(bytes32 _ccy) external view returns (struct AutoRollLog)
 ```
 
 ### getGenesisValueInFutureValue
 
 ```solidity
-function getGenesisValueInFutureValue(bytes32 _ccy, address _user) public view returns (int256)
+function getGenesisValueInFutureValue(bytes32 _ccy, address _user) external view returns (int256)
 ```
 
 ### calculateFVFromFV
 
 ```solidity
-function calculateFVFromFV(bytes32 _ccy, uint256 _basisMaturity, uint256 _destinationMaturity, int256 _futureValue) public view returns (int256)
+function calculateFVFromFV(bytes32 _ccy, uint256 _basisMaturity, uint256 _destinationMaturity, int256 _futureValue) external view returns (int256)
 ```
 
 ### calculateGVFromFV
@@ -128,16 +134,22 @@ function calculateFVFromGV(bytes32 _ccy, uint256 _basisMaturity, int256 _genesis
 function initializeCurrencySetting(bytes32 _ccy, uint8 _decimals, uint256 _compoundFactor, uint256 _maturity) external
 ```
 
+### updateInitialCompoundFactor
+
+```solidity
+function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice) external
+```
+
 ### executeAutoRoll
 
 ```solidity
 function executeAutoRoll(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice, uint256 _feeRate, uint256 _totalFVAmount) external
 ```
 
-### _updateCompoundFactor
+### _updateAutoRollLogs
 
 ```solidity
-function _updateCompoundFactor(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice, uint256 _feeRate) private
+function _updateAutoRollLogs(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice) private
 ```
 
 ### updateGenesisValueWithFutureValue
@@ -226,5 +238,11 @@ by the fee rate due to auto-rolls if it is negative (equals to the borrowing pos
 
 ```solidity
 function _calculateBalanceFluctuationByAutoRolls(bytes32 _ccy, int256 _balance, uint256 _fromMaturity, uint256 _toMaturity) private view returns (int256 fluctuation)
+```
+
+### _updateCompoundFactor
+
+```solidity
+function _updateCompoundFactor(bytes32 _ccy, uint256 _unitPrice, uint256 _feeRate) private
 ```
 

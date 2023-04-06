@@ -51,7 +51,6 @@ struct ActualFunds {
 struct CalculateActualFundsVars {
   bool isTotal;
   address market;
-  uint256 maturity;
   bool isDefaultMarket;
   uint256[] maturities;
 }
@@ -91,10 +90,22 @@ struct InactiveLendingOrdersFunds {
 }
 ```
 
+### OrderFilled
+
+```solidity
+event OrderFilled(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
+```
+
+### OrdersFilledInAsync
+
+```solidity
+event OrdersFilledInAsync(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
+```
+
 ### convertFutureValueToGenesisValue
 
 ```solidity
-function convertFutureValueToGenesisValue(bytes32 _ccy, uint256 _maturity, address _user) external returns (int256)
+function convertFutureValueToGenesisValue(bytes32 _ccy, uint256 _maturity, address _user) public returns (int256)
 ```
 
 Converts the future value to the genesis value if there is balance in the past maturity.
@@ -115,10 +126,10 @@ Converts the future value to the genesis value if there is balance in the past m
 function convertToLiquidationAmountFromCollateral(address _liquidator, address _user, bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, uint24 _poolFee) external returns (uint256 liquidationPVAmount, uint256 offsetPVAmount)
 ```
 
-### updateDepositAmount
+### updateFunds
 
 ```solidity
-function updateDepositAmount(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledFutureValue, uint256 _filledAmount, uint256 _feeFutureValue) external
+function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledFutureValue, uint256 _filledAmount, uint256 _feeFutureValue) external
 ```
 
 ### calculateActualFunds
@@ -145,6 +156,18 @@ function calculateTotalFundsInETH(address _user, bytes32 _depositCcy, uint256 _d
 function getUsedMaturities(bytes32 _ccy, address _user) public view returns (uint256[] maturities)
 ```
 
+### cleanUpFunds
+
+```solidity
+function cleanUpFunds(bytes32 _ccy, address _user) public returns (uint256 totalActiveOrderCount)
+```
+
+### _cleanUpOrders
+
+```solidity
+function _cleanUpOrders(bytes32 _ccy, uint256 _maturity, address _user) internal returns (uint256 activeOrderCount, bool isCleaned)
+```
+
 ### _getFundsFromFutureValueVault
 
 ```solidity
@@ -163,22 +186,22 @@ function _getFundsFromInactiveBorrowingOrders(bytes32 _ccy, address _user, struc
 function _getFundsFromInactiveLendingOrders(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint256 currentMaturity, address currentMarket, bool isDefaultMarket) internal view returns (struct FundManagementLogic.InactiveLendingOrdersFunds funds)
 ```
 
-### _calculatePVandFVFromFVInMaturity
+### _calculatePVandFVInDefaultMarket
 
 ```solidity
-function _calculatePVandFVFromFVInMaturity(bytes32 _ccy, uint256 _basisMaturity, uint256 _destinationMaturity, int256 _futureValueInBasisMaturity) internal view returns (int256 presetValue, int256 futureValue)
+function _calculatePVandFVInDefaultMarket(bytes32 _ccy, uint256 _maturity, int256 _futureValueInMaturity) internal view returns (int256 presetValue, int256 futureValue)
+```
+
+### _calculatePVFromFVByMidUnitPrice
+
+```solidity
+function _calculatePVFromFVByMidUnitPrice(bytes32 _ccy, uint256 _maturity, int256 _futureValue) internal view returns (int256 presetValue)
 ```
 
 ### _calculateFVFromPV
 
 ```solidity
 function _calculateFVFromPV(bytes32 _ccy, uint256 _maturity, uint256 _presentValue) internal view returns (uint256)
-```
-
-### _calculatePVFromFVInMaturity
-
-```solidity
-function _calculatePVFromFVInMaturity(bytes32 _ccy, uint256 maturity, int256 futureValueInMaturity, address lendingMarketInMaturity) internal view returns (int256 totalPresentValue)
 ```
 
 ### _calculatePVFromFV
