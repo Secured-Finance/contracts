@@ -62,7 +62,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         Storage.slot().currencies.add(_ccy);
         Storage.slot().haircuts[_ccy] = _haircut;
 
-        if (_ccy != "WETH") {
+        if (_ccy != "ETH") {
             require(linkPriceFeed(_ccy, _ethPriceFeed, true), "Invalid PriceFeed");
         } else {
             require(linkPriceFeed(_ccy, _ethPriceFeed, false), "Invalid PriceFeed");
@@ -353,7 +353,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {
-        return _ccy == "WETH";
+        return _ccy == "ETH";
     }
 
     function _getLastETHPrice(bytes32 _ccy) internal view returns (int256 price) {

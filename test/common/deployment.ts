@@ -7,7 +7,7 @@ import {
   hexEFIL,
   hexUSDC,
   hexWBTC,
-  hexWETH,
+  hexETH,
   hexWFIL,
   toBytes32,
 } from '../../utils/strings';
@@ -257,7 +257,7 @@ const deployContracts = async () => {
       AUTO_ROLL_FEE_RATE,
     ),
     lendingMarketControllerProxy.initializeLendingMarket(
-      hexWETH,
+      hexETH,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
@@ -305,7 +305,7 @@ const deployContracts = async () => {
     usdcToken,
     wFilToETHPriceFeed: priceFeeds[hexWFIL],
     eFilToETHPriceFeed: priceFeeds[hexEFIL],
-    wEthToUSDPriceFeed: priceFeeds[hexWETH],
+    ethToUSDPriceFeed: priceFeeds[hexETH],
     wBtcToETHPriceFeed: priceFeeds[hexWBTC],
     usdcToUSDPriceFeed: priceFeeds[hexUSDC],
   };

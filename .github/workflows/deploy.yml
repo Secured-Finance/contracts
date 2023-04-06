@@ -40,7 +40,7 @@ jobs:
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
           echo "EFIL_TO_ETH_RATE=${{ vars.EFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
-          echo "WETH_TO_USD_RATE=${{ vars.WETH_TO_USD_RATE }}" >> $GITHUB_ENV
+          echo "ETH_TO_USD_RATE=${{ vars.ETH_TO_USD_RATE }}" >> $GITHUB_ENV
           echo "WBTC_TO_ETH_RATE=${{ vars.WBTC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
@@ -119,7 +119,7 @@ jobs:
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
           echo "EFIL_TO_ETH_RATE=${{ vars.EFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
-          echo "WETH_TO_USD_RATE=${{ vars.WETH_TO_USD_RATE }}" >> $GITHUB_ENV
+          echo "ETH_TO_USD_RATE=${{ vars.ETH_TO_USD_RATE }}" >> $GITHUB_ENV
           echo "WBTC_TO_ETH_RATE=${{ vars.WBTC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV

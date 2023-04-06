@@ -51,8 +51,8 @@ describe('CurrencyController', () => {
   });
 
   describe('Initialize', async () => {
-    it('Add WETH as a supported currency', async () => {
-      const currency = ethers.utils.formatBytes32String('WETH');
+    it('Add ETH as a supported currency', async () => {
+      const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
@@ -107,8 +107,8 @@ describe('CurrencyController', () => {
         .then((decimals) => expect(decimals).to.equal(18));
     });
 
-    it('Fail to add WETH as a supported currency due to the invalid price feed', async () => {
-      const currency = ethers.utils.formatBytes32String('WETH');
+    it('Fail to add ETH as a supported currency due to the invalid price feed', async () => {
+      const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, -1, 0, 0, 0);
@@ -123,8 +123,8 @@ describe('CurrencyController', () => {
       ).to.be.revertedWith('Invalid PriceFeed');
     });
 
-    it('Fail to add WETH as a supported currency due to the invalid decimals', async () => {
-      const currency = ethers.utils.formatBytes32String('WETH');
+    it('Fail to add ETH as a supported currency due to the invalid decimals', async () => {
+      const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
@@ -276,7 +276,7 @@ describe('CurrencyController', () => {
         .withArgs(currency, 'USD', newMockPriceFeed.address);
     });
 
-    it('Fail to link an ETH price feed with WETH currency', async () => {
+    it('Fail to link an ETH price feed with ETH currency', async () => {
       // Set up for the mocks
       const newMockPriceFeed = await deployMockContract(
         owner,
@@ -288,7 +288,7 @@ describe('CurrencyController', () => {
 
       await expect(
         currencyControllerProxy.linkPriceFeed(
-          ethers.utils.formatBytes32String('WETH'),
+          ethers.utils.formatBytes32String('ETH'),
           newMockPriceFeed.address,
           true,
         ),
@@ -308,7 +308,7 @@ describe('CurrencyController', () => {
     });
 
     it('Fail to remove an ETH price feed due to invalid PriceFeed', async () => {
-      const dummyCurrency = ethers.utils.formatBytes32String('WETH');
+      const dummyCurrency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);

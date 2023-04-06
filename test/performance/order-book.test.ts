@@ -4,7 +4,7 @@ import { BigNumber, Contract, Wallet } from 'ethers';
 import { ethers, waffle } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexEFIL, hexUSDC, hexWETH } from '../../utils/strings';
+import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -36,7 +36,7 @@ describe('Performance Test: Order Book', async () => {
       usdcToken,
     } = await deployContracts());
 
-    await tokenVault.registerCurrency(hexWETH, wETHToken.address, false);
+    await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
 
     const mockUniswapRouter = await ethers
@@ -58,7 +58,7 @@ describe('Performance Test: Order Book', async () => {
       mockUniswapQuoter.address,
     );
 
-    await tokenVault.updateCurrency(hexWETH, true);
+    await tokenVault.updateCurrency(hexETH, true);
     await tokenVault.updateCurrency(hexUSDC, true);
 
     // Deploy Lending Markets
@@ -67,7 +67,7 @@ describe('Performance Test: Order Book', async () => {
         .createLendingMarket(hexEFIL, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexWETH, genesisDate)
+        .createLendingMarket(hexETH, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
         .createLendingMarket(hexUSDC, genesisDate)
@@ -82,8 +82,8 @@ describe('Performance Test: Order Book', async () => {
   describe('Take orders without the order cleaning', async () => {
     const currencies = [
       {
-        key: hexWETH,
-        name: 'WETH',
+        key: hexETH,
+        name: 'ETH',
         orderAmount: BigNumber.from('500000000000000000'),
       },
       {
@@ -115,7 +115,7 @@ describe('Performance Test: Order Book', async () => {
         for (const test of tests) {
           it(`${test} orders`, async () => {
             switch (currencyKey) {
-              case hexWETH:
+              case hexETH:
                 contract = wETHToken;
                 break;
               case hexUSDC:
@@ -145,13 +145,13 @@ describe('Performance Test: Order Book', async () => {
                   .sendTransaction({
                     to: user.address,
                     value:
-                      currencyKey === hexWETH
+                      currencyKey === hexETH
                         ? orderAmount.mul(15)
                         : BigNumber.from('500000000000000000'),
                   })
                   .then((tx) => tx.wait());
 
-                if (currencyKey === hexWETH) {
+                if (currencyKey === hexETH) {
                   await tokenVault
                     .connect(user)
                     .deposit(currencyKey, orderAmount.mul(5), {
@@ -191,7 +191,7 @@ describe('Performance Test: Order Book', async () => {
             }
             process.stdout.write('\r\x1b[K');
 
-            if (currencyKey === hexWETH) {
+            if (currencyKey === hexETH) {
               await tokenVault
                 .connect(signers[0])
                 .deposit(currencyKey, totalAmount.mul(3).div(2), {
