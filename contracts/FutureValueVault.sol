@@ -239,9 +239,11 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
      */
     function resetFutureValue(address _user) external override onlyAcceptedContracts {
         int256 removedAmount = Storage.slot().balances[_user];
-        Storage.slot().balances[_user] = 0;
+        if (removedAmount != 0) {
+            Storage.slot().balances[_user] = 0;
 
-        emit Transfer(_user, address(0), removedAmount);
+            emit Transfer(_user, address(0), removedAmount);
+        }
     }
 
     function _updateTotalSupply(

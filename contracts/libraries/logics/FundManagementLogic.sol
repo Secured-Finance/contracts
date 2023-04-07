@@ -311,7 +311,7 @@ library FundManagementLogic {
         emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledFutureValue);
     }
 
-    function resetFutureValues(address _user) external returns (int256 totalPresentValue) {
+    function resetFunds(address _user) external returns (int256 totalPresentValue) {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
 
         for (uint256 i; i < ccySet.length(); i++) {
@@ -332,6 +332,8 @@ library FundManagementLogic {
                 ).resetFutureValue(msg.sender);
             }
         }
+
+        AddressResolverLib.genesisValueVault().resetGenesisValue(ccySet.values(), _user);
     }
 
     function updateDepositsBasedOnMarketTerminationPrice(address _user, int256 presentValue)

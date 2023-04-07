@@ -699,7 +699,7 @@ contract LendingMarketController is
      * This function uses the present value as of the termination date.
      */
     function executeRedemption() external override nonReentrant ifInactive returns (bool) {
-        int256 redemptionAmount = FundManagementLogic.resetFutureValues(msg.sender);
+        int256 redemptionAmount = FundManagementLogic.resetFunds(msg.sender);
         FundManagementLogic.updateDepositsBasedOnMarketTerminationPrice(
             msg.sender,
             redemptionAmount
