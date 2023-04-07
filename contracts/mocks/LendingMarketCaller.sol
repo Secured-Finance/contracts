@@ -46,7 +46,12 @@ contract LendingMarketCaller {
 
     function executeItayoseCall(uint256 _index)
         external
-        returns (uint256 openingUnitPrice, uint256 openingDate)
+        returns (
+            uint256 openingUnitPrice,
+            uint256 openingDate,
+            ILendingMarket.PartiallyFilledOrder memory lendingOrder,
+            ILendingMarket.PartiallyFilledOrder memory borrowingOrder
+        )
     {
         return ILendingMarket(lendingMarkets[_index]).executeItayoseCall();
     }

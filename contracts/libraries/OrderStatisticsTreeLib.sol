@@ -12,6 +12,13 @@ struct RemainingOrder {
     uint256 unitPrice;
 }
 
+struct PartiallyFilledOrder {
+    uint48 orderId;
+    address maker;
+    uint256 amount;
+    uint256 futureValue;
+}
+
 struct OrderItem {
     uint48 orderId;
     uint48 next;
@@ -512,10 +519,10 @@ library OrderStatisticsTreeLib {
         internal
         returns (
             uint256 value,
-            uint256 totalFilledAmount,
+            uint256 filledAmount,
             uint256 filledFutureValue,
             uint256 remainingAmount,
-            RemainingOrder memory remainingOrder
+            PartiallyFilledOrder memory partiallyFilledOrder
         )
     {
         uint256 cursor = first(self);
@@ -538,7 +545,7 @@ library OrderStatisticsTreeLib {
             value = cursor;
 
             filledFutureValue += _calculateFutureValue(cursor, cursorNodeAmount);
-            totalFilledAmount += cursorNodeAmount;
+            filledAmount += cursorNodeAmount;
 
             if (totalAmount > amount && amount != EMPTY) {
                 amountDiff = totalAmount - amount;
@@ -552,7 +559,7 @@ library OrderStatisticsTreeLib {
         }
 
         if (amountDiff > 0) {
-            totalFilledAmount -= amountDiff;
+            filledAmount -= amountDiff;
         }
         if (futureValueDiff > 0) {
             filledFutureValue -= futureValueDiff;
@@ -562,11 +569,11 @@ library OrderStatisticsTreeLib {
             if (amountDiff > 0) {
                 cursor = value;
                 // Update order ids in the node.
-                remainingOrder = fillOrders(self, cursor, cursorNodeAmount - amountDiff);
+                partiallyFilledOrder = fillOrders(self, cursor, cursorNodeAmount - amountDiff);
             } else if (futureValueDiff > 0) {
                 cursor = value;
                 // Update order ids in the node.
-                remainingOrder = fillOrders(
+                partiallyFilledOrder = fillOrders(
                     self,
                     cursor,
                     cursorNodeAmount - _calculatePresentValue(cursor, futureValueDiff)
@@ -603,7 +610,7 @@ library OrderStatisticsTreeLib {
         if (lastNode == value && self.nodes[lastNode].orderTotalAmount == 0) {
             // The case that all node is dropped.
             self.root = EMPTY;
-        } else if (value > self.root || (value == self.root && totalFilledAmount >= totalAmount)) {
+        } else if (value > self.root || (value == self.root && filledAmount >= totalAmount)) {
             // The case that the root node is dropped
             self.root = cursor;
             self.nodes[cursor].parent = 0;
@@ -621,10 +628,10 @@ library OrderStatisticsTreeLib {
         internal
         returns (
             uint256 value,
-            uint256 totalFilledAmount,
+            uint256 filledAmount,
             uint256 filledFutureValue,
             uint256 remainingAmount,
-            RemainingOrder memory remainingOrder
+            PartiallyFilledOrder memory partiallyFilledOrder
         )
     {
         uint256 cursor = last(self);
@@ -647,7 +654,7 @@ library OrderStatisticsTreeLib {
             value = cursor;
 
             filledFutureValue += _calculateFutureValue(cursor, cursorNodeAmount);
-            totalFilledAmount += cursorNodeAmount;
+            filledAmount += cursorNodeAmount;
 
             if (totalAmount > amount && amount != EMPTY) {
                 amountDiff = totalAmount - amount;
@@ -661,7 +668,7 @@ library OrderStatisticsTreeLib {
         }
 
         if (amountDiff > 0) {
-            totalFilledAmount -= amountDiff;
+            filledAmount -= amountDiff;
         }
         if (futureValueDiff > 0) {
             filledFutureValue -= futureValueDiff;
@@ -671,11 +678,11 @@ library OrderStatisticsTreeLib {
             if (amountDiff > 0) {
                 cursor = value;
                 // Update order ids in the node.
-                remainingOrder = fillOrders(self, cursor, cursorNodeAmount - amountDiff);
+                partiallyFilledOrder = fillOrders(self, cursor, cursorNodeAmount - amountDiff);
             } else if (futureValueDiff > 0) {
                 cursor = value;
                 // Update order ids in the node.
-                remainingOrder = fillOrders(
+                partiallyFilledOrder = fillOrders(
                     self,
                     cursor,
                     cursorNodeAmount - _calculatePresentValue(cursor, futureValueDiff)
@@ -712,7 +719,7 @@ library OrderStatisticsTreeLib {
         if (firstNode == value && self.nodes[firstNode].orderTotalAmount == 0) {
             // The case that all node is dropped.
             self.root = EMPTY;
-        } else if (value < self.root || (value == self.root && totalFilledAmount >= totalAmount)) {
+        } else if (value < self.root || (value == self.root && filledAmount >= totalAmount)) {
             // The case that the root node is dropped
             self.root = cursor;
             self.nodes[cursor].parent = 0;
@@ -827,7 +834,7 @@ library OrderStatisticsTreeLib {
         Tree storage self,
         uint256 value,
         uint256 _amount
-    ) internal returns (RemainingOrder memory remainingOrder) {
+    ) internal returns (PartiallyFilledOrder memory partiallyFilledOrder) {
         Node storage gn = self.nodes[value];
 
         require(
@@ -836,7 +843,6 @@ library OrderStatisticsTreeLib {
         );
 
         uint256 remainingAmount = _amount;
-        uint256 filledCount = 0;
         OrderItem memory currentOrder = gn.orders[gn.head];
         uint48 orderId = gn.head;
 
@@ -847,27 +853,25 @@ library OrderStatisticsTreeLib {
                 remainingAmount -= currentOrder.amount;
                 orderId = currentOrder.next;
             } else {
-                remainingOrder = RemainingOrder(
+                partiallyFilledOrder = PartiallyFilledOrder(
                     currentOrder.orderId,
                     currentOrder.maker,
-                    currentOrder.amount - remainingAmount,
-                    value
+                    remainingAmount,
+                    _calculateFutureValue(value, remainingAmount)
                 );
-                remainingAmount = 0;
+                currentOrder = gn.orders[currentOrder.prev];
+                break;
             }
-
-            filledCount++;
         }
 
-        _dropOrders(self, value, currentOrder.orderId);
+        if (currentOrder.orderId != 0) {
+            _dropOrders(self, value, currentOrder.orderId);
+        }
 
-        if (remainingOrder.amount > 0) {
-            // NOTE: This order that the filled partially was dropped from a node, and the unfilled amount
-            // will be inserted newly as a new orders.
-            // However, that filled order amount is used when future value is calculated from inactive order.
-            // For that calculation, this order amount needs to be updated by an actual filled amount at this point.
-            OrderItem storage order = self.nodes[value].orders[currentOrder.orderId];
-            order.amount -= remainingOrder.amount;
+        if (partiallyFilledOrder.amount > 0) {
+            self.nodes[value].orders[partiallyFilledOrder.orderId].amount -= partiallyFilledOrder
+                .amount;
+            self.nodes[value].orderTotalAmount -= partiallyFilledOrder.amount;
         }
     }
 

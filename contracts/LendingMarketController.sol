@@ -617,40 +617,52 @@ contract LendingMarketController is
         uint256 filledUnitPrice;
         uint256 filledAmount;
         uint256 filledFutureValue;
+        ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder;
         ProtocolTypes.Side side;
 
         if (futureValue > 0) {
             side = ProtocolTypes.Side.BORROW;
-            (filledUnitPrice, filledAmount, filledFutureValue) = ILendingMarket(
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwindOrder(side, msg.sender, futureValue.toUint256());
-        } else if (futureValue < 0) {
-            side = ProtocolTypes.Side.LEND;
-            (filledUnitPrice, filledAmount, filledFutureValue) = ILendingMarket(
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwindOrder(side, msg.sender, (-futureValue).toUint256());
-        }
-
-        if (filledAmount > 0) {
-            FundManagementLogic.updateFunds(
-                _ccy,
-                _maturity,
-                msg.sender,
-                side,
-                filledFutureValue,
-                filledAmount,
-                0
-            );
-
-            LendingMarketOperationLogic.updateOrderLogs(
-                _ccy,
-                _maturity,
-                getObservationPeriod(),
+            (
                 filledUnitPrice,
                 filledAmount,
-                filledFutureValue
+                filledFutureValue,
+                partiallyFilledOrder
+            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
+                side,
+                msg.sender,
+                futureValue.toUint256()
+            );
+        } else if (futureValue < 0) {
+            side = ProtocolTypes.Side.LEND;
+            (
+                filledUnitPrice,
+                filledAmount,
+                filledFutureValue,
+                partiallyFilledOrder
+            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
+                side,
+                msg.sender,
+                (-futureValue).toUint256()
             );
         }
+
+        _updateFundsForTaker(
+            _ccy,
+            _maturity,
+            msg.sender,
+            side,
+            filledAmount,
+            filledFutureValue,
+            filledUnitPrice,
+            0
+        );
+
+        _updateFundsForMaker(
+            _ccy,
+            _maturity,
+            side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
+            partiallyFilledOrder
+        );
 
         return true;
     }
@@ -661,7 +673,28 @@ contract LendingMarketController is
         nonReentrant
         returns (bool)
     {
-        LendingMarketOperationLogic.executeItayoseCalls(_currencies, _maturity);
+        for (uint256 i; i < _currencies.length; i++) {
+            bytes32 ccy = _currencies[i];
+
+            (
+                ILendingMarket.PartiallyFilledOrder memory partiallyFilledLendingOrder,
+                ILendingMarket.PartiallyFilledOrder memory partiallyFilledBorrowingOrder
+            ) = LendingMarketOperationLogic.executeItayoseCall(ccy, _maturity);
+
+            _updateFundsForMaker(
+                ccy,
+                _maturity,
+                ProtocolTypes.Side.LEND,
+                partiallyFilledLendingOrder
+            );
+            _updateFundsForMaker(
+                ccy,
+                _maturity,
+                ProtocolTypes.Side.BORROW,
+                partiallyFilledBorrowingOrder
+            );
+        }
+
         return true;
     }
 
@@ -864,6 +897,7 @@ contract LendingMarketController is
         (
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
+            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
             uint256 remainingAmount
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
                 _side,
@@ -889,27 +923,75 @@ contract LendingMarketController is
             feeFutureValue = _calculateOrderFeeAmount(_ccy, filledFutureValue, _maturity);
         }
 
-        if (filledFutureValue != 0) {
+        _updateFundsForTaker(
+            _ccy,
+            _maturity,
+            _user,
+            _side,
+            filledAmount,
+            filledFutureValue,
+            filledUnitPrice,
+            feeFutureValue
+        );
+
+        _updateFundsForMaker(
+            _ccy,
+            _maturity,
+            _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
+            partiallyFilledOrder
+        );
+
+        Storage.slot().usedCurrencies[_user].add(_ccy);
+    }
+
+    function _updateFundsForTaker(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _filledAmount,
+        uint256 _filledFutureValue,
+        uint256 _filledUnitPrice,
+        uint256 _feeFutureValue
+    ) private {
+        if (_filledFutureValue != 0) {
             FundManagementLogic.updateFunds(
                 _ccy,
                 _maturity,
                 _user,
                 _side,
-                filledFutureValue,
-                filledAmount,
-                feeFutureValue
+                _filledFutureValue,
+                _filledAmount,
+                _feeFutureValue
             );
 
             LendingMarketOperationLogic.updateOrderLogs(
                 _ccy,
                 _maturity,
                 getObservationPeriod(),
-                filledUnitPrice,
-                _amount,
-                filledFutureValue
+                _filledUnitPrice,
+                _filledAmount,
+                _filledFutureValue
             );
         }
+    }
 
-        Storage.slot().usedCurrencies[_user].add(_ccy);
+    function _updateFundsForMaker(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
+    ) private {
+        if (partiallyFilledOrder.futureValue != 0) {
+            FundManagementLogic.updateFunds(
+                _ccy,
+                _maturity,
+                partiallyFilledOrder.maker,
+                _side,
+                partiallyFilledOrder.futureValue,
+                partiallyFilledOrder.amount,
+                0
+            );
+        }
     }
 }

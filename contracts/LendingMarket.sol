@@ -15,7 +15,7 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
-import {LendingMarketStorage as Storage, RemainingOrder} from "./storages/LendingMarketStorage.sol";
+import {LendingMarketStorage as Storage} from "./storages/LendingMarketStorage.sol";
 
 /**
  * @notice Implements the module that allows lending market participants to create/cancel market orders,
@@ -229,12 +229,20 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             block.timestamp >= Storage.slot().openingDate;
     }
 
+    /**
+     * @notice Gets if the market is under the Itayose period.
+     * @return The boolean if the market is under the Itayose period.
+     */
     function isItayosePeriod() public view returns (bool) {
         return
             block.timestamp >= (Storage.slot().openingDate - ITAYOSE_PERIOD) &&
             !Storage.slot().isReady[Storage.slot().maturity];
     }
 
+    /**
+     * @notice Gets if the market is under the pre-order period.
+     * @return The boolean if the market is under the pre-order period.
+     */
     function isPreOrderPeriod() public view override returns (bool) {
         return
             block.timestamp >= (Storage.slot().openingDate - PRE_ORDER_PERIOD) &&
@@ -484,6 +492,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after taking orders
      * @return filledUnitPrice Last unit price of the filled order
      * @return filledFutureValue The total FV amount of the filled order on the order book
+     * @return partiallyFilledOrder Partially filled order on the order book
      * @return remainingAmount The remaining amount that is not filled in the order book
      */
     function createOrder(
@@ -501,6 +510,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
+            PartiallyFilledOrder memory partiallyFilledOrder,
             uint256 remainingAmount
         )
     {
@@ -515,13 +525,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
 
         if (isExists) {
-            (filledUnitPrice, filledFutureValue, remainingAmount) = _takeOrder(
-                _side,
-                _user,
-                _amount,
-                _unitPrice,
-                _ignoreRemainingAmount
-            );
+            (
+                filledUnitPrice,
+                filledFutureValue,
+                partiallyFilledOrder,
+                remainingAmount
+            ) = _takeOrder(_side, _user, _amount, _unitPrice, _ignoreRemainingAmount);
         } else {
             _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
             remainingAmount = _amount;
@@ -556,6 +565,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return filledUnitPrice Last unit price of the filled order
      * @return filledAmount The total amount of the filled order on the order book
      * @return filledFutureValue The total FV amount of the filled order on the order book
+     * @return partiallyFilledOrder Partially filled order
      */
     function unwindOrder(
         ProtocolTypes.Side _side,
@@ -570,7 +580,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (
             uint256 filledUnitPrice,
             uint256 filledAmount,
-            uint256 filledFutureValue
+            uint256 filledFutureValue,
+            PartiallyFilledOrder memory partiallyFilledOrder
         )
     {
         require(_futureValue > 0, "Can't place empty future value amount");
@@ -583,6 +594,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
      * @return openingUnitPrice The opening price when Itayose is executed
      * @return openingDate The timestamp when the market opens
+     * @return partiallyFilledLendingOrder Partially filled lending order on the order book
+     * @return partiallyFilledBorrowingOrder Partially filled borrowing order on the order book
      */
     function executeItayoseCall()
         external
@@ -590,7 +603,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         whenNotPaused
         onlyAcceptedContracts
         ifItayosePeriod
-        returns (uint256 openingUnitPrice, uint256 openingDate)
+        returns (
+            uint256 openingUnitPrice,
+            uint256 openingDate,
+            PartiallyFilledOrder memory partiallyFilledLendingOrder,
+            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
+        )
     {
         uint256 totalOffsetAmount;
         (openingUnitPrice, totalOffsetAmount) = OrderBookLogic.getOpeningUnitPrice();
@@ -602,23 +620,38 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             ];
 
             for (uint256 i; i < sides.length; i++) {
-                (, RemainingOrder memory remainingOrder, , ) = OrderBookLogic.dropOrders(
-                    sides[i],
-                    totalOffsetAmount,
-                    0
-                );
+                ProtocolTypes.Side partiallyFilledOrderSide;
+                (
+                    ,
+                    ,
+                    uint48 partiallyFilledOrderId,
+                    address partiallyFilledMaker,
+                    uint256 partiallyFilledAmount,
+                    uint256 partiallyFilledFutureValue,
 
-                if (remainingOrder.amount > 0) {
-                    // Make a new order for the remaining amount of a partially filled order
-                    _makeOrder(
-                        sides[i] == ProtocolTypes.Side.BORROW
-                            ? ProtocolTypes.Side.LEND
-                            : ProtocolTypes.Side.BORROW,
-                        remainingOrder.maker,
-                        remainingOrder.amount,
-                        remainingOrder.unitPrice,
-                        true,
-                        remainingOrder.orderId
+                ) = OrderBookLogic.dropOrders(sides[i], totalOffsetAmount, 0);
+
+                if (partiallyFilledFutureValue > 0) {
+                    if (sides[i] == ProtocolTypes.Side.LEND) {
+                        partiallyFilledOrderSide = ProtocolTypes.Side.BORROW;
+                        partiallyFilledBorrowingOrder.maker = partiallyFilledMaker;
+                        partiallyFilledBorrowingOrder.amount = partiallyFilledAmount;
+                        partiallyFilledBorrowingOrder.futureValue = partiallyFilledFutureValue;
+                    } else {
+                        partiallyFilledOrderSide = ProtocolTypes.Side.LEND;
+                        partiallyFilledLendingOrder.maker = partiallyFilledMaker;
+                        partiallyFilledLendingOrder.amount = partiallyFilledAmount;
+                        partiallyFilledLendingOrder.futureValue = partiallyFilledFutureValue;
+                    }
+
+                    emit OrderPartiallyTaken(
+                        partiallyFilledOrderId,
+                        partiallyFilledMaker,
+                        partiallyFilledOrderSide,
+                        Storage.slot().ccy,
+                        Storage.slot().maturity,
+                        partiallyFilledAmount,
+                        partiallyFilledFutureValue
                     );
                 }
             }
@@ -709,13 +742,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
+            PartiallyFilledOrder memory partiallyFilledOrder,
             uint256 remainingAmount
         )
     {
-        RemainingOrder memory remainingOrder;
+        uint48 partiallyFilledOrderId;
 
-        (filledUnitPrice, remainingOrder, filledFutureValue, remainingAmount) = OrderBookLogic
-            .dropOrders(_side, _amount, _unitPrice);
+        (
+            filledUnitPrice,
+            filledFutureValue,
+            partiallyFilledOrderId,
+            partiallyFilledOrder.maker,
+            partiallyFilledOrder.amount,
+            partiallyFilledOrder.futureValue,
+            remainingAmount
+        ) = OrderBookLogic.dropOrders(_side, _amount, _unitPrice);
 
         emit OrdersTaken(
             _user,
@@ -727,17 +768,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             filledFutureValue
         );
 
-        if (remainingOrder.amount > 0) {
-            // Make a new order for the remaining amount of a partially filled order
-            _makeOrder(
-                _side == ProtocolTypes.Side.BORROW
-                    ? ProtocolTypes.Side.LEND
-                    : ProtocolTypes.Side.BORROW,
-                remainingOrder.maker,
-                remainingOrder.amount,
-                remainingOrder.unitPrice,
-                true,
-                remainingOrder.orderId
+        if (partiallyFilledOrder.futureValue > 0) {
+            emit OrderPartiallyTaken(
+                partiallyFilledOrderId,
+                partiallyFilledOrder.maker,
+                _side == ProtocolTypes.Side.LEND
+                    ? ProtocolTypes.Side.BORROW
+                    : ProtocolTypes.Side.LEND,
+                Storage.slot().ccy,
+                Storage.slot().maturity,
+                partiallyFilledOrder.amount,
+                partiallyFilledOrder.futureValue
             );
         }
 
@@ -756,13 +797,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (
             uint256 filledUnitPrice,
             uint256 filledAmount,
-            uint256 filledFutureValue
+            uint256 filledFutureValue,
+            PartiallyFilledOrder memory partiallyFilledOrder
         )
     {
-        RemainingOrder memory remainingOrder;
+        uint48 partiallyFilledOrderId;
 
-        (filledUnitPrice, remainingOrder, filledAmount, filledFutureValue) = OrderBookLogic
-            .dropOrders(_side, _futureValue);
+        (
+            filledUnitPrice,
+            filledAmount,
+            filledFutureValue,
+            partiallyFilledOrderId,
+            partiallyFilledOrder.maker,
+            partiallyFilledOrder.amount,
+            partiallyFilledOrder.futureValue
+        ) = OrderBookLogic.dropOrders(_side, _futureValue);
 
         emit OrdersTaken(
             _user,
@@ -774,17 +823,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             filledFutureValue
         );
 
-        if (remainingOrder.amount > 0) {
-            // Make a new order for the remaining amount of a partially filled order
-            _makeOrder(
-                _side == ProtocolTypes.Side.BORROW
-                    ? ProtocolTypes.Side.LEND
-                    : ProtocolTypes.Side.BORROW,
-                remainingOrder.maker,
-                remainingOrder.amount,
-                remainingOrder.unitPrice,
-                true,
-                remainingOrder.orderId
+        if (partiallyFilledOrder.futureValue > 0) {
+            emit OrderPartiallyTaken(
+                partiallyFilledOrderId,
+                partiallyFilledOrder.maker,
+                _side == ProtocolTypes.Side.LEND
+                    ? ProtocolTypes.Side.BORROW
+                    : ProtocolTypes.Side.LEND,
+                Storage.slot().ccy,
+                Storage.slot().maturity,
+                partiallyFilledOrder.amount,
+                partiallyFilledOrder.futureValue
             );
         }
     }

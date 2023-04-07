@@ -238,7 +238,7 @@ describe('OrderStatisticsTree - drop values', () => {
                 }
                 const totalAmountBefore = await getTotalAmount('<Before>');
 
-                const { droppedAmountInPV, droppedAmountInFV } = await ost[
+                const { droppedAmount, droppedFutureValue } = await ost[
                   test.method
                 ](0, 0, input.limitFutureValue).then(
                   ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
@@ -246,8 +246,8 @@ describe('OrderStatisticsTree - drop values', () => {
 
                 const totalAmountAfter = await getTotalAmount('<After>');
 
-                expect(droppedAmountInPV.toNumber()).equal(input.filledAmount);
-                expect(droppedAmountInFV.toNumber()).equal(
+                expect(droppedAmount.toNumber()).equal(input.filledAmount);
+                expect(droppedFutureValue.toNumber()).equal(
                   input.filledFutureValue,
                 );
                 expect(
@@ -310,7 +310,7 @@ describe('OrderStatisticsTree - drop values', () => {
 
           const totalAmountBefore = await getTotalAmount('<Before>');
 
-          const { remainingOrderAmountInPV } = await ost
+          const { droppedAmount } = await ost
             .dropValuesFromFirst(test.estimatedPVAmount, 0, 0)
             .then(
               ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
@@ -318,11 +318,12 @@ describe('OrderStatisticsTree - drop values', () => {
 
           const totalAmountAfter = await getTotalAmount('<After>');
 
-          expect(
-            totalAmountAfter
-              .add(remainingOrderAmountInPV.toString())
-              .add(test.estimatedPVAmount.toString()),
-          ).to.equal(totalAmountBefore);
+          expect(droppedAmount.toString()).to.equal(
+            test.estimatedPVAmount.toString(),
+          );
+          expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
+            totalAmountBefore,
+          );
         });
       }
     });
@@ -375,7 +376,7 @@ describe('OrderStatisticsTree - drop values', () => {
 
           const totalAmountBefore = await getTotalAmount('<Before>');
 
-          const { remainingOrderAmountInPV } = await ost
+          const { droppedAmount } = await ost
             .dropValuesFromLast(test.estimatedPVAmount, 0, 0)
             .then(
               ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
@@ -383,11 +384,12 @@ describe('OrderStatisticsTree - drop values', () => {
 
           const totalAmountAfter = await getTotalAmount('<After>');
 
-          expect(
-            totalAmountAfter
-              .add(remainingOrderAmountInPV.toString())
-              .add(test.estimatedPVAmount.toString()),
-          ).to.equal(totalAmountBefore);
+          expect(droppedAmount.toString()).to.equal(
+            test.estimatedPVAmount.toString(),
+          );
+          expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
+            totalAmountBefore,
+          );
         });
       }
     });

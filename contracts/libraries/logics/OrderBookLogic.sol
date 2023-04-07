@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {OrderStatisticsTreeLib, RemainingOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
+import {OrderStatisticsTreeLib, PartiallyFilledOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
@@ -390,44 +390,64 @@ library OrderBookLogic {
         public
         returns (
             uint256 filledUnitPrice,
-            RemainingOrder memory remainingOrder,
             uint256 filledFutureValue,
+            uint48 partiallyFilledOrderId,
+            address partiallyFilledMaker,
+            uint256 partiallyFilledAmount,
+            uint256 partiallyFilledFutureValue,
             uint256 remainingAmount
         )
     {
+        PartiallyFilledOrder memory partiallyFilledOrder;
+
         if (_side == ProtocolTypes.Side.BORROW) {
-            (filledUnitPrice, , filledFutureValue, remainingAmount, remainingOrder) = Storage
+            (filledUnitPrice, , filledFutureValue, remainingAmount, partiallyFilledOrder) = Storage
                 .slot()
                 .lendOrders[Storage.slot().maturity]
                 .dropRight(_amount, _unitPrice, 0);
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (filledUnitPrice, , filledFutureValue, remainingAmount, remainingOrder) = Storage
+            (filledUnitPrice, , filledFutureValue, remainingAmount, partiallyFilledOrder) = Storage
                 .slot()
                 .borrowOrders[Storage.slot().maturity]
                 .dropLeft(_amount, _unitPrice, 0);
         }
+
+        partiallyFilledOrderId = partiallyFilledOrder.orderId;
+        partiallyFilledMaker = partiallyFilledOrder.maker;
+        partiallyFilledAmount = partiallyFilledOrder.amount;
+        partiallyFilledFutureValue = partiallyFilledOrder.futureValue;
     }
 
     function dropOrders(ProtocolTypes.Side _side, uint256 _futureValue)
         public
         returns (
             uint256 filledUnitPrice,
-            RemainingOrder memory remainingOrder,
             uint256 filledAmount,
-            uint256 filledFutureValue
+            uint256 filledFutureValue,
+            uint48 partiallyFilledOrderId,
+            address partiallyFilledMaker,
+            uint256 partiallyFilledAmount,
+            uint256 partiallyFilledFutureValue
         )
     {
+        PartiallyFilledOrder memory partiallyFilledOrder;
+
         if (_side == ProtocolTypes.Side.BORROW) {
-            (filledUnitPrice, filledAmount, filledFutureValue, , remainingOrder) = Storage
+            (filledUnitPrice, filledAmount, filledFutureValue, , partiallyFilledOrder) = Storage
                 .slot()
                 .lendOrders[Storage.slot().maturity]
                 .dropRight(0, 0, _futureValue);
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (filledUnitPrice, filledAmount, filledFutureValue, , remainingOrder) = Storage
+            (filledUnitPrice, filledAmount, filledFutureValue, , partiallyFilledOrder) = Storage
                 .slot()
                 .borrowOrders[Storage.slot().maturity]
                 .dropLeft(0, 0, _futureValue);
         }
+
+        partiallyFilledOrderId = partiallyFilledOrder.orderId;
+        partiallyFilledMaker = partiallyFilledOrder.maker;
+        partiallyFilledAmount = partiallyFilledOrder.amount;
+        partiallyFilledFutureValue = partiallyFilledOrder.futureValue;
     }
 
     function cleanLendOrders(address _user, uint256 _maturity)
