@@ -53,6 +53,7 @@ interface ILendingMarket {
         uint256 borrowUnitPrice;
         uint256 lendUnitPrice;
         uint256 midUnitPrice;
+        bool isReady;
     }
 
     function getMarket() external view returns (Market memory);
@@ -87,13 +88,15 @@ interface ILendingMarket {
 
     function getOpeningDate() external view returns (uint256);
 
-    function isItayosePeriod() external view returns (bool);
-
     function getOpeningUnitPrice() external view returns (uint256);
+
+    function isReady() external view returns (bool);
 
     function isMatured() external view returns (bool);
 
     function isOpened() external view returns (bool);
+
+    function isItayosePeriod() external view returns (bool);
 
     function isPreOrderPeriod() external returns (bool);
 
