@@ -211,14 +211,38 @@ Gets the market currency.
 ### getOpeningDate
 
 ```solidity
-function getOpeningDate() external view returns (uint256)
+function getOpeningDate() external view returns (uint256 openingDate)
 ```
+
+Gets the market opening date.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| openingDate | uint256 | The market opening date |
 
 ### getOpeningUnitPrice
 
 ```solidity
-function getOpeningUnitPrice() external view returns (uint256)
+function getOpeningUnitPrice() external view returns (uint256 openingUnitPrices)
 ```
+
+Gets the market opening unit price.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| openingUnitPrices | uint256 | The market opening unit price |
+
+### isReady
+
+```solidity
+function isReady() public view returns (bool)
+```
+
+Gets if the market is ready.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the market is ready or not |
 
 ### isMatured
 
