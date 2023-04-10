@@ -211,7 +211,6 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Check collateral', async () => {
-        const coverage = await tokenVault.getCoverage(alice.address);
         const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
           hexETH,
@@ -253,10 +252,12 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(aliceFV).to.equal(0);
+      });
 
+      after(async () => {
         await lendingMarketController
           .connect(carol)
-          .cancelOrder(hexETH, ethMaturities[0], '5');
+          .cancelOrder(hexETH, ethMaturities[0], '4');
       });
     });
 
@@ -316,7 +317,7 @@ describe('Integration Test: Order Book', async () => {
         const fee = calculateOrderFee(
           orderAmount,
           '8000',
-          ethMaturities[0].sub(timestamp),
+          filMaturities[0].sub(timestamp),
         );
 
         const [aliceFV, bobFV] = await Promise.all(
@@ -334,7 +335,6 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Check collateral', async () => {
-        const coverage = await tokenVault.getCoverage(alice.address);
         const aliceFILDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
           hexEFIL,
@@ -391,10 +391,12 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(aliceFV).to.equal(0);
+      });
 
+      after(async () => {
         await lendingMarketController
           .connect(dave)
-          .cancelOrder(hexEFIL, filMaturities[0], '5');
+          .cancelOrder(hexEFIL, filMaturities[0], '4');
       });
     });
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../types/ProtocolTypes.sol";
-import "../libraries/OrderStatisticsTreeLib.sol";
+import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {OrderStatisticsTreeLib} from "../libraries/OrderStatisticsTreeLib.sol";
 
 struct MarketOrder {
     ProtocolTypes.Side side;

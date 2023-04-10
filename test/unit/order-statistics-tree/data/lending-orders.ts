@@ -8,7 +8,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Fill 1 node partially',
         targetAmount: 50000000,
-        droppedAmount: 100000000,
+        droppedAmount: 50000000,
       },
       {
         title: 'Drop all nodes',
@@ -32,7 +32,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Fill 1 node partially',
         targetAmount: 100000000,
-        droppedAmount: 300000000,
+        droppedAmount: 100000000,
       },
       {
         title: 'Drop 1 node',
@@ -42,7 +42,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Drop 1 node, Fill 1 node partially',
         targetAmount: 350000000,
-        droppedAmount: 400000000,
+        droppedAmount: 350000000,
       },
       {
         title: 'Drop all nodes',
@@ -67,7 +67,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Fill 1 node partially',
         targetAmount: 300000000,
-        droppedAmount: 500000000,
+        droppedAmount: 300000000,
       },
       {
         title: 'Drop 1 node',
@@ -77,7 +77,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Drop 1 node, Fill 1 node partially',
         targetAmount: 600000000,
-        droppedAmount: 800000000,
+        droppedAmount: 600000000,
       },
       {
         title: 'Drop 2 nodes',
@@ -114,7 +114,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Fill 1 node partially, Remove 4 order with a unfilled amount',
         targetAmount: 350000000,
-        droppedAmount: 400000000,
+        droppedAmount: 350000000,
       },
       {
         title:
@@ -129,14 +129,14 @@ const lendingMarketOrders: Condition[] = [
       },
       {
         title: 'Drop 1 node, Fill 1 node partially',
-        targetAmount: 600000000,
-        droppedAmount: 600000000,
+        targetAmount: 580000000,
+        droppedAmount: 580000000,
       },
       {
         title:
           'Drop 1 node, Fill 1 node partially, Remove 2 order with a unfilled amount',
         targetAmount: 620000000,
-        droppedAmount: 700000000,
+        droppedAmount: 620000000,
       },
       {
         title:
@@ -152,13 +152,13 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Drop 2 nodes, Fill 1 node partially',
         targetAmount: 820000000,
-        droppedAmount: 850000000,
+        droppedAmount: 820000000,
       },
       {
         title:
           'Drop 2 nodes, Fill 1 node partially, Remove 1 order with a unfilled amount',
         targetAmount: 830000000,
-        droppedAmount: 850000000,
+        droppedAmount: 830000000,
       },
       {
         title:
@@ -202,7 +202,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Fill 1 node partially',
         targetAmount: 50000000,
-        droppedAmount: 100000000,
+        droppedAmount: 50000000,
       },
       {
         title: 'Drop 1 node',
@@ -218,7 +218,7 @@ const lendingMarketOrders: Condition[] = [
         title:
           'Drop multiple nodes less than the root, Fill root node partially',
         targetAmount: 6000000000,
-        droppedAmount: 6600000000,
+        droppedAmount: 6000000000,
       },
       {
         title: 'Drop multiple nodes less than or equal to the root',
@@ -228,7 +228,7 @@ const lendingMarketOrders: Condition[] = [
       {
         title: 'Drop multiple nodes across the root',
         targetAmount: 7000000000,
-        droppedAmount: 7100000000,
+        droppedAmount: 7000000000,
       },
       {
         title: 'Drop all nodes',
@@ -290,7 +290,7 @@ const lendingLimitOrders: Condition[] = [
         title: 'Drop 1 node, Fill 1 node partially',
         targetAmount: 350000000,
         limitValue: 9800,
-        droppedAmount: 400000000,
+        droppedAmount: 350000000,
         droppedValue: 9801,
       },
       {
@@ -335,7 +335,7 @@ const lendingLimitOrders: Condition[] = [
         title: 'Drop 1 node, Fill 1 node partially',
         targetAmount: 600000000,
         limitValue: 9801,
-        droppedAmount: 800000000,
+        droppedAmount: 600000000,
         droppedValue: 9802,
       },
       {
@@ -387,7 +387,7 @@ const lendingLimitOrders: Condition[] = [
         title: 'Drop 1 node, Fill 1 node partially',
         targetAmount: 700000000,
         limitValue: 9801,
-        droppedAmount: 800000000,
+        droppedAmount: 700000000,
         droppedValue: 9804,
       },
       {
@@ -416,7 +416,7 @@ const lendingUnwindOrders: UnwindCondition[] = [
       {
         title: 'Fill 1 node partially',
         limitFutureValue: 125000000,
-        droppedAmount: 200000000,
+        droppedAmount: 100000000,
         filledAmount: 100000000,
         filledFutureValue: 125000000,
       },
@@ -453,7 +453,7 @@ const lendingUnwindOrders: UnwindCondition[] = [
       {
         title: 'Fill 1 node partially',
         limitFutureValue: 125000000,
-        droppedAmount: 200000000,
+        droppedAmount: 100000000,
         filledAmount: 100000000,
         filledFutureValue: 125000000,
       },
@@ -467,7 +467,7 @@ const lendingUnwindOrders: UnwindCondition[] = [
       {
         title: 'Drop 1 node, Fill 1 node partially',
         limitFutureValue: 350000000,
-        droppedAmount: 990000000,
+        droppedAmount: 279000000,
         filledAmount: 279000000,
         filledFutureValue: 350000000,
       },
@@ -505,7 +505,7 @@ const lendingUnwindOrders: UnwindCondition[] = [
       {
         title: 'Fill 1 node partially',
         limitFutureValue: 125000000,
-        droppedAmount: 200000000,
+        droppedAmount: 100000000,
         filledAmount: 100000000,
         filledFutureValue: 125000000,
       },
@@ -519,7 +519,7 @@ const lendingUnwindOrders: UnwindCondition[] = [
       {
         title: 'Drop 1 node, Fill 1 node partially',
         limitFutureValue: 350000000,
-        droppedAmount: 990000000,
+        droppedAmount: 279000000,
         filledAmount: 279000000,
         filledFutureValue: 350000000,
       },
@@ -533,7 +533,7 @@ const lendingUnwindOrders: UnwindCondition[] = [
       {
         title: 'Drop 2 nodes, Fill 1 node partially',
         limitFutureValue: 1350000000,
-        droppedAmount: 1770000000,
+        droppedAmount: 1068000000,
         filledAmount: 1068000000,
         filledFutureValue: 1350000000,
       },
