@@ -120,7 +120,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 openingDate: Storage.slot().openingDate,
                 borrowUnitPrice: OrderBookLogic.getLowestBorrowingUnitPrice(),
                 lendUnitPrice: OrderBookLogic.getHighestLendingUnitPrice(),
-                midUnitPrice: getMidUnitPrice()
+                midUnitPrice: getMidUnitPrice(),
+                isReady: isReady()
             });
     }
 
@@ -202,12 +203,28 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return Storage.slot().ccy;
     }
 
-    function getOpeningDate() external view override returns (uint256) {
+    /**
+     * @notice Gets the market opening date.
+     * @return openingDate The market opening date
+     */
+    function getOpeningDate() external view override returns (uint256 openingDate) {
         return Storage.slot().openingDate;
     }
 
-    function getOpeningUnitPrice() external view override returns (uint256) {
+    /**
+     * @notice Gets the market opening unit price.
+     * @return openingUnitPrices The market opening unit price
+     */
+    function getOpeningUnitPrice() external view override returns (uint256 openingUnitPrices) {
         return Storage.slot().openingUnitPrices[Storage.slot().maturity];
+    }
+
+    /**
+     * @notice Gets if the market is ready.
+     * @return The boolean if the market is ready or not
+     */
+    function isReady() public view override returns (bool) {
+        return Storage.slot().isReady[Storage.slot().maturity];
     }
 
     /**
