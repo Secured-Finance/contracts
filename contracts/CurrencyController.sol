@@ -326,9 +326,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         for (uint256 i = 0; i < _amounts.length; i++) {
             if (_amounts[i] == 0) continue;
 
-            amounts[i] =
-                (_amounts[i] * _getLastETHPrice(_ccy).toUint256()) /
-                10**Storage.slot().ethDecimals[_ccy];
+            amounts[i] = (_amounts[i] * _getLastETHPrice(_ccy).toUint256()).div(
+                10**Storage.slot().ethDecimals[_ccy]
+            );
         }
     }
 
@@ -346,9 +346,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     {
         if (_isETH(_ccy)) return _amountETH;
 
-        amount =
-            (_amountETH * 10**Storage.slot().ethDecimals[_ccy]) /
-            _getLastETHPrice(_ccy).toUint256();
+        amount = (_amountETH * 10**Storage.slot().ethDecimals[_ccy]).div(
+            _getLastETHPrice(_ccy).toUint256()
+        );
         require(amount != 0, "Too small amount");
     }
 

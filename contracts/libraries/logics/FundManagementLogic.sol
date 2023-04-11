@@ -339,21 +339,23 @@ library FundManagementLogic {
     function updateDepositsBasedOnMarketTerminationPrice(address _user, int256 presentValue)
         external
     {
-        EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
-        uint256[] memory marketTerminationRatios = new uint256[](ccySet.length());
+        bytes32[] memory collateralCurrencies = AddressResolverLib
+            .tokenVault()
+            .getCollateralCurrencies();
+        uint256[] memory marketTerminationRatios = new uint256[](collateralCurrencies.length);
         uint256 marketTerminationRatioTotal;
         uint256 absPresentValue = presentValue > 0
             ? presentValue.toUint256()
             : (-presentValue).toUint256();
 
-        for (uint256 i; i < ccySet.length(); i++) {
-            bytes32 ccy = ccySet.at(i);
+        for (uint256 i; i < collateralCurrencies.length; i++) {
+            bytes32 ccy = collateralCurrencies[i];
             marketTerminationRatios[i] = Storage.slot().marketTerminationRatios[ccy];
             marketTerminationRatioTotal += marketTerminationRatios[i];
         }
 
-        for (uint256 i; i < ccySet.length(); i++) {
-            bytes32 ccy = ccySet.at(i);
+        for (uint256 i; i < collateralCurrencies.length; i++) {
+            bytes32 ccy = collateralCurrencies[i];
             uint256 amount = _convertFromETHAtMarketTerminationPrice(
                 ccy,
                 (absPresentValue * marketTerminationRatios[i]).div(marketTerminationRatioTotal)
@@ -908,13 +910,14 @@ library FundManagementLogic {
         view
         returns (int256)
     {
-        if (_ccy == "WETH") {
+        if (_ccy == "ETH") {
             return _amount;
         } else {
-            uint8 ethDecimals = AddressResolverLib.currencyController().getEthDecimals(_ccy);
+            uint8 decimals = AddressResolverLib.currencyController().getEthDecimals(_ccy);
+
             return
                 (_amount * Storage.slot().marketTerminationPrices[_ccy]).div(
-                    (10**ethDecimals).toInt256()
+                    (10**decimals).toInt256()
                 );
         }
     }
@@ -924,12 +927,12 @@ library FundManagementLogic {
         view
         returns (uint256)
     {
-        if (_ccy == "WETH") {
+        if (_ccy == "ETH") {
             return _amount;
         } else {
-            uint8 ethDecimals = AddressResolverLib.currencyController().getEthDecimals(_ccy);
+            uint8 decimals = AddressResolverLib.currencyController().getEthDecimals(_ccy);
             return
-                (_amount * 10**ethDecimals).div(
+                (_amount * 10**decimals).div(
                     Storage.slot().marketTerminationPrices[_ccy].toUint256()
                 );
         }

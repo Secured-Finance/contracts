@@ -177,10 +177,10 @@ library LendingMarketOperationLogic {
             bytes32 ccy = collateralCurrencies[i];
             address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(ccy);
             uint256 balance = IERC20(tokenAddress).balanceOf(
-                address(AddressResolverLib.reserveFund())
+                address(AddressResolverLib.tokenVault())
             );
 
-            Storage.slot().marketTerminationRatios[ccy] = ccy == "WETH"
+            Storage.slot().marketTerminationRatios[ccy] = ccy == "ETH"
                 ? balance
                 : AddressResolverLib.currencyController().convertToETH(ccy, balance);
         }

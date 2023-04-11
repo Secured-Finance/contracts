@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers';
-import { hexEFIL, hexUSDC, hexWBTC, hexETH } from './strings';
+import { hexEFIL, hexETH, hexUSDC, hexWBTC } from './strings';
 
 export interface Currency {
   symbol: string;
