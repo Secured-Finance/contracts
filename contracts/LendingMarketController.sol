@@ -655,6 +655,11 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Executes Itayose operation.
+     * @param _currencies List of currency names in bytes32 of the selected markets
+     * @param _maturity The maturity of the selected market
+     */
     function executeItayoseCalls(bytes32[] memory _currencies, uint256 _maturity)
         external
         override

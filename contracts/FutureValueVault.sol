@@ -227,6 +227,15 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
             Storage.slot().removedBorrowingSupply[maturity] == Storage.slot().totalSupply[maturity];
     }
 
+    function addInitialTotalSupply(uint256 _maturity, int256 _amount)
+        external
+        override
+        onlyAcceptedContracts
+    {
+        require(Storage.slot().totalSupply[_maturity] == 0, "initial total supply is not 0");
+        _updateTotalSupply(_maturity, 0, _amount);
+    }
+
     function _updateTotalSupply(
         uint256 _maturity,
         int256 _previous,

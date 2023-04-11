@@ -44,4 +44,6 @@ interface IFutureValueVault {
             uint256 maturity,
             bool removeFutureValue
         );
+
+    function addInitialTotalSupply(uint256 maturity, int256 amount) external;
 }

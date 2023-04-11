@@ -16,6 +16,7 @@ import {
   ORDER_FEE_RATE,
   PRICE_DIGIT,
 } from '../common/constants';
+import { calculateFutureValue } from '../common/orders';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
@@ -217,6 +218,7 @@ describe('LendingMarketController - Itayose', () => {
 
   describe('Itayose', async () => {
     let lendingMarketProxies: Contract[];
+    let futureValueVaultProxy: Contract;
     let maturities: BigNumber[];
 
     const createLendingMarkets = async (
@@ -298,6 +300,9 @@ describe('LendingMarketController - Itayose', () => {
         },
       ];
 
+      // the matching amount of the above orders
+      const expectedFilledAmount = BigNumber.from('200000000000000');
+
       for (const order of orders) {
         await expect(
           lendingMarketControllerProxy
@@ -337,6 +342,19 @@ describe('LendingMarketController - Itayose', () => {
       const openingPrice = await lendingMarketProxies[0].getOpeningUnitPrice();
 
       expect(openingPrice).to.equal('8300');
+
+      futureValueVaultProxy = await lendingMarketControllerProxy
+        .getFutureValueVault(targetCurrency, maturities[0])
+        .then((address) => ethers.getContractAt('FutureValueVault', address));
+
+      const totalSupplyAfterItayoseExecuted =
+        await futureValueVaultProxy.getTotalSupply(maturities[0]);
+
+      expect(
+        totalSupplyAfterItayoseExecuted.sub(
+          calculateFutureValue(expectedFilledAmount, openingPrice),
+        ),
+      ).lte(1);
 
       const currentLendingCompoundFactor = await genesisValueVaultProxy
         .getLatestAutoRollLog(targetCurrency)

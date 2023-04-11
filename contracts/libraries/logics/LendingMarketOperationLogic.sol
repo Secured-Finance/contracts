@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
@@ -15,6 +16,7 @@ import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from ".
 
 library LendingMarketOperationLogic {
     using RoundingUint256 for uint256;
+    using SafeCast for uint256;
 
     function initializeCurrencySetting(
         bytes32 _ccy,
@@ -78,7 +80,8 @@ library LendingMarketOperationLogic {
             ILendingMarket market = ILendingMarket(marketAddr);
 
             if (market.isItayosePeriod()) {
-                (uint256 openingUnitPrice, uint256 openingDate) = market.executeItayoseCall();
+                (uint256 openingUnitPrice, uint256 openingDate, uint256 filledAmount) = market
+                    .executeItayoseCall();
 
                 // Save the openingUnitPrice as first compound factor
                 // if it is a first Itayose call at the nearest market.
@@ -95,6 +98,17 @@ library LendingMarketOperationLogic {
                         ccy,
                         convertedUnitPrice
                     );
+                    if (filledAmount > 0) {
+                        address futureValueVault = Storage.slot().futureValueVaults[ccy][
+                            marketAddr
+                        ];
+                        IFutureValueVault(futureValueVault).addInitialTotalSupply(
+                            _maturity,
+                            (filledAmount * ProtocolTypes.PRICE_DIGIT)
+                                .div(openingUnitPrice)
+                                .toInt256()
+                        );
+                    }
                 }
             }
         }

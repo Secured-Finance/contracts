@@ -607,7 +607,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         whenNotPaused
         onlyAcceptedContracts
         ifItayosePeriod
-        returns (uint256 openingUnitPrice, uint256 openingDate)
+        returns (
+            uint256 openingUnitPrice,
+            uint256 openingDate,
+            uint256 filledAmount
+        )
     {
         uint256 totalOffsetAmount;
         (openingUnitPrice, totalOffsetAmount) = OrderBookLogic.getOpeningUnitPrice();
@@ -619,11 +623,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             ];
 
             for (uint256 i; i < sides.length; i++) {
-                (, RemainingOrder memory remainingOrder, , ) = OrderBookLogic.dropOrders(
-                    sides[i],
-                    totalOffsetAmount,
-                    0
-                );
+                (, RemainingOrder memory remainingOrder, , , uint256 _filledAmount) = OrderBookLogic
+                    .dropOrders(sides[i], totalOffsetAmount, 0);
 
                 if (remainingOrder.amount > 0) {
                     // Make a new order for the remaining amount of a partially filled order
@@ -638,6 +639,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                         remainingOrder.orderId
                     );
                 }
+
+                filledAmount += _filledAmount;
             }
 
             emit ItayoseExecuted(Storage.slot().ccy, Storage.slot().maturity, openingUnitPrice);
@@ -731,7 +734,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     {
         RemainingOrder memory remainingOrder;
 
-        (filledUnitPrice, remainingOrder, filledFutureValue, remainingAmount) = OrderBookLogic
+        (filledUnitPrice, remainingOrder, filledFutureValue, remainingAmount, ) = OrderBookLogic
             .dropOrders(_side, _amount, _unitPrice);
 
         emit OrdersTaken(

@@ -19,3 +19,10 @@ export const calculateOrderFee = (
     .div(SECONDS_IN_YEAR)
     .div(PCT_DIGIT);
 };
+
+export const calculateFutureValue = (
+  orderAmount: BigNumber,
+  unitPrice: BigNumber | string | number,
+) => {
+  return orderAmount.mul(PRICE_DIGIT).div(unitPrice);
+};

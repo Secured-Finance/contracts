@@ -392,19 +392,34 @@ library OrderBookLogic {
             uint256 filledUnitPrice,
             RemainingOrder memory remainingOrder,
             uint256 filledFutureValue,
-            uint256 remainingAmount
+            uint256 remainingAmount,
+            uint256 filledAmount
         )
     {
         if (_side == ProtocolTypes.Side.BORROW) {
-            (filledUnitPrice, , filledFutureValue, remainingAmount, remainingOrder) = Storage
-                .slot()
-                .lendOrders[Storage.slot().maturity]
-                .dropRight(_amount, _unitPrice, 0);
+            (
+                filledUnitPrice,
+                filledAmount,
+                filledFutureValue,
+                remainingAmount,
+                remainingOrder
+            ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
+                _amount,
+                _unitPrice,
+                0
+            );
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (filledUnitPrice, , filledFutureValue, remainingAmount, remainingOrder) = Storage
-                .slot()
-                .borrowOrders[Storage.slot().maturity]
-                .dropLeft(_amount, _unitPrice, 0);
+            (
+                filledUnitPrice,
+                filledAmount,
+                filledFutureValue,
+                remainingAmount,
+                remainingOrder
+            ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
+                _amount,
+                _unitPrice,
+                0
+            );
         }
     }
 
