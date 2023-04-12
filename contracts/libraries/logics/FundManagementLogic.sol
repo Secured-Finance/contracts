@@ -341,7 +341,7 @@ library FundManagementLogic {
         AddressResolverLib.genesisValueVault().resetGenesisValue(_ccy, _user);
     }
 
-    function addDepositsAtMarketTerminationPrice(
+    function addDepositAtMarketTerminationPrice(
         bytes32 _ccy,
         address _user,
         uint256 _amount

@@ -712,7 +712,7 @@ contract LendingMarketController is
         int256 redemptionAmount = FundManagementLogic.resetFunds(_redemptionCcy, msg.sender);
 
         if (redemptionAmount > 0) {
-            FundManagementLogic.addDepositsAtMarketTerminationPrice(
+            FundManagementLogic.addDepositAtMarketTerminationPrice(
                 _redemptionCcy,
                 msg.sender,
                 redemptionAmount.toUint256()
