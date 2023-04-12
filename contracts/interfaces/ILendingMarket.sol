@@ -5,6 +5,12 @@ import "../types/ProtocolTypes.sol";
 import {MarketOrder} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
+    struct PartiallyFilledOrder {
+        address maker;
+        uint256 amount;
+        uint256 futureValue;
+    }
+
     event OrderCanceled(
         uint48 orderId,
         address indexed maker,
@@ -14,6 +20,7 @@ interface ILendingMarket {
         uint256 amount,
         uint256 unitPrice
     );
+
     event OrderMade(
         uint48 orderId,
         uint48 originalOrderId,
@@ -24,6 +31,7 @@ interface ILendingMarket {
         uint256 amount,
         uint256 unitPrice
     );
+
     event OrdersTaken(
         address indexed taker,
         ProtocolTypes.Side side,
@@ -31,6 +39,16 @@ interface ILendingMarket {
         uint256 maturity,
         uint256 filledAmount,
         uint256 unitPrice,
+        uint256 filledFutureValue
+    );
+
+    event OrderPartiallyTaken(
+        uint48 orderId,
+        address indexed maker,
+        ProtocolTypes.Side side,
+        bytes32 indexed ccy,
+        uint256 maturity,
+        uint256 filledAmount,
         uint256 filledFutureValue
     );
 
@@ -173,15 +191,18 @@ interface ILendingMarket {
         returns (
             uint256 filledUnitPrice,
             uint256 filledAmount,
-            uint256 filledFutureValue
+            uint256 filledFutureValue,
+            PartiallyFilledOrder memory partiallyFilledOrder
         );
 
     function executeItayoseCall()
         external
         returns (
             uint256 openingUnitPrice,
+            uint256 filledAmount,
             uint256 openingDate,
-            uint256 filledAmount
+            PartiallyFilledOrder memory partiallyFilledLendingOrder,
+            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         );
 
     function cleanUpOrders(address _user)
@@ -207,6 +228,7 @@ interface ILendingMarket {
         returns (
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
+            PartiallyFilledOrder memory partiallyFilledOrder,
             uint256 remainingAmount
         );
 

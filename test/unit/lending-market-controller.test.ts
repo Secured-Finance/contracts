@@ -1231,7 +1231,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.LEND,
             '50000000000000000',
-            '8800',
+            '8000',
           );
 
         await lendingMarketControllerProxy
@@ -1241,7 +1241,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.LEND,
             '50000000000000000',
-            '8800',
+            '8000',
           );
 
         const tx = await lendingMarketControllerProxy
@@ -1251,7 +1251,7 @@ describe('LendingMarketController', () => {
             maturities[0],
             Side.BORROW,
             '80000000000000000',
-            '8800',
+            '8000',
           );
         await expect(tx).to.emit(
           fundManagementLogic.attach(lendingMarketControllerProxy.address),
@@ -1259,16 +1259,15 @@ describe('LendingMarketController', () => {
         );
         await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx)
-          .to.emit(lendingMarket1, 'OrderMade')
+          .to.emit(lendingMarket1, 'OrderPartiallyTaken')
           .withArgs(
-            3,
-            2,
+            () => true,
             bob.address,
             Side.LEND,
             targetCurrency,
             maturities[0],
-            '20000000000000000',
-            '8800',
+            '30000000000000000',
+            '37500000000000000',
           );
       });
 

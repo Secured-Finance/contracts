@@ -48,8 +48,10 @@ contract LendingMarketCaller {
         external
         returns (
             uint256 openingUnitPrice,
+            uint256 filledAmount,
             uint256 openingDate,
-            uint256 filledAmount
+            ILendingMarket.PartiallyFilledOrder memory lendingOrder,
+            ILendingMarket.PartiallyFilledOrder memory borrowingOrder
         )
     {
         return ILendingMarket(lendingMarkets[_index]).executeItayoseCall();

@@ -76,6 +76,8 @@ describe('LendingMarketController - Itayose', () => {
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockTokenVault.mock.isCovered.returns(true);
+    await mockTokenVault.mock.addDepositAmount.returns();
+    await mockTokenVault.mock.removeDepositAmount.returns();
 
     // Deploy libraries
     const quickSort = await deployContract(owner, QuickSort);
