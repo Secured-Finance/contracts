@@ -101,6 +101,9 @@ describe('LendingMarketController - Terminations', () => {
 
   describe('Terminations', async () => {
     it('Execute an emergency termination without an order', async () => {
+      await mockTokenVault.mock.getDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.isCollateral.returns(true);
+
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
       ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
@@ -196,6 +199,9 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Execute an emergency termination with orders', async () => {
+      await mockTokenVault.mock.getDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.isCollateral.returns(true);
+
       const lendingMarket1 = lendingMarketProxies[0];
 
       await lendingMarketControllerProxy
@@ -250,7 +256,9 @@ describe('LendingMarketController - Terminations', () => {
 
       for (const user of [alice, bob]) {
         await expect(
-          lendingMarketControllerProxy.connect(user).executeRedemption(),
+          lendingMarketControllerProxy
+            .connect(user)
+            .executeRedemption(targetCurrency, targetCurrency),
         ).to.emit(lendingMarketControllerProxy, 'RedemptionExecuted');
 
         expect(
@@ -270,6 +278,9 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Execute an emergency termination with orders after auto-rolls', async () => {
+      await mockTokenVault.mock.getDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.isCollateral.returns(true);
+
       const lendingMarket1 = lendingMarketProxies[0];
 
       await lendingMarketControllerProxy
@@ -334,7 +345,9 @@ describe('LendingMarketController - Terminations', () => {
 
       for (const user of [alice, bob]) {
         await expect(
-          lendingMarketControllerProxy.connect(user).executeRedemption(),
+          lendingMarketControllerProxy
+            .connect(user)
+            .executeRedemption(targetCurrency, targetCurrency),
         ).to.emit(lendingMarketControllerProxy, 'RedemptionExecuted');
 
         expect(
@@ -344,6 +357,104 @@ describe('LendingMarketController - Terminations', () => {
           ),
         ).to.equal('0');
       }
+    });
+
+    it('Fail to redeem due to a insolvent user', async () => {
+      await mockTokenVault.mock.getDepositAmount.returns('40000000000000000');
+      await mockTokenVault.mock.isCollateral.returns(true);
+
+      const lendingMarket1 = lendingMarketProxies[0];
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '7999',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '50000000000000000',
+            '0',
+          ),
+      ).to.emit(lendingMarket1, 'OrdersTaken');
+
+      await expect(
+        lendingMarketControllerProxy.executeEmergencyTermination(),
+      ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeRedemption(targetCurrency, targetCurrency),
+      ).to.revertedWith('Not enough collateral');
+    });
+
+    it('Fail to redeem due to non collateral currency', async () => {
+      await mockTokenVault.mock.getDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.isCollateral.returns(false);
+
+      const lendingMarket1 = lendingMarketProxies[0];
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '7999',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '50000000000000000',
+            '0',
+          ),
+      ).to.emit(lendingMarket1, 'OrdersTaken');
+
+      await expect(
+        lendingMarketControllerProxy.executeEmergencyTermination(),
+      ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeRedemption(targetCurrency, targetCurrency),
+      ).to.revertedWith('Not registered as collateral');
     });
   });
 });

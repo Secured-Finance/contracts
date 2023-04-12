@@ -14,6 +14,7 @@ describe('Integration Test: Emergency terminations', async () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
+  let dave: SignerWithAddress;
 
   let futureValueVaults: Contract[];
   let tokenVault: Contract;
@@ -23,6 +24,7 @@ describe('Integration Test: Emergency terminations', async () => {
   let wETHToken: Contract;
   let usdcToken: Contract;
   let eFILToken: Contract;
+  let eFilToETHPriceFeed: Contract;
 
   let genesisDate: number;
   let maturities: BigNumber[];
@@ -142,7 +144,7 @@ describe('Integration Test: Emergency terminations', async () => {
       ]);
   };
 
-  before('Deploy Contracts', async () => {
+  const initializeContracts = async () => {
     signers = new Signers(await ethers.getSigners());
     [owner] = await signers.get(1);
 
@@ -153,6 +155,7 @@ describe('Integration Test: Emergency terminations', async () => {
       wETHToken,
       eFILToken,
       usdcToken,
+      eFilToETHPriceFeed,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
@@ -166,163 +169,477 @@ describe('Integration Test: Emergency terminations', async () => {
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);
-  });
+  };
 
   describe('Execute emergency termination & redemption', async () => {
-    before(async () => {
-      [alice, bob, carol] = await getUsers(3);
-      await resetContractInstances();
-    });
-
-    it('Fill an order on the ETH market with depositing ETH', async () => {
-      await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH.mul(2), {
-        value: orderAmountInETH.mul(2),
+    describe('Including only healthy users', async () => {
+      before(async () => {
+        await initializeContracts();
+        await resetContractInstances();
+        [alice, bob, carol] = await getUsers(3);
       });
 
-      await expect(
-        lendingMarketController
-          .connect(bob)
-          .createOrder(
-            hexETH,
-            maturities[0],
-            Side.BORROW,
-            orderAmountInETH,
-            8000,
-          ),
-      ).to.emit(ethLendingMarkets[0], 'OrderMade');
+      it('Fill an order on the ETH market with depositing ETH', async () => {
+        await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH.mul(2), {
+          value: orderAmountInETH.mul(2),
+        });
 
-      await expect(
-        lendingMarketController
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .createOrder(
+              hexETH,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInETH,
+              8000,
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              orderAmountInETH,
+              0,
+              { value: orderAmountInETH },
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+
+        // Check future value
+        const { futureValue: aliceFV } =
+          await futureValueVaults[0].getFutureValue(alice.address);
+        const { futureValue: bobFV } =
+          await futureValueVaults[0].getFutureValue(bob.address);
+
+        expect(aliceFV).not.to.equal('0');
+        expect(bobFV).to.equal('0');
+      });
+
+      it('Fill an order on the FIL market with depositing USDC', async () => {
+        await eFILToken
           .connect(alice)
-          .depositAndCreateOrder(
-            hexETH,
-            maturities[0],
-            Side.LEND,
-            orderAmountInETH,
-            0,
-            { value: orderAmountInETH },
-          ),
-      ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+          .approve(tokenVault.address, orderAmountInFIL);
 
-      // Check future value
-      const { futureValue: aliceFV } =
-        await futureValueVaults[0].getFutureValue(alice.address);
-      const { futureValue: bobFV } = await futureValueVaults[0].getFutureValue(
-        bob.address,
-      );
-
-      expect(aliceFV).not.to.equal('0');
-      expect(bobFV).to.equal('0');
-    });
-
-    it('Fill an order on the FIL market with depositing USDC', async () => {
-      await eFILToken
-        .connect(alice)
-        .approve(tokenVault.address, orderAmountInFIL);
-
-      await usdcToken
-        .connect(bob)
-        .approve(tokenVault.address, orderAmountInUSDC.mul(2));
-      await tokenVault.connect(bob).deposit(hexUSDC, orderAmountInUSDC.mul(2));
-
-      await expect(
-        lendingMarketController
+        await usdcToken
           .connect(bob)
-          .createOrder(
-            hexEFIL,
-            maturities[0],
-            Side.BORROW,
-            orderAmountInFIL,
-            8000,
-          ),
-      ).to.emit(filLendingMarkets[0], 'OrderMade');
+          .approve(tokenVault.address, orderAmountInUSDC.mul(2));
+        await tokenVault
+          .connect(bob)
+          .deposit(hexUSDC, orderAmountInUSDC.mul(2));
 
-      await expect(
-        lendingMarketController
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .createOrder(
+              hexEFIL,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInFIL,
+              8000,
+            ),
+        ).to.emit(filLendingMarkets[0], 'OrderMade');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexEFIL,
+              maturities[0],
+              Side.LEND,
+              orderAmountInFIL,
+              0,
+            ),
+        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+
+        // Check future value
+        const { futureValue: aliceFV } =
+          await futureValueVaults[0].getFutureValue(alice.address);
+        const { futureValue: bobFV } =
+          await futureValueVaults[0].getFutureValue(bob.address);
+
+        expect(aliceFV).not.to.equal('0');
+        expect(bobFV).to.equal('0');
+      });
+
+      it('Execute emergency termination', async () => {
+        await createSampleETHOrders(carol, maturities[0], '8000');
+        await createSampleFILOrders(carol, maturities[0], '8000');
+
+        await expect(
+          lendingMarketController.executeEmergencyTermination(),
+        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+      });
+
+      it('Execute forced redemption', async () => {
+        const aliceTotalPVBefore =
+          await lendingMarketController.getTotalPresentValueInETH(
+            alice.address,
+          );
+        const bobTotalPVBefore =
+          await lendingMarketController.getTotalPresentValueInETH(bob.address);
+        const bobTotalCollateralBefore =
+          await tokenVault.getTotalCollateralAmount(bob.address);
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeRedemption(hexETH, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeRedemption(hexEFIL, hexUSDC),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeRedemption(hexETH, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeRedemption(hexEFIL, hexUSDC),
+        )
+          .to.emit(lendingMarketController, 'RedemptionExecuted')
+          .withArgs(hexEFIL, bob.address, orderAmountInFIL.mul(-1));
+
+        for (const user of [alice, bob]) {
+          const fv = await lendingMarketController.getTotalPresentValueInETH(
+            user.address,
+          );
+          expect(fv).equal(0);
+        }
+
+        const aliceTotalCollateralAfter =
+          await tokenVault.getTotalCollateralAmount(alice.address);
+        const bobTotalCollateralAfter =
+          await tokenVault.getTotalCollateralAmount(bob.address);
+
+        const roundedDecimals =
+          orderAmountInETH.toString().length -
+          orderAmountInUSDC.toString().length;
+
+        expect(aliceTotalPVBefore.sub(aliceTotalCollateralAfter).abs()).to.lt(
+          BigNumber.from(10).pow(roundedDecimals),
+        );
+        expect(
+          bobTotalCollateralBefore
+            .add(bobTotalPVBefore)
+            .sub(bobTotalCollateralAfter),
+        ).to.lt(BigNumber.from(10).pow(roundedDecimals));
+      });
+
+      it('Withdraw all collateral', async () => {
+        for (const user of [alice, bob]) {
+          const currencies = [hexETH, hexUSDC];
+
+          const depositsBefore = await Promise.all(
+            currencies.map((ccy) =>
+              tokenVault.getDepositAmount(user.address, ccy),
+            ),
+          );
+
+          await tokenVault.connect(user).withdraw(hexETH, depositsBefore[0]);
+          await tokenVault.connect(user).withdraw(hexUSDC, depositsBefore[1]);
+
+          await Promise.all(
+            currencies.map((ccy) =>
+              tokenVault
+                .getDepositAmount(user.address, ccy)
+                .then((deposit) => expect(deposit).equal(0)),
+            ),
+          );
+        }
+      });
+    });
+
+    describe('Including a liquidation user', async () => {
+      before(async () => {
+        await initializeContracts();
+        await resetContractInstances();
+        [alice, bob, carol] = await getUsers(3);
+      });
+
+      it('Fill an order on the ETH market with depositing ETH', async () => {
+        await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH.mul(2), {
+          value: orderAmountInETH.mul(2),
+        });
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .createOrder(
+              hexETH,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInETH,
+              8000,
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              orderAmountInETH,
+              0,
+              { value: orderAmountInETH },
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+      });
+
+      it('Fill an order on the FIL market with depositing USDC', async () => {
+        await eFILToken
           .connect(alice)
-          .depositAndCreateOrder(
-            hexEFIL,
-            maturities[0],
-            Side.LEND,
-            orderAmountInFIL,
-            0,
-          ),
-      ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+          .approve(tokenVault.address, orderAmountInFIL);
+
+        await usdcToken
+          .connect(bob)
+          .approve(tokenVault.address, orderAmountInUSDC.div(5));
+        await tokenVault
+          .connect(bob)
+          .deposit(hexUSDC, orderAmountInUSDC.div(5));
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .createOrder(
+              hexEFIL,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInFIL.div(10),
+              8000,
+            ),
+        ).to.emit(filLendingMarkets[0], 'OrderMade');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexEFIL,
+              maturities[0],
+              Side.LEND,
+              orderAmountInFIL.div(10),
+              0,
+            ),
+        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+      });
+
+      it('Update a price feed to change the eFIL price', async () => {
+        await createSampleETHOrders(carol, maturities[0], '8000');
+        await createSampleFILOrders(carol, maturities[0], '8000');
+
+        const coverageBefore = await tokenVault.getCoverage(bob.address);
+        expect(coverageBefore).lt('8000');
+
+        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(20));
+
+        const coverageAfter = await tokenVault.getCoverage(bob.address);
+        expect(coverageAfter).gte('8000');
+      });
+
+      it('Execute emergency termination', async () => {
+        await expect(
+          lendingMarketController.executeEmergencyTermination(),
+        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+      });
+
+      it('Execute forced redemption', async () => {
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeRedemption(hexETH, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeRedemption(hexEFIL, hexUSDC),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeRedemption(hexETH, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeRedemption(hexEFIL, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        for (const user of [alice, bob]) {
+          const fv = await lendingMarketController.getTotalPresentValueInETH(
+            user.address,
+          );
+          expect(fv).equal(0);
+        }
+      });
     });
 
-    it('Execute emergency termination', async () => {
-      await createSampleETHOrders(carol, maturities[0], '8000');
-      await createSampleFILOrders(carol, maturities[0], '8000');
+    describe('Including an insolvent user', async () => {
+      before(async () => {
+        await initializeContracts();
+        await resetContractInstances();
+        [alice, bob, carol, dave] = await getUsers(4);
+      });
 
-      await expect(
-        lendingMarketController.executeEmergencyTermination(),
-      ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
-    });
+      it('Fill an order on the ETH market with depositing ETH', async () => {
+        await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH.mul(2), {
+          value: orderAmountInETH.mul(2),
+        });
 
-    it('Execute forced redemption', async () => {
-      const aliceTotalPVBefore =
-        await lendingMarketController.getTotalPresentValueInETH(alice.address);
-      const bobTotalPVBefore =
-        await lendingMarketController.getTotalPresentValueInETH(bob.address);
-      const bobTotalCollateralBefore =
-        await tokenVault.getTotalCollateralAmount(bob.address);
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .createOrder(
+              hexETH,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInETH,
+              8000,
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrderMade');
 
-      await expect(
-        lendingMarketController.connect(alice).executeRedemption(),
-      ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              orderAmountInETH,
+              0,
+              { value: orderAmountInETH },
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+      });
 
-      await expect(lendingMarketController.connect(bob).executeRedemption())
-        .to.emit(lendingMarketController, 'RedemptionExecuted')
-        .withArgs(bob.address, orderAmountInETH.mul(-2));
+      it('Fill an order on the FIL market with depositing USDC', async () => {
+        await eFILToken
+          .connect(alice)
+          .approve(tokenVault.address, orderAmountInFIL);
 
-      for (const user of [alice, bob]) {
-        const fv = await lendingMarketController.getTotalPresentValueInETH(
-          user.address,
-        );
-        expect(fv).equal(0);
-      }
+        await usdcToken
+          .connect(bob)
+          .approve(tokenVault.address, orderAmountInUSDC.mul(2));
+        await tokenVault
+          .connect(bob)
+          .deposit(hexUSDC, orderAmountInUSDC.mul(2));
 
-      const aliceTotalCollateralAfter =
-        await tokenVault.getTotalCollateralAmount(alice.address);
-      const bobTotalCollateralAfter = await tokenVault.getTotalCollateralAmount(
-        bob.address,
-      );
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .createOrder(
+              hexEFIL,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInFIL,
+              8000,
+            ),
+        ).to.emit(filLendingMarkets[0], 'OrderMade');
 
-      const roundedDecimals =
-        orderAmountInETH.toString().length -
-        orderAmountInUSDC.toString().length;
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexEFIL,
+              maturities[0],
+              Side.LEND,
+              orderAmountInFIL,
+              0,
+            ),
+        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+      });
 
-      expect(aliceTotalPVBefore.sub(aliceTotalCollateralAfter).abs()).to.lt(
-        BigNumber.from(10).pow(roundedDecimals),
-      );
-      expect(
-        bobTotalCollateralBefore
-          .add(bobTotalPVBefore)
-          .sub(bobTotalCollateralAfter),
-      ).to.lt(BigNumber.from(10).pow(roundedDecimals));
-    });
+      it('Fill an order for a huge amount to store fees in the reserve funds', async () => {
+        await tokenVault
+          .connect(carol)
+          .deposit(hexETH, orderAmountInETH.mul(2000), {
+            value: orderAmountInETH.mul(2000),
+          });
 
-    it('Withdraw all collateral', async () => {
-      for (const user of [alice, bob]) {
-        const currencies = [hexETH, hexUSDC];
+        await expect(
+          lendingMarketController
+            .connect(carol)
+            .createOrder(
+              hexETH,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInETH.mul(1000),
+              8000,
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrderMade');
 
-        const depositsBefore = await Promise.all(
-          currencies.map((ccy) =>
-            tokenVault.getDepositAmount(user.address, ccy),
-          ),
-        );
+        await expect(
+          lendingMarketController
+            .connect(dave)
+            .depositAndCreateOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              orderAmountInETH.mul(1000),
+              0,
+              { value: orderAmountInETH.mul(1000) },
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+      });
 
-        await tokenVault.connect(user).withdraw(hexETH, depositsBefore[0]);
-        await tokenVault.connect(user).withdraw(hexUSDC, depositsBefore[1]);
+      it('Update a price feed to change the eFIL price', async () => {
+        await createSampleETHOrders(carol, maturities[0], '8000');
+        await createSampleFILOrders(carol, maturities[0], '8000');
 
-        await Promise.all(
-          currencies.map((ccy) =>
-            tokenVault
-              .getDepositAmount(user.address, ccy)
-              .then((deposit) => expect(deposit).to.lte(0)),
-          ),
-        );
-      }
+        const coverageBefore = await tokenVault.getCoverage(bob.address);
+        expect(coverageBefore).lt('8000');
+
+        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(5));
+
+        const coverageAfter = await tokenVault.getCoverage(bob.address);
+        expect(coverageAfter).gte('8000');
+      });
+
+      it('Execute emergency termination', async () => {
+        await expect(
+          lendingMarketController.executeEmergencyTermination(),
+        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+      });
+
+      it('Execute forced redemption', async () => {
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeRedemption(hexETH, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeRedemption(hexEFIL, hexUSDC),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeRedemption(hexETH, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeRedemption(hexEFIL, hexETH),
+        ).to.revertedWith('Not enough collateral');
+      });
     });
   });
 });

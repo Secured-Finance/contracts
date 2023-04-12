@@ -121,5 +121,5 @@ interface IGenesisValueVault {
         uint256 maturity
     ) external;
 
-    function resetGenesisValue(bytes32[] calldata _ccys, address _user) external;
+    function resetGenesisValue(bytes32 _ccy, address _user) external;
 }

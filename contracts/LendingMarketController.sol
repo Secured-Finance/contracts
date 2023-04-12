@@ -698,14 +698,33 @@ contract LendingMarketController is
      * @notice Redeems all lending and borrowing positions.
      * This function uses the present value as of the termination date.
      */
-    function executeRedemption() external override nonReentrant ifInactive returns (bool) {
-        int256 redemptionAmount = FundManagementLogic.resetFunds(msg.sender);
-        FundManagementLogic.updateDepositsBasedOnMarketTerminationPrice(
-            msg.sender,
-            redemptionAmount
-        );
+    function executeRedemption(bytes32 _redemptionCcy, bytes32 _collateralCcy)
+        external
+        override
+        nonReentrant
+        ifInactive
+        returns (bool)
+    {
+        int256 redemptionAmount = FundManagementLogic.resetFunds(_redemptionCcy, msg.sender);
 
-        emit RedemptionExecuted(msg.sender, redemptionAmount);
+        if (redemptionAmount > 0) {
+            FundManagementLogic.addDepositsBasedOnMarketTerminationPrice(
+                _redemptionCcy,
+                msg.sender,
+                redemptionAmount.toUint256()
+            );
+
+            emit RedemptionExecuted(_redemptionCcy, msg.sender, redemptionAmount);
+        } else if (redemptionAmount < 0) {
+            FundManagementLogic.removeDepositsBasedOnMarketTerminationPrice(
+                _redemptionCcy,
+                msg.sender,
+                (-redemptionAmount).toUint256(),
+                _collateralCcy
+            );
+            emit RedemptionExecuted(_redemptionCcy, msg.sender, redemptionAmount);
+        }
+
         return true;
     }
 
@@ -1088,6 +1107,8 @@ contract LendingMarketController is
             _unitPrice
         );
 
-        Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+        if (!Storage.slot().usedCurrencies[msg.sender].contains(_ccy)) {
+            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+        }
     }
 }

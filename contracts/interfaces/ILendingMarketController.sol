@@ -13,7 +13,7 @@ interface ILendingMarketController {
         uint256 maturity
     );
     event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event RedemptionExecuted(address indexed user, int256 amount);
+    event RedemptionExecuted(bytes32 ccy, address indexed user, int256 amount);
     event LiquidationExecuted(
         address indexed user,
         bytes32 collateralCcy,
@@ -158,20 +158,22 @@ interface ILendingMarketController {
     ) external returns (bool);
 
     function depositAndCreatePreOrder(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice
+        bytes32 ccy,
+        uint256 maturity,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice
     ) external payable returns (bool);
 
-    function unwindOrder(bytes32 _ccy, uint256 _maturity) external returns (bool);
+    function unwindOrder(bytes32 ccy, uint256 maturity) external returns (bool);
 
     function executeItayoseCalls(bytes32[] memory currencies, uint256 maturity)
         external
         returns (bool);
 
-    function executeRedemption() external returns (bool);
+    function executeRedemption(bytes32 redemptionCcy, bytes32 collateralCcy)
+        external
+        returns (bool);
 
     function executeLiquidationCall(
         bytes32 collateralCcy,

@@ -422,7 +422,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         emit OrderCanceled(
             _orderId,
-            msg.sender,
+            _user,
             side,
             Storage.slot().ccy,
             Storage.slot().maturity,
