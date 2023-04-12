@@ -38,8 +38,6 @@ const QuickSort = artifacts.require('QuickSort');
 
 const { deployContract, deployMockContract } = waffle;
 
-const BP = ethers.BigNumber.from(PRICE_DIGIT);
-
 describe('LendingMarketController - Itayose', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
@@ -218,7 +216,6 @@ describe('LendingMarketController - Itayose', () => {
 
   describe('Itayose', async () => {
     let lendingMarketProxies: Contract[];
-    let futureValueVaultProxy: Contract;
     let maturities: BigNumber[];
 
     const createLendingMarkets = async (
@@ -343,7 +340,7 @@ describe('LendingMarketController - Itayose', () => {
 
       expect(openingPrice).to.equal('8300');
 
-      futureValueVaultProxy = await lendingMarketControllerProxy
+      const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
         .getFutureValueVault(targetCurrency, maturities[0])
         .then((address) => ethers.getContractAt('FutureValueVault', address));
 
@@ -449,6 +446,9 @@ describe('LendingMarketController - Itayose', () => {
         },
       ];
 
+      // the matching amount of the above orders
+      const expectedFilledAmount = BigNumber.from('200000000000000');
+
       for (const order of orders) {
         await expect(
           lendingMarketControllerProxy
@@ -476,6 +476,21 @@ describe('LendingMarketController - Itayose', () => {
 
       expect(openingPrice).to.equal('8300');
 
+      const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
+        .getFutureValueVault(targetCurrency, maturities[maturities.length - 1])
+        .then((address) => ethers.getContractAt('FutureValueVault', address));
+
+      const totalSupplyAfterItayoseExecuted =
+        await futureValueVaultProxy.getTotalSupply(
+          maturities[maturities.length - 1],
+        );
+
+      expect(
+        totalSupplyAfterItayoseExecuted.sub(
+          calculateFutureValue(expectedFilledAmount, openingPrice),
+        ),
+      ).lte(1);
+
       const [aliceFV, bobFV, carolFV] = await Promise.all(
         [alice, bob, carol].map((account) =>
           lendingMarketControllerProxy.getFutureValue(
@@ -487,10 +502,10 @@ describe('LendingMarketController - Itayose', () => {
       );
 
       expect(aliceFV).to.equal(
-        BigNumber.from('-100000000000000').mul(BP).div(openingPrice),
+        calculateFutureValue(BigNumber.from('-100000000000000'), openingPrice),
       );
       expect(bobFV).to.equal(
-        BigNumber.from('100000000000000').mul(BP).div(openingPrice),
+        calculateFutureValue(BigNumber.from('100000000000000'), openingPrice),
       );
       expect(carolFV).to.equal('0');
     });
