@@ -428,6 +428,8 @@ contract LendingMarketController is
      * @notice Gets the funds that are calculated from the user's lending and borrowing order list
      * for all currencies in ETH.
      * @param _user User's address
+     * @param _depositCcy Currency name to be used as deposit
+     * @param _depositAmount Amount to deposit
      */
     function calculateTotalFundsInETH(
         address _user,
@@ -583,7 +585,7 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice
     ) public override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        _createPreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
+        _createPreOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -614,7 +616,7 @@ contract LendingMarketController is
         returns (bool)
     {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        _createPreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
+        _createPreOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -697,6 +699,8 @@ contract LendingMarketController is
     /**
      * @notice Redeems all lending and borrowing positions.
      * This function uses the present value as of the termination date.
+     * @param _redemptionCcy Currency name of positions to be redeemed
+     * @param _collateralCcy Currency name of collateral
      */
     function executeRedemption(bytes32 _redemptionCcy, bytes32 _collateralCcy)
         external
@@ -708,7 +712,7 @@ contract LendingMarketController is
         int256 redemptionAmount = FundManagementLogic.resetFunds(_redemptionCcy, msg.sender);
 
         if (redemptionAmount > 0) {
-            FundManagementLogic.addDepositsBasedOnMarketTerminationPrice(
+            FundManagementLogic.addDepositsAtMarketTerminationPrice(
                 _redemptionCcy,
                 msg.sender,
                 redemptionAmount.toUint256()
@@ -716,7 +720,7 @@ contract LendingMarketController is
 
             emit RedemptionExecuted(_redemptionCcy, msg.sender, redemptionAmount);
         } else if (redemptionAmount < 0) {
-            FundManagementLogic.removeDepositsBasedOnMarketTerminationPrice(
+            FundManagementLogic.removeDepositAtMarketTerminationPrice(
                 _redemptionCcy,
                 msg.sender,
                 (-redemptionAmount).toUint256(),
@@ -970,10 +974,7 @@ contract LendingMarketController is
     ) private returns (uint256 filledAmount) {
         require(_amount > 0, "Invalid amount");
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-
-        if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
-            Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
-        }
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
         if (!_isForced) {
             require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
@@ -1083,32 +1084,28 @@ contract LendingMarketController is
     function _createPreOrder(
         bytes32 _ccy,
         uint256 _maturity,
+        address _user,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
     ) private {
         require(_amount > 0, "Invalid amount");
-        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
+        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
 
         require(
             activeOrderCount + 1 <= ProtocolTypes.MAXIMUM_ORDER_COUNT,
             "Too many active orders"
         );
 
-        if (!Storage.slot().usedMaturities[_ccy][msg.sender].contains(_maturity)) {
-            Storage.slot().usedMaturities[_ccy][msg.sender].add(_maturity);
-        }
-        require(tokenVault().isCovered(msg.sender, _ccy, _amount, _side), "Not enough collateral");
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+
+        require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
 
         ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createPreOrder(
             _side,
-            msg.sender,
+            _user,
             _amount,
             _unitPrice
         );
-
-        if (!Storage.slot().usedCurrencies[msg.sender].contains(_ccy)) {
-            Storage.slot().usedCurrencies[msg.sender].add(_ccy);
-        }
     }
 }

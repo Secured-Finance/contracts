@@ -303,16 +303,24 @@ library FundManagementLogic {
                 _side == ProtocolTypes.Side.LEND
             );
 
-            if (!Storage.slot().usedMaturities[_ccy][reserveFundAddr].contains(_maturity)) {
-                Storage.slot().usedMaturities[_ccy][reserveFundAddr].add(_maturity);
-
-                if (!Storage.slot().usedCurrencies[reserveFundAddr].contains(_ccy)) {
-                    Storage.slot().usedCurrencies[reserveFundAddr].add(_ccy);
-                }
-            }
+            registerCurrencyAndMaturity(_ccy, _maturity, reserveFundAddr);
         }
 
         emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledFutureValue);
+    }
+
+    function registerCurrencyAndMaturity(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) public {
+        if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
+            Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
+
+            if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
+                Storage.slot().usedCurrencies[_user].add(_ccy);
+            }
+        }
     }
 
     function resetFunds(bytes32 _ccy, address _user) external returns (int256 amount) {
@@ -333,7 +341,7 @@ library FundManagementLogic {
         AddressResolverLib.genesisValueVault().resetGenesisValue(_ccy, _user);
     }
 
-    function addDepositsBasedOnMarketTerminationPrice(
+    function addDepositsAtMarketTerminationPrice(
         bytes32 _ccy,
         address _user,
         uint256 _amount
@@ -364,7 +372,7 @@ library FundManagementLogic {
         }
     }
 
-    function removeDepositsBasedOnMarketTerminationPrice(
+    function removeDepositAtMarketTerminationPrice(
         bytes32 _ccy,
         address _user,
         uint256 _amount,
