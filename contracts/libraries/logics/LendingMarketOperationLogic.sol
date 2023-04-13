@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
@@ -8,13 +10,16 @@ import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../../libraries/BokkyPooBahsDateTimeLibrary.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
+import {RoundingInt256} from "../math/RoundingInt256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
 library LendingMarketOperationLogic {
+    using SafeCast for uint256;
     using RoundingUint256 for uint256;
+    using RoundingInt256 for int256;
 
     function initializeCurrencySetting(
         bytes32 _ccy,
@@ -149,6 +154,50 @@ library LendingMarketOperationLogic {
         );
 
         Storage.slot().maturityLendingMarkets[_ccy][toMaturity] = currentMarketAddr;
+    }
+
+    function executeEmergencyTermination() external {
+        Storage.slot().marketTerminationDate = block.timestamp;
+
+        bytes32[] memory currencies = AddressResolverLib.currencyController().getCurrencies();
+        bytes32[] memory collateralCurrencies = AddressResolverLib
+            .tokenVault()
+            .getCollateralCurrencies();
+
+        for (uint256 i = 0; i < currencies.length; i++) {
+            bytes32 ccy = currencies[i];
+
+            pauseLendingMarkets(ccy);
+            Storage.slot().marketTerminationPrices[ccy] = AddressResolverLib
+                .currencyController()
+                .getLastETHPrice(ccy);
+        }
+
+        for (uint256 i = 0; i < collateralCurrencies.length; i++) {
+            bytes32 ccy = collateralCurrencies[i];
+            address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(ccy);
+            uint256 balance = IERC20(tokenAddress).balanceOf(
+                address(AddressResolverLib.tokenVault())
+            );
+
+            Storage.slot().marketTerminationRatios[ccy] = ccy == "ETH"
+                ? balance
+                : AddressResolverLib.currencyController().convertToETH(ccy, balance);
+        }
+    }
+
+    function pauseLendingMarkets(bytes32 _ccy) public {
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
+            market.pauseMarket();
+        }
+    }
+
+    function unpauseLendingMarkets(bytes32 _ccy) public {
+        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
+            market.unpauseMarket();
+        }
     }
 
     function updateOrderLogs(

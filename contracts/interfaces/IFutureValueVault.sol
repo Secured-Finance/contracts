@@ -44,4 +44,6 @@ interface IFutureValueVault {
             uint256 maturity,
             bool removeFutureValue
         );
+
+    function resetFutureValue(address _user) external;
 }

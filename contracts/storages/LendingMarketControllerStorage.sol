@@ -16,6 +16,9 @@ library LendingMarketControllerStorage {
 
     struct Storage {
         uint256 marketBasePeriod;
+        uint256 marketTerminationDate;
+        mapping(bytes32 => int256) marketTerminationPrices;
+        mapping(bytes32 => uint256) marketTerminationRatios;
         // Mapping from currency to lending market contract addresses
         mapping(bytes32 => address[]) lendingMarkets;
         // Mapping from lending market contract address to future value vault contract address per currency

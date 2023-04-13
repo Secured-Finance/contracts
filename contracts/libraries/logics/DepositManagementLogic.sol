@@ -7,6 +7,7 @@ import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRoute
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {CollateralParametersHandler as Params} from "../CollateralParametersHandler.sol";
 import {ERC20Handler} from "../ERC20Handler.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
@@ -14,6 +15,7 @@ import {TokenVaultStorage as Storage} from "../../storages/TokenVaultStorage.sol
 
 library DepositManagementLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
+    using RoundingUint256 for uint256;
 
     struct CalculatedFundVars {
         uint256 workingLendOrdersAmount;
@@ -193,7 +195,7 @@ library DepositManagementLogic {
             uint256 maxWithdraw = (totalCollateral *
                 ProtocolTypes.PRICE_DIGIT -
                 (totalUsedCollateral) *
-                Params.liquidationThresholdRate()) / ProtocolTypes.PRICE_DIGIT;
+                Params.liquidationThresholdRate()).div(ProtocolTypes.PRICE_DIGIT);
             return maxWithdraw >= totalActualCollateral ? totalActualCollateral : maxWithdraw;
         } else {
             return 0;

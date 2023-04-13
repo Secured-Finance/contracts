@@ -155,6 +155,12 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         return true;
     }
 
+    /**
+     * @notice Offsets the future value amount of the lender and the borrower.
+     * @param _lender The lender's address
+     * @param _borrower The borrower's address
+     * @param _maximumFVAmount Maximum future value amount to be offset
+     */
     function offsetFutureValue(
         address _lender,
         address _borrower,
@@ -185,7 +191,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
-     * @notice Remove all future values if there is an amount in the past maturity.
+     * @notice Removes all future values if there is an amount in the past maturity.
      * @param _user User's address
      * @return removedAmount Removed future value amount
      * @return currentAmount Current future value amount after update
@@ -225,6 +231,19 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         isAllRemoved =
             Storage.slot().removedLendingSupply[maturity] == Storage.slot().totalSupply[maturity] &&
             Storage.slot().removedBorrowingSupply[maturity] == Storage.slot().totalSupply[maturity];
+    }
+
+    /**
+     * @notice Resets the future value of the user
+     * @param _user User's address
+     */
+    function resetFutureValue(address _user) external override onlyAcceptedContracts {
+        int256 removedAmount = Storage.slot().balances[_user];
+        if (removedAmount != 0) {
+            Storage.slot().balances[_user] = 0;
+
+            emit Transfer(_user, address(0), removedAmount);
+        }
     }
 
     function _updateTotalSupply(

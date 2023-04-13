@@ -72,6 +72,22 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Modifier to check if the protocol is active.
+     */
+    modifier ifActive() {
+        require(!isTerminated(), "Already terminated");
+        _;
+    }
+
+    /**
+     * @notice Modifier to check if the protocol is inactive.
+     */
+    modifier ifInactive() {
+        require(isTerminated(), "Not terminated");
+        _;
+    }
+
+    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
@@ -104,6 +120,14 @@ contract LendingMarketController is
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.TOKEN_VAULT;
+    }
+
+    /**
+     * @notice Gets if the protocol has not been terminated.
+     * @return The boolean if the protocol has not been terminated
+     */
+    function isTerminated() public view returns (bool) {
+        return Storage.slot().marketTerminationDate > 0;
     }
 
     /**
@@ -404,6 +428,8 @@ contract LendingMarketController is
      * @notice Gets the funds that are calculated from the user's lending and borrowing order list
      * for all currencies in ETH.
      * @param _user User's address
+     * @param _depositCcy Currency name to be used as deposit
+     * @param _depositAmount Amount to deposit
      */
     function calculateTotalFundsInETH(
         address _user,
@@ -465,7 +491,12 @@ contract LendingMarketController is
      * @param _openingDate Timestamp when the lending market opens
      * @notice Reverts on deployment market with existing currency and term
      */
-    function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external override onlyOwner {
+    function createLendingMarket(bytes32 _ccy, uint256 _openingDate)
+        external
+        override
+        ifActive
+        onlyOwner
+    {
         (address market, address futureValueVault, uint256 maturity) = LendingMarketOperationLogic
             .createLendingMarket(_ccy, _openingDate);
 
@@ -499,7 +530,7 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
 
         return true;
@@ -521,7 +552,15 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external payable override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    )
+        external
+        payable
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        ifActive
+        returns (bool)
+    {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
         _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
 
@@ -545,26 +584,8 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) public override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
-        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
-        require(
-            activeOrderCount + 1 <= ProtocolTypes.MAXIMUM_ORDER_COUNT,
-            "Too many active orders"
-        );
-
-        if (!Storage.slot().usedMaturities[_ccy][msg.sender].contains(_maturity)) {
-            Storage.slot().usedMaturities[_ccy][msg.sender].add(_maturity);
-        }
-        require(tokenVault().isCovered(msg.sender, _ccy, _amount, _side), "Not enough collateral");
-
-        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createPreOrder(
-            _side,
-            msg.sender,
-            _amount,
-            _unitPrice
-        );
-
-        Storage.slot().usedCurrencies[msg.sender].add(_ccy);
+    ) public override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
+        _createPreOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -585,15 +606,23 @@ contract LendingMarketController is
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external payable override returns (bool) {
+    )
+        external
+        payable
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        ifActive
+        returns (bool)
+    {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        createPreOrder(_ccy, _maturity, _side, _amount, _unitPrice);
+        _createPreOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
 
         return true;
     }
 
     /**
-     * @notice Unwind all orders by creating an opposite position order.
+     * @notice Unwinds all orders by creating an opposite position order.
      * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      */
@@ -602,13 +631,13 @@ contract LendingMarketController is
         override
         nonReentrant
         ifValidMaturity(_ccy, _maturity)
+        ifActive
         returns (bool)
     {
         FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
 
-        address currentMarket = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         (int256 futureValue, uint256 fvMaturity) = IFutureValueVault(
-            Storage.slot().futureValueVaults[_ccy][currentMarket]
+            getFutureValueVault(_ccy, _maturity)
         ).getFutureValue(msg.sender);
 
         require(futureValue != 0, "Future Value is zero");
@@ -667,10 +696,52 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Redeems all lending and borrowing positions.
+     * This function uses the present value as of the termination date.
+     * @param _redemptionCcy Currency name of positions to be redeemed
+     * @param _collateralCcy Currency name of collateral
+     */
+    function executeRedemption(bytes32 _redemptionCcy, bytes32 _collateralCcy)
+        external
+        override
+        nonReentrant
+        ifInactive
+        returns (bool)
+    {
+        int256 redemptionAmount = FundManagementLogic.resetFunds(_redemptionCcy, msg.sender);
+
+        if (redemptionAmount > 0) {
+            FundManagementLogic.addDepositAtMarketTerminationPrice(
+                _redemptionCcy,
+                msg.sender,
+                redemptionAmount.toUint256()
+            );
+
+            emit RedemptionExecuted(_redemptionCcy, msg.sender, redemptionAmount);
+        } else if (redemptionAmount < 0) {
+            FundManagementLogic.removeDepositAtMarketTerminationPrice(
+                _redemptionCcy,
+                msg.sender,
+                (-redemptionAmount).toUint256(),
+                _collateralCcy
+            );
+            emit RedemptionExecuted(_redemptionCcy, msg.sender, redemptionAmount);
+        }
+
+        return true;
+    }
+
+    /**
+     * @notice Executes Itayose calls per selected currencies.
+     * @param _currencies Currency name list in bytes32
+     * @param _maturity The maturity of the selected market
+     */
     function executeItayoseCalls(bytes32[] memory _currencies, uint256 _maturity)
         external
         override
         nonReentrant
+        ifActive
         returns (bool)
     {
         for (uint256 i; i < _currencies.length; i++) {
@@ -708,7 +779,7 @@ contract LendingMarketController is
         bytes32 _ccy,
         uint256 _maturity,
         uint48 _orderId
-    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) returns (bool) {
+    ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
         address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
         ILendingMarket(market).cancelOrder(msg.sender, _orderId);
 
@@ -733,7 +804,14 @@ contract LendingMarketController is
         uint256 _debtMaturity,
         address _user,
         uint24 _poolFee
-    ) external override nonReentrant ifValidMaturity(_debtCcy, _debtMaturity) returns (bool) {
+    )
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_debtCcy, _debtMaturity)
+        ifActive
+        returns (bool)
+    {
         // Check if the caller is an EOA registered as an active liquidator to protect against flash loan attacks.
         require(Address.isContract(msg.sender) == false, "Caller must be EOA");
         require(LiquidatorHandler.isActive(msg.sender), "Caller is not active");
@@ -807,6 +885,7 @@ contract LendingMarketController is
         override
         nonReentrant
         hasLendingMarket(_ccy)
+        ifActive
     {
         (uint256 fromMaturity, uint256 toMaturity) = LendingMarketOperationLogic
             .rotateLendingMarkets(_ccy, getAutoRollFeeRate(_ccy));
@@ -821,15 +900,22 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Executes an emergency termination to stop the protocol. Once this function is executed,
+     * the protocol cannot be run again. Also, users will only be able to redeem and withdraw.
+     */
+    function executeEmergencyTermination() external nonReentrant ifActive onlyOwner {
+        LendingMarketOperationLogic.executeEmergencyTermination();
+
+        emit EmergencyTerminationExecuted(block.timestamp);
+    }
+
+    /**
      * @notice Pauses previously deployed lending market by currency
      * @param _ccy Currency for pausing all lending markets
      * @return True if the execution of the operation succeeds
      */
-    function pauseLendingMarkets(bytes32 _ccy) external override onlyOwner returns (bool) {
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            market.pauseMarket();
-        }
+    function pauseLendingMarkets(bytes32 _ccy) external override ifActive onlyOwner returns (bool) {
+        LendingMarketOperationLogic.pauseLendingMarkets(_ccy);
 
         return true;
     }
@@ -839,11 +925,14 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @return True if the execution of the operation succeeds
      */
-    function unpauseLendingMarkets(bytes32 _ccy) external override onlyOwner returns (bool) {
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            market.unpauseMarket();
-        }
+    function unpauseLendingMarkets(bytes32 _ccy)
+        external
+        override
+        ifActive
+        onlyOwner
+        returns (bool)
+    {
+        LendingMarketOperationLogic.unpauseLendingMarkets(_ccy);
 
         return true;
     }
@@ -852,7 +941,7 @@ contract LendingMarketController is
      * @notice Clean up all funds of the user
      * @param _user User's address
      */
-    function cleanUpAllFunds(address _user) external override {
+    function cleanUpAllFunds(address _user) public override {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
         for (uint256 i = 0; i < ccySet.length(); i++) {
             FundManagementLogic.cleanUpFunds(ccySet.at(i), _user);
@@ -885,10 +974,7 @@ contract LendingMarketController is
     ) private returns (uint256 filledAmount) {
         require(_amount > 0, "Invalid amount");
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-
-        if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
-            Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
-        }
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
         if (!_isForced) {
             require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
@@ -993,5 +1079,33 @@ contract LendingMarketController is
                 0
             );
         }
+    }
+
+    function _createPreOrder(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) private {
+        require(_amount > 0, "Invalid amount");
+        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
+
+        require(
+            activeOrderCount + 1 <= ProtocolTypes.MAXIMUM_ORDER_COUNT,
+            "Too many active orders"
+        );
+
+        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
+
+        require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
+
+        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createPreOrder(
+            _side,
+            _user,
+            _amount,
+            _unitPrice
+        );
     }
 }
