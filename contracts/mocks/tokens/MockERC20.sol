@@ -9,12 +9,12 @@ contract MockERC20 is IMockERC20, ERC20, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     modifier onlyMinter() {
-        require(hasRole(MINTER_ROLE, _msgSender()), "must have minter role");
+        require(hasRole(MINTER_ROLE, _msgSender()), "Must have minter role");
         _;
     }
 
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "must have admin role");
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must have admin role");
         _;
     }
 

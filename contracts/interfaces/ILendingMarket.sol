@@ -199,7 +199,7 @@ interface ILendingMarket {
         external
         returns (
             uint256 openingUnitPrice,
-            uint256 filledAmount,
+            uint256 totalOffsetAmount,
             uint256 openingDate,
             PartiallyFilledOrder memory partiallyFilledLendingOrder,
             PartiallyFilledOrder memory partiallyFilledBorrowingOrder

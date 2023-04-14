@@ -300,7 +300,8 @@ describe('LendingMarketController - Itayose', () => {
       ];
 
       // the matching amount of the above orders
-      const expectedFilledAmount = BigNumber.from('200000000000000');
+      const expectedOpeningPrice = '8300';
+      const expectedFilledAmount = BigNumber.from('100000000000000');
 
       for (const order of orders) {
         await expect(
@@ -340,7 +341,7 @@ describe('LendingMarketController - Itayose', () => {
 
       const openingPrice = await lendingMarketProxies[0].getOpeningUnitPrice();
 
-      expect(openingPrice).to.equal('8300');
+      expect(openingPrice).to.equal(expectedOpeningPrice);
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
         .getFutureValueVault(targetCurrency, maturities[0])
@@ -449,7 +450,8 @@ describe('LendingMarketController - Itayose', () => {
       ];
 
       // the matching amount of the above orders
-      const expectedFilledAmount = BigNumber.from('200000000000000');
+      const expectedOpeningPrice = '8300';
+      const expectedOffsetAmount = BigNumber.from('100000000000000');
 
       for (const order of orders) {
         await expect(
@@ -476,7 +478,7 @@ describe('LendingMarketController - Itayose', () => {
 
       const openingPrice = await lendingMarket.getOpeningUnitPrice();
 
-      expect(openingPrice).to.equal('8300');
+      expect(openingPrice).to.equal(expectedOpeningPrice);
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
         .getFutureValueVault(targetCurrency, maturities[maturities.length - 1])
@@ -489,7 +491,7 @@ describe('LendingMarketController - Itayose', () => {
 
       expect(
         totalSupplyAfterItayoseExecuted.sub(
-          calculateFutureValue(expectedFilledAmount, openingPrice),
+          calculateFutureValue(expectedOffsetAmount, openingPrice),
         ),
       ).lte(1);
 

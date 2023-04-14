@@ -86,11 +86,11 @@ library LendingMarketOperationLogic {
         if (market.isItayosePeriod()) {
             uint256 openingUnitPrice;
             uint256 openingDate;
-            uint256 filledAmount;
+            uint256 totalOffsetAmount;
 
             (
                 openingUnitPrice,
-                filledAmount,
+                totalOffsetAmount,
                 openingDate,
                 partiallyFilledLendingOrder,
                 partiallyFilledBorrowingOrder
@@ -111,13 +111,12 @@ library LendingMarketOperationLogic {
                     _ccy,
                     convertedUnitPrice
                 );
-                if (filledAmount > 0) {
-                    address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
-                    IFutureValueVault(futureValueVault).addInitialTotalSupply(
-                        _maturity,
-                        (filledAmount * ProtocolTypes.PRICE_DIGIT).div(openingUnitPrice).toInt256()
-                    );
-                }
+
+                address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
+                IFutureValueVault(futureValueVault).addInitialTotalSupply(
+                    _maturity,
+                    (totalOffsetAmount * ProtocolTypes.PRICE_DIGIT).div(openingUnitPrice).toInt256()
+                );
             }
         }
     }

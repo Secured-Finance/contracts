@@ -390,7 +390,6 @@ library OrderBookLogic {
         public
         returns (
             uint256 filledUnitPrice,
-            uint256 filledAmount,
             uint256 filledFutureValue,
             uint48 partiallyFilledOrderId,
             address partiallyFilledMaker,
@@ -402,29 +401,15 @@ library OrderBookLogic {
         PartiallyFilledOrder memory partiallyFilledOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                remainingAmount,
-                partiallyFilledOrder
-            ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
-                _amount,
-                _unitPrice,
-                0
-            );
+            (filledUnitPrice, , filledFutureValue, remainingAmount, partiallyFilledOrder) = Storage
+                .slot()
+                .lendOrders[Storage.slot().maturity]
+                .dropRight(_amount, _unitPrice, 0);
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                remainingAmount,
-                partiallyFilledOrder
-            ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
-                _amount,
-                _unitPrice,
-                0
-            );
+            (filledUnitPrice, , filledFutureValue, remainingAmount, partiallyFilledOrder) = Storage
+                .slot()
+                .borrowOrders[Storage.slot().maturity]
+                .dropLeft(_amount, _unitPrice, 0);
         }
 
         partiallyFilledOrderId = partiallyFilledOrder.orderId;
