@@ -115,7 +115,9 @@ library LendingMarketOperationLogic {
                     _ccy,
                     convertedUnitPrice
                 );
+            }
 
+            if (totalOffsetAmount > 0) {
                 address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
                 IFutureValueVault(futureValueVault).addInitialTotalSupply(
                     _maturity,

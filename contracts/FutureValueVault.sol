@@ -234,7 +234,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
-     * @notice Add initial total supply at market opening
+     * @notice Adds initial total supply at market opening
      * @param _maturity The maturity of the market
      * @param _amount The amount to add
      */
