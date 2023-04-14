@@ -100,9 +100,17 @@ library LendingMarketOperationLogic {
                 partiallyFilledBorrowingOrder
             ) = market.executeItayoseCall();
 
+            if (totalOffsetAmount > 0) {
+                address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
+                IFutureValueVault(futureValueVault).addInitialTotalSupply(
+                    _maturity,
+                    (totalOffsetAmount * ProtocolTypes.PRICE_DIGIT).div(openingUnitPrice).toInt256()
+                );
+            }
+
             // Save the openingUnitPrice as first compound factor
             // if it is a first Itayose call at the nearest market.
-            if (openingUnitPrice > 0 && Storage.slot().lendingMarkets[_ccy][0] == address(market)) {
+            if (Storage.slot().lendingMarkets[_ccy][0] == address(market)) {
                 // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
                 uint256 convertedUnitPrice = _convertUnitPrice(
                     openingUnitPrice,
@@ -114,14 +122,6 @@ library LendingMarketOperationLogic {
                 AddressResolverLib.genesisValueVault().updateInitialCompoundFactor(
                     _ccy,
                     convertedUnitPrice
-                );
-            }
-
-            if (totalOffsetAmount > 0) {
-                address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
-                IFutureValueVault(futureValueVault).addInitialTotalSupply(
-                    _maturity,
-                    (totalOffsetAmount * ProtocolTypes.PRICE_DIGIT).div(openingUnitPrice).toInt256()
                 );
             }
         }
