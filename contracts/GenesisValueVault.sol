@@ -371,6 +371,24 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         }
     }
 
+    /**
+     * @notice Resets all genesis values of the user.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     */
+    function resetGenesisValue(bytes32 _ccy, address _user)
+        external
+        override
+        onlyAcceptedContracts
+    {
+        int256 removedAmount = Storage.slot().balances[_ccy][_user];
+        if (removedAmount != 0) {
+            Storage.slot().balances[_ccy][_user] = 0;
+
+            emit Transfer(_ccy, _user, address(0), removedAmount);
+        }
+    }
+
     function getBalanceFluctuationByAutoRolls(
         bytes32 _ccy,
         address _user,

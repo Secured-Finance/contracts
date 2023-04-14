@@ -155,6 +155,12 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         return true;
     }
 
+    /**
+     * @notice Offsets the future value amount of the lender and the borrower.
+     * @param _lender The lender's address
+     * @param _borrower The borrower's address
+     * @param _maximumFVAmount Maximum future value amount to be offset
+     */
     function offsetFutureValue(
         address _lender,
         address _borrower,
@@ -185,7 +191,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
-     * @notice Remove all future values if there is an amount in the past maturity.
+     * @notice Removes all future values if there is an amount in the past maturity.
      * @param _user User's address
      * @return removedAmount Removed future value amount
      * @return currentAmount Current future value amount after update
@@ -227,6 +233,11 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
             Storage.slot().removedBorrowingSupply[maturity] == Storage.slot().totalSupply[maturity];
     }
 
+    /**
+     * @notice Add initial total supply at market opening
+     * @param _maturity The maturity of the market
+     * @param _amount The amount to add
+     */
     function addInitialTotalSupply(uint256 _maturity, int256 _amount)
         external
         override
@@ -234,6 +245,19 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     {
         require(Storage.slot().totalSupply[_maturity] == 0, "Initial total supply is not 0");
         _updateTotalSupply(_maturity, 0, _amount);
+    }
+
+    /**
+     * @notice Resets the future value of the user
+     * @param _user User's address
+     */
+    function resetFutureValue(address _user) external override onlyAcceptedContracts {
+        int256 removedAmount = Storage.slot().balances[_user];
+        if (removedAmount != 0) {
+            Storage.slot().balances[_user] = 0;
+
+            emit Transfer(_user, address(0), removedAmount);
+        }
     }
 
     function _updateTotalSupply(
