@@ -69,7 +69,7 @@ library FundManagementLogic {
         int256 futureValue;
     }
 
-    struct InactiveBorrowingOrdersFunds {
+    struct InactiveBorrowOrdersFunds {
         int256 genesisValue;
         int256 presentValue;
         int256 futureValue;
@@ -77,7 +77,7 @@ library FundManagementLogic {
         uint256 borrowedAmount;
     }
 
-    struct InactiveLendingOrdersFunds {
+    struct InactiveLendOrdersFunds {
         int256 genesisValue;
         int256 presentValue;
         int256 futureValue;
@@ -437,8 +437,8 @@ library FundManagementLogic {
                     isDefaultMarket
                 );
                 // Get current funds from borrowing orders by lazy evaluations.
-                InactiveBorrowingOrdersFunds
-                    memory borrowingOrdersFunds = _getFundsFromInactiveBorrowingOrders(
+                InactiveBorrowOrdersFunds
+                    memory borrowOrdersFunds = _getFundsFromInactiveBorrowOrders(
                         _ccy,
                         _user,
                         vars,
@@ -447,35 +447,34 @@ library FundManagementLogic {
                         isDefaultMarket
                     );
                 // Get current funds from lending orders by lazy evaluations.
-                InactiveLendingOrdersFunds
-                    memory lendingOrdersFunds = _getFundsFromInactiveLendingOrders(
-                        _ccy,
-                        _user,
-                        vars,
-                        currentMaturity,
-                        currentMarket,
-                        isDefaultMarket
-                    );
+                InactiveLendOrdersFunds memory lendOrdersFunds = _getFundsFromInactiveLendOrders(
+                    _ccy,
+                    _user,
+                    vars,
+                    currentMaturity,
+                    currentMarket,
+                    isDefaultMarket
+                );
 
                 actualFunds.genesisValue +=
                     futureValueVaultFunds.genesisValue -
-                    borrowingOrdersFunds.genesisValue +
-                    lendingOrdersFunds.genesisValue;
+                    borrowOrdersFunds.genesisValue +
+                    lendOrdersFunds.genesisValue;
 
                 actualFunds.futureValue +=
                     futureValueVaultFunds.futureValue -
-                    borrowingOrdersFunds.futureValue +
-                    lendingOrdersFunds.futureValue;
+                    borrowOrdersFunds.futureValue +
+                    lendOrdersFunds.futureValue;
 
                 actualFunds.presentValue +=
                     futureValueVaultFunds.presentValue -
-                    borrowingOrdersFunds.presentValue +
-                    lendingOrdersFunds.presentValue;
+                    borrowOrdersFunds.presentValue +
+                    lendOrdersFunds.presentValue;
 
-                actualFunds.workingBorrowOrdersAmount += borrowingOrdersFunds.workingOrdersAmount;
-                actualFunds.workingLendOrdersAmount += lendingOrdersFunds.workingOrdersAmount;
-                actualFunds.borrowedAmount += borrowingOrdersFunds.borrowedAmount;
-                actualFunds.lentAmount += lendingOrdersFunds.lentAmount;
+                actualFunds.workingBorrowOrdersAmount += borrowOrdersFunds.workingOrdersAmount;
+                actualFunds.workingLendOrdersAmount += lendOrdersFunds.workingOrdersAmount;
+                actualFunds.borrowedAmount += borrowOrdersFunds.borrowedAmount;
+                actualFunds.lentAmount += lendOrdersFunds.lentAmount;
 
                 // Get balance fluctuation amount by auto-rolls
                 if (actualFunds.genesisValue < 0) {
@@ -790,14 +789,14 @@ library FundManagementLogic {
         }
     }
 
-    function _getFundsFromInactiveBorrowingOrders(
+    function _getFundsFromInactiveBorrowOrders(
         bytes32 _ccy,
         address _user,
         CalculateActualFundsVars memory vars,
         uint256 currentMaturity,
         address currentMarket,
         bool isDefaultMarket
-    ) internal view returns (InactiveBorrowingOrdersFunds memory funds) {
+    ) internal view returns (InactiveBorrowOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
         (
@@ -835,14 +834,14 @@ library FundManagementLogic {
         }
     }
 
-    function _getFundsFromInactiveLendingOrders(
+    function _getFundsFromInactiveLendOrders(
         bytes32 _ccy,
         address _user,
         CalculateActualFundsVars memory vars,
         uint256 currentMaturity,
         address currentMarket,
         bool isDefaultMarket
-    ) internal view returns (InactiveLendingOrdersFunds memory funds) {
+    ) internal view returns (InactiveLendOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
         (
