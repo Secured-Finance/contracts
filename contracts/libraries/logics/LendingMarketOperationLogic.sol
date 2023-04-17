@@ -110,7 +110,7 @@ library LendingMarketOperationLogic {
 
             // Save the openingUnitPrice as first compound factor
             // if it is a first Itayose call at the nearest market.
-            if (Storage.slot().lendingMarkets[_ccy][0] == address(market)) {
+            if (openingUnitPrice > 0 && Storage.slot().lendingMarkets[_ccy][0] == address(market)) {
                 // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
                 uint256 convertedUnitPrice = _convertUnitPrice(
                     openingUnitPrice,
