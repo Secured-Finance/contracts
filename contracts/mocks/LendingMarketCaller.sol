@@ -48,6 +48,7 @@ contract LendingMarketCaller {
         external
         returns (
             uint256 openingUnitPrice,
+            uint256 totalOffsetAmount,
             uint256 openingDate,
             ILendingMarket.PartiallyFilledOrder memory lendingOrder,
             ILendingMarket.PartiallyFilledOrder memory borrowingOrder

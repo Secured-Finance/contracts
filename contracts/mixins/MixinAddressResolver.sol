@@ -67,7 +67,7 @@ contract MixinAddressResolver {
      * @param _resolver The address of the Address Resolver contract
      */
     function registerAddressResolver(address _resolver) internal {
-        require(address(Storage.slot().resolver) == address(0), "resolver registered already");
+        require(address(Storage.slot().resolver) == address(0), "Resolver registered already");
         Storage.slot().resolver = IAddressResolver(_resolver);
     }
 

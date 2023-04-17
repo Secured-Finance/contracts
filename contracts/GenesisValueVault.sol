@@ -262,7 +262,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _nextMaturity,
         uint256 _unitPrice
     ) private {
-        require(_unitPrice != 0, "unitPrice is zero");
+        require(_unitPrice != 0, "Unit price is zero");
         require(Storage.slot().autoRollLogs[_ccy][_maturity].next == 0, "Already updated maturity");
         require(_nextMaturity > _maturity, "Invalid maturity");
         require(

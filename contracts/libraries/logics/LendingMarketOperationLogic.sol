@@ -19,6 +19,7 @@ import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from ".
 library LendingMarketOperationLogic {
     using SafeCast for uint256;
     using RoundingUint256 for uint256;
+    using SafeCast for uint256;
     using RoundingInt256 for int256;
 
     function initializeCurrencySetting(
@@ -83,20 +84,29 @@ library LendingMarketOperationLogic {
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         )
     {
-        ILendingMarket market = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        );
+        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        ILendingMarket market = ILendingMarket(marketAddr);
 
         if (market.isItayosePeriod()) {
             uint256 openingUnitPrice;
             uint256 openingDate;
+            uint256 totalOffsetAmount;
 
             (
                 openingUnitPrice,
+                totalOffsetAmount,
                 openingDate,
                 partiallyFilledLendingOrder,
                 partiallyFilledBorrowingOrder
             ) = market.executeItayoseCall();
+
+            if (totalOffsetAmount > 0) {
+                address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
+                IFutureValueVault(futureValueVault).addInitialTotalSupply(
+                    _maturity,
+                    (totalOffsetAmount * ProtocolTypes.PRICE_DIGIT).div(openingUnitPrice).toInt256()
+                );
+            }
 
             // Save the openingUnitPrice as first compound factor
             // if it is a first Itayose call at the nearest market.

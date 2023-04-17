@@ -699,6 +699,7 @@ contract LendingMarketController is
     /**
      * @notice Redeems all lending and borrowing positions.
      * This function uses the present value as of the termination date.
+     *
      * @param _redemptionCcy Currency name of positions to be redeemed
      * @param _collateralCcy Currency name of collateral
      */
@@ -1048,7 +1049,8 @@ contract LendingMarketController is
                 _side,
                 _filledFutureValue,
                 _filledAmount,
-                _feeFutureValue
+                _feeFutureValue,
+                true
             );
 
             LendingMarketOperationLogic.updateOrderLogs(
@@ -1076,7 +1078,8 @@ contract LendingMarketController is
                 _side,
                 partiallyFilledOrder.futureValue,
                 partiallyFilledOrder.amount,
-                0
+                0,
+                false
             );
         }
     }

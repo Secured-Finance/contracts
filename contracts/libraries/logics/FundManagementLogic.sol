@@ -270,7 +270,8 @@ library FundManagementLogic {
         ProtocolTypes.Side _side,
         uint256 _filledFutureValue,
         uint256 _filledAmount,
-        uint256 _feeFutureValue
+        uint256 _feeFutureValue,
+        bool _isTaker
     ) external {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy][
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
@@ -282,7 +283,7 @@ library FundManagementLogic {
                 _user,
                 _filledFutureValue + _feeFutureValue,
                 _maturity,
-                true
+                _isTaker
             );
         } else {
             AddressResolverLib.tokenVault().removeDepositAmount(_user, _ccy, _filledAmount);
@@ -290,7 +291,7 @@ library FundManagementLogic {
                 _user,
                 _filledFutureValue - _feeFutureValue,
                 _maturity,
-                true
+                _isTaker
             );
         }
 

@@ -610,6 +610,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * After this action, the market opens.
      * @dev If the opening date had already passed when this contract was created, this Itayose need not be executed.
      * @return openingUnitPrice The opening price when Itayose is executed
+     * @return totalOffsetAmount The total filled amount when Itayose is executed
      * @return openingDate The timestamp when the market opens
      * @return partiallyFilledLendingOrder Partially filled lending order on the order book
      * @return partiallyFilledBorrowingOrder Partially filled borrowing order on the order book
@@ -622,12 +623,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ifItayosePeriod
         returns (
             uint256 openingUnitPrice,
+            uint256 totalOffsetAmount,
             uint256 openingDate,
             PartiallyFilledOrder memory partiallyFilledLendingOrder,
             PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         )
     {
-        uint256 totalOffsetAmount;
         (openingUnitPrice, totalOffsetAmount) = OrderBookLogic.getOpeningUnitPrice();
 
         if (totalOffsetAmount > 0) {

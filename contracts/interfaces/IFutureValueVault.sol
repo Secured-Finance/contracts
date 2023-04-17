@@ -45,5 +45,7 @@ interface IFutureValueVault {
             bool removeFutureValue
         );
 
+    function addInitialTotalSupply(uint256 maturity, int256 amount) external;
+
     function resetFutureValue(address _user) external;
 }
