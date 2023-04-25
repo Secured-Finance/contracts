@@ -237,20 +237,27 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _user User's address
      * @return liquidationAmount The the amount to be liquidated
      */
-    function getLiquidationAmount(address _user)
+    function getLiquidationAmount(
+        address _user,
+        bytes32 _liquidationCcy,
+        uint256 _liquidationAmountMaximum
+    )
         external
         view
         override
-        returns (uint256 liquidationAmount)
+        returns (
+            uint256 liquidationAmount,
+            uint256 protocolFee,
+            uint256 liquidatorFee,
+            uint256 insolventAmount
+        )
     {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = DepositManagementLogic
-            .getCollateralAmount(_user);
-
         return
-            totalCollateral * ProtocolTypes.PCT_DIGIT >=
-                totalUsedCollateral * Params.liquidationThresholdRate()
-                ? 0
-                : totalUsedCollateral / 2;
+            DepositManagementLogic.getLiquidationAmount(
+                _user,
+                _liquidationCcy,
+                _liquidationAmountMaximum
+            );
     }
 
     /**
@@ -420,6 +427,22 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _amount
     ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.removeDepositAmount(_user, _ccy, _amount);
+    }
+
+    /**
+     * @notice Transfers the token from sender to receiver.
+     * @param _ccy Currency name in bytes32
+     * @param _sender Sender's address
+     * @param _receiver Receiver's address
+     * @param _amount Amount of funds to sent
+     */
+    function transferFrom(
+        bytes32 _ccy,
+        address _sender,
+        address _receiver,
+        uint256 _amount
+    ) external override returns (uint256) {
+        return DepositManagementLogic.transferFrom(_ccy, _sender, _receiver, _amount);
     }
 
     /**

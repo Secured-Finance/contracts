@@ -260,6 +260,79 @@ library DepositManagementLogic {
         return withdrawableAmount;
     }
 
+    function getLiquidationAmount(
+        address _user,
+        bytes32 _liquidationCcy,
+        uint256 _liquidationAmountMaximum
+    )
+        public
+        view
+        returns (
+            uint256 liquidationAmount,
+            uint256 protocolFee,
+            uint256 liquidatorFee,
+            uint256 insolventAmount
+        )
+    {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getCollateralAmount(_user);
+        uint256 liquidationAmountInETH = totalCollateral * ProtocolTypes.PCT_DIGIT >=
+            totalUsedCollateral * Params.liquidationThresholdRate()
+            ? 0
+            : totalUsedCollateral / 2;
+        liquidationAmount = AddressResolverLib.currencyController().convertFromETH(
+            _liquidationCcy,
+            liquidationAmountInETH
+        );
+
+        protocolFee =
+            (liquidationAmount * Params.liquidationProtocolFeeRate()) /
+            ProtocolTypes.PCT_DIGIT;
+        liquidatorFee = (liquidationAmount * Params.liquidatorFeeRate()) / ProtocolTypes.PCT_DIGIT;
+        uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
+
+        uint256 userDepositAmount = Storage.slot().depositAmounts[_user][_liquidationCcy];
+
+        if (_liquidationAmountMaximum > userDepositAmount) {
+            _liquidationAmountMaximum = userDepositAmount;
+        }
+
+        if (liquidationTotalAmount > userDepositAmount) {
+            insolventAmount = liquidationTotalAmount - userDepositAmount;
+        }
+
+        if (liquidationTotalAmount > _liquidationAmountMaximum) {
+            liquidationTotalAmount = _liquidationAmountMaximum;
+            protocolFee =
+                (liquidationTotalAmount * Params.liquidationProtocolFeeRate()) /
+                (ProtocolTypes.PCT_DIGIT +
+                    Params.liquidatorFeeRate() +
+                    Params.liquidationProtocolFeeRate());
+            liquidatorFee =
+                (liquidationTotalAmount * Params.liquidatorFeeRate()) /
+                (ProtocolTypes.PCT_DIGIT +
+                    Params.liquidatorFeeRate() +
+                    Params.liquidationProtocolFeeRate());
+            liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
+        }
+    }
+
+    function transferFrom(
+        bytes32 _ccy,
+        address _sender,
+        address _receiver,
+        uint256 _amount
+    ) external returns (uint256 amount) {
+        uint256 senderDepositAmount = Storage.slot().depositAmounts[_sender][_ccy];
+
+        amount = _amount;
+        if (_amount > senderDepositAmount) {
+            amount = senderDepositAmount;
+        }
+
+        removeDepositAmount(_sender, _ccy, amount);
+        addDepositAmount(_receiver, _ccy, amount);
+    }
+
     function swapDepositAmounts(
         address _liquidator,
         address _user,

@@ -48,7 +48,19 @@ interface ITokenVault {
 
     function getTotalCollateralAmount(address party) external view returns (uint256);
 
-    function getLiquidationAmount(address user) external view returns (uint256 liquidationAmount);
+    function getLiquidationAmount(
+        address user,
+        bytes32 liquidationCcy,
+        uint256 liquidationAmountMaximum
+    )
+        external
+        view
+        returns (
+            uint256 liquidationAmount,
+            uint256 protocolFee,
+            uint256 liquidatorFee,
+            uint256 insolventAmount
+        );
 
     function getTotalDepositAmount(bytes32 _ccy) external view returns (uint256);
 
@@ -96,6 +108,13 @@ interface ITokenVault {
         bytes32 ccy,
         uint256 amount
     ) external;
+
+    function transferFrom(
+        bytes32 _ccy,
+        address _sender,
+        address _receiver,
+        uint256 _amount
+    ) external returns (uint256);
 
     function swapDepositAmounts(
         address liquidator,

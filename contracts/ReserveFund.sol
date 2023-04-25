@@ -18,6 +18,8 @@ import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
  * @notice Implements managing of the reserve fund.
  */
 contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
+    receive() external payable {}
+
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
@@ -74,8 +76,10 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
      */
     function deposit(bytes32 _ccy, uint256 _amount) external payable override onlyOwner {
         address tokenAddress = tokenVault().getTokenAddress(_ccy);
-        ERC20Handler.safeApprove(tokenAddress, address(tokenVault()), _amount);
-        ERC20Handler.depositAssets(tokenAddress, msg.sender, address(this), _amount);
+        if (ERC20Handler.weth() != tokenAddress) {
+            ERC20Handler.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
+            ERC20Handler.safeApprove(tokenAddress, address(tokenVault()), _amount);
+        }
         tokenVault().deposit{value: msg.value}(_ccy, _amount);
     }
 
@@ -87,6 +91,12 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
 
     function withdraw(bytes32 _ccy, uint256 _amount) external override onlyOwner {
         tokenVault().withdraw(_ccy, _amount);
-        ERC20Handler.withdrawAssets(tokenVault().getTokenAddress(_ccy), msg.sender, _amount);
+
+        address tokenAddress = tokenVault().getTokenAddress(_ccy);
+        if (ERC20Handler.weth() == tokenAddress) {
+            ERC20Handler.safeTransferETH(msg.sender, _amount);
+        } else {
+            ERC20Handler.safeTransfer(tokenAddress, msg.sender, _amount);
+        }
     }
 }

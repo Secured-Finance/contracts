@@ -11,7 +11,6 @@ import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {LiquidatorHandler} from "./libraries/LiquidatorHandler.sol";
 import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
 // mixins
@@ -21,6 +20,7 @@ import {MixinLendingMarketManager} from "./mixins/MixinLendingMarketManager.sol"
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
 import {Proxyable} from "./utils/Proxyable.sol";
+import {LockAndMsgSender} from "./utils/LockAndMsgSender.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
@@ -40,7 +40,8 @@ contract LendingMarketController is
     MixinLendingMarketManager,
     MixinAddressResolver,
     ReentrancyGuard,
-    Proxyable
+    Proxyable,
+    LockAndMsgSender
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using EnumerableSet for EnumerableSet.UintSet;
@@ -128,14 +129,6 @@ contract LendingMarketController is
      */
     function isTerminated() public view returns (bool) {
         return Storage.slot().marketTerminationDate > 0;
-    }
-
-    /**
-     * @notice Gets if the user is registered as a liquidator.
-     * @return The boolean if the user is registered as a liquidator or not
-     */
-    function isLiquidator(address _user) external view override returns (bool) {
-        return LiquidatorHandler.isRegistered(_user);
     }
 
     /**
@@ -636,12 +629,11 @@ contract LendingMarketController is
     {
         FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
 
-        (int256 futureValue, uint256 fvMaturity) = IFutureValueVault(
-            getFutureValueVault(_ccy, _maturity)
-        ).getFutureValue(msg.sender);
+        int256 futureValue = FundManagementLogic
+            .calculateActualFunds(_ccy, _maturity, msg.sender)
+            .futureValue;
 
         require(futureValue != 0, "Future Value is zero");
-        require(_maturity == fvMaturity, "Invalid maturity");
 
         uint256 filledUnitPrice;
         uint256 filledAmount;
@@ -796,80 +788,46 @@ contract LendingMarketController is
      * @param _debtCcy Currency name to be used as debt
      * @param _debtMaturity The market maturity of the debt
      * @param _user User's address
-     * @param _poolFee Uniswap pool fee
      * @return True if the execution of the operation succeeds
      */
     function executeLiquidationCall(
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
-        address _user,
-        uint24 _poolFee
+        address _user
     )
         external
         override
-        nonReentrant
+        isNotLocked
         ifValidMaturity(_debtCcy, _debtMaturity)
         ifActive
         returns (bool)
     {
-        // Check if the caller is an EOA registered as an active liquidator to protect against flash loan attacks.
-        require(Address.isContract(msg.sender) == false, "Caller must be EOA");
-        require(LiquidatorHandler.isActive(msg.sender), "Caller is not active");
-
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
         FundManagementLogic.cleanUpFunds(_debtCcy, _user);
 
-        (uint256 liquidationPVAmount, uint256 offsetPVAmount) = FundManagementLogic
-            .convertToLiquidationAmountFromCollateral(
-                msg.sender,
-                _user,
-                _collateralCcy,
-                _debtCcy,
-                _debtMaturity,
-                _poolFee
-            );
+        uint256 liquidatedDebtAmount = FundManagementLogic.executeLiquidation(
+            msg.sender,
+            _user,
+            _collateralCcy,
+            _debtCcy,
+            _debtMaturity
+        );
 
-        uint256 executedPVAmount = offsetPVAmount;
-        if (liquidationPVAmount > 0) {
-            uint256 filledAmount = _createOrder(
-                _debtCcy,
-                _debtMaturity,
-                _user,
-                ProtocolTypes.Side.LEND,
-                liquidationPVAmount,
-                0, // market order
-                true
-            );
-            executedPVAmount += filledAmount;
-        }
+        require(tokenVault().isCovered(msg.sender), "Not enough collateral");
 
-        if (executedPVAmount != 0) {
-            emit LiquidationExecuted(
-                _user,
-                _collateralCcy,
-                _debtCcy,
-                _debtMaturity,
-                executedPVAmount
-            );
+        emit LiquidationExecuted(
+            _user,
+            _collateralCcy,
+            _debtCcy,
+            _debtMaturity,
+            liquidatedDebtAmount
+        );
 
-            FundManagementLogic.convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
-        }
+        FundManagementLogic.convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
 
         return true;
-    }
-
-    /**
-     * @notice Registers a user as a liquidator.
-     * @param _isLiquidator The boolean if the user is a liquidator or not
-     */
-    function registerLiquidator(bool _isLiquidator) external override {
-        if (_isLiquidator) {
-            LiquidatorHandler.register(msg.sender);
-        } else {
-            LiquidatorHandler.remove(msg.sender);
-        }
     }
 
     /**

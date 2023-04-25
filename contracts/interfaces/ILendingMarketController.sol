@@ -19,11 +19,9 @@ interface ILendingMarketController {
         bytes32 collateralCcy,
         bytes32 indexed debtCcy,
         uint256 indexed debtMaturity,
-        uint256 amount
+        uint256 debtAmount
     );
     event EmergencyTerminationExecuted(uint256 timestamp);
-
-    function isLiquidator(address user) external view returns (bool);
 
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
@@ -179,11 +177,8 @@ interface ILendingMarketController {
         bytes32 collateralCcy,
         bytes32 debtCcy,
         uint256 debtMaturity,
-        address user,
-        uint24 poolFee
+        address user
     ) external returns (bool);
-
-    function registerLiquidator(bool isLiquidator) external;
 
     function cancelOrder(
         bytes32 ccy,

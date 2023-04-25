@@ -3,7 +3,7 @@ import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
-import { artifacts, ethers, waffle } from 'hardhat';
+import { ethers } from 'hardhat';
 import moment from 'moment';
 
 import { Side } from '../../../utils/constants';
@@ -15,12 +15,6 @@ import {
   PRICE_DIGIT,
 } from '../../common/constants';
 import { deployContracts } from './utils';
-
-// contracts
-const LiquidationBot = artifacts.require('LiquidationBot');
-const LiquidationBot2 = artifacts.require('LiquidationBot2');
-
-const { deployContract } = waffle;
 
 const BP = ethers.BigNumber.from(PRICE_DIGIT);
 
@@ -1915,48 +1909,22 @@ describe('LendingMarketController - Orders', () => {
     describe('Liquidations', async () => {
       beforeEach(async () => {
         // Set up for the mocks
-        await mockTokenVault.mock.getLiquidationAmount.returns(1);
-        await mockTokenVault.mock.getDepositAmount.returns(1);
+        await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10, 0);
+        await mockTokenVault.mock.getDepositAmount.returns(100);
+        await mockTokenVault.mock.transferFrom.returns(100);
+        await mockTokenVault.mock['isCovered(address)'].returns(true);
         await mockReserveFund.mock.isPaused.returns(true);
-
-        const isLiquidator = await lendingMarketControllerProxy.isLiquidator(
-          alice.address,
-        );
-
-        if (!isLiquidator) {
-          await lendingMarketControllerProxy
-            .connect(alice)
-            .registerLiquidator(true);
-        }
-      });
-
-      it('Register a liquidator', async () => {
-        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
-          .to.false;
-
-        await lendingMarketControllerProxy
-          .connect(owner)
-          .registerLiquidator(true);
-
-        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
-          .to.true;
-
-        await lendingMarketControllerProxy
-          .connect(owner)
-          .registerLiquidator(false);
-
-        expect(await lendingMarketControllerProxy.isLiquidator(owner.address))
-          .to.false;
+        await mockCurrencyController.mock.convert.returns(100);
       });
 
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        const liquidationAmount = ethers.BigNumber.from('300000000000000000');
+        // const liquidationAmount = ethers.BigNumber.from('300000000000000000');
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns('1');
-        await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
+        // await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
 
         await lendingMarketControllerProxy
           .connect(signers[0])
@@ -2001,7 +1969,6 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             maturities[0],
             signers[0].address,
-            '1',
           )
           .then((tx) =>
             expect(tx)
@@ -2011,7 +1978,7 @@ describe('LendingMarketController - Orders', () => {
                 targetCurrency,
                 targetCurrency,
                 maturities[0],
-                '200000000000000000',
+                100,
               ),
           );
       });
@@ -2019,11 +1986,11 @@ describe('LendingMarketController - Orders', () => {
       it('Liquidate 50% lending position in case the one position cover liquidation amount', async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        const liquidationAmount = ethers.BigNumber.from('80000000000000000');
+        // const liquidationAmount = ethers.BigNumber.from('80000000000000000');
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns('1');
-        await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
+        // await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
 
         await lendingMarketControllerProxy
           .connect(signers[3])
@@ -2068,7 +2035,6 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             maturities[0],
             signers[3].address,
-            '1',
           )
           .then((tx) =>
             expect(tx)
@@ -2078,7 +2044,7 @@ describe('LendingMarketController - Orders', () => {
                 targetCurrency,
                 targetCurrency,
                 maturities[0],
-                liquidationAmount,
+                100,
               ),
           );
       });
@@ -2086,12 +2052,12 @@ describe('LendingMarketController - Orders', () => {
       it('Liquidate lending position using funds in the reserve fund', async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        const liquidationAmount = ethers.BigNumber.from('80000000000000000');
+        // const liquidationAmount = ethers.BigNumber.from('80000000000000000');
         const offsetAmount = ethers.BigNumber.from('3000000000');
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns(offsetAmount);
-        await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
+        // await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
         await mockReserveFund.mock.isPaused.returns(false);
 
         await lendingMarketControllerProxy
@@ -2137,7 +2103,6 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             maturities[0],
             signers[3].address,
-            '1',
           )
           .then((tx) =>
             expect(tx)
@@ -2147,7 +2112,7 @@ describe('LendingMarketController - Orders', () => {
                 targetCurrency,
                 targetCurrency,
                 maturities[0],
-                liquidationAmount.add(offsetAmount),
+                100,
               ),
           );
       });
@@ -2161,14 +2126,33 @@ describe('LendingMarketController - Orders', () => {
               targetCurrency,
               maturities[0],
               signers[0].address,
-              '1',
             ),
         ).to.be.revertedWith('No debt in the selected maturity');
       });
 
       it('Fail to liquidate a lending position due to no liquidation amount', async () => {
         // Set up for the mocks
-        await mockTokenVault.mock.getLiquidationAmount.returns(0);
+        await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0, 0);
+
+        await lendingMarketControllerProxy
+          .connect(signers[6])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000',
+            '8000',
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[7])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000',
+            '8000',
+          );
 
         await expect(
           lendingMarketControllerProxy
@@ -2177,53 +2161,45 @@ describe('LendingMarketController - Orders', () => {
               targetCurrency,
               targetCurrency,
               maturities[0],
-              signers[0].address,
-              '1',
+              signers[6].address,
             ),
         ).to.be.revertedWith('User has enough collateral');
       });
 
-      it('Fail to liquidate a lending position due to unregistered liquidator', async () => {
+      it('Fail to liquidate a lending position due to insufficient collateral', async () => {
+        // Set up for the mocks
+        await mockTokenVault.mock['isCovered(address)'].returns(false);
+
+        await lendingMarketControllerProxy
+          .connect(signers[6])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000',
+            '8000',
+          );
+
+        await lendingMarketControllerProxy
+          .connect(signers[7])
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000',
+            '8000',
+          );
+
         await expect(
           lendingMarketControllerProxy
-            .connect(bob)
+            .connect(alice)
             .executeLiquidationCall(
               targetCurrency,
               targetCurrency,
               maturities[0],
-              signers[0].address,
-              '1',
+              signers[6].address,
             ),
-        ).to.be.revertedWith('Caller is not active');
-      });
-
-      it('Fail to liquidate a lending position due to bot hack', async () => {
-        await expect(
-          deployContract(owner, LiquidationBot, [
-            lendingMarketControllerProxy.address,
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            signers[0].address,
-            '1',
-          ]),
-        ).to.be.revertedWith('Caller is not active');
-      });
-
-      it('Fail to liquidate a lending position due to bot access', async () => {
-        const bot = await deployContract(owner, LiquidationBot2, [
-          lendingMarketControllerProxy.address,
-        ]);
-        await bot.registerLiquidator(true);
-        await expect(
-          bot.executeLiquidationCall(
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            signers[0].address,
-            '1',
-          ),
-        ).to.be.revertedWith('Caller must be EOA');
+        ).to.be.revertedWith('Not enough collateral');
       });
     });
   });

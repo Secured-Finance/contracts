@@ -7,6 +7,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  PCT_DIGIT,
 } from '../common/constants';
 
 // contracts
@@ -697,7 +698,7 @@ describe('TokenVault', () => {
         this.skip();
       }
 
-      const signer = signers[4];
+      const signer = signers[2];
       const value = ethers.BigNumber.from('30000000000000');
       const swapAmount = ethers.BigNumber.from('7000000000000');
       const offsetAmount = ethers.BigNumber.from('1000000');
@@ -763,7 +764,7 @@ describe('TokenVault', () => {
     });
 
     it('Add an amount in a currency that is not accepted as collateral', async () => {
-      const signer = signers[2];
+      const signer = signers[3];
       const value = '10000000000000';
       const valueInETH = '20000000000000';
       const debtAmount = '5000000000000';
@@ -818,10 +819,9 @@ describe('TokenVault', () => {
     });
 
     it('Get the liquidation amount', async () => {
-      const signer = signers[3];
-      const value = ethers.BigNumber.from('20000000000000');
+      const signer = signers[4];
+      const value = ethers.BigNumber.from('30000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
-      const totalPresentValue = ethers.BigNumber.from('20000000000000');
       const debtAmount = ethers.BigNumber.from('20000000000000');
 
       // Set up for the mocks
@@ -831,9 +831,6 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
       await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
         valueInETH,
-      );
-      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
-        totalPresentValue,
       );
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
@@ -855,9 +852,122 @@ describe('TokenVault', () => {
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
         '10000',
       );
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        value,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).to.equal(debtAmount);
+      expect(liquidationAmounts.insolventAmount).to.equal(0);
+    });
+
+    it('Get the liquidation amount decreased by a maximum', async () => {
+      const signer = signers[5];
+      const value = ethers.BigNumber.from('30000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const debtAmount = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToETH(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+        valueInETH,
+      );
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        debtAmount,
+        0,
+        true,
+      );
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
       expect(
-        await tokenVaultProxy.getLiquidationAmount(signer.address),
-      ).to.equal(debtAmount.div(2));
+        await tokenVaultProxy.getWithdrawableCollateral(signer.address),
+      ).to.equal('0');
+
+      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
+        '10000',
+      );
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        debtAmount,
+      );
+
+      expect(
+        liquidationAmounts.liquidationAmount
+          .add(liquidationAmounts.protocolFee)
+          .add(liquidationAmounts.liquidatorFee),
+      ).to.equal(debtAmount);
+      expect(liquidationAmounts.insolventAmount).to.equal(0);
+    });
+
+    it('Get the liquidation amount of the insolvent', async () => {
+      const signer = signers[6];
+      const value = ethers.BigNumber.from('30000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const debtAmount = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToETH(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromETH.returns(
+        valueInETH.mul(2),
+      );
+      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+        valueInETH,
+      );
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        debtAmount,
+        0,
+        true,
+      );
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy.getWithdrawableCollateral(signer.address),
+      ).to.equal('0');
+
+      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
+        '10000',
+      );
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        value.mul(2),
+      );
+
+      const liquidationTotalAmount = valueInETH
+        .mul(2)
+        .mul(PCT_DIGIT + LIQUIDATION_PROTOCOL_FEE_RATE + LIQUIDATOR_FEE_RATE)
+        .div(PCT_DIGIT);
+
+      expect(
+        liquidationAmounts.liquidationAmount
+          .add(liquidationAmounts.protocolFee)
+          .add(liquidationAmounts.liquidatorFee),
+      ).to.equal(value);
+      expect(liquidationAmounts.insolventAmount).to.equal(
+        liquidationTotalAmount.sub(value),
+      );
     });
 
     it('Fail to call addDepositAmount due to invalid caller', async () => {
