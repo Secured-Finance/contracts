@@ -29,27 +29,6 @@ contract TokenVaultCallerMock {
         tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
-    function swapDepositAmounts(
-        address _liquidator,
-        address _user,
-        bytes32 _ccyIn,
-        bytes32 _ccyOut,
-        uint256 _amountOut,
-        uint24 _poolFee,
-        uint256 _offsetAmount
-    ) public returns (uint256 amountIn) {
-        return
-            tokenVault.swapDepositAmounts(
-                _liquidator,
-                _user,
-                _ccyIn,
-                _ccyOut,
-                _amountOut,
-                _poolFee,
-                _offsetAmount
-            );
-    }
-
     function depositFrom(
         address from,
         bytes32 ccy,

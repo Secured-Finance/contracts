@@ -333,87 +333,6 @@ library DepositManagementLogic {
         addDepositAmount(_receiver, _ccy, amount);
     }
 
-    function swapDepositAmounts(
-        address _liquidator,
-        address _user,
-        bytes32 _ccyFrom,
-        bytes32 _ccyTo,
-        uint256 _amountOut,
-        uint24 _poolFee,
-        uint256 _offsetAmount
-    )
-        public
-        returns (
-            uint256 amountOut,
-            uint256 amountInWithFee,
-            uint256 liquidatorFee,
-            uint256 protocolFee
-        )
-    {
-        SwapDepositAmountsVars memory vars;
-        address reserveFund = address(AddressResolverLib.reserveFund());
-
-        vars.userDepositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
-        vars.depositAmount = vars.userDepositAmount;
-
-        if (!AddressResolverLib.reserveFund().isPaused()) {
-            vars.depositAmount += Storage.slot().depositAmounts[reserveFund][_ccyFrom];
-        }
-
-        require(vars.depositAmount > 0, "No deposit amount in the selected currency");
-
-        vars.amountOutWithFee =
-            (_amountOut * ProtocolTypes.PCT_DIGIT) /
-            (ProtocolTypes.PCT_DIGIT -
-                Params.liquidatorFeeRate() -
-                Params.liquidationProtocolFeeRate());
-
-        vars.estimatedAmountOut = Params.uniswapQuoter().quoteExactInputSingle(
-            Storage.slot().tokenAddresses[_ccyFrom],
-            Storage.slot().tokenAddresses[_ccyTo],
-            _poolFee,
-            vars.depositAmount,
-            0
-        );
-
-        if (vars.amountOutWithFee > vars.estimatedAmountOut) {
-            vars.amountOutWithFee = vars.estimatedAmountOut;
-        }
-
-        amountInWithFee = _executeSwap(
-            _ccyFrom,
-            _ccyTo,
-            vars.amountOutWithFee,
-            vars.depositAmount,
-            _poolFee
-        );
-
-        liquidatorFee =
-            (vars.amountOutWithFee * Params.liquidatorFeeRate()) /
-            ProtocolTypes.PCT_DIGIT;
-
-        if (vars.amountOutWithFee == vars.estimatedAmountOut) {
-            protocolFee =
-                (vars.amountOutWithFee * Params.liquidationProtocolFeeRate()) /
-                ProtocolTypes.PCT_DIGIT;
-            amountOut = vars.amountOutWithFee - liquidatorFee - protocolFee - _offsetAmount;
-        } else {
-            protocolFee = vars.amountOutWithFee - _amountOut - liquidatorFee;
-            amountOut = _amountOut - _offsetAmount;
-        }
-
-        if (amountInWithFee > vars.userDepositAmount) {
-            removeDepositAmount(_user, _ccyFrom, vars.userDepositAmount);
-            removeDepositAmount(reserveFund, _ccyFrom, amountInWithFee - vars.userDepositAmount);
-        } else {
-            removeDepositAmount(_user, _ccyFrom, amountInWithFee);
-        }
-
-        addDepositAmount(_user, _ccyTo, amountOut);
-        addDepositAmount(_liquidator, _ccyTo, liquidatorFee);
-        addDepositAmount(reserveFund, _ccyTo, protocolFee);
-    }
-
     /**
      * @notice Gets the total of amount deposited in the user's collateral of all currencies
      *  in this contract by converting it to ETH.
@@ -448,32 +367,5 @@ library DepositManagementLogic {
         } else {
             Storage.slot().usedCurrencies[_user].remove(_ccy);
         }
-    }
-
-    function _executeSwap(
-        bytes32 _ccyFrom,
-        bytes32 _ccyTo,
-        uint256 _amountOut,
-        uint256 _amountInMaximum,
-        uint24 _poolFee
-    ) internal returns (uint256) {
-        ERC20Handler.safeApprove(
-            Storage.slot().tokenAddresses[_ccyFrom],
-            address(Params.uniswapRouter()),
-            _amountInMaximum
-        );
-
-        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
-            tokenIn: Storage.slot().tokenAddresses[_ccyFrom],
-            tokenOut: Storage.slot().tokenAddresses[_ccyTo],
-            fee: _poolFee,
-            recipient: address(this),
-            deadline: block.timestamp,
-            amountOut: _amountOut,
-            amountInMaximum: _amountInMaximum,
-            sqrtPriceLimitX96: 0
-        });
-
-        return Params.uniswapRouter().exactOutputSingle(params);
     }
 }

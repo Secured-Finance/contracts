@@ -52,8 +52,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _liquidationThresholdRate The liquidation threshold rate
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
-     * @param _uniswapRouter Uniswap router contract address
-     * @param _uniswapQuoter Uniswap quoter contract address
      * @param _WETH9 The address of WETH
      */
     function initialize(
@@ -62,8 +60,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _liquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate,
-        address _uniswapRouter,
-        address _uniswapQuoter,
         address _WETH9
     ) public initializer onlyProxy {
         _transferOwnership(_owner);
@@ -73,9 +69,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         Params.setCollateralParameters(
             _liquidationThresholdRate,
             _liquidationProtocolFeeRate,
-            _liquidatorFeeRate,
-            _uniswapRouter,
-            _uniswapQuoter
+            _liquidatorFeeRate
         );
     }
 
@@ -298,8 +292,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @return liquidationThresholdRate Auto liquidation threshold rate
      * @return liquidationProtocolFeeRate Liquidation fee rate received by protocol
      * @return liquidatorFeeRate Liquidation fee rate received by liquidators
-     * @return uniswapRouter Uniswap router contract address
-     * @return uniswapQuoter Uniswap quoter contract address
      */
     function getCollateralParameters()
         external
@@ -308,16 +300,12 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         returns (
             uint256 liquidationThresholdRate,
             uint256 liquidationProtocolFeeRate,
-            uint256 liquidatorFeeRate,
-            address uniswapRouter,
-            address uniswapQuoter
+            uint256 liquidatorFeeRate
         )
     {
         liquidationThresholdRate = Params.liquidationThresholdRate();
         liquidationProtocolFeeRate = Params.liquidationProtocolFeeRate();
         liquidatorFeeRate = Params.liquidatorFeeRate();
-        uniswapRouter = address(Params.uniswapRouter());
-        uniswapQuoter = address(Params.uniswapQuoter());
     }
 
     /**
@@ -446,76 +434,23 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice Swap the deposited amount to convert to a different currency using Uniswap for liquidation.
-     * @param _liquidator Liquidator's address
-     * @param _user User's address
-     * @param _ccyFrom Currency name to be converted from
-     * @param _ccyTo Currency name to be converted to
-     * @param _amountOut Amount to be converted to
-     * @param _poolFee Uniswap pool fee
-     * @param _offsetAmount User's deposit amount to be offset against the reserve fund
-     */
-    function swapDepositAmounts(
-        address _liquidator,
-        address _user,
-        bytes32 _ccyFrom,
-        bytes32 _ccyTo,
-        uint256 _amountOut,
-        uint24 _poolFee,
-        uint256 _offsetAmount
-    ) external override onlyAcceptedContracts returns (uint256 amountOut) {
-        require(isCollateral(_ccyFrom), "Not registered as collateral");
-
-        uint256 amountIn;
-        uint256 liquidatorFee;
-        uint256 protocolFee;
-
-        (amountOut, amountIn, liquidatorFee, protocolFee) = DepositManagementLogic
-            .swapDepositAmounts(
-                _liquidator,
-                _user,
-                _ccyFrom,
-                _ccyTo,
-                _amountOut,
-                _poolFee,
-                _offsetAmount
-            );
-
-        emit Swap(
-            _user,
-            _ccyFrom,
-            _ccyTo,
-            amountIn,
-            amountOut + _offsetAmount,
-            liquidatorFee,
-            protocolFee
-        );
-    }
-
-    /**
      * @notice Sets main collateral parameters this function
      * solves the issue of frontrunning during parameters tuning.
      *
      * @param _liquidationThresholdRate The auto liquidation threshold rate
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
-     * @param _uniswapRouter Uniswap router contract address
-     * @param _uniswapQuoter Uniswap quoter contract address
      * @notice Triggers only be contract owner
      */
     function setCollateralParameters(
         uint256 _liquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
-        uint256 _liquidatorFeeRate,
-        address _uniswapRouter,
-        address _uniswapQuoter
+        uint256 _liquidatorFeeRate
     ) external override onlyOwner {
         Params.setCollateralParameters(
             _liquidationThresholdRate,
             _liquidationProtocolFeeRate,
-            _liquidatorFeeRate,
-            _uniswapRouter,
-            _uniswapQuoter
+            _liquidatorFeeRate
         );
     }
 

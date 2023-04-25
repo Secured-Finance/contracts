@@ -6,10 +6,10 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexEFIL, hexETH } from '../../utils/strings';
 import {
-  eFilToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  eFilToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
@@ -22,14 +22,11 @@ describe('Integration Test: Order Book', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  let addressResolver: Contract;
   let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let eFILToken: Contract;
-  let mockUniswapRouter: Contract;
-  let mockUniswapQuoter: Contract;
 
   let fundManagementLogic: Contract;
 
@@ -89,7 +86,6 @@ describe('Integration Test: Order Book', async () => {
     ({
       genesisDate,
       fundManagementLogic,
-      addressResolver,
       currencyController,
       tokenVault,
       lendingMarketController,
@@ -100,28 +96,10 @@ describe('Integration Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
 
-    mockUniswapRouter = await ethers
-      .getContractFactory('MockUniswapRouter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-    mockUniswapQuoter = await ethers
-      .getContractFactory('MockUniswapQuoter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-
-    await mockUniswapRouter.setToken(hexETH, wETHToken.address);
-    await mockUniswapRouter.setToken(hexEFIL, eFILToken.address);
-    await mockUniswapQuoter.setToken(hexETH, wETHToken.address);
-    await mockUniswapQuoter.setToken(hexEFIL, eFILToken.address);
-
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
-      mockUniswapRouter.address,
-      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexETH, true);

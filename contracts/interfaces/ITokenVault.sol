@@ -74,17 +74,13 @@ interface ITokenVault {
         returns (
             uint256 liquidationThresholdRate,
             uint256 liquidationProtocolFeeRate,
-            uint256 liquidatorFeeRate,
-            address uniswapRouter,
-            address uniswapQuoter
+            uint256 liquidatorFeeRate
         );
 
     function setCollateralParameters(
         uint256 liquidationThresholdRate,
         uint256 liquidationProtocolFeeRate,
-        uint256 liquidatorFeeRate,
-        address uniswapRouter,
-        address uniswapQuoter
+        uint256 liquidatorFeeRate
     ) external;
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
@@ -115,14 +111,4 @@ interface ITokenVault {
         address _receiver,
         uint256 _amount
     ) external returns (uint256);
-
-    function swapDepositAmounts(
-        address liquidator,
-        address user,
-        bytes32 ccyFrom,
-        bytes32 ccyTo,
-        uint256 amountOut,
-        uint24 poolFee,
-        uint256 offsetAmount
-    ) external returns (uint256 amountIn);
 }

@@ -1924,7 +1924,6 @@ describe('LendingMarketController - Orders', () => {
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns('1');
-        // await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
 
         await lendingMarketControllerProxy
           .connect(signers[0])
@@ -1990,7 +1989,6 @@ describe('LendingMarketController - Orders', () => {
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns('1');
-        // await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
 
         await lendingMarketControllerProxy
           .connect(signers[3])
@@ -2057,7 +2055,6 @@ describe('LendingMarketController - Orders', () => {
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns(offsetAmount);
-        // await mockTokenVault.mock.swapDepositAmounts.returns(liquidationAmount);
         await mockReserveFund.mock.isPaused.returns(false);
 
         await lendingMarketControllerProxy

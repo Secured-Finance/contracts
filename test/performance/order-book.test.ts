@@ -15,7 +15,6 @@ import { deployContracts } from '../common/deployment';
 describe('Performance Test: Order Book', async () => {
   let signers: SignerWithAddress[];
 
-  let addressResolver: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
@@ -29,7 +28,6 @@ describe('Performance Test: Order Book', async () => {
 
     ({
       genesisDate,
-      addressResolver,
       tokenVault,
       lendingMarketController,
       wETHToken,
@@ -39,23 +37,10 @@ describe('Performance Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
 
-    const mockUniswapRouter = await ethers
-      .getContractFactory('MockUniswapRouter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-    const mockUniswapQuoter = await ethers
-      .getContractFactory('MockUniswapQuoter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
-      mockUniswapRouter.address,
-      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexETH, true);

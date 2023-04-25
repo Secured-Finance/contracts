@@ -781,9 +781,6 @@ contract LendingMarketController is
 
     /**
      * @notice Liquidates a lending position if the user's coverage is less than 1.
-     * @dev A liquidation amount is calculated from the selected debt, but its maximum amount is the same as a collateral amount.
-     * That amount needs to be set at liquidationAmountMax otherwise currency swapping using Uniswap will fail
-     * if the collateral is insufficient.
      * @param _collateralCcy Currency name to be used as collateral
      * @param _debtCcy Currency name to be used as debt
      * @param _debtMaturity The market maturity of the debt
