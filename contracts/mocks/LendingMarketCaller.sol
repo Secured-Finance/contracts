@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IBeaconProxyController} from "../interfaces/IBeaconProxyController.sol";
-import {ILendingMarket} from "../interfaces/ILendingMarket.sol";
-import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {IBeaconProxyController} from "../protocol/interfaces/IBeaconProxyController.sol";
+import {ILendingMarket} from "../protocol/interfaces/ILendingMarket.sol";
+import {ProtocolTypes} from "../protocol/types/ProtocolTypes.sol";
 
 contract LendingMarketCaller {
     IBeaconProxyController public beaconProxyController;

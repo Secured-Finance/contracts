@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../interfaces/ITokenVault.sol";
-import "../interfaces/ILendingMarketController.sol";
+import "../protocol/interfaces/ITokenVault.sol";
+import "../protocol/interfaces/ILendingMarketController.sol";
 
 contract TokenVaultCallerMock {
     ITokenVault public tokenVault;
