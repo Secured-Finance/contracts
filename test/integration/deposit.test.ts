@@ -395,6 +395,43 @@ describe('Integration Test: Deposit', async () => {
         totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
       ).to.equal(initialUSDCBalance.div(5));
     });
+
+    it('Withdraw FIL (ERC20 non-collateral currency) with over amount input', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexEFIL);
+      const collateralAmountBefore = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+      const tokenVaultBalanceBefore = await eFILToken.balanceOf(
+        tokenVault.address,
+      );
+
+      await tokenVault.connect(alice).withdraw(hexEFIL, initialFILBalance);
+
+      const collateralAmountAfter = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+
+      const tokenVaultBalanceAfter = await eFILToken.balanceOf(
+        tokenVault.address,
+      );
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexEFIL,
+      );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexEFIL,
+      );
+
+      expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(0);
+      expect(tokenVaultBalanceAfter).to.equal(0);
+      expect(currencies.includes(hexEFIL)).to.equal(false);
+      expect(depositAmount).to.equal(0);
+      expect(
+        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
+      ).to.equal(tokenVaultBalanceBefore.mul(-1));
+    });
   });
 
   describe('Deposit by multiple users', async () => {
