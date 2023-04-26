@@ -25,7 +25,7 @@
     "docgen": "hardhat docgen",
     "predocgen": "rm -rf cache && npm run compile:force && rm -rf docs",
     "flatten": "./scripts/hardhat-flattener.sh",
-    "security:slither": "slither flattened --solc-disable-warnings --exclude-informational 2>&1 | cat > secured-finance-slither.txt",
+    "security:slither": "slither flattened --solc-disable-warnings --exclude-informational --print human-summary 2>&1 | cat > secured-finance-slither.txt",
     "security:mythril": "docker run --entrypoint /bin/bash -v $(pwd):/home/mythril mythril/myth /home/mythril/scripts/mythril.sh"
   },
   "author": "Secured Finance",

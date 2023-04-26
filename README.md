@@ -62,6 +62,7 @@ As of Apr 23, we use Slither and Mythril for security testing.
 1. Run `npm run flatten`
 2. Delete the duplicated file from `flattened/BeaconProxyController.sol`. hardhat flatten is not smart enough to avoid some patterns of circular dependencies. Don't worry we will fix this.
 3. Run `npm run security:mythril`
+4. Check the generated report named `secured-finance-mythril.json` in the project root
 
 You will encounter the following error. Please remove the duplicated contract from `flattened/BeaconProxyController.sol` as the error mentions. And run it again.
 
@@ -82,9 +83,11 @@ Note: The previous declaration is here:
 ```
 
 #### How to run Slither Analyzer
+0. Install `pip3 install slither-analyzer`
 1. Run `npm run flatten`
 2. Delete the duplicated contract as mentioned in `How to run Mythril` section
 3. Run `npm run security:slither`
+4. Check the generated report named `secured-finance-slither.txt` in the project root
 
 As of now, Slither will refer to the flatten contracts rather than ones in `build`. This might affect the slither behavior: generating duplicated messages, etc.
 

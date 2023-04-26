@@ -9,6 +9,7 @@ rm -rf $FLATTENED_FOLDER/*
 rm -rf tmp
 cp -R contracts tmp
 
+#Exclude sol files under contracts/interfaces and contracts/mocks
 find $CONTRACTS_FOLDER \( -path 'tmp/interfaces' -prune -o -path 'tmp/mocks' -prune \) -o -name '*.sol' -print | while IFS=$'\n' read -r FILE; do
   # Note: hardhat flatten doens't support 'import YYY as XXX' syntax yet. Replace XXX with YYY before flattening them.
   # Extract the import line containing 'as XXXXX'.
