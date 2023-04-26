@@ -37,6 +37,15 @@ contract TokenVaultCallerMock {
         tokenVault.depositFrom(from, ccy, amount);
     }
 
+    function transferFrom(
+        bytes32 ccy,
+        address from,
+        address to,
+        uint256 amount
+    ) external {
+        tokenVault.transferFrom(ccy, from, to, amount);
+    }
+
     function getTotalPresentValueInETH(address _user) public view returns (int256) {
         return lendingMarketController.getTotalPresentValueInETH(_user);
     }

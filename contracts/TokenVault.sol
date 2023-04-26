@@ -420,17 +420,18 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     /**
      * @notice Transfers the token from sender to receiver.
      * @param _ccy Currency name in bytes32
-     * @param _sender Sender's address
-     * @param _receiver Receiver's address
+     * @param _from Sender's address
+     * @param _to Receiver's address
      * @param _amount Amount of funds to sent
      */
     function transferFrom(
         bytes32 _ccy,
-        address _sender,
-        address _receiver,
+        address _from,
+        address _to,
         uint256 _amount
-    ) external override returns (uint256) {
-        return DepositManagementLogic.transferFrom(_ccy, _sender, _receiver, _amount);
+    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+        DepositManagementLogic.transferFrom(_ccy, _from, _to, _amount);
+        emit Transfer(_ccy, _from, _to, _amount);
     }
 
     /**

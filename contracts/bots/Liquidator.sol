@@ -32,7 +32,7 @@ contract Liquidator is ILiquidator {
 
     receive() external payable {}
 
-    function executeLiquidation(
+    function executeLiquidationCall(
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity,

@@ -576,7 +576,7 @@ describe('TokenVault', () => {
     });
 
     it('Add an amount in a currency that is not accepted as collateral', async () => {
-      const signer = signers[3];
+      const signer = signers[2];
       const value = '10000000000000';
       const valueInETH = '20000000000000';
       const debtAmount = '5000000000000';
@@ -631,7 +631,7 @@ describe('TokenVault', () => {
     });
 
     it('Get the liquidation amount', async () => {
-      const signer = signers[4];
+      const signer = signers[3];
       const value = ethers.BigNumber.from('30000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const debtAmount = ethers.BigNumber.from('20000000000000');
@@ -676,7 +676,7 @@ describe('TokenVault', () => {
     });
 
     it('Get the liquidation amount decreased by a maximum', async () => {
-      const signer = signers[5];
+      const signer = signers[4];
       const value = ethers.BigNumber.from('30000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const debtAmount = ethers.BigNumber.from('20000000000000');
@@ -725,7 +725,7 @@ describe('TokenVault', () => {
     });
 
     it('Get the liquidation amount of the insolvent', async () => {
-      const signer = signers[6];
+      const signer = signers[5];
       const value = ethers.BigNumber.from('30000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const debtAmount = ethers.BigNumber.from('20000000000000');
@@ -853,6 +853,80 @@ describe('TokenVault', () => {
       )
         .to.emit(tokenVaultProxy, 'Withdraw')
         .withArgs(alice.address, targetCurrency, valueInETH);
+    });
+  });
+
+  describe('Transfer', async () => {
+    beforeEach(async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+    });
+
+    it('Transfer from Alice to Bob', async () => {
+      const value = '10000';
+
+      await tokenVaultProxy.connect(alice).deposit(targetCurrency, value);
+
+      const [aliceCollateralAmountBefore, bobCollateralAmountBefore] =
+        await Promise.all(
+          [alice, bob].map(({ address }) =>
+            tokenVaultProxy.getDepositAmount(address, targetCurrency),
+          ),
+        );
+
+      await expect(
+        tokenVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          value,
+        ),
+      )
+        .to.emit(tokenVaultProxy, 'Transfer')
+        .withArgs(targetCurrency, alice.address, bob.address, value);
+
+      const [aliceCollateralAmountAfter, bobCollateralAmountAfter] =
+        await Promise.all(
+          [alice, bob].map(({ address }) =>
+            tokenVaultProxy.getDepositAmount(address, targetCurrency),
+          ),
+        );
+
+      expect(
+        aliceCollateralAmountBefore.sub(aliceCollateralAmountAfter),
+      ).to.equal(value);
+      expect(bobCollateralAmountAfter.sub(bobCollateralAmountBefore)).to.equal(
+        value,
+      );
+    });
+
+    it('Fail to transfer deposits due to invalid caller', async () => {
+      await expect(
+        tokenVaultProxy.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          1,
+        ),
+      ).to.be.revertedWith('Only Accepted Contracts');
+    });
+
+    it('Fail to call transfer deposits due to exceeded amount', async () => {
+      const depositAmount = await tokenVaultProxy.getDepositAmount(
+        alice.address,
+        targetCurrency,
+      );
+      await expect(
+        tokenVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          depositAmount.add(1),
+        ),
+      ).to.be.revertedWith('Transfer amount exceeds balance');
     });
   });
 });

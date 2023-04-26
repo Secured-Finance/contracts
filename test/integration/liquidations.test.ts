@@ -386,7 +386,7 @@ describe('Integration Test: Liquidations', async () => {
 
         const receipt = await liquidator
           .connect(carol)
-          .executeLiquidation(
+          .executeLiquidationCall(
             hexETH,
             hexEFIL,
             filMaturities[0],
@@ -422,7 +422,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           liquidator
             .connect(carol)
-            .executeLiquidation(
+            .executeLiquidationCall(
               hexETH,
               hexEFIL,
               filMaturities[0],
@@ -598,7 +598,7 @@ describe('Integration Test: Liquidations', async () => {
         });
 
         await expect(
-          liquidator.executeLiquidation(
+          liquidator.executeLiquidationCall(
             hexETH,
             hexEFIL,
             filMaturities[0],
@@ -731,10 +731,8 @@ describe('Integration Test: Liquidations', async () => {
           EFIL: filMaturities[0],
         });
 
-        console.log('executeLiquidation==========1');
-
         await expect(
-          liquidator.executeLiquidation(
+          liquidator.executeLiquidationCall(
             hexETH,
             hexEFIL,
             filMaturities[0],
@@ -758,10 +756,8 @@ describe('Integration Test: Liquidations', async () => {
         expect(rfFutureValueAfter.lt(rfFutureValueBefore));
         expect(rfFutureValueAfter.gte(0));
 
-        console.log('executeLiquidation==========1');
-
         await expect(
-          liquidator.executeLiquidation(
+          liquidator.executeLiquidationCall(
             hexETH,
             hexEFIL,
             filMaturities[0],
@@ -793,7 +789,7 @@ describe('Integration Test: Liquidations', async () => {
         ).to.lt(ERROR_RANGE);
 
         await expect(
-          liquidator.executeLiquidation(
+          liquidator.executeLiquidationCall(
             hexETH,
             hexEFIL,
             filMaturities[0],
@@ -926,7 +922,7 @@ describe('Integration Test: Liquidations', async () => {
         });
 
         await expect(
-          liquidator.executeLiquidation(
+          liquidator.executeLiquidationCall(
             hexETH,
             hexEFIL,
             filMaturities[1],
@@ -1044,7 +1040,7 @@ describe('Integration Test: Liquidations', async () => {
 
         const receipt = await liquidator
           .connect(carol)
-          .executeLiquidation(
+          .executeLiquidationCall(
             hexETH,
             hexEFIL,
             filMaturities[0],
@@ -1264,7 +1260,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       await expect(
-        liquidator.executeLiquidation(
+        liquidator.executeLiquidationCall(
           hexETH,
           hexEFIL,
           usdcMaturities[0],
@@ -1305,7 +1301,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       await expect(
-        liquidator.executeLiquidation(
+        liquidator.executeLiquidationCall(
           hexETH,
           hexUSDC,
           usdcMaturities[0],

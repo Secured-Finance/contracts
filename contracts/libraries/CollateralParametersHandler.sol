@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
-import {IQuoter} from "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import {CollateralParametersStorage as Storage} from "../storages/CollateralParametersStorage.sol";
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 

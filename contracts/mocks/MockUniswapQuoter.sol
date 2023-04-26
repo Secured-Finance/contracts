@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 // libraries
 import {Contracts} from "../libraries/Contracts.sol";
 import {ERC20Handler} from "../libraries/ERC20Handler.sol";

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {CollateralParametersHandler as Params} from "../CollateralParametersHandler.sol";
@@ -25,13 +24,6 @@ library DepositManagementLogic {
         uint256 debtAmount;
         uint256 borrowedAmount;
         bool isEnoughDeposit;
-    }
-
-    struct SwapDepositAmountsVars {
-        uint256 userDepositAmount;
-        uint256 depositAmount;
-        uint256 amountOutWithFee;
-        uint256 estimatedAmountOut;
     }
 
     function isCovered(
@@ -318,19 +310,15 @@ library DepositManagementLogic {
 
     function transferFrom(
         bytes32 _ccy,
-        address _sender,
-        address _receiver,
+        address _from,
+        address _to,
         uint256 _amount
-    ) external returns (uint256 amount) {
-        uint256 senderDepositAmount = Storage.slot().depositAmounts[_sender][_ccy];
+    ) external {
+        uint256 depositAmount = Storage.slot().depositAmounts[_from][_ccy];
+        require(depositAmount >= _amount, "Transfer amount exceeds balance");
 
-        amount = _amount;
-        if (_amount > senderDepositAmount) {
-            amount = senderDepositAmount;
-        }
-
-        removeDepositAmount(_sender, _ccy, amount);
-        addDepositAmount(_receiver, _ccy, amount);
+        removeDepositAmount(_from, _ccy, _amount);
+        addDepositAmount(_to, _ccy, _amount);
     }
 
     /**

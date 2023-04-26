@@ -6,17 +6,9 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 interface ITokenVault {
     event Deposit(address indexed user, bytes32 ccy, uint256 amount);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
+    event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, uint256 amount);
     event CurrencyRegistered(bytes32 ccy, address tokenAddress, bool isCollateral);
     event CurrencyUpdated(bytes32 ccy, bool isCollateral);
-    event Swap(
-        address indexed user,
-        bytes32 ccyIn,
-        bytes32 ccyOut,
-        uint256 amountIn,
-        uint256 amountOut,
-        uint256 liquidatorFee,
-        uint256 protocolFee
-    );
 
     function isCovered(
         address user,
@@ -110,5 +102,5 @@ interface ITokenVault {
         address _sender,
         address _receiver,
         uint256 _amount
-    ) external returns (uint256);
+    ) external;
 }

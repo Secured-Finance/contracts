@@ -12,11 +12,8 @@ import {
   AUTO_ROLL_FEE_RATE,
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
-  PRICE_DIGIT,
 } from '../../common/constants';
 import { deployContracts } from './utils';
-
-const BP = ethers.BigNumber.from(PRICE_DIGIT);
 
 describe('LendingMarketController - Orders', () => {
   let mockCurrencyController: MockContract;
@@ -1911,7 +1908,7 @@ describe('LendingMarketController - Orders', () => {
         // Set up for the mocks
         await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10, 0);
         await mockTokenVault.mock.getDepositAmount.returns(100);
-        await mockTokenVault.mock.transferFrom.returns(100);
+        await mockTokenVault.mock.transferFrom.returns();
         await mockTokenVault.mock['isCovered(address)'].returns(true);
         await mockReserveFund.mock.isPaused.returns(true);
         await mockCurrencyController.mock.convert.returns(100);
