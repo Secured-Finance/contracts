@@ -1917,7 +1917,6 @@ describe('LendingMarketController - Orders', () => {
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        // const liquidationAmount = ethers.BigNumber.from('300000000000000000');
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns('1');
@@ -1982,7 +1981,6 @@ describe('LendingMarketController - Orders', () => {
       it('Liquidate 50% lending position in case the one position cover liquidation amount', async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        // const liquidationAmount = ethers.BigNumber.from('80000000000000000');
 
         // Set up for the mocks
         await mockCurrencyController.mock.convertFromETH.returns('1');
@@ -2047,7 +2045,6 @@ describe('LendingMarketController - Orders', () => {
       it('Liquidate lending position using funds in the reserve fund', async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        // const liquidationAmount = ethers.BigNumber.from('80000000000000000');
         const offsetAmount = ethers.BigNumber.from('3000000000');
 
         // Set up for the mocks
