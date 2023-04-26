@@ -252,7 +252,7 @@ library DepositManagementLogic {
                 ? withdrawableAmount
                 : depositAmount;
         } else {
-            withdrawableAmount = depositAmount;
+            withdrawableAmount = depositAmount >= _amount ? _amount : depositAmount;
         }
 
         removeDepositAmount(user, _ccy, withdrawableAmount);
