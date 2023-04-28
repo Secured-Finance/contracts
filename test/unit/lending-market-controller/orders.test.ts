@@ -1563,6 +1563,37 @@ describe('LendingMarketController - Orders', () => {
       });
     });
 
+    describe('Market Order', async () => {
+      it('place a borrow market order', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .createOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '10000000000000000',
+              '0',
+            ),
+        ).to.not.emit(lendingMarketProxies[0], 'OrderMade');
+      });
+
+      it('place a lend market order', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .depositAndCreateOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '0',
+              { value: '1000000000000000' },
+            ),
+        ).to.not.emit(lendingMarketProxies[0], 'OrderMade');
+      });
+    });
+
     describe('Unwind', async () => {
       it('Unwind a lending order', async () => {
         await expect(

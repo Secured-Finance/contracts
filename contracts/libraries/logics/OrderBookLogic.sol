@@ -20,6 +20,14 @@ library OrderBookLogic {
         return unitPrice == 0 ? ProtocolTypes.PRICE_DIGIT : unitPrice;
     }
 
+    function checkBorrowOrderExist() public view returns (bool) {
+        return Storage.slot().borrowOrders[Storage.slot().maturity].isNotEmpty();
+    }
+
+    function checkLendOrderExist() public view returns (bool) {
+        return Storage.slot().lendOrders[Storage.slot().maturity].isNotEmpty();
+    }
+
     function getLendOrderBook(uint256 _limit)
         public
         view

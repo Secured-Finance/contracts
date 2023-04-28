@@ -72,6 +72,10 @@ library OrderStatisticsTreeLib {
         }
     }
 
+    function isNotEmpty(Tree storage self) internal view returns (bool) {
+        return self.root != EMPTY;
+    }
+
     function next(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
         require(value != EMPTY, "OrderStatisticsTree(401) - Starting value cannot be zero");
         if (self.nodes[value].right != EMPTY) {
