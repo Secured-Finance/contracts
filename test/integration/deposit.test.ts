@@ -429,8 +429,8 @@ describe('Integration Test: Deposit', async () => {
       expect(currencies.includes(hexEFIL)).to.equal(false);
       expect(depositAmount).to.equal(0);
       expect(
-        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
-      ).to.equal(tokenVaultBalanceBefore.mul(-1));
+        totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
+      ).to.equal(tokenVaultBalanceBefore);
     });
   });
 
