@@ -548,11 +548,9 @@ library OrderBookLogic {
         return (marketOrder.side, removedAmount, marketOrder.unitPrice);
     }
 
-    function getOpeningUnitPrice()
-        public
-        view
-        returns (uint256 openingUnitPrice, uint256 totalOffsetAmount)
-    {
+    function getOpeningUnitPrice() public view returns (uint256, uint256) {
+        uint256 openingUnitPrice = 0;
+        uint256 totalOffsetAmount = 0;
         uint256 lendUnitPrice = getHighestLendingUnitPrice();
         uint256 borrowUnitPrice = getLowestBorrowingUnitPrice();
         uint256 lendAmount = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
@@ -570,6 +568,12 @@ library OrderBookLogic {
             Storage.slot().maturity
         ];
 
+        // return mid price when no lending and borrowing orders overwrap
+        if (borrowUnitPrice > lendUnitPrice) {
+            openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
+            return (openingUnitPrice, 0);
+        }
+
         while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {
             if (lendAmount > borrowAmount) {
                 openingUnitPrice = lendUnitPrice;
@@ -584,7 +588,7 @@ library OrderBookLogic {
                 lendUnitPrice = lendOrders.prev(lendUnitPrice);
                 lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
             } else {
-                openingUnitPrice = (lendUnitPrice + borrowUnitPrice) / 2;
+                openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
                 totalOffsetAmount += lendAmount;
                 lendUnitPrice = lendOrders.prev(lendUnitPrice);
                 borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
@@ -592,6 +596,7 @@ library OrderBookLogic {
                 borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
             }
         }
+        return (openingUnitPrice, totalOffsetAmount);
     }
 
     /**

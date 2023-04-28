@@ -164,6 +164,7 @@ describe('LendingMarket', () => {
             { side: Side.LEND, unitPrice: '8300', amount: '200000000000000' },
             { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
           ],
+          shouldItayoseExecuted: true,
         },
         {
           openingPrice: '8000',
@@ -173,6 +174,7 @@ describe('LendingMarket', () => {
             { side: Side.LEND, unitPrice: '8300', amount: '100000000000000' },
             { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
           ],
+          shouldItayoseExecuted: true,
         },
         {
           openingPrice: '8150',
@@ -182,6 +184,7 @@ describe('LendingMarket', () => {
             { side: Side.LEND, unitPrice: '8300', amount: '200000000000000' },
             { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
           ],
+          shouldItayoseExecuted: true,
         },
         {
           openingPrice: '9000',
@@ -191,6 +194,7 @@ describe('LendingMarket', () => {
             { side: Side.LEND, unitPrice: '8300', amount: '100000000000000' },
             { side: Side.LEND, unitPrice: '9000', amount: '300000000000000' },
           ],
+          shouldItayoseExecuted: true,
         },
         {
           openingPrice: '8200',
@@ -202,6 +206,33 @@ describe('LendingMarket', () => {
             { side: Side.LEND, unitPrice: '8200', amount: '200000000000000' },
             { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
           ],
+          shouldItayoseExecuted: true,
+        },
+        {
+          openingPrice: '4000', // 0 + 8,000 = 4,000 / 2
+          orders: [
+            { side: Side.BORROW, unitPrice: '8500', amount: '300000000000000' },
+            { side: Side.BORROW, unitPrice: '8100', amount: '100000000000000' },
+            { side: Side.BORROW, unitPrice: '8000', amount: '50000000000000' },
+          ],
+          shouldItayoseExecuted: false,
+        },
+        {
+          openingPrice: '9150', // 10,000 + 8,300 = 9,150 / 2
+          orders: [
+            { side: Side.LEND, unitPrice: '8300', amount: '100000000000000' },
+            { side: Side.LEND, unitPrice: '8200', amount: '200000000000000' },
+            { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
+          ],
+          shouldItayoseExecuted: false,
+        },
+        {
+          openingPrice: '8150', // 7,800 + 8,500 / 2
+          orders: [
+            { side: Side.BORROW, unitPrice: '8500', amount: '300000000000000' },
+            { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
+          ],
+          shouldItayoseExecuted: false,
         },
       ];
 
@@ -225,9 +256,15 @@ describe('LendingMarket', () => {
           // Increase 47 hours
           await time.increase(169200);
 
-          await expect(
-            lendingMarketCaller.executeItayoseCall(lendingMarketCount - 1),
-          ).to.emit(lendingMarket, 'ItayoseExecuted');
+          await lendingMarketCaller
+            .executeItayoseCall(lendingMarketCount - 1)
+            .then(async (tx) => {
+              if (test.shouldItayoseExecuted) {
+                await expect(tx).to.emit(lendingMarket, 'ItayoseExecuted');
+              } else {
+                await expect(tx).not.to.emit(lendingMarket, 'ItayoseExecuted');
+              }
+            });
 
           const openingPrice = await lendingMarket.getOpeningUnitPrice();
 
