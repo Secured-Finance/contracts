@@ -525,7 +525,7 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -556,7 +556,7 @@ contract LendingMarketController is
         returns (bool)
     {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice, false);
+        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
 
         return true;
     }
@@ -926,33 +926,30 @@ contract LendingMarketController is
         address _user,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice,
-        bool _isForced
+        uint256 _unitPrice
     ) private returns (uint256 filledAmount) {
         require(_amount > 0, "Invalid amount");
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
-        if (!_isForced) {
-            require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
-        }
+        require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
 
         (
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount
+            uint256 remainingAmount,
+            bool orderPlaced
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
                 _side,
                 _user,
                 _amount,
                 _unitPrice,
-                _isForced
+                false
             );
         filledAmount = _amount - remainingAmount;
 
-        uint256 feeFutureValue;
-        if (!_isForced) {
+        if (orderPlaced) {
             // The case that an order was made, or taken partially
             if (filledFutureValue == 0 || remainingAmount > 0) {
                 activeOrderCount += 1;
@@ -960,28 +957,30 @@ contract LendingMarketController is
 
             require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
 
-            feeFutureValue = _calculateOrderFeeAmount(_ccy, filledFutureValue, _maturity);
+            uint256 feeFutureValue = _calculateOrderFeeAmount(_ccy, filledFutureValue, _maturity);
+
+            _updateFundsForTaker(
+                _ccy,
+                _maturity,
+                _user,
+                _side,
+                filledAmount,
+                filledFutureValue,
+                filledUnitPrice,
+                feeFutureValue
+            );
+
+            _updateFundsForMaker(
+                _ccy,
+                _maturity,
+                _side == ProtocolTypes.Side.LEND
+                    ? ProtocolTypes.Side.BORROW
+                    : ProtocolTypes.Side.LEND,
+                partiallyFilledOrder
+            );
+
+            Storage.slot().usedCurrencies[_user].add(_ccy);
         }
-
-        _updateFundsForTaker(
-            _ccy,
-            _maturity,
-            _user,
-            _side,
-            filledAmount,
-            filledFutureValue,
-            filledUnitPrice,
-            feeFutureValue
-        );
-
-        _updateFundsForMaker(
-            _ccy,
-            _maturity,
-            _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
-            partiallyFilledOrder
-        );
-
-        Storage.slot().usedCurrencies[_user].add(_ccy);
     }
 
     function _updateFundsForTaker(
