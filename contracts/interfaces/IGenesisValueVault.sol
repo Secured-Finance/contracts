@@ -115,6 +115,13 @@ interface IGenesisValueVault {
         int256 maximumGVAmount
     ) external returns (int256 offsetAmount);
 
+    function transferFrom(
+        bytes32 _ccy,
+        address _sender,
+        address _receiver,
+        int256 _amount
+    ) external;
+
     function cleanUpGenesisValue(
         bytes32 ccy,
         address user,

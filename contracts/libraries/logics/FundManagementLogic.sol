@@ -7,6 +7,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
+import {ILiquidator} from "../../interfaces/ILiquidator.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {QuickSort} from "../QuickSort.sol";
@@ -25,16 +26,18 @@ library FundManagementLogic {
     using RoundingUint256 for uint256;
     using RoundingInt256 for int256;
 
-    struct CalculatedAmountVars {
-        address debtMarket;
-        uint256 debtFVAmount;
-        uint256 debtPVAmount;
-        int256 futureValueAmount;
-        uint256 estimatedLiquidationPVAmount;
-        uint256 liquidationPVAmountInETH;
-        uint256 liquidationFVAmount;
-        int256 offsetGVAmount;
-        uint256 offsetFVAmount;
+    struct ExecuteLiquidationVars {
+        uint256 liquidationAmountInCollateralCcy;
+        uint256 liquidationAmountInDebtCcy;
+        uint256 protocolFeeInCollateralCcy;
+        uint256 liquidatorFeeInCollateralCcy;
+        uint256 insolventAmountInCollateralCcy;
+        uint256 offsetPVAmount;
+        uint256 offsetPVAmountInCollateralCcy;
+        bool isDefaultMarket;
+        bool isReserveFundPaused;
+        uint256 receivedCollateralAmount;
+        uint256 receivedDebtAmount;
     }
 
     struct CalculatedTotalFundInETHVars {
@@ -146,121 +149,143 @@ library FundManagementLogic {
         return currentAmount;
     }
 
-    function convertToLiquidationAmountFromCollateral(
+    function executeLiquidation(
         address _liquidator,
         address _user,
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
-        uint256 _debtMaturity,
-        uint24 _poolFee
-    ) external returns (uint256 liquidationPVAmount, uint256 offsetPVAmount) {
-        CalculatedAmountVars memory vars;
+        uint256 _debtMaturity
+    ) external returns (uint256 totalLiquidatedDebtAmount) {
+        ExecuteLiquidationVars memory vars;
 
-        vars.liquidationPVAmountInETH = AddressResolverLib.tokenVault().getLiquidationAmount(_user);
-        require(vars.liquidationPVAmountInETH != 0, "User has enough collateral");
+        int256 debtFVAmount = calculateActualFunds(_debtCcy, _debtMaturity, _user).futureValue;
+        require(debtFVAmount < 0, "No debt in the selected maturity");
 
-        vars.futureValueAmount = calculateActualFunds(_debtCcy, _debtMaturity, _user).futureValue;
-        require(vars.futureValueAmount < 0, "No debt in the selected maturity");
-
-        vars.debtMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity];
-        vars.debtFVAmount = (-vars.futureValueAmount).toUint256();
         (int256 debtPVAmount, ) = _calculatePVandFVInDefaultMarket(
             _debtCcy,
             _debtMaturity,
-            -vars.futureValueAmount
+            -debtFVAmount
         );
-        vars.debtPVAmount = debtPVAmount.toUint256();
 
-        vars.liquidationFVAmount = _calculateFVFromPV(
-            _debtCcy,
-            _debtMaturity,
-            AddressResolverLib.currencyController().convertFromETH(
+        (
+            vars.liquidationAmountInCollateralCcy,
+            vars.protocolFeeInCollateralCcy,
+            vars.liquidatorFeeInCollateralCcy,
+            vars.insolventAmountInCollateralCcy
+        ) = AddressResolverLib.tokenVault().getLiquidationAmount(
+            _user,
+            _collateralCcy,
+            AddressResolverLib.currencyController().convert(
                 _debtCcy,
-                vars.liquidationPVAmountInETH
+                _collateralCcy,
+                debtPVAmount.toUint256()
             )
         );
 
-        // If the debt amount is less than the liquidation amount, the debt amount is used as the liquidation amount.
-        // In that case, the actual liquidation ratio is under the liquidation threshold ratio.
-        if (vars.liquidationFVAmount > vars.debtFVAmount) {
-            vars.liquidationFVAmount = vars.debtFVAmount;
-        }
+        require(vars.liquidationAmountInCollateralCcy != 0, "User has enough collateral");
 
-        if (!AddressResolverLib.reserveFund().isPaused()) {
+        vars.liquidationAmountInDebtCcy = AddressResolverLib.currencyController().convert(
+            _collateralCcy,
+            _debtCcy,
+            vars.liquidationAmountInCollateralCcy
+        );
+        totalLiquidatedDebtAmount += vars.liquidationAmountInDebtCcy;
+
+        vars.isDefaultMarket =
+            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
+            Storage.slot().lendingMarkets[_debtCcy][0];
+        vars.isReserveFundPaused = AddressResolverLib.reserveFund().isPaused();
+
+        if (!vars.isReserveFundPaused) {
             // Offset the user's debt using the future value amount and the genesis value amount hold by the reserve fund contract.
             // Before this step, the target user's order must be cleaned up by `LendingMarketController#cleanUpFunds` function.
             // If the target market is the nearest market(default market), the genesis value is used for the offset.
-            bool isDefaultMarket = Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
-                Storage.slot().lendingMarkets[_debtCcy][0];
-
-            if (isDefaultMarket) {
-                vars.offsetGVAmount = AddressResolverLib.genesisValueVault().offsetGenesisValue(
-                    _debtCcy,
-                    _debtMaturity,
-                    address(AddressResolverLib.reserveFund()),
-                    _user,
-                    AddressResolverLib.genesisValueVault().calculateGVFromFV(
-                        _debtCcy,
-                        _debtMaturity,
-                        vars.liquidationFVAmount.toInt256()
-                    )
-                );
-
-                if (vars.offsetGVAmount > 0) {
-                    (int256 pvAmount, ) = _calculatePVandFVInDefaultMarket(
-                        _debtCcy,
-                        _debtMaturity,
-                        AddressResolverLib.genesisValueVault().calculateFVFromGV(
-                            _debtCcy,
-                            _debtMaturity,
-                            vars.offsetGVAmount
-                        )
-                    );
-                    offsetPVAmount = pvAmount.toUint256();
-                }
-            }
-
-            vars.offsetFVAmount = _offsetFutureValue(
-                _debtCcy,
-                _debtMaturity,
+            vars.offsetPVAmount = _offsetFunds(
                 address(AddressResolverLib.reserveFund()),
                 _user,
-                vars.liquidationFVAmount -
-                    _calculateFVFromPV(_debtCcy, _debtMaturity, offsetPVAmount)
+                _debtCcy,
+                _debtMaturity,
+                _calculateFVFromPV(_debtCcy, _debtMaturity, vars.liquidationAmountInDebtCcy),
+                vars.isDefaultMarket
             );
 
-            if (vars.offsetFVAmount > 0) {
-                (int256 pvAmount, ) = _calculatePVandFVInDefaultMarket(
+            vars.offsetPVAmountInCollateralCcy = AddressResolverLib.currencyController().convert(
+                _debtCcy,
+                _collateralCcy,
+                vars.offsetPVAmount
+            );
+        }
+
+        // Transfer collateral from users to liquidators and reserve funds.
+        vars.receivedCollateralAmount =
+            vars.liquidationAmountInCollateralCcy +
+            vars.liquidatorFeeInCollateralCcy -
+            vars.offsetPVAmountInCollateralCcy;
+
+        AddressResolverLib.tokenVault().transferFrom(
+            _collateralCcy,
+            _user,
+            _liquidator,
+            vars.receivedCollateralAmount
+        );
+        AddressResolverLib.tokenVault().transferFrom(
+            _collateralCcy,
+            _user,
+            address(AddressResolverLib.reserveFund()),
+            vars.protocolFeeInCollateralCcy + vars.offsetPVAmountInCollateralCcy
+        );
+
+        // Cover insolvent amounts using reserve funds.
+        if (vars.insolventAmountInCollateralCcy > 0 && !vars.isReserveFundPaused) {
+            if (AddressResolverLib.tokenVault().getTotalCollateralAmount(_user) == 0) {
+                uint256 insolventAmountInDebtCcy = AddressResolverLib.currencyController().convert(
+                    _collateralCcy,
+                    _debtCcy,
+                    vars.insolventAmountInCollateralCcy
+                );
+
+                _transferFunds(
+                    address(AddressResolverLib.reserveFund()),
+                    _user,
                     _debtCcy,
                     _debtMaturity,
-                    vars.offsetFVAmount.toInt256()
+                    insolventAmountInDebtCcy,
+                    vars.isDefaultMarket
                 );
-                offsetPVAmount += pvAmount.toUint256();
+
+                totalLiquidatedDebtAmount += insolventAmountInDebtCcy;
             }
         }
 
-        // Estimate the filled amount from actual orders in the order book using the future value of user debt.
-        // If the estimated amount is less than the liquidation amount, the estimated amount is used as
-        // the liquidation amount.
-        vars.estimatedLiquidationPVAmount = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity]
-        ).estimateFilledAmount(
-                ProtocolTypes.Side.LEND,
-                vars.liquidationFVAmount -
-                    _calculateFVFromPV(_debtCcy, _debtMaturity, offsetPVAmount)
-            );
+        // Transfer the debt from users to liquidators
+        if (vars.liquidationAmountInDebtCcy > vars.offsetPVAmount) {
+            vars.receivedDebtAmount = vars.liquidationAmountInDebtCcy - vars.offsetPVAmount;
 
-        // Swap collateral from deposited currency to debt currency using Uniswap.
-        // This swapped collateral is used to unwind the debt.
-        liquidationPVAmount = AddressResolverLib.tokenVault().swapDepositAmounts(
-            _liquidator,
-            _user,
-            _collateralCcy,
-            _debtCcy,
-            vars.estimatedLiquidationPVAmount + offsetPVAmount,
-            _poolFee,
-            offsetPVAmount
-        );
+            _transferFunds(
+                _user,
+                _liquidator,
+                _debtCcy,
+                _debtMaturity,
+                vars.receivedDebtAmount,
+                vars.isDefaultMarket
+            );
+        }
+
+        if (_liquidator.code.length > 0) {
+            require(
+                ILiquidator(_liquidator).executeOperation(
+                    _liquidator,
+                    _user,
+                    _collateralCcy,
+                    vars.receivedCollateralAmount,
+                    _debtCcy,
+                    _debtMaturity,
+                    vars.receivedDebtAmount,
+                    msg.sender
+                ),
+                "Invalid operation execution"
+            );
+        }
     }
 
     function updateFunds(
@@ -884,14 +909,18 @@ library FundManagementLogic {
         bytes32 _ccy,
         uint256 _maturity,
         int256 _futureValueInMaturity
-    ) internal view returns (int256 presetValue, int256 futureValue) {
+    ) internal view returns (int256 presentValue, int256 futureValue) {
         address destinationMarket = Storage.slot().lendingMarkets[_ccy][0];
         uint256 unitPriceInDestinationMaturity = ILendingMarket(destinationMarket)
             .getMidUnitPrice();
 
         if (AddressResolverLib.genesisValueVault().getAutoRollLog(_ccy, _maturity).unitPrice == 0) {
-            presetValue = _calculatePVFromFVByMidUnitPrice(_ccy, _maturity, _futureValueInMaturity);
-            futureValue = (presetValue * ProtocolTypes.PRICE_DIGIT.toInt256()).div(
+            presentValue = _calculatePVFromFVByMidUnitPrice(
+                _ccy,
+                _maturity,
+                _futureValueInMaturity
+            );
+            futureValue = (presentValue * ProtocolTypes.PRICE_DIGIT.toInt256()).div(
                 unitPriceInDestinationMaturity.toInt256()
             );
         } else {
@@ -901,7 +930,7 @@ library FundManagementLogic {
                 0,
                 _futureValueInMaturity
             );
-            presetValue = _calculatePVFromFV(futureValue, unitPriceInDestinationMaturity);
+            presentValue = _calculatePVFromFV(futureValue, unitPriceInDestinationMaturity);
         }
     }
 
@@ -909,11 +938,11 @@ library FundManagementLogic {
         bytes32 _ccy,
         uint256 _maturity,
         int256 _futureValue
-    ) internal view returns (int256 presetValue) {
+    ) internal view returns (int256 presentValue) {
         uint256 unitPriceInBasisMaturity = ILendingMarket(
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ).getMidUnitPrice();
-        presetValue = _calculatePVFromFV(_futureValue, unitPriceInBasisMaturity);
+        presentValue = _calculatePVFromFV(_futureValue, unitPriceInBasisMaturity);
     }
 
     function _calculateFVFromPV(
@@ -985,5 +1014,121 @@ library FundManagementLogic {
             _borrower,
             _maximumFVAmount
         );
+    }
+
+    function _offsetFunds(
+        address _user0,
+        address _user1,
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _fvAmount,
+        bool _isDefaultMarket
+    ) internal returns (uint256 offsetPVAmount) {
+        if (_isDefaultMarket) {
+            int256 offsetGVAmount = AddressResolverLib.genesisValueVault().offsetGenesisValue(
+                _ccy,
+                _maturity,
+                _user0,
+                _user1,
+                AddressResolverLib.genesisValueVault().calculateGVFromFV(
+                    _ccy,
+                    _maturity,
+                    _fvAmount.toInt256()
+                )
+            );
+
+            if (offsetGVAmount > 0) {
+                (int256 pvAmount, ) = _calculatePVandFVInDefaultMarket(
+                    _ccy,
+                    _maturity,
+                    AddressResolverLib.genesisValueVault().calculateFVFromGV(
+                        _ccy,
+                        _maturity,
+                        offsetGVAmount
+                    )
+                );
+                offsetPVAmount = pvAmount.toUint256();
+            }
+        }
+
+        uint256 offsetFVAmount = _offsetFutureValue(
+            _ccy,
+            _maturity,
+            _user0,
+            _user1,
+            _fvAmount - _calculateFVFromPV(_ccy, _maturity, offsetPVAmount)
+        );
+
+        if (offsetFVAmount > 0) {
+            (int256 pvAmount, ) = _calculatePVandFVInDefaultMarket(
+                _ccy,
+                _maturity,
+                offsetFVAmount.toInt256()
+            );
+            offsetPVAmount += pvAmount.toUint256();
+        }
+    }
+
+    function _transferFunds(
+        address _from,
+        address _to,
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _amount,
+        bool _isDefaultMarket
+    ) internal returns (uint256 remainingAmount) {
+        remainingAmount = _amount;
+
+        if (_isDefaultMarket) {
+            int256 userGVAmount = AddressResolverLib.genesisValueVault().getGenesisValue(
+                _ccy,
+                _from
+            );
+
+            if (userGVAmount < 0) {
+                uint256 currentMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(
+                    _ccy
+                );
+
+                int256 gvAmount = AddressResolverLib.genesisValueVault().calculateGVFromFV(
+                    _ccy,
+                    0,
+                    -_calculateFVFromPV(_ccy, currentMaturity, remainingAmount).toInt256()
+                );
+
+                if (userGVAmount > gvAmount) {
+                    gvAmount = userGVAmount;
+                }
+
+                // Due to the negative genesis value, the liquidator's genesis value is decreased.
+                AddressResolverLib.genesisValueVault().transferFrom(_ccy, _from, _to, gvAmount);
+
+                remainingAmount -= _calculatePVFromFVByMidUnitPrice(
+                    _ccy,
+                    currentMaturity,
+                    AddressResolverLib.genesisValueVault().calculateFVFromGV(_ccy, 0, -gvAmount)
+                ).toUint256();
+            }
+        }
+
+        IFutureValueVault futureValueVault = IFutureValueVault(
+            Storage.slot().futureValueVaults[_ccy][
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ]
+        );
+
+        (int256 userFVAmount, ) = futureValueVault.getFutureValue(_from);
+
+        if (userFVAmount < 0) {
+            int256 fvAmount = -_calculateFVFromPV(_ccy, _maturity, remainingAmount).toInt256();
+
+            if (userFVAmount > fvAmount) {
+                fvAmount = userFVAmount;
+            }
+            futureValueVault.transferFrom(_from, _to, fvAmount, _maturity);
+
+            remainingAmount -= _calculatePVFromFVByMidUnitPrice(_ccy, _maturity, -fvAmount)
+                .toUint256();
+        }
     }
 }

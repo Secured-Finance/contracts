@@ -269,13 +269,44 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets the converted amount of currency.
+     * @param _fromCcy Currency to convert from
+     * @param _toCcy Currency to convert to
+     * @param _amount Amount to be converted
+     * @return amount The converted amount
+     */
+    function convert(
+        bytes32 _fromCcy,
+        bytes32 _toCcy,
+        uint256 _amount
+    ) external view override returns (uint256 amount) {
+        if (_fromCcy == _toCcy) return _amount;
+        if (_amount == 0) return 0;
+
+        if (_isETH(_fromCcy)) {
+            return convertFromETH(_toCcy, _amount);
+        }
+
+        if (_isETH(_toCcy)) {
+            return convertToETH(_fromCcy, _amount);
+        }
+
+        int256 fromPrice = _getLastETHPrice(_fromCcy);
+        int256 toPrice = _getLastETHPrice(_toCcy);
+
+        amount = (_amount * uint256(fromPrice) * 10**Storage.slot().ethDecimals[_toCcy]).div(
+            10**Storage.slot().ethDecimals[_fromCcy] * uint256(toPrice)
+        );
+    }
+
+    /**
      * @notice Gets the converted amount of currency in ETH.
      * @param _ccy Currency that has to be converted to ETH
      * @param _amount Amount to be converted
      * @return amount The converted amount
      */
     function convertToETH(bytes32 _ccy, uint256 _amount)
-        external
+        public
         view
         override
         returns (uint256 amount)
@@ -309,7 +340,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets the converted amount of currency in ETH.
+     * @notice Gets the converted amounts of currency in ETH.
      * @param _ccy Currency that has to be converted to ETH
      * @param _amounts Amounts to be converted
      * @return amounts The converted amounts

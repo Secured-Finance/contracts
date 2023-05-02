@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {CollateralParametersHandler as Params} from "../CollateralParametersHandler.sol";
@@ -25,13 +24,6 @@ library DepositManagementLogic {
         uint256 debtAmount;
         uint256 borrowedAmount;
         bool isEnoughDeposit;
-    }
-
-    struct SwapDepositAmountsVars {
-        uint256 userDepositAmount;
-        uint256 depositAmount;
-        uint256 amountOutWithFee;
-        uint256 estimatedAmountOut;
     }
 
     function isCovered(
@@ -260,85 +252,73 @@ library DepositManagementLogic {
         return withdrawableAmount;
     }
 
-    function swapDepositAmounts(
-        address _liquidator,
+    function getLiquidationAmount(
         address _user,
-        bytes32 _ccyFrom,
-        bytes32 _ccyTo,
-        uint256 _amountOut,
-        uint24 _poolFee,
-        uint256 _offsetAmount
+        bytes32 _liquidationCcy,
+        uint256 _liquidationAmountMaximum
     )
         public
+        view
         returns (
-            uint256 amountOut,
-            uint256 amountInWithFee,
+            uint256 liquidationAmount,
+            uint256 protocolFee,
             uint256 liquidatorFee,
-            uint256 protocolFee
+            uint256 insolventAmount
         )
     {
-        SwapDepositAmountsVars memory vars;
-        address reserveFund = address(AddressResolverLib.reserveFund());
-
-        vars.userDepositAmount = Storage.slot().depositAmounts[_user][_ccyFrom];
-        vars.depositAmount = vars.userDepositAmount;
-
-        if (!AddressResolverLib.reserveFund().isPaused()) {
-            vars.depositAmount += Storage.slot().depositAmounts[reserveFund][_ccyFrom];
-        }
-
-        require(vars.depositAmount > 0, "No deposit amount in the selected currency");
-
-        vars.amountOutWithFee =
-            (_amountOut * ProtocolTypes.PCT_DIGIT) /
-            (ProtocolTypes.PCT_DIGIT -
-                Params.liquidatorFeeRate() -
-                Params.liquidationProtocolFeeRate());
-
-        vars.estimatedAmountOut = Params.uniswapQuoter().quoteExactInputSingle(
-            Storage.slot().tokenAddresses[_ccyFrom],
-            Storage.slot().tokenAddresses[_ccyTo],
-            _poolFee,
-            vars.depositAmount,
-            0
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getCollateralAmount(_user);
+        uint256 liquidationAmountInETH = totalCollateral * ProtocolTypes.PCT_DIGIT >=
+            totalUsedCollateral * Params.liquidationThresholdRate()
+            ? 0
+            : totalUsedCollateral / 2;
+        liquidationAmount = AddressResolverLib.currencyController().convertFromETH(
+            _liquidationCcy,
+            liquidationAmountInETH
         );
 
-        if (vars.amountOutWithFee > vars.estimatedAmountOut) {
-            vars.amountOutWithFee = vars.estimatedAmountOut;
-        }
-
-        amountInWithFee = _executeSwap(
-            _ccyFrom,
-            _ccyTo,
-            vars.amountOutWithFee,
-            vars.depositAmount,
-            _poolFee
-        );
-
-        liquidatorFee =
-            (vars.amountOutWithFee * Params.liquidatorFeeRate()) /
+        protocolFee =
+            (liquidationAmount * Params.liquidationProtocolFeeRate()) /
             ProtocolTypes.PCT_DIGIT;
+        liquidatorFee = (liquidationAmount * Params.liquidatorFeeRate()) / ProtocolTypes.PCT_DIGIT;
+        uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
 
-        if (vars.amountOutWithFee == vars.estimatedAmountOut) {
+        uint256 userDepositAmount = Storage.slot().depositAmounts[_user][_liquidationCcy];
+
+        if (_liquidationAmountMaximum > userDepositAmount) {
+            _liquidationAmountMaximum = userDepositAmount;
+        }
+
+        if (liquidationTotalAmount > userDepositAmount) {
+            insolventAmount = liquidationTotalAmount - userDepositAmount;
+        }
+
+        if (liquidationTotalAmount > _liquidationAmountMaximum) {
+            liquidationTotalAmount = _liquidationAmountMaximum;
             protocolFee =
-                (vars.amountOutWithFee * Params.liquidationProtocolFeeRate()) /
-                ProtocolTypes.PCT_DIGIT;
-            amountOut = vars.amountOutWithFee - liquidatorFee - protocolFee - _offsetAmount;
-        } else {
-            protocolFee = vars.amountOutWithFee - _amountOut - liquidatorFee;
-            amountOut = _amountOut - _offsetAmount;
+                (liquidationTotalAmount * Params.liquidationProtocolFeeRate()) /
+                (ProtocolTypes.PCT_DIGIT +
+                    Params.liquidatorFeeRate() +
+                    Params.liquidationProtocolFeeRate());
+            liquidatorFee =
+                (liquidationTotalAmount * Params.liquidatorFeeRate()) /
+                (ProtocolTypes.PCT_DIGIT +
+                    Params.liquidatorFeeRate() +
+                    Params.liquidationProtocolFeeRate());
+            liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
         }
+    }
 
-        if (amountInWithFee > vars.userDepositAmount) {
-            removeDepositAmount(_user, _ccyFrom, vars.userDepositAmount);
-            removeDepositAmount(reserveFund, _ccyFrom, amountInWithFee - vars.userDepositAmount);
-        } else {
-            removeDepositAmount(_user, _ccyFrom, amountInWithFee);
-        }
+    function transferFrom(
+        bytes32 _ccy,
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external {
+        uint256 depositAmount = Storage.slot().depositAmounts[_from][_ccy];
+        require(depositAmount >= _amount, "Transfer amount exceeds balance");
 
-        addDepositAmount(_user, _ccyTo, amountOut);
-        addDepositAmount(_liquidator, _ccyTo, liquidatorFee);
-        addDepositAmount(reserveFund, _ccyTo, protocolFee);
+        removeDepositAmount(_from, _ccy, _amount);
+        addDepositAmount(_to, _ccy, _amount);
     }
 
     /**
@@ -375,32 +355,5 @@ library DepositManagementLogic {
         } else {
             Storage.slot().usedCurrencies[_user].remove(_ccy);
         }
-    }
-
-    function _executeSwap(
-        bytes32 _ccyFrom,
-        bytes32 _ccyTo,
-        uint256 _amountOut,
-        uint256 _amountInMaximum,
-        uint24 _poolFee
-    ) internal returns (uint256) {
-        ERC20Handler.safeApprove(
-            Storage.slot().tokenAddresses[_ccyFrom],
-            address(Params.uniswapRouter()),
-            _amountInMaximum
-        );
-
-        ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
-            tokenIn: Storage.slot().tokenAddresses[_ccyFrom],
-            tokenOut: Storage.slot().tokenAddresses[_ccyTo],
-            fee: _poolFee,
-            recipient: address(this),
-            deadline: block.timestamp,
-            amountOut: _amountOut,
-            amountInMaximum: _amountInMaximum,
-            sqrtPriceLimitX96: 0
-        });
-
-        return Params.uniswapRouter().exactOutputSingle(params);
     }
 }

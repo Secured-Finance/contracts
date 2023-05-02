@@ -191,6 +191,35 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
+     * @notice Transfers the future value from sender to receiver.
+     * @param _sender Sender's address
+     * @param _receiver Receiver's address
+     * @param _amount Amount of funds to sent
+     * @param _maturity The maturity of the market
+     */
+    function transferFrom(
+        address _sender,
+        address _receiver,
+        int256 _amount,
+        uint256 _maturity
+    ) external override onlyAcceptedContracts {
+        require(
+            !hasFutureValueInPastMaturity(_sender, _maturity),
+            "Sender has the future value in past maturity"
+        );
+        require(
+            !hasFutureValueInPastMaturity(_receiver, _maturity),
+            "Receiver has the future value in past maturity"
+        );
+
+        Storage.slot().futureValueMaturities[_receiver] = _maturity;
+        Storage.slot().balances[_sender] -= _amount;
+        Storage.slot().balances[_receiver] += _amount;
+
+        emit Transfer(_sender, _receiver, _amount);
+    }
+
+    /**
      * @notice Removes all future values if there is an amount in the past maturity.
      * @param _user User's address
      * @return removedAmount Removed future value amount

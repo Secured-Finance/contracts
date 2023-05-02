@@ -153,7 +153,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _basisMaturity,
         int256 _futureValue
     ) public view override returns (int256) {
-        uint256 compoundFactor = _basisMaturity == Storage.slot().currentMaturity[_ccy]
+        uint256 compoundFactor = _basisMaturity == 0 ||
+            _basisMaturity == Storage.slot().currentMaturity[_ccy]
             ? getLendingCompoundFactor(_ccy)
             : Storage.slot().autoRollLogs[_ccy][_basisMaturity].lendingCompoundFactor;
 
@@ -343,6 +344,18 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         _updateBalance(_ccy, _lender, _maturity, -offsetAmount);
         _updateBalance(_ccy, _borrower, _maturity, offsetAmount);
+    }
+
+    function transferFrom(
+        bytes32 _ccy,
+        address _sender,
+        address _receiver,
+        int256 _amount
+    ) external override onlyAcceptedContracts {
+        Storage.slot().balances[_ccy][_sender] -= _amount;
+        Storage.slot().balances[_ccy][_receiver] += _amount;
+
+        emit Transfer(_ccy, _sender, _receiver, _amount);
     }
 
     function cleanUpGenesisValue(

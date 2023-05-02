@@ -36,6 +36,13 @@ interface IFutureValueVault {
         uint256 maximumFVAmount
     ) external returns (uint256 offsetAmount);
 
+    function transferFrom(
+        address sender,
+        address receiver,
+        int256 amount,
+        uint256 maturity
+    ) external;
+
     function removeFutureValue(address user, uint256 activeMaturity)
         external
         returns (

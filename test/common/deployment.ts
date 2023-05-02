@@ -5,9 +5,9 @@ import moment from 'moment';
 import { currencies, mockRates } from '../../utils/currencies';
 import {
   hexEFIL,
+  hexETH,
   hexUSDC,
   hexWBTC,
-  hexETH,
   hexWFIL,
   toBytes32,
 } from '../../utils/strings';
@@ -135,8 +135,6 @@ const deployContracts = async () => {
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
-      ethers.utils.hexlify(ethers.utils.randomBytes(20)),
-      ethers.utils.hexlify(ethers.utils.randomBytes(20)),
       wETHToken.address,
     ),
   ])
