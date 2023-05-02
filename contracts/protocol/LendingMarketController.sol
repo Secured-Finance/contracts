@@ -938,8 +938,7 @@ contract LendingMarketController is
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount,
-            bool orderPlaced
+            uint256 remainingAmount
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
                 _side,
                 _user,
@@ -949,38 +948,34 @@ contract LendingMarketController is
             );
         filledAmount = _amount - remainingAmount;
 
-        if (orderPlaced) {
-            // The case that an order was made, or taken partially
-            if (filledFutureValue == 0 || remainingAmount > 0) {
-                activeOrderCount += 1;
-            }
-
-            require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
-
-            uint256 feeFutureValue = _calculateOrderFeeAmount(_ccy, filledFutureValue, _maturity);
-
-            _updateFundsForTaker(
-                _ccy,
-                _maturity,
-                _user,
-                _side,
-                filledAmount,
-                filledFutureValue,
-                filledUnitPrice,
-                feeFutureValue
-            );
-
-            _updateFundsForMaker(
-                _ccy,
-                _maturity,
-                _side == ProtocolTypes.Side.LEND
-                    ? ProtocolTypes.Side.BORROW
-                    : ProtocolTypes.Side.LEND,
-                partiallyFilledOrder
-            );
-
-            Storage.slot().usedCurrencies[_user].add(_ccy);
+        // The case that an order was made, or taken partially
+        if (filledFutureValue == 0 || remainingAmount > 0) {
+            activeOrderCount += 1;
         }
+
+        require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
+
+        uint256 feeFutureValue = _calculateOrderFeeAmount(_ccy, filledFutureValue, _maturity);
+
+        _updateFundsForTaker(
+            _ccy,
+            _maturity,
+            _user,
+            _side,
+            filledAmount,
+            filledFutureValue,
+            filledUnitPrice,
+            feeFutureValue
+        );
+
+        _updateFundsForMaker(
+            _ccy,
+            _maturity,
+            _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
+            partiallyFilledOrder
+        );
+
+        Storage.slot().usedCurrencies[_user].add(_ccy);
     }
 
     function _updateFundsForTaker(

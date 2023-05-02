@@ -229,8 +229,7 @@ interface ILendingMarket {
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
             PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount,
-            bool orderPlaced
+            uint256 remainingAmount
         );
 
     function pauseMarket() external;

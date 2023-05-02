@@ -528,8 +528,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 filledUnitPrice,
             uint256 filledFutureValue,
             PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount,
-            bool orderPlaced
+            uint256 remainingAmount
         )
     {
         require(_amount > 0, "Can't place empty amount");
@@ -541,11 +540,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                     ? OrderBookLogic.checkBorrowOrderExist()
                     : OrderBookLogic.checkLendOrderExist()
             )) ||
-            (
-                _side == ProtocolTypes.Side.LEND
-                    ? OrderBookLogic.getLowestBorrowingUnitPrice() <= _unitPrice
-                    : OrderBookLogic.getHighestLendingUnitPrice() >= _unitPrice
-            );
+            (_unitPrice != 0 &&
+                (
+                    _side == ProtocolTypes.Side.LEND
+                        ? OrderBookLogic.getLowestBorrowingUnitPrice() <= _unitPrice
+                        : OrderBookLogic.getHighestLendingUnitPrice() >= _unitPrice
+                ));
+
+        require(
+            (_unitPrice != 0 || (_unitPrice == 0 && isExists)),
+            "limit order should exist in the orderbook for market orders"
+        );
 
         if (isExists) {
             (
@@ -554,14 +559,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 partiallyFilledOrder,
                 remainingAmount
             ) = _takeOrder(_side, _user, _amount, _unitPrice, _ignoreRemainingAmount);
-            orderPlaced = true;
-        } else if (_unitPrice == 0) {
-            remainingAmount = _amount;
-            orderPlaced = false;
         } else {
             _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
             remainingAmount = _amount;
-            orderPlaced = true;
         }
     }
 

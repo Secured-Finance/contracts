@@ -1566,7 +1566,9 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '0',
             ),
-        ).to.not.emit(lendingMarketProxies[0], 'OrderMade');
+        ).to.be.revertedWith(
+          'limit order should exist in the orderbook for market orders',
+        );
       });
 
       it('place a lend market order', async () => {
@@ -1581,7 +1583,9 @@ describe('LendingMarketController - Orders', () => {
               '0',
               { value: '1000000000000000' },
             ),
-        ).to.not.emit(lendingMarketProxies[0], 'OrderMade');
+        ).to.be.revertedWith(
+          'limit order should exist in the orderbook for market orders',
+        );
       });
     });
 
