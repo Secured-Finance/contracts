@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../interfaces/ITokenVault.sol";
-import "../interfaces/ILendingMarketController.sol";
+import "../protocol/interfaces/ITokenVault.sol";
+import "../protocol/interfaces/ILendingMarketController.sol";
 
 contract TokenVaultCallerMock {
     ITokenVault public tokenVault;
@@ -29,33 +29,21 @@ contract TokenVaultCallerMock {
         tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
-    function swapDepositAmounts(
-        address _liquidator,
-        address _user,
-        bytes32 _ccyIn,
-        bytes32 _ccyOut,
-        uint256 _amountOut,
-        uint24 _poolFee,
-        uint256 _offsetAmount
-    ) public returns (uint256 amountIn) {
-        return
-            tokenVault.swapDepositAmounts(
-                _liquidator,
-                _user,
-                _ccyIn,
-                _ccyOut,
-                _amountOut,
-                _poolFee,
-                _offsetAmount
-            );
-    }
-
     function depositFrom(
         address from,
         bytes32 ccy,
         uint256 amount
     ) public {
         tokenVault.depositFrom(from, ccy, amount);
+    }
+
+    function transferFrom(
+        bytes32 ccy,
+        address from,
+        address to,
+        uint256 amount
+    ) external {
+        tokenVault.transferFrom(ccy, from, to, amount);
     }
 
     function getTotalPresentValueInETH(address _user) public view returns (int256) {
