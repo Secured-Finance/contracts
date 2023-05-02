@@ -107,14 +107,6 @@ interface IGenesisValueVault {
         uint256 basisMaturity
     ) external;
 
-    function offsetGenesisValue(
-        bytes32 ccy,
-        uint256 maturity,
-        address lender,
-        address borrower,
-        int256 maximumGVAmount
-    ) external returns (int256 offsetAmount);
-
     function transferFrom(
         bytes32 _ccy,
         address _sender,

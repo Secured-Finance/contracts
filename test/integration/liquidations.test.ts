@@ -836,7 +836,7 @@ describe('Integration Test: Liquidations', async () => {
       });
     });
 
-    describe('Execute auto-roll a borrowing position, Execute liquidation using the genesis value in the reserve fund for the offset', async () => {
+    describe('Execute auto-roll a borrowing position, Execute liquidation after auto-roll', async () => {
       const filledOrderAmount = BigNumber.from('180000000000000000000');
       const depositAmount = BigNumber.from('1000000000000000000');
       let lendingInfo: LendingInfo;
@@ -1119,7 +1119,7 @@ describe('Integration Test: Liquidations', async () => {
 
         expect(liquidatorFutureValue).to.equal(0);
         expect(liquidatorDepositAmount).not.equal(0);
-        expect(receivedDebtAmount).to.lt(filledOrderAmount.div(2));
+        expect(receivedDebtAmount).to.equal(filledOrderAmount.div(2));
       });
     });
 
