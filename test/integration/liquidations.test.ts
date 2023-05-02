@@ -203,19 +203,6 @@ describe('Integration Test: Liquidations', async () => {
       );
   };
 
-  // const updateLiquidator = async () => {
-  //   liquidator = await ethers
-  //     .getContractFactory('Liquidator')
-  //     .then((factory) =>
-  //       factory.deploy(
-  //         lendingMarketController.address,
-  //         tokenVault.address,
-  //         mockUniswapRouter.address,
-  //         mockUniswapQuoter.address,
-  //       ),
-  //     );
-  // };
-
   before('Deploy Contracts', async () => {
     signers = new Signers(await ethers.getSigners());
 
@@ -299,19 +286,6 @@ describe('Integration Test: Liquidations', async () => {
     ({ liquidatorFeeRate, liquidationProtocolFeeRate } =
       await tokenVault.getCollateralParameters());
   });
-
-  // beforeEach(async () => {
-  //   liquidator = await ethers
-  //     .getContractFactory('Liquidator')
-  //     .then((factory) =>
-  //       factory.deploy(
-  //         lendingMarketController.address,
-  //         tokenVault.address,
-  //         mockUniswapRouter.address,
-  //         mockUniswapQuoter.address,
-  //       ),
-  //     );
-  // });
 
   describe('Liquidations on FIL(non-collateral currency) market by ETH', async () => {
     describe('Increase FIL exchange rate, Execute liquidation once, Manage reserve funds', async () => {

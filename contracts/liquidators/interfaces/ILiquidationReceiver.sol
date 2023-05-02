@@ -6,8 +6,7 @@ interface ILiquidationReceiver {
         address liquidator,
         address user,
         bytes32 ccy,
-        uint256 receivedAmount,
-        address initiator
+        uint256 receivedAmount
     );
     event OperationExecuteForDebt(
         address liquidator,
@@ -16,16 +15,14 @@ interface ILiquidationReceiver {
         uint256 receivedCollateralAmount,
         bytes32 debtCcy,
         uint256 debtMaturity,
-        uint256 receivedDebtAmount,
-        address initiator
+        uint256 receivedDebtAmount
     );
 
     function executeOperationForCollateral(
         address liquidator,
         address user,
         bytes32 ccy,
-        uint256 receivedAmount,
-        address initiator
+        uint256 receivedAmount
     ) external returns (bool);
 
     function executeOperationForDebt(
@@ -35,7 +32,6 @@ interface ILiquidationReceiver {
         uint256 receivedCollateralAmount,
         bytes32 debtCcy,
         uint256 debtMaturity,
-        uint256 receivedDebtAmount,
-        address initiator
+        uint256 receivedDebtAmount
     ) external returns (bool);
 }

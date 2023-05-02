@@ -56,8 +56,7 @@ contract Liquidator is ILiquidationReceiver {
         address _liquidator,
         address _user,
         bytes32 _collateralCcy,
-        uint256 _receivedCollateralAmount,
-        address _initiator
+        uint256 _receivedCollateralAmount
     ) external override returns (bool) {
         for (uint256 i = 0; i < collateralMaturities.length; i++) {
             int256 fvAmount = lendingMarketController.getFutureValue(
@@ -77,8 +76,7 @@ contract Liquidator is ILiquidationReceiver {
             _liquidator,
             _user,
             _collateralCcy,
-            _receivedCollateralAmount,
-            _initiator
+            _receivedCollateralAmount
         );
 
         return true;
@@ -91,8 +89,7 @@ contract Liquidator is ILiquidationReceiver {
         uint256 _receivedCollateralAmount,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
-        uint256 _receivedDebtAmount,
-        address _initiator
+        uint256 _receivedDebtAmount
     ) external override returns (bool) {
         address collateralCcyAddr = tokenVault.getTokenAddress(_collateralCcy);
         address debtCcyAddr = tokenVault.getTokenAddress(_debtCcy);
@@ -133,8 +130,7 @@ contract Liquidator is ILiquidationReceiver {
             _receivedCollateralAmount,
             _debtCcy,
             _debtMaturity,
-            _receivedDebtAmount,
-            _initiator
+            _receivedDebtAmount
         );
 
         return true;

@@ -297,8 +297,7 @@ library FundManagementLogic {
                     _liquidator,
                     _user,
                     _collateralCcy,
-                    vars.receivedCollateralAmount,
-                    msg.sender
+                    vars.receivedCollateralAmount
                 ),
                 "Invalid operation execution"
             );
@@ -326,8 +325,7 @@ library FundManagementLogic {
                         vars.receivedCollateralAmount,
                         _debtCcy,
                         _debtMaturity,
-                        vars.receivedDebtAmount,
-                        msg.sender
+                        vars.receivedDebtAmount
                     ),
                     "Invalid operation execution"
                 );
@@ -852,7 +850,7 @@ library FundManagementLogic {
                     );
                 } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
                     funds.futureValue = futureValueInMaturity;
-                    funds.presentValue = _calculatePVFromFVByMidUnitPrice(
+                    funds.presentValue = _calculatePVFromFV(
                         _ccy,
                         fvMaturity,
                         futureValueInMaturity
@@ -897,11 +895,7 @@ library FundManagementLogic {
                     );
                 } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
                     funds.futureValue = filledFutureValue.toInt256();
-                    funds.presentValue = _calculatePVFromFVByMidUnitPrice(
-                        _ccy,
-                        orderMaturity,
-                        funds.futureValue
-                    );
+                    funds.presentValue = _calculatePVFromFV(_ccy, orderMaturity, funds.futureValue);
                 }
             }
         }
@@ -942,11 +936,7 @@ library FundManagementLogic {
                     );
                 } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
                     funds.futureValue = filledFutureValue.toInt256();
-                    funds.presentValue = _calculatePVFromFVByMidUnitPrice(
-                        _ccy,
-                        orderMaturity,
-                        funds.futureValue
-                    );
+                    funds.presentValue = _calculatePVFromFV(_ccy, orderMaturity, funds.futureValue);
                 }
             }
         }
@@ -962,11 +952,7 @@ library FundManagementLogic {
             .getMidUnitPrice();
 
         if (AddressResolverLib.genesisValueVault().getAutoRollLog(_ccy, _maturity).unitPrice == 0) {
-            presentValue = _calculatePVFromFVByMidUnitPrice(
-                _ccy,
-                _maturity,
-                _futureValueInMaturity
-            );
+            presentValue = _calculatePVFromFV(_ccy, _maturity, _futureValueInMaturity);
             futureValue = (presentValue * Constants.PRICE_DIGIT.toInt256()).div(
                 unitPriceInDestinationMaturity.toInt256()
             );
@@ -981,7 +967,7 @@ library FundManagementLogic {
         }
     }
 
-    function _calculatePVFromFVByMidUnitPrice(
+    function _calculatePVFromFV(
         bytes32 _ccy,
         uint256 _maturity,
         int256 _futureValue
@@ -990,18 +976,6 @@ library FundManagementLogic {
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ).getMidUnitPrice();
         presentValue = _calculatePVFromFV(_futureValue, unitPriceInBasisMaturity);
-    }
-
-    function _calculateFVFromPV(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _presentValue
-    ) internal view returns (uint256) {
-        uint256 unitPrice = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity])
-            .getMidUnitPrice();
-
-        // NOTE: The formula is: futureValue = presentValue / unitPrice.
-        return (_presentValue * Constants.PRICE_DIGIT).div(unitPrice);
     }
 
     function _calculateFVFromPV(
@@ -1120,7 +1094,7 @@ library FundManagementLogic {
                 // Due to the negative genesis value, the liquidator's genesis value is decreased.
                 AddressResolverLib.genesisValueVault().transferFrom(_ccy, _from, _to, gvAmount);
 
-                untransferredAmount -= _calculatePVFromFVByMidUnitPrice(
+                untransferredAmount -= _calculatePVFromFV(
                     _ccy,
                     currentMaturity,
                     AddressResolverLib.genesisValueVault().calculateFVFromGV(_ccy, 0, gvAmount)
@@ -1144,7 +1118,7 @@ library FundManagementLogic {
             }
 
             futureValueVault.transferFrom(_from, _to, fvAmount, _maturity);
-            untransferredAmount -= _calculatePVFromFVByMidUnitPrice(_ccy, _maturity, fvAmount);
+            untransferredAmount -= _calculatePVFromFV(_ccy, _maturity, fvAmount);
         }
 
         if (_amount != untransferredAmount) {
