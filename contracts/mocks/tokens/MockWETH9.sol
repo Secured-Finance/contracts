@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../../interfaces/IWETH9.sol";
+import "../../protocol/interfaces/IWETH9.sol";
 
 contract MockWETH9 is IWETH9 {
     string public name = "Wrapped Ether";
