@@ -243,8 +243,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         returns (
             uint256 liquidationAmount,
             uint256 protocolFee,
-            uint256 liquidatorFee,
-            uint256 insolventAmount
+            uint256 liquidatorFee
         )
     {
         return
@@ -430,9 +429,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _from,
         address _to,
         uint256 _amount
-    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
-        DepositManagementLogic.transferFrom(_ccy, _from, _to, _amount);
-        emit Transfer(_ccy, _from, _to, _amount);
+    )
+        external
+        override
+        onlyAcceptedContracts
+        onlyRegisteredCurrency(_ccy)
+        returns (uint256 untransferredAmount)
+    {
+        untransferredAmount = DepositManagementLogic.transferFrom(_ccy, _from, _to, _amount);
+        emit Transfer(_ccy, _from, _to, _amount - untransferredAmount);
     }
 
     /**

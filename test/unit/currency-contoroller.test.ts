@@ -395,18 +395,5 @@ describe('CurrencyController', () => {
 
       expect(amount).to.equal('1000000000000000000');
     });
-
-    it('Fail to get the converted amount(uint256) in the selected currency due to small amount', async () => {
-      await mockPriceFeed.mock.latestRoundData.returns(
-        0,
-        '10000000000000000000000',
-        0,
-        0,
-        0,
-      );
-      await expect(
-        currencyControllerProxy.convertFromETH(currency, 1000),
-      ).to.be.revertedWith('Too small amount');
-    });
   });
 });

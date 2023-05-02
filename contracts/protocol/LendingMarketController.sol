@@ -628,45 +628,13 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
-
-        int256 futureValue = FundManagementLogic
-            .calculateActualFunds(_ccy, _maturity, msg.sender)
-            .futureValue;
-
-        require(futureValue != 0, "Future Value is zero");
-
-        uint256 filledUnitPrice;
-        uint256 filledAmount;
-        uint256 filledFutureValue;
-        ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder;
-        ProtocolTypes.Side side;
-
-        if (futureValue > 0) {
-            side = ProtocolTypes.Side.BORROW;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
-                side,
-                msg.sender,
-                futureValue.toUint256()
-            );
-        } else if (futureValue < 0) {
-            side = ProtocolTypes.Side.LEND;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
-                side,
-                msg.sender,
-                (-futureValue).toUint256()
-            );
-        }
+        (
+            uint256 filledUnitPrice,
+            uint256 filledAmount,
+            uint256 filledFutureValue,
+            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
+            ProtocolTypes.Side side
+        ) = FundManagementLogic.unwind(_ccy, _maturity, msg.sender);
 
         _updateFundsForTaker(
             _ccy,
@@ -685,6 +653,15 @@ contract LendingMarketController is
             side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
             partiallyFilledOrder
         );
+
+        // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
+        // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
+        (int256 currentFutureValue, ) = IFutureValueVault(getFutureValueVault(_ccy, _maturity))
+            .getFutureValue(msg.sender);
+
+        if (currentFutureValue != 0) {
+            FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, msg.sender);
+        }
 
         return true;
     }
@@ -781,7 +758,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Liquidates a lending position if the user's coverage is less than 1.
+     * @notice Liquidates a lending or borrowing position if the user's coverage is hight.
      * @param _collateralCcy Currency name to be used as collateral
      * @param _debtCcy Currency name to be used as debt
      * @param _debtMaturity The market maturity of the debt
@@ -803,6 +780,7 @@ contract LendingMarketController is
     {
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
+        FundManagementLogic.cleanUpFunds(_collateralCcy, _user);
         FundManagementLogic.cleanUpFunds(_debtCcy, _user);
 
         uint256 liquidatedDebtAmount = FundManagementLogic.executeLiquidation(
@@ -813,7 +791,7 @@ contract LendingMarketController is
             _debtMaturity
         );
 
-        require(tokenVault().isCovered(msg.sender), "Not enough collateral");
+        require(tokenVault().isCovered(msg.sender), "Invalid liquidation");
 
         emit LiquidationExecuted(
             _user,
@@ -822,8 +800,6 @@ contract LendingMarketController is
             _debtMaturity,
             liquidatedDebtAmount
         );
-
-        FundManagementLogic.convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
 
         return true;
     }

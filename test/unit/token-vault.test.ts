@@ -7,7 +7,6 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  PCT_DIGIT,
 } from '../common/constants';
 
 // contracts
@@ -672,7 +671,6 @@ describe('TokenVault', () => {
       );
 
       expect(liquidationAmounts.liquidationAmount).to.equal(debtAmount);
-      expect(liquidationAmounts.insolventAmount).to.equal(0);
     });
 
     it('Get the liquidation amount decreased by a maximum', async () => {
@@ -721,65 +719,6 @@ describe('TokenVault', () => {
           .add(liquidationAmounts.protocolFee)
           .add(liquidationAmounts.liquidatorFee),
       ).to.equal(debtAmount);
-      expect(liquidationAmounts.insolventAmount).to.equal(0);
-    });
-
-    it('Get the liquidation amount of the insolvent', async () => {
-      const signer = signers[5];
-      const value = ethers.BigNumber.from('30000000000000');
-      const valueInETH = ethers.BigNumber.from('20000000000000');
-      const debtAmount = ethers.BigNumber.from('20000000000000');
-
-      // Set up for the mocks
-      await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
-      ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(
-        valueInETH.mul(2),
-      );
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
-        valueInETH,
-      );
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
-        0,
-        0,
-        0,
-        0,
-        0,
-        debtAmount,
-        0,
-        true,
-      );
-
-      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
-
-      expect(
-        await tokenVaultProxy.getWithdrawableCollateral(signer.address),
-      ).to.equal('0');
-
-      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
-        '10000',
-      );
-
-      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
-        signer.address,
-        targetCurrency,
-        value.mul(2),
-      );
-
-      const liquidationTotalAmount = valueInETH
-        .mul(2)
-        .mul(PCT_DIGIT + LIQUIDATION_PROTOCOL_FEE_RATE + LIQUIDATOR_FEE_RATE)
-        .div(PCT_DIGIT);
-
-      expect(
-        liquidationAmounts.liquidationAmount
-          .add(liquidationAmounts.protocolFee)
-          .add(liquidationAmounts.liquidatorFee),
-      ).to.equal(value);
-      expect(liquidationAmounts.insolventAmount).to.equal(
-        liquidationTotalAmount.sub(value),
-      );
     });
 
     it('Fail to call addDepositAmount due to invalid caller', async () => {
@@ -903,18 +842,7 @@ describe('TokenVault', () => {
       );
     });
 
-    it('Fail to transfer deposits due to invalid caller', async () => {
-      await expect(
-        tokenVaultProxy.transferFrom(
-          targetCurrency,
-          alice.address,
-          bob.address,
-          1,
-        ),
-      ).to.be.revertedWith('Only Accepted Contracts');
-    });
-
-    it('Fail to call transfer deposits due to exceeded amount', async () => {
+    it('Transfer from Alice to Bob with over amount', async () => {
       const depositAmount = await tokenVaultProxy.getDepositAmount(
         alice.address,
         targetCurrency,
@@ -926,7 +854,20 @@ describe('TokenVault', () => {
           bob.address,
           depositAmount.add(1),
         ),
-      ).to.be.revertedWith('Transfer amount exceeds balance');
+      )
+        .to.emit(tokenVaultProxy, 'Transfer')
+        .withArgs(targetCurrency, alice.address, bob.address, depositAmount);
+    });
+
+    it('Fail to transfer deposits due to invalid caller', async () => {
+      await expect(
+        tokenVaultProxy.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          1,
+        ),
+      ).to.be.revertedWith('Only Accepted Contracts');
     });
   });
 });

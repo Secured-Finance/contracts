@@ -2,7 +2,14 @@
 pragma solidity ^0.8.9;
 
 interface ILiquidationReceiver {
-    event OperationExecute(
+    event OperationExecuteForCollateral(
+        address liquidator,
+        address user,
+        bytes32 ccy,
+        uint256 receivedAmount,
+        address initiator
+    );
+    event OperationExecuteForDebt(
         address liquidator,
         address user,
         bytes32 collateralCcy,
@@ -13,7 +20,15 @@ interface ILiquidationReceiver {
         address initiator
     );
 
-    function executeOperation(
+    function executeOperationForCollateral(
+        address liquidator,
+        address user,
+        bytes32 ccy,
+        uint256 receivedAmount,
+        address initiator
+    ) external returns (bool);
+
+    function executeOperationForDebt(
         address liquidator,
         address user,
         bytes32 collateralCcy,
