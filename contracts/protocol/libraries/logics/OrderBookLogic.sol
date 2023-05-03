@@ -571,6 +571,12 @@ library OrderBookLogic {
             Storage.slot().maturity
         ];
 
+        // return mid price when no lending and borrowing orders overwrap
+        if (borrowUnitPrice > lendUnitPrice) {
+            openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
+            return (openingUnitPrice, 0);
+        }
+
         while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {
             if (lendAmount > borrowAmount) {
                 openingUnitPrice = lendUnitPrice;
@@ -585,7 +591,7 @@ library OrderBookLogic {
                 lendUnitPrice = lendOrders.prev(lendUnitPrice);
                 lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
             } else {
-                openingUnitPrice = (lendUnitPrice + borrowUnitPrice) / 2;
+                openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
                 totalOffsetAmount += lendAmount;
                 lendUnitPrice = lendOrders.prev(lendUnitPrice);
                 borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
