@@ -1555,7 +1555,7 @@ describe('LendingMarketController - Orders', () => {
     });
 
     describe('Market Order', async () => {
-      it('Place a borrow market order', async () => {
+      it('Fail to place a borrow market order', async () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
@@ -1569,7 +1569,7 @@ describe('LendingMarketController - Orders', () => {
         ).to.be.revertedWith('Invalid Market Order');
       });
 
-      it('Place a lend market order', async () => {
+      it('Fail to place a lend market order', async () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
