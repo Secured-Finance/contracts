@@ -1555,7 +1555,7 @@ describe('LendingMarketController - Orders', () => {
     });
 
     describe('Market Order', async () => {
-      it('place a borrow market order', async () => {
+      it('Place a borrow market order', async () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
@@ -1566,12 +1566,10 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '0',
             ),
-        ).to.be.revertedWith(
-          'limit order should exist in the orderbook for market orders',
-        );
+        ).to.be.revertedWith('Invalid Market Order');
       });
 
-      it('place a lend market order', async () => {
+      it('Place a lend market order', async () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
@@ -1583,9 +1581,7 @@ describe('LendingMarketController - Orders', () => {
               '0',
               { value: '1000000000000000' },
             ),
-        ).to.be.revertedWith(
-          'limit order should exist in the orderbook for market orders',
-        );
+        ).to.be.revertedWith('Invalid Market Order');
       });
     });
 

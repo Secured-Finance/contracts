@@ -22,11 +22,11 @@ library OrderBookLogic {
     }
 
     function checkBorrowOrderExist() public view returns (bool) {
-        return Storage.slot().borrowOrders[Storage.slot().maturity].isNotEmpty();
+        return Storage.slot().borrowOrders[Storage.slot().maturity].hasOrders();
     }
 
     function checkLendOrderExist() public view returns (bool) {
-        return Storage.slot().lendOrders[Storage.slot().maturity].isNotEmpty();
+        return Storage.slot().lendOrders[Storage.slot().maturity].hasOrders();
     }
 
     function getLendOrderBook(uint256 _limit)

@@ -73,7 +73,7 @@ library OrderStatisticsTreeLib {
         }
     }
 
-    function isNotEmpty(Tree storage self) internal view returns (bool) {
+    function hasOrders(Tree storage self) internal view returns (bool) {
         return self.root != EMPTY;
     }
 

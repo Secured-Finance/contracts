@@ -534,23 +534,18 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         require(_amount > 0, "Can't place empty amount");
         _updateUserMaturity(_user);
 
-        bool isExists = (_unitPrice == 0 &&
-            (
-                _side == ProtocolTypes.Side.LEND
-                    ? OrderBookLogic.checkBorrowOrderExist()
-                    : OrderBookLogic.checkLendOrderExist()
-            )) ||
-            (_unitPrice != 0 &&
-                (
-                    _side == ProtocolTypes.Side.LEND
-                        ? OrderBookLogic.getLowestBorrowingUnitPrice() <= _unitPrice
-                        : OrderBookLogic.getHighestLendingUnitPrice() >= _unitPrice
-                ));
+        bool isExists;
+        if (_unitPrice == 0) {
+            isExists = _side == ProtocolTypes.Side.LEND
+                ? OrderBookLogic.checkBorrowOrderExist()
+                : OrderBookLogic.checkLendOrderExist();
 
-        require(
-            (_unitPrice != 0 || (_unitPrice == 0 && isExists)),
-            "limit order should exist in the orderbook for market orders"
-        );
+            require(isExists, "Invalid Market Order");
+        } else {
+            isExists = _side == ProtocolTypes.Side.LEND
+                ? OrderBookLogic.getLowestBorrowingUnitPrice() <= _unitPrice
+                : OrderBookLogic.getHighestLendingUnitPrice() >= _unitPrice;
+        }
 
         if (isExists) {
             (
