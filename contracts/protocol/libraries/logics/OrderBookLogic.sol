@@ -21,6 +21,14 @@ library OrderBookLogic {
         return unitPrice == 0 ? Constants.PRICE_DIGIT : unitPrice;
     }
 
+    function checkBorrowOrderExist() public view returns (bool) {
+        return Storage.slot().borrowOrders[Storage.slot().maturity].hasOrders();
+    }
+
+    function checkLendOrderExist() public view returns (bool) {
+        return Storage.slot().lendOrders[Storage.slot().maturity].hasOrders();
+    }
+
     function getLendOrderBook(uint256 _limit)
         public
         view
