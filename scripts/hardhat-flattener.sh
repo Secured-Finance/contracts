@@ -9,8 +9,8 @@ rm -rf $FLATTENED_FOLDER/*
 rm -rf tmp
 cp -R contracts tmp
 
-#Exclude sol files under contracts/interfaces and contracts/mocks
-find $CONTRACTS_FOLDER \( -path 'tmp/interfaces' -prune -o -path 'tmp/mocks' -prune \) -o -name '*.sol' -print | while IFS=$'\n' read -r FILE; do
+# Replace a short file name with its full name. hardhat flatten doen't support 'import AAA as BBB' notation as of Apr 2023.
+find $CONTRACTS_FOLDER \( -path 'tmp/mocks' -prune \) -o -name '*.sol' -print | while IFS=$'\n' read -r FILE; do
   # Note: hardhat flatten doens't support 'import YYY as XXX' syntax yet. Replace XXX with YYY before flattening them.
   # Extract the import line containing 'as XXXXX'.
   import_storage=$(grep "as Storage" "$FILE")
@@ -36,7 +36,8 @@ find $CONTRACTS_FOLDER \( -path 'tmp/interfaces' -prune -o -path 'tmp/mocks' -pr
   fi
 done
 
-find $CONTRACTS_FOLDER \( -path 'tmp/interfaces' -prune -o -path 'tmp/mocks' -prune \) -o -name '*.sol' -print | while IFS=$'\n' read -r FILE; do
+# Exclude sol files that are referenced by other sol files because those referenced files will be flattened into caller sol files.
+find $CONTRACTS_FOLDER \( -path 'tmp/interfaces' -prune -o -path 'tmp/libraries' -prune -o -path 'tmp/mocks' -prune -o -path 'tmp/storages' -prune -o -path 'tmp/types' -prune -o -path 'tmp/utils' -prune \) -o -name '*.sol' -print | while IFS=$'\n' read -r FILE; do
   FLATTENED_FILE=$FLATTENED_FOLDER/`basename $FILE`
   printf "Processing $FILE into $FLATTENED_FILE\n"
 
