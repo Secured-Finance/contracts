@@ -6,10 +6,10 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
 import {
-  eFilToETHRate,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  eFilToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
@@ -20,15 +20,12 @@ describe('Integration Test: Deposit', async () => {
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
 
-  let addressResolver: Contract;
   let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let usdcToken: Contract;
   let eFILToken: Contract;
-  let mockUniswapRouter: Contract;
-  let mockUniswapQuoter: Contract;
 
   let genesisDate: number;
   let filMaturities: BigNumber[];
@@ -56,7 +53,6 @@ describe('Integration Test: Deposit', async () => {
 
     ({
       genesisDate,
-      addressResolver,
       currencyController,
       tokenVault,
       lendingMarketController,
@@ -69,30 +65,10 @@ describe('Integration Test: Deposit', async () => {
     await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
     await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
 
-    mockUniswapRouter = await ethers
-      .getContractFactory('MockUniswapRouter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-    mockUniswapQuoter = await ethers
-      .getContractFactory('MockUniswapQuoter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-
-    await mockUniswapRouter.setToken(hexETH, wETHToken.address);
-    await mockUniswapRouter.setToken(hexUSDC, usdcToken.address);
-    await mockUniswapRouter.setToken(hexEFIL, eFILToken.address);
-    await mockUniswapQuoter.setToken(hexETH, wETHToken.address);
-    await mockUniswapQuoter.setToken(hexUSDC, usdcToken.address);
-    await mockUniswapQuoter.setToken(hexEFIL, eFILToken.address);
-
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
-      mockUniswapRouter.address,
-      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexETH, true);
@@ -394,6 +370,43 @@ describe('Integration Test: Deposit', async () => {
       expect(
         totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
       ).to.equal(initialUSDCBalance.div(5));
+    });
+
+    it('Withdraw FIL (ERC20 non-collateral currency) with over amount input', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexEFIL);
+      const collateralAmountBefore = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+      const tokenVaultBalanceBefore = await eFILToken.balanceOf(
+        tokenVault.address,
+      );
+
+      await tokenVault.connect(alice).withdraw(hexEFIL, initialFILBalance);
+
+      const collateralAmountAfter = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+
+      const tokenVaultBalanceAfter = await eFILToken.balanceOf(
+        tokenVault.address,
+      );
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexEFIL,
+      );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexEFIL,
+      );
+
+      expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(0);
+      expect(tokenVaultBalanceAfter).to.equal(0);
+      expect(currencies.includes(hexEFIL)).to.equal(false);
+      expect(depositAmount).to.equal(0);
+      expect(
+        totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
+      ).to.equal(tokenVaultBalanceBefore);
     });
   });
 

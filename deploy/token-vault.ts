@@ -37,8 +37,6 @@ const func: DeployFunction = async function ({
         LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
-        process.env.UNISWAP_SWAP_ROUTER_CONTRACT,
-        process.env.UNISWAP_SWAP_QUOTER_CONTRACT,
         WETH,
       )
       .then((tx) => tx.wait());

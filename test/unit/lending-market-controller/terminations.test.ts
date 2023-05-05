@@ -177,7 +177,6 @@ describe('LendingMarketController - Terminations', () => {
           targetCurrency,
           maturities[0],
           alice.address,
-          0,
         ),
       ).to.revertedWith('Already terminated');
 
