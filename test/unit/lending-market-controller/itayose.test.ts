@@ -12,7 +12,6 @@ import {
   AUTO_ROLL_FEE_RATE,
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
-  PRICE_DIGIT,
 } from '../../common/constants';
 import { calculateFutureValue } from '../../common/orders';
 import { deployContracts } from './utils';

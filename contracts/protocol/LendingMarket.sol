@@ -581,7 +581,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Unwind orders using future value amount.
+     * @notice Unwinds lending or borrowing positions by a specified future value amount.
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _futureValue Amount of future value unwound
@@ -590,7 +590,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return filledFutureValue The total FV amount of the filled order on the order book
      * @return partiallyFilledOrder Partially filled order
      */
-    function unwindOrder(
+    function unwind(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _futureValue
@@ -608,7 +608,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         )
     {
         require(_futureValue > 0, "Can't place empty future value amount");
-        return _unwindOrder(_side, _user, _futureValue);
+        return _unwind(_side, _user, _futureValue);
     }
 
     /**
@@ -812,7 +812,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         }
     }
 
-    function _unwindOrder(
+    function _unwind(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _futureValue
