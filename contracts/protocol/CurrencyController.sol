@@ -380,7 +380,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         amount = (_amountETH * 10**Storage.slot().ethDecimals[_ccy]).div(
             _getLastETHPrice(_ccy).toUint256()
         );
-        require(amount != 0, "Too small amount");
     }
 
     function _isETH(bytes32 _ccy) internal pure returns (bool) {

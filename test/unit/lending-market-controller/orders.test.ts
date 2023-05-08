@@ -1937,20 +1937,18 @@ describe('LendingMarketController - Orders', () => {
     describe('Liquidations', async () => {
       beforeEach(async () => {
         // Set up for the mocks
-        await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10, 0);
+        await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10);
         await mockTokenVault.mock.getDepositAmount.returns(100);
-        await mockTokenVault.mock.transferFrom.returns();
+        await mockTokenVault.mock.transferFrom.returns(0);
         await mockTokenVault.mock['isCovered(address)'].returns(true);
         await mockReserveFund.mock.isPaused.returns(true);
         await mockCurrencyController.mock.convert.returns(100);
+        await mockCurrencyController.mock.convertFromETH.returns(1);
       });
 
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-
-        // Set up for the mocks
-        await mockCurrencyController.mock.convertFromETH.returns('1');
 
         await lendingMarketControllerProxy
           .connect(signers[0])
@@ -2013,9 +2011,6 @@ describe('LendingMarketController - Orders', () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
 
-        // Set up for the mocks
-        await mockCurrencyController.mock.convertFromETH.returns('1');
-
         await lendingMarketControllerProxy
           .connect(signers[3])
           .createOrder(
@@ -2073,17 +2068,15 @@ describe('LendingMarketController - Orders', () => {
           );
       });
 
-      it('Liquidate lending position using funds in the reserve fund', async () => {
+      it('Liquidate lending position using zero-coupon bonds', async () => {
         const orderAmount = ethers.BigNumber.from('100000000000000000');
         const orderRate = ethers.BigNumber.from('8000');
-        const offsetAmount = ethers.BigNumber.from('3000000000');
 
         // Set up for the mocks
-        await mockCurrencyController.mock.convertFromETH.returns(offsetAmount);
-        await mockReserveFund.mock.isPaused.returns(false);
+        await mockTokenVault.mock.transferFrom.returns(100);
 
         await lendingMarketControllerProxy
-          .connect(signers[3])
+          .connect(signers[0])
           .createOrder(
             targetCurrency,
             maturities[0],
@@ -2093,7 +2086,7 @@ describe('LendingMarketController - Orders', () => {
           );
 
         await lendingMarketControllerProxy
-          .connect(signers[4])
+          .connect(signers[1])
           .createOrder(
             targetCurrency,
             maturities[0],
@@ -2103,7 +2096,7 @@ describe('LendingMarketController - Orders', () => {
           );
 
         await lendingMarketControllerProxy
-          .connect(signers[5])
+          .connect(signers[2])
           .createOrder(
             targetCurrency,
             maturities[0],
@@ -2124,13 +2117,13 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             targetCurrency,
             maturities[0],
-            signers[3].address,
+            signers[0].address,
           )
           .then((tx) =>
             expect(tx)
               .to.emit(lendingMarketControllerProxy, 'LiquidationExecuted')
               .withArgs(
-                signers[3].address,
+                signers[0].address,
                 targetCurrency,
                 targetCurrency,
                 maturities[0],
@@ -2154,7 +2147,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Fail to liquidate a lending position due to no liquidation amount', async () => {
         // Set up for the mocks
-        await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0, 0);
+        await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
 
         await lendingMarketControllerProxy
           .connect(signers[6])
@@ -2221,7 +2214,7 @@ describe('LendingMarketController - Orders', () => {
               maturities[0],
               signers[6].address,
             ),
-        ).to.be.revertedWith('Not enough collateral');
+        ).to.be.revertedWith('Invalid liquidation');
       });
     });
   });

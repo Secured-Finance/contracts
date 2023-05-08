@@ -261,48 +261,37 @@ library DepositManagementLogic {
         returns (
             uint256 liquidationAmount,
             uint256 protocolFee,
-            uint256 liquidatorFee,
-            uint256 insolventAmount
+            uint256 liquidatorFee
         )
     {
         (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getCollateralAmount(_user);
         uint256 liquidationAmountInETH = totalCollateral * Constants.PCT_DIGIT >=
             totalUsedCollateral * Params.liquidationThresholdRate()
             ? 0
-            : totalUsedCollateral / 2;
+            : totalUsedCollateral.div(2);
         liquidationAmount = AddressResolverLib.currencyController().convertFromETH(
             _liquidationCcy,
             liquidationAmountInETH
         );
 
-        protocolFee =
-            (liquidationAmount * Params.liquidationProtocolFeeRate()) /
-            Constants.PCT_DIGIT;
-        liquidatorFee = (liquidationAmount * Params.liquidatorFeeRate()) / Constants.PCT_DIGIT;
+        protocolFee = (liquidationAmount * Params.liquidationProtocolFeeRate()).div(
+            Constants.PCT_DIGIT
+        );
+        liquidatorFee = (liquidationAmount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
         uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
-
-        uint256 userDepositAmount = Storage.slot().depositAmounts[_user][_liquidationCcy];
-
-        if (_liquidationAmountMaximum > userDepositAmount) {
-            _liquidationAmountMaximum = userDepositAmount;
-        }
-
-        if (liquidationTotalAmount > userDepositAmount) {
-            insolventAmount = liquidationTotalAmount - userDepositAmount;
-        }
 
         if (liquidationTotalAmount > _liquidationAmountMaximum) {
             liquidationTotalAmount = _liquidationAmountMaximum;
-            protocolFee =
-                (liquidationTotalAmount * Params.liquidationProtocolFeeRate()) /
-                (Constants.PCT_DIGIT +
+            protocolFee = (liquidationTotalAmount * Params.liquidationProtocolFeeRate()).div(
+                Constants.PCT_DIGIT +
                     Params.liquidatorFeeRate() +
-                    Params.liquidationProtocolFeeRate());
-            liquidatorFee =
-                (liquidationTotalAmount * Params.liquidatorFeeRate()) /
-                (Constants.PCT_DIGIT +
+                    Params.liquidationProtocolFeeRate()
+            );
+            liquidatorFee = (liquidationTotalAmount * Params.liquidatorFeeRate()).div(
+                Constants.PCT_DIGIT +
                     Params.liquidatorFeeRate() +
-                    Params.liquidationProtocolFeeRate());
+                    Params.liquidationProtocolFeeRate()
+            );
             liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
         }
     }
@@ -312,12 +301,13 @@ library DepositManagementLogic {
         address _from,
         address _to,
         uint256 _amount
-    ) external {
+    ) external returns (uint256 untransferredAmount) {
         uint256 depositAmount = Storage.slot().depositAmounts[_from][_ccy];
-        require(depositAmount >= _amount, "Transfer amount exceeds balance");
+        uint256 amount = depositAmount >= _amount ? _amount : depositAmount;
+        untransferredAmount = _amount - amount;
 
-        removeDepositAmount(_from, _ccy, _amount);
-        addDepositAmount(_to, _ccy, _amount);
+        removeDepositAmount(_from, _ccy, amount);
+        addDepositAmount(_to, _ccy, amount);
     }
 
     /**
