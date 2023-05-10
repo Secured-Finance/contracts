@@ -2,7 +2,7 @@ import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencies, mockRates } from '../../utils/currencies';
+import { currencies, mockPriceFeeds } from '../../utils/currencies';
 import {
   hexEFIL,
   hexETH,
@@ -182,17 +182,23 @@ const deployContracts = async () => {
   const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
 
   for (const currency of currencies) {
-    const mockRate = mockRates[currency.key];
-    priceFeeds[currency.key] = await MockV3Aggregator.deploy(
-      mockRate.decimals,
-      currency.key,
-      mockRate.rate,
-    );
+    const priceFeedAddresses: string[] = [];
+
+    if (mockPriceFeeds[currency.key]) {
+      for (const priceFeed of mockPriceFeeds[currency.key]) {
+        priceFeeds[currency.key] = await MockV3Aggregator.deploy(
+          priceFeed.decimals,
+          currency.key,
+          priceFeed.rate,
+        );
+        priceFeedAddresses.push(priceFeeds[currency.key].address);
+      }
+    }
 
     await currencyControllerProxy.addCurrency(
       currency.key,
-      priceFeeds[currency.key].address,
       currency.haircut,
+      priceFeedAddresses,
     );
   }
 
@@ -303,7 +309,6 @@ const deployContracts = async () => {
     usdcToken,
     wFilToETHPriceFeed: priceFeeds[hexWFIL],
     eFilToETHPriceFeed: priceFeeds[hexEFIL],
-    ethToUSDPriceFeed: priceFeeds[hexETH],
     wBtcToETHPriceFeed: priceFeeds[hexWBTC],
     usdcToUSDPriceFeed: priceFeeds[hexUSDC],
   };

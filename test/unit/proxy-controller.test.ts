@@ -3,7 +3,7 @@ import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
 import { hexWBTC, toBytes32 } from '../../utils/strings';
-import { wBtcToETHRate } from '../common/constants';
+import { btcToETHRate, wBtcToBTCRate } from '../common/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -141,16 +141,20 @@ describe('ProxyController', () => {
       );
 
       // Set up for CurrencyController
-      const wBtcToETHPriceFeed = await MockV3Aggregator.new(
-        18,
+      const btcToETHPriceFeed = await MockV3Aggregator.new(
+        6,
         hexWBTC,
-        wBtcToETHRate,
+        btcToETHRate,
       );
-      await currencyControllerProxy1.addCurrency(
+      const wBtcToBTCPriceFeed = await MockV3Aggregator.new(
+        6,
         hexWBTC,
-        wBtcToETHPriceFeed.address,
-        HAIRCUT,
+        wBtcToBTCRate,
       );
+      await currencyControllerProxy1.addCurrency(hexWBTC, HAIRCUT, [
+        wBtcToBTCPriceFeed.address,
+        btcToETHPriceFeed.address,
+      ]);
 
       const haircut1 = await currencyControllerProxy1.getHaircut(hexWBTC);
       haircut1.toString().should.be.equal(HAIRCUT.toString());

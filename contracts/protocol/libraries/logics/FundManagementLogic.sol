@@ -1008,7 +1008,7 @@ library FundManagementLogic {
         if (_ccy == "ETH") {
             return _amount;
         } else {
-            uint8 decimals = AddressResolverLib.currencyController().getEthDecimals(_ccy);
+            uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
 
             return
                 (_amount * Storage.slot().marketTerminationPrices[_ccy].toUint256()).div(
@@ -1025,7 +1025,7 @@ library FundManagementLogic {
         if (_ccy == "ETH") {
             return _amount;
         } else {
-            uint8 decimals = AddressResolverLib.currencyController().getEthDecimals(_ccy);
+            uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
             return
                 (_amount * 10**decimals).div(
                     Storage.slot().marketTerminationPrices[_ccy].toUint256()

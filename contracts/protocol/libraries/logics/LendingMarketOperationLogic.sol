@@ -179,7 +179,7 @@ library LendingMarketOperationLogic {
             pauseLendingMarkets(ccy);
             Storage.slot().marketTerminationPrices[ccy] = AddressResolverLib
                 .currencyController()
-                .getLastETHPrice(ccy);
+                .getLastPrice(ccy);
         }
 
         for (uint256 i = 0; i < collateralCurrencies.length; i++) {
