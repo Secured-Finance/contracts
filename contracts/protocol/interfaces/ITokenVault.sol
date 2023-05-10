@@ -34,6 +34,8 @@ interface ITokenVault {
 
     function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw);
 
+    function getWithdrawableCollateral(bytes32 _ccy, address _user) external view returns (uint256);
+
     function getCoverage(address user) external view returns (uint256 coverage);
 
     function getUnusedCollateral(address user) external view returns (uint256);

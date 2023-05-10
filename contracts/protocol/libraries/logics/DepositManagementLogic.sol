@@ -163,11 +163,6 @@ library DepositManagementLogic {
             : 0;
     }
 
-    /**
-     * @notice Calculates maximum amount of ETH that can be withdrawn.
-     * @param _user User's address
-     * @return Maximum amount of ETH that can be withdrawn
-     */
     function getWithdrawableCollateral(address _user) public view returns (uint256) {
         (
             uint256 totalCollateral,
@@ -190,6 +185,25 @@ library DepositManagementLogic {
             return maxWithdraw >= totalActualCollateral ? totalActualCollateral : maxWithdraw;
         } else {
             return 0;
+        }
+    }
+
+    function getWithdrawableCollateral(bytes32 _ccy, address _user)
+        public
+        view
+        returns (uint256 withdrawableAmount)
+    {
+        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccy];
+        if (Storage.slot().collateralCurrencies.contains(_ccy)) {
+            uint256 maxWithdrawETH = getWithdrawableCollateral(_user);
+            uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromETH(
+                _ccy,
+                maxWithdrawETH
+            );
+
+            withdrawableAmount = depositAmount >= maxWithdraw ? maxWithdraw : depositAmount;
+        } else {
+            withdrawableAmount = depositAmount;
         }
     }
 
@@ -220,33 +234,30 @@ library DepositManagementLogic {
         _updateUsedCurrencies(_user, _ccy);
     }
 
-    /**
-     * @notice Withdraws funds by the caller from unused collateral.
-     * @param _ccy Currency name in bytes32
-     * @param _amount Amount of funds to withdraw.
-     */
+    function deposit(
+        address _user,
+        bytes32 _ccy,
+        uint256 _amount
+    ) public {
+        ERC20Handler.depositAssets(
+            Storage.slot().tokenAddresses[_ccy],
+            _user,
+            address(this),
+            _amount
+        );
+        addDepositAmount(_user, _ccy, _amount);
+    }
+
     function withdraw(
-        address user,
+        address _user,
         bytes32 _ccy,
         uint256 _amount
     ) public returns (uint256 withdrawableAmount) {
-        uint256 depositAmount = Storage.slot().depositAmounts[user][_ccy];
-        if (Storage.slot().collateralCurrencies.contains(_ccy)) {
-            uint256 maxWithdrawETH = getWithdrawableCollateral(user);
-            uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromETH(
-                _ccy,
-                maxWithdrawETH
-            );
+        withdrawableAmount = getWithdrawableCollateral(_ccy, _user);
+        withdrawableAmount = _amount > withdrawableAmount ? withdrawableAmount : _amount;
 
-            withdrawableAmount = _amount > maxWithdraw ? maxWithdraw : _amount;
-            withdrawableAmount = depositAmount >= withdrawableAmount
-                ? withdrawableAmount
-                : depositAmount;
-        } else {
-            withdrawableAmount = depositAmount >= _amount ? _amount : depositAmount;
-        }
-
-        removeDepositAmount(user, _ccy, withdrawableAmount);
+        removeDepositAmount(_user, _ccy, withdrawableAmount);
+        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
 
         return withdrawableAmount;
     }
