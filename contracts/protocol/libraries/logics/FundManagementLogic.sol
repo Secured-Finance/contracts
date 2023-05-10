@@ -173,7 +173,7 @@ library FundManagementLogic {
                 filledAmount,
                 filledFutureValue,
                 partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
+            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwind(
                 side,
                 _user,
                 futureValue.toUint256()
@@ -185,7 +185,7 @@ library FundManagementLogic {
                 filledAmount,
                 filledFutureValue,
                 partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
+            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwind(
                 side,
                 _user,
                 (-futureValue).toUint256()

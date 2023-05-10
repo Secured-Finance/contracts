@@ -616,7 +616,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Unwinds all orders by creating an opposite position order.
+     * @notice Unwinds user's lending or borrowing positions by creating an opposite position order.
      * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      */

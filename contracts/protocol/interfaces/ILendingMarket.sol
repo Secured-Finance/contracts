@@ -182,7 +182,7 @@ interface ILendingMarket {
         uint256 unitPrice
     ) external;
 
-    function unwindOrder(
+    function unwind(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _futureValue
