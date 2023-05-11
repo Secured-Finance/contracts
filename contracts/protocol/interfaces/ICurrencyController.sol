@@ -25,16 +25,22 @@ interface ICurrencyController {
         uint256 _amount
     ) external view returns (uint256 amount);
 
-    function convertFromETH(bytes32 _ccy, uint256 _amountETH)
+    function convertFromBaseCurrency(bytes32 _ccy, uint256 _amountETH)
         external
         view
         returns (uint256 amount);
 
-    function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256 amount);
+    function convertToBaseCurrency(bytes32 _ccy, uint256 _amount)
+        external
+        view
+        returns (uint256 amount);
 
-    function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256 amount);
+    function convertToBaseCurrency(bytes32 _ccy, int256 _amount)
+        external
+        view
+        returns (int256 amount);
 
-    function convertToETH(bytes32 _ccy, uint256[] memory _amounts)
+    function convertToBaseCurrency(bytes32 _ccy, uint256[] memory _amounts)
         external
         view
         returns (uint256[] memory amounts);

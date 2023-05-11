@@ -33,12 +33,15 @@ contract MockUniswapQuoter is MixinAddressResolver {
         uint256 amountIn,
         uint160 sqrtPriceLimitX96
     ) external view returns (uint256 amountOut) {
-        uint256 amountInInETH = currencyController().convertToETH(currencies[tokenIn], amountIn);
+        uint256 amountInInETH = currencyController().convertToBaseCurrency(
+            currencies[tokenIn],
+            amountIn
+        );
 
         // NOTE: This fee and sqrtPriceLimitX96 are not intended to be used like this,
         // but are used here to adjust the amountOut value for testing purposes.
         amountOut =
-            currencyController().convertFromETH(currencies[tokenOut], amountInInETH) -
+            currencyController().convertFromBaseCurrency(currencies[tokenOut], amountInInETH) -
             fee +
             sqrtPriceLimitX96;
     }

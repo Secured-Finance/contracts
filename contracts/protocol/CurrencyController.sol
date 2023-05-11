@@ -41,9 +41,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
+     * @param _baseCcy The base currency name in bytes32
      */
-    function initialize(address _owner) public initializer onlyProxy {
+    function initialize(address _owner, bytes32 _baseCcy) public initializer onlyProxy {
         _transferOwnership(_owner);
+        Storage.slot().baseCurrency = _baseCcy;
     }
 
     /**
@@ -158,7 +160,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @return price The last price
      */
     function getLastPrice(bytes32 _ccy) public view override returns (int256 price) {
-        if (_isETH(_ccy)) return 1e18;
+        if (_isBaseCurrency(_ccy)) return 1e18;
         price = _getLastPrice(_ccy);
     }
 
@@ -177,12 +179,12 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_fromCcy == _toCcy) return _amount;
         if (_amount == 0) return 0;
 
-        if (_isETH(_fromCcy)) {
-            return convertFromETH(_toCcy, _amount);
+        if (_isBaseCurrency(_fromCcy)) {
+            return convertFromBaseCurrency(_toCcy, _amount);
         }
 
-        if (_isETH(_toCcy)) {
-            return convertToETH(_fromCcy, _amount);
+        if (_isBaseCurrency(_toCcy)) {
+            return convertToBaseCurrency(_fromCcy, _amount);
         }
 
         int256 fromPrice = _getLastPrice(_fromCcy);
@@ -194,18 +196,18 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets the converted amount of currency in ETH.
-     * @param _ccy Currency that has to be converted to ETH
+     * @notice Gets the converted amount in the base currency.
+     * @param _ccy Currency that has to be converted to the base currency
      * @param _amount Amount to be converted
      * @return amount The converted amount
      */
-    function convertToETH(bytes32 _ccy, uint256 _amount)
+    function convertToBaseCurrency(bytes32 _ccy, uint256 _amount)
         public
         view
         override
         returns (uint256 amount)
     {
-        if (_isETH(_ccy)) return _amount;
+        if (_isBaseCurrency(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
         amount = (_amount * _getLastPrice(_ccy).toUint256()).div(
@@ -214,18 +216,18 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets the converted amount of currency in ETH.
-     * @param _ccy Currency that has to be converted to ETH
+     * @notice Gets the converted amount in the base currency.
+     * @param _ccy Currency that has to be converted to the base currency.
      * @param _amount Amount to be converted
      * @return amount The converted amount
      */
-    function convertToETH(bytes32 _ccy, int256 _amount)
+    function convertToBaseCurrency(bytes32 _ccy, int256 _amount)
         external
         view
         override
         returns (int256 amount)
     {
-        if (_isETH(_ccy)) return _amount;
+        if (_isBaseCurrency(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
         amount = (_amount * _getLastPrice(_ccy)).div(
@@ -234,18 +236,18 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets the converted amounts of currency in ETH.
-     * @param _ccy Currency that has to be converted to ETH
+     * @notice Gets the converted amounts in the base currency.
+     * @param _ccy Currency that has to be converted to the base currency.
      * @param _amounts Amounts to be converted
      * @return amounts The converted amounts
      */
-    function convertToETH(bytes32 _ccy, uint256[] memory _amounts)
+    function convertToBaseCurrency(bytes32 _ccy, uint256[] memory _amounts)
         external
         view
         override
         returns (uint256[] memory amounts)
     {
-        if (_isETH(_ccy)) return _amounts;
+        if (_isBaseCurrency(_ccy)) return _amounts;
 
         amounts = new uint256[](_amounts.length);
         for (uint256 i = 0; i < _amounts.length; i++) {
@@ -258,26 +260,26 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets the converted amount to the selected currency from ETH.
-     * @param _ccy Currency that has to be converted from ETH
-     * @param _amountETH Amount in ETH to be converted
+     * @notice Gets the converted amount to the selected currency from the base currency.
+     * @param _ccy Currency that has to be converted from the base currency.
+     * @param _amount Amount in the base currency to be converted
      * @return amount The converted amount
      */
-    function convertFromETH(bytes32 _ccy, uint256 _amountETH)
+    function convertFromBaseCurrency(bytes32 _ccy, uint256 _amount)
         public
         view
         override
         returns (uint256 amount)
     {
-        if (_isETH(_ccy)) return _amountETH;
+        if (_isBaseCurrency(_ccy)) return _amount;
 
-        amount = (_amountETH * 10**Storage.slot().decimalsCaches[_ccy]).div(
+        amount = (_amount * 10**Storage.slot().decimalsCaches[_ccy]).div(
             _getLastPrice(_ccy).toUint256()
         );
     }
 
-    function _isETH(bytes32 _ccy) internal pure returns (bool) {
-        return _ccy == "ETH";
+    function _isBaseCurrency(bytes32 _ccy) internal view returns (bool) {
+        return _ccy == Storage.slot().baseCurrency;
     }
 
     function _getLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice) {

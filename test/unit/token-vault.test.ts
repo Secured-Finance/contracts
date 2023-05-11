@@ -264,7 +264,7 @@ describe('TokenVault', () => {
       const valueInETH = '20000000000000';
 
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
 
       await expect(
@@ -322,14 +322,16 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256[])'
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256[])'
       ].returns([valueInETH, valueInETH, valueInETH]);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
@@ -352,7 +354,7 @@ describe('TokenVault', () => {
       );
 
       // NOTE: Deposit in two currencies to double the collateral
-      // since the mock always returns the same value with "convertToETH".
+      // since the mock always returns the same value with "convertToBaseCurrency".
       await tokenVaultProxy.connect(bob).deposit(targetCurrency, value);
       await tokenVaultProxy.connect(bob).deposit(previousCurrency, value);
 
@@ -409,12 +411,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -447,12 +451,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -494,12 +500,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -547,12 +555,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -597,7 +607,7 @@ describe('TokenVault', () => {
       const debtAmount = '5000000000000';
 
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
@@ -635,7 +645,7 @@ describe('TokenVault', () => {
         .true;
 
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(debtAmount);
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
@@ -652,12 +662,12 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(value);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
-        valueInETH,
-      );
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(value);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
         0,
@@ -683,7 +693,9 @@ describe('TokenVault', () => {
         ),
       ).to.equal(value);
 
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
 
       expect(
         await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
@@ -701,12 +713,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
         0,
@@ -747,12 +761,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
         0,
@@ -829,9 +845,11 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
 
       await expect(
         tokenVaultCaller.depositFrom(alice.address, targetCurrency, valueInETH),
@@ -845,9 +863,11 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
 
       await tokenVaultCaller.depositFrom(
         alice.address,

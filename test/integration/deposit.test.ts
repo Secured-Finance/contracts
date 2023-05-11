@@ -358,7 +358,7 @@ describe('Integration Test: Deposit', async () => {
       );
 
       const estimatedDepositAmountInETH = await currencyController[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ](hexUSDC, initialUSDCBalance.div(5));
 
       expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(

@@ -373,7 +373,7 @@ contract LendingMarketController is
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
             int256 amount = FundManagementLogic.calculateActualFunds(ccy, 0, _user).presentValue;
-            totalPresentValue += currencyController().convertToETH(ccy, amount);
+            totalPresentValue += currencyController().convertToBaseCurrency(ccy, amount);
         }
     }
 

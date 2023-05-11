@@ -659,7 +659,7 @@ library FundManagementLogic {
                 vars.minusDepositAmount += vars.amounts[0] + vars.amounts[3];
             }
 
-            vars.amountsInETH = AddressResolverLib.currencyController().convertToETH(
+            vars.amountsInETH = AddressResolverLib.currencyController().convertToBaseCurrency(
                 vars.ccy,
                 vars.amounts
             );

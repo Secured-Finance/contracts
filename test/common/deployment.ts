@@ -122,7 +122,10 @@ const deployContracts = async () => {
     tokenVaultAddress,
   ] = await Promise.all([
     proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
-    proxyController.setCurrencyControllerImpl(currencyController.address),
+    proxyController.setCurrencyControllerImpl(
+      currencyController.address,
+      hexETH,
+    ),
     proxyController.setGenesisValueVaultImpl(genesisValueVault.address),
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,

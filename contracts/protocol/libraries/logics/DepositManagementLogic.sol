@@ -111,7 +111,7 @@ library DepositManagementLogic {
             if (_isUnsettledBorrowOrder) {
                 unsettledBorrowOrdersAmountInETH = AddressResolverLib
                     .currencyController()
-                    .convertToETH(_unsettledOrderCcy, _unsettledOrderAmount);
+                    .convertToBaseCurrency(_unsettledOrderCcy, _unsettledOrderAmount);
             } else {
                 require(
                     depositAmount >= _unsettledOrderAmount,
@@ -122,7 +122,7 @@ library DepositManagementLogic {
                 if (Storage.slot().collateralCurrencies.contains(_unsettledOrderCcy)) {
                     vars.workingLendOrdersAmount += AddressResolverLib
                         .currencyController()
-                        .convertToETH(_unsettledOrderCcy, _unsettledOrderAmount);
+                        .convertToBaseCurrency(_unsettledOrderCcy, _unsettledOrderAmount);
                 }
             }
         }
@@ -196,7 +196,7 @@ library DepositManagementLogic {
         uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccy];
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
             uint256 maxWithdrawETH = getWithdrawableCollateral(_user);
-            uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromETH(
+            uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromBaseCurrency(
                 _ccy,
                 maxWithdrawETH
             );
@@ -280,7 +280,7 @@ library DepositManagementLogic {
             totalUsedCollateral * Params.liquidationThresholdRate()
             ? 0
             : totalUsedCollateral.div(2);
-        liquidationAmount = AddressResolverLib.currencyController().convertFromETH(
+        liquidationAmount = AddressResolverLib.currencyController().convertFromBaseCurrency(
             _liquidationCcy,
             liquidationAmountInETH
         );
@@ -339,10 +339,10 @@ library DepositManagementLogic {
             bytes32 ccy = currencies.at(i);
             if (Storage.slot().collateralCurrencies.contains(ccy)) {
                 uint256 depositAmount = Storage.slot().depositAmounts[_user][ccy];
-                totalDepositAmount += AddressResolverLib.currencyController().convertToETH(
-                    ccy,
-                    depositAmount
-                );
+                totalDepositAmount += AddressResolverLib.currencyController().convertToBaseCurrency(
+                        ccy,
+                        depositAmount
+                    );
             }
         }
 
