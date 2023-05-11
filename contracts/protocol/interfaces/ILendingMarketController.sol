@@ -4,6 +4,15 @@ pragma solidity ^0.8.9;
 import "../types/ProtocolTypes.sol";
 
 interface ILendingMarketController {
+    struct Order {
+        uint256 maturity;
+        ProtocolTypes.Side side;
+        address user;
+        uint256 unitPrice;
+        uint256 amount;
+        uint256 timestamp;
+    }
+
     event LendingMarketCreated(
         bytes32 indexed ccy,
         address indexed marketAddr,

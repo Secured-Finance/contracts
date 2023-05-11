@@ -148,51 +148,6 @@ library FundManagementLogic {
         return currentAmount;
     }
 
-    function unwind(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    )
-        external
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
-            ProtocolTypes.Side side
-        )
-    {
-        int256 futureValue = calculateActualFunds(_ccy, _maturity, _user).futureValue;
-
-        require(futureValue != 0, "Future Value is zero");
-
-        if (futureValue > 0) {
-            side = ProtocolTypes.Side.BORROW;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwind(
-                side,
-                _user,
-                futureValue.toUint256()
-            );
-        } else if (futureValue < 0) {
-            side = ProtocolTypes.Side.LEND;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwind(
-                side,
-                _user,
-                (-futureValue).toUint256()
-            );
-        }
-    }
-
     function executeLiquidation(
         address _liquidator,
         address _user,
@@ -201,6 +156,11 @@ library FundManagementLogic {
         uint256 _debtMaturity
     ) external returns (uint256 totalLiquidatedDebtAmount) {
         ExecuteLiquidationVars memory vars;
+
+        // In order to liquidate using user collateral, inactive order IDs must be cleaned
+        // and converted to actual funds first.
+        cleanUpFunds(_collateralCcy, _user);
+        cleanUpFunds(_debtCcy, _user);
 
         int256 debtPVAmount = calculateActualFunds(_debtCcy, _debtMaturity, _user).presentValue;
 
@@ -691,6 +651,13 @@ library FundManagementLogic {
         maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         if (maturities.length > 0) {
             maturities = QuickSort.sort(maturities);
+        }
+    }
+
+    function cleanUpAllFunds(address _user) external {
+        EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
+        for (uint256 i = 0; i < ccySet.length(); i++) {
+            cleanUpFunds(ccySet.at(i), _user);
         }
     }
 

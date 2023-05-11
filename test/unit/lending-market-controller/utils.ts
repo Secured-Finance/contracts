@@ -22,6 +22,7 @@ const ReserveFund = artifacts.require('ReserveFund');
 const LendingMarketOperationLogic = artifacts.require(
   'LendingMarketOperationLogic',
 );
+const LendingMarketUserLogic = artifacts.require('LendingMarketUserLogic');
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const QuickSort = artifacts.require('QuickSort');
 
@@ -41,6 +42,10 @@ const deployContracts = async (owner: SignerWithAddress) => {
   const lendingMarketOperationLogic = await deployContract(
     owner,
     LendingMarketOperationLogic,
+  );
+  const lendingMarketUserLogic = await deployContract(
+    owner,
+    LendingMarketUserLogic,
   );
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
@@ -64,6 +69,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
       libraries: {
         FundManagementLogic: fundManagementLogic.address,
         LendingMarketOperationLogic: lendingMarketOperationLogic.address,
+        LendingMarketUserLogic: lendingMarketUserLogic.address,
       },
     })
     .then((factory) => factory.deploy());

@@ -15,6 +15,7 @@ const func: DeployFunction = async function ({
     'QuickSort',
     'DepositManagementLogic',
     'LendingMarketOperationLogic',
+    'LendingMarketUserLogic',
     'OrderBookLogic',
   ]) {
     const deployResult = await deploy(libName, {
