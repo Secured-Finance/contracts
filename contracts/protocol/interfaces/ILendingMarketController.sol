@@ -7,7 +7,6 @@ interface ILendingMarketController {
     struct Order {
         uint256 maturity;
         ProtocolTypes.Side side;
-        address user;
         uint256 unitPrice;
         uint256 amount;
         uint256 timestamp;

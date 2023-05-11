@@ -787,7 +787,6 @@ describe('LendingMarketController - Orders', () => {
       expect(activeOrders[0].side).to.equal(Side.LEND);
       expect(activeOrders[0].unitPrice).to.equal('9880');
       expect(activeOrders[0].maturity).to.equal(maturities[0]);
-      expect(activeOrders[0].user).to.equal(alice.address);
       expect(activeOrders[0].amount).to.equal('50000000000000000');
     });
 
@@ -823,13 +822,11 @@ describe('LendingMarketController - Orders', () => {
       expect(activeOrders[0].side).to.equal(Side.LEND);
       expect(activeOrders[0].unitPrice).to.equal('9880');
       expect(activeOrders[0].maturity).to.equal(maturities[0]);
-      expect(activeOrders[0].user).to.equal(alice.address);
       expect(activeOrders[0].amount).to.equal('50000000000000000');
 
       expect(activeOrders[1].side).to.equal(Side.LEND);
       expect(activeOrders[1].unitPrice).to.equal('9881');
       expect(activeOrders[1].maturity).to.equal(maturities[1]);
-      expect(activeOrders[1].user).to.equal(alice.address);
       expect(activeOrders[1].amount).to.equal('50000000000000001');
     });
 
@@ -874,13 +871,11 @@ describe('LendingMarketController - Orders', () => {
       expect(activeOrders[0].side).to.equal(Side.LEND);
       expect(activeOrders[0].unitPrice).to.equal('9880');
       expect(activeOrders[0].maturity).to.equal(maturities[0]);
-      expect(activeOrders[0].user).to.equal(alice.address);
       expect(activeOrders[0].amount).to.equal('50000000000000000');
 
       expect(inactiveOrders[0].side).to.equal(Side.LEND);
       expect(inactiveOrders[0].unitPrice).to.equal('9881');
       expect(inactiveOrders[0].maturity).to.equal(maturities[0]);
-      expect(inactiveOrders[0].user).to.equal(alice.address);
       expect(inactiveOrders[0].amount).to.equal('50000000000000001');
     });
 

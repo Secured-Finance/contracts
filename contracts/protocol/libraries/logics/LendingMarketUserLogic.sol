@@ -158,11 +158,11 @@ library LendingMarketUserLogic {
             ProtocolTypes.Side side,
             uint256 unitPrice,
             uint256 maturity,
-            address maker,
+            ,
             uint256 amount,
             uint256 timestamp
         ) = _market.getOrder(_orderId);
 
-        order = ILendingMarketController.Order(maturity, side, maker, unitPrice, amount, timestamp);
+        order = ILendingMarketController.Order(maturity, side, unitPrice, amount, timestamp);
     }
 }
