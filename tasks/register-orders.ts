@@ -139,9 +139,9 @@ task('register-orders', 'Registers order data into the selected lending market')
       }
 
       // Add collateral
-      const availableAmountInETH = await tokenVault.getWithdrawableCollateral(
-        owner.address,
-      );
+      const availableAmountInETH = await tokenVault[
+        'getWithdrawableCollateral(address)'
+      ](owner.address);
 
       if (marketCurrency !== 'ETH') {
         const currency = currencies.find(

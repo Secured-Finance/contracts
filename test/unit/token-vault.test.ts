@@ -47,6 +47,14 @@ describe('TokenVault', () => {
   let previousCurrency: string;
   let currencyIdx = 0;
 
+  const getUser = (): SignerWithAddress => {
+    const signer = signers.shift();
+    if (!signer) {
+      throw new Error('No user exists');
+    }
+    return signer;
+  };
+
   before(async () => {
     [owner, alice, bob, carol, dave, ellen, ...signers] =
       await ethers.getSigners();
@@ -367,7 +375,9 @@ describe('TokenVault', () => {
         true,
       );
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(bob.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          bob.address,
+        ),
       ).to.equal(
         valueInETH
           .mul('2')
@@ -460,7 +470,9 @@ describe('TokenVault', () => {
       await tokenVaultProxy.connect(dave).deposit(targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(dave.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          dave.address,
+        ),
       ).to.equal(
         valueInETH
           .mul('10000')
@@ -505,7 +517,9 @@ describe('TokenVault', () => {
       await tokenVaultProxy.connect(ellen).deposit(targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(ellen.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          ellen.address,
+        ),
       ).to.equal(
         valueInETH
           .mul('10000')
@@ -525,6 +539,8 @@ describe('TokenVault', () => {
     });
 
     it('Add and remove the collateral amount', async () => {
+      const signer = getUser();
+
       const value = ethers.BigNumber.from('20000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const totalPresentValue = ethers.BigNumber.from('20000000000000');
@@ -552,30 +568,30 @@ describe('TokenVault', () => {
       );
 
       await tokenVaultCaller
-        .connect(signers[0])
-        .addDepositAmount(signers[0].address, targetCurrency, value);
+        .connect(signer)
+        .addDepositAmount(signer.address, targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getUnusedCollateral(signers[0].address),
+        await tokenVaultProxy.getUnusedCollateral(signer.address),
       ).to.equal(value);
       expect(
-        await tokenVaultProxy.getTotalCollateralAmount(signers[0].address),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address),
       ).to.equal(value);
 
       await tokenVaultCaller
-        .connect(signers[0])
-        .removeDepositAmount(signers[0].address, targetCurrency, value);
+        .connect(signer)
+        .removeDepositAmount(signer.address, targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getUnusedCollateral(signers[0].address),
+        await tokenVaultProxy.getUnusedCollateral(signer.address),
       ).to.equal('0');
       expect(
-        await tokenVaultProxy.getTotalCollateralAmount(signers[0].address),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address),
       ).to.equal('0');
     });
 
     it('Add an amount in a currency that is not accepted as collateral', async () => {
-      const signer = signers[2];
+      const signer = getUser();
       const value = '10000000000000';
       const valueInETH = '20000000000000';
       const debtAmount = '5000000000000';
@@ -629,8 +645,56 @@ describe('TokenVault', () => {
         .false;
     });
 
+    it('Get the withdrawable amount', async () => {
+      const signer = getUser();
+      const value = ethers.BigNumber.from('30000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToETH(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromETH.returns(value);
+      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+        valueInETH,
+      );
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        true,
+      );
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
+      ).to.equal(valueInETH);
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(value);
+
+      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(valueInETH);
+    });
+
     it('Get the liquidation amount', async () => {
-      const signer = signers[3];
+      const signer = getUser();
       const value = ethers.BigNumber.from('30000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const debtAmount = ethers.BigNumber.from('20000000000000');
@@ -657,7 +721,9 @@ describe('TokenVault', () => {
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(signer.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
       ).to.equal('0');
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
@@ -674,7 +740,7 @@ describe('TokenVault', () => {
     });
 
     it('Get the liquidation amount decreased by a maximum', async () => {
-      const signer = signers[4];
+      const signer = getUser();
       const value = ethers.BigNumber.from('30000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const debtAmount = ethers.BigNumber.from('20000000000000');
@@ -701,7 +767,9 @@ describe('TokenVault', () => {
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(signer.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
       ).to.equal('0');
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
