@@ -16,8 +16,8 @@ interface ICurrencyController {
 
     event HaircutUpdated(bytes32 indexed ccy, uint256 haircut);
 
-    event PriceFeedAdded(bytes32 ccy, string secondCcy, address indexed priceFeed);
-    event PriceFeedRemoved(bytes32 ccy, string secondCcy, address indexed priceFeed);
+    event PriceFeedUpdated(bytes32 ccy, address[] indexed priceFeeds);
+    event PriceFeedRemoved(bytes32 ccy);
 
     function convert(
         bytes32 _fromCcy,
@@ -39,36 +39,24 @@ interface ICurrencyController {
         view
         returns (uint256[] memory amounts);
 
-    function getEthDecimals(bytes32) external view returns (uint8);
-
-    function getUsdDecimals(bytes32) external view returns (uint8);
+    function getDecimals(bytes32) external view returns (uint8);
 
     function getCurrencies() external view returns (bytes32[] memory);
 
     function getHaircut(bytes32 _ccy) external view returns (uint256);
 
-    function getHistoricalETHPrice(bytes32 _ccy, uint80 _roundId) external view returns (int256);
-
-    function getHistoricalUSDPrice(bytes32 _ccy, uint80 _roundId) external view returns (int256);
-
-    function getLastETHPrice(bytes32 _ccy) external view returns (int256);
-
-    function getLastUSDPrice(bytes32 _ccy) external view returns (int256);
+    function getLastPrice(bytes32 _ccy) external view returns (int256);
 
     function currencyExists(bytes32 _ccy) external view returns (bool);
 
-    function linkPriceFeed(
-        bytes32 _ccy,
-        address _priceFeedAddr,
-        bool _isEthPriceFeed
-    ) external returns (bool);
+    function updatePriceFeed(bytes32 _ccy, address[] calldata _priceFeeds) external;
 
-    function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external;
+    function removePriceFeed(bytes32 _ccy) external;
 
     function addCurrency(
         bytes32 _ccy,
-        address _ethPriceFeed,
-        uint256 _haircut
+        uint256 _haircut,
+        address[] calldata _priceFeeds
     ) external;
 
     function updateHaircut(bytes32 _ccy, uint256 _haircut) external;
