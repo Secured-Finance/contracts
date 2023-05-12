@@ -5,6 +5,7 @@ import "../types/ProtocolTypes.sol";
 
 interface ILendingMarketController {
     struct Order {
+        bytes32 ccy;
         uint256 maturity;
         ProtocolTypes.Side side;
         uint256 unitPrice;

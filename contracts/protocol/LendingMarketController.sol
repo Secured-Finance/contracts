@@ -395,17 +395,17 @@ contract LendingMarketController is
 
     /**
      * @notice Gets user's active and inactive orders in the order book
-     * @param _ccy Currency name in bytes32
+     * @param _ccys Currency name list in bytes32
      * @param _user User's address
      * @return activeOrders The array of active orders in the order book
      * @return inactiveOrders The array of inactive orders
      */
-    function getOrders(bytes32 _ccy, address _user)
+    function getOrders(bytes32[] memory _ccys, address _user)
         external
         view
         returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
     {
-        (activeOrders, inactiveOrders) = LendingMarketUserLogic.getOrders(_ccy, _user);
+        (activeOrders, inactiveOrders) = LendingMarketUserLogic.getOrders(_ccys, _user);
     }
 
     /**
