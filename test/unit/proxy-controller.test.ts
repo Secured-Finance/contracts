@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
-import { hexWBTC, toBytes32 } from '../../utils/strings';
+import { hexETH, hexWBTC, toBytes32 } from '../../utils/strings';
 import { btcToETHRate, wBtcToBTCRate } from '../common/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
@@ -38,6 +38,7 @@ describe('ProxyController', () => {
       );
       const tx = await proxyController.setCurrencyControllerImpl(
         currencyController.address,
+        hexETH,
       );
 
       const currencyControllerProxyAddress = getNewProxyAddress(tx);
@@ -54,9 +55,13 @@ describe('ProxyController', () => {
       );
 
       await expectRevert(
-        proxyController.setCurrencyControllerImpl(currencyController.address, {
-          from: aliceSigner.address,
-        }),
+        proxyController.setCurrencyControllerImpl(
+          currencyController.address,
+          hexETH,
+          {
+            from: aliceSigner.address,
+          },
+        ),
         'Ownable: caller is not the owner',
       );
     });
@@ -67,7 +72,7 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
       const currencyControllerProxyAddress1 = await proxyController
-        .setCurrencyControllerImpl(currencyController1.address)
+        .setCurrencyControllerImpl(currencyController1.address, hexETH)
         .then(getNewProxyAddress);
 
       await addressResolver.importAddresses(
@@ -81,6 +86,7 @@ describe('ProxyController', () => {
       );
       const tx2 = await proxyController.setCurrencyControllerImpl(
         currencyController2.address,
+        hexETH,
       );
       const currencyControllerProxyAddress2 = getUpdatedProxyAddress(tx2);
 
@@ -97,7 +103,7 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
       const currencyControllerProxyAddress = await proxyController
-        .setCurrencyControllerImpl(currencyController.address)
+        .setCurrencyControllerImpl(currencyController.address, hexETH)
         .then(getNewProxyAddress);
 
       const contractName = toBytes32('CurrencyController');
@@ -129,7 +135,7 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
       const currencyControllerProxyAddress1 = await proxyController
-        .setCurrencyControllerImpl(currencyController1.address)
+        .setCurrencyControllerImpl(currencyController1.address, hexETH)
         .then(getNewProxyAddress);
       const currencyControllerProxy1 = await CurrencyController.at(
         currencyControllerProxyAddress1,
@@ -164,7 +170,7 @@ describe('ProxyController', () => {
         currencyController1.address,
       );
       const currencyControllerProxyAddress2 = await proxyController
-        .setCurrencyControllerImpl(currencyController2.address)
+        .setCurrencyControllerImpl(currencyController2.address, hexETH)
         .then(getUpdatedProxyAddress);
       const currencyControllerProxy2 = await CurrencyController.at(
         currencyControllerProxyAddress2,
@@ -180,7 +186,7 @@ describe('ProxyController', () => {
       );
 
       await expectRevert(
-        currencyController.initialize(ownerSinger.address),
+        currencyController.initialize(ownerSinger.address, hexETH),
         'Must be called from proxy contract',
       );
     });
@@ -193,7 +199,7 @@ describe('ProxyController', () => {
       );
 
       const currencyControllerProxyAddress = await proxyController
-        .setCurrencyControllerImpl(currencyController.address)
+        .setCurrencyControllerImpl(currencyController.address, hexETH)
         .then(getNewProxyAddress);
 
       await addressResolver.importAddresses(

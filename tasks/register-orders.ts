@@ -189,7 +189,7 @@ task('register-orders', 'Registers order data into the selected lending market')
 
       const depositValue = totalBorrowAmount.mul(2);
       const depositValueInETH = await currencyController[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ](marketCurrencyName, depositValue);
 
       if (BigNumber.from(depositValueInETH).mul(2).lt(availableAmountInETH)) {
@@ -200,7 +200,7 @@ task('register-orders', 'Registers order data into the selected lending market')
         );
       } else {
         const depositValueInCollateralCurrency =
-          await currencyController.convertFromETH(
+          await currencyController.convertFromBaseCurrency(
             collateralCurrencyName,
             depositValueInETH,
           );

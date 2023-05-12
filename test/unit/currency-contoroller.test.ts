@@ -3,6 +3,7 @@ import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
+import { hexETH } from '../../utils/strings';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -36,7 +37,7 @@ describe('CurrencyController', () => {
     await proxyController.setAddressResolverImpl(addressResolver.address);
 
     const currencyControllerAddress = await proxyController
-      .setCurrencyControllerImpl(currencyController.address)
+      .setCurrencyControllerImpl(currencyController.address, hexETH)
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
@@ -275,7 +276,7 @@ describe('CurrencyController', () => {
 
     it('Get the converted amount(int256) in ETH', async () => {
       const amount = await currencyControllerProxy[
-        'convertToETH(bytes32,int256)'
+        'convertToBaseCurrency(bytes32,int256)'
       ](currency, 10000000000);
 
       expect(amount).to.equal('100');
@@ -283,7 +284,7 @@ describe('CurrencyController', () => {
 
     it('Get the converted amount(uint256) in ETH', async () => {
       const amount = await currencyControllerProxy[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ](currency, 10000000000);
 
       expect(amount).to.equal('100');
@@ -291,7 +292,7 @@ describe('CurrencyController', () => {
 
     it('Get the array of converted amount(uint256[]) in ETH', async () => {
       const amounts = await currencyControllerProxy[
-        'convertToETH(bytes32,uint256[])'
+        'convertToBaseCurrency(bytes32,uint256[])'
       ](currency, [10000000000]);
 
       expect(amounts.length).to.equal(1);
@@ -299,7 +300,7 @@ describe('CurrencyController', () => {
     });
 
     it('Get the converted amount(uint256) in the selected currency', async () => {
-      const amount = await currencyControllerProxy.convertFromETH(
+      const amount = await currencyControllerProxy.convertFromBaseCurrency(
         currency,
         10000000000,
       );

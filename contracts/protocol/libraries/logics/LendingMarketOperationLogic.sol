@@ -191,7 +191,7 @@ library LendingMarketOperationLogic {
 
             Storage.slot().marketTerminationRatios[ccy] = ccy == "ETH"
                 ? balance
-                : AddressResolverLib.currencyController().convertToETH(ccy, balance);
+                : AddressResolverLib.currencyController().convertToBaseCurrency(ccy, balance);
         }
     }
 

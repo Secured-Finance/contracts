@@ -1943,7 +1943,7 @@ describe('LendingMarketController - Orders', () => {
         await mockTokenVault.mock['isCovered(address)'].returns(true);
         await mockReserveFund.mock.isPaused.returns(true);
         await mockCurrencyController.mock.convert.returns(100);
-        await mockCurrencyController.mock.convertFromETH.returns(1);
+        await mockCurrencyController.mock.convertFromBaseCurrency.returns(1);
       });
 
       it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {

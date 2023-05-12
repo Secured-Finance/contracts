@@ -2,6 +2,7 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { currencies, mockPriceFeeds, priceOracles } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
+import { hexETH } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -27,7 +28,7 @@ const func: DeployFunction = async function ({
         );
 
       const { events } = await proxyController
-        .setCurrencyControllerImpl(deployResult.address)
+        .setCurrencyControllerImpl(deployResult.address, hexETH)
         .then((tx) => tx.wait());
 
       const proxyAddress = events.find(({ event }) =>

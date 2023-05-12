@@ -15,6 +15,7 @@ library CurrencyControllerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.currencyController");
 
     struct Storage {
+        bytes32 baseCurrency;
         // Protocol currencies
         EnumerableSet.Bytes32Set currencies;
         mapping(bytes32 => uint256) haircuts;
