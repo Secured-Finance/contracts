@@ -27,12 +27,14 @@ const deployContracts = async () => {
   const [
     depositManagementLogic,
     lendingMarketOperationLogic,
+    lendingMarketUserLogic,
     orderBookLogic,
     quickSort,
   ] = await Promise.all(
     [
       'DepositManagementLogic',
       'LendingMarketOperationLogic',
+      'LendingMarketUserLogic',
       'OrderBookLogic',
       'QuickSort',
     ].map((library) =>
@@ -80,6 +82,7 @@ const deployContracts = async () => {
         libraries: {
           FundManagementLogic: fundManagementLogic.address,
           LendingMarketOperationLogic: lendingMarketOperationLogic.address,
+          LendingMarketUserLogic: lendingMarketUserLogic.address,
         },
       })
       .then((factory) => factory.deploy()),

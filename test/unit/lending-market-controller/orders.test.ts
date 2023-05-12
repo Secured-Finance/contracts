@@ -765,6 +765,131 @@ describe('LendingMarketController - Orders', () => {
       ).to.emit(lendingMarket1, 'OrderCanceled');
     });
 
+    it('Get active orders from one market', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '9880',
+        );
+      const { activeOrders, inactiveOrders } =
+        await lendingMarketControllerProxy.getOrders(
+          targetCurrency,
+          alice.address,
+        );
+
+      expect(activeOrders.length).to.equal(1);
+      expect(inactiveOrders.length).to.equal(0);
+
+      expect(activeOrders[0].side).to.equal(Side.LEND);
+      expect(activeOrders[0].unitPrice).to.equal('9880');
+      expect(activeOrders[0].maturity).to.equal(maturities[0]);
+      expect(activeOrders[0].amount).to.equal('50000000000000000');
+    });
+
+    it('Get active orders from multiple markets', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '9880',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '50000000000000001',
+          '9881',
+        );
+
+      const { activeOrders, inactiveOrders } =
+        await lendingMarketControllerProxy.getOrders(
+          targetCurrency,
+          alice.address,
+        );
+
+      expect(activeOrders.length).to.equal(2);
+      expect(inactiveOrders.length).to.equal(0);
+
+      expect(activeOrders[0].side).to.equal(Side.LEND);
+      expect(activeOrders[0].unitPrice).to.equal('9880');
+      expect(activeOrders[0].maturity).to.equal(maturities[0]);
+      expect(activeOrders[0].amount).to.equal('50000000000000000');
+
+      expect(activeOrders[1].side).to.equal(Side.LEND);
+      expect(activeOrders[1].unitPrice).to.equal('9881');
+      expect(activeOrders[1].maturity).to.equal(maturities[1]);
+      expect(activeOrders[1].amount).to.equal('50000000000000001');
+    });
+
+    it('Get active orders and inactive orders', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000000',
+          '9880',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000001',
+          '9881',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '50000000000000001',
+          '0',
+        );
+
+      const { activeOrders, inactiveOrders } =
+        await lendingMarketControllerProxy.getOrders(
+          targetCurrency,
+          alice.address,
+        );
+
+      expect(activeOrders.length).to.equal(1);
+      expect(inactiveOrders.length).to.equal(1);
+
+      expect(activeOrders[0].side).to.equal(Side.LEND);
+      expect(activeOrders[0].unitPrice).to.equal('9880');
+      expect(activeOrders[0].maturity).to.equal(maturities[0]);
+      expect(activeOrders[0].amount).to.equal('50000000000000000');
+
+      expect(inactiveOrders[0].side).to.equal(Side.LEND);
+      expect(inactiveOrders[0].unitPrice).to.equal('9881');
+      expect(inactiveOrders[0].maturity).to.equal(maturities[0]);
+      expect(inactiveOrders[0].amount).to.equal('50000000000000001');
+    });
+
+    it('Get empty orders', async () => {
+      const { activeOrders, inactiveOrders } =
+        await lendingMarketControllerProxy.getOrders(
+          targetCurrency,
+          alice.address,
+        );
+
+      expect(activeOrders.length).to.equal(0);
+      expect(inactiveOrders.length).to.equal(0);
+    });
+
     it('Fill lending orders and check the total present value', async () => {
       const checkPresentValue = async () => {
         const aliceTotalPV =

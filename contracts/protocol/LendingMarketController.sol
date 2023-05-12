@@ -11,9 +11,10 @@ import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
+import {Constants} from "./libraries/Constants.sol";
 import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
-import {Constants} from "./libraries/Constants.sol";
+import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLendingMarketManager} from "./mixins/MixinLendingMarketManager.sol";
@@ -377,6 +378,12 @@ contract LendingMarketController is
         }
     }
 
+    /**
+     * @notice Gets the genesis value of the account.
+     * @param _ccy Currency name in bytes32 for Lending Market
+     * @param _user User's address
+     * @return genesisValue The genesis value
+     */
     function getGenesisValue(bytes32 _ccy, address _user)
         external
         view
@@ -384,6 +391,21 @@ contract LendingMarketController is
         returns (int256 genesisValue)
     {
         genesisValue = FundManagementLogic.calculateActualFunds(_ccy, 0, _user).genesisValue;
+    }
+
+    /**
+     * @notice Gets user's active and inactive orders in the order book
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return activeOrders The array of active orders in the order book
+     * @return inactiveOrders The array of inactive orders
+     */
+    function getOrders(bytes32 _ccy, address _user)
+        external
+        view
+        returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
+    {
+        (activeOrders, inactiveOrders) = LendingMarketUserLogic.getOrders(_ccy, _user);
     }
 
     /**
@@ -628,13 +650,17 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
+        int256 futureValue = FundManagementLogic
+            .calculateActualFunds(_ccy, _maturity, msg.sender)
+            .futureValue;
+
         (
             uint256 filledUnitPrice,
             uint256 filledAmount,
             uint256 filledFutureValue,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
             ProtocolTypes.Side side
-        ) = FundManagementLogic.unwind(_ccy, _maturity, msg.sender);
+        ) = LendingMarketUserLogic.unwind(_ccy, _maturity, msg.sender, futureValue);
 
         _updateFundsForTaker(
             _ccy,
@@ -778,11 +804,6 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        // In order to liquidate using user collateral, inactive order IDs must be cleaned
-        // and converted to actual funds first.
-        FundManagementLogic.cleanUpFunds(_collateralCcy, _user);
-        FundManagementLogic.cleanUpFunds(_debtCcy, _user);
-
         uint256 liquidatedDebtAmount = FundManagementLogic.executeLiquidation(
             msg.sender,
             _user,
@@ -874,11 +895,8 @@ contract LendingMarketController is
      * @notice Clean up all funds of the user
      * @param _user User's address
      */
-    function cleanUpAllFunds(address _user) public override {
-        EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
-        for (uint256 i = 0; i < ccySet.length(); i++) {
-            FundManagementLogic.cleanUpFunds(ccySet.at(i), _user);
-        }
+    function cleanUpAllFunds(address _user) external override {
+        FundManagementLogic.cleanUpAllFunds(_user);
     }
 
     /**

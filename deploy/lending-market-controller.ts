@@ -14,12 +14,16 @@ const func: DeployFunction = async function ({
   const lendingMarketOperationLogic = await deployments.get(
     'LendingMarketOperationLogic',
   );
+  const lendingMarketUserLogic = await deployments.get(
+    'LendingMarketUserLogic',
+  );
 
   const deployResult = await deploy('LendingMarketController', {
     from: deployer,
     libraries: {
       FundManagementLogic: fundManagementLogic.address,
       LendingMarketOperationLogic: lendingMarketOperationLogic.address,
+      LendingMarketUserLogic: lendingMarketUserLogic.address,
     },
   });
 
