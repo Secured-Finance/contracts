@@ -189,11 +189,9 @@ library LendingMarketUserLogic {
     function _flattenOrders(ILendingMarketController.Order[][] memory orders, uint256 totalLength)
         internal
         pure
-        returns (ILendingMarketController.Order[] memory)
+        returns (ILendingMarketController.Order[] memory flattened)
     {
-        ILendingMarketController.Order[] memory flattened = new ILendingMarketController.Order[](
-            totalLength
-        );
+        flattened = new ILendingMarketController.Order[](totalLength);
         uint256 index;
         for (uint256 i; i < orders.length; i++) {
             for (uint256 j; j < orders[i].length; j++) {
@@ -201,7 +199,5 @@ library LendingMarketUserLogic {
                 index++;
             }
         }
-
-        return flattened;
     }
 }
