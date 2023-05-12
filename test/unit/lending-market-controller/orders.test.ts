@@ -754,7 +754,7 @@ describe('LendingMarketController - Orders', () => {
       ).to.emit(lendingMarket1, 'OrderCanceled');
     });
 
-    it('Get active orders of one market', async () => {
+    it('Get an active order of one market', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
         .createOrder(
@@ -794,9 +794,28 @@ describe('LendingMarketController - Orders', () => {
         .connect(alice)
         .createOrder(
           targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '50000000000000001',
+          '9881',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
           maturities[1],
           Side.LEND,
-          '50000000000000001',
+          '50000000000000002',
+          '9880',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '50000000000000003',
           '9881',
         );
 
@@ -806,7 +825,7 @@ describe('LendingMarketController - Orders', () => {
           alice.address,
         );
 
-      expect(activeOrders.length).to.equal(2);
+      expect(activeOrders.length).to.equal(4);
       expect(inactiveOrders.length).to.equal(0);
 
       expect(activeOrders[0].ccy).to.equal(targetCurrency);
@@ -816,10 +835,22 @@ describe('LendingMarketController - Orders', () => {
       expect(activeOrders[0].amount).to.equal('50000000000000000');
 
       expect(activeOrders[1].ccy).to.equal(targetCurrency);
-      expect(activeOrders[1].side).to.equal(Side.LEND);
+      expect(activeOrders[1].side).to.equal(Side.BORROW);
       expect(activeOrders[1].unitPrice).to.equal('9881');
-      expect(activeOrders[1].maturity).to.equal(maturities[1]);
+      expect(activeOrders[1].maturity).to.equal(maturities[0]);
       expect(activeOrders[1].amount).to.equal('50000000000000001');
+
+      expect(activeOrders[2].ccy).to.equal(targetCurrency);
+      expect(activeOrders[2].side).to.equal(Side.LEND);
+      expect(activeOrders[2].unitPrice).to.equal('9880');
+      expect(activeOrders[2].maturity).to.equal(maturities[1]);
+      expect(activeOrders[2].amount).to.equal('50000000000000002');
+
+      expect(activeOrders[3].ccy).to.equal(targetCurrency);
+      expect(activeOrders[3].side).to.equal(Side.BORROW);
+      expect(activeOrders[3].unitPrice).to.equal('9881');
+      expect(activeOrders[3].maturity).to.equal(maturities[1]);
+      expect(activeOrders[3].amount).to.equal('50000000000000003');
     });
 
     it('Get active orders of multiple currencies', async () => {
@@ -832,6 +863,15 @@ describe('LendingMarketController - Orders', () => {
           '50000000000000000',
           '9880',
         );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '50000000000000001',
+          '9879',
+        );
 
       const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency2`);
       await initialize(targetCurrency2);
@@ -842,8 +882,17 @@ describe('LendingMarketController - Orders', () => {
           targetCurrency2,
           maturities[0],
           Side.BORROW,
-          '50000000000000001',
+          '50000000000000002',
           '9881',
+        );
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency2,
+          maturities[0],
+          Side.BORROW,
+          '50000000000000003',
+          '9882',
         );
       const { activeOrders, inactiveOrders } =
         await lendingMarketControllerProxy.getOrders(
@@ -851,7 +900,7 @@ describe('LendingMarketController - Orders', () => {
           alice.address,
         );
 
-      expect(activeOrders.length).to.equal(2);
+      expect(activeOrders.length).to.equal(4);
       expect(inactiveOrders.length).to.equal(0);
 
       expect(activeOrders[0].ccy).to.equal(targetCurrency);
@@ -860,11 +909,23 @@ describe('LendingMarketController - Orders', () => {
       expect(activeOrders[0].maturity).to.equal(maturities[0]);
       expect(activeOrders[0].amount).to.equal('50000000000000000');
 
-      expect(activeOrders[1].ccy).to.equal(targetCurrency2);
-      expect(activeOrders[1].side).to.equal(Side.BORROW);
-      expect(activeOrders[1].unitPrice).to.equal('9881');
+      expect(activeOrders[1].ccy).to.equal(targetCurrency);
+      expect(activeOrders[1].side).to.equal(Side.LEND);
+      expect(activeOrders[1].unitPrice).to.equal('9879');
       expect(activeOrders[1].maturity).to.equal(maturities[0]);
       expect(activeOrders[1].amount).to.equal('50000000000000001');
+
+      expect(activeOrders[2].ccy).to.equal(targetCurrency2);
+      expect(activeOrders[2].side).to.equal(Side.BORROW);
+      expect(activeOrders[2].unitPrice).to.equal('9881');
+      expect(activeOrders[2].maturity).to.equal(maturities[0]);
+      expect(activeOrders[2].amount).to.equal('50000000000000002');
+
+      expect(activeOrders[3].ccy).to.equal(targetCurrency2);
+      expect(activeOrders[3].side).to.equal(Side.BORROW);
+      expect(activeOrders[3].unitPrice).to.equal('9882');
+      expect(activeOrders[3].maturity).to.equal(maturities[0]);
+      expect(activeOrders[3].amount).to.equal('50000000000000003');
     });
 
     it('Get active orders and inactive orders', async () => {
