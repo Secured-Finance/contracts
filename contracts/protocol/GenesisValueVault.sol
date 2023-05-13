@@ -318,34 +318,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         );
     }
 
-    function offsetGenesisValue(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _lender,
-        address _borrower,
-        int256 _maximumGVAmount
-    ) external override onlyAcceptedContracts returns (int256 offsetAmount) {
-        int256 lenderGVAmount = getGenesisValue(_ccy, _lender);
-        int256 borrowerGVAmount = getGenesisValue(_ccy, _borrower);
-
-        if (lenderGVAmount <= 0 || borrowerGVAmount >= 0) {
-            return 0;
-        } else {
-            offsetAmount = lenderGVAmount;
-        }
-
-        if (-borrowerGVAmount < lenderGVAmount) {
-            offsetAmount = -borrowerGVAmount;
-        }
-
-        if (_maximumGVAmount != 0 && offsetAmount > _maximumGVAmount) {
-            offsetAmount = _maximumGVAmount;
-        }
-
-        _updateBalance(_ccy, _lender, _maturity, -offsetAmount);
-        _updateBalance(_ccy, _borrower, _maturity, offsetAmount);
-    }
-
     function transferFrom(
         bytes32 _ccy,
         address _sender,

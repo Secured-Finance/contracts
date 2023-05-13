@@ -12,7 +12,7 @@ import {
   eFilToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
-import { calculateOrderFee } from '../common/orders';
+import { calculateFutureValue, calculateOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
 describe('Integration Test: Order Book', async () => {
@@ -122,7 +122,7 @@ describe('Integration Test: Order Book', async () => {
   });
 
   describe('Market orders', async () => {
-    describe('Add orders using the same currency as the collateral, Fill the order, Unwind the ETH order', async () => {
+    describe('Add orders using the same currency as the collateral, Fill the order, Unwind the ETH borrowing order', async () => {
       const orderAmount = initialETHBalance.div(5);
       const depositAmount = orderAmount.mul(3).div(2);
 
@@ -239,7 +239,7 @@ describe('Integration Test: Order Book', async () => {
       });
     });
 
-    describe('Add orders using the different currency as the collateral, Fill the order, Unwind the non-ETH order', async () => {
+    describe('Add orders using the different currency as the collateral, Fill the order, Unwind the non-ETH borrowing order', async () => {
       const depositAmount = initialETHBalance.div(5);
       const orderAmount = depositAmount
         .mul(4)
@@ -375,6 +375,132 @@ describe('Integration Test: Order Book', async () => {
         await lendingMarketController
           .connect(dave)
           .cancelOrder(hexEFIL, filMaturities[0], '4');
+      });
+    });
+
+    describe('Fill the order, Unwind the lending order', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount
+        .mul(4)
+        .div(5)
+        .mul(BigNumber.from(10).pow(18))
+        .div(eFilToETHRate);
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(4);
+        filMaturities = await lendingMarketController.getMaturities(hexEFIL);
+        // await createSampleFILOrders(carol);
+      });
+
+      it('Deposit ETH ', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill an order on the FIL market', async () => {
+        await eFILToken
+          .connect(bob)
+          .approve(tokenVault.address, initialFILBalance);
+
+        await lendingMarketController
+          .connect(bob)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '8000',
+          );
+
+        const { blockHash } = await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '0',
+          );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount,
+          '8000',
+          filMaturities[0].sub(timestamp),
+        );
+
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController.getFutureValue(
+              hexEFIL,
+              filMaturities[0],
+              address,
+            ),
+          ),
+        );
+
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
+      });
+
+      it('Check lending position', async () => {
+        const bobFV = await lendingMarketController.getFutureValue(
+          hexEFIL,
+          filMaturities[0],
+          bob.address,
+        );
+
+        expect(bobFV).to.equal(calculateFutureValue(orderAmount, '8000'));
+      });
+
+      it('Unwind a lending order', async () => {
+        await eFILToken
+          .connect(carol)
+          .approve(tokenVault.address, orderAmount.mul(2));
+
+        await lendingMarketController
+          .connect(carol)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '8000',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .unwindOrder(hexEFIL, filMaturities[0]),
+        ).to.emit(
+          fundManagementLogic.attach(lendingMarketController.address),
+          'OrderFilled',
+        );
+
+        const bobFV = await lendingMarketController.getFutureValue(
+          hexEFIL,
+          filMaturities[0],
+          bob.address,
+        );
+
+        expect(bobFV).to.equal(0);
+      });
+
+      it('Check deposit amount', async () => {
+        const bobFILDepositAmount = await tokenVault.getDepositAmount(
+          bob.address,
+          hexEFIL,
+        );
+
+        expect(bobFILDepositAmount).to.equal(orderAmount);
       });
     });
 

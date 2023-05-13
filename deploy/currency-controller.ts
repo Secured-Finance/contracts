@@ -1,7 +1,8 @@
-import { DeployFunction, DeployResult } from 'hardhat-deploy/types';
+import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies, mockRates, priceOracles } from '../utils/currencies';
+import { currencies, mockPriceFeeds, priceOracles } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
+import { hexETH } from '../utils/strings';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -27,7 +28,7 @@ const func: DeployFunction = async function ({
         );
 
       const { events } = await proxyController
-        .setCurrencyControllerImpl(deployResult.address)
+        .setCurrencyControllerImpl(deployResult.address, hexETH)
         .then((tx) => tx.wait());
 
       const proxyAddress = events.find(({ event }) =>
@@ -39,29 +40,38 @@ const func: DeployFunction = async function ({
         proxyAddress,
       );
 
-      // Set up for CurrencyController
-      const mockPriceFeeds: Record<string, DeployResult> = {};
-
       // Use MockV3Aggregator for a currency when a price feed is not set
       for (const currency of currencies) {
-        if (!priceOracles[currency.key]) {
-          const rate = mockRates[currency.key];
-          const priceFeed = await deploy('MockV3Aggregator', {
-            from: deployer,
-            args: [rate.decimals, currency.key, rate.rate.toString()],
+        const priceFeedAddresses: string[] = [];
+
+        if (priceOracles[currency.key]) {
+          priceOracles[currency.key].forEach((priceOracle) => {
+            if (priceOracle) {
+              priceFeedAddresses.push(priceOracle);
+            }
           });
-          console.log(
-            `Deployed MockV3Aggregator ${rate.name} price feed at`,
-            priceFeed.address,
-          );
-          mockPriceFeeds[currency.key] = priceFeed;
+
+          if (priceFeedAddresses.length === 0) {
+            for (const priceFeed of mockPriceFeeds[currency.key]) {
+              const priceFeedContract = await deploy('MockV3Aggregator', {
+                from: deployer,
+                args: [
+                  priceFeed.decimals,
+                  currency.key,
+                  priceFeed.rate.toString(),
+                ],
+              });
+              console.log(
+                `Deployed MockV3Aggregator ${priceFeed.name} price feed at`,
+                priceFeedContract.address,
+              );
+              priceFeedAddresses.push(priceFeedContract.address);
+            }
+          }
         }
 
-        const priceFeedAddress = mockPriceFeeds[currency.key]
-          ? mockPriceFeeds[currency.key].address
-          : priceOracles[currency.key];
         await currencyControllerContract
-          .addCurrency(currency.key, priceFeedAddress, currency.haircut)
+          .addCurrency(currency.key, currency.haircut, priceFeedAddresses)
           .then((tx) => tx.wait());
       }
     },

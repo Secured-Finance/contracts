@@ -1,4 +1,6 @@
+import BigNumberJS from 'bignumber.js';
 import { BigNumber } from 'ethers';
+
 import {
   ORDER_FEE_RATE,
   PCT_DIGIT,
@@ -24,5 +26,9 @@ export const calculateFutureValue = (
   orderAmount: BigNumber,
   unitPrice: BigNumber | string | number,
 ) => {
-  return orderAmount.mul(PRICE_DIGIT).div(unitPrice);
+  return BigNumberJS(orderAmount.toString())
+    .times(PRICE_DIGIT)
+    .div(unitPrice.toString())
+    .dp(0)
+    .toFixed();
 };

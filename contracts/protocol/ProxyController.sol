@@ -107,9 +107,14 @@ contract ProxyController is IProxyController, Ownable {
     /**
      * @notice Sets the implementation contract of CurrencyController
      * @param newImpl The address of implementation contract
+     * @param baseCcy The base currency name in bytes32
      */
-    function setCurrencyControllerImpl(address newImpl) external onlyOwner {
-        bytes memory data = abi.encodeWithSignature("initialize(address)", msg.sender);
+    function setCurrencyControllerImpl(address newImpl, bytes32 baseCcy) external onlyOwner {
+        bytes memory data = abi.encodeWithSignature(
+            "initialize(address,bytes32)",
+            msg.sender,
+            baseCcy
+        );
         _updateImpl(Contracts.CURRENCY_CONTROLLER, newImpl, data);
     }
 

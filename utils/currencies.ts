@@ -13,18 +13,18 @@ export interface Currency {
   args?: string[];
 }
 
-export interface MockRate {
+export interface MockPriceFeeds {
   [key: string]: {
     name: string;
     decimals: number;
     rate: BigNumber;
-  };
+  }[];
 }
 
 const eFilToETHRate = BigNumber.from('3803677700000000');
-const ethToUSDRate = BigNumber.from('149164000000');
-const wBtcToETHRate = BigNumber.from('13087292239235700000');
+const btcToETHRate = BigNumber.from('13087292239235700000');
 const usdcToETHRate = BigNumber.from('670403046311442');
+const wBtcToBTCRate = BigNumber.from('100100000');
 
 const currencies: Currency[] = [
   {
@@ -73,34 +73,39 @@ const currencies: Currency[] = [
   },
 ];
 
-const mockRates: MockRate = {
-  [hexEFIL]: {
-    name: 'EFIL/ETH',
-    decimals: 18,
-    rate: eFilToETHRate,
-  },
-  [hexETH]: {
-    name: 'ETH/USD',
-    decimals: 8,
-    rate: ethToUSDRate,
-  },
-  [hexWBTC]: {
-    name: 'WBTC/ETH',
-    decimals: 8,
-    rate: wBtcToETHRate,
-  },
-  [hexUSDC]: {
-    name: 'USDC/ETH',
-    decimals: 6,
-    rate: usdcToETHRate,
-  },
+const mockPriceFeeds: MockPriceFeeds = {
+  [hexEFIL]: [
+    {
+      name: 'EFIL/ETH',
+      decimals: 18,
+      rate: eFilToETHRate,
+    },
+  ],
+  [hexWBTC]: [
+    {
+      name: 'WBTC/BTC',
+      decimals: 8,
+      rate: wBtcToBTCRate,
+    },
+    {
+      name: 'BTC/ETH',
+      decimals: 8,
+      rate: btcToETHRate,
+    },
+  ],
+  [hexUSDC]: [
+    {
+      name: 'USDC/ETH',
+      decimals: 6,
+      rate: usdcToETHRate,
+    },
+  ],
 };
 
 const priceOracles = {
-  [hexEFIL]: process.env.EFIL_TO_ETH_RATE,
-  [hexETH]: process.env.ETH_TO_USD_RATE,
-  [hexWBTC]: process.env.WBTC_TO_ETH_RATE,
-  [hexUSDC]: process.env.USDC_TO_ETH_RATE,
+  [hexEFIL]: [process.env.EFIL_TO_ETH_RATE],
+  [hexWBTC]: [process.env.WBTC_TO_BTC_RATE, process.env.BTC_TO_ETH_RATE],
+  [hexUSDC]: [process.env.USDC_TO_ETH_RATE],
 };
 
-export { currencies, mockRates, priceOracles };
+export { currencies, mockPriceFeeds, priceOracles };

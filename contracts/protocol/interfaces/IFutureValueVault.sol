@@ -30,12 +30,6 @@ interface IFutureValueVault {
         bool isTaker
     ) external returns (bool);
 
-    function offsetFutureValue(
-        address lender,
-        address borrower,
-        uint256 maximumFVAmount
-    ) external returns (uint256 offsetAmount);
-
     function transferFrom(
         address sender,
         address receiver,

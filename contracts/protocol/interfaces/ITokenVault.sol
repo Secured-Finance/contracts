@@ -34,6 +34,8 @@ interface ITokenVault {
 
     function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw);
 
+    function getWithdrawableCollateral(bytes32 _ccy, address _user) external view returns (uint256);
+
     function getCoverage(address user) external view returns (uint256 coverage);
 
     function getUnusedCollateral(address user) external view returns (uint256);
@@ -50,8 +52,7 @@ interface ITokenVault {
         returns (
             uint256 liquidationAmount,
             uint256 protocolFee,
-            uint256 liquidatorFee,
-            uint256 insolventAmount
+            uint256 liquidatorFee
         );
 
     function getTotalDepositAmount(bytes32 _ccy) external view returns (uint256);
@@ -102,5 +103,5 @@ interface ITokenVault {
         address _sender,
         address _receiver,
         uint256 _amount
-    ) external;
+    ) external returns (uint256 untransferredAmount);
 }

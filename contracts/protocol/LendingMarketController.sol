@@ -11,9 +11,10 @@ import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
+import {Constants} from "./libraries/Constants.sol";
 import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
-import {Constants} from "./libraries/Constants.sol";
+import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLendingMarketManager} from "./mixins/MixinLendingMarketManager.sol";
@@ -373,10 +374,16 @@ contract LendingMarketController is
         for (uint256 i = 0; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
             int256 amount = FundManagementLogic.calculateActualFunds(ccy, 0, _user).presentValue;
-            totalPresentValue += currencyController().convertToETH(ccy, amount);
+            totalPresentValue += currencyController().convertToBaseCurrency(ccy, amount);
         }
     }
 
+    /**
+     * @notice Gets the genesis value of the account.
+     * @param _ccy Currency name in bytes32 for Lending Market
+     * @param _user User's address
+     * @return genesisValue The genesis value
+     */
     function getGenesisValue(bytes32 _ccy, address _user)
         external
         view
@@ -384,6 +391,21 @@ contract LendingMarketController is
         returns (int256 genesisValue)
     {
         genesisValue = FundManagementLogic.calculateActualFunds(_ccy, 0, _user).genesisValue;
+    }
+
+    /**
+     * @notice Gets user's active and inactive orders in the order book
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return activeOrders The array of active orders in the order book
+     * @return inactiveOrders The array of inactive orders
+     */
+    function getOrders(bytes32 _ccy, address _user)
+        external
+        view
+        returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
+    {
+        (activeOrders, inactiveOrders) = LendingMarketUserLogic.getOrders(_ccy, _user);
     }
 
     /**
@@ -616,7 +638,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Unwinds all orders by creating an opposite position order.
+     * @notice Unwinds user's lending or borrowing positions by creating an opposite position order.
      * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      */
@@ -628,45 +650,17 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        FundManagementLogic.cleanUpFunds(_ccy, msg.sender);
-
         int256 futureValue = FundManagementLogic
             .calculateActualFunds(_ccy, _maturity, msg.sender)
             .futureValue;
 
-        require(futureValue != 0, "Future Value is zero");
-
-        uint256 filledUnitPrice;
-        uint256 filledAmount;
-        uint256 filledFutureValue;
-        ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder;
-        ProtocolTypes.Side side;
-
-        if (futureValue > 0) {
-            side = ProtocolTypes.Side.BORROW;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
-                side,
-                msg.sender,
-                futureValue.toUint256()
-            );
-        } else if (futureValue < 0) {
-            side = ProtocolTypes.Side.LEND;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwindOrder(
-                side,
-                msg.sender,
-                (-futureValue).toUint256()
-            );
-        }
+        (
+            uint256 filledUnitPrice,
+            uint256 filledAmount,
+            uint256 filledFutureValue,
+            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
+            ProtocolTypes.Side side
+        ) = LendingMarketUserLogic.unwind(_ccy, _maturity, msg.sender, futureValue);
 
         _updateFundsForTaker(
             _ccy,
@@ -685,6 +679,15 @@ contract LendingMarketController is
             side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
             partiallyFilledOrder
         );
+
+        // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
+        // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
+        (int256 currentFutureValue, ) = IFutureValueVault(getFutureValueVault(_ccy, _maturity))
+            .getFutureValue(msg.sender);
+
+        if (currentFutureValue != 0) {
+            FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, msg.sender);
+        }
 
         return true;
     }
@@ -781,7 +784,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Liquidates a lending position if the user's coverage is less than 1.
+     * @notice Liquidates a lending or borrowing position if the user's coverage is hight.
      * @param _collateralCcy Currency name to be used as collateral
      * @param _debtCcy Currency name to be used as debt
      * @param _debtMaturity The market maturity of the debt
@@ -801,10 +804,6 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        // In order to liquidate using user collateral, inactive order IDs must be cleaned
-        // and converted to actual funds first.
-        FundManagementLogic.cleanUpFunds(_debtCcy, _user);
-
         uint256 liquidatedDebtAmount = FundManagementLogic.executeLiquidation(
             msg.sender,
             _user,
@@ -813,7 +812,7 @@ contract LendingMarketController is
             _debtMaturity
         );
 
-        require(tokenVault().isCovered(msg.sender), "Not enough collateral");
+        require(tokenVault().isCovered(msg.sender), "Invalid liquidation");
 
         emit LiquidationExecuted(
             _user,
@@ -822,8 +821,6 @@ contract LendingMarketController is
             _debtMaturity,
             liquidatedDebtAmount
         );
-
-        FundManagementLogic.convertFutureValueToGenesisValue(_debtCcy, _debtMaturity, _user);
 
         return true;
     }
@@ -898,11 +895,8 @@ contract LendingMarketController is
      * @notice Clean up all funds of the user
      * @param _user User's address
      */
-    function cleanUpAllFunds(address _user) public override {
-        EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
-        for (uint256 i = 0; i < ccySet.length(); i++) {
-            FundManagementLogic.cleanUpFunds(ccySet.at(i), _user);
-        }
+    function cleanUpAllFunds(address _user) external override {
+        FundManagementLogic.cleanUpAllFunds(_user);
     }
 
     /**

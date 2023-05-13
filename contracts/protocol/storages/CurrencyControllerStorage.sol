@@ -15,14 +15,14 @@ library CurrencyControllerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.currencyController");
 
     struct Storage {
+        bytes32 baseCurrency;
         // Protocol currencies
         EnumerableSet.Bytes32Set currencies;
         mapping(bytes32 => uint256) haircuts;
-        // PriceFeed
-        mapping(bytes32 => AggregatorV3Interface) usdPriceFeeds;
-        mapping(bytes32 => AggregatorV3Interface) ethPriceFeeds;
-        mapping(bytes32 => uint8) usdDecimals;
-        mapping(bytes32 => uint8) ethDecimals;
+        // Array of the price feeds
+        mapping(bytes32 => AggregatorV3Interface[]) priceFeeds;
+        // Total cached decimals of the price feeds
+        mapping(bytes32 => uint8) decimalsCaches;
     }
 
     function slot() internal pure returns (Storage storage r) {

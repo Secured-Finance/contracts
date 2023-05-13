@@ -186,6 +186,21 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets the maximum amount of the selected currency that can be withdrawn from user collateral.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return Maximum amount of the selected currency that can be withdrawn
+     */
+    function getWithdrawableCollateral(bytes32 _ccy, address _user)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return DepositManagementLogic.getWithdrawableCollateral(_ccy, _user);
+    }
+
+    /**
      * @notice Gets the rate of collateral used.
      * @param _user User's address
      * @return coverage The rate of collateral used
@@ -243,8 +258,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         returns (
             uint256 liquidationAmount,
             uint256 protocolFee,
-            uint256 liquidatorFee,
-            uint256 insolventAmount
+            uint256 liquidatorFee
         )
     {
         return
@@ -430,9 +444,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _from,
         address _to,
         uint256 _amount
-    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
-        DepositManagementLogic.transferFrom(_ccy, _from, _to, _amount);
-        emit Transfer(_ccy, _from, _to, _amount);
+    )
+        external
+        override
+        onlyAcceptedContracts
+        onlyRegisteredCurrency(_ccy)
+        returns (uint256 untransferredAmount)
+    {
+        untransferredAmount = DepositManagementLogic.transferFrom(_ccy, _from, _to, _amount);
+        emit Transfer(_ccy, _from, _to, _amount - untransferredAmount);
     }
 
     /**
@@ -467,13 +487,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             "Invalid amount"
         );
 
-        ERC20Handler.depositAssets(
-            Storage.slot().tokenAddresses[_ccy],
-            _user,
-            address(this),
-            _amount
-        );
-        DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
+        DepositManagementLogic.deposit(_user, _ccy, _amount);
 
         emit Deposit(_user, _ccy, _amount);
     }
@@ -487,7 +501,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
 
         lendingMarketController().cleanUpFunds(_ccy, _user);
         uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);
-        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
 
         emit Withdraw(_user, _ccy, withdrawableAmount);
     }
