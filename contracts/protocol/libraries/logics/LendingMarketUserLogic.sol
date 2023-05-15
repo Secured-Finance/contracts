@@ -183,7 +183,15 @@ library LendingMarketUserLogic {
             uint256 timestamp
         ) = _market.getOrder(_orderId);
 
-        order = ILendingMarketController.Order(_ccy, maturity, side, unitPrice, amount, timestamp);
+        order = ILendingMarketController.Order(
+            _orderId,
+            _ccy,
+            maturity,
+            side,
+            unitPrice,
+            amount,
+            timestamp
+        );
     }
 
     function _flattenOrders(ILendingMarketController.Order[][] memory orders, uint256 totalLength)
