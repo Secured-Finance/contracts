@@ -198,6 +198,23 @@ Gets the maximum amount of ETH that can be withdrawn from user collateral.
 | ---- | ---- | ----------- |
 | [0] | uint256 | Maximum amount of ETH that can be withdrawn |
 
+### getWithdrawableCollateral
+
+```solidity
+function getWithdrawableCollateral(bytes32 _ccy, address _user) external view returns (uint256)
+```
+
+Gets the maximum amount of the selected currency that can be withdrawn from user collateral.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | Maximum amount of the selected currency that can be withdrawn |
+
 ### getCoverage
 
 ```solidity
@@ -249,7 +266,7 @@ Gets the total collateral amount.
 ### getLiquidationAmount
 
 ```solidity
-function getLiquidationAmount(address _user, bytes32 _liquidationCcy, uint256 _liquidationAmountMaximum) external view returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee, uint256 insolventAmount)
+function getLiquidationAmount(address _user, bytes32 _liquidationCcy, uint256 _liquidationAmountMaximum) external view returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee)
 ```
 
 Gets the amount to be liquidated.
@@ -265,7 +282,6 @@ Gets the amount to be liquidated.
 | liquidationAmount | uint256 | The the amount to be liquidated |
 | protocolFee | uint256 |  |
 | liquidatorFee | uint256 |  |
-| insolventAmount | uint256 |  |
 
 ### getTotalDepositAmount
 
@@ -428,7 +444,7 @@ Removes deposit amount.
 ### transferFrom
 
 ```solidity
-function transferFrom(bytes32 _ccy, address _from, address _to, uint256 _amount) external
+function transferFrom(bytes32 _ccy, address _from, address _to, uint256 _amount) external returns (uint256 untransferredAmount)
 ```
 
 Transfers the token from sender to receiver.

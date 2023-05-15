@@ -52,15 +52,11 @@ function getCollateralAmount(address _user, bytes32 _unsettledOrderCcy, uint256 
 function getWithdrawableCollateral(address _user) public view returns (uint256)
 ```
 
-Calculates maximum amount of ETH that can be withdrawn.
+### getWithdrawableCollateral
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | Maximum amount of ETH that can be withdrawn |
+```solidity
+function getWithdrawableCollateral(bytes32 _ccy, address _user) public view returns (uint256 withdrawableAmount)
+```
 
 ### addDepositAmount
 
@@ -74,30 +70,28 @@ function addDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public
 function removeDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public
 ```
 
+### deposit
+
+```solidity
+function deposit(address _user, bytes32 _ccy, uint256 _amount) public
+```
+
 ### withdraw
 
 ```solidity
-function withdraw(address user, bytes32 _ccy, uint256 _amount) public returns (uint256 withdrawableAmount)
+function withdraw(address _user, bytes32 _ccy, uint256 _amount) public returns (uint256 withdrawableAmount)
 ```
-
-Withdraws funds by the caller from unused collateral.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| user | address |  |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _amount | uint256 | Amount of funds to withdraw. |
 
 ### getLiquidationAmount
 
 ```solidity
-function getLiquidationAmount(address _user, bytes32 _liquidationCcy, uint256 _liquidationAmountMaximum) public view returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee, uint256 insolventAmount)
+function getLiquidationAmount(address _user, bytes32 _liquidationCcy, uint256 _liquidationAmountMaximum) public view returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee)
 ```
 
 ### transferFrom
 
 ```solidity
-function transferFrom(bytes32 _ccy, address _from, address _to, uint256 _amount) external
+function transferFrom(bytes32 _ccy, address _from, address _to, uint256 _amount) external returns (uint256 untransferredAmount)
 ```
 
 ### _getTotalInternalDepositAmountInETH

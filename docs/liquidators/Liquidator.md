@@ -32,6 +32,12 @@ contract IQuoter uniswapQuoter
 uint24 poolFee
 ```
 
+### collateralMaturities
+
+```solidity
+uint256[] collateralMaturities
+```
+
 ### constructor
 
 ```solidity
@@ -47,18 +53,24 @@ receive() external payable
 ### executeLiquidationCall
 
 ```solidity
-function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) external
+function executeLiquidationCall(bytes32 _collateralCcy, uint256[] _collateralMaturities, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) external
 ```
 
-### executeOperation
+### executeOperationForCollateral
 
 ```solidity
-function executeOperation(address liquidator, address user, bytes32 collateralCcy, uint256 receivedCollateralAmount, bytes32 debtCcy, uint256 debtMaturity, uint256 receivedDebtAmount, address initiator) external returns (bool)
+function executeOperationForCollateral(address _liquidator, address _user, bytes32 _collateralCcy, uint256 _receivedCollateralAmount) external returns (bool)
+```
+
+### executeOperationForDebt
+
+```solidity
+function executeOperationForDebt(address _liquidator, address _user, bytes32 _collateralCcy, uint256 _receivedCollateralAmount, bytes32 _debtCcy, uint256 _debtMaturity, uint256 _receivedDebtAmount) external returns (bool)
 ```
 
 ### _executeSwap
 
 ```solidity
-function _executeSwap(address _ccyFrom, address _ccyTo, uint256 _amountIn, uint256 _amountOutMinimum, uint24 _poolFee) internal returns (uint256)
+function _executeSwap(address _ccyFrom, address _ccyTo, uint256 _amountIn, uint256 _amountOutMinimum, uint24 _poolFee, bool _isETH) internal returns (uint256)
 ```
 

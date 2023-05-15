@@ -495,13 +495,13 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
 
-### unwindOrder
+### unwind
 
 ```solidity
-function unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
-Unwind orders using future value amount.
+Unwinds lending or borrowing positions by a specified future value amount.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -590,9 +590,9 @@ Takes the market order.
 | _unitPrice | uint256 | Amount of unit price taken |
 | _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after taking orders |
 
-### _unwindOrder
+### _unwind
 
 ```solidity
-function _unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) private returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function _unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) private returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 

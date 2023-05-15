@@ -212,10 +212,10 @@ function cancelOrder(address user, uint48 orderId) external returns (enum Protoc
 function createPreOrder(enum ProtocolTypes.Side side, address user, uint256 amount, uint256 unitPrice) external
 ```
 
-### unwindOrder
+### unwind
 
 ```solidity
-function unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 ### executeItayoseCall

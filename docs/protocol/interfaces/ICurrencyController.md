@@ -26,16 +26,16 @@ event CurrencyRemoved(bytes32 ccy)
 event HaircutUpdated(bytes32 ccy, uint256 haircut)
 ```
 
-### PriceFeedAdded
+### PriceFeedUpdated
 
 ```solidity
-event PriceFeedAdded(bytes32 ccy, string secondCcy, address priceFeed)
+event PriceFeedUpdated(bytes32 ccy, address[] priceFeeds)
 ```
 
 ### PriceFeedRemoved
 
 ```solidity
-event PriceFeedRemoved(bytes32 ccy, string secondCcy, address priceFeed)
+event PriceFeedRemoved(bytes32 ccy)
 ```
 
 ### convert
@@ -44,40 +44,34 @@ event PriceFeedRemoved(bytes32 ccy, string secondCcy, address priceFeed)
 function convert(bytes32 _fromCcy, bytes32 _toCcy, uint256 _amount) external view returns (uint256 amount)
 ```
 
-### convertFromETH
+### convertFromBaseCurrency
 
 ```solidity
-function convertFromETH(bytes32 _ccy, uint256 _amountETH) external view returns (uint256 amount)
+function convertFromBaseCurrency(bytes32 _ccy, uint256 _amountETH) external view returns (uint256 amount)
 ```
 
-### convertToETH
+### convertToBaseCurrency
 
 ```solidity
-function convertToETH(bytes32 _ccy, uint256 _amount) external view returns (uint256 amount)
+function convertToBaseCurrency(bytes32 _ccy, uint256 _amount) external view returns (uint256 amount)
 ```
 
-### convertToETH
+### convertToBaseCurrency
 
 ```solidity
-function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256 amount)
+function convertToBaseCurrency(bytes32 _ccy, int256 _amount) external view returns (int256 amount)
 ```
 
-### convertToETH
+### convertToBaseCurrency
 
 ```solidity
-function convertToETH(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
+function convertToBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
 ```
 
-### getEthDecimals
+### getDecimals
 
 ```solidity
-function getEthDecimals(bytes32) external view returns (uint8)
-```
-
-### getUsdDecimals
-
-```solidity
-function getUsdDecimals(bytes32) external view returns (uint8)
+function getDecimals(bytes32) external view returns (uint8)
 ```
 
 ### getCurrencies
@@ -92,28 +86,10 @@ function getCurrencies() external view returns (bytes32[])
 function getHaircut(bytes32 _ccy) external view returns (uint256)
 ```
 
-### getHistoricalETHPrice
+### getLastPrice
 
 ```solidity
-function getHistoricalETHPrice(bytes32 _ccy, uint80 _roundId) external view returns (int256)
-```
-
-### getHistoricalUSDPrice
-
-```solidity
-function getHistoricalUSDPrice(bytes32 _ccy, uint80 _roundId) external view returns (int256)
-```
-
-### getLastETHPrice
-
-```solidity
-function getLastETHPrice(bytes32 _ccy) external view returns (int256)
-```
-
-### getLastUSDPrice
-
-```solidity
-function getLastUSDPrice(bytes32 _ccy) external view returns (int256)
+function getLastPrice(bytes32 _ccy) external view returns (int256)
 ```
 
 ### currencyExists
@@ -122,22 +98,22 @@ function getLastUSDPrice(bytes32 _ccy) external view returns (int256)
 function currencyExists(bytes32 _ccy) external view returns (bool)
 ```
 
-### linkPriceFeed
+### updatePriceFeed
 
 ```solidity
-function linkPriceFeed(bytes32 _ccy, address _priceFeedAddr, bool _isEthPriceFeed) external returns (bool)
+function updatePriceFeed(bytes32 _ccy, address[] _priceFeeds) external
 ```
 
 ### removePriceFeed
 
 ```solidity
-function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external
+function removePriceFeed(bytes32 _ccy) external
 ```
 
 ### addCurrency
 
 ```solidity
-function addCurrency(bytes32 _ccy, address _ethPriceFeed, uint256 _haircut) external
+function addCurrency(bytes32 _ccy, uint256 _haircut, address[] _priceFeeds) external
 ```
 
 ### updateHaircut

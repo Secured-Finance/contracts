@@ -38,12 +38,6 @@ function addLendFutureValue(address user, uint256 amount, uint256 maturity, bool
 function addBorrowFutureValue(address user, uint256 amount, uint256 maturity, bool isTaker) external returns (bool)
 ```
 
-### offsetFutureValue
-
-```solidity
-function offsetFutureValue(address lender, address borrower, uint256 maximumFVAmount) external returns (uint256 offsetAmount)
-```
-
 ### transferFrom
 
 ```solidity

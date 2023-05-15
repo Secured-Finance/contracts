@@ -14,6 +14,18 @@ function getHighestLendingUnitPrice() public view returns (uint256)
 function getLowestBorrowingUnitPrice() public view returns (uint256)
 ```
 
+### checkBorrowOrderExist
+
+```solidity
+function checkBorrowOrderExist() public view returns (bool)
+```
+
+### checkLendOrderExist
+
+```solidity
+function checkLendOrderExist() public view returns (bool)
+```
+
 ### getLendOrderBook
 
 ```solidity

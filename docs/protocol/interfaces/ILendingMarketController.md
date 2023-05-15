@@ -2,6 +2,19 @@
 
 ## ILendingMarketController
 
+### Order
+
+```solidity
+struct Order {
+  bytes32 ccy;
+  uint256 maturity;
+  enum ProtocolTypes.Side side;
+  uint256 unitPrice;
+  uint256 amount;
+  uint256 timestamp;
+}
+```
+
 ### LendingMarketCreated
 
 ```solidity

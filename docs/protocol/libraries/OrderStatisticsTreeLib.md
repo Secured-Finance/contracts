@@ -85,6 +85,12 @@ function first(struct OrderStatisticsTreeLib.Tree self) internal view returns (u
 function last(struct OrderStatisticsTreeLib.Tree self) internal view returns (uint256 _value)
 ```
 
+### hasOrders
+
+```solidity
+function hasOrders(struct OrderStatisticsTreeLib.Tree self) internal view returns (bool)
+```
+
 ### next
 
 ```solidity

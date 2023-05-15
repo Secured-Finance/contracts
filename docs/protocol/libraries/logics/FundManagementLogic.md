@@ -6,13 +6,10 @@
 
 ```solidity
 struct ExecuteLiquidationVars {
+  address reserveFund;
   uint256 liquidationAmountInCollateralCcy;
-  uint256 liquidationAmountInDebtCcy;
   uint256 protocolFeeInCollateralCcy;
   uint256 liquidatorFeeInCollateralCcy;
-  uint256 insolventAmountInCollateralCcy;
-  uint256 offsetPVAmount;
-  uint256 offsetPVAmountInCollateralCcy;
   bool isDefaultMarket;
   bool isReserveFundPaused;
   uint256 receivedCollateralAmount;
@@ -182,6 +179,12 @@ function calculateTotalFundsInETH(address _user, bytes32 _depositCcy, uint256 _d
 function getUsedMaturities(bytes32 _ccy, address _user) public view returns (uint256[] maturities)
 ```
 
+### cleanUpAllFunds
+
+```solidity
+function cleanUpAllFunds(address _user) external
+```
+
 ### cleanUpFunds
 
 ```solidity
@@ -218,16 +221,16 @@ function _getFundsFromInactiveLendOrders(bytes32 _ccy, address _user, struct Fun
 function _calculatePVandFVInDefaultMarket(bytes32 _ccy, uint256 _maturity, int256 _futureValueInMaturity) internal view returns (int256 presentValue, int256 futureValue)
 ```
 
-### _calculatePVFromFVByMidUnitPrice
+### _calculatePVFromFV
 
 ```solidity
-function _calculatePVFromFVByMidUnitPrice(bytes32 _ccy, uint256 _maturity, int256 _futureValue) internal view returns (int256 presentValue)
+function _calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue) internal view returns (int256 presentValue)
 ```
 
 ### _calculateFVFromPV
 
 ```solidity
-function _calculateFVFromPV(bytes32 _ccy, uint256 _maturity, uint256 _presentValue) internal view returns (uint256)
+function _calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) internal view returns (int256)
 ```
 
 ### _calculatePVFromFV
@@ -248,21 +251,15 @@ function _convertToETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) in
 function _convertFromETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
 ```
 
-### _offsetFutureValue
+### _transferFunds
 
 ```solidity
-function _offsetFutureValue(bytes32 _ccy, uint256 _maturity, address _lender, address _borrower, uint256 _maximumFVAmount) internal returns (uint256 offsetAmount)
-```
-
-### _offsetFunds
-
-```solidity
-function _offsetFunds(address _user0, address _user1, bytes32 _ccy, uint256 _maturity, uint256 _fvAmount, bool _isDefaultMarket) internal returns (uint256 offsetPVAmount)
+function _transferFunds(address _from, address _to, bytes32 _ccy, int256 _amount) internal returns (int256 untransferredAmount)
 ```
 
 ### _transferFunds
 
 ```solidity
-function _transferFunds(address _from, address _to, bytes32 _ccy, uint256 _maturity, uint256 _amount, bool _isDefaultMarket) internal returns (uint256 remainingAmount)
+function _transferFunds(address _from, address _to, bytes32 _ccy, uint256 _maturity, int256 _amount, bool _isDefaultMarket) internal returns (int256 untransferredAmount)
 ```
 
