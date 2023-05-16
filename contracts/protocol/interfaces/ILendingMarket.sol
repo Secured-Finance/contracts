@@ -5,6 +5,13 @@ import "../types/ProtocolTypes.sol";
 import {MarketOrder} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
+    struct FilledOrder {
+        uint256 unitPrice;
+        uint256 amount;
+        uint256 futureValue;
+        uint256 ignoredAmount;
+    }
+
     struct PartiallyFilledOrder {
         address maker;
         uint256 amount;
@@ -221,15 +228,10 @@ interface ILendingMarket {
         address account,
         uint256 amount,
         uint256 unitPrice,
-        bool ignoreRemainingAmount
+        uint256 circuitBreakerLimitRange
     )
         external
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount
-        );
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder);
 
     function pauseMarket() external;
 

@@ -13,6 +13,7 @@ import {
 } from '../../utils/strings';
 import {
   AUTO_ROLL_FEE_RATE,
+  CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -264,43 +265,17 @@ const deployContracts = async () => {
 
   const { timestamp } = await ethers.provider.getBlock('latest');
   const genesisDate = moment(timestamp * 1000).unix();
-  await Promise.all([
+
+  for (const currency of [hexWBTC, hexETH, hexWFIL, hexEFIL, hexUSDC]) {
     lendingMarketControllerProxy.initializeLendingMarket(
-      hexWBTC,
+      currency,
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       AUTO_ROLL_FEE_RATE,
-    ),
-    lendingMarketControllerProxy.initializeLendingMarket(
-      hexETH,
-      genesisDate,
-      INITIAL_COMPOUND_FACTOR,
-      ORDER_FEE_RATE,
-      AUTO_ROLL_FEE_RATE,
-    ),
-    lendingMarketControllerProxy.initializeLendingMarket(
-      hexWFIL,
-      genesisDate,
-      INITIAL_COMPOUND_FACTOR,
-      ORDER_FEE_RATE,
-      AUTO_ROLL_FEE_RATE,
-    ),
-    lendingMarketControllerProxy.initializeLendingMarket(
-      hexEFIL,
-      genesisDate,
-      INITIAL_COMPOUND_FACTOR,
-      ORDER_FEE_RATE,
-      AUTO_ROLL_FEE_RATE,
-    ),
-    lendingMarketControllerProxy.initializeLendingMarket(
-      hexUSDC,
-      genesisDate,
-      INITIAL_COMPOUND_FACTOR,
-      ORDER_FEE_RATE,
-      AUTO_ROLL_FEE_RATE,
-    ),
-  ]);
+      CIRCUIT_BREAKER_LIMIT_RANGE,
+    );
+  }
 
   return {
     genesisDate,

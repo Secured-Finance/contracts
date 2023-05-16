@@ -9,6 +9,8 @@ library LendingMarketManagerStorage {
         mapping(bytes32 => uint256) orderFeeRates;
         // Mapping from currency to auto-roll fee rate received by protocol (in basis point)
         mapping(bytes32 => uint256) autoRollFeeRates;
+        // Mapping from currency to limit range in unit price for the circuit breaker
+        mapping(bytes32 => uint256) circuitBreakerLimitRanges;
         // The period to calculate the volume-weighted average price of transactions to use as auto-roll fee rate.
         uint256 observationPeriod;
     }

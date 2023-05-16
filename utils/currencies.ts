@@ -9,6 +9,7 @@ export interface Currency {
   haircut: number;
   orderFeeRate: number;
   autoRollFeeRate: number;
+  circuitBreakerLimitRange: number;
   isCollateral: boolean;
   args: string[];
 }
@@ -35,6 +36,7 @@ const currencies: Currency[] = [
     haircut: 5000,
     orderFeeRate: 100,
     autoRollFeeRate: 250,
+    circuitBreakerLimitRange: 1000,
     isCollateral: false,
     args: ['100000000000000000000000000'], // 100,000,000 eFIL
   },
@@ -46,6 +48,7 @@ const currencies: Currency[] = [
     haircut: 8000,
     orderFeeRate: 100,
     autoRollFeeRate: 250,
+    circuitBreakerLimitRange: 1000,
     isCollateral: true,
     args: ['100000000000000'], // 100,000,000 USDC
   },
@@ -57,6 +60,7 @@ const currencies: Currency[] = [
     haircut: 8000,
     orderFeeRate: 100,
     autoRollFeeRate: 250,
+    circuitBreakerLimitRange: 1000,
     isCollateral: false,
     args: ['1000000000000'], // 10,000 BTC
   },
@@ -68,6 +72,7 @@ const currencies: Currency[] = [
     haircut: 8000,
     orderFeeRate: 100,
     autoRollFeeRate: 250,
+    circuitBreakerLimitRange: 1000,
     isCollateral: true,
     args: [],
   },

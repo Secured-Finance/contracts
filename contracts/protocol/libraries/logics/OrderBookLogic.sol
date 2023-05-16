@@ -606,6 +606,76 @@ library OrderBookLogic {
         }
     }
 
+    function checkCircuitBreakerThreshold(
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice,
+        uint256 _circuitBreakerLimitRange
+    )
+        public
+        returns (
+            bool isFilled,
+            uint256 executedUnitPrice,
+            bool ignoreRemainingAmount
+        )
+    {
+        uint256 cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[
+            block.number
+        ][_side];
+        bool isLend = _side == ProtocolTypes.Side.LEND;
+        bool orderExists;
+        uint256 bestUnitPrice;
+
+        if (isLend) {
+            bestUnitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].first();
+            orderExists = bestUnitPrice != 0;
+
+            if (orderExists && cbThresholdUnitPrice == 0) {
+                cbThresholdUnitPrice = Constants.PRICE_DIGIT - bestUnitPrice >
+                    _circuitBreakerLimitRange
+                    ? bestUnitPrice + _circuitBreakerLimitRange
+                    : Constants.PRICE_DIGIT;
+
+                Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
+                        _side
+                    ] = cbThresholdUnitPrice;
+            }
+        } else {
+            bestUnitPrice = Storage.slot().lendOrders[Storage.slot().maturity].last();
+            orderExists = bestUnitPrice != 0;
+
+            if (orderExists && cbThresholdUnitPrice == 0) {
+                cbThresholdUnitPrice = bestUnitPrice > _circuitBreakerLimitRange
+                    ? bestUnitPrice - _circuitBreakerLimitRange
+                    : 1;
+
+                Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
+                        _side
+                    ] = cbThresholdUnitPrice;
+            }
+        }
+
+        if (_unitPrice == 0) {
+            require(orderExists, "Invalid Market Order");
+        }
+
+        if (
+            _unitPrice == 0 ||
+            (orderExists &&
+                ((isLend && _unitPrice > cbThresholdUnitPrice) ||
+                    (!isLend && _unitPrice < cbThresholdUnitPrice)))
+        ) {
+            executedUnitPrice = cbThresholdUnitPrice;
+            ignoreRemainingAmount = true;
+        } else {
+            executedUnitPrice = _unitPrice;
+            ignoreRemainingAmount = false;
+        }
+
+        isFilled = isLend
+            ? (bestUnitPrice == 0 ? Constants.PRICE_DIGIT : bestUnitPrice) <= executedUnitPrice
+            : bestUnitPrice >= executedUnitPrice;
+    }
+
     /**
      * @notice Increases and returns id of last order in order book.
      * @return The new order id
