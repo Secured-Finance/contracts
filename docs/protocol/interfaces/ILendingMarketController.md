@@ -6,6 +6,7 @@
 
 ```solidity
 struct Order {
+  uint48 orderId;
   bytes32 ccy;
   uint256 maturity;
   enum ProtocolTypes.Side side;
