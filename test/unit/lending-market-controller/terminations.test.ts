@@ -9,6 +9,7 @@ import { Side } from '../../../utils/constants';
 import { getGenesisDate } from '../../../utils/dates';
 import {
   AUTO_ROLL_FEE_RATE,
+  CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
 } from '../../common/constants';
@@ -45,6 +46,7 @@ describe('LendingMarketController - Terminations', () => {
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       AUTO_ROLL_FEE_RATE,
+      CIRCUIT_BREAKER_LIMIT_RANGE,
     );
     for (let i = 0; i < 5; i++) {
       await lendingMarketControllerProxy.createLendingMarket(

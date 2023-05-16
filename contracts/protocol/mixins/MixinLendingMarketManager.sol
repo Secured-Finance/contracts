@@ -12,8 +12,9 @@ import {LendingMarketManagerStorage as Storage} from "../storages/LendingMarketM
 contract MixinLendingMarketManager is Ownable {
     using RoundingUint256 for uint256;
 
-    event OrderFeeRateUpdated(uint256 previousRate, uint256 rate);
-    event AutoRollFeeRateUpdated(uint256 previousRate, uint256 rate);
+    event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
+    event AutoRollFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
+    event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event ObservationPeriodUpdated(uint256 previousPeriod, uint256 period);
 
     function _initialize(address _owner, uint256 _observationPeriod) internal {
@@ -40,6 +41,15 @@ contract MixinLendingMarketManager is Ownable {
     }
 
     /**
+     * @notice Gets the limit range in unit price for the circuit breaker
+     * @param _ccy Currency name in bytes32
+     * @return The auto-roll fee rate received by protocol
+     */
+    function getCircuitBreakerLimitRange(bytes32 _ccy) public view returns (uint256) {
+        return Storage.slot().circuitBreakerLimitRanges[_ccy];
+    }
+
+    /**
      * @notice Gets the observation period
      * @return The observation period to calculate the volume-weighted average price of transactions
      */
@@ -59,7 +69,7 @@ contract MixinLendingMarketManager is Ownable {
         if (_orderFeeRate != previousRate) {
             Storage.slot().orderFeeRates[_ccy] = _orderFeeRate;
 
-            emit OrderFeeRateUpdated(previousRate, _orderFeeRate);
+            emit OrderFeeRateUpdated(_ccy, previousRate, _orderFeeRate);
         }
     }
 
@@ -75,7 +85,23 @@ contract MixinLendingMarketManager is Ownable {
         if (_autoRollFeeRate != previousRate) {
             Storage.slot().autoRollFeeRates[_ccy] = _autoRollFeeRate;
 
-            emit AutoRollFeeRateUpdated(previousRate, _autoRollFeeRate);
+            emit AutoRollFeeRateUpdated(_ccy, previousRate, _autoRollFeeRate);
+        }
+    }
+
+    /**
+     * @notice Updates the auto-roll fee rate
+     * @param _ccy Currency name in bytes32
+     * @param _limitRange The circuit breaker limit range
+     */
+    function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) public onlyOwner {
+        require(_limitRange <= Constants.PCT_DIGIT, "Invalid circuit breaker limit range");
+        uint256 previousRange = Storage.slot().circuitBreakerLimitRanges[_ccy];
+
+        if (_limitRange != previousRange) {
+            Storage.slot().circuitBreakerLimitRanges[_ccy] = _limitRange;
+
+            emit CircuitBreakerLimitRangeUpdated(_ccy, previousRange, _limitRange);
         }
     }
 

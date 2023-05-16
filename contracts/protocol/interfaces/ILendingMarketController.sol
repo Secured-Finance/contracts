@@ -136,7 +136,8 @@ interface ILendingMarketController {
         uint256 genesisDate,
         uint256 compoundFactor,
         uint256 orderFeeRate,
-        uint256 autoRollFeeRate
+        uint256 autoRollFeeRate,
+        uint256 circuitBreakerLimitRange
     ) external;
 
     function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external;
