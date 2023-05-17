@@ -1797,7 +1797,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '0',
             ),
-        ).to.be.revertedWith('Invalid Market Order');
+        ).to.be.revertedWith('Order not found');
       });
 
       it('Fail to place a lend market order', async () => {
@@ -1812,7 +1812,7 @@ describe('LendingMarketController - Orders', () => {
               '0',
               { value: '1000000000000000' },
             ),
-        ).to.be.revertedWith('Invalid Market Order');
+        ).to.be.revertedWith('Order not found');
       });
     });
 

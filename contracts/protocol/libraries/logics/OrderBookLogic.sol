@@ -654,9 +654,7 @@ library OrderBookLogic {
             }
         }
 
-        if (_unitPrice == 0) {
-            require(orderExists, "Invalid Market Order");
-        }
+        if (_unitPrice == 0 && !orderExists) revert("Order not found");
 
         if (
             _unitPrice == 0 ||
@@ -674,6 +672,8 @@ library OrderBookLogic {
         isFilled = isLend
             ? (bestUnitPrice == 0 ? Constants.PRICE_DIGIT : bestUnitPrice) <= executedUnitPrice
             : bestUnitPrice >= executedUnitPrice;
+
+        if (_unitPrice == 0 && !isFilled) revert("Circuit breaker has triggered");
     }
 
     /**

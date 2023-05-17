@@ -765,7 +765,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             Storage.slot().ccy,
             Storage.slot().maturity,
             filledOrder.amount,
-            _unitPrice,
+            filledOrder.unitPrice,
             filledOrder.futureValue
         );
 
