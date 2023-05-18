@@ -412,7 +412,7 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_setAutomine', [false]);
 
-          const tx1 = await lendingMarketCaller
+          const bobTx = await lendingMarketCaller
             .connect(bob)
             .createOrder(
               side,
@@ -422,7 +422,7 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             );
 
-          const tx2 = await lendingMarketCaller
+          const carolTx = await lendingMarketCaller
             .connect(carol)
             .createOrder(
               side,
@@ -434,7 +434,7 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_mine', []);
 
-          await expect(tx1)
+          await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
               bob.address,
@@ -446,7 +446,7 @@ describe('LendingMarket', () => {
               () => true,
             );
 
-          await expect(tx2)
+          await expect(carolTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
               carol.address,
@@ -469,7 +469,7 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_setAutomine', [false]);
 
-          const tx1 = await lendingMarketCaller
+          const bobTx = await lendingMarketCaller
             .connect(bob)
             .createOrder(
               side,
@@ -479,21 +479,19 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             );
 
-          await expect(
-            lendingMarketCaller
-              .connect(carol)
-              .createOrder(
-                side,
-                '50000000000000',
-                '0',
-                CIRCUIT_BREAKER_LIMIT_RANGE,
-                currentMarketIdx,
-              ),
-          ).to.be.revertedWith('Circuit breaker has triggered');
+          const carolTx = await lendingMarketCaller
+            .connect(carol)
+            .createOrder(
+              side,
+              '50000000000000',
+              '0',
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            );
 
           await ethers.provider.send('evm_mine', []);
 
-          await expect(tx1)
+          await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
               bob.address,
@@ -503,6 +501,19 @@ describe('LendingMarket', () => {
               '100000000000000',
               8500,
               () => true,
+            );
+
+          await expect(carolTx)
+            .to.emit(lendingMarket, 'OrderBlockedByCircuitBreaker')
+            .withArgs(
+              carol.address,
+              targetCurrency,
+              side,
+              maturity,
+              8500 +
+                (side === Side.LEND
+                  ? CIRCUIT_BREAKER_LIMIT_RANGE
+                  : -CIRCUIT_BREAKER_LIMIT_RANGE),
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -547,17 +558,15 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             );
 
-          await expect(
-            lendingMarketCaller
-              .connect(carol)
-              .createOrder(
-                side,
-                '50000000000000',
-                0,
-                CIRCUIT_BREAKER_LIMIT_RANGE,
-                currentMarketIdx,
-              ),
-          ).to.be.revertedWith('Circuit breaker has triggered');
+          const carolTx1 = await lendingMarketCaller
+            .connect(carol)
+            .createOrder(
+              side,
+              '50000000000000',
+              0,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            );
 
           await lendingMarketCaller
             .connect(alice)
@@ -569,7 +578,7 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             );
 
-          const tx = await lendingMarketCaller
+          const carolTx2 = await lendingMarketCaller
             .connect(carol)
             .createOrder(
               side,
@@ -581,7 +590,20 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_mine', []);
 
-          await expect(tx)
+          await expect(carolTx1)
+            .to.emit(lendingMarket, 'OrderBlockedByCircuitBreaker')
+            .withArgs(
+              carol.address,
+              targetCurrency,
+              side,
+              maturity,
+              8500 +
+                (side === Side.LEND
+                  ? CIRCUIT_BREAKER_LIMIT_RANGE
+                  : -CIRCUIT_BREAKER_LIMIT_RANGE),
+            );
+
+          await expect(carolTx2)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
               carol.address,
@@ -596,12 +618,12 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_setAutomine', [true]);
         });
 
-        it('Fail to create a second market order in the same block due to no filled amount', async () => {
+        it('Fail to place a second market order in the same block due to no filled amount', async () => {
           await createInitialOrders(isBorrow ? Side.LEND : Side.BORROW, 8500);
 
           await ethers.provider.send('evm_setAutomine', [false]);
 
-          const tx1 = await lendingMarketCaller
+          const bobTx = await lendingMarketCaller
             .connect(bob)
             .createOrder(
               side,
@@ -611,21 +633,19 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             );
 
-          await expect(
-            lendingMarketCaller
-              .connect(carol)
-              .createOrder(
-                side,
-                '50000000000000',
-                '0',
-                CIRCUIT_BREAKER_LIMIT_RANGE,
-                currentMarketIdx,
-              ),
-          ).to.be.revertedWith('Circuit breaker has triggered');
+          const carolTx = await lendingMarketCaller
+            .connect(carol)
+            .createOrder(
+              side,
+              '50000000000000',
+              '0',
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            );
 
           await ethers.provider.send('evm_mine', []);
 
-          await expect(tx1)
+          await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
               bob.address,
@@ -637,10 +657,23 @@ describe('LendingMarket', () => {
               () => true,
             );
 
+          await expect(carolTx)
+            .to.emit(lendingMarket, 'OrderBlockedByCircuitBreaker')
+            .withArgs(
+              carol.address,
+              targetCurrency,
+              side,
+              maturity,
+              8500 +
+                (side === Side.LEND
+                  ? CIRCUIT_BREAKER_LIMIT_RANGE
+                  : -CIRCUIT_BREAKER_LIMIT_RANGE),
+            );
+
           await ethers.provider.send('evm_setAutomine', [true]);
         });
 
-        it('Fail to create a second limit order in the same block due to over the circuit breaker threshold', async () => {
+        it('Fail to place a second limit order in the same block due to over the circuit breaker threshold', async () => {
           const offsetUnitPrice = await await createInitialOrders(
             isBorrow ? Side.LEND : Side.BORROW,
             8500,
@@ -648,7 +681,7 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_setAutomine', [false]);
 
-          const tx1 = await lendingMarketCaller
+          const bobTx = await lendingMarketCaller
             .connect(bob)
             .createOrder(
               side,
@@ -658,21 +691,19 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             );
 
-          await expect(
-            lendingMarketCaller
-              .connect(carol)
-              .createOrder(
-                side,
-                '50000000000000',
-                8500 + offsetUnitPrice,
-                CIRCUIT_BREAKER_LIMIT_RANGE,
-                currentMarketIdx,
-              ),
-          ).to.be.revertedWith('Circuit breaker has triggered');
+          const carolTx = await lendingMarketCaller
+            .connect(carol)
+            .createOrder(
+              side,
+              '50000000000000',
+              8500 + offsetUnitPrice,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            );
 
           await ethers.provider.send('evm_mine', []);
 
-          await expect(tx1)
+          await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
               bob.address,
@@ -682,6 +713,19 @@ describe('LendingMarket', () => {
               '100000000000000',
               8500,
               () => true,
+            );
+
+          await expect(carolTx)
+            .to.emit(lendingMarket, 'OrderBlockedByCircuitBreaker')
+            .withArgs(
+              carol.address,
+              targetCurrency,
+              side,
+              maturity,
+              8500 +
+                (side === Side.LEND
+                  ? CIRCUIT_BREAKER_LIMIT_RANGE
+                  : -CIRCUIT_BREAKER_LIMIT_RANGE),
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
