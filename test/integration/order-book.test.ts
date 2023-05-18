@@ -865,7 +865,9 @@ describe('Integration Test: Order Book', async () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
-        await expect(tx.wait()).to.be.reverted;
+        await expect(tx)
+          .to.emit(filLendingMarkets[0], 'OrderBlockedByCircuitBreaker')
+          .withArgs(carol.address, hexEFIL, Side.LEND, filMaturities[0], 9000);
 
         await expect(
           lendingMarketController

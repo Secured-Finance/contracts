@@ -656,10 +656,6 @@ library OrderBookLogic {
         isFilled = isLend
             ? (bestUnitPrice == 0 ? Constants.PRICE_DIGIT : bestUnitPrice) <= executedUnitPrice
             : bestUnitPrice >= executedUnitPrice;
-
-        if (!isFilled && ignoreRemainingAmount) {
-            revert("Circuit breaker has triggered");
-        }
     }
 
     /**

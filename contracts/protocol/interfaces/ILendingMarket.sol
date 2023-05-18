@@ -66,6 +66,14 @@ interface ILendingMarket {
         uint256 maturity
     );
 
+    event OrderBlockedByCircuitBreaker(
+        address indexed user,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 thresholdUnitPrice
+    );
+
     event MarketOpened(uint256 maturity, uint256 prevMaturity);
 
     event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingPrice);
