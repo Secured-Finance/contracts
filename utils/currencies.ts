@@ -89,7 +89,7 @@ const mockPriceFeeds: MockPriceFeeds = {
     },
     {
       name: 'BTC/ETH',
-      decimals: 8,
+      decimals: 18,
       rate: btcToETHRate,
     },
   ],
