@@ -19,13 +19,12 @@ library LendingMarketUserLogic {
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
-        int256 _futureValue
+        int256 _futureValue,
+        uint256 _circuitBreakerLimitRange
     )
         external
         returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
+            ILendingMarket.FilledOrder memory filledOrder,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
             ProtocolTypes.Side side
         )
@@ -34,28 +33,14 @@ library LendingMarketUserLogic {
 
         if (_futureValue > 0) {
             side = ProtocolTypes.Side.BORROW;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwind(
-                side,
-                _user,
-                _futureValue.toUint256()
-            );
+            (filledOrder, partiallyFilledOrder) = ILendingMarket(
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ).unwind(side, _user, _futureValue.toUint256(), _circuitBreakerLimitRange);
         } else if (_futureValue < 0) {
             side = ProtocolTypes.Side.LEND;
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                partiallyFilledOrder
-            ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).unwind(
-                side,
-                _user,
-                (-_futureValue).toUint256()
-            );
+            (filledOrder, partiallyFilledOrder) = ILendingMarket(
+                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+            ).unwind(side, _user, (-_futureValue).toUint256(), _circuitBreakerLimitRange);
         }
     }
 

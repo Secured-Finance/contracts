@@ -404,8 +404,6 @@ describe('LendingMarket', () => {
                 8500,
                 () => true,
               );
-
-            lendingMarket.bet;
           });
         }
 
@@ -643,5 +641,46 @@ describe('LendingMarket', () => {
         });
       });
     }
+
+    describe('Unwind', async () => {
+      it('Unwind a position partially until the circuit breaker threshold', async () => {
+        await createInitialOrders(Side.LEND, 8000);
+
+        await expect(
+          lendingMarketCaller
+            .connect(bob)
+            .createOrder(
+              Side.BORROW,
+              '100000000000000',
+              0,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            ),
+        ).to.emit(lendingMarket, 'OrdersTaken');
+
+        await createInitialOrders(Side.BORROW, 8500);
+
+        await expect(
+          lendingMarketCaller
+            .connect(bob)
+            .unwind(
+              Side.LEND,
+              '125000000000000',
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            ),
+        )
+          .to.emit(lendingMarket, 'OrdersTaken')
+          .withArgs(
+            bob.address,
+            Side.LEND,
+            targetCurrency,
+            maturity,
+            '100000000000000',
+            8500,
+            () => true,
+          );
+      });
+    });
   });
 });

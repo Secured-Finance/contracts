@@ -60,6 +60,20 @@ contract LendingMarketCaller {
         );
     }
 
+    function unwind(
+        ProtocolTypes.Side _side,
+        uint256 _futureValue,
+        uint256 _circuitBreakerLimitRange,
+        uint256 _index
+    ) external {
+        ILendingMarket(lendingMarkets[_index]).unwind(
+            _side,
+            msg.sender,
+            _futureValue,
+            _circuitBreakerLimitRange
+        );
+    }
+
     function executeItayoseCall(uint256 _index)
         external
         returns (

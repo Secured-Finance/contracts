@@ -568,30 +568,25 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _futureValue Amount of future value unwound
-     * @return filledUnitPrice Last unit price of the filled order
-     * @return filledAmount The total amount of the filled order on the order book
-     * @return filledFutureValue The total FV amount of the filled order on the order book
+     * @param _circuitBreakerLimitRange Limit range in unit price for the circuit breaker
+     * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order
      */
     function unwind(
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _futureValue
+        uint256 _futureValue,
+        uint256 _circuitBreakerLimitRange
     )
         external
         override
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder
-        )
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
         require(_futureValue > 0, "Can't place empty future value amount");
-        return _unwind(_side, _user, _futureValue);
+        return _unwind(_side, _user, _futureValue, _circuitBreakerLimitRange);
     }
 
     /**
@@ -631,12 +626,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 (
                     ,
                     ,
+                    ,
                     uint48 partiallyFilledOrderId,
                     address partiallyFilledMaker,
                     uint256 partiallyFilledAmount,
                     uint256 partiallyFilledFutureValue,
 
-                ) = OrderBookLogic.dropOrders(sides[i], totalOffsetAmount, 0);
+                ) = OrderBookLogic.dropOrders(sides[i], totalOffsetAmount, 0, 0);
 
                 if (partiallyFilledFutureValue > 0) {
                     if (sides[i] == ProtocolTypes.Side.LEND) {
@@ -749,13 +745,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         (
             filledOrder.unitPrice,
+            ,
             filledOrder.futureValue,
             partiallyFilledOrderId,
             partiallyFilledOrder.maker,
             partiallyFilledOrder.amount,
             partiallyFilledOrder.futureValue,
             remainingAmount
-        ) = OrderBookLogic.dropOrders(_side, _amount, _unitPrice);
+        ) = OrderBookLogic.dropOrders(_side, _amount, 0, _unitPrice);
 
         filledOrder.amount = _amount - remainingAmount;
 
@@ -796,36 +793,39 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     function _unwind(
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _futureValue
+        uint256 _futureValue,
+        uint256 _circuitBreakerLimitRange
     )
         private
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder
-        )
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
         uint48 partiallyFilledOrderId;
 
+        (, uint256 executedUnitPrice, ) = OrderBookLogic.checkCircuitBreakerThreshold(
+            _side,
+            0,
+            _circuitBreakerLimitRange
+        );
+
         (
-            filledUnitPrice,
-            filledAmount,
-            filledFutureValue,
+            filledOrder.unitPrice,
+            filledOrder.amount,
+            filledOrder.futureValue,
             partiallyFilledOrderId,
             partiallyFilledOrder.maker,
             partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue
-        ) = OrderBookLogic.dropOrders(_side, _futureValue);
+            partiallyFilledOrder.futureValue,
+
+        ) = OrderBookLogic.dropOrders(_side, 0, _futureValue, executedUnitPrice);
 
         emit OrdersTaken(
             _user,
             _side,
             Storage.slot().ccy,
             Storage.slot().maturity,
-            filledAmount,
-            0,
-            filledFutureValue
+            filledOrder.amount,
+            filledOrder.unitPrice,
+            filledOrder.futureValue
         );
 
         if (partiallyFilledOrder.futureValue > 0) {

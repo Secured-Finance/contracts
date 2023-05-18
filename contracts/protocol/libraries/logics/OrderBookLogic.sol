@@ -21,16 +21,16 @@ library OrderBookLogic {
         return unitPrice == 0 ? Constants.PRICE_DIGIT : unitPrice;
     }
 
-    function checkBorrowOrderExist() public view returns (bool) {
+    function checkBorrowOrderExist() external view returns (bool) {
         return Storage.slot().borrowOrders[Storage.slot().maturity].hasOrders();
     }
 
-    function checkLendOrderExist() public view returns (bool) {
+    function checkLendOrderExist() external view returns (bool) {
         return Storage.slot().lendOrders[Storage.slot().maturity].hasOrders();
     }
 
     function getLendOrderBook(uint256 _limit)
-        public
+        external
         view
         returns (
             uint256[] memory unitPrices,
@@ -66,7 +66,7 @@ library OrderBookLogic {
     }
 
     function getBorrowOrderBook(uint256 _limit)
-        public
+        external
         view
         returns (
             uint256[] memory unitPrices,
@@ -104,7 +104,7 @@ library OrderBookLogic {
     }
 
     function getOrder(uint48 _orderId)
-        public
+        external
         view
         returns (
             ProtocolTypes.Side side,
@@ -143,7 +143,7 @@ library OrderBookLogic {
     }
 
     function getTotalAmountFromLendOrders(address _user)
-        public
+        external
         view
         returns (
             uint256 activeAmount,
@@ -197,7 +197,7 @@ library OrderBookLogic {
     }
 
     function getTotalAmountFromBorrowOrders(address _user)
-        public
+        external
         view
         returns (
             uint256 activeAmount,
@@ -338,7 +338,7 @@ library OrderBookLogic {
     }
 
     function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
-        public
+        external
         view
         returns (uint256 amount)
     {
@@ -360,7 +360,7 @@ library OrderBookLogic {
         address _user,
         uint256 _amount,
         uint256 _unitPrice
-    ) public returns (uint48 orderId) {
+    ) external returns (uint48 orderId) {
         orderId = _nextOrderId();
         Storage.slot().orders[orderId] = MarketOrder(
             _side,
@@ -391,11 +391,13 @@ library OrderBookLogic {
     function dropOrders(
         ProtocolTypes.Side _side,
         uint256 _amount,
+        uint256 _futureValue,
         uint256 _unitPrice
     )
-        public
+        external
         returns (
             uint256 filledUnitPrice,
+            uint256 filledAmount,
             uint256 filledFutureValue,
             uint48 partiallyFilledOrderId,
             address partiallyFilledMaker,
@@ -407,47 +409,29 @@ library OrderBookLogic {
         PartiallyFilledOrder memory partiallyFilledOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
-            (filledUnitPrice, , filledFutureValue, remainingAmount, partiallyFilledOrder) = Storage
-                .slot()
-                .lendOrders[Storage.slot().maturity]
-                .dropRight(_amount, _unitPrice, 0);
+            (
+                filledUnitPrice,
+                filledAmount,
+                filledFutureValue,
+                remainingAmount,
+                partiallyFilledOrder
+            ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
+                _amount,
+                _unitPrice,
+                _futureValue
+            );
         } else if (_side == ProtocolTypes.Side.LEND) {
-            (filledUnitPrice, , filledFutureValue, remainingAmount, partiallyFilledOrder) = Storage
-                .slot()
-                .borrowOrders[Storage.slot().maturity]
-                .dropLeft(_amount, _unitPrice, 0);
-        }
-
-        partiallyFilledOrderId = partiallyFilledOrder.orderId;
-        partiallyFilledMaker = partiallyFilledOrder.maker;
-        partiallyFilledAmount = partiallyFilledOrder.amount;
-        partiallyFilledFutureValue = partiallyFilledOrder.futureValue;
-    }
-
-    function dropOrders(ProtocolTypes.Side _side, uint256 _futureValue)
-        public
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            uint48 partiallyFilledOrderId,
-            address partiallyFilledMaker,
-            uint256 partiallyFilledAmount,
-            uint256 partiallyFilledFutureValue
-        )
-    {
-        PartiallyFilledOrder memory partiallyFilledOrder;
-
-        if (_side == ProtocolTypes.Side.BORROW) {
-            (filledUnitPrice, filledAmount, filledFutureValue, , partiallyFilledOrder) = Storage
-                .slot()
-                .lendOrders[Storage.slot().maturity]
-                .dropRight(0, 0, _futureValue);
-        } else if (_side == ProtocolTypes.Side.LEND) {
-            (filledUnitPrice, filledAmount, filledFutureValue, , partiallyFilledOrder) = Storage
-                .slot()
-                .borrowOrders[Storage.slot().maturity]
-                .dropLeft(0, 0, _futureValue);
+            (
+                filledUnitPrice,
+                filledAmount,
+                filledFutureValue,
+                remainingAmount,
+                partiallyFilledOrder
+            ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
+                _amount,
+                _unitPrice,
+                _futureValue
+            );
         }
 
         partiallyFilledOrderId = partiallyFilledOrder.orderId;
@@ -457,7 +441,7 @@ library OrderBookLogic {
     }
 
     function cleanLendOrders(address _user, uint256 _maturity)
-        public
+        external
         returns (
             uint48[] memory orderIds,
             uint256 activeOrderCount,
@@ -492,7 +476,7 @@ library OrderBookLogic {
     }
 
     function cleanBorrowOrders(address _user, uint256 _maturity)
-        public
+        external
         returns (
             uint48[] memory orderIds,
             uint256 activeOrderCount,
@@ -528,7 +512,7 @@ library OrderBookLogic {
     }
 
     function removeOrder(address _user, uint48 _orderId)
-        public
+        external
         returns (
             ProtocolTypes.Side,
             uint256,
@@ -555,7 +539,7 @@ library OrderBookLogic {
     }
 
     function getOpeningUnitPrice()
-        public
+        external
         view
         returns (uint256 openingUnitPrice, uint256 totalOffsetAmount)
     {
@@ -611,7 +595,7 @@ library OrderBookLogic {
         uint256 _unitPrice,
         uint256 _circuitBreakerLimitRange
     )
-        public
+        external
         returns (
             bool isFilled,
             uint256 executedUnitPrice,
