@@ -656,23 +656,28 @@ contract LendingMarketController is
         int256 futureValue = FundManagementLogic
             .calculateActualFunds(_ccy, _maturity, msg.sender)
             .futureValue;
+        uint256 circuitBreakerLimitRange = getCircuitBreakerLimitRange(_ccy);
 
         (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
+            ILendingMarket.FilledOrder memory filledOrder,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
             ProtocolTypes.Side side
-        ) = LendingMarketUserLogic.unwind(_ccy, _maturity, msg.sender, futureValue);
+        ) = LendingMarketUserLogic.unwind(
+                _ccy,
+                _maturity,
+                msg.sender,
+                futureValue,
+                circuitBreakerLimitRange
+            );
 
         _updateFundsForTaker(
             _ccy,
             _maturity,
             msg.sender,
             side,
-            filledAmount,
-            filledFutureValue,
-            filledUnitPrice,
+            filledOrder.amount,
+            filledOrder.futureValue,
+            filledOrder.unitPrice,
             0
         );
 

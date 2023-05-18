@@ -2086,10 +2086,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .unwindPosition(targetCurrency, maturities[0]),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.be.revertedWith('Order not found');
 
         const aliveFV = await lendingMarketControllerProxy.getFutureValue(
           targetCurrency,
