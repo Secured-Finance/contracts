@@ -657,7 +657,9 @@ library OrderBookLogic {
             ? (bestUnitPrice == 0 ? Constants.PRICE_DIGIT : bestUnitPrice) <= executedUnitPrice
             : bestUnitPrice >= executedUnitPrice;
 
-        if (_unitPrice == 0 && !isFilled) revert("Circuit breaker has triggered");
+        if (!isFilled && ignoreRemainingAmount) {
+            revert("Circuit breaker has triggered");
+        }
     }
 
     /**

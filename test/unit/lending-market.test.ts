@@ -596,7 +596,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_setAutomine', [true]);
         });
 
-        it('Fail to create a second order on the block due to no filled amount', async () => {
+        it('Fail to create a second market order in the same block due to no filled amount', async () => {
           await createInitialOrders(isBorrow ? Side.LEND : Side.BORROW, 8500);
 
           await ethers.provider.send('evm_setAutomine', [false]);
@@ -618,6 +618,53 @@ describe('LendingMarket', () => {
                 side,
                 '50000000000000',
                 '0',
+                CIRCUIT_BREAKER_LIMIT_RANGE,
+                currentMarketIdx,
+              ),
+          ).to.be.revertedWith('Circuit breaker has triggered');
+
+          await ethers.provider.send('evm_mine', []);
+
+          await expect(tx1)
+            .to.emit(lendingMarket, 'OrdersTaken')
+            .withArgs(
+              bob.address,
+              side,
+              targetCurrency,
+              maturity,
+              '100000000000000',
+              8500,
+              () => true,
+            );
+
+          await ethers.provider.send('evm_setAutomine', [true]);
+        });
+
+        it('Fail to create a second limit order in the same block due to over the circuit breaker threshold', async () => {
+          const offsetUnitPrice = await await createInitialOrders(
+            isBorrow ? Side.LEND : Side.BORROW,
+            8500,
+          );
+
+          await ethers.provider.send('evm_setAutomine', [false]);
+
+          const tx1 = await lendingMarketCaller
+            .connect(bob)
+            .createOrder(
+              side,
+              '100000000000000',
+              '0',
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            );
+
+          await expect(
+            lendingMarketCaller
+              .connect(carol)
+              .createOrder(
+                side,
+                '50000000000000',
+                8500 + offsetUnitPrice,
                 CIRCUIT_BREAKER_LIMIT_RANGE,
                 currentMarketIdx,
               ),
