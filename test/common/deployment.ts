@@ -97,7 +97,7 @@ const deployContracts = async () => {
 
     tokens[currency.symbol] = await ethers
       .getContractFactory(currency.mock)
-      .then((factory) => factory.deploy(...currency.args));
+      .then((factory) => factory.deploy(...args));
   }
 
   const eFILToken = tokens['eFIL'];
