@@ -16,7 +16,7 @@ interface ICurrencyController {
 
     event HaircutUpdated(bytes32 indexed ccy, uint256 haircut);
 
-    event PriceFeedUpdated(bytes32 ccy, address[] indexed priceFeeds);
+    event PriceFeedUpdated(bytes32 ccy, uint256 decimals, address[] indexed priceFeeds);
     event PriceFeedRemoved(bytes32 ccy);
 
     function convert(
@@ -55,12 +55,17 @@ interface ICurrencyController {
 
     function currencyExists(bytes32 _ccy) external view returns (bool);
 
-    function updatePriceFeed(bytes32 _ccy, address[] calldata _priceFeeds) external;
+    function updatePriceFeed(
+        bytes32 _ccy,
+        uint8 _decimals,
+        address[] calldata _priceFeeds
+    ) external;
 
     function removePriceFeed(bytes32 _ccy) external;
 
     function addCurrency(
         bytes32 _ccy,
+        uint8 _decimals,
         uint256 _haircut,
         address[] calldata _priceFeeds
     ) external;

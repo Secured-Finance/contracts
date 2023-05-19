@@ -9,9 +9,9 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  btcToETHRate,
   eFilToETHRate,
   wBtcToBTCRate,
-  btcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
@@ -41,9 +41,9 @@ describe('Integration Test: Deposit', async () => {
   let signers: Signers;
 
   const initialETHBalance = BigNumber.from('10000000000000000');
-  const initialUSDCBalance = BigNumber.from('10000000000');
+  const initialUSDCBalance = BigNumber.from('100000000000');
   const initialFILBalance = BigNumber.from('100000000000000000000');
-  const initialWBTCBalance = BigNumber.from('1000000000000000');
+  const initialWBTCBalance = BigNumber.from('10000000000');
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
@@ -518,7 +518,7 @@ describe('Integration Test: Deposit', async () => {
       .mul(BigNumber.from(10).pow(18))
       .div(eFilToETHRate);
     const orderAmountInBTC = orderAmountInETH
-      .mul(BigNumber.from(10).pow(18))
+      .mul(BigNumber.from(10).pow(8))
       .div(btcToETHRate);
     const orderAmountInWBTC = orderAmountInBTC
       .mul(BigNumber.from(10).pow(8))

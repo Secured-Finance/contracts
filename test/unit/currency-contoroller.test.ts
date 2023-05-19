@@ -59,7 +59,12 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      const tx = await currencyControllerProxy.addCurrency(currency, 9000, []);
+      const tx = await currencyControllerProxy.addCurrency(
+        currency,
+        18,
+        9000,
+        [],
+      );
       await expect(tx).to.emit(currencyControllerProxy, 'CurrencyAdded');
       await expect(tx).to.not.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
@@ -87,7 +92,7 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      const tx = await currencyControllerProxy.addCurrency(currency, 9000, [
+      const tx = await currencyControllerProxy.addCurrency(currency, 18, 9000, [
         mockPriceFeed.address,
       ]);
       await expect(tx).to.emit(currencyControllerProxy, 'CurrencyAdded');
@@ -106,7 +111,7 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.addCurrency(currency, 8000, [
+        currencyControllerProxy.addCurrency(currency, 18, 8000, [
           mockPriceFeed.address,
         ]),
       ).to.be.revertedWith('Invalid PriceFeed');
@@ -120,7 +125,7 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.decimals.returns(19);
 
       await expect(
-        currencyControllerProxy.addCurrency(currency, 8000, [
+        currencyControllerProxy.addCurrency(currency, 18, 8000, [
           mockPriceFeed.address,
         ]),
       ).to.be.revertedWith('Invalid decimals');
@@ -138,7 +143,7 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.addCurrency(currency, 9000, [
+      await currencyControllerProxy.addCurrency(currency, 18, 9000, [
         mockPriceFeed.address,
       ]);
     });
@@ -170,7 +175,7 @@ describe('CurrencyController', () => {
       await newMockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.updatePriceFeed(currency, [
+        currencyControllerProxy.updatePriceFeed(currency, 18, [
           newMockPriceFeed.address,
         ]),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
@@ -198,7 +203,7 @@ describe('CurrencyController', () => {
       await newMockPriceFeed2.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.updatePriceFeed(currency, [
+        currencyControllerProxy.updatePriceFeed(currency, 18, [
           newMockPriceFeed1.address,
           newMockPriceFeed2.address,
         ]),
@@ -221,7 +226,7 @@ describe('CurrencyController', () => {
       await newMockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.updatePriceFeed(currency, [
+        currencyControllerProxy.updatePriceFeed(currency, 18, [
           newMockPriceFeed.address,
         ]),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
@@ -250,7 +255,7 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.addCurrency(dummyCurrency, 9000, []);
+      await currencyControllerProxy.addCurrency(dummyCurrency, 18, 9000, []);
 
       await expect(
         currencyControllerProxy.removePriceFeed(dummyCurrency),
@@ -269,7 +274,7 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.latestRoundData.returns(0, 10000000000, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.addCurrency(currency, 9000, [
+      await currencyControllerProxy.addCurrency(currency, 18, 9000, [
         mockPriceFeed.address,
       ]);
     });
