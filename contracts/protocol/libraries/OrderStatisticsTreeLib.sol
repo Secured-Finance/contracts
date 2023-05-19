@@ -809,18 +809,13 @@ library OrderStatisticsTreeLib {
         uint256 value,
         uint48 orderId,
         address user,
-        uint256 amount,
-        bool isInterruption
+        uint256 amount
     ) internal {
         require(amount > 0, "Insufficient amount");
         require(value <= Constants.PRICE_DIGIT, "Insufficient value");
         insert(self, value);
 
-        if (isInterruption) {
-            addHead(self, value, orderId, user, amount);
-        } else {
-            addTail(self, value, orderId, user, amount);
-        }
+        addTail(self, value, orderId, user, amount);
     }
 
     function removeOrder(

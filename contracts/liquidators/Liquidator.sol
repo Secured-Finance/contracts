@@ -66,7 +66,7 @@ contract Liquidator is ILiquidationReceiver {
             );
 
             if (fvAmount > 0) {
-                lendingMarketController.unwindOrder(_collateralCcy, collateralMaturities[i]);
+                lendingMarketController.unwindPosition(_collateralCcy, collateralMaturities[i]);
             }
         }
 
@@ -120,7 +120,7 @@ contract Liquidator is ILiquidationReceiver {
 
         if (debtTokenBalance != 0) {
             tokenVault.deposit(_debtCcy, debtTokenBalance);
-            lendingMarketController.unwindOrder(_debtCcy, _debtMaturity);
+            lendingMarketController.unwindPosition(_debtCcy, _debtMaturity);
         }
 
         emit OperationExecuteForDebt(

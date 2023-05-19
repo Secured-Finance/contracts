@@ -1860,7 +1860,7 @@ describe('LendingMarketController - Orders', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
-            .unwindOrder(targetCurrency, maturities[0]),
+            .unwindPosition(targetCurrency, maturities[0]),
         )
           .to.emit(
             fundManagementLogic.attach(lendingMarketControllerProxy.address),
@@ -1948,7 +1948,7 @@ describe('LendingMarketController - Orders', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
-            .unwindOrder(targetCurrency, maturities[0]),
+            .unwindPosition(targetCurrency, maturities[0]),
         )
           .to.emit(
             fundManagementLogic.attach(lendingMarketControllerProxy.address),
@@ -2021,7 +2021,7 @@ describe('LendingMarketController - Orders', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
-            .unwindOrder(targetCurrency, maturities[0]),
+            .unwindPosition(targetCurrency, maturities[0]),
         )
           .to.emit(
             fundManagementLogic.attach(lendingMarketControllerProxy.address),
@@ -2079,7 +2079,7 @@ describe('LendingMarketController - Orders', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
-            .unwindOrder(targetCurrency, maturities[0]),
+            .unwindPosition(targetCurrency, maturities[0]),
         ).to.not.emit(
           fundManagementLogic.attach(lendingMarketControllerProxy.address),
           'OrderFilled',
@@ -2098,7 +2098,7 @@ describe('LendingMarketController - Orders', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
-            .unwindOrder(targetCurrency, maturities[0]),
+            .unwindPosition(targetCurrency, maturities[0]),
         ).to.be.revertedWith('Future Value is zero');
       });
 
@@ -2106,7 +2106,7 @@ describe('LendingMarketController - Orders', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(alice)
-            .unwindOrder(targetCurrency, '1'),
+            .unwindPosition(targetCurrency, '1'),
         ).to.be.revertedWith('Invalid maturity');
       });
     });

@@ -359,8 +359,7 @@ library OrderBookLogic {
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice,
-        bool _isInterruption
+        uint256 _unitPrice
     ) public returns (uint48 orderId) {
         orderId = _nextOrderId();
         Storage.slot().orders[orderId] = MarketOrder(
@@ -375,8 +374,7 @@ library OrderBookLogic {
                 _unitPrice,
                 orderId,
                 _user,
-                _amount,
-                _isInterruption
+                _amount
             );
             Storage.slot().activeLendOrderIds[_user].push(orderId);
         } else if (_side == ProtocolTypes.Side.BORROW) {
@@ -384,8 +382,7 @@ library OrderBookLogic {
                 _unitPrice,
                 orderId,
                 _user,
-                _amount,
-                _isInterruption
+                _amount
             );
             Storage.slot().activeBorrowOrderIds[_user].push(orderId);
         }

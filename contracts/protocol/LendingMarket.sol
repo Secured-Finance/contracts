@@ -555,7 +555,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 remainingAmount
             ) = _takeOrder(_side, _user, _amount, _unitPrice, _ignoreRemainingAmount);
         } else {
-            _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
+            _makeOrder(_side, _user, _amount, _unitPrice);
             remainingAmount = _amount;
         }
     }
@@ -576,7 +576,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     ) external override whenNotPaused onlyAcceptedContracts ifPreOrderPeriod {
         require(_amount > 0, "Can't place empty amount");
         _updateUserMaturity(_user);
-        uint48 orderId = _makeOrder(_side, _user, _amount, _unitPrice, false, 0);
+        uint48 orderId = _makeOrder(_side, _user, _amount, _unitPrice);
         Storage.slot().isPreOrder[orderId] = true;
     }
 
@@ -723,21 +723,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Preferable interest unit price
-     * @param _originalOrderId The original order id that filled partially
      */
     function _makeOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice,
-        bool _isInterruption,
-        uint48 _originalOrderId
+        uint256 _unitPrice
     ) private returns (uint48 orderId) {
-        orderId = OrderBookLogic.insertOrder(_side, _user, _amount, _unitPrice, _isInterruption);
+        orderId = OrderBookLogic.insertOrder(_side, _user, _amount, _unitPrice);
 
         emit OrderMade(
             orderId,
-            _originalOrderId,
             _user,
             _side,
             Storage.slot().ccy,
@@ -808,7 +804,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         if (remainingAmount > 0 && _unitPrice != 0 && !_ignoreRemainingAmount) {
             // Make a new order for the remaining amount of input
-            _makeOrder(_side, _user, remainingAmount, _unitPrice, false, 0);
+            _makeOrder(_side, _user, remainingAmount, _unitPrice);
         }
     }
 
