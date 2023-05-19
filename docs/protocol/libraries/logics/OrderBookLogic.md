@@ -77,7 +77,7 @@ function estimateFilledAmount(enum ProtocolTypes.Side _side, uint256 _futureValu
 ### insertOrder
 
 ```solidity
-function insertOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _isInterruption) public returns (uint48 orderId)
+function insertOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) public returns (uint48 orderId)
 ```
 
 ### dropOrders

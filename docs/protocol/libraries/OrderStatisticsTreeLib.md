@@ -260,7 +260,7 @@ _Return boolean if value, amount and orderId exist in doubly linked list_
 ### insertOrder
 
 ```solidity
-function insertOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId, address user, uint256 amount, bool isInterruption) internal
+function insertOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId, address user, uint256 amount) internal
 ```
 
 ### removeOrder

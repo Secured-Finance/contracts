@@ -560,7 +560,7 @@ function _updateUserMaturity(address _user) private
 ### _makeOrder
 
 ```solidity
-function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _isInterruption, uint48 _originalOrderId) private returns (uint48 orderId)
+function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint48 orderId)
 ```
 
 Makes new market order.
@@ -571,8 +571,6 @@ Makes new market order.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Preferable interest unit price |
-| _isInterruption | bool |  |
-| _originalOrderId | uint48 | The original order id that filled partially |
 
 ### _takeOrder
 

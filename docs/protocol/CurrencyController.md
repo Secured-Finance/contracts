@@ -90,7 +90,7 @@ Gets if the selected currency is supported.
 ### addCurrency
 
 ```solidity
-function addCurrency(bytes32 _ccy, uint256 _haircut, address[] _priceFeeds) public
+function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds) public
 ```
 
 Adds new currency into the protocol and links with existing price feed.
@@ -98,6 +98,7 @@ Adds new currency into the protocol and links with existing price feed.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32k |
+| _decimals | uint8 | Currency decimals |
 | _haircut | uint256 | Remaining ratio after haircut |
 | _priceFeeds | address[] | Array with the contract address of price feed |
 
@@ -129,7 +130,7 @@ Updates the haircut ratio for supported currency
 ### updatePriceFeed
 
 ```solidity
-function updatePriceFeed(bytes32 _ccy, address[] _priceFeeds) public
+function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) public
 ```
 
 Update the price feed contract addresses.
@@ -137,6 +138,7 @@ Update the price feed contract addresses.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
+| _decimals | uint8 | Currency decimals |
 | _priceFeeds | address[] | Array with the contract address of price feed |
 
 ### removePriceFeed
@@ -274,6 +276,6 @@ function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal
 ### _updatePriceFeed
 
 ```solidity
-function _updatePriceFeed(bytes32 _ccy, address[] _priceFeeds) internal
+function _updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) internal
 ```
 

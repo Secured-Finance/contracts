@@ -562,10 +562,10 @@ Deposits funds and creates a pre-order at the same time.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### unwindOrder
+### unwindPosition
 
 ```solidity
-function unwindOrder(bytes32 _ccy, uint256 _maturity) external returns (bool)
+function unwindPosition(bytes32 _ccy, uint256 _maturity) external returns (bool)
 ```
 
 Unwinds user's lending or borrowing positions by creating an opposite position order.

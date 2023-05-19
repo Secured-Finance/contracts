@@ -29,7 +29,7 @@ event HaircutUpdated(bytes32 ccy, uint256 haircut)
 ### PriceFeedUpdated
 
 ```solidity
-event PriceFeedUpdated(bytes32 ccy, address[] priceFeeds)
+event PriceFeedUpdated(bytes32 ccy, uint256 decimals, address[] priceFeeds)
 ```
 
 ### PriceFeedRemoved
@@ -101,7 +101,7 @@ function currencyExists(bytes32 _ccy) external view returns (bool)
 ### updatePriceFeed
 
 ```solidity
-function updatePriceFeed(bytes32 _ccy, address[] _priceFeeds) external
+function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) external
 ```
 
 ### removePriceFeed
@@ -113,7 +113,7 @@ function removePriceFeed(bytes32 _ccy) external
 ### addCurrency
 
 ```solidity
-function addCurrency(bytes32 _ccy, uint256 _haircut, address[] _priceFeeds) external
+function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds) external
 ```
 
 ### updateHaircut

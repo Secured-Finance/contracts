@@ -21,7 +21,7 @@ event OrderCanceled(uint48 orderId, address maker, enum ProtocolTypes.Side side,
 ### OrderMade
 
 ```solidity
-event OrderMade(uint48 orderId, uint48 originalOrderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice)
+event OrderMade(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice)
 ```
 
 ### OrdersTaken
