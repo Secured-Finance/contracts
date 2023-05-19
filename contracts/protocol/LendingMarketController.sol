@@ -642,7 +642,7 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
      */
-    function unwindOrder(bytes32 _ccy, uint256 _maturity)
+    function unwindPosition(bytes32 _ccy, uint256 _maturity)
         external
         override
         nonReentrant

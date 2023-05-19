@@ -173,7 +173,7 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external payable returns (bool);
 
-    function unwindOrder(bytes32 ccy, uint256 maturity) external returns (bool);
+    function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool);
 
     function executeItayoseCalls(bytes32[] memory currencies, uint256 maturity)
         external

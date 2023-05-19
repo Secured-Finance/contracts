@@ -153,7 +153,10 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('Already terminated');
 
       await expect(
-        lendingMarketControllerProxy.unwindOrder(targetCurrency, maturities[0]),
+        lendingMarketControllerProxy.unwindPosition(
+          targetCurrency,
+          maturities[0],
+        ),
       ).to.revertedWith('Already terminated');
 
       await expect(

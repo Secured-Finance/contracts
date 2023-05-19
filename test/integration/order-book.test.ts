@@ -217,7 +217,7 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .unwindOrder(hexETH, ethMaturities[0]),
+            .unwindPosition(hexETH, ethMaturities[0]),
         ).to.emit(
           fundManagementLogic.attach(lendingMarketController.address),
           'OrderFilled',
@@ -344,7 +344,7 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .unwindOrder(hexEFIL, filMaturities[0]),
+            .unwindPosition(hexEFIL, filMaturities[0]),
         ).to.be.revertedWith('Not enough collateral in the selected currency');
 
         // Deposit the amount that is not enough due to fees being deducted.
@@ -356,7 +356,7 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .unwindOrder(hexEFIL, filMaturities[0]),
+            .unwindPosition(hexEFIL, filMaturities[0]),
         ).to.emit(
           fundManagementLogic.attach(lendingMarketController.address),
           'OrderFilled',
@@ -479,7 +479,7 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .unwindOrder(hexEFIL, filMaturities[0]),
+            .unwindPosition(hexEFIL, filMaturities[0]),
         ).to.emit(
           fundManagementLogic.attach(lendingMarketController.address),
           'OrderFilled',
@@ -690,7 +690,7 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .unwindOrder(hexEFIL, filMaturities[0]),
+            .unwindPosition(hexEFIL, filMaturities[0]),
         ).to.emit(
           fundManagementLogic.attach(lendingMarketController.address),
           'OrderFilled',
