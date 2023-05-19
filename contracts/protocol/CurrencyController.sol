@@ -85,11 +85,13 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     /**
      * @notice Adds new currency into the protocol and links with existing price feed.
      * @param _ccy Currency name in bytes32k
+     * @param _decimals Currency decimals
      * @param _haircut Remaining ratio after haircut
      * @param _priceFeeds Array with the contract address of price feed
      */
     function addCurrency(
         bytes32 _ccy,
+        uint8 _decimals,
         uint256 _haircut,
         address[] calldata _priceFeeds
     ) public override onlyOwner {
@@ -97,7 +99,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         _updateHaircut(_ccy, _haircut);
 
         if (_priceFeeds.length != 0) {
-            _updatePriceFeed(_ccy, _priceFeeds);
+            _updatePriceFeed(_ccy, _decimals, _priceFeeds);
         }
 
         emit CurrencyAdded(_ccy, _haircut);
@@ -129,15 +131,15 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     /**
      * @notice Update the price feed contract addresses.
      * @param _ccy Currency name in bytes32
+     * @param _decimals Currency decimals
      * @param _priceFeeds Array with the contract address of price feed
      */
-    function updatePriceFeed(bytes32 _ccy, address[] calldata _priceFeeds)
-        public
-        override
-        onlyOwner
-        onlySupportedCurrency(_ccy)
-    {
-        _updatePriceFeed(_ccy, _priceFeeds);
+    function updatePriceFeed(
+        bytes32 _ccy,
+        uint8 _decimals,
+        address[] calldata _priceFeeds
+    ) public override onlyOwner onlySupportedCurrency(_ccy) {
+        _updatePriceFeed(_ccy, _decimals, _priceFeeds);
     }
 
     /**
@@ -301,25 +303,32 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         emit HaircutUpdated(_ccy, _haircut);
     }
 
-    function _updatePriceFeed(bytes32 _ccy, address[] calldata _priceFeeds) internal {
+    function _updatePriceFeed(
+        bytes32 _ccy,
+        uint8 _decimals,
+        address[] calldata _priceFeeds
+    ) internal {
         AggregatorV3Interface[] memory priceFeeds = new AggregatorV3Interface[](_priceFeeds.length);
         uint8 decimalsTotal;
 
         for (uint256 i; i < _priceFeeds.length; i++) {
-            AggregatorV3Interface priceFeed = AggregatorV3Interface(_priceFeeds[i]);
-            (, int256 price, , , ) = priceFeed.latestRoundData();
+            priceFeeds[i] = AggregatorV3Interface(_priceFeeds[i]);
+            (, int256 price, , , ) = priceFeeds[i].latestRoundData();
             require(price >= 0, "Invalid PriceFeed");
 
-            uint8 decimals = priceFeed.decimals();
+            uint8 decimals = priceFeeds[i].decimals();
             require(decimals <= 18, "Invalid decimals");
 
-            priceFeeds[i] = priceFeed;
-            decimalsTotal += decimals;
+            // Add the decimal point of the source currency of the price feed.
+            // The previous price feed decimals are used as source data if there are multiple price feeds.
+            decimalsTotal += i == 0
+                ? _decimals
+                : AggregatorV3Interface(_priceFeeds[i - 1]).decimals();
         }
 
         Storage.slot().priceFeeds[_ccy] = priceFeeds;
         Storage.slot().decimalsCaches[_ccy] = decimalsTotal;
 
-        emit PriceFeedUpdated(_ccy, _priceFeeds);
+        emit PriceFeedUpdated(_ccy, _decimals, _priceFeeds);
     }
 }
