@@ -37,7 +37,7 @@ find $CONTRACTS_FOLDER \( -path 'tmp/mocks' -prune \) -o -name '*.sol' -print | 
 done
 
 # Exclude sol files that are referenced by other sol files because those referenced files will be flattened into caller sol files.
-find $CONTRACTS_FOLDER \( -path 'tmp/interfaces' -prune -o -path 'tmp/libraries' -prune -o -path 'tmp/mocks' -prune -o -path 'tmp/storages' -prune -o -path 'tmp/types' -prune -o -path 'tmp/utils' -prune \) -o -name '*.sol' -print | while IFS=$'\n' read -r FILE; do
+find $CONTRACTS_FOLDER \( -path 'tmp/liquidators/interfaces' -prune -o -path 'tmp/mocks' -prune -o -path 'tmp/protocol/interfaces' -prune -o -path 'tmp/protocol/libraries' -prune -o -path 'tmp/protocol/storages' -prune -o -path 'tmp/protocol/types' -prune -o -path 'tmp/protocol/utils' -prune \) -o -name '*.sol' -print | while IFS=$'\n' read -r FILE; do
   FLATTENED_FILE=$FLATTENED_FOLDER/`basename $FILE`
   printf "Processing $FILE into $FLATTENED_FILE\n"
 
