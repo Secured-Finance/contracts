@@ -363,6 +363,35 @@ Gets the total present value of the account converted to ETH.
 function getGenesisValue(bytes32 _ccy, address _user) external view returns (int256 genesisValue)
 ```
 
+Gets the genesis value of the account.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 for Lending Market |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| genesisValue | int256 | The genesis value |
+
+### getOrders
+
+```solidity
+function getOrders(bytes32[] _ccys, address _user) external view returns (struct ILendingMarketController.Order[] activeOrders, struct ILendingMarketController.Order[] inactiveOrders)
+```
+
+Gets user's active and inactive orders in the order book
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccys | bytes32[] | Currency name list in bytes32 |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| activeOrders | struct ILendingMarketController.Order[] | The array of active orders in the order book |
+| inactiveOrders | struct ILendingMarketController.Order[] | The array of inactive orders |
+
 ### calculateFunds
 
 ```solidity
@@ -533,13 +562,13 @@ Deposits funds and creates a pre-order at the same time.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### unwindOrder
+### unwindPosition
 
 ```solidity
-function unwindOrder(bytes32 _ccy, uint256 _maturity) external returns (bool)
+function unwindPosition(bytes32 _ccy, uint256 _maturity) external returns (bool)
 ```
 
-Unwinds all orders by creating an opposite position order.
+Unwinds user's lending or borrowing positions by creating an opposite position order.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -593,7 +622,7 @@ Cancels the own order.
 function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user) external returns (bool)
 ```
 
-Liquidates a lending position if the user's coverage is less than 1.
+Liquidates a lending or borrowing position if the user's coverage is hight.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -666,7 +695,7 @@ Unpauses previously deployed lending market by currency
 ### cleanUpAllFunds
 
 ```solidity
-function cleanUpAllFunds(address _user) public
+function cleanUpAllFunds(address _user) external
 ```
 
 Clean up all funds of the user
@@ -693,7 +722,7 @@ Clean up user funds used for lazy evaluation by the following actions:
 ### _createOrder
 
 ```solidity
-function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, bool _isForced) private returns (uint256 filledAmount)
+function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) private returns (uint256 filledAmount)
 ```
 
 ### _updateFundsForTaker

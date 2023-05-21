@@ -10,7 +10,7 @@ export interface Currency {
   orderFeeRate: number;
   autoRollFeeRate: number;
   isCollateral: boolean;
-  args?: string[];
+  args: string[];
 }
 
 export interface MockPriceFeeds {
@@ -69,7 +69,7 @@ const currencies: Currency[] = [
     orderFeeRate: 100,
     autoRollFeeRate: 250,
     isCollateral: true,
-    args: undefined,
+    args: [],
   },
 ];
 
@@ -89,14 +89,14 @@ const mockPriceFeeds: MockPriceFeeds = {
     },
     {
       name: 'BTC/ETH',
-      decimals: 8,
+      decimals: 18,
       rate: btcToETHRate,
     },
   ],
   [hexUSDC]: [
     {
       name: 'USDC/ETH',
-      decimals: 6,
+      decimals: 18,
       rate: usdcToETHRate,
     },
   ],

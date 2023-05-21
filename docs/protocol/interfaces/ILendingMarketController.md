@@ -2,6 +2,20 @@
 
 ## ILendingMarketController
 
+### Order
+
+```solidity
+struct Order {
+  uint48 orderId;
+  bytes32 ccy;
+  uint256 maturity;
+  enum ProtocolTypes.Side side;
+  uint256 unitPrice;
+  uint256 amount;
+  uint256 timestamp;
+}
+```
+
 ### LendingMarketCreated
 
 ```solidity
@@ -182,10 +196,10 @@ function createPreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side s
 function depositAndCreatePreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external payable returns (bool)
 ```
 
-### unwindOrder
+### unwindPosition
 
 ```solidity
-function unwindOrder(bytes32 ccy, uint256 maturity) external returns (bool)
+function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool)
 ```
 
 ### executeItayoseCalls

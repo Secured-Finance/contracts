@@ -146,12 +146,6 @@ function updateGenesisValueWithFutureValue(bytes32 ccy, address user, uint256 ba
 function updateGenesisValueWithResidualAmount(bytes32 ccy, address user, uint256 basisMaturity) external
 ```
 
-### offsetGenesisValue
-
-```solidity
-function offsetGenesisValue(bytes32 ccy, uint256 maturity, address lender, address borrower, int256 maximumGVAmount) external returns (int256 offsetAmount)
-```
-
 ### transferFrom
 
 ```solidity

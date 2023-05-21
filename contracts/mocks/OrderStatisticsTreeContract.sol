@@ -81,7 +81,7 @@ contract OrderStatisticsTreeContract {
         uint256 amount
     ) public {
         emit OrderInserted("insert", amount, value, orderId);
-        tree.insertOrder(value, orderId, user, amount, false);
+        tree.insertOrder(value, orderId, user, amount);
     }
 
     function removeAmountValue(uint256 value, uint48 orderId) public {

@@ -70,8 +70,20 @@ const func: DeployFunction = async function ({
           }
         }
 
+        const tokenContract = await ethers.getContractAt(
+          currency.mock,
+          currency.env || (await deployments.get(currency.mock)).address,
+        );
+
+        const decimals = await tokenContract.decimals();
+
         await currencyControllerContract
-          .addCurrency(currency.key, currency.haircut, priceFeedAddresses)
+          .addCurrency(
+            currency.key,
+            decimals,
+            currency.haircut,
+            priceFeedAddresses,
+          )
           .then((tx) => tx.wait());
       }
     },
@@ -79,6 +91,6 @@ const func: DeployFunction = async function ({
 };
 
 func.tags = ['CurrencyController'];
-func.dependencies = ['ProxyController'];
+func.dependencies = ['ProxyController', 'Tokens'];
 
 export default func;

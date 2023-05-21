@@ -23,7 +23,6 @@ interface ILendingMarket {
 
     event OrderMade(
         uint48 orderId,
-        uint48 originalOrderId,
         address indexed maker,
         ProtocolTypes.Side side,
         bytes32 ccy,

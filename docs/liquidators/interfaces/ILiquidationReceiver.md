@@ -2,15 +2,27 @@
 
 ## ILiquidationReceiver
 
-### OperationExecute
+### OperationExecuteForCollateral
 
 ```solidity
-event OperationExecute(address liquidator, address user, bytes32 collateralCcy, uint256 receivedCollateralAmount, bytes32 debtCcy, uint256 debtMaturity, uint256 receivedDebtAmount, address initiator)
+event OperationExecuteForCollateral(address liquidator, address user, bytes32 ccy, uint256 receivedAmount)
 ```
 
-### executeOperation
+### OperationExecuteForDebt
 
 ```solidity
-function executeOperation(address liquidator, address user, bytes32 collateralCcy, uint256 receivedCollateralAmount, bytes32 debtCcy, uint256 debtMaturity, uint256 receivedDebtAmount, address initiator) external returns (bool)
+event OperationExecuteForDebt(address liquidator, address user, bytes32 collateralCcy, uint256 receivedCollateralAmount, bytes32 debtCcy, uint256 debtMaturity, uint256 receivedDebtAmount)
+```
+
+### executeOperationForCollateral
+
+```solidity
+function executeOperationForCollateral(address liquidator, address user, bytes32 ccy, uint256 receivedAmount) external returns (bool)
+```
+
+### executeOperationForDebt
+
+```solidity
+function executeOperationForDebt(address liquidator, address user, bytes32 collateralCcy, uint256 receivedCollateralAmount, bytes32 debtCcy, uint256 debtMaturity, uint256 receivedDebtAmount) external returns (bool)
 ```
 

@@ -1,4 +1,4 @@
-import { Contract } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
@@ -55,7 +55,6 @@ const deployContracts = async () => {
     beaconProxyController,
     currencyController,
     genesisValueVault,
-    wETHToken,
     reserveFund,
     tokenVault,
     lendingMarketController,
@@ -65,7 +64,6 @@ const deployContracts = async () => {
       'BeaconProxyController',
       'CurrencyController',
       'GenesisValueVault',
-      'MockWETH9',
       'ReserveFund',
     ].map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
@@ -88,18 +86,24 @@ const deployContracts = async () => {
       .then((factory) => factory.deploy()),
   ]);
 
-  const wFILToken = await ethers
-    .getContractFactory('MockWFIL')
-    .then((factory) => factory.deploy('10000000000000000000000000000'));
-  const eFILToken = await ethers
-    .getContractFactory('MockEFIL')
-    .then((factory) => factory.deploy('10000000000000000000000000000'));
-  const usdcToken = await ethers
-    .getContractFactory('MockUSDC')
-    .then((factory) => factory.deploy('100000000000000000'));
-  const wBTCToken = await ethers
-    .getContractFactory('MockWBTC')
-    .then((factory) => factory.deploy('100000000000000000'));
+  const tokens: Record<string, Contract> = {};
+  for (const currency of currencies) {
+    const args = currency.args;
+
+    // Increase initial mint amount for testing
+    if (args[0]) {
+      args[0] = BigNumber.from(args[0]).mul(100).toString();
+    }
+
+    tokens[currency.symbol] = await ethers
+      .getContractFactory(currency.mock)
+      .then((factory) => factory.deploy(...args));
+  }
+
+  const eFILToken = tokens['eFIL'];
+  const usdcToken = tokens['USDC'];
+  const wBTCToken = tokens['WBTC'];
+  const wETHToken = tokens['WETH'];
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')
@@ -201,8 +205,10 @@ const deployContracts = async () => {
       }
     }
 
+    const decimals = await tokens[currency.symbol].decimals();
     await currencyControllerProxy.addCurrency(
       currency.key,
+      decimals,
       currency.haircut,
       priceFeedAddresses,
     );
@@ -308,7 +314,6 @@ const deployContracts = async () => {
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
     reserveFund: reserveFundProxy,
-    wFILToken,
     eFILToken,
     wETHToken,
     wBTCToken,

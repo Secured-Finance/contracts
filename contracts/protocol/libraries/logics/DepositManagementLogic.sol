@@ -203,7 +203,7 @@ library DepositManagementLogic {
 
             withdrawableAmount = depositAmount >= maxWithdraw ? maxWithdraw : depositAmount;
         } else {
-            withdrawableAmount = depositAmount;
+            withdrawableAmount = getDepositAmount(_user, _ccy);
         }
     }
 

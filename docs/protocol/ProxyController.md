@@ -106,7 +106,7 @@ Sets the implementation contract of TokenVault
 ### setCurrencyControllerImpl
 
 ```solidity
-function setCurrencyControllerImpl(address newImpl) external
+function setCurrencyControllerImpl(address newImpl, bytes32 baseCcy) external
 ```
 
 Sets the implementation contract of CurrencyController
@@ -114,6 +114,7 @@ Sets the implementation contract of CurrencyController
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
+| baseCcy | bytes32 | The base currency name in bytes32 |
 
 ### setGenesisValueVaultImpl
 

@@ -4,8 +4,8 @@
 
 Implements managing of the supported currencies in the protocol.
 
-This contract links new currencies to ETH Chainlink price feeds, without an existing price feed
-contract owner is not able to add a new currency into the protocol
+This contract links new currencies to Chainlink price feeds. To add a new currency to the protocol except for the base currency,
+the owner needs to also add an existing price feed contract.
 
 ### onlySupportedCurrency
 
@@ -22,7 +22,7 @@ Modifier to check if the currency is supported.
 ### initialize
 
 ```solidity
-function initialize(address _owner) public
+function initialize(address _owner, bytes32 _baseCcy) public
 ```
 
 Initializes the contract.
@@ -32,65 +32,15 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _owner | address | The address of the contract owner |
+| _baseCcy | bytes32 | The base currency name in bytes32 |
 
-### addCurrency
-
-```solidity
-function addCurrency(bytes32 _ccy, address _ethPriceFeed, uint256 _haircut) public
-```
-
-Adds new currency into the protocol and links with existing ETH price feed of Chainlink.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _ethPriceFeed | address | Address for ETH price feed |
-| _haircut | uint256 | Remaining ratio after haircut |
-
-### removeCurrency
+### getDecimals
 
 ```solidity
-function removeCurrency(bytes32 _ccy) public
+function getDecimals(bytes32 _ccy) external view returns (uint8)
 ```
 
-Updates the flag indicating if the currency is supported in the protocol.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-### updateHaircut
-
-```solidity
-function updateHaircut(bytes32 _ccy, uint256 _haircut) public
-```
-
-Updates the haircut ratio for supported currency
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _haircut | uint256 | Remaining ratio after haircut |
-
-### getEthDecimals
-
-```solidity
-function getEthDecimals(bytes32 _ccy) external view returns (uint8)
-```
-
-Get ETH decimal for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-### getUsdDecimals
-
-```solidity
-function getUsdDecimals(bytes32 _ccy) external view returns (uint8)
-```
-
-Gets USD decimal for the selected currency.
+Gets cached decimal of the price feed for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -137,30 +87,64 @@ Gets if the selected currency is supported.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the selected currency is supported or not |
 
-### linkPriceFeed
+### addCurrency
 
 ```solidity
-function linkPriceFeed(bytes32 _ccy, address _priceFeedAddr, bool _isEthPriceFeed) public returns (bool)
+function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds) public
 ```
 
-Links the contract to existing Chainlink price feed.
+Adds new currency into the protocol and links with existing price feed.
 
-_This method can use only Chainlink._
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32k |
+| _decimals | uint8 | Currency decimals |
+| _haircut | uint256 | Remaining ratio after haircut |
+| _priceFeeds | address[] | Array with the contract address of price feed |
+
+### removeCurrency
+
+```solidity
+function removeCurrency(bytes32 _ccy) public
+```
+
+Updates the flag indicating if the currency is supported in the protocol.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _priceFeedAddr | address | The contract address of Chainlink price feed |
-| _isEthPriceFeed | bool | Boolean if the price feed is in ETH or not |
+
+### updateHaircut
+
+```solidity
+function updateHaircut(bytes32 _ccy, uint256 _haircut) public
+```
+
+Updates the haircut ratio for supported currency
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | bool | True if the execution of the operation succeeds |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _haircut | uint256 | Remaining ratio after haircut |
+
+### updatePriceFeed
+
+```solidity
+function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) public
+```
+
+Update the price feed contract addresses.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _decimals | uint8 | Currency decimals |
+| _priceFeeds | address[] | Array with the contract address of price feed |
 
 ### removePriceFeed
 
 ```solidity
-function removePriceFeed(bytes32 _ccy, bool _isEthPriceFeed) external
+function removePriceFeed(bytes32 _ccy) external
 ```
 
 Removes existing Chainlink price feed.
@@ -168,15 +152,14 @@ Removes existing Chainlink price feed.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _isEthPriceFeed | bool | Boolean if the price feed is in ETH or not |
 
-### getLastUSDPrice
+### getLastPrice
 
 ```solidity
-function getLastUSDPrice(bytes32 _ccy) public view returns (int256 price)
+function getLastPrice(bytes32 _ccy) public view returns (int256 price)
 ```
 
-Gets the last price in USD for the selected currency.
+Gets the last price for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -184,57 +167,7 @@ Gets the last price in USD for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| price | int256 | The last price in USD |
-
-### getHistoricalUSDPrice
-
-```solidity
-function getHistoricalUSDPrice(bytes32 _ccy, uint80 _roundId) public view returns (int256)
-```
-
-Gets the historical price in USD for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _roundId | uint80 | RoundId |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | int256 | The historical price in USD |
-
-### getLastETHPrice
-
-```solidity
-function getLastETHPrice(bytes32 _ccy) public view returns (int256 price)
-```
-
-Gets the last price in ETH for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| price | int256 | The last price in ETH |
-
-### getHistoricalETHPrice
-
-```solidity
-function getHistoricalETHPrice(bytes32 _ccy, uint80 _roundId) public view returns (int256)
-```
-
-Gets the historical price in ETH for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _roundId | uint80 | RoundId |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | int256 | The historical price in ETH |
+| price | int256 | The last price |
 
 ### convert
 
@@ -254,83 +187,95 @@ Gets the converted amount of currency.
 | ---- | ---- | ----------- |
 | amount | uint256 | The converted amount |
 
-### convertToETH
+### convertToBaseCurrency
 
 ```solidity
-function convertToETH(bytes32 _ccy, uint256 _amount) public view returns (uint256 amount)
+function convertToBaseCurrency(bytes32 _ccy, uint256 _amount) public view returns (uint256 amount)
 ```
 
-Gets the converted amount of currency in ETH.
+Gets the converted amount in the base currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency that has to be converted to ETH |
+| _ccy | bytes32 | Currency that has to be converted to the base currency |
 | _amount | uint256 | Amount to be converted |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | amount | uint256 | The converted amount |
 
-### convertToETH
+### convertToBaseCurrency
 
 ```solidity
-function convertToETH(bytes32 _ccy, int256 _amount) external view returns (int256 amount)
+function convertToBaseCurrency(bytes32 _ccy, int256 _amount) external view returns (int256 amount)
 ```
 
-Gets the converted amount of currency in ETH.
+Gets the converted amount in the base currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency that has to be converted to ETH |
+| _ccy | bytes32 | Currency that has to be converted to the base currency. |
 | _amount | int256 | Amount to be converted |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | amount | int256 | The converted amount |
 
-### convertToETH
+### convertToBaseCurrency
 
 ```solidity
-function convertToETH(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
+function convertToBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
 ```
 
-Gets the converted amounts of currency in ETH.
+Gets the converted amounts in the base currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency that has to be converted to ETH |
+| _ccy | bytes32 | Currency that has to be converted to the base currency. |
 | _amounts | uint256[] | Amounts to be converted |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | amounts | uint256[] | The converted amounts |
 
-### convertFromETH
+### convertFromBaseCurrency
 
 ```solidity
-function convertFromETH(bytes32 _ccy, uint256 _amountETH) public view returns (uint256 amount)
+function convertFromBaseCurrency(bytes32 _ccy, uint256 _amount) public view returns (uint256 amount)
 ```
 
-Gets the converted amount to the selected currency from ETH.
+Gets the converted amount to the selected currency from the base currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency that has to be converted from ETH |
-| _amountETH | uint256 | Amount in ETH to be converted |
+| _ccy | bytes32 | Currency that has to be converted from the base currency. |
+| _amount | uint256 | Amount in the base currency to be converted |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | amount | uint256 | The converted amount |
 
-### _isETH
+### _isBaseCurrency
 
 ```solidity
-function _isETH(bytes32 _ccy) internal pure returns (bool)
+function _isBaseCurrency(bytes32 _ccy) internal view returns (bool)
 ```
 
-### _getLastETHPrice
+### _getLastPrice
 
 ```solidity
-function _getLastETHPrice(bytes32 _ccy) internal view returns (int256 price)
+function _getLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice)
+```
+
+### _updateHaircut
+
+```solidity
+function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal
+```
+
+### _updatePriceFeed
+
+```solidity
+function _updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) internal
 ```
 

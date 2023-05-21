@@ -148,7 +148,7 @@ describe('ProxyController', () => {
 
       // Set up for CurrencyController
       const btcToETHPriceFeed = await MockV3Aggregator.new(
-        6,
+        18,
         hexWBTC,
         btcToETHRate,
       );
@@ -157,7 +157,7 @@ describe('ProxyController', () => {
         hexWBTC,
         wBtcToBTCRate,
       );
-      await currencyControllerProxy1.addCurrency(hexWBTC, HAIRCUT, [
+      await currencyControllerProxy1.addCurrency(hexWBTC, 6, HAIRCUT, [
         wBtcToBTCPriceFeed.address,
         btcToETHPriceFeed.address,
       ]);

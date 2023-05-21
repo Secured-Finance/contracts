@@ -59,8 +59,34 @@ library LendingMarketUserLogic {
         }
     }
 
-    function getOrders(bytes32 _ccy, address _user)
+    function getOrders(bytes32[] memory _ccys, address _user)
         external
+        view
+        returns (
+            ILendingMarketController.Order[] memory activeOrders,
+            ILendingMarketController.Order[] memory inactiveOrders
+        )
+    {
+        uint256 totalActiveOrderCount;
+        uint256 totalInactiveOrderCount;
+
+        ILendingMarketController.Order[][]
+            memory activeOrdersList = new ILendingMarketController.Order[][](_ccys.length);
+        ILendingMarketController.Order[][]
+            memory inactiveOrdersList = new ILendingMarketController.Order[][](_ccys.length);
+
+        for (uint256 i; i < _ccys.length; i++) {
+            (activeOrdersList[i], inactiveOrdersList[i]) = _getOrdersPerCurrency(_ccys[i], _user);
+            totalActiveOrderCount += activeOrdersList[i].length;
+            totalInactiveOrderCount += inactiveOrdersList[i].length;
+        }
+
+        activeOrders = _flattenOrders(activeOrdersList, totalActiveOrderCount);
+        inactiveOrders = _flattenOrders(inactiveOrdersList, totalInactiveOrderCount);
+    }
+
+    function _getOrdersPerCurrency(bytes32 _ccy, address _user)
+        internal
         view
         returns (
             ILendingMarketController.Order[] memory activeOrders,
@@ -77,28 +103,20 @@ library LendingMarketUserLogic {
             memory inactiveOrdersList = new ILendingMarketController.Order[][](maturities.length);
 
         for (uint256 i; i < maturities.length; i++) {
-            (activeOrdersList[i], inactiveOrdersList[i]) = _getOrders(_ccy, maturities[i], _user);
+            (activeOrdersList[i], inactiveOrdersList[i]) = _getOrdersPerMarket(
+                _ccy,
+                maturities[i],
+                _user
+            );
             totalActiveOrderCount += activeOrdersList[i].length;
             totalInactiveOrderCount += inactiveOrdersList[i].length;
         }
 
-        activeOrders = new ILendingMarketController.Order[](totalActiveOrderCount);
-        inactiveOrders = new ILendingMarketController.Order[](totalInactiveOrderCount);
-
-        for (uint256 i; i < activeOrdersList.length; i++) {
-            for (uint256 j; j < activeOrdersList[i].length; j++) {
-                activeOrders[i + j] = activeOrdersList[i][j];
-            }
-        }
-
-        for (uint256 i; i < inactiveOrdersList.length; i++) {
-            for (uint256 j; j < inactiveOrdersList[i].length; j++) {
-                inactiveOrders[i + j] = inactiveOrdersList[i][j];
-            }
-        }
+        activeOrders = _flattenOrders(activeOrdersList, totalActiveOrderCount);
+        inactiveOrders = _flattenOrders(inactiveOrdersList, totalInactiveOrderCount);
     }
 
-    function _getOrders(
+    function _getOrdersPerMarket(
         bytes32 _ccy,
         uint256 _maturity,
         address _user
@@ -127,33 +145,35 @@ library LendingMarketUserLogic {
         );
 
         for (uint256 i; i < activeLendOrderIds.length; i++) {
-            activeOrders[i] = _getOrder(market, activeLendOrderIds[i]);
+            activeOrders[i] = _getOrder(_ccy, market, activeLendOrderIds[i]);
         }
 
         for (uint256 i; i < activeBorrowOrderIds.length; i++) {
             activeOrders[activeLendOrderIds.length + i] = _getOrder(
+                _ccy,
                 market,
                 activeBorrowOrderIds[i]
             );
         }
 
         for (uint256 i; i < inActiveLendOrderIds.length; i++) {
-            inactiveOrders[i] = _getOrder(market, inActiveLendOrderIds[i]);
+            inactiveOrders[i] = _getOrder(_ccy, market, inActiveLendOrderIds[i]);
         }
 
         for (uint256 i; i < inActiveBorrowOrderIds.length; i++) {
             inactiveOrders[inActiveLendOrderIds.length + i] = _getOrder(
+                _ccy,
                 market,
                 inActiveBorrowOrderIds[i]
             );
         }
     }
 
-    function _getOrder(ILendingMarket _market, uint48 _orderId)
-        internal
-        view
-        returns (ILendingMarketController.Order memory order)
-    {
+    function _getOrder(
+        bytes32 _ccy,
+        ILendingMarket _market,
+        uint48 _orderId
+    ) internal view returns (ILendingMarketController.Order memory order) {
         (
             ProtocolTypes.Side side,
             uint256 unitPrice,
@@ -163,6 +183,29 @@ library LendingMarketUserLogic {
             uint256 timestamp
         ) = _market.getOrder(_orderId);
 
-        order = ILendingMarketController.Order(maturity, side, unitPrice, amount, timestamp);
+        order = ILendingMarketController.Order(
+            _orderId,
+            _ccy,
+            maturity,
+            side,
+            unitPrice,
+            amount,
+            timestamp
+        );
+    }
+
+    function _flattenOrders(ILendingMarketController.Order[][] memory orders, uint256 totalLength)
+        internal
+        pure
+        returns (ILendingMarketController.Order[] memory flattened)
+    {
+        flattened = new ILendingMarketController.Order[](totalLength);
+        uint256 index;
+        for (uint256 i; i < orders.length; i++) {
+            for (uint256 j; j < orders[i].length; j++) {
+                flattened[index] = orders[i][j];
+                index++;
+            }
+        }
     }
 }

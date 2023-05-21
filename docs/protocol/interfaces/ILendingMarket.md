@@ -21,7 +21,7 @@ event OrderCanceled(uint48 orderId, address maker, enum ProtocolTypes.Side side,
 ### OrderMade
 
 ```solidity
-event OrderMade(uint48 orderId, uint48 originalOrderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice)
+event OrderMade(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice)
 ```
 
 ### OrdersTaken
@@ -212,10 +212,10 @@ function cancelOrder(address user, uint48 orderId) external returns (enum Protoc
 function createPreOrder(enum ProtocolTypes.Side side, address user, uint256 amount, uint256 unitPrice) external
 ```
 
-### unwindOrder
+### unwind
 
 ```solidity
-function unwindOrder(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 ### executeItayoseCall

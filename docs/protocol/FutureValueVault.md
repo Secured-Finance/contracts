@@ -122,20 +122,6 @@ is the taker._
 | _maturity | uint256 | The maturity of the market |
 | _isTaker | bool | The boolean if the original order is created by a taker |
 
-### offsetFutureValue
-
-```solidity
-function offsetFutureValue(address _lender, address _borrower, uint256 _maximumFVAmount) external returns (uint256 offsetAmount)
-```
-
-Offsets the future value amount of the lender and the borrower.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _lender | address | The lender's address |
-| _borrower | address | The borrower's address |
-| _maximumFVAmount | uint256 | Maximum future value amount to be offset |
-
 ### transferFrom
 
 ```solidity
