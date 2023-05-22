@@ -458,7 +458,7 @@ for lazy evaluation if the collateral is enough or not._
 ### createOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) external returns (uint256 filledUnitPrice, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, uint256 remainingAmount)
+function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 Creates the order. Takes the order if the order is matched,
@@ -470,14 +470,12 @@ and places new order if not match it.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
-| _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after taking orders |
+| _circuitBreakerLimitRange | uint256 | Limit range in unit price for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| filledUnitPrice | uint256 | Last unit price of the filled order |
-| filledFutureValue | uint256 | The total FV amount of the filled order on the order book |
+| filledOrder | struct ILendingMarket.FilledOrder | User's Filled order of the user |
 | partiallyFilledOrder | struct ILendingMarket.PartiallyFilledOrder | Partially filled order on the order book |
-| remainingAmount | uint256 | The remaining amount that is not filled in the order book |
 
 ### createPreOrder
 
@@ -498,7 +496,7 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 ### unwind
 
 ```solidity
-function unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 Unwinds lending or borrowing positions by a specified future value amount.
@@ -508,12 +506,11 @@ Unwinds lending or borrowing positions by a specified future value amount.
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
 | _futureValue | uint256 | Amount of future value unwound |
+| _circuitBreakerLimitRange | uint256 | Limit range in unit price for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| filledUnitPrice | uint256 | Last unit price of the filled order |
-| filledAmount | uint256 | The total amount of the filled order on the order book |
-| filledFutureValue | uint256 | The total FV amount of the filled order on the order book |
+| filledOrder | struct ILendingMarket.FilledOrder | User's Filled order of the user |
 | partiallyFilledOrder | struct ILendingMarket.PartiallyFilledOrder | Partially filled order |
 
 ### executeItayoseCall
@@ -575,7 +572,7 @@ Makes new market order.
 ### _takeOrder
 
 ```solidity
-function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (uint256 filledUnitPrice, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, uint256 remainingAmount)
+function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 Takes the market order.
@@ -591,6 +588,6 @@ Takes the market order.
 ### _unwind
 
 ```solidity
-function _unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) private returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function _unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 

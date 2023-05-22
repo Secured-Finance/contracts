@@ -5,13 +5,19 @@
 ### OrderFeeRateUpdated
 
 ```solidity
-event OrderFeeRateUpdated(uint256 previousRate, uint256 rate)
+event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
 ```
 
 ### AutoRollFeeRateUpdated
 
 ```solidity
-event AutoRollFeeRateUpdated(uint256 previousRate, uint256 rate)
+event AutoRollFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
+```
+
+### CircuitBreakerLimitRangeUpdated
+
+```solidity
+event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
 ```
 
 ### ObservationPeriodUpdated
@@ -58,6 +64,22 @@ Gets the auto-roll fee rate
 | ---- | ---- | ----------- |
 | [0] | uint256 | The auto-roll fee rate received by protocol |
 
+### getCircuitBreakerLimitRange
+
+```solidity
+function getCircuitBreakerLimitRange(bytes32 _ccy) public view returns (uint256)
+```
+
+Gets the limit range in unit price for the circuit breaker
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The auto-roll fee rate received by protocol |
+
 ### getObservationPeriod
 
 ```solidity
@@ -95,6 +117,19 @@ Updates the auto-roll fee rate
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _autoRollFeeRate | uint256 | The order fee rate received by protocol |
+
+### updateCircuitBreakerLimitRange
+
+```solidity
+function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) public
+```
+
+Updates the auto-roll fee rate
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _limitRange | uint256 | The circuit breaker limit range |
 
 ### updateObservationPeriod
 
