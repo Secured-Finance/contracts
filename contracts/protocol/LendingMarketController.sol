@@ -485,13 +485,15 @@ contract LendingMarketController is
      * @param _compoundFactor The initial compound factor when the initial market is opened
      * @param _orderFeeRate The order fee rate received by protocol
      * @param _autoRollFeeRate The auto roll fee rate received by protocol
+     * @param _circuitBreakerLimitRange The circuit breaker limit range
      */
     function initializeLendingMarket(
         bytes32 _ccy,
         uint256 _genesisDate,
         uint256 _compoundFactor,
         uint256 _orderFeeRate,
-        uint256 _autoRollFeeRate
+        uint256 _autoRollFeeRate,
+        uint256 _circuitBreakerLimitRange
     ) external override onlyOwner {
         require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
@@ -499,6 +501,7 @@ contract LendingMarketController is
         LendingMarketOperationLogic.initializeCurrencySetting(_ccy, _genesisDate, _compoundFactor);
         updateOrderFeeRate(_ccy, _orderFeeRate);
         updateAutoRollFeeRate(_ccy, _autoRollFeeRate);
+        updateCircuitBreakerLimitRange(_ccy, _circuitBreakerLimitRange);
     }
 
     /**
@@ -653,23 +656,28 @@ contract LendingMarketController is
         int256 futureValue = FundManagementLogic
             .calculateActualFunds(_ccy, _maturity, msg.sender)
             .futureValue;
+        uint256 circuitBreakerLimitRange = getCircuitBreakerLimitRange(_ccy);
 
         (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
+            ILendingMarket.FilledOrder memory filledOrder,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
             ProtocolTypes.Side side
-        ) = LendingMarketUserLogic.unwind(_ccy, _maturity, msg.sender, futureValue);
+        ) = LendingMarketUserLogic.unwind(
+                _ccy,
+                _maturity,
+                msg.sender,
+                futureValue,
+                circuitBreakerLimitRange
+            );
 
         _updateFundsForTaker(
             _ccy,
             _maturity,
             msg.sender,
             side,
-            filledAmount,
-            filledFutureValue,
-            filledUnitPrice,
+            filledOrder.amount,
+            filledOrder.futureValue,
+            filledOrder.unitPrice,
             0
         );
 
@@ -928,28 +936,29 @@ contract LendingMarketController is
 
         require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
 
+        uint256 circuitBreakerLimitRange = getCircuitBreakerLimitRange(_ccy);
+
         (
-            uint256 filledUnitPrice,
-            uint256 filledFutureValue,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount
+            ILendingMarket.FilledOrder memory filledOrder,
+            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
         ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
                 _side,
                 _user,
                 _amount,
                 _unitPrice,
-                false
+                circuitBreakerLimitRange
             );
-        filledAmount = _amount - remainingAmount;
 
-        // The case that an order was made, or taken partially
-        if (filledFutureValue == 0 || remainingAmount > 0) {
+        filledAmount = filledOrder.amount;
+
+        // The case that an order is placed in the order book
+        if ((filledAmount + filledOrder.ignoredAmount) != _amount) {
             activeOrderCount += 1;
         }
 
         require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
 
-        uint256 feeFutureValue = _calculateOrderFeeAmount(_ccy, filledFutureValue, _maturity);
+        uint256 feeFutureValue = _calculateOrderFeeAmount(_ccy, filledOrder.futureValue, _maturity);
 
         _updateFundsForTaker(
             _ccy,
@@ -957,8 +966,8 @@ contract LendingMarketController is
             _user,
             _side,
             filledAmount,
-            filledFutureValue,
-            filledUnitPrice,
+            filledOrder.futureValue,
+            filledOrder.unitPrice,
             feeFutureValue
         );
 

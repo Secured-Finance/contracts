@@ -39,6 +39,8 @@ library LendingMarketStorage {
         mapping(uint256 => OrderStatisticsTreeLib.Tree) lendOrders;
         // Mapping from maturity to borrowing orders
         mapping(uint256 => OrderStatisticsTreeLib.Tree) borrowOrders;
+        // Mapping from order side to threshold unit price of circuit breaker per block
+        mapping(uint256 => mapping(ProtocolTypes.Side => uint256)) circuitBreakerThresholdUnitPrices;
     }
 
     function slot() internal pure returns (Storage storage r) {

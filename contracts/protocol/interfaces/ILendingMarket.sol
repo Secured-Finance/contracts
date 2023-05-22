@@ -5,6 +5,13 @@ import "../types/ProtocolTypes.sol";
 import {MarketOrder} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
+    struct FilledOrder {
+        uint256 unitPrice;
+        uint256 amount;
+        uint256 futureValue;
+        uint256 ignoredAmount;
+    }
+
     struct PartiallyFilledOrder {
         address maker;
         uint256 amount;
@@ -57,6 +64,14 @@ interface ILendingMarket {
         ProtocolTypes.Side side,
         bytes32 indexed ccy,
         uint256 maturity
+    );
+
+    event OrderBlockedByCircuitBreaker(
+        address indexed user,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 indexed maturity,
+        uint256 thresholdUnitPrice
     );
 
     event MarketOpened(uint256 maturity, uint256 prevMaturity);
@@ -117,7 +132,7 @@ interface ILendingMarket {
 
     function isPreOrderPeriod() external returns (bool);
 
-    function getOrder(uint48 _orderId)
+    function getOrder(uint48 orderId)
         external
         view
         returns (
@@ -129,7 +144,7 @@ interface ILendingMarket {
             uint256 timestamp
         );
 
-    function getTotalAmountFromLendOrders(address _user)
+    function getTotalAmountFromLendOrders(address user)
         external
         view
         returns (
@@ -139,7 +154,7 @@ interface ILendingMarket {
             uint256 maturity
         );
 
-    function getTotalAmountFromBorrowOrders(address _user)
+    function getTotalAmountFromBorrowOrders(address user)
         external
         view
         returns (
@@ -149,17 +164,17 @@ interface ILendingMarket {
             uint256 maturity
         );
 
-    function getLendOrderIds(address _user)
+    function getLendOrderIds(address user)
         external
         view
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
 
-    function getBorrowOrderIds(address _user)
+    function getBorrowOrderIds(address user)
         external
         view
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
 
-    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
+    function estimateFilledAmount(ProtocolTypes.Side side, uint256 futureValue)
         external
         view
         returns (uint256 amount);
@@ -174,6 +189,16 @@ interface ILendingMarket {
             uint256
         );
 
+    function createOrder(
+        ProtocolTypes.Side side,
+        address account,
+        uint256 amount,
+        uint256 unitPrice,
+        uint256 circuitBreakerLimitRange
+    )
+        external
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder);
+
     function createPreOrder(
         ProtocolTypes.Side side,
         address user,
@@ -182,17 +207,13 @@ interface ILendingMarket {
     ) external;
 
     function unwind(
-        ProtocolTypes.Side _side,
-        address _user,
-        uint256 _futureValue
+        ProtocolTypes.Side side,
+        address user,
+        uint256 futureValue,
+        uint256 circuitBreakerLimitRange
     )
         external
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder
-        );
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder);
 
     function executeItayoseCall()
         external
@@ -204,7 +225,7 @@ interface ILendingMarket {
             PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         );
 
-    function cleanUpOrders(address _user)
+    function cleanUpOrders(address user)
         external
         returns (
             uint256 activeLendOrderCount,
@@ -214,21 +235,6 @@ interface ILendingMarket {
             uint256 removedLendOrderAmount,
             uint256 removedBorrowOrderAmount,
             uint256 maturity
-        );
-
-    function createOrder(
-        ProtocolTypes.Side side,
-        address account,
-        uint256 amount,
-        uint256 unitPrice,
-        bool ignoreRemainingAmount
-    )
-        external
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount
         );
 
     function pauseMarket() external;

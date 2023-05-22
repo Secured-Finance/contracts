@@ -506,57 +506,48 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
-     * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after taking orders
-     * @return filledUnitPrice Last unit price of the filled order
-     * @return filledFutureValue The total FV amount of the filled order on the order book
+     * @param _circuitBreakerLimitRange Limit range in unit price for the circuit breaker
+     * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order on the order book
-     * @return remainingAmount The remaining amount that is not filled in the order book
      */
     function createOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
         uint256 _unitPrice,
-        bool _ignoreRemainingAmount
+        uint256 _circuitBreakerLimitRange
     )
         external
         override
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount
-        )
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
         require(_amount > 0, "Can't place empty amount");
         _updateUserMaturity(_user);
 
-        bool isExists;
-        if (_unitPrice == 0) {
-            isExists = _side == ProtocolTypes.Side.LEND
-                ? OrderBookLogic.checkBorrowOrderExist()
-                : OrderBookLogic.checkLendOrderExist();
+        (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount) = OrderBookLogic
+            .checkCircuitBreakerThreshold(_side, _unitPrice, _circuitBreakerLimitRange);
 
-            require(isExists, "Invalid Market Order");
+        if (isFilled) {
+            (filledOrder, partiallyFilledOrder) = _takeOrder(
+                _side,
+                _user,
+                _amount,
+                executedUnitPrice,
+                ignoreRemainingAmount
+            );
+        } else if (!ignoreRemainingAmount) {
+            _makeOrder(_side, _user, _amount, executedUnitPrice);
         } else {
-            isExists = _side == ProtocolTypes.Side.LEND
-                ? OrderBookLogic.getLowestBorrowingUnitPrice() <= _unitPrice
-                : OrderBookLogic.getHighestLendingUnitPrice() >= _unitPrice;
-        }
-
-        if (isExists) {
-            (
-                filledUnitPrice,
-                filledFutureValue,
-                partiallyFilledOrder,
-                remainingAmount
-            ) = _takeOrder(_side, _user, _amount, _unitPrice, _ignoreRemainingAmount);
-        } else {
-            _makeOrder(_side, _user, _amount, _unitPrice);
-            remainingAmount = _amount;
+            emit OrderBlockedByCircuitBreaker(
+                _user,
+                Storage.slot().ccy,
+                _side,
+                Storage.slot().maturity,
+                executedUnitPrice
+            );
         }
     }
 
@@ -585,30 +576,25 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _futureValue Amount of future value unwound
-     * @return filledUnitPrice Last unit price of the filled order
-     * @return filledAmount The total amount of the filled order on the order book
-     * @return filledFutureValue The total FV amount of the filled order on the order book
+     * @param _circuitBreakerLimitRange Limit range in unit price for the circuit breaker
+     * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order
      */
     function unwind(
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _futureValue
+        uint256 _futureValue,
+        uint256 _circuitBreakerLimitRange
     )
         external
         override
         whenNotPaused
         onlyAcceptedContracts
         ifOpened
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder
-        )
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
         require(_futureValue > 0, "Can't place empty future value amount");
-        return _unwind(_side, _user, _futureValue);
+        return _unwind(_side, _user, _futureValue, _circuitBreakerLimitRange);
     }
 
     /**
@@ -648,12 +634,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 (
                     ,
                     ,
+                    ,
                     uint48 partiallyFilledOrderId,
                     address partiallyFilledMaker,
                     uint256 partiallyFilledAmount,
                     uint256 partiallyFilledFutureValue,
 
-                ) = OrderBookLogic.dropOrders(sides[i], totalOffsetAmount, 0);
+                ) = OrderBookLogic.dropOrders(sides[i], totalOffsetAmount, 0, 0);
 
                 if (partiallyFilledFutureValue > 0) {
                     if (sides[i] == ProtocolTypes.Side.LEND) {
@@ -759,33 +746,32 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         bool _ignoreRemainingAmount
     )
         private
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder,
-            uint256 remainingAmount
-        )
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
         uint48 partiallyFilledOrderId;
+        uint256 remainingAmount;
 
         (
-            filledUnitPrice,
-            filledFutureValue,
+            filledOrder.unitPrice,
+            ,
+            filledOrder.futureValue,
             partiallyFilledOrderId,
             partiallyFilledOrder.maker,
             partiallyFilledOrder.amount,
             partiallyFilledOrder.futureValue,
             remainingAmount
-        ) = OrderBookLogic.dropOrders(_side, _amount, _unitPrice);
+        ) = OrderBookLogic.dropOrders(_side, _amount, 0, _unitPrice);
+
+        filledOrder.amount = _amount - remainingAmount;
 
         emit OrdersTaken(
             _user,
             _side,
             Storage.slot().ccy,
             Storage.slot().maturity,
-            _amount - remainingAmount,
-            _unitPrice,
-            filledFutureValue
+            filledOrder.amount,
+            filledOrder.unitPrice,
+            filledOrder.futureValue
         );
 
         if (partiallyFilledOrder.futureValue > 0) {
@@ -802,58 +788,75 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
         }
 
-        if (remainingAmount > 0 && _unitPrice != 0 && !_ignoreRemainingAmount) {
-            // Make a new order for the remaining amount of input
-            _makeOrder(_side, _user, remainingAmount, _unitPrice);
+        if (remainingAmount > 0) {
+            if (_ignoreRemainingAmount) {
+                filledOrder.ignoredAmount = remainingAmount;
+            } else {
+                // Make a new order for the remaining amount of input
+                _makeOrder(_side, _user, remainingAmount, _unitPrice);
+            }
         }
     }
 
     function _unwind(
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _futureValue
+        uint256 _futureValue,
+        uint256 _circuitBreakerLimitRange
     )
         private
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            PartiallyFilledOrder memory partiallyFilledOrder
-        )
+        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
-        uint48 partiallyFilledOrderId;
-
-        (
-            filledUnitPrice,
-            filledAmount,
-            filledFutureValue,
-            partiallyFilledOrderId,
-            partiallyFilledOrder.maker,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue
-        ) = OrderBookLogic.dropOrders(_side, _futureValue);
-
-        emit OrdersTaken(
-            _user,
+        (bool isFilled, uint256 executedUnitPrice, ) = OrderBookLogic.checkCircuitBreakerThreshold(
             _side,
-            Storage.slot().ccy,
-            Storage.slot().maturity,
-            filledAmount,
             0,
-            filledFutureValue
+            _circuitBreakerLimitRange
         );
 
-        if (partiallyFilledOrder.futureValue > 0) {
-            emit OrderPartiallyTaken(
+        if (isFilled) {
+            uint48 partiallyFilledOrderId;
+
+            (
+                filledOrder.unitPrice,
+                filledOrder.amount,
+                filledOrder.futureValue,
                 partiallyFilledOrderId,
                 partiallyFilledOrder.maker,
-                _side == ProtocolTypes.Side.LEND
-                    ? ProtocolTypes.Side.BORROW
-                    : ProtocolTypes.Side.LEND,
+                partiallyFilledOrder.amount,
+                partiallyFilledOrder.futureValue,
+
+            ) = OrderBookLogic.dropOrders(_side, 0, _futureValue, executedUnitPrice);
+
+            emit OrdersTaken(
+                _user,
+                _side,
                 Storage.slot().ccy,
                 Storage.slot().maturity,
-                partiallyFilledOrder.amount,
-                partiallyFilledOrder.futureValue
+                filledOrder.amount,
+                filledOrder.unitPrice,
+                filledOrder.futureValue
+            );
+
+            if (partiallyFilledOrder.futureValue > 0) {
+                emit OrderPartiallyTaken(
+                    partiallyFilledOrderId,
+                    partiallyFilledOrder.maker,
+                    _side == ProtocolTypes.Side.LEND
+                        ? ProtocolTypes.Side.BORROW
+                        : ProtocolTypes.Side.LEND,
+                    Storage.slot().ccy,
+                    Storage.slot().maturity,
+                    partiallyFilledOrder.amount,
+                    partiallyFilledOrder.futureValue
+                );
+            }
+        } else {
+            emit OrderBlockedByCircuitBreaker(
+                _user,
+                Storage.slot().ccy,
+                _side,
+                Storage.slot().maturity,
+                executedUnitPrice
             );
         }
     }

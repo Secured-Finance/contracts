@@ -387,9 +387,8 @@ describe('Integration Test: Order Book', async () => {
         .div(eFilToETHRate);
 
       before(async () => {
-        [alice, bob, carol] = await getUsers(4);
+        [alice, bob, carol] = await getUsers(3);
         filMaturities = await lendingMarketController.getMaturities(hexEFIL);
-        // await createSampleFILOrders(carol);
       });
 
       it('Deposit ETH ', async () => {
@@ -703,6 +702,184 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(aliceFVAfter.abs()).to.lte(aliceFVBefore.abs());
+      });
+    });
+
+    describe('Fill orders, Trigger circuit breakers by one order', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount
+        .mul(4)
+        .div(5)
+        .mul(BigNumber.from(10).pow(18))
+        .div(eFilToETHRate);
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        filMaturities = await lendingMarketController.getMaturities(hexEFIL);
+      });
+
+      it('Deposit ETH ', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill orders on the FIL market', async () => {
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount.div(2),
+            '8000',
+          );
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount.div(2),
+            '9001',
+          );
+
+        await eFILToken
+          .connect(bob)
+          .approve(tokenVault.address, initialFILBalance);
+
+        const { blockHash } = await lendingMarketController
+          .connect(bob)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '0',
+          );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount.div(2),
+          '8000',
+          filMaturities[0].sub(timestamp),
+        );
+
+        const bobFV = await lendingMarketController.getFutureValue(
+          hexEFIL,
+          filMaturities[0],
+          bob.address,
+        );
+
+        calculateFutureValue(orderAmount.div(2), 8000);
+
+        expect(
+          bobFV.add(fee).sub(calculateFutureValue(orderAmount.div(2), 8000)),
+        ).lte(1);
+      });
+    });
+
+    describe('Fill orders, Trigger circuit breakers by multiple orders', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount
+        .mul(4)
+        .div(5)
+        .mul(BigNumber.from(10).pow(18))
+        .div(eFilToETHRate);
+
+      before(async () => {
+        [alice, bob, carol, dave] = await getUsers(4);
+        filMaturities = await lendingMarketController.getMaturities(hexEFIL);
+      });
+
+      it('Deposit ETH ', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill orders on the FIL market', async () => {
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount.div(2),
+            '8000',
+          );
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount.div(2),
+            '9001',
+          );
+
+        for (const user of [bob, carol, dave]) {
+          await eFILToken
+            .connect(user)
+            .approve(tokenVault.address, initialFILBalance);
+        }
+
+        await ethers.provider.send('evm_setAutomine', [false]);
+
+        await lendingMarketController
+          .connect(bob)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount.div(2),
+            '0',
+          );
+
+        const tx = await lendingMarketController
+          .connect(carol)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount.div(2),
+            '0',
+          );
+
+        await ethers.provider.send('evm_mine', []);
+        await ethers.provider.send('evm_setAutomine', [true]);
+
+        await expect(tx)
+          .to.emit(filLendingMarkets[0], 'OrderBlockedByCircuitBreaker')
+          .withArgs(carol.address, hexEFIL, Side.LEND, filMaturities[0], 9000);
+
+        await expect(
+          lendingMarketController
+            .connect(dave)
+            .depositAndCreateOrder(
+              hexEFIL,
+              filMaturities[0],
+              Side.LEND,
+              orderAmount.div(3),
+              '0',
+            ),
+        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
       });
     });
   });

@@ -10,6 +10,7 @@ import { Side } from '../../../utils/constants';
 import { getGenesisDate } from '../../../utils/dates';
 import {
   AUTO_ROLL_FEE_RATE,
+  CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
 } from '../../common/constants';
@@ -78,6 +79,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
       const res = await lendingMarketControllerProxy.getGenesisDate(
         targetCurrency,
@@ -115,6 +117,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
       await lendingMarketControllerProxy.createLendingMarket(
         targetCurrency,
@@ -149,6 +152,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
       for (let i = 0; i < 9; i++) {
@@ -202,6 +206,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         AUTO_ROLL_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
       for (let i = 0; i < 5; i++) {
         await lendingMarketControllerProxy.createLendingMarket(
@@ -1020,6 +1025,7 @@ describe('LendingMarketController - Orders', () => {
           alicePVs.reduce((pv, total) => total.add(pv)),
         );
       };
+
       await lendingMarketControllerProxy
         .connect(alice)
         .createOrder(
@@ -1791,7 +1797,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '0',
             ),
-        ).to.be.revertedWith('Invalid Market Order');
+        ).to.be.revertedWith('Order not found');
       });
 
       it('Fail to place a lend market order', async () => {
@@ -1806,7 +1812,7 @@ describe('LendingMarketController - Orders', () => {
               '0',
               { value: '1000000000000000' },
             ),
-        ).to.be.revertedWith('Invalid Market Order');
+        ).to.be.revertedWith('Order not found');
       });
     });
 
@@ -2080,10 +2086,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .unwindPosition(targetCurrency, maturities[0]),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.be.revertedWith('Order not found');
 
         const aliveFV = await lendingMarketControllerProxy.getFutureValue(
           targetCurrency,

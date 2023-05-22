@@ -30,6 +30,22 @@ contract LendingMarketCaller {
         lendingMarkets.push(lendingMarket);
     }
 
+    function createOrder(
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice,
+        uint256 _circuitBreakerLimitRange,
+        uint256 _index
+    ) external {
+        ILendingMarket(lendingMarkets[_index]).createOrder(
+            _side,
+            msg.sender,
+            _amount,
+            _unitPrice,
+            _circuitBreakerLimitRange
+        );
+    }
+
     function createPreOrder(
         ProtocolTypes.Side _side,
         uint256 _amount,
@@ -41,6 +57,20 @@ contract LendingMarketCaller {
             msg.sender,
             _amount,
             _unitPrice
+        );
+    }
+
+    function unwind(
+        ProtocolTypes.Side _side,
+        uint256 _futureValue,
+        uint256 _circuitBreakerLimitRange,
+        uint256 _index
+    ) external {
+        ILendingMarket(lendingMarkets[_index]).unwind(
+            _side,
+            msg.sender,
+            _futureValue,
+            _circuitBreakerLimitRange
         );
     }
 
