@@ -5,7 +5,7 @@
 ### unwind
 
 ```solidity
-function unwind(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, enum ProtocolTypes.Side side)
+function unwind(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, enum ProtocolTypes.Side side)
 ```
 
 ### getOrders

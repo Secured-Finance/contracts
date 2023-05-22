@@ -36,6 +36,7 @@ struct Storage {
   mapping(uint256 => bool) isPreOrder;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) lendOrders;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) borrowOrders;
+  mapping(uint256 => mapping(enum ProtocolTypes.Side => uint256)) circuitBreakerThresholdUnitPrices;
 }
 ```
 
