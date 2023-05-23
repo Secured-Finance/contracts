@@ -56,8 +56,7 @@ jobs:
         run: |
           npm version ${{ github.event.inputs.versionLevel }} -m "chore: upgrade to %s"
           npm publish
-          git push
-          git push --tags
+          git push --follow-tags
       - name: Merge main into develop
         shell: bash
         if: ${{ github.event.inputs.branch == 'main' }}
