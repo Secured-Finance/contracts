@@ -1,3 +1,0 @@
-@openzeppelin/=contracts/dependencies/openzeppelin/
-@chainlink/=contracts/dependencies/chainlink
-@uniswap/=contracts/dependencies/uniswap

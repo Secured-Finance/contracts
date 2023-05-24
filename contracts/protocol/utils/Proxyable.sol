@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/utils/StorageSlot.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "../../dependencies/openzeppelin/contracts/utils/StorageSlot.sol";
+import "../../dependencies/openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 abstract contract Proxyable is Initializable {
     bytes32 internal constant _IMPLEMENTATION_SLOT =

@@ -2,7 +2,6 @@ import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-ganache';
 import '@nomiclabs/hardhat-truffle5';
 import '@nomiclabs/hardhat-waffle';
-import '@nomicfoundation/hardhat-foundry';
 import 'dotenv/config';
 import 'hardhat-contract-sizer';
 import 'hardhat-deploy';

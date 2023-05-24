@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ISwapRouter} from "@uniswap/contracts/ISwapRouter.sol";
-import {IQuoter} from "@uniswap/contracts/IQuoter.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ISwapRouter} from "../dependencies/uniswap/contracts/ISwapRouter.sol";
+import {IQuoter} from "../dependencies/uniswap/contracts/IQuoter.sol";
+import {IERC20} from "../dependencies/openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {ILiquidationReceiver} from "./interfaces/ILiquidationReceiver.sol";
 // libraries
