@@ -1,4 +1,4 @@
-name: Deploy
+name: Update smart contracts
 
 on:
   workflow_dispatch:

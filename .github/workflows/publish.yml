@@ -11,6 +11,15 @@ on:
         options:
           - develop
           - main
+      versionLevel:
+        description: 'Version Level'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   publish:
@@ -45,13 +54,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ '${{ github.event.inputs.branch }}' = 'main' ]; then
-            npm version patch -m "chore: upgrade to %s"
-          else
-            npm version prerelease --preid beta -m "chore: upgrade to %s"
-          fi
+          npm version ${{ github.event.inputs.versionLevel }} -m "chore: upgrade to %s"
           npm publish
-          git push
+          git push --follow-tags
       - name: Merge main into develop
         shell: bash
         if: ${{ github.event.inputs.branch == 'main' }}
