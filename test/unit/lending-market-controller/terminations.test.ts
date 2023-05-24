@@ -81,13 +81,13 @@ describe('LendingMarketController - Terminations', () => {
 
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
 
-    await mockCurrencyController.mock.getEthDecimals.returns(16);
+    await mockCurrencyController.mock.getDecimals.returns(16);
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
-    await mockCurrencyController.mock.getLastETHPrice.returns(10000000000);
-    await mockCurrencyController.mock['convertToETH(bytes32,uint256)'].returns(
-      20000000000,
-    );
+    await mockCurrencyController.mock.getLastPrice.returns(10000000000);
+    await mockCurrencyController.mock[
+      'convertToBaseCurrency(bytes32,uint256)'
+    ].returns(20000000000);
     await mockTokenVault.mock.isCovered.returns(true);
     await mockTokenVault.mock.getCollateralCurrencies.returns([targetCurrency]);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);
@@ -153,7 +153,10 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('Already terminated');
 
       await expect(
-        lendingMarketControllerProxy.unwindOrder(targetCurrency, maturities[0]),
+        lendingMarketControllerProxy.unwindPosition(
+          targetCurrency,
+          maturities[0],
+        ),
       ).to.revertedWith('Already terminated');
 
       await expect(
@@ -177,7 +180,6 @@ describe('LendingMarketController - Terminations', () => {
           targetCurrency,
           maturities[0],
           alice.address,
-          0,
         ),
       ).to.revertedWith('Already terminated');
 

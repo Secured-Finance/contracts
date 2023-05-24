@@ -1,13 +1,13 @@
-import { Contract } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencies, mockRates } from '../../utils/currencies';
+import { currencies, mockPriceFeeds } from '../../utils/currencies';
 import {
   hexEFIL,
+  hexETH,
   hexUSDC,
   hexWBTC,
-  hexETH,
   hexWFIL,
   toBytes32,
 } from '../../utils/strings';
@@ -27,12 +27,14 @@ const deployContracts = async () => {
   const [
     depositManagementLogic,
     lendingMarketOperationLogic,
+    lendingMarketUserLogic,
     orderBookLogic,
     quickSort,
   ] = await Promise.all(
     [
       'DepositManagementLogic',
       'LendingMarketOperationLogic',
+      'LendingMarketUserLogic',
       'OrderBookLogic',
       'QuickSort',
     ].map((library) =>
@@ -53,7 +55,6 @@ const deployContracts = async () => {
     beaconProxyController,
     currencyController,
     genesisValueVault,
-    wETHToken,
     reserveFund,
     tokenVault,
     lendingMarketController,
@@ -63,7 +64,6 @@ const deployContracts = async () => {
       'BeaconProxyController',
       'CurrencyController',
       'GenesisValueVault',
-      'MockWETH9',
       'ReserveFund',
     ].map((contract) =>
       ethers.getContractFactory(contract).then((factory) => factory.deploy()),
@@ -80,23 +80,30 @@ const deployContracts = async () => {
         libraries: {
           FundManagementLogic: fundManagementLogic.address,
           LendingMarketOperationLogic: lendingMarketOperationLogic.address,
+          LendingMarketUserLogic: lendingMarketUserLogic.address,
         },
       })
       .then((factory) => factory.deploy()),
   ]);
 
-  const wFILToken = await ethers
-    .getContractFactory('MockWFIL')
-    .then((factory) => factory.deploy('10000000000000000000000000000'));
-  const eFILToken = await ethers
-    .getContractFactory('MockEFIL')
-    .then((factory) => factory.deploy('10000000000000000000000000000'));
-  const usdcToken = await ethers
-    .getContractFactory('MockUSDC')
-    .then((factory) => factory.deploy('100000000000000000'));
-  const wBTCToken = await ethers
-    .getContractFactory('MockWBTC')
-    .then((factory) => factory.deploy('100000000000000000'));
+  const tokens: Record<string, Contract> = {};
+  for (const currency of currencies) {
+    const args = currency.args;
+
+    // Increase initial mint amount for testing
+    if (args[0]) {
+      args[0] = BigNumber.from(args[0]).mul(100).toString();
+    }
+
+    tokens[currency.symbol] = await ethers
+      .getContractFactory(currency.mock)
+      .then((factory) => factory.deploy(...args));
+  }
+
+  const eFILToken = tokens['eFIL'];
+  const usdcToken = tokens['USDC'];
+  const wBTCToken = tokens['WBTC'];
+  const wETHToken = tokens['WETH'];
 
   const proxyController = await ethers
     .getContractFactory('ProxyController')
@@ -122,7 +129,10 @@ const deployContracts = async () => {
     tokenVaultAddress,
   ] = await Promise.all([
     proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
-    proxyController.setCurrencyControllerImpl(currencyController.address),
+    proxyController.setCurrencyControllerImpl(
+      currencyController.address,
+      hexETH,
+    ),
     proxyController.setGenesisValueVaultImpl(genesisValueVault.address),
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
@@ -135,8 +145,6 @@ const deployContracts = async () => {
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
-      ethers.utils.hexlify(ethers.utils.randomBytes(20)),
-      ethers.utils.hexlify(ethers.utils.randomBytes(20)),
       wETHToken.address,
     ),
   ])
@@ -184,17 +192,25 @@ const deployContracts = async () => {
   const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
 
   for (const currency of currencies) {
-    const mockRate = mockRates[currency.key];
-    priceFeeds[currency.key] = await MockV3Aggregator.deploy(
-      mockRate.decimals,
-      currency.key,
-      mockRate.rate,
-    );
+    const priceFeedAddresses: string[] = [];
 
+    if (mockPriceFeeds[currency.key]) {
+      for (const priceFeed of mockPriceFeeds[currency.key]) {
+        priceFeeds[currency.key] = await MockV3Aggregator.deploy(
+          priceFeed.decimals,
+          currency.key,
+          priceFeed.rate,
+        );
+        priceFeedAddresses.push(priceFeeds[currency.key].address);
+      }
+    }
+
+    const decimals = await tokens[currency.symbol].decimals();
     await currencyControllerProxy.addCurrency(
       currency.key,
-      priceFeeds[currency.key].address,
+      decimals,
       currency.haircut,
+      priceFeedAddresses,
     );
   }
 
@@ -298,14 +314,12 @@ const deployContracts = async () => {
     lendingMarketController: lendingMarketControllerProxy,
     proxyController,
     reserveFund: reserveFundProxy,
-    wFILToken,
     eFILToken,
     wETHToken,
     wBTCToken,
     usdcToken,
     wFilToETHPriceFeed: priceFeeds[hexWFIL],
     eFilToETHPriceFeed: priceFeeds[hexEFIL],
-    ethToUSDPriceFeed: priceFeeds[hexETH],
     wBtcToETHPriceFeed: priceFeeds[hexWBTC],
     usdcToUSDPriceFeed: priceFeeds[hexUSDC],
   };

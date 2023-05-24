@@ -3,10 +3,10 @@ pragma solidity ^0.8.9;
 
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 // libraries
-import {Contracts} from "../libraries/Contracts.sol";
-import {ERC20Handler} from "../libraries/ERC20Handler.sol";
+import {Contracts} from "../protocol/libraries/Contracts.sol";
+import {ERC20Handler} from "../protocol/libraries/ERC20Handler.sol";
 // mixins
-import {MixinAddressResolver} from "../mixins/MixinAddressResolver.sol";
+import {MixinAddressResolver} from "../protocol/mixins/MixinAddressResolver.sol";
 
 contract MockUniswapRouter is MixinAddressResolver {
     mapping(address => bytes32) private currencies;
@@ -17,6 +17,8 @@ contract MockUniswapRouter is MixinAddressResolver {
 
         buildCache();
     }
+
+    receive() external payable {}
 
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
@@ -31,16 +33,44 @@ contract MockUniswapRouter is MixinAddressResolver {
         external
         returns (uint256 amountIn)
     {
-        uint256 amountOutInETH = currencyController().convertToETH(
+        amountIn = currencyController().convert(
             currencies[params.tokenOut],
+            currencies[params.tokenIn],
             params.amountOut
         );
-
-        amountIn = currencyController().convertFromETH(currencies[params.tokenIn], amountOutInETH);
 
         require(amountIn <= params.amountInMaximum, "Too much requested");
 
         ERC20Handler.safeTransferFrom(params.tokenIn, msg.sender, address(this), amountIn);
         ERC20Handler.safeTransfer(params.tokenOut, msg.sender, params.amountOut);
+    }
+
+    function exactInputSingle(ISwapRouter.ExactInputSingleParams calldata params)
+        external
+        payable
+        returns (uint256 amountOut)
+    {
+        amountOut = currencyController().convert(
+            currencies[params.tokenIn],
+            currencies[params.tokenOut],
+            params.amountIn
+        );
+
+        require(amountOut >= params.amountOutMinimum, "Too little received");
+
+        if (ERC20Handler.weth() != params.tokenIn) {
+            ERC20Handler.safeTransferFrom(
+                params.tokenIn,
+                msg.sender,
+                address(this),
+                params.amountIn
+            );
+        }
+
+        if (ERC20Handler.weth() != params.tokenOut) {
+            ERC20Handler.safeTransfer(params.tokenOut, msg.sender, amountOut);
+        } else {
+            ERC20Handler.safeTransferETH(msg.sender, amountOut);
+        }
     }
 }

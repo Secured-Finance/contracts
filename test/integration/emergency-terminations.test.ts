@@ -1,11 +1,17 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
 import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
-import { eFilToETHRate, usdcToETHRate } from '../common/constants';
+import {
+  AUTO_ROLL_FEE_RATE,
+  PCT_DIGIT,
+  eFilToETHRate,
+  usdcToETHRate,
+} from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
@@ -55,6 +61,7 @@ describe('Integration Test: Emergency terminations', async () => {
     user: SignerWithAddress,
     maturity: BigNumber,
     unitPrice: string,
+    diffAmount = '1000',
   ) => {
     await tokenVault.connect(user).deposit(hexETH, orderAmountInETH, {
       value: orderAmountInETH,
@@ -67,7 +74,7 @@ describe('Integration Test: Emergency terminations', async () => {
         maturity,
         Side.BORROW,
         '1000000',
-        BigNumber.from(unitPrice).add('1000'),
+        BigNumber.from(unitPrice).add(diffAmount),
       );
 
     await lendingMarketController
@@ -77,7 +84,7 @@ describe('Integration Test: Emergency terminations', async () => {
         maturity,
         Side.LEND,
         '1000000',
-        BigNumber.from(unitPrice).sub('1000'),
+        BigNumber.from(unitPrice).sub(diffAmount),
       );
   };
 
@@ -85,6 +92,7 @@ describe('Integration Test: Emergency terminations', async () => {
     user: SignerWithAddress,
     maturity: BigNumber,
     unitPrice: string,
+    diffAmount = '1000',
   ) => {
     await eFILToken.connect(user).approve(tokenVault.address, orderAmountInETH);
     await tokenVault.connect(user).deposit(hexEFIL, orderAmountInETH);
@@ -96,7 +104,7 @@ describe('Integration Test: Emergency terminations', async () => {
         maturity,
         Side.BORROW,
         '1000000',
-        BigNumber.from(unitPrice).add('1000'),
+        BigNumber.from(unitPrice).add(diffAmount),
       );
 
     await lendingMarketController
@@ -106,7 +114,7 @@ describe('Integration Test: Emergency terminations', async () => {
         maturity,
         Side.LEND,
         '1000000',
-        BigNumber.from(unitPrice).sub('1000'),
+        BigNumber.from(unitPrice).sub(diffAmount),
       );
   };
 
@@ -356,6 +364,96 @@ describe('Integration Test: Emergency terminations', async () => {
                 .then((deposit) => expect(deposit).equal(0)),
             ),
           );
+        }
+      });
+    });
+
+    describe('Including an auto-rolled position', async () => {
+      before(async () => {
+        await initializeContracts();
+        await resetContractInstances();
+        [alice, bob, carol] = await getUsers(3);
+      });
+
+      it('Fill an order on the ETH market with depositing ETH', async () => {
+        await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH.mul(2), {
+          value: orderAmountInETH.mul(2),
+        });
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .createOrder(
+              hexETH,
+              maturities[0],
+              Side.BORROW,
+              orderAmountInETH,
+              8000,
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexETH,
+              maturities[0],
+              Side.LEND,
+              orderAmountInETH,
+              0,
+              { value: orderAmountInETH },
+            ),
+        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+      });
+
+      it('Execute auto-roll', async () => {
+        // Move to 6 hours (21600 sec) before maturity.
+        await time.increaseTo(maturities[0].sub('21600').toString());
+        await createSampleETHOrders(carol, maturities[0], '8000', '0');
+        await createSampleETHOrders(carol, maturities[1], '8000');
+
+        await time.increaseTo(maturities[0].toString());
+        await lendingMarketController
+          .connect(owner)
+          .rotateLendingMarkets(hexETH);
+
+        await lendingMarketController.cleanUpAllFunds(alice.address);
+        await lendingMarketController.cleanUpAllFunds(bob.address);
+      });
+
+      it('Execute emergency termination', async () => {
+        await expect(
+          lendingMarketController.executeEmergencyTermination(),
+        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+      });
+
+      it('Execute forced redemption', async () => {
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .executeRedemption(hexETH, hexETH),
+        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .executeRedemption(hexETH, hexETH),
+        )
+          .to.emit(lendingMarketController, 'RedemptionExecuted')
+          .withArgs(
+            hexETH,
+            bob.address,
+            orderAmountInETH
+              .mul(PCT_DIGIT + AUTO_ROLL_FEE_RATE)
+              .div(PCT_DIGIT)
+              .mul(-1),
+          );
+
+        for (const user of [alice, bob]) {
+          const fv = await lendingMarketController.getTotalPresentValueInETH(
+            user.address,
+          );
+          expect(fv).equal(0);
         }
       });
     });

@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.network }}
     outputs:
-      docgenDiff: ${{ steps.docgenDiff.outputs.count }} 
+      docgenDiff: ${{ steps.docgenDiff.outputs.count }}
     steps:
       - name: Generate token
         id: generate_token
@@ -48,15 +48,13 @@ jobs:
           echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
           echo "MARKET_OBSERVATION_PERIOD=${{ vars.MARKET_OBSERVATION_PERIOD }}" >> $GITHUB_ENV
-          echo "UNISWAP_SWAP_ROUTER_CONTRACT=${{ vars.UNISWAP_SWAP_ROUTER_CONTRACT }}" >> $GITHUB_ENV
-          echo "UNISWAP_SWAP_QUOTER_CONTRACT=${{ vars.UNISWAP_SWAP_QUOTER_CONTRACT }}" >> $GITHUB_ENV
           echo "TOKEN_EFIL=${{ vars.TOKEN_EFIL }}" >> $GITHUB_ENV
           echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
           echo "EFIL_TO_ETH_RATE=${{ vars.EFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
-          echo "ETH_TO_USD_RATE=${{ vars.ETH_TO_USD_RATE }}" >> $GITHUB_ENV
-          echo "WBTC_TO_ETH_RATE=${{ vars.WBTC_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "WBTC_TO_BTC_RATE=${{ vars.WBTC_TO_BTC_RATE }}" >> $GITHUB_ENV
+          echo "BTC_TO_ETH_RATE=${{ vars.BTC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}" >> $GITHUB_ENV
           echo "ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}" >> $GITHUB_ENV

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../libraries/OrderStatisticsTreeLib.sol";
+import "../protocol/libraries/OrderStatisticsTreeLib.sol";
 
 contract OrderStatisticsTreeContract {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
@@ -81,7 +81,7 @@ contract OrderStatisticsTreeContract {
         uint256 amount
     ) public {
         emit OrderInserted("insert", amount, value, orderId);
-        tree.insertOrder(value, orderId, user, amount, false);
+        tree.insertOrder(value, orderId, user, amount);
     }
 
     function removeAmountValue(uint256 value, uint48 orderId) public {

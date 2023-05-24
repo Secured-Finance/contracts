@@ -16,6 +16,7 @@ import {
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
+import { calculateOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
 const BP = ethers.BigNumber.from(PRICE_DIGIT);
@@ -27,7 +28,6 @@ describe('Integration Test: Auto-rolls', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  let addressResolver: Contract;
   let futureValueVaults: Contract[];
   let genesisValueVault: Contract;
   let reserveFund: Contract;
@@ -36,8 +36,6 @@ describe('Integration Test: Auto-rolls', async () => {
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
   let eFILToken: Contract;
-  let mockUniswapRouter: Contract;
-  let mockUniswapQuoter: Contract;
 
   let genesisDate: number;
   let maturities: BigNumber[];
@@ -116,7 +114,6 @@ describe('Integration Test: Auto-rolls', async () => {
 
     ({
       genesisDate,
-      addressResolver,
       genesisValueVault,
       reserveFund,
       tokenVault,
@@ -128,28 +125,10 @@ describe('Integration Test: Auto-rolls', async () => {
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
 
-    mockUniswapRouter = await ethers
-      .getContractFactory('MockUniswapRouter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-    mockUniswapQuoter = await ethers
-      .getContractFactory('MockUniswapQuoter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-
-    await mockUniswapRouter.setToken(hexETH, wETHToken.address);
-    await mockUniswapRouter.setToken(hexEFIL, eFILToken.address);
-    await mockUniswapQuoter.setToken(hexETH, wETHToken.address);
-    await mockUniswapQuoter.setToken(hexEFIL, eFILToken.address);
-
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
-      mockUniswapRouter.address,
-      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexETH, true);
@@ -494,11 +473,10 @@ describe('Integration Test: Auto-rolls', async () => {
           ),
       ).to.emit(lendingMarkets[1], 'OrderMade');
 
-      await expect(
-        lendingMarketController
-          .connect(bob)
-          .createOrder(hexETH, maturities[1], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[1], 'OrdersTaken');
+      const tx = await lendingMarketController
+        .connect(bob)
+        .createOrder(hexETH, maturities[1], Side.BORROW, orderAmount, 0);
+      await expect(tx).to.emit(lendingMarkets[1], 'OrdersTaken');
 
       await createSampleETHOrders(carol, maturities[1], '5000');
 
@@ -514,15 +492,15 @@ describe('Integration Test: Auto-rolls', async () => {
         bob.address,
       );
 
+      const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+      const fee = calculateOrderFee(
+        orderAmount,
+        5000,
+        maturities[1].sub(timestamp),
+      );
+
       expect(aliceActualFV).equal('200000000000000000');
-      expect(
-        BigNumberJS(aliceActualFV.toString())
-          .times(10000)
-          .div(bobActualFV.toString())
-          .dp(0)
-          .abs()
-          .toFixed(),
-      ).to.equal('9950');
+      expect(bobActualFV.add(aliceActualFV).add(fee).abs()).to.lte(1);
     });
 
     it('Check total PVs', async () => {

@@ -23,9 +23,6 @@ const TokenVaultCallerMock = artifacts.require('TokenVaultCallerMock');
 // libraries
 const DepositManagementLogic = artifacts.require('DepositManagementLogic');
 
-const ISwapRouter = artifacts.require('ISwapRouter');
-const IQuoter = artifacts.require('IQuoter');
-
 const { deployContract, deployMockContract } = waffle;
 
 describe('TokenVault', () => {
@@ -34,8 +31,6 @@ describe('TokenVault', () => {
   let mockReserveFund: MockContract;
   let mockWETH: MockContract;
   let mockERC20: MockContract;
-  let mockUniswapRouter: MockContract;
-  let mockUniswapQuoter: MockContract;
 
   let tokenVaultProxy: Contract;
   let tokenVaultCaller: Contract;
@@ -51,6 +46,14 @@ describe('TokenVault', () => {
   let targetCurrency: string;
   let previousCurrency: string;
   let currencyIdx = 0;
+
+  const getUser = (): SignerWithAddress => {
+    const signer = signers.shift();
+    if (!signer) {
+      throw new Error('No user exists');
+    }
+    return signer;
+  };
 
   before(async () => {
     [owner, alice, bob, carol, dave, ellen, ...signers] =
@@ -68,8 +71,6 @@ describe('TokenVault', () => {
     );
     mockWETH = await deployMockContract(owner, WETH9.abi);
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
-    mockUniswapRouter = await deployMockContract(owner, ISwapRouter.abi);
-    mockUniswapQuoter = await deployMockContract(owner, IQuoter.abi);
 
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockWETH.mock.transferFrom.returns(true);
@@ -131,8 +132,6 @@ describe('TokenVault', () => {
         LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
-        mockUniswapRouter.address,
-        mockUniswapQuoter.address,
         mockWETH.address,
       )
       .then((tx) => tx.wait())
@@ -195,36 +194,21 @@ describe('TokenVault', () => {
     it('Update CollateralParameters', async () => {
       const setCollateralParameters = async (
         liquidationThresholdRate: number,
-        uniswapRouter: string,
-        uniswapQuoter: string,
       ) => {
         await tokenVaultProxy.setCollateralParameters(
           liquidationThresholdRate,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
-          uniswapRouter,
-          uniswapQuoter,
         );
         const params = await tokenVaultProxy.getCollateralParameters();
 
         expect(params.liquidationThresholdRate).to.equal(
           liquidationThresholdRate.toString(),
         );
-        expect(params.uniswapRouter.toLocaleLowerCase()).to.equal(
-          uniswapRouter.toLocaleLowerCase(),
-        );
       };
 
-      await setCollateralParameters(
-        1000,
-        ethers.utils.hexlify(ethers.utils.randomBytes(20)),
-        ethers.utils.hexlify(ethers.utils.randomBytes(20)),
-      );
-      await setCollateralParameters(
-        LIQUIDATION_THRESHOLD_RATE,
-        mockUniswapRouter.address,
-        mockUniswapQuoter.address,
-      );
+      await setCollateralParameters(1000);
+      await setCollateralParameters(LIQUIDATION_THRESHOLD_RATE);
     });
 
     it('Register a currency', async () => {
@@ -249,44 +233,14 @@ describe('TokenVault', () => {
 
     it('Fail to call setCollateralParameters due to invalid rate', async () => {
       await expect(
-        tokenVaultProxy.setCollateralParameters(
-          '0',
-          '1',
-          '1',
-          mockUniswapRouter.address,
-          mockUniswapQuoter.address,
-        ),
+        tokenVaultProxy.setCollateralParameters('0', '1', '1'),
       ).to.be.revertedWith('Invalid liquidation threshold rate');
       await expect(
-        tokenVaultProxy.setCollateralParameters(
-          '1',
-          '10001',
-          '1',
-          mockUniswapRouter.address,
-          mockUniswapQuoter.address,
-        ),
+        tokenVaultProxy.setCollateralParameters('1', '10001', '1'),
       ).to.be.revertedWith('Invalid liquidation protocol fee rate');
       await expect(
-        tokenVaultProxy.setCollateralParameters(
-          '1',
-          '1',
-          '10001',
-          mockUniswapRouter.address,
-          mockUniswapQuoter.address,
-        ),
+        tokenVaultProxy.setCollateralParameters('1', '1', '10001'),
       ).to.be.revertedWith('Invalid liquidator fee rate');
-    });
-
-    it('Fail to call setCollateralParameters due to zero address', async () => {
-      await expect(
-        tokenVaultProxy.setCollateralParameters(
-          LIQUIDATION_THRESHOLD_RATE,
-          LIQUIDATION_PROTOCOL_FEE_RATE,
-          LIQUIDATOR_FEE_RATE,
-          ethers.constants.AddressZero,
-          mockUniswapQuoter.address,
-        ),
-      ).to.be.revertedWith('Invalid Uniswap Router');
     });
   });
 
@@ -310,7 +264,7 @@ describe('TokenVault', () => {
       const valueInETH = '20000000000000';
 
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
 
       await expect(
@@ -368,14 +322,16 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256[])'
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256[])'
       ].returns([valueInETH, valueInETH, valueInETH]);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
@@ -398,7 +354,7 @@ describe('TokenVault', () => {
       );
 
       // NOTE: Deposit in two currencies to double the collateral
-      // since the mock always returns the same value with "convertToETH".
+      // since the mock always returns the same value with "convertToBaseCurrency".
       await tokenVaultProxy.connect(bob).deposit(targetCurrency, value);
       await tokenVaultProxy.connect(bob).deposit(previousCurrency, value);
 
@@ -421,7 +377,9 @@ describe('TokenVault', () => {
         true,
       );
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(bob.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          bob.address,
+        ),
       ).to.equal(
         valueInETH
           .mul('2')
@@ -453,12 +411,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -491,12 +451,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -514,7 +476,9 @@ describe('TokenVault', () => {
       await tokenVaultProxy.connect(dave).deposit(targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(dave.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          dave.address,
+        ),
       ).to.equal(
         valueInETH
           .mul('10000')
@@ -536,12 +500,14 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -559,7 +525,9 @@ describe('TokenVault', () => {
       await tokenVaultProxy.connect(ellen).deposit(targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(ellen.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          ellen.address,
+        ),
       ).to.equal(
         valueInETH
           .mul('10000')
@@ -579,18 +547,22 @@ describe('TokenVault', () => {
     });
 
     it('Add and remove the collateral amount', async () => {
+      const signer = getUser();
+
       const value = ethers.BigNumber.from('20000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
       const totalPresentValue = ethers.BigNumber.from('20000000000000');
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
         totalPresentValue,
       );
@@ -606,170 +578,36 @@ describe('TokenVault', () => {
       );
 
       await tokenVaultCaller
-        .connect(signers[0])
-        .addDepositAmount(signers[0].address, targetCurrency, value);
+        .connect(signer)
+        .addDepositAmount(signer.address, targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getUnusedCollateral(signers[0].address),
+        await tokenVaultProxy.getUnusedCollateral(signer.address),
       ).to.equal(value);
       expect(
-        await tokenVaultProxy.getTotalCollateralAmount(signers[0].address),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address),
       ).to.equal(value);
 
       await tokenVaultCaller
-        .connect(signers[0])
-        .removeDepositAmount(signers[0].address, targetCurrency, value);
+        .connect(signer)
+        .removeDepositAmount(signer.address, targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getUnusedCollateral(signers[0].address),
+        await tokenVaultProxy.getUnusedCollateral(signer.address),
       ).to.equal('0');
       expect(
-        await tokenVaultProxy.getTotalCollateralAmount(signers[0].address),
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address),
       ).to.equal('0');
-    });
-
-    it('Swap the collateral amount and deposit', async function () {
-      if (!previousCurrency) {
-        this.skip();
-      }
-
-      const signer = signers[1];
-      const value = ethers.BigNumber.from('30000000000000');
-      const swapAmount = ethers.BigNumber.from('7000000000000');
-
-      // Set up for the mocks
-      await mockUniswapRouter.mock.exactOutputSingle.returns(value.div(3));
-      await mockUniswapQuoter.mock.quoteExactInputSingle.returns(value);
-      await mockReserveFund.mock.isPaused.returns(true);
-
-      await tokenVaultCaller.addDepositAmount(
-        signer.address,
-        targetCurrency,
-        value,
-      );
-
-      await tokenVaultCaller.swapDepositAmounts(
-        owner.address,
-        signer.address,
-        targetCurrency,
-        previousCurrency,
-        swapAmount,
-        '1',
-        '0',
-      );
-
-      expect(
-        await tokenVaultProxy.getDepositAmount(signer.address, targetCurrency),
-      ).to.equal(value.div(3).mul(2));
-      expect(
-        await tokenVaultProxy.getDepositAmount(
-          signer.address,
-          previousCurrency,
-        ),
-      ).to.equal(swapAmount);
-
-      // Check fee amounts
-      const { liquidatorFeeRate, liquidationProtocolFeeRate } =
-        await tokenVaultProxy.getCollateralParameters();
-      const liquidatorFee = await tokenVaultProxy.getDepositAmount(
-        owner.address,
-        previousCurrency,
-      );
-      const protocolFee = await tokenVaultProxy.getDepositAmount(
-        mockReserveFund.address,
-        previousCurrency,
-      );
-      const amountOutWithFee = swapAmount
-        .mul('10000')
-        .div(
-          ethers.BigNumber.from('10000')
-            .sub(liquidatorFeeRate)
-            .sub(liquidationProtocolFeeRate),
-        );
-
-      expect(swapAmount).to.equal(
-        amountOutWithFee.sub(liquidatorFee).sub(protocolFee),
-      );
-    });
-
-    it('Swap the collateral amount and deposit using the reserve fund', async function () {
-      if (!previousCurrency) {
-        this.skip();
-      }
-
-      const signer = signers[4];
-      const value = ethers.BigNumber.from('30000000000000');
-      const swapAmount = ethers.BigNumber.from('7000000000000');
-      const offsetAmount = ethers.BigNumber.from('1000000');
-
-      // Set up for the mocks
-      await mockUniswapRouter.mock.exactOutputSingle.returns(value.mul(2));
-      await mockUniswapQuoter.mock.quoteExactInputSingle.returns(value);
-      await mockReserveFund.mock.isPaused.returns(false);
-
-      await tokenVaultCaller.addDepositAmount(
-        signer.address,
-        targetCurrency,
-        value,
-      );
-      await tokenVaultCaller.addDepositAmount(
-        mockReserveFund.address,
-        targetCurrency,
-        value,
-      );
-
-      await tokenVaultCaller.swapDepositAmounts(
-        owner.address,
-        signer.address,
-        targetCurrency,
-        previousCurrency,
-        swapAmount,
-        '1',
-        offsetAmount,
-      );
-
-      expect(
-        await tokenVaultProxy.getDepositAmount(signer.address, targetCurrency),
-      ).to.equal('0');
-      expect(
-        await tokenVaultProxy.getDepositAmount(
-          signer.address,
-          previousCurrency,
-        ),
-      ).to.equal(swapAmount.sub(offsetAmount));
-
-      // Check fee amounts
-      const { liquidatorFeeRate, liquidationProtocolFeeRate } =
-        await tokenVaultProxy.getCollateralParameters();
-      const liquidatorFee = await tokenVaultProxy.getDepositAmount(
-        owner.address,
-        previousCurrency,
-      );
-      const protocolFee = await tokenVaultProxy.getDepositAmount(
-        mockReserveFund.address,
-        previousCurrency,
-      );
-      const amountOutWithFee = swapAmount
-        .mul('10000')
-        .div(
-          ethers.BigNumber.from('10000')
-            .sub(liquidatorFeeRate)
-            .sub(liquidationProtocolFeeRate),
-        );
-
-      expect(swapAmount).to.equal(
-        amountOutWithFee.sub(liquidatorFee).sub(protocolFee),
-      );
     });
 
     it('Add an amount in a currency that is not accepted as collateral', async () => {
-      const signer = signers[2];
+      const signer = getUser();
       const value = '10000000000000';
       const valueInETH = '20000000000000';
       const debtAmount = '5000000000000';
 
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
@@ -807,7 +645,7 @@ describe('TokenVault', () => {
         .true;
 
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(debtAmount);
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
@@ -817,24 +655,72 @@ describe('TokenVault', () => {
         .false;
     });
 
-    it('Get the liquidation amount', async () => {
-      const signer = signers[3];
-      const value = ethers.BigNumber.from('20000000000000');
+    it('Get the withdrawable amount', async () => {
+      const signer = getUser();
+      const value = ethers.BigNumber.from('30000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');
-      const totalPresentValue = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(value);
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        true,
+      );
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
+      ).to.equal(valueInETH);
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(value);
+
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(valueInETH);
+    });
+
+    it('Get the liquidation amount', async () => {
+      const signer = getUser();
+      const value = ethers.BigNumber.from('30000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
       const debtAmount = ethers.BigNumber.from('20000000000000');
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
-      await mockCurrencyController.mock['convertToETH(bytes32,int256)'].returns(
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
         valueInETH,
       );
-      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
-        totalPresentValue,
-      );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
       await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
         0,
         0,
@@ -849,15 +735,74 @@ describe('TokenVault', () => {
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getWithdrawableCollateral(signer.address),
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
       ).to.equal('0');
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
         '10000',
       );
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        value,
+      );
+
+      expect(liquidationAmounts.liquidationAmount).to.equal(debtAmount);
+    });
+
+    it('Get the liquidation amount decreased by a maximum', async () => {
+      const signer = getUser();
+      const value = ethers.BigNumber.from('30000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const debtAmount = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
+      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        debtAmount,
+        0,
+        true,
+      );
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
       expect(
-        await tokenVaultProxy.getLiquidationAmount(signer.address),
-      ).to.equal(debtAmount.div(2));
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
+      ).to.equal('0');
+
+      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal(
+        '10000',
+      );
+
+      const liquidationAmounts = await tokenVaultProxy.getLiquidationAmount(
+        signer.address,
+        targetCurrency,
+        debtAmount,
+      );
+
+      expect(
+        liquidationAmounts.liquidationAmount
+          .add(liquidationAmounts.protocolFee)
+          .add(liquidationAmounts.liquidatorFee),
+      ).to.equal(debtAmount);
     });
 
     it('Fail to call addDepositAmount due to invalid caller', async () => {
@@ -900,9 +845,11 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
 
       await expect(
         tokenVaultCaller.depositFrom(alice.address, targetCurrency, valueInETH),
@@ -916,9 +863,11 @@ describe('TokenVault', () => {
 
       // Set up for the mocks
       await mockCurrencyController.mock[
-        'convertToETH(bytes32,uint256)'
+        'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockCurrencyController.mock.convertFromETH.returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
 
       await tokenVaultCaller.depositFrom(
         alice.address,
@@ -931,6 +880,82 @@ describe('TokenVault', () => {
       )
         .to.emit(tokenVaultProxy, 'Withdraw')
         .withArgs(alice.address, targetCurrency, valueInETH);
+    });
+  });
+
+  describe('Transfer', async () => {
+    beforeEach(async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+    });
+
+    it('Transfer from Alice to Bob', async () => {
+      const value = '10000';
+
+      await tokenVaultProxy.connect(alice).deposit(targetCurrency, value);
+
+      const [aliceCollateralAmountBefore, bobCollateralAmountBefore] =
+        await Promise.all(
+          [alice, bob].map(({ address }) =>
+            tokenVaultProxy.getDepositAmount(address, targetCurrency),
+          ),
+        );
+
+      await expect(
+        tokenVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          value,
+        ),
+      )
+        .to.emit(tokenVaultProxy, 'Transfer')
+        .withArgs(targetCurrency, alice.address, bob.address, value);
+
+      const [aliceCollateralAmountAfter, bobCollateralAmountAfter] =
+        await Promise.all(
+          [alice, bob].map(({ address }) =>
+            tokenVaultProxy.getDepositAmount(address, targetCurrency),
+          ),
+        );
+
+      expect(
+        aliceCollateralAmountBefore.sub(aliceCollateralAmountAfter),
+      ).to.equal(value);
+      expect(bobCollateralAmountAfter.sub(bobCollateralAmountBefore)).to.equal(
+        value,
+      );
+    });
+
+    it('Transfer from Alice to Bob with over amount', async () => {
+      const depositAmount = await tokenVaultProxy.getDepositAmount(
+        alice.address,
+        targetCurrency,
+      );
+      await expect(
+        tokenVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          depositAmount.add(1),
+        ),
+      )
+        .to.emit(tokenVaultProxy, 'Transfer')
+        .withArgs(targetCurrency, alice.address, bob.address, depositAmount);
+    });
+
+    it('Fail to transfer deposits due to invalid caller', async () => {
+      await expect(
+        tokenVaultProxy.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          1,
+        ),
+      ).to.be.revertedWith('Only Accepted Contracts');
     });
   });
 });

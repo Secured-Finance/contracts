@@ -24,15 +24,11 @@ describe('Performance Test: Auto-rolls', async () => {
   let dave: SignerWithAddress;
   let ellen: SignerWithAddress;
 
-  let addressResolver: Contract;
   let genesisValueVault: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarkets: Contract[] = [];
-  let wETHToken: Contract;
   let eFILToken: Contract;
-  let mockUniswapRouter: Contract;
-  let mockUniswapQuoter: Contract;
 
   let genesisDate: number;
   let maturities: BigNumber[];
@@ -83,36 +79,18 @@ describe('Performance Test: Auto-rolls', async () => {
 
     ({
       genesisDate,
-      addressResolver,
       genesisValueVault,
       tokenVault,
       lendingMarketController,
-      wETHToken,
       eFILToken,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
 
-    mockUniswapRouter = await ethers
-      .getContractFactory('MockUniswapRouter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-    mockUniswapQuoter = await ethers
-      .getContractFactory('MockUniswapQuoter')
-      .then((factory) =>
-        factory.deploy(addressResolver.address, wETHToken.address),
-      );
-
-    await mockUniswapRouter.setToken(hexEFIL, eFILToken.address);
-    await mockUniswapQuoter.setToken(hexEFIL, eFILToken.address);
-
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
-      mockUniswapRouter.address,
-      mockUniswapQuoter.address,
     );
 
     await tokenVault.updateCurrency(hexEFIL, true);
