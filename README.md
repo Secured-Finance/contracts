@@ -48,6 +48,43 @@ In order to run the specified script, execute `npx hardhat --network <NETWORK> t
 
 For example `npx hardhat --network development test "scripts/zc-e2e.ts"` will execute the `zc-e2e` script on the develop environment.
 
+### Security Tool testing
+
+As of Apr 23, we use Slither and Mythril for security testing.
+
+#### How to run Mythril
+1. Run `npm run flatten`
+2. Delete the duplicated file from `flattened/BeaconProxyController.sol`. hardhat flatten is not smart enough to avoid some patterns of circular dependencies. Don't worry we will fix this.
+3. Run `npm run security:mythril`
+4. Check the generated report named `secured-finance-mythril.json` in the project root
+
+You will encounter the following error. Please remove the duplicated contract from `flattened/BeaconProxyController.sol` as the error mentions. And run it again.
+
+```
+crytic_compile.platform.exceptions.InvalidCompilation: Invalid solc compilation Warning: SPDX license identifier not provided in source file. Before publishing, consider adding a comment containing "SPDX-License-Identifier: <SPDX-License>" to each source file. Use "SPDX-License-Identifier: UNLICENSED" for non-open-source code. Please see https://spdx.org for more information.
+--> flattened/BeaconProxyController.sol
+
+Error: Identifier already declared.
+    --> flattened/BeaconProxyController.sol:1790:1:
+     |
+1790 | abstract contract Ownable is Context {
+     | ^ (Relevant source part starts here and spans across multiple lines).
+Note: The previous declaration is here:
+  --> flattened/BeaconProxyController.sol:67:1:
+   |
+67 | abstract contract Ownable is Context {
+   | ^ (Relevant source part starts here and spans across multiple lines).tmp
+```
+
+#### How to run Slither Analyzer
+0. Install `pip3 install slither-analyzer`
+1. Run `npm run flatten`
+2. Delete the duplicated contract as mentioned in `How to run Mythril` section
+3. Run `npm run security:slither`
+4. Check the generated report named `secured-finance-slither.txt` in the project root
+
+As of now, Slither will refer to the flatten contracts rather than ones in `build`. This might affect the slither behavior: generating duplicated messages, etc.
+
 ## Publishing
 
 This package is published automatically by workflows when the PR is merged into develop branch or main branch. The package version will be updated by the workflow.

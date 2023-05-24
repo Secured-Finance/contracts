@@ -16,3 +16,13 @@ coverage/
 coverage.json
 
 deployments/localhost/
+
+# Security tool related directories
+flattened
+tmp
+secured-finance-slither.txt
+secured-finance-mythril.json
+
+# Foundry
+solidity-files-cache.json
+lib/
