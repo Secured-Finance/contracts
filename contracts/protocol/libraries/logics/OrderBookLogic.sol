@@ -458,15 +458,19 @@ library OrderBookLogic {
         activeOrderCount = activeLendOrderIds.length;
         uint256 inactiveOrderCount = inActiveLendOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
+        uint256 maturity = _maturity;
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveLendOrderIds[i]];
-            OrderItem memory orderItem = Storage.slot().lendOrders[_maturity].getOrderById(
-                marketOrder.unitPrice,
+            uint256 unitPrice = Storage.slot().isPreOrder[inActiveLendOrderIds[i]] == true
+                ? getUnitPriceForPreOrder(marketOrder)
+                : marketOrder.unitPrice;
+            OrderItem memory orderItem = Storage.slot().lendOrders[maturity].getOrderById(
+                unitPrice,
                 inActiveLendOrderIds[i]
             );
-            removedFutureValue += Storage.slot().lendOrders[_maturity].getFutureValue(
-                marketOrder.unitPrice,
+            removedFutureValue += Storage.slot().lendOrders[maturity].getFutureValue(
+                unitPrice,
                 inActiveLendOrderIds[i]
             );
             removedOrderAmount += orderItem.amount;
@@ -493,21 +497,37 @@ library OrderBookLogic {
         activeOrderCount = activeBorrowOrderIds.length;
         uint256 inactiveOrderCount = inActiveBorrowOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
+        uint256 maturity = _maturity;
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveBorrowOrderIds[i]];
-            OrderItem memory orderItem = Storage.slot().borrowOrders[_maturity].getOrderById(
-                marketOrder.unitPrice,
+            uint256 unitPrice = Storage.slot().isPreOrder[inActiveBorrowOrderIds[i]] == true
+                ? getUnitPriceForPreOrder(marketOrder)
+                : marketOrder.unitPrice;
+            OrderItem memory orderItem = Storage.slot().borrowOrders[maturity].getOrderById(
+                unitPrice,
                 inActiveBorrowOrderIds[i]
             );
-            removedFutureValue += Storage.slot().borrowOrders[_maturity].getFutureValue(
-                marketOrder.unitPrice,
+            removedFutureValue += Storage.slot().borrowOrders[maturity].getFutureValue(
+                unitPrice,
                 inActiveBorrowOrderIds[i]
             );
 
             removedOrderAmount += orderItem.amount;
 
             orderIds[i] = orderItem.orderId;
+        }
+    }
+
+    function getUnitPriceForPreOrder(MarketOrder memory marketOrder)
+        private
+        view
+        returns (uint256 unitPrice)
+    {
+        uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
+        unitPrice = marketOrder.unitPrice;
+        if (openingUnitPrice < marketOrder.unitPrice) {
+            unitPrice = openingUnitPrice;
         }
     }
 
