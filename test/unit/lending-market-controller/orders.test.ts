@@ -1817,7 +1817,7 @@ describe('LendingMarketController - Orders', () => {
       });
     });
 
-    describe.only('Unwind', async () => {
+    describe('Unwind', async () => {
       it('Unwind a lending order', async () => {
         await expect(
           lendingMarketControllerProxy
