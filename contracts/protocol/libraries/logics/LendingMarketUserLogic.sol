@@ -6,6 +6,10 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
+// libraries
+import {Constants} from "../Constants.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
+import {LendingMarketConfigurationLogic} from "./LendingMarketConfigurationLogic.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
@@ -14,13 +18,13 @@ import {LendingMarketControllerStorage as Storage} from "../../storages/LendingM
 library LendingMarketUserLogic {
     using EnumerableSet for EnumerableSet.UintSet;
     using SafeCast for int256;
+    using RoundingUint256 for uint256;
 
-    function unwind(
+    function unwindPosition(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
-        int256 _futureValue,
-        uint256 _circuitBreakerLimitRange
+        int256 _futureValue
     )
         external
         returns (
@@ -31,16 +35,47 @@ library LendingMarketUserLogic {
     {
         require(_futureValue != 0, "Future Value is zero");
 
+        uint256 cbLimitRange = LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy);
+        uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
+
         if (_futureValue > 0) {
             side = ProtocolTypes.Side.BORROW;
+            // To unwind all positions, calculate the future value taking into account
+            // the added portion of the fee.
+            // NOTE: The formula is:
+            // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+            // amount = totalAmountInFV / (1 + actualRate)
+            uint256 currentMaturity = _maturity - block.timestamp;
+            uint256 amountInFV = (_futureValue.toUint256() *
+                Constants.SECONDS_IN_YEAR *
+                Constants.PCT_DIGIT).div(
+                    Constants.SECONDS_IN_YEAR *
+                        Constants.PCT_DIGIT +
+                        (orderFeeRate * currentMaturity)
+                );
+
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwind(side, _user, _futureValue.toUint256(), _circuitBreakerLimitRange);
+            ).unwind(side, _user, amountInFV, cbLimitRange);
         } else if (_futureValue < 0) {
             side = ProtocolTypes.Side.LEND;
+            // To unwind all positions, calculate the future value taking into account
+            // the subtracted portion of the fee.
+            // NOTE: The formula is:
+            // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+            // amount = totalAmountInFV / (1 - actualRate)
+            uint256 currentMaturity = _maturity - block.timestamp;
+            uint256 amountInFV = ((-_futureValue).toUint256() *
+                Constants.SECONDS_IN_YEAR *
+                Constants.PCT_DIGIT).div(
+                    Constants.SECONDS_IN_YEAR *
+                        Constants.PCT_DIGIT -
+                        (orderFeeRate * currentMaturity)
+                );
+
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwind(side, _user, (-_futureValue).toUint256(), _circuitBreakerLimitRange);
+            ).unwind(side, _user, amountInFV, cbLimitRange);
         }
     }
 
