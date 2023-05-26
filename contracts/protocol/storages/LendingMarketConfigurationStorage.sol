@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-library LendingMarketManagerStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketManager");
+library LendingMarketConfigurationStorage {
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketConfiguration");
 
     struct Storage {
         // Mapping from currency to order fee rate received by protocol (in basis point)

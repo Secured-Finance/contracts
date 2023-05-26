@@ -17,6 +17,9 @@ const func: DeployFunction = async function ({
   const lendingMarketUserLogic = await deployments.get(
     'LendingMarketUserLogic',
   );
+  const lendingMarketConfigurationLogic = await deployments.get(
+    'LendingMarketConfigurationLogic',
+  );
 
   const deployResult = await deploy('LendingMarketController', {
     from: deployer,
@@ -24,6 +27,7 @@ const func: DeployFunction = async function ({
       FundManagementLogic: fundManagementLogic.address,
       LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       LendingMarketUserLogic: lendingMarketUserLogic.address,
+      LendingMarketConfigurationLogic: lendingMarketConfigurationLogic.address,
     },
   });
 

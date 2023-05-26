@@ -17,7 +17,7 @@ import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOpera
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
-import {MixinLendingMarketManager} from "./mixins/MixinLendingMarketManager.sol";
+import {MixinLendingMarketConfiguration} from "./mixins/MixinLendingMarketConfiguration.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
@@ -39,7 +39,7 @@ import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarke
  */
 contract LendingMarketController is
     ILendingMarketController,
-    MixinLendingMarketManager,
+    MixinLendingMarketConfiguration,
     MixinAddressResolver,
     ReentrancyGuard,
     Proxyable,
@@ -105,7 +105,7 @@ contract LendingMarketController is
         uint256 _observationPeriod
     ) public initializer onlyProxy {
         Storage.slot().marketBasePeriod = _marketBasePeriod;
-        MixinLendingMarketManager._initialize(_owner, _observationPeriod);
+        MixinLendingMarketConfiguration._initialize(_owner, _observationPeriod);
         registerAddressResolver(_resolver);
     }
 
@@ -656,19 +656,12 @@ contract LendingMarketController is
         int256 futureValue = FundManagementLogic
             .calculateActualFunds(_ccy, _maturity, msg.sender)
             .futureValue;
-        uint256 circuitBreakerLimitRange = getCircuitBreakerLimitRange(_ccy);
 
         (
             ILendingMarket.FilledOrder memory filledOrder,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
             ProtocolTypes.Side side
-        ) = LendingMarketUserLogic.unwind(
-                _ccy,
-                _maturity,
-                msg.sender,
-                futureValue,
-                circuitBreakerLimitRange
-            );
+        ) = LendingMarketUserLogic.unwindPosition(_ccy, _maturity, msg.sender, futureValue);
 
         _updateFundsForTaker(
             _ccy,
@@ -677,8 +670,7 @@ contract LendingMarketController is
             side,
             filledOrder.amount,
             filledOrder.futureValue,
-            filledOrder.unitPrice,
-            0
+            filledOrder.unitPrice
         );
 
         _updateFundsForMaker(
@@ -958,8 +950,6 @@ contract LendingMarketController is
 
         require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
 
-        uint256 feeFutureValue = _calculateOrderFeeAmount(_ccy, filledOrder.futureValue, _maturity);
-
         _updateFundsForTaker(
             _ccy,
             _maturity,
@@ -967,8 +957,7 @@ contract LendingMarketController is
             _side,
             filledAmount,
             filledOrder.futureValue,
-            filledOrder.unitPrice,
-            feeFutureValue
+            filledOrder.unitPrice
         );
 
         _updateFundsForMaker(
@@ -987,19 +976,17 @@ contract LendingMarketController is
         address _user,
         ProtocolTypes.Side _side,
         uint256 _filledAmount,
-        uint256 _filledFutureValue,
-        uint256 _filledUnitPrice,
-        uint256 _feeFutureValue
+        uint256 _filledAmountInFV,
+        uint256 _filledUnitPrice
     ) private {
-        if (_filledFutureValue != 0) {
+        if (_filledAmountInFV != 0) {
             FundManagementLogic.updateFunds(
                 _ccy,
                 _maturity,
                 _user,
                 _side,
-                _filledFutureValue,
                 _filledAmount,
-                _feeFutureValue,
+                _filledAmountInFV,
                 true
             );
 
@@ -1009,7 +996,7 @@ contract LendingMarketController is
                 getObservationPeriod(),
                 _filledUnitPrice,
                 _filledAmount,
-                _filledFutureValue
+                _filledAmountInFV
             );
         }
     }
@@ -1026,9 +1013,8 @@ contract LendingMarketController is
                 _maturity,
                 partiallyFilledOrder.maker,
                 _side,
-                partiallyFilledOrder.futureValue,
                 partiallyFilledOrder.amount,
-                0,
+                partiallyFilledOrder.futureValue,
                 false
             );
         }

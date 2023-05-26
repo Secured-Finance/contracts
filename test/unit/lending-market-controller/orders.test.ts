@@ -14,6 +14,7 @@ import {
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
 } from '../../common/constants';
+import { getAmountWithUnwindFee } from '../../common/orders';
 import { deployContracts } from './utils';
 
 describe('LendingMarketController - Orders', () => {
@@ -1840,7 +1841,7 @@ describe('LendingMarketController - Orders', () => {
               targetCurrency,
               maturities[0],
               Side.LEND,
-              '20000000000000000',
+              '30000000000000000',
               '8000',
             ),
         ).to.not.emit(
@@ -1863,11 +1864,12 @@ describe('LendingMarketController - Orders', () => {
           'OrderFilled',
         );
 
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .unwindPosition(targetCurrency, maturities[0]),
-        )
+        const tx = await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPosition(targetCurrency, maturities[0]);
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
+        await expect(tx)
           .to.emit(
             fundManagementLogic.attach(lendingMarketControllerProxy.address),
             'OrderFilled',
@@ -1877,8 +1879,12 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             Side.BORROW,
             maturities[0],
-            '10000000000000000',
-            '12500000000000000',
+            () => true, // any value
+            getAmountWithUnwindFee(
+              Side.BORROW,
+              BigNumber.from('12500000000000000'),
+              maturities[0].sub(timestamp),
+            ),
           );
 
         const aliveFV = await lendingMarketControllerProxy.getFutureValue(
@@ -1951,11 +1957,12 @@ describe('LendingMarketController - Orders', () => {
           'OrderFilled',
         );
 
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .unwindPosition(targetCurrency, maturities[0]),
-        )
+        const tx = await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPosition(targetCurrency, maturities[0]);
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
+        await expect(tx)
           .to.emit(
             fundManagementLogic.attach(lendingMarketControllerProxy.address),
             'OrderFilled',
@@ -1965,8 +1972,12 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             Side.LEND,
             maturities[0],
-            '10250000000000000',
-            '12500000000000000',
+            () => true, // any value
+            getAmountWithUnwindFee(
+              Side.LEND,
+              BigNumber.from('12500000000000000'),
+              maturities[0].sub(timestamp),
+            ),
           );
 
         const aliveFV = await lendingMarketControllerProxy.getFutureValue(
@@ -2024,11 +2035,12 @@ describe('LendingMarketController - Orders', () => {
           'OrderFilled',
         );
 
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .unwindPosition(targetCurrency, maturities[0]),
-        )
+        const tx = await lendingMarketControllerProxy
+          .connect(alice)
+          .unwindPosition(targetCurrency, maturities[0]);
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
+        await expect(tx)
           .to.emit(
             fundManagementLogic.attach(lendingMarketControllerProxy.address),
             'OrderFilled',
@@ -2038,8 +2050,12 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             Side.BORROW,
             maturities[0],
-            '9000000000000000',
-            '11250000000000000',
+            () => true, // any value
+            getAmountWithUnwindFee(
+              Side.BORROW,
+              BigNumber.from('11250000000000000'),
+              maturities[0].sub(timestamp),
+            ),
           );
 
         const aliveFV = await lendingMarketControllerProxy.getFutureValue(

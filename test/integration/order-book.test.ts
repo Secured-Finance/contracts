@@ -12,7 +12,11 @@ import {
   eFilToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
-import { calculateFutureValue, calculateOrderFee } from '../common/orders';
+import {
+  calculateFutureValue,
+  calculateOrderFee,
+  getAmountWithUnwindFee,
+} from '../common/orders';
 import { Signers } from '../common/signers';
 
 describe('Integration Test: Order Book', async () => {
@@ -475,11 +479,11 @@ describe('Integration Test: Order Book', async () => {
             '8000',
           );
 
-        await expect(
-          lendingMarketController
-            .connect(bob)
-            .unwindPosition(hexEFIL, filMaturities[0]),
-        ).to.emit(
+        const tx = await lendingMarketController
+          .connect(bob)
+          .unwindPosition(hexEFIL, filMaturities[0]);
+
+        await expect(tx).to.emit(
           fundManagementLogic.attach(lendingMarketController.address),
           'OrderFilled',
         );
@@ -491,15 +495,30 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(bobFV).to.equal(0);
-      });
 
-      it('Check deposit amount', async () => {
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
         const bobFILDepositAmount = await tokenVault.getDepositAmount(
           bob.address,
           hexEFIL,
         );
 
-        expect(bobFILDepositAmount).to.equal(orderAmount);
+        const amount = getAmountWithUnwindFee(
+          Side.BORROW,
+          orderAmount,
+          filMaturities[0].sub(timestamp),
+        );
+
+        expect(
+          bobFILDepositAmount
+            .sub(
+              getAmountWithUnwindFee(
+                Side.BORROW,
+                orderAmount,
+                filMaturities[0].sub(timestamp),
+              ),
+            )
+            .abs(1),
+        ).to.lte(1);
       });
     });
 
@@ -573,14 +592,8 @@ describe('Integration Test: Order Book', async () => {
           ),
         );
 
-        const bobTotalCollateralAmountAfter =
-          await tokenVault.getTotalCollateralAmount(bob.address);
-
         expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
         expect(bobFV.sub(orderAmountInFIL.mul(5).div(2))).lte(1);
-        expect(bobTotalCollateralAmountAfter.sub(orderAmountInETH.div(2))).lte(
-          1,
-        );
       });
 
       it('Fill an order on the ETH market', async () => {

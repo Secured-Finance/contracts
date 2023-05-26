@@ -13,6 +13,7 @@ import {QuickSort} from "../QuickSort.sol";
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
+import {LendingMarketConfigurationLogic} from "./LendingMarketConfigurationLogic.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
@@ -298,20 +299,27 @@ library FundManagementLogic {
         uint256 _maturity,
         address _user,
         ProtocolTypes.Side _side,
-        uint256 _filledFutureValue,
         uint256 _filledAmount,
-        uint256 _feeFutureValue,
+        uint256 _filledAmountInFV,
         bool _isTaker
     ) external {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy][
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ];
 
+        uint256 feeInFV = _isTaker
+            ? LendingMarketConfigurationLogic.calculateOrderFeeAmount(
+                _ccy,
+                _filledAmountInFV,
+                _maturity
+            )
+            : 0;
+
         if (_side == ProtocolTypes.Side.BORROW) {
             AddressResolverLib.tokenVault().addDepositAmount(_user, _ccy, _filledAmount);
             IFutureValueVault(futureValueVault).addBorrowFutureValue(
                 _user,
-                _filledFutureValue + _feeFutureValue,
+                _filledAmountInFV + feeInFV,
                 _maturity,
                 _isTaker
             );
@@ -319,17 +327,17 @@ library FundManagementLogic {
             AddressResolverLib.tokenVault().removeDepositAmount(_user, _ccy, _filledAmount);
             IFutureValueVault(futureValueVault).addLendFutureValue(
                 _user,
-                _filledFutureValue - _feeFutureValue,
+                _filledAmountInFV - feeInFV,
                 _maturity,
                 _isTaker
             );
         }
 
-        if (_feeFutureValue > 0) {
+        if (feeInFV > 0) {
             address reserveFundAddr = address(AddressResolverLib.reserveFund());
             IFutureValueVault(futureValueVault).addLendFutureValue(
                 reserveFundAddr,
-                _feeFutureValue,
+                feeInFV,
                 _maturity,
                 _side == ProtocolTypes.Side.LEND
             );
@@ -337,7 +345,7 @@ library FundManagementLogic {
             registerCurrencyAndMaturity(_ccy, _maturity, reserveFundAddr);
         }
 
-        emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledFutureValue);
+        emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledAmountInFV);
     }
 
     function registerCurrencyAndMaturity(

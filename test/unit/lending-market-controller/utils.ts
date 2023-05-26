@@ -22,8 +22,10 @@ const ReserveFund = artifacts.require('ReserveFund');
 const LendingMarketOperationLogic = artifacts.require(
   'LendingMarketOperationLogic',
 );
-const LendingMarketUserLogic = artifacts.require('LendingMarketUserLogic');
 const OrderBookLogic = artifacts.require('OrderBookLogic');
+const LendingMarketConfigurationLogic = artifacts.require(
+  'LendingMarketConfigurationLogic',
+);
 const QuickSort = artifacts.require('QuickSort');
 
 const { deployContract, deployMockContract } = waffle;
@@ -39,18 +41,29 @@ const deployContracts = async (owner: SignerWithAddress) => {
 
   // Deploy libraries
   const quickSort = await deployContract(owner, QuickSort);
+  const lendingMarketConfigurationLogic = await deployContract(
+    owner,
+    LendingMarketConfigurationLogic,
+  );
   const lendingMarketOperationLogic = await deployContract(
     owner,
     LendingMarketOperationLogic,
   );
-  const lendingMarketUserLogic = await deployContract(
-    owner,
-    LendingMarketUserLogic,
-  );
+  const lendingMarketUserLogic = await ethers
+    .getContractFactory('LendingMarketUserLogic', {
+      libraries: {
+        LendingMarketConfigurationLogic:
+          lendingMarketConfigurationLogic.address,
+      },
+    })
+    .then((factory) => factory.deploy());
+
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
       libraries: {
         QuickSort: quickSort.address,
+        LendingMarketConfigurationLogic:
+          lendingMarketConfigurationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -70,6 +83,8 @@ const deployContracts = async (owner: SignerWithAddress) => {
         FundManagementLogic: fundManagementLogic.address,
         LendingMarketOperationLogic: lendingMarketOperationLogic.address,
         LendingMarketUserLogic: lendingMarketUserLogic.address,
+        LendingMarketConfigurationLogic:
+          lendingMarketConfigurationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
