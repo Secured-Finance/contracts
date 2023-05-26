@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Ownable} from "../dependencies/openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "./utils/Ownable.sol";
 import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
 import {Contracts} from "./libraries/Contracts.sol";

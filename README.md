@@ -58,24 +58,6 @@ As of Apr 23, we use Slither and Mythril for security testing.
 3. Run `npm run security:mythril`
 4. Check the generated report named `secured-finance-mythril.json` in the project root
 
-You will encounter the following error. Please remove the duplicated contract from `flattened/BeaconProxyController.sol` as the error mentions. And run it again.
-
-```
-crytic_compile.platform.exceptions.InvalidCompilation: Invalid solc compilation Warning: SPDX license identifier not provided in source file. Before publishing, consider adding a comment containing "SPDX-License-Identifier: <SPDX-License>" to each source file. Use "SPDX-License-Identifier: UNLICENSED" for non-open-source code. Please see https://spdx.org for more information.
---> flattened/BeaconProxyController.sol
-
-Error: Identifier already declared.
-    --> flattened/BeaconProxyController.sol:1790:1:
-     |
-1790 | abstract contract Ownable is Context {
-     | ^ (Relevant source part starts here and spans across multiple lines).
-Note: The previous declaration is here:
-  --> flattened/BeaconProxyController.sol:67:1:
-   |
-67 | abstract contract Ownable is Context {
-   | ^ (Relevant source part starts here and spans across multiple lines).tmp
-```
-
 #### How to run Slither Analyzer
 0. Install `pip3 install slither-analyzer`
 1. Run `npm run flatten`

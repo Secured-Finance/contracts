@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Uniswap Contracts 4.0.1-alpha (v3-periphery/contracts/interfaces/ISwapRouter.sol)
 pragma solidity >=0.7.5;
 pragma abicoder v2;
 

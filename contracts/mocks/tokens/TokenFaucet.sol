@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.9;
 
-import {Ownable} from "../../dependencies/openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "../../protocol/utils/Ownable.sol";
 import {IMockERC20} from "./IMockERC20.sol";
 
 contract TokenFaucet is Ownable {

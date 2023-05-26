@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "../dependencies/chainlink/contracts/AggregatorV2V3Interface.sol";
-import "../dependencies/openzeppelin/contracts/access/Ownable.sol";
+import "../protocol/utils/Ownable.sol";
 
 /**
  * @title MockV3Aggregator

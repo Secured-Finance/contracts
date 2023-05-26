@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (proxy/beacon/UpgradeableBeacon.sol)
+// Based on OpenZeppelin Contracts v4.4.1 (proxy/beacon/UpgradeableBeacon.sol)
 
 pragma solidity ^0.8.0;
 
-import "./IBeacon.sol";
-import "../../access/Ownable.sol";
-import "../../utils/Address.sol";
+import "../../dependencies/openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import "./Ownable.sol";
+import "../../dependencies/openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @dev This contract is used in conjunction with one or more instances of {BeaconProxy} to determine their

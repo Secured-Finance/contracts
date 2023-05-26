@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+// Uniswap Contracts 4.0.1-alpha (v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol)
 pragma solidity >=0.5.0;
 
 /// @title Callback for IUniswapV3PoolActions#swap
