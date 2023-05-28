@@ -29,7 +29,8 @@ contract MockV3Aggregator is AggregatorV2V3Interface, Ownable {
         uint8 _decimals,
         bytes32 _ccy,
         int256 _initialAnswer
-    ) Ownable() {
+    ) {
+        _transferOwnership(msg.sender);
         priceFeedCcy = _ccy;
         decimals = _decimals;
         updateAnswer(_initialAnswer);

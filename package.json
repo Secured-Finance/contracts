@@ -26,8 +26,7 @@
     "predocgen": "rm -rf cache && npm run compile:force && rm -rf docs",
     "flatten": "./scripts/hardhat-flattener.sh",
     "security:slither": "slither flattened --solc-disable-warnings --exclude-informational --print human-summary 2>&1 | cat > secured-finance-slither.txt",
-    "security:mythril": "docker run --entrypoint /bin/bash -v $(pwd):/home/mythril mythril/myth /home/mythril/scripts/mythril.sh",
-    "count:audit": "cloc contracts --exclude-dir=interface,mocks"
+    "security:mythril": "docker run --entrypoint /bin/bash -v $(pwd):/home/mythril mythril/myth /home/mythril/scripts/mythril.sh"
   },
   "author": "Secured Finance",
   "license": "ISC",
@@ -59,7 +58,6 @@
     "babel-eslint": "^10.1.0",
     "bignumber.js": "^9.1.0",
     "chai": "^4.3.6",
-    "cloc": "^1.96.0-cloc",
     "dotenv": "^8.6.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^6.11.0",

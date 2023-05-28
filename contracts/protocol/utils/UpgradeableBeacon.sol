@@ -3,8 +3,8 @@
 
 pragma solidity ^0.8.0;
 
-import "../../dependencies/openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import "./Ownable.sol";
+import "../../dependencies/openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import "../../dependencies/openzeppelin/contracts/utils/Address.sol";
 
 /**
@@ -26,6 +26,7 @@ contract UpgradeableBeacon is IBeacon, Ownable {
      * beacon.
      */
     constructor(address implementation_) {
+        _transferOwnership(msg.sender);
         _setImplementation(implementation_);
     }
 
