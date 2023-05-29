@@ -23,6 +23,10 @@ library LendingMarketConfigurationLogic {
         return Storage.slot().orderFeeRates[_ccy];
     }
 
+    function getObservationPeriod() public view returns (uint256) {
+        return Storage.slot().observationPeriod;
+    }
+
     function calculateOrderFeeAmount(
         bytes32 _ccy,
         uint256 _amount,

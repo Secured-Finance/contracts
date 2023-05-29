@@ -31,6 +31,8 @@ describe('LendingMarketController - Operations', () => {
   let lendingMarketProxies: Contract[];
   let futureValueVaultProxies: Contract[];
 
+  let lendingMarketOperationLogic: Contract;
+
   let maturities: BigNumber[];
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -63,7 +65,12 @@ describe('LendingMarketController - Operations', () => {
       beaconProxyControllerProxy,
       lendingMarketControllerProxy,
       genesisValueVaultProxy,
+      lendingMarketOperationLogic,
     } = await deployContracts(owner));
+
+    lendingMarketOperationLogic = lendingMarketOperationLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
 
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getHaircut.returns(8000);
@@ -357,7 +364,7 @@ describe('LendingMarketController - Operations', () => {
         await time.increaseTo(maturities[0].toString());
         await expect(
           lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-        ).to.emit(lendingMarketControllerProxy, 'LendingMarketsRotated');
+        ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
 
         maturities = await lendingMarketControllerProxy.getMaturities(
           targetCurrency,

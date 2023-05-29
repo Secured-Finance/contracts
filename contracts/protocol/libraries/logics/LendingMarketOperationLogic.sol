@@ -21,6 +21,18 @@ library LendingMarketOperationLogic {
     using SafeCast for uint256;
     using RoundingInt256 for int256;
 
+    event LendingMarketCreated(
+        bytes32 indexed ccy,
+        address indexed marketAddr,
+        address futureValueVault,
+        uint256 index,
+        uint256 openingDate,
+        uint256 maturity
+    );
+
+    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event EmergencyTerminationExecuted(uint256 timestamp);
+
     function initializeCurrencySetting(
         bytes32 _ccy,
         uint256 _genesisDate,
@@ -36,14 +48,7 @@ library LendingMarketOperationLogic {
         Storage.slot().genesisDates[_ccy] = _genesisDate;
     }
 
-    function createLendingMarket(bytes32 _ccy, uint256 _openingDate)
-        external
-        returns (
-            address market,
-            address futureValueVault,
-            uint256 maturity
-        )
-    {
+    function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external {
         require(
             AddressResolverLib.genesisValueVault().isInitialized(_ccy),
             "Lending market hasn't been initialized in the currency"
@@ -53,6 +58,7 @@ library LendingMarketOperationLogic {
             "Non supported currency"
         );
 
+        uint256 maturity;
         if (Storage.slot().lendingMarkets[_ccy].length == 0) {
             maturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy);
         } else {
@@ -64,16 +70,27 @@ library LendingMarketOperationLogic {
 
         require(_openingDate < maturity, "Market opening date must be before maturity date");
 
-        market = AddressResolverLib.beaconProxyController().deployLendingMarket(
+        address market = AddressResolverLib.beaconProxyController().deployLendingMarket(
             _ccy,
             maturity,
             _openingDate
         );
-        futureValueVault = AddressResolverLib.beaconProxyController().deployFutureValueVault();
+        address futureValueVault = AddressResolverLib
+            .beaconProxyController()
+            .deployFutureValueVault();
 
         Storage.slot().lendingMarkets[_ccy].push(market);
         Storage.slot().maturityLendingMarkets[_ccy][maturity] = market;
         Storage.slot().futureValueVaults[_ccy][market] = futureValueVault;
+
+        emit LendingMarketCreated(
+            _ccy,
+            market,
+            futureValueVault,
+            Storage.slot().lendingMarkets[_ccy].length,
+            _openingDate,
+            maturity
+        );
     }
 
     function executeItayoseCall(bytes32 _ccy, uint256 _maturity)
@@ -128,7 +145,7 @@ library LendingMarketOperationLogic {
 
     function rotateLendingMarkets(bytes32 _ccy, uint256 _autoRollFeeRate)
         external
-        returns (uint256 fromMaturity, uint256 toMaturity)
+        returns (uint256 toMaturity)
     {
         address[] storage markets = Storage.slot().lendingMarkets[_ccy];
         address currentMarketAddr = markets[0];
@@ -143,7 +160,10 @@ library LendingMarketOperationLogic {
 
         // The market that is moved to the last of the list opens again when the next market is matured.
         // Just before the opening, the moved market needs the Itayose execution.
-        fromMaturity = ILendingMarket(currentMarketAddr).openMarket(toMaturity, nextMaturity);
+        uint256 fromMaturity = ILendingMarket(currentMarketAddr).openMarket(
+            toMaturity,
+            nextMaturity
+        );
 
         // Rotate the order of the market
         for (uint256 i = 0; i < markets.length; i++) {
@@ -163,6 +183,8 @@ library LendingMarketOperationLogic {
         );
 
         Storage.slot().maturityLendingMarkets[_ccy][toMaturity] = currentMarketAddr;
+
+        emit LendingMarketsRotated(_ccy, fromMaturity, toMaturity);
     }
 
     function executeEmergencyTermination() external {
@@ -193,6 +215,8 @@ library LendingMarketOperationLogic {
                 ? balance
                 : AddressResolverLib.currencyController().convertToBaseCurrency(ccy, balance);
         }
+
+        emit EmergencyTerminationExecuted(block.timestamp);
     }
 
     function pauseLendingMarkets(bytes32 _ccy) public {

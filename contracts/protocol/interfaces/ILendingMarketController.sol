@@ -14,25 +14,6 @@ interface ILendingMarketController {
         uint256 timestamp;
     }
 
-    event LendingMarketCreated(
-        bytes32 indexed ccy,
-        address indexed marketAddr,
-        address futureValueVault,
-        uint256 index,
-        uint256 openingDate,
-        uint256 maturity
-    );
-    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
-    event RedemptionExecuted(bytes32 ccy, address indexed user, int256 amount);
-    event LiquidationExecuted(
-        address indexed user,
-        bytes32 collateralCcy,
-        bytes32 indexed debtCcy,
-        uint256 indexed debtMaturity,
-        uint256 debtAmount
-    );
-    event EmergencyTerminationExecuted(uint256 timestamp);
-
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
@@ -199,11 +180,13 @@ interface ILendingMarketController {
 
     function rotateLendingMarkets(bytes32 ccy) external;
 
+    function executeEmergencyTermination() external;
+
     function pauseLendingMarkets(bytes32 ccy) external returns (bool);
 
     function unpauseLendingMarkets(bytes32 ccy) external returns (bool);
 
-    function cleanUpAllFunds(address user) external;
+    function cleanUpAllFunds(address user) external returns (bool);
 
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
 }

@@ -49,21 +49,20 @@ const deployContracts = async (owner: SignerWithAddress) => {
     owner,
     LendingMarketOperationLogic,
   );
-  const lendingMarketUserLogic = await ethers
-    .getContractFactory('LendingMarketUserLogic', {
-      libraries: {
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
-      },
-    })
-    .then((factory) => factory.deploy());
 
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
+      libraries: { QuickSort: quickSort.address },
+    })
+    .then((factory) => factory.deploy());
+
+  const lendingMarketUserLogic = await ethers
+    .getContractFactory('LendingMarketUserLogic', {
       libraries: {
-        QuickSort: quickSort.address,
+        FundManagementLogic: fundManagementLogic.address,
         LendingMarketConfigurationLogic:
           lendingMarketConfigurationLogic.address,
+        LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -199,6 +198,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
     genesisValueVaultProxy,
     // logics
     fundManagementLogic,
+    lendingMarketOperationLogic,
   };
 };
 
