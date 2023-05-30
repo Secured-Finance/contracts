@@ -81,8 +81,10 @@ describe('TokenVault', () => {
     await mockERC20.mock.transfer.returns(true);
     await mockERC20.mock.approve.returns(true);
     await mockLendingMarketController.mock.cleanUpFunds.returns(0);
-    await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(0);
-    await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+    await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
+      0,
+    );
+    await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
       0,
       0,
       0,
@@ -333,11 +335,11 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256[])'
       ].returns([valueInETH, valueInETH, valueInETH]);
-      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+      await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
 
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -362,7 +364,7 @@ describe('TokenVault', () => {
         true,
       );
 
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -419,10 +421,10 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+      await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -459,10 +461,10 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+      await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -508,10 +510,10 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+      await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -563,10 +565,10 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.getTotalPresentValueInETH.returns(
+      await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -609,7 +611,7 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -668,7 +670,7 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -721,7 +723,7 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,
@@ -769,7 +771,7 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInETH.returns(
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
         0,

@@ -45,6 +45,12 @@ const func: DeployFunction = async function ({
     .then((address) =>
       ethers.getContractAt('LendingMarketController', address),
     );
+  const lendingMarketOperationLogic = await deployments
+    .get('LendingMarketOperationLogic')
+    .then(({ address }) =>
+      ethers.getContractAt('LendingMarketOperationLogic', address),
+    )
+    .then((contract) => contract.attach(lendingMarketController.address));
 
   await executeIfNewlyDeployment('LendingMarket', deployResult, async () => {
     await beaconProxyController
@@ -113,9 +119,18 @@ const func: DeployFunction = async function ({
           .createLendingMarket(currency.key, openingDate)
           .then((tx) => tx.wait());
 
-        const { marketAddr, futureValueVault, maturity } = receipt.events.find(
+        const events = await lendingMarketOperationLogic.queryFilter(
+          lendingMarketOperationLogic.filters.LendingMarketCreated(),
+          receipt.blockNumber,
+        );
+
+        const args = events.find(
           ({ event }) => event === 'LendingMarketCreated',
-        ).args;
+        )?.args;
+
+        const marketAddr = args?.marketAddr;
+        const futureValueVault = args?.futureValueVault;
+        const maturity = args?.maturity;
 
         if (!nearestMaturity && i === 0) {
           nearestMaturity = maturity;

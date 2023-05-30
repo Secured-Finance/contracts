@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-library ERC20Storage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.erc20");
+library ERC20HandlerStorage {
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.erc20Handler");
 
     struct Storage {
-        address weth;
+        address baseCurrency;
     }
 
     function slot() internal pure returns (Storage storage r) {

@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
+import { hexETH } from '../../../utils/strings';
 import {
   MARKET_BASE_PERIOD,
   MARKET_OBSERVATION_PERIOD,
@@ -39,6 +40,8 @@ const deployContracts = async (owner: SignerWithAddress) => {
   const mockReserveFund = await deployMockContract(owner, ReserveFund.abi);
   const mockTokenVault = await deployMockContract(owner, TokenVault.abi);
 
+  await mockCurrencyController.mock.getBaseCurrency.returns(hexETH);
+
   // Deploy libraries
   const quickSort = await deployContract(owner, QuickSort);
   const lendingMarketConfigurationLogic = await deployContract(
@@ -49,21 +52,20 @@ const deployContracts = async (owner: SignerWithAddress) => {
     owner,
     LendingMarketOperationLogic,
   );
-  const lendingMarketUserLogic = await ethers
-    .getContractFactory('LendingMarketUserLogic', {
-      libraries: {
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
-      },
-    })
-    .then((factory) => factory.deploy());
 
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
+      libraries: { QuickSort: quickSort.address },
+    })
+    .then((factory) => factory.deploy());
+
+  const lendingMarketUserLogic = await ethers
+    .getContractFactory('LendingMarketUserLogic', {
       libraries: {
-        QuickSort: quickSort.address,
+        FundManagementLogic: fundManagementLogic.address,
         LendingMarketConfigurationLogic:
           lendingMarketConfigurationLogic.address,
+        LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -199,6 +201,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
     genesisValueVaultProxy,
     // logics
     fundManagementLogic,
+    lendingMarketOperationLogic,
   };
 };
 

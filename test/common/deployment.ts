@@ -47,8 +47,6 @@ const deployContracts = async () => {
     .getContractFactory('FundManagementLogic', {
       libraries: {
         QuickSort: quickSort.address,
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -56,8 +54,10 @@ const deployContracts = async () => {
   const lendingMarketUserLogic = await ethers
     .getContractFactory('LendingMarketUserLogic', {
       libraries: {
+        FundManagementLogic: fundManagementLogic.address,
         LendingMarketConfigurationLogic:
           lendingMarketConfigurationLogic.address,
+        LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -293,7 +293,6 @@ const deployContracts = async () => {
 
   return {
     genesisDate,
-    fundManagementLogic,
     // contracts
     addressResolver: addressResolverProxy,
     beaconProxyController: beaconProxyControllerProxy,
@@ -311,6 +310,13 @@ const deployContracts = async () => {
     eFilToETHPriceFeed: priceFeeds[hexEFIL],
     wBtcToETHPriceFeed: priceFeeds[hexWBTC],
     usdcToUSDPriceFeed: priceFeeds[hexUSDC],
+    // libraries
+    fundManagementLogic: fundManagementLogic.attach(
+      lendingMarketControllerProxy.address,
+    ),
+    lendingMarketOperationLogic: lendingMarketOperationLogic.attach(
+      lendingMarketControllerProxy.address,
+    ),
   };
 };
 

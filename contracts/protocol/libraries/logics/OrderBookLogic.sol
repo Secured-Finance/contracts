@@ -656,12 +656,12 @@ library OrderBookLogic {
      * @notice Increases and returns id of last order in order book.
      * @return The new order id
      */
-    function _nextOrderId() private returns (uint48) {
+    function _nextOrderId() internal returns (uint48) {
         Storage.slot().lastOrderId++;
         return Storage.slot().lastOrderId;
     }
 
-    function _removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) private {
+    function _removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) internal {
         uint256 lastOrderIndex = orders.length - 1;
         for (uint256 i = 0; i <= lastOrderIndex; i++) {
             if (orders[i] == orderId) {
