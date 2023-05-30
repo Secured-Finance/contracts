@@ -72,7 +72,7 @@ interface ILendingMarketController {
 
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
-    function getTotalPresentValueInETH(address user)
+    function getTotalPresentValueInBaseCurrency(address user)
         external
         view
         returns (int256 totalPresentValue);
@@ -92,7 +92,7 @@ interface ILendingMarketController {
             uint256 borrowedAmount
         );
 
-    function calculateTotalFundsInETH(
+    function calculateTotalFundsInBaseCurrency(
         address user,
         bytes32 depositCcy,
         uint256 depositAmount

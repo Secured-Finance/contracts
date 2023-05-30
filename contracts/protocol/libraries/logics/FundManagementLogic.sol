@@ -39,11 +39,11 @@ library FundManagementLogic {
         uint256 receivedDebtAmount;
     }
 
-    struct CalculatedTotalFundInETHVars {
+    struct CalculatedTotalFundInBaseCurrencyVars {
         bool[] isCollateral;
         bytes32 ccy;
         uint256[] amounts;
-        uint256[] amountsInETH;
+        uint256[] amountsInBaseCurrency;
         uint256 plusDepositAmount;
         uint256 minusDepositAmount;
     }
@@ -541,7 +541,7 @@ library FundManagementLogic {
         }
     }
 
-    function calculateTotalFundsInETH(
+    function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
         uint256 _depositAmount
@@ -560,7 +560,7 @@ library FundManagementLogic {
         )
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
-        CalculatedTotalFundInETHVars memory vars;
+        CalculatedTotalFundInBaseCurrencyVars memory vars;
 
         vars.isCollateral = AddressResolverLib.tokenVault().isCollateral(currencySet.values());
         vars.plusDepositAmount = _depositAmount;
@@ -594,23 +594,22 @@ library FundManagementLogic {
                 vars.minusDepositAmount += vars.amounts[0] + vars.amounts[3];
             }
 
-            vars.amountsInETH = AddressResolverLib.currencyController().convertToBaseCurrency(
-                vars.ccy,
-                vars.amounts
-            );
+            vars.amountsInBaseCurrency = AddressResolverLib
+                .currencyController()
+                .convertToBaseCurrency(vars.ccy, vars.amounts);
 
-            totalClaimableAmount += vars.amountsInETH[1];
-            totalCollateralAmount += vars.amountsInETH[2];
-            totalWorkingBorrowOrdersAmount += vars.amountsInETH[4];
-            totalDebtAmount += vars.amountsInETH[5];
+            totalClaimableAmount += vars.amountsInBaseCurrency[1];
+            totalCollateralAmount += vars.amountsInBaseCurrency[2];
+            totalWorkingBorrowOrdersAmount += vars.amountsInBaseCurrency[4];
+            totalDebtAmount += vars.amountsInBaseCurrency[5];
 
             // NOTE: Lent amount and working lend orders amount are excluded here as they are not used
             // for the collateral calculation.
             // Those amounts need only to check whether there is enough deposit amount in the selected currency.
             if (vars.isCollateral[i]) {
-                totalWorkingLendOrdersAmount += vars.amountsInETH[0];
-                totalLentAmount += vars.amountsInETH[3];
-                totalBorrowedAmount += vars.amountsInETH[6];
+                totalWorkingLendOrdersAmount += vars.amountsInBaseCurrency[0];
+                totalLentAmount += vars.amountsInBaseCurrency[3];
+                totalBorrowedAmount += vars.amountsInBaseCurrency[6];
             }
         }
 
@@ -942,12 +941,12 @@ library FundManagementLogic {
         return (_futureValue * _unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
     }
 
-    function _convertToETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
+    function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
         internal
         view
         returns (uint256)
     {
-        if (_ccy == "ETH") {
+        if (_ccy == Storage.slot().baseCurrency) {
             return _amount;
         } else {
             uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
@@ -959,12 +958,12 @@ library FundManagementLogic {
         }
     }
 
-    function _convertFromETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
+    function _convertFromBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
         internal
         view
         returns (uint256)
     {
-        if (_ccy == "ETH") {
+        if (_ccy == Storage.slot().baseCurrency) {
             return _amount;
         } else {
             uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
@@ -1120,13 +1119,16 @@ library FundManagementLogic {
             marketTerminationRatioTotal += marketTerminationRatios[i];
         }
 
-        uint256 amountInETH = _convertToETHAtMarketTerminationPrice(_ccy, _amount);
+        uint256 amountInBaseCurrency = _convertToBaseCurrencyAtMarketTerminationPrice(
+            _ccy,
+            _amount
+        );
 
         for (uint256 i; i < collateralCurrencies.length; i++) {
             bytes32 ccy = collateralCurrencies[i];
-            uint256 addedAmount = _convertFromETHAtMarketTerminationPrice(
+            uint256 addedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
                 ccy,
-                (amountInETH * marketTerminationRatios[i]).div(marketTerminationRatioTotal)
+                (amountInBaseCurrency * marketTerminationRatios[i]).div(marketTerminationRatioTotal)
             );
 
             AddressResolverLib.tokenVault().addDepositAmount(_user, ccy, addedAmount);
@@ -1149,9 +1151,9 @@ library FundManagementLogic {
             _collateralCcy
         );
 
-        uint256 removedAmount = _convertFromETHAtMarketTerminationPrice(
+        uint256 removedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
             _collateralCcy,
-            _convertToETHAtMarketTerminationPrice(_ccy, _amount)
+            _convertToBaseCurrencyAtMarketTerminationPrice(_ccy, _amount)
         );
 
         require(depositAmount >= removedAmount, "Not enough collateral");

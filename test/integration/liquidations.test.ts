@@ -196,6 +196,7 @@ describe('Integration Test: Liquidations', async () => {
       .getContractFactory('Liquidator')
       .then((factory) =>
         factory.deploy(
+          hexETH,
           lendingMarketController.address,
           tokenVault.address,
           mockUniswapRouter.address,

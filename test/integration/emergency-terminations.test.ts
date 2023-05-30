@@ -290,11 +290,13 @@ describe('Integration Test: Emergency terminations', async () => {
 
       it('Execute forced redemption', async () => {
         const aliceTotalPVBefore =
-          await lendingMarketController.getTotalPresentValueInETH(
+          await lendingMarketController.getTotalPresentValueInBaseCurrency(
             alice.address,
           );
         const bobTotalPVBefore =
-          await lendingMarketController.getTotalPresentValueInETH(bob.address);
+          await lendingMarketController.getTotalPresentValueInBaseCurrency(
+            bob.address,
+          );
         const bobTotalCollateralBefore =
           await tokenVault.getTotalCollateralAmount(bob.address);
 
@@ -325,9 +327,10 @@ describe('Integration Test: Emergency terminations', async () => {
           .withArgs(hexEFIL, bob.address, orderAmountInFIL.mul(-1));
 
         for (const user of [alice, bob]) {
-          const fv = await lendingMarketController.getTotalPresentValueInETH(
-            user.address,
-          );
+          const fv =
+            await lendingMarketController.getTotalPresentValueInBaseCurrency(
+              user.address,
+            );
           expect(fv).equal(0);
         }
 
@@ -456,9 +459,10 @@ describe('Integration Test: Emergency terminations', async () => {
           );
 
         for (const user of [alice, bob]) {
-          const fv = await lendingMarketController.getTotalPresentValueInETH(
-            user.address,
-          );
+          const fv =
+            await lendingMarketController.getTotalPresentValueInBaseCurrency(
+              user.address,
+            );
           expect(fv).equal(0);
         }
       });
@@ -584,9 +588,10 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         for (const user of [alice, bob]) {
-          const fv = await lendingMarketController.getTotalPresentValueInETH(
-            user.address,
-          );
+          const fv =
+            await lendingMarketController.getTotalPresentValueInBaseCurrency(
+              user.address,
+            );
           expect(fv).equal(0);
         }
       });

@@ -104,6 +104,11 @@ contract LendingMarketController is
     }
 
     // @inheritdoc MixinAddressResolver
+    function afterBuildCache() internal override {
+        Storage.slot().baseCurrency = currencyController().getBaseCurrency();
+    }
+
+    // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](5);
         contracts[0] = Contracts.BEACON_PROXY_CONTROLLER;
@@ -353,11 +358,11 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the total present value of the account converted to ETH.
+     * @notice Gets the total present value of the account converted to base currency.
      * @param _user User's address
-     * @return totalPresentValue The total present value in ETH
+     * @return totalPresentValue The total present value in base currency
      */
-    function getTotalPresentValueInETH(address _user)
+    function getTotalPresentValueInBaseCurrency(address _user)
         external
         view
         override
@@ -436,12 +441,12 @@ contract LendingMarketController is
 
     /**
      * @notice Gets the funds that are calculated from the user's lending and borrowing order list
-     * for all currencies in ETH.
+     * for all currencies in base currency.
      * @param _user User's address
      * @param _depositCcy Currency name to be used as deposit
      * @param _depositAmount Amount to deposit
      */
-    function calculateTotalFundsInETH(
+    function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
         uint256 _depositAmount
@@ -460,7 +465,12 @@ contract LendingMarketController is
             bool isEnoughDeposit
         )
     {
-        return FundManagementLogic.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
+        return
+            FundManagementLogic.calculateTotalFundsInBaseCurrency(
+                _user,
+                _depositCcy,
+                _depositAmount
+            );
     }
 
     /**

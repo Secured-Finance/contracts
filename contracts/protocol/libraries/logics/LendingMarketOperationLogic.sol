@@ -211,7 +211,7 @@ library LendingMarketOperationLogic {
                 address(AddressResolverLib.tokenVault())
             );
 
-            Storage.slot().marketTerminationRatios[ccy] = ccy == "ETH"
+            Storage.slot().marketTerminationRatios[ccy] = ccy == Storage.slot().baseCurrency
                 ? balance
                 : AddressResolverLib.currencyController().convertToBaseCurrency(ccy, balance);
         }

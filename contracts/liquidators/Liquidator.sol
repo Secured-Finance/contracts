@@ -13,6 +13,7 @@ import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketCon
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
 
 contract Liquidator is ILiquidationReceiver {
+    bytes32 public baseCurrency;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
     ISwapRouter public immutable uniswapRouter;
@@ -21,11 +22,13 @@ contract Liquidator is ILiquidationReceiver {
     uint256[] internal collateralMaturities;
 
     constructor(
+        bytes32 _baseCurrency,
         address _lendingMarketController,
         address _tokenVault,
         address _uniswapRouter,
         address _uniswapQuoter
     ) {
+        baseCurrency = _baseCurrency;
         lendingMarketController = ILendingMarketController(_lendingMarketController);
         tokenVault = ITokenVault(_tokenVault);
         uniswapRouter = ISwapRouter(_uniswapRouter);
@@ -93,9 +96,9 @@ contract Liquidator is ILiquidationReceiver {
     ) external override returns (bool) {
         address collateralCcyAddr = tokenVault.getTokenAddress(_collateralCcy);
         address debtCcyAddr = tokenVault.getTokenAddress(_debtCcy);
-        bool isETH = _collateralCcy == "ETH";
+        bool isBaseCurrency = _collateralCcy == baseCurrency;
 
-        uint256 collateralTokenBalance = isETH
+        uint256 collateralTokenBalance = isBaseCurrency
             ? address(this).balance
             : IERC20(collateralCcyAddr).balanceOf(address(this));
 
@@ -106,12 +109,19 @@ contract Liquidator is ILiquidationReceiver {
         );
 
         if (debtFVAmount < 0 && collateralTokenBalance != 0) {
-            _executeSwap(collateralCcyAddr, debtCcyAddr, collateralTokenBalance, 0, poolFee, isETH);
+            _executeSwap(
+                collateralCcyAddr,
+                debtCcyAddr,
+                collateralTokenBalance,
+                0,
+                poolFee,
+                isBaseCurrency
+            );
         }
 
         uint256 debtTokenBalance;
 
-        if (_debtCcy == "ETH") {
+        if (_debtCcy == baseCurrency) {
             debtTokenBalance = address(this).balance;
         } else {
             debtTokenBalance = IERC20(debtCcyAddr).balanceOf(address(this));
@@ -142,10 +152,10 @@ contract Liquidator is ILiquidationReceiver {
         uint256 _amountIn,
         uint256 _amountOutMinimum,
         uint24 _poolFee,
-        bool _isETH
+        bool _isBaseCurrency
     ) internal returns (uint256) {
         uint256 ethAmount;
-        if (_isETH) {
+        if (_isBaseCurrency) {
             ethAmount = _amountIn;
         } else {
             ERC20Handler.safeApprove(_ccyFrom, address(uniswapRouter), _amountIn);
