@@ -261,7 +261,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       const aliceFVBefore = await lendingMarketController.getFutureValue(
         hexETH,
-        0,
+        maturities[0],
         alice.address,
       );
 
@@ -359,7 +359,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       const aliceFVBefore = await lendingMarketController.getFutureValue(
         hexETH,
-        0,
+        maturities[0],
         alice.address,
       );
 

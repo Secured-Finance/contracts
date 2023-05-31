@@ -1125,6 +1125,180 @@ describe('LendingMarketController - Orders', () => {
       await checkPresentValue();
     });
 
+    it('Calculate the funds of users who have a large lending position and a small borrowing position', async () => {
+      // Move to 6 hours (21600 sec) before maturity.
+      await time.increaseTo(maturities[0].sub('21600').toString());
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[0], Side.BORROW, '100', '8000');
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[0], Side.LEND, '100', '7999');
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '50000000000000000',
+          '8000',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.LEND,
+            '50000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[1], Side.BORROW, '100', '8000');
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[1], Side.LEND, '100', '7999');
+
+      await lendingMarketControllerProxy
+        .calculateFunds(targetCurrency, alice.address)
+        .then(({ claimableAmount, debtAmount }) => {
+          expect(claimableAmount).to.equal('100000000000000000');
+          expect(debtAmount).to.equal('50000000000000000');
+        });
+
+      const totalPresentValue =
+        await lendingMarketControllerProxy.getTotalPresentValue(
+          targetCurrency,
+          alice.address,
+        );
+      expect(totalPresentValue).to.equal('50000000000000000');
+
+      await time.increaseTo(maturities[0].toString());
+      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+
+      await lendingMarketControllerProxy
+        .calculateFunds(targetCurrency, alice.address)
+        .then(({ claimableAmount, debtAmount }) => {
+          expect(claimableAmount).not.to.equal('0');
+          expect(debtAmount).to.equal('0');
+        });
+    });
+
+    it('Calculate the funds of users who have a small lending position and a large borrowing position', async () => {
+      // Move to 6 hours (21600 sec) before maturity.
+      await time.increaseTo(maturities[0].sub('21600').toString());
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[0], Side.BORROW, '100', '8000');
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[0], Side.LEND, '100', '7999');
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '50000000000000000',
+          '8000',
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.BORROW,
+            '50000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[1], Side.BORROW, '100', '8000');
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .createOrder(targetCurrency, maturities[1], Side.LEND, '100', '7999');
+
+      await lendingMarketControllerProxy
+        .calculateFunds(targetCurrency, alice.address)
+        .then(({ claimableAmount, debtAmount }) => {
+          expect(claimableAmount).to.equal('50000000000000000');
+          expect(debtAmount).to.equal('100000000000000000');
+        });
+
+      const totalPresentValue =
+        await lendingMarketControllerProxy.getTotalPresentValue(
+          targetCurrency,
+          alice.address,
+        );
+      expect(totalPresentValue).to.equal('-50000000000000000');
+
+      await time.increaseTo(maturities[0].toString());
+      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+
+      await lendingMarketControllerProxy
+        .calculateFunds(targetCurrency, alice.address)
+        .then(({ claimableAmount, debtAmount }) => {
+          expect(claimableAmount).to.equal('0');
+          expect(debtAmount).not.to.equal('0');
+        });
+    });
+
     describe('Limit Order', async () => {
       it('Fill all lending orders at one rate', async () => {
         const lendingMarket1 = lendingMarketProxies[0];
@@ -2065,275 +2239,6 @@ describe('LendingMarketController - Orders', () => {
             .connect(alice)
             .cancelOrder(targetCurrency, maturities[0], '10'),
         ).to.be.revertedWith('Order not found');
-      });
-    });
-
-    describe('Liquidations', async () => {
-      beforeEach(async () => {
-        // Set up for the mocks
-        await mockTokenVault.mock.getLiquidationAmount.returns(1000, 20, 10);
-        await mockTokenVault.mock.getDepositAmount.returns(100);
-        await mockTokenVault.mock.transferFrom.returns(0);
-        await mockTokenVault.mock['isCovered(address)'].returns(true);
-        await mockReserveFund.mock.isPaused.returns(true);
-        await mockCurrencyController.mock.convert.returns(100);
-        await mockCurrencyController.mock.convertFromBaseCurrency.returns(1);
-      });
-
-      it("Liquidate less than 50% lending position in case the one position doesn't cover liquidation amount", async () => {
-        const orderAmount = ethers.BigNumber.from('100000000000000000');
-        const orderRate = ethers.BigNumber.from('8000');
-
-        await lendingMarketControllerProxy
-          .connect(signers[0])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            orderAmount,
-            orderRate,
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[1])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '200000000000000000',
-            '8001',
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[2])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '200000000000000000',
-            '8000',
-          )
-          .then((tx) => expect(tx).to.emit(fundManagementLogic, 'OrderFilled'));
-
-        await lendingMarketControllerProxy
-          .connect(alice)
-          .executeLiquidationCall(
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            signers[0].address,
-          )
-          .then((tx) =>
-            expect(tx)
-              .to.emit(fundManagementLogic, 'LiquidationExecuted')
-              .withArgs(
-                signers[0].address,
-                targetCurrency,
-                targetCurrency,
-                maturities[0],
-                100,
-              ),
-          );
-      });
-
-      it('Liquidate 50% lending position in case the one position cover liquidation amount', async () => {
-        const orderAmount = ethers.BigNumber.from('100000000000000000');
-        const orderRate = ethers.BigNumber.from('8000');
-
-        await lendingMarketControllerProxy
-          .connect(signers[3])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            orderAmount,
-            orderRate,
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[4])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '200000000000000000',
-            '8001',
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[5])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '200000000000000000',
-            '8000',
-          )
-          .then((tx) => expect(tx).to.emit(fundManagementLogic, 'OrderFilled'));
-
-        await lendingMarketControllerProxy
-          .connect(alice)
-          .executeLiquidationCall(
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            signers[3].address,
-          )
-          .then((tx) =>
-            expect(tx)
-              .to.emit(fundManagementLogic, 'LiquidationExecuted')
-              .withArgs(
-                signers[3].address,
-                targetCurrency,
-                targetCurrency,
-                maturities[0],
-                100,
-              ),
-          );
-      });
-
-      it('Liquidate lending position using zero-coupon bonds', async () => {
-        const orderAmount = ethers.BigNumber.from('100000000000000000');
-        const orderRate = ethers.BigNumber.from('8000');
-
-        // Set up for the mocks
-        await mockTokenVault.mock.transferFrom.returns(100);
-
-        await lendingMarketControllerProxy
-          .connect(signers[0])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            orderAmount,
-            orderRate,
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[1])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '200000000000000000',
-            '8001',
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[2])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '200000000000000000',
-            '8000',
-          )
-          .then((tx) => expect(tx).to.emit(fundManagementLogic, 'OrderFilled'));
-
-        await lendingMarketControllerProxy
-          .connect(alice)
-          .executeLiquidationCall(
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            signers[0].address,
-          )
-          .then((tx) =>
-            expect(tx)
-              .to.emit(fundManagementLogic, 'LiquidationExecuted')
-              .withArgs(
-                signers[0].address,
-                targetCurrency,
-                targetCurrency,
-                maturities[0],
-                100,
-              ),
-          );
-      });
-
-      it('Fail to liquidate a lending position due to no debt', async () => {
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .executeLiquidationCall(
-              targetCurrency,
-              targetCurrency,
-              maturities[0],
-              signers[0].address,
-            ),
-        ).to.be.revertedWith('No debt in the selected maturity');
-      });
-
-      it('Fail to liquidate a lending position due to no liquidation amount', async () => {
-        // Set up for the mocks
-        await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
-
-        await lendingMarketControllerProxy
-          .connect(signers[6])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '100000000',
-            '8000',
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[7])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '100000000',
-            '8000',
-          );
-
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .executeLiquidationCall(
-              targetCurrency,
-              targetCurrency,
-              maturities[0],
-              signers[6].address,
-            ),
-        ).to.be.revertedWith('User has enough collateral');
-      });
-
-      it('Fail to liquidate a lending position due to insufficient collateral', async () => {
-        // Set up for the mocks
-        await mockTokenVault.mock['isCovered(address)'].returns(false);
-
-        await lendingMarketControllerProxy
-          .connect(signers[6])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.BORROW,
-            '100000000',
-            '8000',
-          );
-
-        await lendingMarketControllerProxy
-          .connect(signers[7])
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            '100000000',
-            '8000',
-          );
-
-        await expect(
-          lendingMarketControllerProxy
-            .connect(alice)
-            .executeLiquidationCall(
-              targetCurrency,
-              targetCurrency,
-              maturities[0],
-              signers[6].address,
-            ),
-        ).to.be.revertedWith('Invalid liquidation');
       });
     });
   });
