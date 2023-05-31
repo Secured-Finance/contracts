@@ -25,6 +25,7 @@ describe('LendingMarketController - Orders', () => {
   let lendingMarketControllerProxy: Contract;
 
   let fundManagementLogic: Contract;
+  let lendingMarketOperationLogic: Contract;
 
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -57,7 +58,15 @@ describe('LendingMarketController - Orders', () => {
       beaconProxyControllerProxy,
       lendingMarketControllerProxy,
       fundManagementLogic,
+      lendingMarketOperationLogic,
     } = await deployContracts(owner));
+
+    fundManagementLogic = fundManagementLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
+    lendingMarketOperationLogic = lendingMarketOperationLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
 
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getHaircut.returns(8000);
@@ -380,10 +389,7 @@ describe('LendingMarketController - Orders', () => {
         )
         .then(async (tx) => {
           await expect(tx).to.emit(lendingMarket1, 'OrderMade');
-          await expect(tx).to.not.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          );
+          await expect(tx).to.not.emit(fundManagementLogic, 'OrderFilled');
         });
 
       await lendingMarketControllerProxy
@@ -418,10 +424,7 @@ describe('LendingMarketController - Orders', () => {
             '100000000000000000',
             '8720',
           ),
-      ).to.emit(
-        fundManagementLogic.attach(lendingMarketControllerProxy.address),
-        'OrderFilled',
-      );
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const maturity = await lendingMarket1.getMaturity();
       expect(moment.unix(maturity).day()).to.equal(5);
@@ -526,16 +529,10 @@ describe('LendingMarketController - Orders', () => {
           targetCurrency,
           alice.address,
         ),
-      ).to.emit(
-        fundManagementLogic.attach(lendingMarketControllerProxy.address),
-        'OrdersFilledInAsync',
-      );
+      ).to.emit(fundManagementLogic, 'OrdersFilledInAsync');
       await expect(
         lendingMarketControllerProxy.cleanUpFunds(targetCurrency, bob.address),
-      ).to.not.emit(
-        fundManagementLogic.attach(lendingMarketControllerProxy.address),
-        'OrdersFilledInAsync',
-      );
+      ).to.not.emit(fundManagementLogic, 'OrdersFilledInAsync');
 
       await showLendingInfo();
       await time.increaseTo(maturities[0].toString());
@@ -583,13 +580,17 @@ describe('LendingMarketController - Orders', () => {
       );
       const market = await lendingMarket1.getMarket();
 
-      const { newMaturity } = await lendingMarketControllerProxy
-        .rotateLendingMarkets(targetCurrency)
-        .then((tx) => tx.wait())
-        .then(
-          ({ events }) =>
-            events.find(({ event }) => event === 'LendingMarketsRotated').args,
-        );
+      const { blockNumber } =
+        await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+
+      const events = await lendingMarketOperationLogic.queryFilter(
+        lendingMarketOperationLogic.filters.LendingMarketsRotated(),
+        blockNumber,
+      );
+
+      const newMaturity = events.find(
+        ({ event }) => event === 'LendingMarketsRotated',
+      )?.args?.newMaturity;
 
       await showLendingInfo();
 
@@ -693,10 +694,7 @@ describe('LendingMarketController - Orders', () => {
           { value: '1000000000000000' },
         )
         .then(async (tx) => {
-          await expect(tx).to.not.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          );
+          await expect(tx).to.not.emit(fundManagementLogic, 'OrderFilled');
         });
     });
 
@@ -712,10 +710,7 @@ describe('LendingMarketController - Orders', () => {
           { value: '1000000000000000' },
         )
         .then(async (tx) => {
-          await expect(tx).to.not.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          );
+          await expect(tx).to.not.emit(fundManagementLogic, 'OrderFilled');
         });
     });
 
@@ -1057,10 +1052,7 @@ describe('LendingMarketController - Orders', () => {
             '50000000000000000',
             '0',
           ),
-      ).to.emit(
-        fundManagementLogic.attach(lendingMarketControllerProxy.address),
-        'OrderFilled',
-      );
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await checkPresentValue();
 
@@ -1094,10 +1086,7 @@ describe('LendingMarketController - Orders', () => {
             '50000000000000000',
             '0',
           ),
-      ).to.emit(
-        fundManagementLogic.attach(lendingMarketControllerProxy.address),
-        'OrderFilled',
-      );
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await checkPresentValue();
 
@@ -1131,10 +1120,7 @@ describe('LendingMarketController - Orders', () => {
             '80000000000000000',
             '0',
           ),
-      ).to.emit(
-        fundManagementLogic.attach(lendingMarketControllerProxy.address),
-        'OrderFilled',
-      );
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await checkPresentValue();
     });
@@ -1173,10 +1159,7 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
 
-        await expect(tx).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx).to.not.emit(lendingMarket1, 'OrderMade');
       });
@@ -1214,10 +1197,7 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
 
-        await expect(tx).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx).to.not.emit(lendingMarket1, 'OrderMade');
       });
@@ -1273,10 +1253,7 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
 
-        await expect(tx).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx)
           .to.not.emit(lendingMarket1, 'OrderMade')
@@ -1323,10 +1300,7 @@ describe('LendingMarketController - Orders', () => {
             '80000000000000000',
             '8000',
           );
-        await expect(tx).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx)
           .to.emit(lendingMarket1, 'OrderPartiallyTaken')
@@ -1372,10 +1346,7 @@ describe('LendingMarketController - Orders', () => {
             '120000000000000000',
             '8800',
           );
-        await expect(tx).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx).to.emit(lendingMarket1, 'OrderMade');
       });
@@ -1401,10 +1372,7 @@ describe('LendingMarketController - Orders', () => {
               '50000000000000000',
               '8800',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill multiple lending order at different rates with limit rate', async () => {
@@ -1437,10 +1405,7 @@ describe('LendingMarketController - Orders', () => {
               '100000000000000000',
               '8798',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill multiple borrowing order at different rates with limit rate', async () => {
@@ -1473,10 +1438,7 @@ describe('LendingMarketController - Orders', () => {
               '100000000000000000',
               '8801',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill multiple lending order at different rates with limit rate', async () => {
@@ -1509,10 +1471,7 @@ describe('LendingMarketController - Orders', () => {
               '100000000000000000',
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill multiple borrowing order at different rates with limit rate', async () => {
@@ -1545,10 +1504,7 @@ describe('LendingMarketController - Orders', () => {
               '100000000000000000',
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill an order partially out of the orders held', async () => {
@@ -1582,10 +1538,7 @@ describe('LendingMarketController - Orders', () => {
               '50000000000000000',
               '8800',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1597,10 +1550,7 @@ describe('LendingMarketController - Orders', () => {
               '50000000000000000',
               '8798',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill multiple orders partially out of the orders held', async () => {
@@ -1653,10 +1603,7 @@ describe('LendingMarketController - Orders', () => {
               '50000000000000000',
               '8800',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1668,10 +1615,7 @@ describe('LendingMarketController - Orders', () => {
               '50000000000000000',
               '8799',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1683,10 +1627,7 @@ describe('LendingMarketController - Orders', () => {
               '50000000000000000',
               '8798',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketControllerProxy
           .connect(alice)
@@ -1728,10 +1669,7 @@ describe('LendingMarketController - Orders', () => {
               '9880',
             ),
         )
-          .to.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          )
+          .to.emit(fundManagementLogic, 'OrderFilled')
           .withArgs(
             users[0].address,
             targetCurrency,
@@ -1771,10 +1709,7 @@ describe('LendingMarketController - Orders', () => {
               '9880',
             ),
         )
-          .to.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          )
+          .to.emit(fundManagementLogic, 'OrderFilled')
           .withArgs(
             users[0].address,
             targetCurrency,
@@ -1829,10 +1764,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '8000',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1844,10 +1776,7 @@ describe('LendingMarketController - Orders', () => {
               '30000000000000000',
               '8000',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1859,10 +1788,7 @@ describe('LendingMarketController - Orders', () => {
               '20000000000000000',
               '8000',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         const tx = await lendingMarketControllerProxy
           .connect(alice)
@@ -1870,10 +1796,7 @@ describe('LendingMarketController - Orders', () => {
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
 
         await expect(tx)
-          .to.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          )
+          .to.emit(fundManagementLogic, 'OrderFilled')
           .withArgs(
             alice.address,
             targetCurrency,
@@ -1907,10 +1830,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '8000',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1922,10 +1842,7 @@ describe('LendingMarketController - Orders', () => {
               '20000000000000000',
               '8200',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1937,10 +1854,7 @@ describe('LendingMarketController - Orders', () => {
               '5000000000000000',
               '8000',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -1952,10 +1866,7 @@ describe('LendingMarketController - Orders', () => {
               '5000000000000000',
               '8000',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         const tx = await lendingMarketControllerProxy
           .connect(alice)
@@ -1963,10 +1874,7 @@ describe('LendingMarketController - Orders', () => {
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
 
         await expect(tx)
-          .to.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          )
+          .to.emit(fundManagementLogic, 'OrderFilled')
           .withArgs(
             alice.address,
             targetCurrency,
@@ -2000,10 +1908,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '8000',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -2015,10 +1920,7 @@ describe('LendingMarketController - Orders', () => {
               '20000000000000000',
               '8000',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -2030,10 +1932,7 @@ describe('LendingMarketController - Orders', () => {
               '9000000000000000',
               '8000',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         const tx = await lendingMarketControllerProxy
           .connect(alice)
@@ -2041,10 +1940,7 @@ describe('LendingMarketController - Orders', () => {
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
 
         await expect(tx)
-          .to.emit(
-            fundManagementLogic.attach(lendingMarketControllerProxy.address),
-            'OrderFilled',
-          )
+          .to.emit(fundManagementLogic, 'OrderFilled')
           .withArgs(
             alice.address,
             targetCurrency,
@@ -2078,10 +1974,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '8000',
             ),
-        ).to.not.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -2093,10 +1986,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '8000',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketControllerProxy.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -2223,12 +2113,7 @@ describe('LendingMarketController - Orders', () => {
             '200000000000000000',
             '8000',
           )
-          .then((tx) =>
-            expect(tx).to.emit(
-              fundManagementLogic.attach(lendingMarketControllerProxy.address),
-              'OrderFilled',
-            ),
-          );
+          .then((tx) => expect(tx).to.emit(fundManagementLogic, 'OrderFilled'));
 
         await lendingMarketControllerProxy
           .connect(alice)
@@ -2240,7 +2125,7 @@ describe('LendingMarketController - Orders', () => {
           )
           .then((tx) =>
             expect(tx)
-              .to.emit(lendingMarketControllerProxy, 'LiquidationExecuted')
+              .to.emit(fundManagementLogic, 'LiquidationExecuted')
               .withArgs(
                 signers[0].address,
                 targetCurrency,
@@ -2284,12 +2169,7 @@ describe('LendingMarketController - Orders', () => {
             '200000000000000000',
             '8000',
           )
-          .then((tx) =>
-            expect(tx).to.emit(
-              fundManagementLogic.attach(lendingMarketControllerProxy.address),
-              'OrderFilled',
-            ),
-          );
+          .then((tx) => expect(tx).to.emit(fundManagementLogic, 'OrderFilled'));
 
         await lendingMarketControllerProxy
           .connect(alice)
@@ -2301,7 +2181,7 @@ describe('LendingMarketController - Orders', () => {
           )
           .then((tx) =>
             expect(tx)
-              .to.emit(lendingMarketControllerProxy, 'LiquidationExecuted')
+              .to.emit(fundManagementLogic, 'LiquidationExecuted')
               .withArgs(
                 signers[3].address,
                 targetCurrency,
@@ -2348,12 +2228,7 @@ describe('LendingMarketController - Orders', () => {
             '200000000000000000',
             '8000',
           )
-          .then((tx) =>
-            expect(tx).to.emit(
-              fundManagementLogic.attach(lendingMarketControllerProxy.address),
-              'OrderFilled',
-            ),
-          );
+          .then((tx) => expect(tx).to.emit(fundManagementLogic, 'OrderFilled'));
 
         await lendingMarketControllerProxy
           .connect(alice)
@@ -2365,7 +2240,7 @@ describe('LendingMarketController - Orders', () => {
           )
           .then((tx) =>
             expect(tx)
-              .to.emit(lendingMarketControllerProxy, 'LiquidationExecuted')
+              .to.emit(fundManagementLogic, 'LiquidationExecuted')
               .withArgs(
                 signers[0].address,
                 targetCurrency,

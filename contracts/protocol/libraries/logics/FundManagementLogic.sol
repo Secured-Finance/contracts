@@ -13,7 +13,6 @@ import {QuickSort} from "../QuickSort.sol";
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
-import {LendingMarketConfigurationLogic} from "./LendingMarketConfigurationLogic.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
@@ -40,11 +39,11 @@ library FundManagementLogic {
         uint256 receivedDebtAmount;
     }
 
-    struct CalculatedTotalFundInETHVars {
+    struct CalculatedTotalFundInBaseCurrencyVars {
         bool[] isCollateral;
         bytes32 ccy;
         uint256[] amounts;
-        uint256[] amountsInETH;
+        uint256[] amountsInBaseCurrency;
         uint256 plusDepositAmount;
         uint256 minusDepositAmount;
     }
@@ -106,6 +105,16 @@ library FundManagementLogic {
         uint256 futureValue
     );
 
+    event RedemptionExecuted(bytes32 ccy, address indexed user, int256 amount);
+
+    event LiquidationExecuted(
+        address indexed user,
+        bytes32 collateralCcy,
+        bytes32 indexed debtCcy,
+        uint256 indexed debtMaturity,
+        uint256 debtAmount
+    );
+
     /**
      * @notice Converts the future value to the genesis value if there is balance in the past maturity.
      * @param _ccy Currency for pausing all lending markets
@@ -155,7 +164,7 @@ library FundManagementLogic {
         bytes32 _collateralCcy,
         bytes32 _debtCcy,
         uint256 _debtMaturity
-    ) external returns (uint256 totalLiquidatedDebtAmount) {
+    ) external {
         ExecuteLiquidationVars memory vars;
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
@@ -183,7 +192,7 @@ library FundManagementLogic {
 
         require(vars.liquidationAmountInCollateralCcy != 0, "User has enough collateral");
 
-        totalLiquidatedDebtAmount = AddressResolverLib.currencyController().convert(
+        uint256 totalLiquidatedDebtAmount = AddressResolverLib.currencyController().convert(
             _collateralCcy,
             _debtCcy,
             vars.liquidationAmountInCollateralCcy
@@ -292,6 +301,16 @@ library FundManagementLogic {
                 );
             }
         }
+
+        require(AddressResolverLib.tokenVault().isCovered(msg.sender), "Invalid liquidation");
+
+        emit LiquidationExecuted(
+            _user,
+            _collateralCcy,
+            _debtCcy,
+            _debtMaturity,
+            totalLiquidatedDebtAmount
+        );
     }
 
     function updateFunds(
@@ -301,6 +320,7 @@ library FundManagementLogic {
         ProtocolTypes.Side _side,
         uint256 _filledAmount,
         uint256 _filledAmountInFV,
+        uint256 _orderFeeRate,
         bool _isTaker
     ) external {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy][
@@ -308,11 +328,7 @@ library FundManagementLogic {
         ];
 
         uint256 feeInFV = _isTaker
-            ? LendingMarketConfigurationLogic.calculateOrderFeeAmount(
-                _ccy,
-                _filledAmountInFV,
-                _maturity
-            )
+            ? _calculateOrderFeeAmount(_maturity, _filledAmountInFV, _orderFeeRate)
             : 0;
 
         if (_side == ProtocolTypes.Side.BORROW) {
@@ -362,79 +378,30 @@ library FundManagementLogic {
         }
     }
 
-    function resetFunds(bytes32 _ccy, address _user) external returns (int256 amount) {
-        // First, clean up future values and genesis values to redeem those amounts.
-        cleanUpFunds(_ccy, _user);
-
-        amount = calculateActualFunds(_ccy, 0, _user).presentValue;
-
-        uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
-        for (uint256 j; j < maturities.length; j++) {
-            IFutureValueVault(
-                Storage.slot().futureValueVaults[_ccy][
-                    Storage.slot().maturityLendingMarkets[_ccy][maturities[j]]
-                ]
-            ).resetFutureValue(_user);
-        }
-
-        AddressResolverLib.genesisValueVault().resetGenesisValue(_ccy, _user);
-    }
-
-    function addDepositAtMarketTerminationPrice(
-        bytes32 _ccy,
-        address _user,
-        uint256 _amount
+    function executeRedemption(
+        bytes32 _redemptionCcy,
+        bytes32 _collateralCcy,
+        address _user
     ) external {
-        bytes32[] memory collateralCurrencies = AddressResolverLib
-            .tokenVault()
-            .getCollateralCurrencies();
+        int256 redemptionAmount = _resetFunds(_redemptionCcy, _user);
 
-        uint256[] memory marketTerminationRatios = new uint256[](collateralCurrencies.length);
-        uint256 marketTerminationRatioTotal;
-
-        for (uint256 i; i < collateralCurrencies.length; i++) {
-            bytes32 ccy = collateralCurrencies[i];
-            marketTerminationRatios[i] = Storage.slot().marketTerminationRatios[ccy];
-            marketTerminationRatioTotal += marketTerminationRatios[i];
-        }
-
-        uint256 amountInETH = _convertToETHAtMarketTerminationPrice(_ccy, _amount);
-
-        for (uint256 i; i < collateralCurrencies.length; i++) {
-            bytes32 ccy = collateralCurrencies[i];
-            uint256 addedAmount = _convertFromETHAtMarketTerminationPrice(
-                ccy,
-                (amountInETH * marketTerminationRatios[i]).div(marketTerminationRatioTotal)
+        if (redemptionAmount > 0) {
+            _addDepositAtMarketTerminationPrice(
+                _redemptionCcy,
+                _user,
+                redemptionAmount.toUint256()
             );
 
-            AddressResolverLib.tokenVault().addDepositAmount(_user, ccy, addedAmount);
+            emit RedemptionExecuted(_redemptionCcy, _user, redemptionAmount);
+        } else if (redemptionAmount < 0) {
+            _removeDepositAtMarketTerminationPrice(
+                _redemptionCcy,
+                _user,
+                (-redemptionAmount).toUint256(),
+                _collateralCcy
+            );
+            emit RedemptionExecuted(_redemptionCcy, _user, redemptionAmount);
         }
-    }
-
-    function removeDepositAtMarketTerminationPrice(
-        bytes32 _ccy,
-        address _user,
-        uint256 _amount,
-        bytes32 _collateralCcy
-    ) external {
-        require(
-            AddressResolverLib.tokenVault().isCollateral(_collateralCcy),
-            "Not registered as collateral"
-        );
-
-        uint256 depositAmount = AddressResolverLib.tokenVault().getDepositAmount(
-            _user,
-            _collateralCcy
-        );
-
-        uint256 removedAmount = _convertFromETHAtMarketTerminationPrice(
-            _collateralCcy,
-            _convertToETHAtMarketTerminationPrice(_ccy, _amount)
-        );
-
-        require(depositAmount >= removedAmount, "Not enough collateral");
-
-        AddressResolverLib.tokenVault().removeDepositAmount(_user, _collateralCcy, removedAmount);
     }
 
     function calculateActualFunds(
@@ -574,7 +541,7 @@ library FundManagementLogic {
         }
     }
 
-    function calculateTotalFundsInETH(
+    function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
         uint256 _depositAmount
@@ -593,7 +560,7 @@ library FundManagementLogic {
         )
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
-        CalculatedTotalFundInETHVars memory vars;
+        CalculatedTotalFundInBaseCurrencyVars memory vars;
 
         vars.isCollateral = AddressResolverLib.tokenVault().isCollateral(currencySet.values());
         vars.plusDepositAmount = _depositAmount;
@@ -627,23 +594,22 @@ library FundManagementLogic {
                 vars.minusDepositAmount += vars.amounts[0] + vars.amounts[3];
             }
 
-            vars.amountsInETH = AddressResolverLib.currencyController().convertToBaseCurrency(
-                vars.ccy,
-                vars.amounts
-            );
+            vars.amountsInBaseCurrency = AddressResolverLib
+                .currencyController()
+                .convertToBaseCurrency(vars.ccy, vars.amounts);
 
-            totalClaimableAmount += vars.amountsInETH[1];
-            totalCollateralAmount += vars.amountsInETH[2];
-            totalWorkingBorrowOrdersAmount += vars.amountsInETH[4];
-            totalDebtAmount += vars.amountsInETH[5];
+            totalClaimableAmount += vars.amountsInBaseCurrency[1];
+            totalCollateralAmount += vars.amountsInBaseCurrency[2];
+            totalWorkingBorrowOrdersAmount += vars.amountsInBaseCurrency[4];
+            totalDebtAmount += vars.amountsInBaseCurrency[5];
 
             // NOTE: Lent amount and working lend orders amount are excluded here as they are not used
             // for the collateral calculation.
             // Those amounts need only to check whether there is enough deposit amount in the selected currency.
             if (vars.isCollateral[i]) {
-                totalWorkingLendOrdersAmount += vars.amountsInETH[0];
-                totalLentAmount += vars.amountsInETH[3];
-                totalBorrowedAmount += vars.amountsInETH[6];
+                totalWorkingLendOrdersAmount += vars.amountsInBaseCurrency[0];
+                totalLentAmount += vars.amountsInBaseCurrency[3];
+                totalBorrowedAmount += vars.amountsInBaseCurrency[6];
             }
         }
 
@@ -975,12 +941,12 @@ library FundManagementLogic {
         return (_futureValue * _unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
     }
 
-    function _convertToETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
+    function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
         internal
         view
         returns (uint256)
     {
-        if (_ccy == "ETH") {
+        if (_ccy == Storage.slot().baseCurrency) {
             return _amount;
         } else {
             uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
@@ -992,12 +958,12 @@ library FundManagementLogic {
         }
     }
 
-    function _convertFromETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
+    function _convertFromBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
         internal
         view
         returns (uint256)
     {
-        if (_ccy == "ETH") {
+        if (_ccy == Storage.slot().baseCurrency) {
             return _amount;
         } else {
             uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
@@ -1099,5 +1065,99 @@ library FundManagementLogic {
         if (_amount != untransferredAmount) {
             registerCurrencyAndMaturity(_ccy, _maturity, _to);
         }
+    }
+
+    function _calculateOrderFeeAmount(
+        uint256 _maturity,
+        uint256 _amount,
+        uint256 _orderFeeRate
+    ) internal view returns (uint256 orderFeeAmount) {
+        require(block.timestamp < _maturity, "Invalid maturity");
+        uint256 currentMaturity = _maturity - block.timestamp;
+
+        // NOTE: The formula is:
+        // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+        // orderFeeAmount = amount * actualRate
+        orderFeeAmount = (_orderFeeRate * currentMaturity * _amount).div(
+            Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT
+        );
+    }
+
+    function _resetFunds(bytes32 _ccy, address _user) internal returns (int256 amount) {
+        // First, clean up future values and genesis values to redeem those amounts.
+        cleanUpFunds(_ccy, _user);
+
+        amount = calculateActualFunds(_ccy, 0, _user).presentValue;
+
+        uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
+        for (uint256 j; j < maturities.length; j++) {
+            IFutureValueVault(
+                Storage.slot().futureValueVaults[_ccy][
+                    Storage.slot().maturityLendingMarkets[_ccy][maturities[j]]
+                ]
+            ).resetFutureValue(_user);
+        }
+
+        AddressResolverLib.genesisValueVault().resetGenesisValue(_ccy, _user);
+    }
+
+    function _addDepositAtMarketTerminationPrice(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount
+    ) internal {
+        bytes32[] memory collateralCurrencies = AddressResolverLib
+            .tokenVault()
+            .getCollateralCurrencies();
+
+        uint256[] memory marketTerminationRatios = new uint256[](collateralCurrencies.length);
+        uint256 marketTerminationRatioTotal;
+
+        for (uint256 i; i < collateralCurrencies.length; i++) {
+            bytes32 ccy = collateralCurrencies[i];
+            marketTerminationRatios[i] = Storage.slot().marketTerminationRatios[ccy];
+            marketTerminationRatioTotal += marketTerminationRatios[i];
+        }
+
+        uint256 amountInBaseCurrency = _convertToBaseCurrencyAtMarketTerminationPrice(
+            _ccy,
+            _amount
+        );
+
+        for (uint256 i; i < collateralCurrencies.length; i++) {
+            bytes32 ccy = collateralCurrencies[i];
+            uint256 addedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
+                ccy,
+                (amountInBaseCurrency * marketTerminationRatios[i]).div(marketTerminationRatioTotal)
+            );
+
+            AddressResolverLib.tokenVault().addDepositAmount(_user, ccy, addedAmount);
+        }
+    }
+
+    function _removeDepositAtMarketTerminationPrice(
+        bytes32 _ccy,
+        address _user,
+        uint256 _amount,
+        bytes32 _collateralCcy
+    ) internal {
+        require(
+            AddressResolverLib.tokenVault().isCollateral(_collateralCcy),
+            "Not registered as collateral"
+        );
+
+        uint256 depositAmount = AddressResolverLib.tokenVault().getDepositAmount(
+            _user,
+            _collateralCcy
+        );
+
+        uint256 removedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
+            _collateralCcy,
+            _convertToBaseCurrencyAtMarketTerminationPrice(_ccy, _amount)
+        );
+
+        require(depositAmount >= removedAmount, "Not enough collateral");
+
+        AddressResolverLib.tokenVault().removeDepositAmount(_user, _collateralCcy, removedAmount);
     }
 }

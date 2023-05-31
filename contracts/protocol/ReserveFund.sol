@@ -76,7 +76,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
      */
     function deposit(bytes32 _ccy, uint256 _amount) external payable override onlyOwner {
         address tokenAddress = tokenVault().getTokenAddress(_ccy);
-        if (ERC20Handler.weth() != tokenAddress) {
+        if (ERC20Handler.baseCurrency() != tokenAddress) {
             ERC20Handler.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
             ERC20Handler.safeApprove(tokenAddress, address(tokenVault()), _amount);
         }
@@ -93,7 +93,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
         tokenVault().withdraw(_ccy, _amount);
 
         address tokenAddress = tokenVault().getTokenAddress(_ccy);
-        if (ERC20Handler.weth() == tokenAddress) {
+        if (ERC20Handler.baseCurrency() == tokenAddress) {
             ERC20Handler.safeTransferETH(msg.sender, _amount);
         } else {
             ERC20Handler.safeTransfer(tokenAddress, msg.sender, _amount);

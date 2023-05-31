@@ -7,8 +7,8 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexETH } from '../../utils/strings';
 import { deployContracts } from '../common/deployment';
-import { Signers } from '../common/signers';
 import { calculateFutureValue } from '../common/orders';
+import { Signers } from '../common/signers';
 
 describe('Integration Test: Itayose', async () => {
   let owner: SignerWithAddress;
@@ -17,6 +17,8 @@ describe('Integration Test: Itayose', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
   let ellen: SignerWithAddress;
+
+  let lendingMarketOperationLogic: Contract;
 
   let futureValueVaults: Contract[];
   let tokenVault: Contract;
@@ -103,6 +105,7 @@ describe('Integration Test: Itayose', async () => {
       lendingMarketController,
       wETHToken,
       eFILToken,
+      lendingMarketOperationLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
@@ -195,7 +198,7 @@ describe('Integration Test: Itayose', async () => {
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
     });
 
     it('Execute Itayose without pre-order', async () => {
@@ -335,7 +338,7 @@ describe('Integration Test: Itayose', async () => {
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
     });
 
     it('Execute Itayose with pre-order', async () => {
@@ -396,7 +399,7 @@ describe('Integration Test: Itayose', async () => {
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
 
       await lendingMarketController.executeItayoseCalls(
         [hexETH],

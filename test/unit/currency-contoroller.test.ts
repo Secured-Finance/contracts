@@ -81,6 +81,10 @@ describe('CurrencyController', () => {
         .then((decimals) => expect(decimals).to.equal(0));
 
       await currencyControllerProxy
+        .getBaseCurrency()
+        .then((baseCurrency) => expect(baseCurrency).to.equal(hexETH));
+
+      await currencyControllerProxy
         .getHaircut(currency)
         .then((haircut) => expect(haircut).to.equal(9000));
     });

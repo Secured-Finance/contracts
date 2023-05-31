@@ -27,6 +27,9 @@ describe('LendingMarketController - Terminations', () => {
   let lendingMarketControllerProxy: Contract;
   let lendingMarketProxies: Contract[];
 
+  let lendingMarketOperationLogic: Contract;
+  let fundManagementLogic: Contract;
+
   let maturities: BigNumber[];
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -78,8 +81,20 @@ describe('LendingMarketController - Terminations', () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
 
-    ({ mockCurrencyController, mockTokenVault, lendingMarketControllerProxy } =
-      await deployContracts(owner));
+    ({
+      mockCurrencyController,
+      mockTokenVault,
+      lendingMarketControllerProxy,
+      lendingMarketOperationLogic,
+      fundManagementLogic,
+    } = await deployContracts(owner));
+
+    lendingMarketOperationLogic = lendingMarketOperationLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
+    fundManagementLogic = fundManagementLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
 
     mockERC20 = await deployMockContract(owner, MockERC20.abi);
 
@@ -108,7 +123,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       await expect(
         lendingMarketControllerProxy.createLendingMarket(targetCurrency, '1'),
@@ -256,14 +271,14 @@ describe('LendingMarketController - Terminations', () => {
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       for (const user of [alice, bob]) {
         await expect(
           lendingMarketControllerProxy
             .connect(user)
             .executeRedemption(targetCurrency, targetCurrency),
-        ).to.emit(lendingMarketControllerProxy, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         expect(
           await lendingMarketControllerProxy.getTotalPresentValue(
@@ -334,7 +349,7 @@ describe('LendingMarketController - Terminations', () => {
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketControllerProxy, 'LendingMarketsRotated');
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
 
       expect(
         await lendingMarketControllerProxy.getGenesisValue(
@@ -345,14 +360,14 @@ describe('LendingMarketController - Terminations', () => {
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       for (const user of [alice, bob]) {
         await expect(
           lendingMarketControllerProxy
             .connect(user)
             .executeRedemption(targetCurrency, targetCurrency),
-        ).to.emit(lendingMarketControllerProxy, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         expect(
           await lendingMarketControllerProxy.getGenesisValue(
@@ -403,7 +418,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       await expect(
         lendingMarketControllerProxy
@@ -452,7 +467,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.emit(lendingMarketControllerProxy, 'EmergencyTerminationExecuted');
+      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       await expect(
         lendingMarketControllerProxy

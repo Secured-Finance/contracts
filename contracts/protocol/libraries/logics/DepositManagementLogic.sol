@@ -105,11 +105,11 @@ library DepositManagementLogic {
         CalculatedFundVars memory vars;
 
         uint256 depositAmount = Storage.slot().depositAmounts[_user][_unsettledOrderCcy];
-        uint256 unsettledBorrowOrdersAmountInETH;
+        uint256 unsettledBorrowOrdersAmountInBaseCurrency;
 
         if (_unsettledOrderAmount > 0) {
             if (_isUnsettledBorrowOrder) {
-                unsettledBorrowOrdersAmountInETH = AddressResolverLib
+                unsettledBorrowOrdersAmountInBaseCurrency = AddressResolverLib
                     .currencyController()
                     .convertToBaseCurrency(_unsettledOrderCcy, _unsettledOrderAmount);
             } else {
@@ -136,7 +136,7 @@ library DepositManagementLogic {
             vars.debtAmount,
             vars.borrowedAmount,
             vars.isEnoughDeposit
-        ) = AddressResolverLib.lendingMarketController().calculateTotalFundsInETH(
+        ) = AddressResolverLib.lendingMarketController().calculateTotalFundsInBaseCurrency(
             _user,
             _unsettledOrderCcy,
             depositAmount
@@ -147,7 +147,7 @@ library DepositManagementLogic {
             "Not enough collateral in the selected currency"
         );
 
-        uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInETH(_user);
+        uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInBaseCurrency(_user);
 
         uint256 actualPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
         uint256 minusCollateral = vars.workingLendOrdersAmount + vars.lentAmount;
@@ -157,7 +157,7 @@ library DepositManagementLogic {
         totalUsedCollateral =
             vars.workingBorrowOrdersAmount +
             vars.debtAmount +
-            unsettledBorrowOrdersAmountInETH;
+            unsettledBorrowOrdersAmountInBaseCurrency;
         totalActualCollateral = actualPlusCollateral >= minusCollateral
             ? actualPlusCollateral - minusCollateral
             : 0;
@@ -276,13 +276,13 @@ library DepositManagementLogic {
         )
     {
         (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getCollateralAmount(_user);
-        uint256 liquidationAmountInETH = totalCollateral * Constants.PCT_DIGIT >=
+        uint256 liquidationAmountInBaseCurrency = totalCollateral * Constants.PCT_DIGIT >=
             totalUsedCollateral * Params.liquidationThresholdRate()
             ? 0
             : totalUsedCollateral.div(2);
         liquidationAmount = AddressResolverLib.currencyController().convertFromBaseCurrency(
             _liquidationCcy,
-            liquidationAmountInETH
+            liquidationAmountInBaseCurrency
         );
 
         protocolFee = (liquidationAmount * Params.liquidationProtocolFeeRate()).div(
@@ -327,7 +327,7 @@ library DepositManagementLogic {
      * @param _user Address of collateral user
      * @return totalDepositAmount The total deposited amount in ETH
      */
-    function _getTotalInternalDepositAmountInETH(address _user)
+    function _getTotalInternalDepositAmountInBaseCurrency(address _user)
         internal
         view
         returns (uint256 totalDepositAmount)

@@ -25,6 +25,10 @@ describe('Integration Test: Emergency terminations', async () => {
   let futureValueVaults: Contract[];
   let tokenVault: Contract;
   let lendingMarketController: Contract;
+
+  let lendingMarketOperationLogic: Contract;
+  let fundManagementLogic: Contract;
+
   let ethLendingMarkets: Contract[] = [];
   let filLendingMarkets: Contract[] = [];
   let wETHToken: Contract;
@@ -164,6 +168,8 @@ describe('Integration Test: Emergency terminations', async () => {
       eFILToken,
       usdcToken,
       eFilToETHPriceFeed,
+      lendingMarketOperationLogic,
+      fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
@@ -279,16 +285,18 @@ describe('Integration Test: Emergency terminations', async () => {
 
         await expect(
           lendingMarketController.executeEmergencyTermination(),
-        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+        ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
       });
 
       it('Execute forced redemption', async () => {
         const aliceTotalPVBefore =
-          await lendingMarketController.getTotalPresentValueInETH(
+          await lendingMarketController.getTotalPresentValueInBaseCurrency(
             alice.address,
           );
         const bobTotalPVBefore =
-          await lendingMarketController.getTotalPresentValueInETH(bob.address);
+          await lendingMarketController.getTotalPresentValueInBaseCurrency(
+            bob.address,
+          );
         const bobTotalCollateralBefore =
           await tokenVault.getTotalCollateralAmount(bob.address);
 
@@ -296,32 +304,33 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(alice)
             .executeRedemption(hexETH, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(alice)
             .executeRedemption(hexEFIL, hexUSDC),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(bob)
             .executeRedemption(hexETH, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(bob)
             .executeRedemption(hexEFIL, hexUSDC),
         )
-          .to.emit(lendingMarketController, 'RedemptionExecuted')
+          .to.emit(fundManagementLogic, 'RedemptionExecuted')
           .withArgs(hexEFIL, bob.address, orderAmountInFIL.mul(-1));
 
         for (const user of [alice, bob]) {
-          const fv = await lendingMarketController.getTotalPresentValueInETH(
-            user.address,
-          );
+          const fv =
+            await lendingMarketController.getTotalPresentValueInBaseCurrency(
+              user.address,
+            );
           expect(fv).equal(0);
         }
 
@@ -424,7 +433,7 @@ describe('Integration Test: Emergency terminations', async () => {
       it('Execute emergency termination', async () => {
         await expect(
           lendingMarketController.executeEmergencyTermination(),
-        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+        ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
       });
 
       it('Execute forced redemption', async () => {
@@ -432,14 +441,14 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(alice)
             .executeRedemption(hexETH, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(bob)
             .executeRedemption(hexETH, hexETH),
         )
-          .to.emit(lendingMarketController, 'RedemptionExecuted')
+          .to.emit(fundManagementLogic, 'RedemptionExecuted')
           .withArgs(
             hexETH,
             bob.address,
@@ -450,9 +459,10 @@ describe('Integration Test: Emergency terminations', async () => {
           );
 
         for (const user of [alice, bob]) {
-          const fv = await lendingMarketController.getTotalPresentValueInETH(
-            user.address,
-          );
+          const fv =
+            await lendingMarketController.getTotalPresentValueInBaseCurrency(
+              user.address,
+            );
           expect(fv).equal(0);
         }
       });
@@ -549,7 +559,7 @@ describe('Integration Test: Emergency terminations', async () => {
       it('Execute emergency termination', async () => {
         await expect(
           lendingMarketController.executeEmergencyTermination(),
-        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+        ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
       });
 
       it('Execute forced redemption', async () => {
@@ -557,30 +567,31 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(alice)
             .executeRedemption(hexETH, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(alice)
             .executeRedemption(hexEFIL, hexUSDC),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(bob)
             .executeRedemption(hexETH, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(bob)
             .executeRedemption(hexEFIL, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         for (const user of [alice, bob]) {
-          const fv = await lendingMarketController.getTotalPresentValueInETH(
-            user.address,
-          );
+          const fv =
+            await lendingMarketController.getTotalPresentValueInBaseCurrency(
+              user.address,
+            );
           expect(fv).equal(0);
         }
       });
@@ -710,7 +721,7 @@ describe('Integration Test: Emergency terminations', async () => {
       it('Execute emergency termination', async () => {
         await expect(
           lendingMarketController.executeEmergencyTermination(),
-        ).to.emit(lendingMarketController, 'EmergencyTerminationExecuted');
+        ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
       });
 
       it('Execute forced redemption', async () => {
@@ -718,19 +729,19 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(alice)
             .executeRedemption(hexETH, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(alice)
             .executeRedemption(hexEFIL, hexUSDC),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController
             .connect(bob)
             .executeRedemption(hexETH, hexETH),
-        ).to.emit(lendingMarketController, 'RedemptionExecuted');
+        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
 
         await expect(
           lendingMarketController

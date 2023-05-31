@@ -3,15 +3,11 @@ pragma solidity ^0.8.9;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
-import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {Constants} from "./libraries/Constants.sol";
 import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
@@ -46,8 +42,6 @@ contract LendingMarketController is
     LockAndMsgSender
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
-    using EnumerableSet for EnumerableSet.UintSet;
-    using SafeCast for int256;
 
     /**
      * @notice Modifier to check if the currency has a lending market.
@@ -107,6 +101,11 @@ contract LendingMarketController is
         Storage.slot().marketBasePeriod = _marketBasePeriod;
         MixinLendingMarketConfiguration._initialize(_owner, _observationPeriod);
         registerAddressResolver(_resolver);
+    }
+
+    // @inheritdoc MixinAddressResolver
+    function afterBuildCache() internal override {
+        Storage.slot().baseCurrency = currencyController().getBaseCurrency();
     }
 
     // @inheritdoc MixinAddressResolver
@@ -359,11 +358,11 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the total present value of the account converted to ETH.
+     * @notice Gets the total present value of the account converted to base currency.
      * @param _user User's address
-     * @return totalPresentValue The total present value in ETH
+     * @return totalPresentValue The total present value in base currency
      */
-    function getTotalPresentValueInETH(address _user)
+    function getTotalPresentValueInBaseCurrency(address _user)
         external
         view
         override
@@ -442,12 +441,12 @@ contract LendingMarketController is
 
     /**
      * @notice Gets the funds that are calculated from the user's lending and borrowing order list
-     * for all currencies in ETH.
+     * for all currencies in base currency.
      * @param _user User's address
      * @param _depositCcy Currency name to be used as deposit
      * @param _depositAmount Amount to deposit
      */
-    function calculateTotalFundsInETH(
+    function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
         uint256 _depositAmount
@@ -466,7 +465,12 @@ contract LendingMarketController is
             bool isEnoughDeposit
         )
     {
-        return FundManagementLogic.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
+        return
+            FundManagementLogic.calculateTotalFundsInBaseCurrency(
+                _user,
+                _depositCcy,
+                _depositAmount
+            );
     }
 
     /**
@@ -516,17 +520,7 @@ contract LendingMarketController is
         ifActive
         onlyOwner
     {
-        (address market, address futureValueVault, uint256 maturity) = LendingMarketOperationLogic
-            .createLendingMarket(_ccy, _openingDate);
-
-        emit LendingMarketCreated(
-            _ccy,
-            market,
-            futureValueVault,
-            Storage.slot().lendingMarkets[_ccy].length,
-            _openingDate,
-            maturity
-        );
+        LendingMarketOperationLogic.createLendingMarket(_ccy, _openingDate);
     }
 
     /**
@@ -550,8 +544,7 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
-
+        LendingMarketUserLogic.createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
         return true;
     }
 
@@ -581,8 +574,7 @@ contract LendingMarketController is
         returns (bool)
     {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        _createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
-
+        LendingMarketUserLogic.createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
         return true;
     }
 
@@ -604,7 +596,14 @@ contract LendingMarketController is
         uint256 _amount,
         uint256 _unitPrice
     ) public override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        _createPreOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
+        LendingMarketUserLogic.createPreOrder(
+            _ccy,
+            _maturity,
+            msg.sender,
+            _side,
+            _amount,
+            _unitPrice
+        );
 
         return true;
     }
@@ -635,7 +634,14 @@ contract LendingMarketController is
         returns (bool)
     {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        _createPreOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
+        LendingMarketUserLogic.createPreOrder(
+            _ccy,
+            _maturity,
+            msg.sender,
+            _side,
+            _amount,
+            _unitPrice
+        );
 
         return true;
     }
@@ -653,42 +659,7 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        int256 futureValue = FundManagementLogic
-            .calculateActualFunds(_ccy, _maturity, msg.sender)
-            .futureValue;
-
-        (
-            ILendingMarket.FilledOrder memory filledOrder,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
-            ProtocolTypes.Side side
-        ) = LendingMarketUserLogic.unwindPosition(_ccy, _maturity, msg.sender, futureValue);
-
-        _updateFundsForTaker(
-            _ccy,
-            _maturity,
-            msg.sender,
-            side,
-            filledOrder.amount,
-            filledOrder.futureValue,
-            filledOrder.unitPrice
-        );
-
-        _updateFundsForMaker(
-            _ccy,
-            _maturity,
-            side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
-            partiallyFilledOrder
-        );
-
-        // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
-        // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
-        (int256 currentFutureValue, ) = IFutureValueVault(getFutureValueVault(_ccy, _maturity))
-            .getFutureValue(msg.sender);
-
-        if (currentFutureValue != 0) {
-            FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, msg.sender);
-        }
-
+        LendingMarketUserLogic.unwindPosition(_ccy, _maturity, msg.sender);
         return true;
     }
 
@@ -706,26 +677,7 @@ contract LendingMarketController is
         ifInactive
         returns (bool)
     {
-        int256 redemptionAmount = FundManagementLogic.resetFunds(_redemptionCcy, msg.sender);
-
-        if (redemptionAmount > 0) {
-            FundManagementLogic.addDepositAtMarketTerminationPrice(
-                _redemptionCcy,
-                msg.sender,
-                redemptionAmount.toUint256()
-            );
-
-            emit RedemptionExecuted(_redemptionCcy, msg.sender, redemptionAmount);
-        } else if (redemptionAmount < 0) {
-            FundManagementLogic.removeDepositAtMarketTerminationPrice(
-                _redemptionCcy,
-                msg.sender,
-                (-redemptionAmount).toUint256(),
-                _collateralCcy
-            );
-            emit RedemptionExecuted(_redemptionCcy, msg.sender, redemptionAmount);
-        }
-
+        FundManagementLogic.executeRedemption(_redemptionCcy, _collateralCcy, msg.sender);
         return true;
     }
 
@@ -749,13 +701,13 @@ contract LendingMarketController is
                 ILendingMarket.PartiallyFilledOrder memory partiallyFilledBorrowingOrder
             ) = LendingMarketOperationLogic.executeItayoseCall(ccy, _maturity);
 
-            _updateFundsForMaker(
+            LendingMarketUserLogic.updateFundsForMaker(
                 ccy,
                 _maturity,
                 ProtocolTypes.Side.LEND,
                 partiallyFilledLendingOrder
             );
-            _updateFundsForMaker(
+            LendingMarketUserLogic.updateFundsForMaker(
                 ccy,
                 _maturity,
                 ProtocolTypes.Side.BORROW,
@@ -804,22 +756,12 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        uint256 liquidatedDebtAmount = FundManagementLogic.executeLiquidation(
+        FundManagementLogic.executeLiquidation(
             msg.sender,
             _user,
             _collateralCcy,
             _debtCcy,
             _debtMaturity
-        );
-
-        require(tokenVault().isCovered(msg.sender), "Invalid liquidation");
-
-        emit LiquidationExecuted(
-            _user,
-            _collateralCcy,
-            _debtCcy,
-            _debtMaturity,
-            liquidatedDebtAmount
         );
 
         return true;
@@ -841,26 +783,24 @@ contract LendingMarketController is
         hasLendingMarket(_ccy)
         ifActive
     {
-        (uint256 fromMaturity, uint256 toMaturity) = LendingMarketOperationLogic
-            .rotateLendingMarkets(_ccy, getAutoRollFeeRate(_ccy));
+        uint256 newMaturity = LendingMarketOperationLogic.rotateLendingMarkets(
+            _ccy,
+            getAutoRollFeeRate(_ccy)
+        );
 
         FundManagementLogic.convertFutureValueToGenesisValue(
             _ccy,
-            toMaturity,
+            newMaturity,
             address(reserveFund())
         );
-
-        emit LendingMarketsRotated(_ccy, fromMaturity, toMaturity);
     }
 
     /**
      * @notice Executes an emergency termination to stop the protocol. Once this function is executed,
      * the protocol cannot be run again. Also, users will only be able to redeem and withdraw.
      */
-    function executeEmergencyTermination() external nonReentrant ifActive onlyOwner {
+    function executeEmergencyTermination() external override nonReentrant ifActive onlyOwner {
         LendingMarketOperationLogic.executeEmergencyTermination();
-
-        emit EmergencyTerminationExecuted(block.timestamp);
     }
 
     /**
@@ -870,7 +810,6 @@ contract LendingMarketController is
      */
     function pauseLendingMarkets(bytes32 _ccy) external override ifActive onlyOwner returns (bool) {
         LendingMarketOperationLogic.pauseLendingMarkets(_ccy);
-
         return true;
     }
 
@@ -887,7 +826,6 @@ contract LendingMarketController is
         returns (bool)
     {
         LendingMarketOperationLogic.unpauseLendingMarkets(_ccy);
-
         return true;
     }
 
@@ -895,8 +833,9 @@ contract LendingMarketController is
      * @notice Clean up all funds of the user
      * @param _user User's address
      */
-    function cleanUpAllFunds(address _user) external override {
+    function cleanUpAllFunds(address _user) external override returns (bool) {
         FundManagementLogic.cleanUpAllFunds(_user);
+        return true;
     }
 
     /**
@@ -912,136 +851,5 @@ contract LendingMarketController is
         returns (uint256 totalActiveOrderCount)
     {
         return FundManagementLogic.cleanUpFunds(_ccy, _user);
-    }
-
-    function _createOrder(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice
-    ) private returns (uint256 filledAmount) {
-        require(_amount > 0, "Invalid amount");
-        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
-
-        require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
-
-        uint256 circuitBreakerLimitRange = getCircuitBreakerLimitRange(_ccy);
-
-        (
-            ILendingMarket.FilledOrder memory filledOrder,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
-        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
-                _side,
-                _user,
-                _amount,
-                _unitPrice,
-                circuitBreakerLimitRange
-            );
-
-        filledAmount = filledOrder.amount;
-
-        // The case that an order is placed in the order book
-        if ((filledAmount + filledOrder.ignoredAmount) != _amount) {
-            activeOrderCount += 1;
-        }
-
-        require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
-
-        _updateFundsForTaker(
-            _ccy,
-            _maturity,
-            _user,
-            _side,
-            filledAmount,
-            filledOrder.futureValue,
-            filledOrder.unitPrice
-        );
-
-        _updateFundsForMaker(
-            _ccy,
-            _maturity,
-            _side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
-            partiallyFilledOrder
-        );
-
-        Storage.slot().usedCurrencies[_user].add(_ccy);
-    }
-
-    function _updateFundsForTaker(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _filledAmount,
-        uint256 _filledAmountInFV,
-        uint256 _filledUnitPrice
-    ) private {
-        if (_filledAmountInFV != 0) {
-            FundManagementLogic.updateFunds(
-                _ccy,
-                _maturity,
-                _user,
-                _side,
-                _filledAmount,
-                _filledAmountInFV,
-                true
-            );
-
-            LendingMarketOperationLogic.updateOrderLogs(
-                _ccy,
-                _maturity,
-                getObservationPeriod(),
-                _filledUnitPrice,
-                _filledAmount,
-                _filledAmountInFV
-            );
-        }
-    }
-
-    function _updateFundsForMaker(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
-    ) private {
-        if (partiallyFilledOrder.futureValue != 0) {
-            FundManagementLogic.updateFunds(
-                _ccy,
-                _maturity,
-                partiallyFilledOrder.maker,
-                _side,
-                partiallyFilledOrder.amount,
-                partiallyFilledOrder.futureValue,
-                false
-            );
-        }
-    }
-
-    function _createPreOrder(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice
-    ) private {
-        require(_amount > 0, "Invalid amount");
-        uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
-
-        require(activeOrderCount + 1 <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
-
-        FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
-
-        require(tokenVault().isCovered(_user, _ccy, _amount, _side), "Not enough collateral");
-
-        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createPreOrder(
-            _side,
-            _user,
-            _amount,
-            _unitPrice
-        );
     }
 }
