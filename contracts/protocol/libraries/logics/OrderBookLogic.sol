@@ -584,6 +584,48 @@ library OrderBookLogic {
         }
     }
 
+    function getLowerCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 price)
+        internal
+        pure
+        returns (uint256 cbThresholdUnitPrice)
+    {
+        uint256 num = price * 100000000;
+        uint256 den = 100000000 +
+            _circuitBreakerLimitRange *
+            10000 -
+            _circuitBreakerLimitRange *
+            price;
+        cbThresholdUnitPrice = num.div(den);
+
+        cbThresholdUnitPrice = price - cbThresholdUnitPrice >
+            Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
+            ? price - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
+            : cbThresholdUnitPrice;
+        cbThresholdUnitPrice = cbThresholdUnitPrice < 1 ? 1 : cbThresholdUnitPrice;
+    }
+
+    function getUpperCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 price)
+        internal
+        pure
+        returns (uint256 cbThresholdUnitPrice)
+    {
+        uint256 num = price * 100000000;
+        uint256 den = 100000000 -
+            _circuitBreakerLimitRange *
+            10000 +
+            _circuitBreakerLimitRange *
+            price;
+        cbThresholdUnitPrice = num.div(den);
+
+        cbThresholdUnitPrice = cbThresholdUnitPrice - price >
+            Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
+            ? price + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
+            : cbThresholdUnitPrice;
+        cbThresholdUnitPrice = cbThresholdUnitPrice > Constants.PRICE_DIGIT
+            ? Constants.PRICE_DIGIT
+            : cbThresholdUnitPrice;
+    }
+
     function checkCircuitBreakerThreshold(
         ProtocolTypes.Side _side,
         uint256 _unitPrice,
