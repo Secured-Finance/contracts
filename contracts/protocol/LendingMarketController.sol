@@ -579,7 +579,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+     * @notice Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
      * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
      *
      * @param _ccy Currency name in bytes32 of the selected market

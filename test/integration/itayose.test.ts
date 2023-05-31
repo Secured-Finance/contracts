@@ -270,8 +270,8 @@ describe('Integration Test: Itayose', async () => {
     });
 
     it('Crate pre-orders', async () => {
-      // Move to 48 hours before maturity.
-      await time.increaseTo(maturities[0].sub('172800').toString());
+      // Move to 7 days before maturity.
+      await time.increaseTo(maturities[0].sub('604800').toString());
 
       await tokenVault.connect(ellen).deposit(hexETH, orderAmount.mul(4), {
         value: orderAmount.mul(4),
@@ -371,8 +371,8 @@ describe('Integration Test: Itayose', async () => {
     });
 
     it('Crate pre-orders', async () => {
-      // Move to 48 hours before maturity.
-      await time.increaseTo(maturities[0].sub('172800').toString());
+      // Move to 7 days before maturity.
+      await time.increaseTo(maturities[0].sub('604800').toString());
 
       await tokenVault.connect(ellen).deposit(hexETH, orderAmount.mul(4), {
         value: orderAmount.mul(4),
