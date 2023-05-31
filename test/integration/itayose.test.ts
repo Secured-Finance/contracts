@@ -7,8 +7,8 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexETH } from '../../utils/strings';
 import { deployContracts } from '../common/deployment';
-import { Signers } from '../common/signers';
 import { calculateFutureValue } from '../common/orders';
+import { Signers } from '../common/signers';
 
 describe('Integration Test: Itayose', async () => {
   let owner: SignerWithAddress;
@@ -399,7 +399,7 @@ describe('Integration Test: Itayose', async () => {
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
 
       await lendingMarketController.executeItayoseCalls(
         [hexETH],
