@@ -187,9 +187,7 @@ library OrderBookLogic {
             uint256 unitPrice = marketOrder.unitPrice;
             if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
                 uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-                if (openingUnitPrice < unitPrice) {
-                    unitPrice = openingUnitPrice;
-                }
+                unitPrice = _getUnitPriceForPreLendOrder(openingUnitPrice, unitPrice);
             }
 
             inactiveFutureValue += (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
@@ -240,9 +238,7 @@ library OrderBookLogic {
             uint256 unitPrice = marketOrder.unitPrice;
             if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
                 uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-                if (openingUnitPrice > unitPrice) {
-                    unitPrice = openingUnitPrice;
-                }
+                unitPrice = _getUnitPriceForPreBorrowOrder(openingUnitPrice, unitPrice);
             }
 
             inactiveFutureValue += (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
@@ -458,17 +454,16 @@ library OrderBookLogic {
         activeOrderCount = activeLendOrderIds.length;
         uint256 inactiveOrderCount = inActiveLendOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
+        OrderStatisticsTreeLib.Tree storage orders = Storage.slot().lendOrders[_maturity];
+        uint256 openingUnitPrice = Storage.slot().openingUnitPrices[_maturity];
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveLendOrderIds[i]];
-            OrderItem memory orderItem = Storage.slot().lendOrders[_maturity].getOrderById(
-                marketOrder.unitPrice,
-                inActiveLendOrderIds[i]
-            );
-            removedFutureValue += Storage.slot().lendOrders[_maturity].getFutureValue(
-                marketOrder.unitPrice,
-                inActiveLendOrderIds[i]
-            );
+            uint256 unitPrice = Storage.slot().isPreOrder[inActiveLendOrderIds[i]] == true
+                ? _getUnitPriceForPreLendOrder(openingUnitPrice, marketOrder.unitPrice)
+                : marketOrder.unitPrice;
+            OrderItem memory orderItem = orders.getOrderById(unitPrice, inActiveLendOrderIds[i]);
+            removedFutureValue += orders.getFutureValue(unitPrice, inActiveLendOrderIds[i]);
             removedOrderAmount += orderItem.amount;
 
             orderIds[i] = orderItem.orderId;
@@ -493,17 +488,16 @@ library OrderBookLogic {
         activeOrderCount = activeBorrowOrderIds.length;
         uint256 inactiveOrderCount = inActiveBorrowOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
+        OrderStatisticsTreeLib.Tree storage orders = Storage.slot().borrowOrders[_maturity];
+        uint256 openingUnitPrice = Storage.slot().openingUnitPrices[_maturity];
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveBorrowOrderIds[i]];
-            OrderItem memory orderItem = Storage.slot().borrowOrders[_maturity].getOrderById(
-                marketOrder.unitPrice,
-                inActiveBorrowOrderIds[i]
-            );
-            removedFutureValue += Storage.slot().borrowOrders[_maturity].getFutureValue(
-                marketOrder.unitPrice,
-                inActiveBorrowOrderIds[i]
-            );
+            uint256 unitPrice = Storage.slot().isPreOrder[inActiveBorrowOrderIds[i]] == true
+                ? _getUnitPriceForPreBorrowOrder(openingUnitPrice, marketOrder.unitPrice)
+                : marketOrder.unitPrice;
+            OrderItem memory orderItem = orders.getOrderById(unitPrice, inActiveBorrowOrderIds[i]);
+            removedFutureValue += orders.getFutureValue(unitPrice, inActiveBorrowOrderIds[i]);
 
             removedOrderAmount += orderItem.amount;
 
@@ -662,12 +656,12 @@ library OrderBookLogic {
      * @notice Increases and returns id of last order in order book.
      * @return The new order id
      */
-    function _nextOrderId() private returns (uint48) {
+    function _nextOrderId() internal returns (uint48) {
         Storage.slot().lastOrderId++;
         return Storage.slot().lastOrderId;
     }
 
-    function _removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) private {
+    function _removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) internal {
         uint256 lastOrderIndex = orders.length - 1;
         for (uint256 i = 0; i <= lastOrderIndex; i++) {
             if (orders[i] == orderId) {
@@ -680,5 +674,21 @@ library OrderBookLogic {
                 break;
             }
         }
+    }
+
+    function _getUnitPriceForPreLendOrder(uint256 openingUnitPrice, uint256 unitPrice)
+        private
+        pure
+        returns (uint256)
+    {
+        return openingUnitPrice < unitPrice ? openingUnitPrice : unitPrice;
+    }
+
+    function _getUnitPriceForPreBorrowOrder(uint256 openingUnitPrice, uint256 unitPrice)
+        private
+        pure
+        returns (uint256)
+    {
+        return openingUnitPrice > unitPrice ? openingUnitPrice : unitPrice;
     }
 }

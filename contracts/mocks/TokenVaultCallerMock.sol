@@ -46,11 +46,11 @@ contract TokenVaultCallerMock {
         tokenVault.transferFrom(ccy, from, to, amount);
     }
 
-    function getTotalPresentValueInETH(address _user) public view returns (int256) {
-        return lendingMarketController.getTotalPresentValueInETH(_user);
+    function getTotalPresentValueInBaseCurrency(address _user) public view returns (int256) {
+        return lendingMarketController.getTotalPresentValueInBaseCurrency(_user);
     }
 
-    function calculateTotalFundsInETH(
+    function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
         uint256 _depositAmount
@@ -68,7 +68,12 @@ contract TokenVaultCallerMock {
             bool isEnoughDeposit
         )
     {
-        return lendingMarketController.calculateTotalFundsInETH(_user, _depositCcy, _depositAmount);
+        return
+            lendingMarketController.calculateTotalFundsInBaseCurrency(
+                _user,
+                _depositCcy,
+                _depositAmount
+            );
     }
 
     function calculateFunds(bytes32 _ccy, address _user)

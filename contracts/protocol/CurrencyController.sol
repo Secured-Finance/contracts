@@ -49,10 +49,18 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets the base currency name.
+     * @return Currency name in bytes32
+     */
+    function getBaseCurrency() external view override returns (bytes32) {
+        return Storage.slot().baseCurrency;
+    }
+
+    /**
      * @notice Gets cached decimal of the price feed for the selected currency.
      * @param _ccy Currency name in bytes32
      */
-    function getDecimals(bytes32 _ccy) external view returns (uint8) {
+    function getDecimals(bytes32 _ccy) external view override returns (uint8) {
         return Storage.slot().decimalsCaches[_ccy];
     }
 

@@ -53,7 +53,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
      * @param _liquidationThresholdRate The liquidation threshold rate
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
-     * @param _WETH9 The address of WETH
+     * @param _WETH9 The address of the wrapped token to use as base currency
      */
     function initialize(
         address _owner,
@@ -90,7 +90,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     receive() external payable {
-        require(msg.sender == ERC20Handler.weth(), "Not WETH");
+        require(msg.sender == ERC20Handler.baseCurrency(), "Not base currency");
     }
 
     /**
@@ -483,7 +483,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     ) internal {
         require(_amount > 0, "Invalid amount");
         require(
-            Storage.slot().tokenAddresses[_ccy] != ERC20Handler.weth() || _amount == msg.value,
+            Storage.slot().tokenAddresses[_ccy] != ERC20Handler.baseCurrency() ||
+                _amount == msg.value,
             "Invalid amount"
         );
 

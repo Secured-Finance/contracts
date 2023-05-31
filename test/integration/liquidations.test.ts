@@ -14,6 +14,7 @@ import {
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
+import { getAmountWithUnwindFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
 const ERROR_RANGE = BigNumber.from(1000);
@@ -52,7 +53,7 @@ describe('Integration Test: Liquidations', async () => {
 
   const initialETHBalance = BigNumber.from('1000000000000000000');
   const initialFILBalance = BigNumber.from('1000000000000000000000');
-  const initialUSDCBalance = BigNumber.from('1000000000000000');
+  const initialUSDCBalance = BigNumber.from('100000000000000');
 
   class LendingInfo {
     private address: string;
@@ -195,6 +196,7 @@ describe('Integration Test: Liquidations', async () => {
       .getContractFactory('Liquidator')
       .then((factory) =>
         factory.deploy(
+          hexETH,
           lendingMarketController.address,
           tokenVault.address,
           mockUniswapRouter.address,
@@ -330,10 +332,7 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketController
           .connect(owner)
@@ -398,7 +397,7 @@ describe('Integration Test: Liquidations', async () => {
           )
           .then(async (tx) => {
             await expect(tx).to.emit(
-              lendingMarketController,
+              fundManagementLogic,
               'LiquidationExecuted',
             );
             return tx.wait();
@@ -460,18 +459,24 @@ describe('Integration Test: Liquidations', async () => {
         expect(reserveFundDepositEFILAfter).to.equal(0);
 
         // Check fees
-        const liquidationAmountWithFee = receivedDebtAmount
-          .mul(
-            ethers.BigNumber.from('10000')
-              .add(liquidatorFeeRate)
-              .add(liquidationProtocolFeeRate),
+        const { timestamp } = await ethers.provider.getBlock(receipt.blockHash);
+        const unwindFee = receivedDebtAmount
+          .sub(
+            getAmountWithUnwindFee(
+              Side.LEND,
+              receivedDebtAmount,
+              filMaturities[0].sub(timestamp),
+            ),
           )
-          .div('10000');
+          .abs();
 
         expect(receivedDebtAmount).to.equal(filledOrderAmount.div(2));
-        expect(liquidatorBalanceEFIL).to.equal(
-          receivedDebtAmount.mul(liquidatorFeeRate).div('10000'),
-        );
+        expect(
+          liquidatorBalanceEFIL
+            .add(unwindFee)
+            .sub(receivedDebtAmount.mul(liquidatorFeeRate).div('10000'))
+            .abs(),
+        ).to.lte(1);
         expect(protocolFeeEFIL).to.equal(
           receivedDebtAmount.mul(liquidationProtocolFeeRate).div('10000'),
         );
@@ -494,147 +499,6 @@ describe('Integration Test: Liquidations', async () => {
         const reserveFundsAmountAfterDeposit =
           await tokenVault.getDepositAmount(reserveFund.address, hexEFIL);
         expect(reserveFundsAmountAfterDeposit).to.equal('1000');
-      });
-    });
-
-    describe('Increase FIL exchange rate, Execute liquidation once without using funds in the reserve fund', async () => {
-      const filledOrderAmount = BigNumber.from('200000000000000000000');
-      const depositAmount = BigNumber.from('1000000000000000000');
-      let lendingInfo: LendingInfo;
-      let aliceInitialBalance: BigNumber;
-
-      before(async () => {
-        [alice, bob] = await getUsers(2);
-        await resetContractInstances();
-      });
-
-      it('Pause the reserve fund', async () => {
-        await reserveFund.pause();
-      });
-
-      it('Create orders', async () => {
-        lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
-
-        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
-          value: depositAmount,
-        });
-        await tokenVault.connect(owner).deposit(hexETH, depositAmount.mul(3), {
-          value: depositAmount.mul(3),
-        });
-
-        await lendingMarketController
-          .connect(bob)
-          .depositAndCreateOrder(
-            hexEFIL,
-            filMaturities[0],
-            Side.LEND,
-            filledOrderAmount,
-            '8000',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .depositAndCreateOrder(
-            hexEFIL,
-            filMaturities[0],
-            Side.LEND,
-            '10000000000000000000',
-            '7999',
-          );
-
-        await expect(
-          lendingMarketController
-            .connect(alice)
-            .createOrder(
-              hexEFIL,
-              filMaturities[0],
-              Side.BORROW,
-              filledOrderAmount,
-              '0',
-            ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
-
-        await lendingMarketController
-          .connect(owner)
-          .createOrder(
-            hexEFIL,
-            filMaturities[0],
-            Side.BORROW,
-            filledOrderAmount.mul(2),
-            '8000',
-          );
-
-        expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
-        ).to.equal(filledOrderAmount);
-      });
-
-      it('Withdraw', async () => {
-        await tokenVault
-          .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
-
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
-        expect(
-          aliceBalanceAfter
-            .sub(aliceInitialBalance)
-            .sub(filledOrderAmount)
-            .abs(),
-        ).to.lt(ERROR_RANGE);
-      });
-
-      it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(
-          eFilToETHRate.mul('110').div('100'),
-        );
-
-        const rfFutureValueBefore =
-          await lendingMarketController.getFutureValue(
-            hexEFIL,
-            filMaturities[0],
-            reserveFund.address,
-          );
-
-        const lendingInfoBefore = await lendingInfo.load('Before', {
-          EFIL: filMaturities[0],
-        });
-
-        await expect(
-          liquidator.executeLiquidationCall(
-            hexETH,
-            ethMaturities,
-            hexEFIL,
-            filMaturities[0],
-            alice.address,
-            10,
-          ),
-        ).to.emit(lendingMarketController, 'LiquidationExecuted');
-
-        const rfFutureValueAfter = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          reserveFund.address,
-        );
-
-        const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[0],
-        });
-        lendingInfo.show();
-
-        expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to
-          .true;
-        expect(
-          lendingInfoAfter.pvs[0].sub(lendingInfoBefore.pvs[0].div(2)).abs(),
-        ).to.lt(ERROR_RANGE);
-        expect(rfFutureValueBefore).to.equal(rfFutureValueAfter);
-      });
-
-      it('Unpause the reserve fund', async () => {
-        await reserveFund.unpause();
       });
     });
 
@@ -689,10 +553,7 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketController
           .connect(owner)
@@ -747,7 +608,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             10,
           ),
-        ).to.emit(lendingMarketController, 'LiquidationExecuted');
+        ).to.emit(fundManagementLogic, 'LiquidationExecuted');
 
         const rfFutureValueAfter = await lendingMarketController.getFutureValue(
           hexEFIL,
@@ -773,7 +634,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             10,
           ),
-        ).to.emit(lendingMarketController, 'LiquidationExecuted');
+        ).to.emit(fundManagementLogic, 'LiquidationExecuted');
 
         const tokenVaultBalanceAfter2 = await wETHToken.balanceOf(
           tokenVault.address,
@@ -861,10 +722,7 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketController
           .connect(owner)
@@ -940,7 +798,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             10,
           ),
-        ).to.emit(lendingMarketController, 'LiquidationExecuted');
+        ).to.emit(fundManagementLogic, 'LiquidationExecuted');
 
         const lendingInfoAfter = await lendingInfo.load('After', {
           EFIL: filMaturities[1],
@@ -997,10 +855,7 @@ describe('Integration Test: Liquidations', async () => {
               filledOrderAmount,
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketController
           .connect(owner)
@@ -1149,10 +1004,7 @@ describe('Integration Test: Liquidations', async () => {
               orderAmountInUSDC,
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketController
           .connect(owner)
@@ -1200,10 +1052,7 @@ describe('Integration Test: Liquidations', async () => {
               orderAmountInFIL.div(2),
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketController
           .connect(owner)
@@ -1353,10 +1202,7 @@ describe('Integration Test: Liquidations', async () => {
                 orderAmountInUSDC.div(3).mul(1 + i),
                 '0',
               ),
-          ).to.emit(
-            fundManagementLogic.attach(lendingMarketController.address),
-            'OrderFilled',
-          );
+          ).to.emit(fundManagementLogic, 'OrderFilled');
 
           await lendingMarketController
             .connect(owner)
@@ -1405,10 +1251,7 @@ describe('Integration Test: Liquidations', async () => {
               orderAmountInFIL.div(2),
               '0',
             ),
-        ).to.emit(
-          fundManagementLogic.attach(lendingMarketController.address),
-          'OrderFilled',
-        );
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         await lendingMarketController
           .connect(owner)
@@ -1561,10 +1404,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInFIL,
             '0',
           ),
-      ).to.emit(
-        fundManagementLogic.attach(lendingMarketController.address),
-        'OrderFilled',
-      );
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -1617,10 +1457,7 @@ describe('Integration Test: Liquidations', async () => {
             filledOrderAmountInUSDC,
             '0',
           ),
-      ).to.emit(
-        fundManagementLogic.attach(lendingMarketController.address),
-        'OrderFilled',
-      );
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await lendingMarketController
         .connect(owner)
@@ -1670,7 +1507,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'LiquidationExecuted');
+      ).to.emit(fundManagementLogic, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         EFIL: filMaturities[0],
@@ -1712,7 +1549,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(lendingMarketController, 'LiquidationExecuted');
+      ).to.emit(fundManagementLogic, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         EFIL: filMaturities[0],

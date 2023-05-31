@@ -15,7 +15,7 @@ const func: DeployFunction = async function ({
     'QuickSort',
     'DepositManagementLogic',
     'LendingMarketOperationLogic',
-    'LendingMarketUserLogic',
+    'LendingMarketConfigurationLogic',
     'OrderBookLogic',
   ]) {
     const deployResult = await deploy(libName, {
@@ -27,12 +27,28 @@ const func: DeployFunction = async function ({
     deployResults[libName] = deployResult;
   }
 
-  await deploy('FundManagementLogic', {
+  deployResults['FundManagementLogic'] = await deploy('FundManagementLogic', {
     from: deployer,
     libraries: {
       QuickSort: deployResults['QuickSort'].address,
     },
-  }).then((result) => executeIfNewlyDeployment('FundManagementLogic', result));
+  }).then((result) => {
+    executeIfNewlyDeployment('FundManagementLogic', result);
+    return result;
+  });
+
+  await deploy('LendingMarketUserLogic', {
+    from: deployer,
+    libraries: {
+      FundManagementLogic: deployResults['FundManagementLogic'].address,
+      LendingMarketConfigurationLogic:
+        deployResults['LendingMarketConfigurationLogic'].address,
+      LendingMarketOperationLogic:
+        deployResults['LendingMarketOperationLogic'].address,
+    },
+  }).then((result) =>
+    executeIfNewlyDeployment('LendingMarketUserLogic', result),
+  );
 };
 
 func.tags = ['Libraries'];

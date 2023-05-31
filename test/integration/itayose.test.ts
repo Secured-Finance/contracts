@@ -7,6 +7,7 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexETH } from '../../utils/strings';
 import { deployContracts } from '../common/deployment';
+import { calculateFutureValue } from '../common/orders';
 import { Signers } from '../common/signers';
 
 describe('Integration Test: Itayose', async () => {
@@ -16,6 +17,8 @@ describe('Integration Test: Itayose', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
   let ellen: SignerWithAddress;
+
+  let lendingMarketOperationLogic: Contract;
 
   let futureValueVaults: Contract[];
   let tokenVault: Contract;
@@ -102,6 +105,7 @@ describe('Integration Test: Itayose', async () => {
       lendingMarketController,
       wETHToken,
       eFILToken,
+      lendingMarketOperationLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
@@ -194,7 +198,7 @@ describe('Integration Test: Itayose', async () => {
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
     });
 
     it('Execute Itayose without pre-order', async () => {
@@ -334,7 +338,7 @@ describe('Integration Test: Itayose', async () => {
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketController, 'LendingMarketsRotated');
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
     });
 
     it('Execute Itayose with pre-order', async () => {
@@ -355,6 +359,90 @@ describe('Integration Test: Itayose', async () => {
       expect(marketInfo.lendUnitPrice).to.equal('7200');
       expect(marketInfo.midUnitPrice).to.equal('7250');
       expect(openingUnitPrice).to.equal('7300');
+    });
+  });
+
+  describe('Execute Itayose with pre-order and check if clearing order process takes opening unit price into account', async () => {
+    const orderAmount = BigNumber.from('100000000000000000');
+
+    before(async () => {
+      [dave, ellen] = await getUsers(5);
+      await resetContractInstances();
+    });
+
+    it('Crate pre-orders', async () => {
+      // Move to 48 hours before maturity.
+      await time.increaseTo(maturities[0].sub('172800').toString());
+
+      await tokenVault.connect(ellen).deposit(hexETH, orderAmount.mul(4), {
+        value: orderAmount.mul(4),
+      });
+
+      const maturity = maturities[maturities.length - 1];
+
+      await lendingMarketController
+        .connect(dave)
+        .depositAndCreatePreOrder(
+          hexETH,
+          maturity,
+          Side.LEND,
+          orderAmount.div(2),
+          7400,
+          { value: orderAmount.div(2) },
+        );
+
+      await lendingMarketController
+        .connect(ellen)
+        .createPreOrder(hexETH, maturity, Side.BORROW, orderAmount, 7300);
+
+      // Auto-roll
+      await time.increaseTo(maturities[0].toString());
+      await expect(
+        lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
+      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+
+      await lendingMarketController.executeItayoseCalls(
+        [hexETH],
+        maturities[maturities.length - 1],
+      );
+    });
+
+    it('Check if clearing order process takes the opening price into accounts', async () => {
+      const lendingMarket = lendingMarkets[lendingMarkets.length - 1];
+      // Fetch the future value before the clean up process is called
+      const daveFVBefore = await lendingMarketController.getFutureValue(
+        hexETH,
+        maturities[maturities.length - 1],
+        dave.address,
+      );
+
+      // inactive order will be cleaned up which affects the future value of dave
+      await lendingMarketController
+        .connect(dave)
+        .depositAndCreateOrder(
+          hexETH,
+          maturities[1],
+          Side.LEND,
+          orderAmount.div(2),
+          9000,
+          {
+            value: orderAmount.div(2),
+          },
+        );
+
+      // Fetch the future value after the clean up process was called
+      const daveFVAfter = await lendingMarketController.getFutureValue(
+        hexETH,
+        maturities[maturities.length - 1],
+        dave.address,
+      );
+
+      // Fetch the opening unit price decided by Itayose
+      const openingUnitPrice = await lendingMarket.getOpeningUnitPrice();
+      // The future value of dave should decrease by the pre lending order at the opening unit price
+      expect(daveFVBefore.sub(daveFVAfter)).eq(
+        calculateFutureValue(orderAmount.div(2), openingUnitPrice),
+      );
     });
   });
 });

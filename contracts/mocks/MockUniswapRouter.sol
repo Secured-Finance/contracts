@@ -58,7 +58,7 @@ contract MockUniswapRouter is MixinAddressResolver {
 
         require(amountOut >= params.amountOutMinimum, "Too little received");
 
-        if (ERC20Handler.weth() != params.tokenIn) {
+        if (ERC20Handler.baseCurrency() != params.tokenIn) {
             ERC20Handler.safeTransferFrom(
                 params.tokenIn,
                 msg.sender,
@@ -67,7 +67,7 @@ contract MockUniswapRouter is MixinAddressResolver {
             );
         }
 
-        if (ERC20Handler.weth() != params.tokenOut) {
+        if (ERC20Handler.baseCurrency() != params.tokenOut) {
             ERC20Handler.safeTransfer(params.tokenOut, msg.sender, amountOut);
         } else {
             ERC20Handler.safeTransferETH(msg.sender, amountOut);

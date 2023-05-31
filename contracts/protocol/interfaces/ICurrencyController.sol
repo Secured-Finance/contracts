@@ -45,6 +45,8 @@ interface ICurrencyController {
         view
         returns (uint256[] memory amounts);
 
+    function getBaseCurrency() external view returns (bytes32);
+
     function getDecimals(bytes32) external view returns (uint8);
 
     function getCurrencies() external view returns (bytes32[] memory);

@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
+import { hexETH } from '../../../utils/strings';
 import {
   MARKET_BASE_PERIOD,
   MARKET_OBSERVATION_PERIOD,
@@ -22,8 +23,10 @@ const ReserveFund = artifacts.require('ReserveFund');
 const LendingMarketOperationLogic = artifacts.require(
   'LendingMarketOperationLogic',
 );
-const LendingMarketUserLogic = artifacts.require('LendingMarketUserLogic');
 const OrderBookLogic = artifacts.require('OrderBookLogic');
+const LendingMarketConfigurationLogic = artifacts.require(
+  'LendingMarketConfigurationLogic',
+);
 const QuickSort = artifacts.require('QuickSort');
 
 const { deployContract, deployMockContract } = waffle;
@@ -37,20 +40,32 @@ const deployContracts = async (owner: SignerWithAddress) => {
   const mockReserveFund = await deployMockContract(owner, ReserveFund.abi);
   const mockTokenVault = await deployMockContract(owner, TokenVault.abi);
 
+  await mockCurrencyController.mock.getBaseCurrency.returns(hexETH);
+
   // Deploy libraries
   const quickSort = await deployContract(owner, QuickSort);
+  const lendingMarketConfigurationLogic = await deployContract(
+    owner,
+    LendingMarketConfigurationLogic,
+  );
   const lendingMarketOperationLogic = await deployContract(
     owner,
     LendingMarketOperationLogic,
   );
-  const lendingMarketUserLogic = await deployContract(
-    owner,
-    LendingMarketUserLogic,
-  );
+
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
+      libraries: { QuickSort: quickSort.address },
+    })
+    .then((factory) => factory.deploy());
+
+  const lendingMarketUserLogic = await ethers
+    .getContractFactory('LendingMarketUserLogic', {
       libraries: {
-        QuickSort: quickSort.address,
+        FundManagementLogic: fundManagementLogic.address,
+        LendingMarketConfigurationLogic:
+          lendingMarketConfigurationLogic.address,
+        LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -70,6 +85,8 @@ const deployContracts = async (owner: SignerWithAddress) => {
         FundManagementLogic: fundManagementLogic.address,
         LendingMarketOperationLogic: lendingMarketOperationLogic.address,
         LendingMarketUserLogic: lendingMarketUserLogic.address,
+        LendingMarketConfigurationLogic:
+          lendingMarketConfigurationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -184,6 +201,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
     genesisValueVaultProxy,
     // logics
     fundManagementLogic,
+    lendingMarketOperationLogic,
   };
 };
 

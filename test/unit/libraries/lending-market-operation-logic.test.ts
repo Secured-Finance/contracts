@@ -1,6 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
-import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
 import moment from 'moment';
@@ -14,15 +13,9 @@ const LendingMarketOperationLogic = artifacts.require(
 
 describe('LendingMarketOperationLogic', function () {
   let owner: SignerWithAddress;
-  let lendingMarketOperationLogic: Contract;
 
   before(async () => {
     [owner] = await ethers.getSigners();
-
-    lendingMarketOperationLogic = await deployContract(
-      owner,
-      LendingMarketOperationLogic,
-    );
   });
 
   async function deployOnceFixture() {

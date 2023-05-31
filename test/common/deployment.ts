@@ -28,24 +28,36 @@ const deployContracts = async () => {
   const [
     depositManagementLogic,
     lendingMarketOperationLogic,
-    lendingMarketUserLogic,
+    lendingMarketConfigurationLogic,
     orderBookLogic,
     quickSort,
   ] = await Promise.all(
     [
       'DepositManagementLogic',
       'LendingMarketOperationLogic',
-      'LendingMarketUserLogic',
+      'LendingMarketConfigurationLogic',
       'OrderBookLogic',
       'QuickSort',
     ].map((library) =>
       ethers.getContractFactory(library).then((factory) => factory.deploy()),
     ),
   );
+
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
       libraries: {
         QuickSort: quickSort.address,
+      },
+    })
+    .then((factory) => factory.deploy());
+
+  const lendingMarketUserLogic = await ethers
+    .getContractFactory('LendingMarketUserLogic', {
+      libraries: {
+        FundManagementLogic: fundManagementLogic.address,
+        LendingMarketConfigurationLogic:
+          lendingMarketConfigurationLogic.address,
+        LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -82,6 +94,8 @@ const deployContracts = async () => {
           FundManagementLogic: fundManagementLogic.address,
           LendingMarketOperationLogic: lendingMarketOperationLogic.address,
           LendingMarketUserLogic: lendingMarketUserLogic.address,
+          LendingMarketConfigurationLogic:
+            lendingMarketConfigurationLogic.address,
         },
       })
       .then((factory) => factory.deploy()),
@@ -279,7 +293,6 @@ const deployContracts = async () => {
 
   return {
     genesisDate,
-    fundManagementLogic,
     // contracts
     addressResolver: addressResolverProxy,
     beaconProxyController: beaconProxyControllerProxy,
@@ -297,6 +310,13 @@ const deployContracts = async () => {
     eFilToETHPriceFeed: priceFeeds[hexEFIL],
     wBtcToETHPriceFeed: priceFeeds[hexWBTC],
     usdcToUSDPriceFeed: priceFeeds[hexUSDC],
+    // libraries
+    fundManagementLogic: fundManagementLogic.attach(
+      lendingMarketControllerProxy.address,
+    ),
+    lendingMarketOperationLogic: lendingMarketOperationLogic.attach(
+      lendingMarketControllerProxy.address,
+    ),
   };
 };
 
