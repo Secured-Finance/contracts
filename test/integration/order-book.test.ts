@@ -868,7 +868,7 @@ describe('Integration Test: Order Book', async () => {
 
         await expect(tx)
           .to.emit(filLendingMarkets[0], 'OrderBlockedByCircuitBreaker')
-          .withArgs(carol.address, hexEFIL, Side.LEND, filMaturities[0], 9000);
+          .withArgs(carol.address, hexEFIL, Side.LEND, filMaturities[0], 8163);
 
         await expect(
           lendingMarketController

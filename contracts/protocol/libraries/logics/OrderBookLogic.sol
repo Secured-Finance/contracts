@@ -584,7 +584,7 @@ library OrderBookLogic {
         }
     }
 
-    function getLowerCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 price)
+    function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 price)
         internal
         pure
         returns (uint256 cbThresholdUnitPrice)
@@ -604,7 +604,7 @@ library OrderBookLogic {
         cbThresholdUnitPrice = cbThresholdUnitPrice < 1 ? 1 : cbThresholdUnitPrice;
     }
 
-    function getUpperCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 price)
+    function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 price)
         internal
         pure
         returns (uint256 cbThresholdUnitPrice)
@@ -650,11 +650,10 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = Constants.PRICE_DIGIT - bestUnitPrice >
-                    _circuitBreakerLimitRange
-                    ? bestUnitPrice + _circuitBreakerLimitRange
-                    : Constants.PRICE_DIGIT;
-
+                cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
+                    _circuitBreakerLimitRange,
+                    bestUnitPrice
+                );
                 Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
                         _side
                     ] = cbThresholdUnitPrice;
@@ -664,9 +663,10 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = bestUnitPrice > _circuitBreakerLimitRange
-                    ? bestUnitPrice - _circuitBreakerLimitRange
-                    : 1;
+                cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
+                    _circuitBreakerLimitRange,
+                    bestUnitPrice
+                );
 
                 Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
                         _side
