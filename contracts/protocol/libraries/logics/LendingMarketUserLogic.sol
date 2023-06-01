@@ -43,7 +43,7 @@ library LendingMarketUserLogic {
         );
 
         uint256 circuitBreakerLimitRange = LendingMarketConfigurationLogic
-            .getCircuitBreakerLimitRange(_ccy);
+            .getCircuitBreakerLimitRange();
 
         (
             ILendingMarket.FilledOrder memory filledOrder,
@@ -377,7 +377,7 @@ library LendingMarketUserLogic {
     {
         require(_futureValue != 0, "Future Value is zero");
 
-        uint256 cbLimitRange = LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy);
+        uint256 cbLimitRange = LendingMarketConfigurationLogic.getCircuitBreakerLimitRange();
         uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
 
         if (_futureValue > 0) {

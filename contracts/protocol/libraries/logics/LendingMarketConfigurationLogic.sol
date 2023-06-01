@@ -12,11 +12,11 @@ library LendingMarketConfigurationLogic {
 
     event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event AutoRollFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
-    event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
+    event CircuitBreakerLimitRangeUpdated(uint256 previousRate, uint256 rate);
     event ObservationPeriodUpdated(uint256 previousPeriod, uint256 period);
 
-    function getCircuitBreakerLimitRange(bytes32 _ccy) public view returns (uint256) {
-        return Storage.slot().circuitBreakerLimitRanges[_ccy];
+    function getCircuitBreakerLimitRange() public view returns (uint256) {
+        return Storage.slot().circuitBreakerLimitRange;
     }
 
     function getOrderFeeRate(bytes32 _ccy) public view returns (uint256) {
@@ -65,14 +65,14 @@ library LendingMarketConfigurationLogic {
         }
     }
 
-    function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) external {
+    function updateCircuitBreakerLimitRange(uint256 _limitRange) external {
         require(_limitRange <= Constants.PCT_DIGIT, "Invalid circuit breaker limit range");
-        uint256 previousRange = Storage.slot().circuitBreakerLimitRanges[_ccy];
+        uint256 previousRange = Storage.slot().circuitBreakerLimitRange;
 
         if (_limitRange != previousRange) {
-            Storage.slot().circuitBreakerLimitRanges[_ccy] = _limitRange;
+            Storage.slot().circuitBreakerLimitRange = _limitRange;
 
-            emit CircuitBreakerLimitRangeUpdated(_ccy, previousRange, _limitRange);
+            emit CircuitBreakerLimitRangeUpdated(previousRange, _limitRange);
         }
     }
 

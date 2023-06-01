@@ -34,11 +34,10 @@ contract MixinLendingMarketConfiguration is Ownable {
 
     /**
      * @notice Gets the limit range in unit price for the circuit breaker
-     * @param _ccy Currency name in bytes32
      * @return The auto-roll fee rate received by protocol
      */
-    function getCircuitBreakerLimitRange(bytes32 _ccy) public view returns (uint256) {
-        return Storage.slot().circuitBreakerLimitRanges[_ccy];
+    function getCircuitBreakerLimitRange() public view returns (uint256) {
+        return Storage.slot().circuitBreakerLimitRange;
     }
 
     /**
@@ -69,11 +68,10 @@ contract MixinLendingMarketConfiguration is Ownable {
 
     /**
      * @notice Updates the auto-roll fee rate
-     * @param _ccy Currency name in bytes32
      * @param _limitRange The circuit breaker limit range
      */
-    function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) public onlyOwner {
-        LendingMarketConfigurationLogic.updateCircuitBreakerLimitRange(_ccy, _limitRange);
+    function updateCircuitBreakerLimitRange(uint256 _limitRange) public onlyOwner {
+        LendingMarketConfigurationLogic.updateCircuitBreakerLimitRange(_limitRange);
     }
 
     /**

@@ -505,7 +505,7 @@ contract LendingMarketController is
         LendingMarketOperationLogic.initializeCurrencySetting(_ccy, _genesisDate, _compoundFactor);
         updateOrderFeeRate(_ccy, _orderFeeRate);
         updateAutoRollFeeRate(_ccy, _autoRollFeeRate);
-        updateCircuitBreakerLimitRange(_ccy, _circuitBreakerLimitRange);
+        updateCircuitBreakerLimitRange(_circuitBreakerLimitRange);
     }
 
     /**
