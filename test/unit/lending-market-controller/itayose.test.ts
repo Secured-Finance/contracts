@@ -39,6 +39,8 @@ describe('LendingMarketController - Itayose', () => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
+    await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
+
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
   });
@@ -95,8 +97,6 @@ describe('LendingMarketController - Itayose', () => {
         .unix();
 
       await initialize(targetCurrency, openingDate);
-
-      await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
 
       await genesisValueVaultProxy
         .getLatestAutoRollLog(targetCurrency)
@@ -235,7 +235,6 @@ describe('LendingMarketController - Itayose', () => {
     it('Execute Itayose call after auto-rolling', async () => {
       await initialize(targetCurrency);
 
-      await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
       const lendingMarket = lendingMarketProxies[0];
 
       await lendingMarketControllerProxy
@@ -350,6 +349,180 @@ describe('LendingMarketController - Itayose', () => {
         calculateFutureValue(BigNumber.from('100000000000000'), openingPrice),
       );
       expect(carolFV).to.equal('0');
+    });
+
+    it('Fill orders that are not filled with Itayose call and not the same as the opening unit price', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const openingDate = moment(timestamp * 1000)
+        .add(2, 'h')
+        .unix();
+
+      await initialize(targetCurrency, openingDate);
+
+      const lendingMarket = lendingMarketProxies[0];
+      const maturity = maturities[0];
+
+      const orders = [
+        {
+          side: Side.BORROW,
+          unitPrice: '8000',
+          amount: '300000000000000',
+          user: carol,
+        },
+        {
+          side: Side.BORROW,
+          unitPrice: '7300',
+          amount: '100000000000000',
+          user: alice,
+        },
+        {
+          side: Side.LEND,
+          unitPrice: '7500',
+          amount: '200000000000000',
+          user: bob,
+        },
+      ];
+
+      for (const order of orders) {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(order.user)
+            .createPreOrder(
+              targetCurrency,
+              maturity,
+              order.side,
+              order.amount,
+              order.unitPrice,
+            ),
+        ).to.emit(lendingMarket, 'OrderMade');
+      }
+
+      await time.increaseTo(openingDate);
+
+      await expect(
+        lendingMarketControllerProxy.executeItayoseCalls(
+          [targetCurrency],
+          maturity,
+        ),
+      ).to.emit(lendingMarket, 'ItayoseExecuted');
+
+      const openingPrice = await lendingMarket.getOpeningUnitPrice();
+      expect(openingPrice).to.equal('7500');
+
+      const carolFVBefore = await lendingMarketControllerProxy.getFutureValue(
+        targetCurrency,
+        maturity,
+        carol.address,
+      );
+
+      expect(carolFVBefore).to.equal('0');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturity,
+            Side.LEND,
+            '300000000000000',
+            '8500',
+          ),
+      ).to.emit(lendingMarket, 'OrdersTaken');
+
+      const carolFVAfter = await lendingMarketControllerProxy.getFutureValue(
+        targetCurrency,
+        maturity,
+        carol.address,
+      );
+
+      expect(carolFVAfter).to.equal('-375000000000000');
+    });
+
+    it('Fill orders that are not filled with Itayose call and the same as the opening unit price', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const openingDate = moment(timestamp * 1000)
+        .add(2, 'h')
+        .unix();
+
+      await initialize(targetCurrency, openingDate);
+
+      const lendingMarket = lendingMarketProxies[0];
+      const maturity = maturities[0];
+
+      const orders = [
+        {
+          side: Side.BORROW,
+          unitPrice: '8500',
+          amount: '300000000000000',
+          user: carol,
+        },
+        {
+          side: Side.BORROW,
+          unitPrice: '7800',
+          amount: '100000000000000',
+          user: alice,
+        },
+        {
+          side: Side.LEND,
+          unitPrice: '8000',
+          amount: '200000000000000',
+          user: bob,
+        },
+      ];
+
+      for (const order of orders) {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(order.user)
+            .createPreOrder(
+              targetCurrency,
+              maturity,
+              order.side,
+              order.amount,
+              order.unitPrice,
+            ),
+        ).to.emit(lendingMarket, 'OrderMade');
+      }
+
+      await time.increaseTo(openingDate);
+
+      await expect(
+        lendingMarketControllerProxy.executeItayoseCalls(
+          [targetCurrency],
+          maturity,
+        ),
+      ).to.emit(lendingMarket, 'ItayoseExecuted');
+
+      const openingPrice = await lendingMarket.getOpeningUnitPrice();
+      expect(openingPrice).to.equal('8000');
+
+      const bobFVBefore = await lendingMarketControllerProxy.getFutureValue(
+        targetCurrency,
+        maturity,
+        bob.address,
+      );
+
+      expect(bobFVBefore).to.equal('125000000000000');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(carol)
+          .createOrder(
+            targetCurrency,
+            maturity,
+            Side.BORROW,
+            '100000000000000',
+            '8000',
+          ),
+      ).to.emit(lendingMarket, 'OrdersTaken');
+
+      const bobFVAfter = await lendingMarketControllerProxy.getFutureValue(
+        targetCurrency,
+        maturity,
+        bob.address,
+      );
+
+      expect(bobFVAfter).to.equal('250000000000000');
     });
   });
 });
