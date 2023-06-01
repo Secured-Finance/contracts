@@ -48,6 +48,23 @@ In order to run the specified script, execute `npx hardhat --network <NETWORK> t
 
 For example `npx hardhat --network development test "scripts/zc-e2e.ts"` will execute the `zc-e2e` script on the develop environment.
 
+### Security Tool testing
+
+As of Apr 23, we use Slither and Mythril for security testing.
+
+#### How to run Mythril
+1. Run `npm run flatten`
+2. Run `npm run security:mythril`
+3. Check the generated report named `secured-finance-mythril.json` in the project root
+
+#### How to run Slither Analyzer
+0. Install `pip3 install slither-analyzer`
+1. Run `npm run flatten`
+2. Run `npm run security:slither`
+3. Check the generated report named `secured-finance-slither.txt` in the project root
+
+As of now, Slither will refer to the flatten contracts rather than ones in `build`. This might affect the slither behavior: generating duplicated messages, etc.
+
 ## Publishing
 
 This package is published automatically by workflows when the PR is merged into develop branch or main branch. The package version will be updated by the workflow.

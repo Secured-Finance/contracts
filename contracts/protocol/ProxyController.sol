@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "./utils/Ownable.sol";
 import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
 import {Contracts} from "./libraries/Contracts.sol";
@@ -26,7 +26,8 @@ contract ProxyController is IProxyController, Ownable {
      * If not, set zero address here and call `setAddressResolverImpl` using the implementation
      * address of AddressResolver to create a proxy contract.
      */
-    constructor(address _resolver) Ownable() {
+    constructor(address _resolver) {
+        _transferOwnership(msg.sender);
         if (_resolver != address(0)) {
             UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(_resolver));
             require(proxy.implementation() != address(0), "Proxy address not found");

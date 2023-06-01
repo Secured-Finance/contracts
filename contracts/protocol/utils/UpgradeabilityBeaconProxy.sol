@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import "../../dependencies/openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
 contract UpgradeabilityBeaconProxy is BeaconProxy {
     constructor(address _beacon, bytes memory _data) payable BeaconProxy(_beacon, _data) {

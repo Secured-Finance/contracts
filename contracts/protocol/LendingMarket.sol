@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "../dependencies/openzeppelin/contracts/security/Pausable.sol";
 // interfaces
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
@@ -29,7 +29,7 @@ import {LendingMarketStorage as Storage} from "./storages/LendingMarketStorage.s
 contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
     using RoundingUint256 for uint256;
 
-    uint256 private constant PRE_ORDER_PERIOD = 48 hours;
+    uint256 private constant PRE_ORDER_PERIOD = 7 days;
     uint256 private constant ITAYOSE_PERIOD = 1 hours;
 
     /**
@@ -552,7 +552,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+     * @notice Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
      * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
      *
      * @param _side Order position type, Borrow or Lend

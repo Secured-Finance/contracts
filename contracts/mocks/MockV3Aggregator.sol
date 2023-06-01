@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../dependencies/chainlink/contracts/AggregatorV2V3Interface.sol";
+import "../protocol/utils/Ownable.sol";
 
 /**
  * @title MockV3Aggregator
@@ -29,7 +29,8 @@ contract MockV3Aggregator is AggregatorV2V3Interface, Ownable {
         uint8 _decimals,
         bytes32 _ccy,
         int256 _initialAnswer
-    ) Ownable() {
+    ) {
+        _transferOwnership(msg.sender);
         priceFeedCcy = _ccy;
         decimals = _decimals;
         updateAnswer(_initialAnswer);
