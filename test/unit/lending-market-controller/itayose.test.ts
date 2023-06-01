@@ -263,8 +263,8 @@ describe('LendingMarketController - Itayose', () => {
         targetCurrency,
       );
 
-      // Move to 48 hours (172800 sec) before maturity.
-      await time.increaseTo(maturities[0].sub(172800).toString());
+      // Move to 7 days (604800 sec) before maturity.
+      await time.increaseTo(maturities[0].sub(604800).toString());
 
       const orders = [
         {
