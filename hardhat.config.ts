@@ -96,7 +96,7 @@ const config: HardhatUserConfig = {
   },
   docgen: {
     pages: 'files',
-    exclude: ['mocks', 'interfaces'],
+    exclude: ['mocks', 'interfaces', 'dependencies'],
   },
 };
 

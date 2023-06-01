@@ -6,3 +6,5 @@ coverage/
 contracts/artifacts/
 coverage.json
 gasReporterOutput.json
+flattened/
+secured-finance-mythril.json

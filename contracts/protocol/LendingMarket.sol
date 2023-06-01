@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "../dependencies/openzeppelin/contracts/security/Pausable.sol";
 // interfaces
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
