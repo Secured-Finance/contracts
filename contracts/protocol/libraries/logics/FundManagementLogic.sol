@@ -50,6 +50,8 @@ library FundManagementLogic {
 
     struct ActualFunds {
         int256 presentValue;
+        uint256 claimableAmount;
+        uint256 debtAmount;
         int256 futureValue;
         uint256 workingLendOrdersAmount;
         uint256 lentAmount;
@@ -63,6 +65,7 @@ library FundManagementLogic {
         address market;
         bool isDefaultMarket;
         uint256[] maturities;
+        int256 presentValueOfDefaultMarket;
     }
 
     struct FutureValueVaultFunds {
@@ -172,9 +175,9 @@ library FundManagementLogic {
         cleanUpFunds(_collateralCcy, _user);
         cleanUpFunds(_debtCcy, _user);
 
-        int256 debtPVAmount = calculateActualFunds(_debtCcy, _debtMaturity, _user).presentValue;
+        uint256 debtAmount = calculateActualFunds(_debtCcy, _debtMaturity, _user).debtAmount;
 
-        require(debtPVAmount < 0, "No debt in the selected maturity");
+        require(debtAmount != 0, "No debt in the selected maturity");
 
         (
             vars.liquidationAmountInCollateralCcy,
@@ -183,11 +186,7 @@ library FundManagementLogic {
         ) = AddressResolverLib.tokenVault().getLiquidationAmount(
             _user,
             _collateralCcy,
-            AddressResolverLib.currencyController().convert(
-                _debtCcy,
-                _collateralCcy,
-                (-debtPVAmount).toUint256()
-            )
+            AddressResolverLib.currencyController().convert(_debtCcy, _collateralCcy, debtAmount)
         );
 
         require(vars.liquidationAmountInCollateralCcy != 0, "User has enough collateral");
@@ -462,20 +461,37 @@ library FundManagementLogic {
                     isDefaultMarket
                 );
 
+                // Set genesis value.
                 actualFunds.genesisValue +=
                     futureValueVaultFunds.genesisValue -
                     borrowOrdersFunds.genesisValue +
                     lendOrdersFunds.genesisValue;
 
-                actualFunds.futureValue +=
-                    futureValueVaultFunds.futureValue -
-                    borrowOrdersFunds.futureValue +
-                    lendOrdersFunds.futureValue;
-
-                actualFunds.presentValue +=
-                    futureValueVaultFunds.presentValue -
+                // Set present value.
+                int256 presentValue = futureValueVaultFunds.presentValue -
                     borrowOrdersFunds.presentValue +
                     lendOrdersFunds.presentValue;
+
+                actualFunds.presentValue += presentValue;
+
+                if (isDefaultMarket) {
+                    vars.presentValueOfDefaultMarket = presentValue;
+                }
+
+                if (presentValue > 0) {
+                    actualFunds.claimableAmount += presentValue.toUint256();
+                } else if (presentValue < 0) {
+                    actualFunds.debtAmount += (-presentValue).toUint256();
+                }
+
+                // Set future value.
+                // Note: When calculating total funds, total future value will be 0 because different maturities can not be added.
+                if (!vars.isTotal) {
+                    actualFunds.futureValue +=
+                        futureValueVaultFunds.futureValue -
+                        borrowOrdersFunds.futureValue +
+                        lendOrdersFunds.futureValue;
+                }
 
                 actualFunds.workingBorrowOrdersAmount += borrowOrdersFunds.workingOrdersAmount;
                 actualFunds.workingLendOrdersAmount += lendOrdersFunds.workingOrdersAmount;
@@ -505,11 +521,42 @@ library FundManagementLogic {
                 0,
                 actualFunds.genesisValue
             );
-            actualFunds.presentValue += _calculatePVFromFV(
+
+            int256 presentValue = _calculatePVFromFV(
                 futureValue,
                 ILendingMarket(Storage.slot().lendingMarkets[_ccy][0]).getMidUnitPrice()
             );
-            actualFunds.futureValue += futureValue;
+
+            actualFunds.presentValue += presentValue;
+
+            // Add GV to the claimable amount or debt amount.
+            // Before that, offset the present value of the default market and the genesis value in addition.
+            if (presentValue > 0) {
+                if (vars.presentValueOfDefaultMarket < 0) {
+                    int256 offsetAmount = presentValue > -vars.presentValueOfDefaultMarket
+                        ? -vars.presentValueOfDefaultMarket
+                        : presentValue;
+                    actualFunds.debtAmount -= (offsetAmount).toUint256();
+                    presentValue -= offsetAmount;
+                }
+
+                actualFunds.claimableAmount += presentValue.toUint256();
+            } else if (presentValue < 0) {
+                if (vars.presentValueOfDefaultMarket > 0) {
+                    int256 offsetAmount = -presentValue > vars.presentValueOfDefaultMarket
+                        ? vars.presentValueOfDefaultMarket
+                        : -presentValue;
+
+                    actualFunds.claimableAmount -= (offsetAmount).toUint256();
+                    presentValue += offsetAmount;
+                }
+
+                actualFunds.debtAmount += (-presentValue).toUint256();
+            }
+
+            if (!vars.isTotal) {
+                actualFunds.futureValue += futureValue;
+            }
         }
     }
 
@@ -527,17 +574,17 @@ library FundManagementLogic {
         )
     {
         ActualFunds memory funds = calculateActualFunds(_ccy, 0, _user);
+
         workingLendOrdersAmount = funds.workingLendOrdersAmount;
         lentAmount = funds.lentAmount;
         workingBorrowOrdersAmount = funds.workingBorrowOrdersAmount;
         borrowedAmount = funds.borrowedAmount;
+        claimableAmount = funds.claimableAmount;
+        debtAmount = funds.debtAmount;
 
-        if (funds.presentValue > 0) {
-            claimableAmount = (funds.presentValue).toUint256();
+        if (claimableAmount > 0) {
             uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
             collateralAmount = (claimableAmount * haircut).div(Constants.PCT_DIGIT);
-        } else if (funds.presentValue < 0) {
-            debtAmount = (-funds.presentValue).toUint256();
         }
     }
 
