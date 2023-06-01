@@ -9,8 +9,8 @@ library LendingMarketConfigurationStorage {
         mapping(bytes32 => uint256) orderFeeRates;
         // Mapping from currency to auto-roll fee rate received by protocol (in basis point)
         mapping(bytes32 => uint256) autoRollFeeRates;
-        // Limit range for circuit breaker
-        uint256 circuitBreakerLimitRange;
+        // Mapping from currency to rate limit range of yield for the circuit breaker
+        mapping(bytes32 => uint256) circuitBreakerLimitRanges;
         // The period to calculate the volume-weighted average price of transactions to use as auto-roll fee rate.
         uint256 observationPeriod;
     }
