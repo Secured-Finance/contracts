@@ -590,8 +590,8 @@ library OrderBookLogic {
         returns (uint256 cbThresholdUnitPrice)
     {
         /**
-         * Formula of circuit breaker threshold:
-         * NOTE cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
+         * NOTE Formula of circuit breaker threshold for borrow orders:
+         * cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
          */
         uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
         uint256 den = _unitPrice *
@@ -600,12 +600,13 @@ library OrderBookLogic {
             (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
         cbThresholdUnitPrice = num.div(den);
 
-        cbThresholdUnitPrice = _unitPrice - cbThresholdUnitPrice >
-            Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            ? _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            : _unitPrice - cbThresholdUnitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-            ? _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-            : cbThresholdUnitPrice;
+        if (_unitPrice - cbThresholdUnitPrice > Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+            cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        } else if (
+            _unitPrice - cbThresholdUnitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+        ) {
+            cbThresholdUnitPrice = _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        }
 
         if (cbThresholdUnitPrice == 0) {
             cbThresholdUnitPrice = 1;
@@ -618,8 +619,8 @@ library OrderBookLogic {
         returns (uint256 cbThresholdUnitPrice)
     {
         /**
-         * Formula of circuit breaker threshold:
-         * NOTE cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
+         * NOTE Formula of circuit breaker threshold for lend orders:
+         * cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
          */
         uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
         uint256 den = _unitPrice *
@@ -628,12 +629,13 @@ library OrderBookLogic {
             (Constants.PCT_DIGIT - _circuitBreakerLimitRange);
         cbThresholdUnitPrice = num.div(den);
 
-        cbThresholdUnitPrice = cbThresholdUnitPrice - _unitPrice >
-            Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            ? _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            : cbThresholdUnitPrice - _unitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-            ? _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-            : cbThresholdUnitPrice;
+        if (cbThresholdUnitPrice - _unitPrice > Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+            cbThresholdUnitPrice = _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        } else if (
+            cbThresholdUnitPrice - _unitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+        ) {
+            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        }
 
         if (cbThresholdUnitPrice > Constants.PRICE_DIGIT) {
             cbThresholdUnitPrice = Constants.PRICE_DIGIT;
