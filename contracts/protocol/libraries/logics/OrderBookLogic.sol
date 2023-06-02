@@ -632,10 +632,6 @@ library OrderBookLogic {
         ) {
             cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
         }
-
-        if (cbThresholdUnitPrice > Constants.PRICE_DIGIT) {
-            cbThresholdUnitPrice = Constants.PRICE_DIGIT;
-        }
     }
 
     function checkCircuitBreakerThreshold(
