@@ -310,6 +310,7 @@ describe('LendingMarket', () => {
     const CIRCUIT_BREAKER_RATE_RANGE = 1000;
     const CIRCUIT_BREAKER_BORROW_THRESHOLD = 8374;
     const CIRCUIT_BREAKER_LEND_THRESHOLD = 8629;
+    const MAX_DIFFERENCE = 200;
     let lendingMarket: Contract;
     let currentMarketIdx: number;
     let maturity: number;
@@ -724,6 +725,87 @@ describe('LendingMarket', () => {
               side === Side.LEND
                 ? CIRCUIT_BREAKER_LEND_THRESHOLD
                 : CIRCUIT_BREAKER_BORROW_THRESHOLD,
+            );
+
+          await ethers.provider.send('evm_setAutomine', [true]);
+        });
+
+        it('Maximum difference between threshold and unitPrice can be max_difference', async () => {
+          const unitPrice = 5000;
+          const offsetUnitPrice =
+            side === Side.LEND
+              ? unitPrice + MAX_DIFFERENCE + 1
+              : unitPrice - MAX_DIFFERENCE - 1;
+
+          await expect(
+            lendingMarketCaller
+              .connect(alice)
+              .createOrder(
+                isBorrow ? Side.LEND : Side.BORROW,
+                '100000000000000',
+                unitPrice,
+                CIRCUIT_BREAKER_RATE_RANGE,
+                currentMarketIdx,
+              ),
+          ).to.emit(lendingMarket, 'OrderMade');
+
+          await expect(
+            lendingMarketCaller
+              .connect(alice)
+              .createOrder(
+                isBorrow ? Side.LEND : Side.BORROW,
+                '100000000000000',
+                offsetUnitPrice,
+                CIRCUIT_BREAKER_RATE_RANGE,
+                currentMarketIdx,
+              ),
+          ).to.emit(lendingMarket, 'OrderMade');
+
+          await ethers.provider.send('evm_setAutomine', [false]);
+
+          const bobTx = await lendingMarketCaller
+            .connect(bob)
+            .createOrder(
+              side,
+              '100000000000000',
+              '0',
+              CIRCUIT_BREAKER_RATE_RANGE,
+              currentMarketIdx,
+            );
+          console.log(offsetUnitPrice);
+
+          const carolTx = await lendingMarketCaller
+            .connect(carol)
+            .createOrder(
+              side,
+              '50000000000000',
+              offsetUnitPrice,
+              CIRCUIT_BREAKER_RATE_RANGE,
+              currentMarketIdx,
+            );
+
+          await ethers.provider.send('evm_mine', []);
+
+          await expect(bobTx)
+            .to.emit(lendingMarket, 'OrdersTaken')
+            .withArgs(
+              bob.address,
+              side,
+              targetCurrency,
+              maturity,
+              '100000000000000',
+              5000,
+              () => true,
+            );
+
+          await expect(carolTx)
+            .to.emit(lendingMarket, 'OrderBlockedByCircuitBreaker')
+            .withArgs(
+              carol.address,
+              targetCurrency,
+              side,
+              maturity,
+              side === Side.LEND ? 5200 : 4800,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
