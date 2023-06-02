@@ -506,7 +506,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
-     * @param _circuitBreakerLimitRange Limit range in unit price for the circuit breaker
+     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order on the order book
      */
@@ -576,7 +576,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _futureValue Amount of future value unwound
-     * @param _circuitBreakerLimitRange Limit range in unit price for the circuit breaker
+     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order
      */
