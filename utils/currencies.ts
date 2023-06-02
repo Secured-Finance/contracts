@@ -38,7 +38,7 @@ const currencies: Currency[] = [
     autoRollFeeRate: 250,
     circuitBreakerLimitRange: 1000,
     isCollateral: false,
-    args: ['100000000000000000000000000'], // 100,000,000 eFIL
+    args: ['2500000000000000000000000'], // 2,500,000 eFIL
   },
   {
     symbol: 'USDC',
@@ -50,7 +50,7 @@ const currencies: Currency[] = [
     autoRollFeeRate: 250,
     circuitBreakerLimitRange: 1000,
     isCollateral: true,
-    args: ['1000000000000000'], // 1,000,000,000 USDC
+    args: ['10000000000000'], // 10,000,000 USDC
   },
   {
     symbol: 'WBTC',
@@ -62,7 +62,7 @@ const currencies: Currency[] = [
     autoRollFeeRate: 250,
     circuitBreakerLimitRange: 1000,
     isCollateral: false,
-    args: ['2000000000000'], // 20,000 BTC
+    args: ['40000000000'], // 400 BTC
   },
   {
     symbol: 'WETH',
