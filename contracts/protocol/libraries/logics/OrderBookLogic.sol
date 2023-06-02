@@ -589,19 +589,27 @@ library OrderBookLogic {
         pure
         returns (uint256 cbThresholdUnitPrice)
     {
-        uint256 num = _unitPrice * 100000000;
-        uint256 den = 100000000 +
-            _circuitBreakerLimitRange *
-            10000 -
-            _circuitBreakerLimitRange *
-            _unitPrice;
+        /**
+         * Formula of circuit breaker threshold:
+         * cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
+         */
+        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
+        uint256 den = _unitPrice *
+            Constants.PCT_DIGIT +
+            (Constants.PRICE_DIGIT - _unitPrice) *
+            (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
         cbThresholdUnitPrice = num.div(den);
 
-        cbThresholdUnitPrice = _unitPrice - cbThresholdUnitPrice >
-            Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            ? _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            : cbThresholdUnitPrice;
-        cbThresholdUnitPrice = cbThresholdUnitPrice < 1 ? 1 : cbThresholdUnitPrice;
+        if (_unitPrice - cbThresholdUnitPrice > Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+            cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        } else if (
+            _unitPrice - cbThresholdUnitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+        ) {
+            cbThresholdUnitPrice = _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        }
+        if (cbThresholdUnitPrice == 0) {
+            cbThresholdUnitPrice = 1;
+        }
     }
 
     function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
@@ -609,21 +617,27 @@ library OrderBookLogic {
         pure
         returns (uint256 cbThresholdUnitPrice)
     {
+        /**
+         * Formula of circuit breaker threshold:
+         * cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
+         */
         uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 den = 100000000 -
-            _circuitBreakerLimitRange *
-            10000 +
-            _circuitBreakerLimitRange *
-            _unitPrice;
+        uint256 den = _unitPrice *
+            Constants.PCT_DIGIT +
+            (Constants.PRICE_DIGIT - _unitPrice) *
+            (Constants.PCT_DIGIT - _circuitBreakerLimitRange);
         cbThresholdUnitPrice = num.div(den);
 
-        cbThresholdUnitPrice = cbThresholdUnitPrice - _unitPrice >
-            Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            ? _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
-            : cbThresholdUnitPrice;
-        cbThresholdUnitPrice = cbThresholdUnitPrice > Constants.PRICE_DIGIT
-            ? Constants.PRICE_DIGIT
-            : cbThresholdUnitPrice;
+        if (cbThresholdUnitPrice - _unitPrice > Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+            cbThresholdUnitPrice = _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        } else if (
+            cbThresholdUnitPrice - _unitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+        ) {
+            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        }
+        if (cbThresholdUnitPrice > Constants.PRICE_DIGIT) {
+            cbThresholdUnitPrice = Constants.PRICE_DIGIT;
+        }
     }
 
     function checkCircuitBreakerThreshold(
