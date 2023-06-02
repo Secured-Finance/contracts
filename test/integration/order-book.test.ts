@@ -832,7 +832,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmount.div(2),
-            '9001',
+            '8164',
           );
 
         for (const user of [bob, carol, dave]) {
