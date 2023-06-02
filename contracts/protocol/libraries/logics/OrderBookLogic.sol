@@ -589,10 +589,8 @@ library OrderBookLogic {
         pure
         returns (uint256 cbThresholdUnitPrice)
     {
-        /**
-         * NOTE Formula of circuit breaker threshold for borrow orders:
-         * cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
-         */
+        // NOTE: Formula of circuit breaker threshold for borrow orders:
+        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
         uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
         uint256 den = _unitPrice *
             Constants.PCT_DIGIT +
@@ -618,10 +616,8 @@ library OrderBookLogic {
         pure
         returns (uint256 cbThresholdUnitPrice)
     {
-        /**
-         * NOTE Formula of circuit breaker threshold for lend orders:
-         * cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
-         */
+        // NOTE: Formula of circuit breaker threshold for lend orders:
+        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
         uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
         uint256 den = _unitPrice *
             Constants.PCT_DIGIT +
