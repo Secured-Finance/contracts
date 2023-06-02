@@ -65,7 +65,7 @@ const func: DeployFunction = async function ({
               .registerCurrency(
                 currency.key,
                 mockToken,
-                ethers.BigNumber.from(currency.args?.[0]).div(100),
+                ethers.BigNumber.from(currency.args?.[0]).div(10000),
               )
               .then((tx) => tx.wait());
 
