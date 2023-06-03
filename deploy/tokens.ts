@@ -60,7 +60,7 @@ const func: DeployFunction = async function ({
               mockToken,
             );
 
-            // set the maximum amount per mint for a user wallet as 1/100 of the initial token amount
+            // set the maximum amount per mint for a user wallet as 1/10,000 of the initial token amount
             await tokenFaucetContract
               .registerCurrency(
                 currency.key,
