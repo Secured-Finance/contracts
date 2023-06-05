@@ -607,10 +607,6 @@ library OrderBookLogic {
                 ? _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
                 : 1;
         }
-
-        if (cbThresholdUnitPrice == 0) {
-            cbThresholdUnitPrice = 1;
-        }
     }
 
     function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
@@ -648,6 +644,7 @@ library OrderBookLogic {
             bool ignoreRemainingAmount
         )
     {
+        require(_circuitBreakerLimitRange < Constants.PCT_DIGIT, "CB limit can not be so high");
         uint256 cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[
             block.number
         ][_side];

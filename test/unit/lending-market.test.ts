@@ -892,46 +892,24 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_setAutomine', [true]);
         });
+
+        it('Fail to place an order with circuit breaker range more than equal to 10000', async () => {
+          const unitPrice = 8000;
+
+          await expect(
+            lendingMarketCaller
+              .connect(alice)
+              .createOrder(
+                side,
+                '100000000000000',
+                unitPrice,
+                10000,
+                currentMarketIdx,
+              ),
+          ).to.revertedWith('CB limit can not be so high');
+        });
       });
     }
-
-    it('Minimum threshold can be 1 for borrow orders', async () => {
-      const unitPrice = 11;
-
-      await expect(
-        lendingMarketCaller
-          .connect(alice)
-          .createOrder(
-            Side.LEND,
-            '100000000000000',
-            unitPrice,
-            25000000,
-            currentMarketIdx,
-          ),
-      ).to.emit(lendingMarket, 'OrderMade');
-
-      await expect(
-        lendingMarketCaller
-          .connect(bob)
-          .createOrder(
-            Side.BORROW,
-            '100000000000000',
-            '0',
-            25000000,
-            currentMarketIdx,
-          ),
-      )
-        .to.emit(lendingMarket, 'OrdersTaken')
-        .withArgs(
-          bob.address,
-          Side.BORROW,
-          targetCurrency,
-          maturity,
-          '100000000000000',
-          unitPrice,
-          () => true,
-        );
-    });
 
     it('Threshold should be 1 when difference unit price is less minimum threshold for borrow orders', async () => {
       const unitPrice = 9;
