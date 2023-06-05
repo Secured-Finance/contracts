@@ -112,10 +112,8 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         Storage.slot().balances[_user] += _amount.toInt256();
         emit Transfer(address(0), _user, _amount.toInt256());
 
-        if (_isTaker) {
-            int256 currentBalance = Storage.slot().balances[_user];
-            _updateTotalSupply(_maturity, previousBalance, currentBalance);
-        }
+        int256 currentBalance = Storage.slot().balances[_user];
+        _updateTotalSupply(_maturity, previousBalance, currentBalance, _isTaker);
 
         return true;
     }
@@ -147,10 +145,8 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         Storage.slot().balances[_user] -= _amount.toInt256();
         emit Transfer(address(0), _user, -(_amount.toInt256()));
 
-        if (_isTaker) {
-            int256 currentBalance = Storage.slot().balances[_user];
-            _updateTotalSupply(_maturity, previousBalance, currentBalance);
-        }
+        int256 currentBalance = Storage.slot().balances[_user];
+        _updateTotalSupply(_maturity, previousBalance, currentBalance, _isTaker);
 
         return true;
     }
@@ -238,7 +234,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         onlyAcceptedContracts
     {
         require(Storage.slot().totalSupply[_maturity] == 0, "Initial total supply is not 0");
-        _updateTotalSupply(_maturity, 0, _amount);
+        _updateTotalSupply(_maturity, 0, _amount, true);
     }
 
     /**
@@ -257,14 +253,17 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     function _updateTotalSupply(
         uint256 _maturity,
         int256 _previous,
-        int256 _current
+        int256 _current,
+        bool _isTaker
     ) private {
         uint256 absPrevious = _previous >= 0 ? _previous.toUint256() : (-_previous).toUint256();
         uint256 absCurrent = _current >= 0 ? _current.toUint256() : (-_current).toUint256();
 
+        // Since total supply can be calculated only by taker amount, total supply will not be increased by maker amount.
+        // However, if a maker has an offset volume when cleaning up its own orders, the total supply must be reduced.
         if (absPrevious > absCurrent) {
             Storage.slot().totalSupply[_maturity] -= absPrevious - absCurrent;
-        } else {
+        } else if (_isTaker) {
             Storage.slot().totalSupply[_maturity] += absCurrent - absPrevious;
         }
     }

@@ -524,7 +524,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ifOpened
         returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
-        require(_amount > 0, "Can't place empty amount");
+        require(_amount > 0, "Amount is zero");
         _updateUserMaturity(_user);
 
         (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount) = OrderBookLogic
@@ -565,8 +565,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _amount,
         uint256 _unitPrice
     ) external override whenNotPaused onlyAcceptedContracts ifPreOrderPeriod {
-        require(_amount > 0, "Can't place empty amount");
+        require(_amount > 0, "Amount is zero");
+
         _updateUserMaturity(_user);
+
+        if (
+            (_side == ProtocolTypes.Side.LEND && OrderBookLogic.hasBorrowOrder(_user)) ||
+            (_side == ProtocolTypes.Side.BORROW && OrderBookLogic.hasLendOrder(_user))
+        ) {
+            revert("Opposite side order exists");
+        }
+
         uint48 orderId = _makeOrder(_side, _user, _amount, _unitPrice);
         Storage.slot().isPreOrder[orderId] = true;
     }
@@ -696,7 +705,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 (userMaturity != Storage.slot().maturity &&
                     Storage.slot().activeLendOrderIds[_user].length == 0 &&
                     Storage.slot().activeBorrowOrderIds[_user].length == 0),
-            "Order found in past maturity."
+            "Order found in past maturity"
         );
 
         if (userMaturity != Storage.slot().maturity) {

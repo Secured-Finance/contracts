@@ -32,8 +32,6 @@ library LendingMarketControllerStorage {
         mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
         // Mapping from user to used market maturity per currency
         mapping(bytes32 => mapping(address => EnumerableSet.UintSet)) usedMaturities;
-        // Mapping from user to active order existence per currency and maturity
-        mapping(address => mapping(bytes32 => mapping(uint256 => bool))) activeOrderExistences;
         // Mapping from maturity to observation period log per currency
         mapping(bytes32 => mapping(uint256 => ObservationPeriodLog)) observationPeriodLogs;
         // Mapping from maturity to latest estimated auto roll unit price per currency
