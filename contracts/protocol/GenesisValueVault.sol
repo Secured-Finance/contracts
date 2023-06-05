@@ -240,12 +240,10 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _maturity,
         uint256 _nextMaturity,
         uint256 _unitPrice,
-        uint256 _feeRate,
-        uint256 _totalFVAmount
+        uint256 _feeRate
     ) external override onlyAcceptedContracts {
         _updateCompoundFactor(_ccy, _unitPrice, _feeRate);
         _updateAutoRollLogs(_ccy, _maturity, _nextMaturity, _unitPrice);
-        _registerMaximumTotalSupply(_ccy, _maturity, _totalFVAmount);
 
         emit AutoRollExecuted(
             _ccy,
@@ -465,17 +463,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
                 }
             }
         }
-    }
-
-    function _registerMaximumTotalSupply(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _totalFVAmount
-    ) private {
-        require(Storage.slot().maximumTotalSupply[_ccy][_maturity] == 0, "Already registered");
-
-        Storage.slot().maximumTotalSupply[_ccy][_maturity] = (_totalFVAmount * 10**decimals(_ccy))
-            .div(getLendingCompoundFactor(_ccy));
     }
 
     function _getActualBalance(

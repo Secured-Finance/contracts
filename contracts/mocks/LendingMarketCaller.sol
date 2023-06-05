@@ -30,6 +30,14 @@ contract LendingMarketCaller {
         lendingMarkets.push(lendingMarket);
     }
 
+    function openMarket(
+        uint256 _maturity,
+        uint256 _openingDate,
+        uint256 _index
+    ) external {
+        ILendingMarket(lendingMarkets[_index]).openMarket(_maturity, _openingDate);
+    }
+
     function createOrder(
         ProtocolTypes.Side _side,
         uint256 _amount,

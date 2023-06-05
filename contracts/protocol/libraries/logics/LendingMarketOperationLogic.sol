@@ -171,15 +171,12 @@ library LendingMarketOperationLogic {
             markets[i] = marketAddr;
         }
 
-        address futureValueVault = Storage.slot().futureValueVaults[_ccy][currentMarketAddr];
-
         AddressResolverLib.genesisValueVault().executeAutoRoll(
             _ccy,
             fromMaturity,
             nextMaturity,
             _calculateAutoRollUnitPrice(_ccy, nextMaturity),
-            _autoRollFeeRate,
-            IFutureValueVault(futureValueVault).getTotalSupply(fromMaturity)
+            _autoRollFeeRate
         );
 
         Storage.slot().maturityLendingMarkets[_ccy][toMaturity] = currentMarketAddr;

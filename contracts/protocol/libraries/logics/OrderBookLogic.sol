@@ -21,12 +21,12 @@ library OrderBookLogic {
         return unitPrice == 0 ? Constants.PRICE_DIGIT : unitPrice;
     }
 
-    function checkBorrowOrderExist() external view returns (bool) {
-        return Storage.slot().borrowOrders[Storage.slot().maturity].hasOrders();
+    function hasBorrowOrder(address _user) external view returns (bool) {
+        return Storage.slot().activeBorrowOrderIds[_user].length != 0;
     }
 
-    function checkLendOrderExist() external view returns (bool) {
-        return Storage.slot().lendOrders[Storage.slot().maturity].hasOrders();
+    function hasLendOrder(address _user) external view returns (bool) {
+        return Storage.slot().activeLendOrderIds[_user].length != 0;
     }
 
     function getLendOrderBook(uint256 _limit)
