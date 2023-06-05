@@ -895,6 +895,50 @@ describe('LendingMarket', () => {
       });
     }
 
+    it('Minimum threshold can be 1 for borrow orders', async () => {
+      const unitPrice = 1;
+
+      await expect(
+        lendingMarketCaller
+          .connect(alice)
+          .createOrder(
+            Side.BORROW,
+            '100000000000000',
+            unitPrice,
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          ),
+      ).to.emit(lendingMarket, 'OrderMade');
+
+      await ethers.provider.send('evm_setAutomine', [false]);
+
+      const bobTx = await lendingMarketCaller
+        .connect(bob)
+        .createOrder(
+          Side.LEND,
+          '100000000000000',
+          '0',
+          CIRCUIT_BREAKER_RATE_RANGE,
+          currentMarketIdx,
+        );
+
+      await ethers.provider.send('evm_mine', []);
+
+      await expect(bobTx)
+        .to.emit(lendingMarket, 'OrdersTaken')
+        .withArgs(
+          bob.address,
+          Side.LEND,
+          targetCurrency,
+          maturity,
+          '100000000000000',
+          unitPrice,
+          () => true,
+        );
+
+      await ethers.provider.send('evm_setAutomine', [true]);
+    });
+
     describe('Unwind', async () => {
       it('Unwind a position partially until the circuit breaker threshold', async () => {
         await createInitialOrders(Side.LEND, 8000);
