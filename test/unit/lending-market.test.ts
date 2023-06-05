@@ -32,10 +32,29 @@ describe('LendingMarket', () => {
   let carol: SignerWithAddress;
   let signers: SignerWithAddress[];
 
-  beforeEach(async () => {
+  let lendingMarket: Contract;
+  let currentMarketIdx: number;
+
+  const initialize = async (maturity: number, openingDate: number) => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
-  });
+
+    await lendingMarketCaller.deployLendingMarket(
+      targetCurrency,
+      maturity,
+      openingDate,
+    );
+
+    lendingMarket = await lendingMarketCaller
+      .getLendingMarkets()
+      .then((addresses) => {
+        currentMarketIdx = addresses.length - 1;
+        return ethers.getContractAt(
+          'LendingMarket',
+          addresses[currentMarketIdx],
+        );
+      });
+  };
 
   before(async () => {
     [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
@@ -120,10 +139,65 @@ describe('LendingMarket', () => {
     );
   });
 
-  describe('Itayose', async () => {
-    let lendingMarket: Contract;
-    let currentMarketIdx: number;
+  describe('Pre-Order', async () => {
+    beforeEach(async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const maturity = moment(timestamp * 1000)
+        .add(1, 'M')
+        .unix();
+      const openingDate = moment(timestamp * 1000)
+        .add(48, 'h')
+        .unix();
 
+      await initialize(maturity, openingDate);
+    });
+
+    it('Fail to crete a lending pre-order due to opposite order existing', async () => {
+      await lendingMarketCaller
+        .connect(bob)
+        .createPreOrder(
+          Side.BORROW,
+          '1000000000000000',
+          '8000',
+          currentMarketIdx,
+        );
+
+      await expect(
+        lendingMarketCaller
+          .connect(bob)
+          .createPreOrder(
+            Side.LEND,
+            '1000000000000000',
+            '8000',
+            currentMarketIdx,
+          ),
+      ).to.be.revertedWith('Opposite side order exists');
+    });
+
+    it('Fail to crete a borrowing pre-order due to opposite order existing', async () => {
+      await lendingMarketCaller
+        .connect(bob)
+        .createPreOrder(
+          Side.LEND,
+          '1000000000000000',
+          '8000',
+          currentMarketIdx,
+        );
+
+      await expect(
+        lendingMarketCaller
+          .connect(bob)
+          .createPreOrder(
+            Side.BORROW,
+            '1000000000000000',
+            '8000',
+            currentMarketIdx,
+          ),
+      ).to.be.revertedWith('Opposite side order exists');
+    });
+  });
+
+  describe('Itayose', async () => {
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
       const maturity = moment(timestamp * 1000)
@@ -134,21 +208,7 @@ describe('LendingMarket', () => {
         .add(48, 'h')
         .unix();
 
-      await lendingMarketCaller.deployLendingMarket(
-        targetCurrency,
-        maturity,
-        openingDate,
-      );
-
-      lendingMarket = await lendingMarketCaller
-        .getLendingMarkets()
-        .then((addresses) => {
-          currentMarketIdx = addresses.length - 1;
-          return ethers.getContractAt(
-            'LendingMarket',
-            addresses[currentMarketIdx],
-          );
-        });
+      await initialize(maturity, openingDate);
     });
 
     const tests = [
@@ -236,10 +296,15 @@ describe('LendingMarket', () => {
       const test = tests[i];
 
       it(`Execute Itayose call(Case ${i + 1})`, async () => {
+        const borrower = signers[2 * i];
+        const lender = signers[2 * i + 1];
+
         for (const order of test.orders) {
+          const user = order.side === Side.BORROW ? borrower : lender;
+
           await expect(
             lendingMarketCaller
-              .connect(alice)
+              .connect(user)
               .createPreOrder(
                 order.side,
                 order.amount,
@@ -277,13 +342,14 @@ describe('LendingMarket', () => {
       ).to.not.emit(lendingMarket, 'ItayoseExecuted');
     });
 
-    it('Fail to create a pre-order due to not in the pre-order period', async () => {
+    it('Fail to create a pre-order due to an existing order with a past maturity', async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
       const maturity = moment(timestamp * 1000)
-        .add(1, 'm')
+        .add(1, 'M')
         .unix();
+
       const openingDate = moment(timestamp * 1000)
-        .add(49, 'h')
+        .add(48, 'h')
         .unix();
 
       await lendingMarketCaller.deployLendingMarket(
@@ -292,14 +358,98 @@ describe('LendingMarket', () => {
         openingDate,
       );
 
+      await lendingMarketCaller
+        .connect(alice)
+        .createPreOrder(
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+          currentMarketIdx,
+        );
+      await lendingMarketCaller
+        .connect(bob)
+        .createPreOrder(
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+          currentMarketIdx,
+        );
+
+      // Increase 48 hours
+      await time.increase(172800);
+
+      await lendingMarketCaller
+        .executeItayoseCall(currentMarketIdx)
+        .then(async (tx) => {
+          await expect(tx).to.emit(lendingMarket, 'ItayoseExecuted');
+        });
+
+      await time.increaseTo(maturity.toString());
+
+      const { timestamp: newTimestamp } = await ethers.provider.getBlock(
+        'latest',
+      );
+      const newMaturity = moment(newTimestamp * 1000)
+        .add(1, 'M')
+        .unix();
+      const newOpeningDate = moment(newTimestamp * 1000)
+        .add(48, 'h')
+        .unix();
+
+      await lendingMarketCaller.openMarket(
+        newMaturity,
+        newOpeningDate,
+        currentMarketIdx,
+      );
+
       await expect(
         lendingMarketCaller
           .connect(alice)
-          .createPreOrder(Side.BORROW, '100000000000000000', '8720', 0),
+          .createPreOrder(
+            Side.LEND,
+            '100000000000000000',
+            '8000',
+            currentMarketIdx,
+          ),
+      ).to.be.revertedWith('Order found in past maturity');
+      await expect(
+        lendingMarketCaller
+          .connect(bob)
+          .createPreOrder(
+            Side.BORROW,
+            '100000000000000000',
+            '8000',
+            currentMarketIdx,
+          ),
+      ).to.be.revertedWith('Order found in past maturity');
+    });
+
+    it('Fail to create a pre-order due to not in the pre-order period', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const maturity = moment(timestamp * 1000)
+        .add(1, 'M')
+        .unix();
+      const openingDate = moment(timestamp * 1000)
+        .add(169, 'h')
+        .unix();
+
+      await lendingMarketCaller.deployLendingMarket(
+        targetCurrency,
+        maturity,
+        openingDate,
+      );
+
+      const addresses = await lendingMarketCaller.getLendingMarkets();
+      const marketIdx = addresses.length - 1;
+
+      await expect(
+        lendingMarketCaller
+          .connect(alice)
+          .createPreOrder(Side.BORROW, '100000000000000000', '8720', marketIdx),
       ).to.be.revertedWith('Not in the pre-order period');
     });
 
-    it('Fail to execute the Itayose call due to not in the Itayose period ', async () => {
+    it('Fail to execute the Itayose call due to not in the Itayose period', async () => {
       await expect(
         lendingMarketCaller.executeItayoseCall(currentMarketIdx),
       ).to.be.revertedWith('Not in the Itayose period');
@@ -312,8 +462,6 @@ describe('LendingMarket', () => {
     const CIRCUIT_BREAKER_LEND_THRESHOLD = 8629;
     const MAX_DIFFERENCE = 200;
     const MIN_DIFFERENCE = 10;
-    let lendingMarket: Contract;
-    let currentMarketIdx: number;
     let maturity: number;
 
     beforeEach(async () => {
@@ -324,21 +472,7 @@ describe('LendingMarket', () => {
 
       const openingDate = moment(timestamp * 1000).unix();
 
-      await lendingMarketCaller.deployLendingMarket(
-        targetCurrency,
-        maturity,
-        openingDate,
-      );
-
-      lendingMarket = await lendingMarketCaller
-        .getLendingMarkets()
-        .then((addresses) => {
-          currentMarketIdx = addresses.length - 1;
-          return ethers.getContractAt(
-            'LendingMarket',
-            addresses[currentMarketIdx],
-          );
-        });
+      await initialize(maturity, openingDate);
     });
 
     const createInitialOrders = async (
