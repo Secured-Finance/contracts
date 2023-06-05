@@ -905,7 +905,7 @@ describe('LendingMarket', () => {
             Side.LEND,
             '100000000000000',
             unitPrice,
-            200000,
+            25000000,
             currentMarketIdx,
           ),
       ).to.emit(lendingMarket, 'OrderMade');
@@ -917,7 +917,7 @@ describe('LendingMarket', () => {
             Side.BORROW,
             '100000000000000',
             '0',
-            200000,
+            25000000,
             currentMarketIdx,
           ),
       )
