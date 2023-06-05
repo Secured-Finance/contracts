@@ -628,7 +628,10 @@ library OrderBookLogic {
         } else if (
             cbThresholdUnitPrice < _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
         ) {
-            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
+            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD <=
+                Constants.PRICE_DIGIT
+                ? _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+                : Constants.PRICE_DIGIT;
         }
     }
 

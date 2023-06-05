@@ -1042,80 +1042,81 @@ describe('LendingMarket', () => {
               ),
           ).to.revertedWith('CB limit can not be so high');
         });
+
+        it('Threshold should not cross the range', async () => {
+          const unitPrice = isBorrow ? 9 : 9991;
+          const unitPrice2 = isBorrow ? 4 : 9996;
+
+          await expect(
+            lendingMarketCaller
+              .connect(alice)
+              .createOrder(
+                isBorrow ? Side.LEND : Side.BORROW,
+                '100000000000000',
+                unitPrice,
+                CIRCUIT_BREAKER_RATE_RANGE,
+                currentMarketIdx,
+              ),
+          ).to.emit(lendingMarket, 'OrderMade');
+
+          await expect(
+            lendingMarketCaller
+              .connect(alice)
+              .createOrder(
+                isBorrow ? Side.LEND : Side.BORROW,
+                '100000000000000',
+                unitPrice2,
+                CIRCUIT_BREAKER_RATE_RANGE,
+                currentMarketIdx,
+              ),
+          ).to.emit(lendingMarket, 'OrderMade');
+
+          await expect(
+            lendingMarketCaller
+              .connect(bob)
+              .createOrder(
+                side,
+                '100000000000000',
+                '0',
+                CIRCUIT_BREAKER_RATE_RANGE,
+                currentMarketIdx,
+              ),
+          )
+            .to.emit(lendingMarket, 'OrdersTaken')
+            .withArgs(
+              bob.address,
+              side,
+              targetCurrency,
+              maturity,
+              '100000000000000',
+              unitPrice,
+              () => true,
+            );
+
+          await expect(
+            lendingMarketCaller
+              .connect(bob)
+              .createOrder(
+                side,
+                '100000000000000',
+                isBorrow ? 1 : 10000,
+                CIRCUIT_BREAKER_RATE_RANGE,
+                currentMarketIdx,
+              ),
+          )
+            .to.emit(lendingMarket, 'OrdersTaken')
+            .withArgs(
+              bob.address,
+              side,
+              targetCurrency,
+              maturity,
+              '100000000000000',
+              unitPrice2,
+              () => true,
+            );
+        });
       });
     }
-
-    it('Threshold should be 1 when difference unit price is less minimum threshold for borrow orders', async () => {
-      const unitPrice = 9;
-
-      await expect(
-        lendingMarketCaller
-          .connect(alice)
-          .createOrder(
-            Side.LEND,
-            '100000000000000',
-            unitPrice,
-            CIRCUIT_BREAKER_RATE_RANGE,
-            currentMarketIdx,
-          ),
-      ).to.emit(lendingMarket, 'OrderMade');
-
-      await expect(
-        lendingMarketCaller
-          .connect(alice)
-          .createOrder(
-            Side.LEND,
-            '100000000000000',
-            4,
-            CIRCUIT_BREAKER_RATE_RANGE,
-            currentMarketIdx,
-          ),
-      ).to.emit(lendingMarket, 'OrderMade');
-
-      await expect(
-        lendingMarketCaller
-          .connect(bob)
-          .createOrder(
-            Side.BORROW,
-            '100000000000000',
-            '0',
-            CIRCUIT_BREAKER_RATE_RANGE,
-            currentMarketIdx,
-          ),
-      )
-        .to.emit(lendingMarket, 'OrdersTaken')
-        .withArgs(
-          bob.address,
-          Side.BORROW,
-          targetCurrency,
-          maturity,
-          '100000000000000',
-          unitPrice,
-          () => true,
-        );
-
-      await expect(
-        lendingMarketCaller
-          .connect(bob)
-          .createOrder(
-            Side.BORROW,
-            '100000000000000',
-            1,
-            CIRCUIT_BREAKER_RATE_RANGE,
-            currentMarketIdx,
-          ),
-      )
-        .to.emit(lendingMarket, 'OrdersTaken')
-        .withArgs(
-          bob.address,
-          Side.BORROW,
-          targetCurrency,
-          maturity,
-          '100000000000000',
-          4,
-          () => true,
-        );
-    });
 
     describe('Unwind', async () => {
       it('Unwind a position partially until the circuit breaker threshold', async () => {
