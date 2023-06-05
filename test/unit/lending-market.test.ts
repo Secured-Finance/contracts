@@ -896,7 +896,7 @@ describe('LendingMarket', () => {
     }
 
     it('Minimum threshold can be 1 for borrow orders', async () => {
-      const unitPrice = 1;
+      const unitPrice = 11;
 
       await expect(
         lendingMarketCaller
@@ -905,7 +905,7 @@ describe('LendingMarket', () => {
             Side.LEND,
             '100000000000000',
             unitPrice,
-            CIRCUIT_BREAKER_RATE_RANGE,
+            200000,
             currentMarketIdx,
           ),
       ).to.emit(lendingMarket, 'OrderMade');
@@ -917,7 +917,7 @@ describe('LendingMarket', () => {
             Side.BORROW,
             '100000000000000',
             '0',
-            CIRCUIT_BREAKER_RATE_RANGE,
+            200000,
             currentMarketIdx,
           ),
       )
