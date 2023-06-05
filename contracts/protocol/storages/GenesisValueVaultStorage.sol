@@ -36,8 +36,6 @@ library GenesisValueVaultStorage {
         mapping(bytes32 => mapping(uint256 => AutoRollLog)) autoRollLogs;
         // Mapping from user to maturity per currency
         mapping(bytes32 => mapping(address => uint256)) userMaturities;
-        // Mapping from maturity to maximum total supply per currency
-        mapping(bytes32 => mapping(uint256 => uint256)) maximumTotalSupply;
     }
 
     function slot() internal pure returns (Storage storage r) {
