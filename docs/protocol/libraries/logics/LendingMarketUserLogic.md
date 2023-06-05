@@ -2,10 +2,34 @@
 
 ## LendingMarketUserLogic
 
-### unwind
+### createOrder
 
 ```solidity
-function unwind(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, enum ProtocolTypes.Side side)
+function createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external returns (uint256 filledAmount)
+```
+
+### createPreOrder
+
+```solidity
+function createPreOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
+```
+
+### unwindPosition
+
+```solidity
+function unwindPosition(bytes32 _ccy, uint256 _maturity, address _user) external
+```
+
+### updateFundsForTaker
+
+```solidity
+function updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _filledUnitPrice) public
+```
+
+### updateFundsForMaker
+
+```solidity
+function updateFundsForMaker(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder) public
 ```
 
 ### getOrders
@@ -36,5 +60,11 @@ function _getOrder(bytes32 _ccy, contract ILendingMarket _market, uint48 _orderI
 
 ```solidity
 function _flattenOrders(struct ILendingMarketController.Order[][] orders, uint256 totalLength) internal pure returns (struct ILendingMarketController.Order[] flattened)
+```
+
+### _unwindPosition
+
+```solidity
+function _unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue) internal returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, enum ProtocolTypes.Side side)
 ```
 

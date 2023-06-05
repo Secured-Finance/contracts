@@ -43,7 +43,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _liquidationThresholdRate | uint256 | The liquidation threshold rate |
 | _liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
 | _liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
-| _WETH9 | address | The address of WETH |
+| _WETH9 | address | The address of the wrapped token to use as base currency |
 
 ### requiredContracts
 

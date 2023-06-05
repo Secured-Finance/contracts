@@ -14,16 +14,16 @@ function getHighestLendingUnitPrice() public view returns (uint256)
 function getLowestBorrowingUnitPrice() public view returns (uint256)
 ```
 
-### checkBorrowOrderExist
+### hasBorrowOrder
 
 ```solidity
-function checkBorrowOrderExist() external view returns (bool)
+function hasBorrowOrder(address _user) external view returns (bool)
 ```
 
-### checkLendOrderExist
+### hasLendOrder
 
 ```solidity
-function checkLendOrderExist() external view returns (bool)
+function hasLendOrder(address _user) external view returns (bool)
 ```
 
 ### getLendOrderBook
@@ -119,7 +119,7 @@ function checkCircuitBreakerThreshold(enum ProtocolTypes.Side _side, uint256 _un
 ### _nextOrderId
 
 ```solidity
-function _nextOrderId() private returns (uint48)
+function _nextOrderId() internal returns (uint48)
 ```
 
 Increases and returns id of last order in order book.
@@ -131,6 +131,18 @@ Increases and returns id of last order in order book.
 ### _removeOrderIdFromOrders
 
 ```solidity
-function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) private
+function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) internal
+```
+
+### _getUnitPriceForPreLendOrder
+
+```solidity
+function _getUnitPriceForPreLendOrder(uint256 openingUnitPrice, uint256 unitPrice) private pure returns (uint256)
+```
+
+### _getUnitPriceForPreBorrowOrder
+
+```solidity
+function _getUnitPriceForPreBorrowOrder(uint256 openingUnitPrice, uint256 unitPrice) private pure returns (uint256)
 ```
 

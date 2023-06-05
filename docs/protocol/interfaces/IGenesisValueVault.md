@@ -131,7 +131,7 @@ function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice) external
 ### executeAutoRoll
 
 ```solidity
-function executeAutoRoll(bytes32 ccy, uint256 maturity, uint256 nextMaturity, uint256 unitPrice, uint256 feeRate, uint256 totalFVAmount) external
+function executeAutoRoll(bytes32 ccy, uint256 maturity, uint256 nextMaturity, uint256 unitPrice, uint256 feeRate) external
 ```
 
 ### updateGenesisValueWithFutureValue

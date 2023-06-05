@@ -68,6 +68,12 @@ function convertToBaseCurrency(bytes32 _ccy, int256 _amount) external view retur
 function convertToBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
 ```
 
+### getBaseCurrency
+
+```solidity
+function getBaseCurrency() external view returns (bytes32)
+```
+
 ### getDecimals
 
 ```solidity

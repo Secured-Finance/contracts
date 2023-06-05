@@ -185,6 +185,6 @@ Resets the future value of the user
 ### _updateTotalSupply
 
 ```solidity
-function _updateTotalSupply(uint256 _maturity, int256 _previous, int256 _current) private
+function _updateTotalSupply(uint256 _maturity, int256 _previous, int256 _current, bool _isTaker) private
 ```
 

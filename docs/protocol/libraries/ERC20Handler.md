@@ -5,13 +5,13 @@
 ### initialize
 
 ```solidity
-function initialize(address _weth) internal
+function initialize(address _baseCurrency) internal
 ```
 
-### weth
+### baseCurrency
 
 ```solidity
-function weth() internal view returns (address)
+function baseCurrency() internal view returns (address)
 ```
 
 ### depositAssets
@@ -26,16 +26,16 @@ function depositAssets(address _token, address _payer, address _receiver, uint25
 function withdrawAssets(address _token, address _receiver, uint256 _amount) internal
 ```
 
-### wrapWETH
+### convertToWrappedToken
 
 ```solidity
-function wrapWETH(address _receiver, uint256 _amount) internal
+function convertToWrappedToken(address _receiver, uint256 _amount) internal
 ```
 
-### unwrapWETH
+### convertFromWrappedToken
 
 ```solidity
-function unwrapWETH(address _receiver, uint256 _amount) internal
+function convertFromWrappedToken(address _receiver, uint256 _amount) internal
 ```
 
 ### safeApprove

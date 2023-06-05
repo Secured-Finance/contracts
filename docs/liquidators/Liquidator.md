@@ -2,6 +2,12 @@
 
 ## Liquidator
 
+### baseCurrency
+
+```solidity
+bytes32 baseCurrency
+```
+
 ### lendingMarketController
 
 ```solidity
@@ -41,7 +47,7 @@ uint256[] collateralMaturities
 ### constructor
 
 ```solidity
-constructor(address _lendingMarketController, address _tokenVault, address _uniswapRouter, address _uniswapQuoter) public
+constructor(bytes32 _baseCurrency, address _lendingMarketController, address _tokenVault, address _uniswapRouter, address _uniswapQuoter) public
 ```
 
 ### receive
@@ -71,6 +77,6 @@ function executeOperationForDebt(address _liquidator, address _user, bytes32 _co
 ### _executeSwap
 
 ```solidity
-function _executeSwap(address _ccyFrom, address _ccyTo, uint256 _amountIn, uint256 _amountOutMinimum, uint24 _poolFee, bool _isETH) internal returns (uint256)
+function _executeSwap(address _ccyFrom, address _ccyTo, uint256 _amountIn, uint256 _amountOutMinimum, uint24 _poolFee, bool _isBaseCurrency) internal returns (uint256)
 ```
 

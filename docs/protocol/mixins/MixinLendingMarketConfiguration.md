@@ -1,30 +1,6 @@
 # Solidity API
 
-## MixinLendingMarketManager
-
-### OrderFeeRateUpdated
-
-```solidity
-event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
-```
-
-### AutoRollFeeRateUpdated
-
-```solidity
-event AutoRollFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
-```
-
-### CircuitBreakerLimitRangeUpdated
-
-```solidity
-event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
-```
-
-### ObservationPeriodUpdated
-
-```solidity
-event ObservationPeriodUpdated(uint256 previousPeriod, uint256 period)
-```
+## MixinLendingMarketConfiguration
 
 ### _initialize
 
@@ -142,16 +118,4 @@ Updates the observation period
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _observationPeriod | uint256 | The observation period to calculate the volume-weighted average price of transactions |
-
-### _updateObservationPeriod
-
-```solidity
-function _updateObservationPeriod(uint256 _observationPeriod) internal
-```
-
-### _calculateOrderFeeAmount
-
-```solidity
-function _calculateOrderFeeAmount(bytes32 _ccy, uint256 _amount, uint256 _maturity) internal view returns (uint256 orderFeeAmount)
-```
 

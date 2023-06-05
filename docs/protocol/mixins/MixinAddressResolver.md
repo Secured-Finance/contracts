@@ -40,6 +40,14 @@ _The contact name listed in this method is also needed to be listed `requiredCon
 function buildCache() public
 ```
 
+### afterBuildCache
+
+```solidity
+function afterBuildCache() internal virtual
+```
+
+Executes after the cache is built.
+
 ### isResolverCached
 
 ```solidity

@@ -1,6 +1,6 @@
 # Solidity API
 
-## LendingMarketManagerStorage
+## LendingMarketConfigurationStorage
 
 ### STORAGE_SLOT
 
@@ -22,6 +22,6 @@ struct Storage {
 ### slot
 
 ```solidity
-function slot() internal pure returns (struct LendingMarketManagerStorage.Storage r)
+function slot() internal pure returns (struct LendingMarketConfigurationStorage.Storage r)
 ```
 

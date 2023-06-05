@@ -34,6 +34,18 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _owner | address | The address of the contract owner |
 | _baseCcy | bytes32 | The base currency name in bytes32 |
 
+### getBaseCurrency
+
+```solidity
+function getBaseCurrency() external view returns (bytes32)
+```
+
+Gets the base currency name.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bytes32 | Currency name in bytes32 |
+
 ### getDecimals
 
 ```solidity

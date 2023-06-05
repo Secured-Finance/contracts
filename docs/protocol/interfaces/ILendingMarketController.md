@@ -16,36 +16,6 @@ struct Order {
 }
 ```
 
-### LendingMarketCreated
-
-```solidity
-event LendingMarketCreated(bytes32 ccy, address marketAddr, address futureValueVault, uint256 index, uint256 openingDate, uint256 maturity)
-```
-
-### LendingMarketsRotated
-
-```solidity
-event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
-```
-
-### RedemptionExecuted
-
-```solidity
-event RedemptionExecuted(bytes32 ccy, address user, int256 amount)
-```
-
-### LiquidationExecuted
-
-```solidity
-event LiquidationExecuted(address user, bytes32 collateralCcy, bytes32 debtCcy, uint256 debtMaturity, uint256 debtAmount)
-```
-
-### EmergencyTerminationExecuted
-
-```solidity
-event EmergencyTerminationExecuted(uint256 timestamp)
-```
-
 ### getGenesisDate
 
 ```solidity
@@ -130,10 +100,10 @@ function getPresentValue(bytes32 ccy, uint256 maturity, address user) external v
 function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256)
 ```
 
-### getTotalPresentValueInETH
+### getTotalPresentValueInBaseCurrency
 
 ```solidity
-function getTotalPresentValueInETH(address user) external view returns (int256 totalPresentValue)
+function getTotalPresentValueInBaseCurrency(address user) external view returns (int256 totalPresentValue)
 ```
 
 ### getGenesisValue
@@ -148,10 +118,10 @@ function getGenesisValue(bytes32 ccy, address user) external view returns (int25
 function calculateFunds(bytes32 ccy, address user) external view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
-### calculateTotalFundsInETH
+### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInETH(address user, bytes32 depositCcy, uint256 depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address user, bytes32 depositCcy, uint256 depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
 ```
 
 ### isInitializedLendingMarket
@@ -232,6 +202,12 @@ function cancelOrder(bytes32 ccy, uint256 maturity, uint48 orderId) external ret
 function rotateLendingMarkets(bytes32 ccy) external
 ```
 
+### executeEmergencyTermination
+
+```solidity
+function executeEmergencyTermination() external
+```
+
 ### pauseLendingMarkets
 
 ```solidity
@@ -247,7 +223,7 @@ function unpauseLendingMarkets(bytes32 ccy) external returns (bool)
 ### cleanUpAllFunds
 
 ```solidity
-function cleanUpAllFunds(address user) external
+function cleanUpAllFunds(address user) external returns (bool)
 ```
 
 ### cleanUpFunds

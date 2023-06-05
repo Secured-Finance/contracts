@@ -483,7 +483,7 @@ and places new order if not match it.
 function createPreOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external
 ```
 
-Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
 before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
 
 | Name | Type | Description |

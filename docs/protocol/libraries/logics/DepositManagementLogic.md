@@ -94,10 +94,10 @@ function getLiquidationAmount(address _user, bytes32 _liquidationCcy, uint256 _l
 function transferFrom(bytes32 _ccy, address _from, address _to, uint256 _amount) external returns (uint256 untransferredAmount)
 ```
 
-### _getTotalInternalDepositAmountInETH
+### _getTotalInternalDepositAmountInBaseCurrency
 
 ```solidity
-function _getTotalInternalDepositAmountInETH(address _user) internal view returns (uint256 totalDepositAmount)
+function _getTotalInternalDepositAmountInBaseCurrency(address _user) internal view returns (uint256 totalDepositAmount)
 ```
 
 Gets the total of amount deposited in the user's collateral of all currencies

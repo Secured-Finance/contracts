@@ -70,6 +70,14 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _marketBasePeriod | uint256 | The base period for market maturity |
 | _observationPeriod | uint256 | The observation period to calculate the volume-weighted average price of transactions |
 
+### afterBuildCache
+
+```solidity
+function afterBuildCache() internal
+```
+
+Executes after the cache is built.
+
 ### requiredContracts
 
 ```solidity
@@ -341,13 +349,13 @@ Gets the total present value of the account for selected currency.
 | ---- | ---- | ----------- |
 | totalPresentValue | int256 | The total present value |
 
-### getTotalPresentValueInETH
+### getTotalPresentValueInBaseCurrency
 
 ```solidity
-function getTotalPresentValueInETH(address _user) external view returns (int256 totalPresentValue)
+function getTotalPresentValueInBaseCurrency(address _user) external view returns (int256 totalPresentValue)
 ```
 
-Gets the total present value of the account converted to ETH.
+Gets the total present value of the account converted to base currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -355,7 +363,7 @@ Gets the total present value of the account converted to ETH.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| totalPresentValue | int256 | The total present value in ETH |
+| totalPresentValue | int256 | The total present value in base currency |
 
 ### getGenesisValue
 
@@ -416,14 +424,14 @@ for the selected currency.
 | debtAmount | uint256 | The debt amount due to the borrow orders being filled on the order book |
 | borrowedAmount | uint256 | The borrowed amount due to the borrow orders being filled on the order book |
 
-### calculateTotalFundsInETH
+### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInETH(address _user, bytes32 _depositCcy, uint256 _depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address _user, bytes32 _depositCcy, uint256 _depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
 ```
 
 Gets the funds that are calculated from the user's lending and borrowing order list
-for all currencies in ETH.
+for all currencies in base currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -528,7 +536,7 @@ Deposits funds and creates an order at the same time.
 function createPreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) public returns (bool)
 ```
 
-Creates a pre-order. A pre-order will only be accepted from 48 hours to 1 hour
+Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
 before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
 
 | Name | Type | Description |
@@ -696,7 +704,7 @@ Unpauses previously deployed lending market by currency
 ### cleanUpAllFunds
 
 ```solidity
-function cleanUpAllFunds(address _user) external
+function cleanUpAllFunds(address _user) external returns (bool)
 ```
 
 Clean up all funds of the user
@@ -719,28 +727,4 @@ Clean up user funds used for lazy evaluation by the following actions:
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
-
-### _createOrder
-
-```solidity
-function _createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) private returns (uint256 filledAmount)
-```
-
-### _updateFundsForTaker
-
-```solidity
-function _updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledFutureValue, uint256 _filledUnitPrice, uint256 _feeFutureValue) private
-```
-
-### _updateFundsForMaker
-
-```solidity
-function _updateFundsForMaker(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder) private
-```
-
-### _createPreOrder
-
-```solidity
-function _createPreOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) private
-```
 

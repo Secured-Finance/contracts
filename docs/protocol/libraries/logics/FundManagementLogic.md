@@ -17,14 +17,14 @@ struct ExecuteLiquidationVars {
 }
 ```
 
-### CalculatedTotalFundInETHVars
+### CalculatedTotalFundInBaseCurrencyVars
 
 ```solidity
-struct CalculatedTotalFundInETHVars {
+struct CalculatedTotalFundInBaseCurrencyVars {
   bool[] isCollateral;
   bytes32 ccy;
   uint256[] amounts;
-  uint256[] amountsInETH;
+  uint256[] amountsInBaseCurrency;
   uint256 plusDepositAmount;
   uint256 minusDepositAmount;
 }
@@ -35,6 +35,8 @@ struct CalculatedTotalFundInETHVars {
 ```solidity
 struct ActualFunds {
   int256 presentValue;
+  uint256 claimableAmount;
+  uint256 debtAmount;
   int256 futureValue;
   uint256 workingLendOrdersAmount;
   uint256 lentAmount;
@@ -52,6 +54,7 @@ struct CalculateActualFundsVars {
   address market;
   bool isDefaultMarket;
   uint256[] maturities;
+  int256 presentValueOfDefaultMarket;
 }
 ```
 
@@ -101,6 +104,18 @@ event OrderFilled(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint
 event OrdersFilledInAsync(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
 ```
 
+### RedemptionExecuted
+
+```solidity
+event RedemptionExecuted(bytes32 ccy, address user, int256 amount)
+```
+
+### LiquidationExecuted
+
+```solidity
+event LiquidationExecuted(address user, bytes32 collateralCcy, bytes32 debtCcy, uint256 debtMaturity, uint256 debtAmount)
+```
+
 ### convertFutureValueToGenesisValue
 
 ```solidity
@@ -122,13 +137,13 @@ Converts the future value to the genesis value if there is balance in the past m
 ### executeLiquidation
 
 ```solidity
-function executeLiquidation(address _liquidator, address _user, bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity) external returns (uint256 totalLiquidatedDebtAmount)
+function executeLiquidation(address _liquidator, address _user, bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity) external
 ```
 
 ### updateFunds
 
 ```solidity
-function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledFutureValue, uint256 _filledAmount, uint256 _feeFutureValue, bool _isTaker) external
+function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _orderFeeRate, bool _isTaker) external
 ```
 
 ### registerCurrencyAndMaturity
@@ -137,22 +152,10 @@ function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum Protoc
 function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _user) public
 ```
 
-### resetFunds
+### executeRedemption
 
 ```solidity
-function resetFunds(bytes32 _ccy, address _user) external returns (int256 amount)
-```
-
-### addDepositAtMarketTerminationPrice
-
-```solidity
-function addDepositAtMarketTerminationPrice(bytes32 _ccy, address _user, uint256 _amount) external
-```
-
-### removeDepositAtMarketTerminationPrice
-
-```solidity
-function removeDepositAtMarketTerminationPrice(bytes32 _ccy, address _user, uint256 _amount, bytes32 _collateralCcy) external
+function executeRedemption(bytes32 _redemptionCcy, bytes32 _collateralCcy, address _user) external
 ```
 
 ### calculateActualFunds
@@ -167,10 +170,10 @@ function calculateActualFunds(bytes32 _ccy, uint256 _maturity, address _user) pu
 function calculateFunds(bytes32 _ccy, address _user) public view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
-### calculateTotalFundsInETH
+### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInETH(address _user, bytes32 _depositCcy, uint256 _depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address _user, bytes32 _depositCcy, uint256 _depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
 ```
 
 ### getUsedMaturities
@@ -239,16 +242,16 @@ function _calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValu
 function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
 ```
 
-### _convertToETHAtMarketTerminationPrice
+### _convertToBaseCurrencyAtMarketTerminationPrice
 
 ```solidity
-function _convertToETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
+function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
 ```
 
-### _convertFromETHAtMarketTerminationPrice
+### _convertFromBaseCurrencyAtMarketTerminationPrice
 
 ```solidity
-function _convertFromETHAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
+function _convertFromBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
 ```
 
 ### _transferFunds
@@ -261,5 +264,29 @@ function _transferFunds(address _from, address _to, bytes32 _ccy, int256 _amount
 
 ```solidity
 function _transferFunds(address _from, address _to, bytes32 _ccy, uint256 _maturity, int256 _amount, bool _isDefaultMarket) internal returns (int256 untransferredAmount)
+```
+
+### _calculateOrderFeeAmount
+
+```solidity
+function _calculateOrderFeeAmount(uint256 _maturity, uint256 _amount, uint256 _orderFeeRate) internal view returns (uint256 orderFeeAmount)
+```
+
+### _resetFunds
+
+```solidity
+function _resetFunds(bytes32 _ccy, address _user) internal returns (int256 amount)
+```
+
+### _addDepositAtMarketTerminationPrice
+
+```solidity
+function _addDepositAtMarketTerminationPrice(bytes32 _ccy, address _user, uint256 _amount) internal
+```
+
+### _removeDepositAtMarketTerminationPrice
+
+```solidity
+function _removeDepositAtMarketTerminationPrice(bytes32 _ccy, address _user, uint256 _amount, bytes32 _collateralCcy) internal
 ```
 

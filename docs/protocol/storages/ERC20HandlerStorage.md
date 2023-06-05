@@ -1,6 +1,6 @@
 # Solidity API
 
-## ERC20Storage
+## ERC20HandlerStorage
 
 ### STORAGE_SLOT
 
@@ -12,13 +12,13 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  address weth;
+  address baseCurrency;
 }
 ```
 
 ### slot
 
 ```solidity
-function slot() internal pure returns (struct ERC20Storage.Storage r)
+function slot() internal pure returns (struct ERC20HandlerStorage.Storage r)
 ```
 
