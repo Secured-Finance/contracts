@@ -598,12 +598,14 @@ library OrderBookLogic {
             (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
         cbThresholdUnitPrice = num.div(den);
 
-        if (_unitPrice - cbThresholdUnitPrice > Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+        if (_unitPrice > cbThresholdUnitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
             cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
         } else if (
-            _unitPrice - cbThresholdUnitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+            _unitPrice < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
         ) {
-            cbThresholdUnitPrice = _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
+            cbThresholdUnitPrice = _unitPrice > Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+                ? _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+                : 1;
         }
 
         if (cbThresholdUnitPrice == 0) {
@@ -625,10 +627,10 @@ library OrderBookLogic {
             (Constants.PCT_DIGIT - _circuitBreakerLimitRange);
         cbThresholdUnitPrice = num.div(den);
 
-        if (cbThresholdUnitPrice - _unitPrice > Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+        if (cbThresholdUnitPrice > _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
             cbThresholdUnitPrice = _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
         } else if (
-            cbThresholdUnitPrice - _unitPrice < Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+            cbThresholdUnitPrice < _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
         ) {
             cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD;
         }

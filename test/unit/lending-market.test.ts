@@ -902,7 +902,7 @@ describe('LendingMarket', () => {
         lendingMarketCaller
           .connect(alice)
           .createOrder(
-            Side.BORROW,
+            Side.LEND,
             '100000000000000',
             unitPrice,
             CIRCUIT_BREAKER_RATE_RANGE,
@@ -910,33 +910,27 @@ describe('LendingMarket', () => {
           ),
       ).to.emit(lendingMarket, 'OrderMade');
 
-      await ethers.provider.send('evm_setAutomine', [false]);
-
-      const bobTx = await lendingMarketCaller
-        .connect(bob)
-        .createOrder(
-          Side.LEND,
-          '100000000000000',
-          '0',
-          CIRCUIT_BREAKER_RATE_RANGE,
-          currentMarketIdx,
-        );
-
-      await ethers.provider.send('evm_mine', []);
-
-      await expect(bobTx)
+      await expect(
+        lendingMarketCaller
+          .connect(bob)
+          .createOrder(
+            Side.BORROW,
+            '100000000000000',
+            '0',
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          ),
+      )
         .to.emit(lendingMarket, 'OrdersTaken')
         .withArgs(
           bob.address,
-          Side.LEND,
+          Side.BORROW,
           targetCurrency,
           maturity,
           '100000000000000',
           unitPrice,
           () => true,
         );
-
-      await ethers.provider.send('evm_setAutomine', [true]);
     });
 
     describe('Unwind', async () => {
