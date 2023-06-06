@@ -54,7 +54,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm version ${{ github.event.inputs.versionLevel }} -m "chore: upgrade to %s"
+          npm version ${{ github.event.inputs.versionLevel }} --no-commit-hooks -m "chore: upgrade to %s"
           npm publish
           git push --follow-tags
       - name: Merge main into develop
