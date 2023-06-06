@@ -584,57 +584,6 @@ library OrderBookLogic {
         }
     }
 
-    function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        internal
-        pure
-        returns (uint256 cbThresholdUnitPrice)
-    {
-        // NOTE: Formula of circuit breaker threshold for borrow orders:
-        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
-        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 den = _unitPrice *
-            Constants.PCT_DIGIT +
-            (Constants.PRICE_DIGIT - _unitPrice) *
-            (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = num.div(den);
-
-        if (_unitPrice > cbThresholdUnitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
-            cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
-        } else if (
-            _unitPrice < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-        ) {
-            cbThresholdUnitPrice = _unitPrice > Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                ? _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                : 1;
-        }
-    }
-
-    function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        internal
-        pure
-        returns (uint256 cbThresholdUnitPrice)
-    {
-        // NOTE: Formula of circuit breaker threshold for lend orders:
-        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
-        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 den = _unitPrice *
-            Constants.PCT_DIGIT +
-            (Constants.PRICE_DIGIT - _unitPrice) *
-            (Constants.PCT_DIGIT - _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = num.div(den);
-
-        if (cbThresholdUnitPrice > _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
-            cbThresholdUnitPrice = _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
-        } else if (
-            cbThresholdUnitPrice < _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-        ) {
-            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD <=
-                Constants.PRICE_DIGIT
-                ? _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                : Constants.PRICE_DIGIT;
-        }
-    }
-
     function checkCircuitBreakerThreshold(
         ProtocolTypes.Side _side,
         uint256 _unitPrice,
@@ -660,7 +609,7 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
+                cbThresholdUnitPrice = _getLendCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -673,7 +622,7 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
+                cbThresholdUnitPrice = _getBorrowCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -702,6 +651,56 @@ library OrderBookLogic {
         isFilled = isLend
             ? (bestUnitPrice == 0 ? Constants.PRICE_DIGIT : bestUnitPrice) <= executedUnitPrice
             : bestUnitPrice >= executedUnitPrice;
+    }
+
+    function _getBorrowCircuitBreakerThreshold(
+        uint256 _circuitBreakerLimitRange,
+        uint256 _unitPrice
+    ) internal pure returns (uint256 cbThresholdUnitPrice) {
+        // NOTE: Formula of circuit breaker threshold for borrow orders:
+        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
+        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
+        uint256 den = _unitPrice *
+            Constants.PCT_DIGIT +
+            (Constants.PRICE_DIGIT - _unitPrice) *
+            (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
+        cbThresholdUnitPrice = num.div(den);
+
+        if (_unitPrice > cbThresholdUnitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+            cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        } else if (
+            _unitPrice < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+        ) {
+            cbThresholdUnitPrice = _unitPrice > Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+                ? _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+                : 1;
+        }
+    }
+
+    function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
+        internal
+        pure
+        returns (uint256 cbThresholdUnitPrice)
+    {
+        // NOTE: Formula of circuit breaker threshold for lend orders:
+        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
+        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
+        uint256 den = _unitPrice *
+            Constants.PCT_DIGIT +
+            (Constants.PRICE_DIGIT - _unitPrice) *
+            (Constants.PCT_DIGIT - _circuitBreakerLimitRange);
+        cbThresholdUnitPrice = num.div(den);
+
+        if (cbThresholdUnitPrice > _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
+            cbThresholdUnitPrice = _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        } else if (
+            cbThresholdUnitPrice < _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+        ) {
+            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD <=
+                Constants.PRICE_DIGIT
+                ? _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+                : Constants.PRICE_DIGIT;
+        }
     }
 
     /**
