@@ -2146,7 +2146,7 @@ describe('LendingMarketController - Orders', () => {
               maturities[0],
               Side.BORROW,
               orderAmount,
-              String(9880 - i),
+              String(8500 - i),
             );
         }
 
@@ -2158,7 +2158,7 @@ describe('LendingMarketController - Orders', () => {
               maturities[0],
               Side.LEND,
               totalAmount.toString(),
-              '9880',
+              '8500',
             ),
         )
           .to.emit(fundManagementLogic, 'OrderFilled')
