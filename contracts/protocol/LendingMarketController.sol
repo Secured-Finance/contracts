@@ -402,9 +402,25 @@ contract LendingMarketController is
     function getOrders(bytes32[] memory _ccys, address _user)
         external
         view
+        override
         returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
     {
         (activeOrders, inactiveOrders) = LendingMarketUserLogic.getOrders(_ccys, _user);
+    }
+
+    /**
+     * @notice Gets user's active positions from the future value vaults
+     * @param _ccys Currency name list in bytes32
+     * @param _user User's address
+     * @return positions The array of active positions
+     */
+    function getPositions(bytes32[] memory _ccys, address _user)
+        external
+        view
+        override
+        returns (ILendingMarketController.Position[] memory positions)
+    {
+        positions = FundManagementLogic.getPositions(_ccys, _user);
     }
 
     /**

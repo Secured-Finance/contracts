@@ -14,6 +14,13 @@ interface ILendingMarketController {
         uint256 timestamp;
     }
 
+    struct Position {
+        bytes32 ccy;
+        uint256 maturity;
+        int256 presentValue;
+        int256 futureValue;
+    }
+
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
@@ -78,6 +85,16 @@ interface ILendingMarketController {
         returns (int256 totalPresentValue);
 
     function getGenesisValue(bytes32 ccy, address user) external view returns (int256 genesisValue);
+
+    function getOrders(bytes32[] memory ccys, address user)
+        external
+        view
+        returns (Order[] memory activeOrders, Order[] memory inactiveOrders);
+
+    function getPositions(bytes32[] memory ccys, address user)
+        external
+        view
+        returns (ILendingMarketController.Position[] memory positions);
 
     function calculateFunds(bytes32 ccy, address user)
         external

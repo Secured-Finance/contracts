@@ -675,6 +675,54 @@ library FundManagementLogic {
         }
     }
 
+    function getPositions(bytes32[] memory _ccys, address _user)
+        external
+        view
+        returns (ILendingMarketController.Position[] memory positions)
+    {
+        uint256 totalPositionCount;
+
+        ILendingMarketController.Position[][]
+            memory positionLists = new ILendingMarketController.Position[][](_ccys.length);
+
+        for (uint256 i; i < _ccys.length; i++) {
+            positionLists[i] = getPositionsPerCurrency(_ccys[i], _user);
+            totalPositionCount += positionLists[i].length;
+        }
+
+        positions = new ILendingMarketController.Position[](totalPositionCount);
+        uint256 index;
+        for (uint256 i; i < positionLists.length; i++) {
+            for (uint256 j; j < positionLists[i].length; j++) {
+                positions[index] = positionLists[i][j];
+                index++;
+            }
+        }
+    }
+
+    function getPositionsPerCurrency(bytes32 _ccy, address _user)
+        public
+        view
+        returns (ILendingMarketController.Position[] memory positions)
+    {
+        uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
+        positions = new ILendingMarketController.Position[](maturities.length);
+
+        for (uint256 i; i < maturities.length; i++) {
+            FundManagementLogic.ActualFunds memory funds = calculateActualFunds(
+                _ccy,
+                maturities[i],
+                _user
+            );
+            positions[i] = ILendingMarketController.Position(
+                _ccy,
+                maturities[i],
+                funds.presentValue,
+                funds.futureValue
+            );
+        }
+    }
+
     function cleanUpAllFunds(address _user) external {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
         for (uint256 i = 0; i < ccySet.length(); i++) {

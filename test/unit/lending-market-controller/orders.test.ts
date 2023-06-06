@@ -766,7 +766,7 @@ describe('LendingMarketController - Orders', () => {
       ).to.emit(lendingMarket1, 'OrderCanceled');
     });
 
-    it('Get an active order of one market', async () => {
+    it('Get an active order from one market', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
         .createOrder(
@@ -792,7 +792,7 @@ describe('LendingMarketController - Orders', () => {
       expect(activeOrders[0].amount).to.equal('50000000000000000');
     });
 
-    it('Get active orders of multiple markets', async () => {
+    it('Get active orders from multiple markets', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
         .createOrder(
@@ -865,7 +865,7 @@ describe('LendingMarketController - Orders', () => {
       expect(activeOrders[3].amount).to.equal('50000000000000003');
     });
 
-    it('Get active orders of multiple currencies', async () => {
+    it('Get active orders from multiple currencies', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
         .createOrder(
@@ -991,7 +991,7 @@ describe('LendingMarketController - Orders', () => {
       expect(inactiveOrders[0].amount).to.equal('50000000000000001');
     });
 
-    it('Get empty orders', async () => {
+    it('Get an empty order list', async () => {
       const { activeOrders, inactiveOrders } =
         await lendingMarketControllerProxy.getOrders(
           [targetCurrency],
@@ -1000,6 +1000,227 @@ describe('LendingMarketController - Orders', () => {
 
       expect(activeOrders.length).to.equal(0);
       expect(inactiveOrders.length).to.equal(0);
+    });
+
+    it('Get an active position from one market', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      const positions = await lendingMarketControllerProxy.getPositions(
+        [targetCurrency],
+        alice.address,
+      );
+
+      expect(positions.length).to.equal(1);
+
+      expect(positions[0].ccy).to.equal(targetCurrency);
+      expect(positions[0].maturity).to.equal(maturities[0]);
+      expect(positions[0].futureValue).to.equal('125000000000000000');
+      expect(positions[0].presentValue).to.equal('62500000000000000');
+    });
+
+    it('Get active positions of a user who has both side position', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '5000',
+        );
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '5000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      const positions = await lendingMarketControllerProxy.getPositions(
+        [targetCurrency],
+        alice.address,
+      );
+
+      expect(positions.length).to.equal(1);
+
+      expect(positions[0].ccy).to.equal(targetCurrency);
+      expect(positions[0].maturity).to.equal(maturities[0]);
+      expect(positions[0].futureValue).to.equal('75000000000000000');
+      expect(positions[0].presentValue).to.equal('37500000000000000');
+    });
+
+    it('Get active positions from multiple markets', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '5000',
+        );
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '5000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[1],
+            Side.LEND,
+            '100000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      const positions = await lendingMarketControllerProxy.getPositions(
+        [targetCurrency],
+        alice.address,
+      );
+
+      expect(positions.length).to.equal(2);
+
+      expect(positions[0].ccy).to.equal(targetCurrency);
+      expect(positions[0].maturity).to.equal(maturities[0]);
+      expect(positions[0].futureValue).to.equal('200000000000000000');
+      expect(positions[0].presentValue).to.equal('100000000000000000');
+
+      expect(positions[1].ccy).to.equal(targetCurrency);
+      expect(positions[1].maturity).to.equal(maturities[1]);
+      expect(positions[1].futureValue).to.equal('-125000000000000000');
+      expect(positions[1].presentValue).to.equal('-62500000000000000');
+    });
+
+    it('Get active positions from multiple currencies', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '200000000000000000',
+          '8000',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '200000000000000000',
+          '8000',
+        );
+
+      const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency3`);
+      await initialize(targetCurrency2);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency2,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '5000',
+        );
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .createOrder(
+          targetCurrency2,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '5000',
+        );
+
+      const positions = await lendingMarketControllerProxy.getPositions(
+        [targetCurrency, targetCurrency2],
+        alice.address,
+      );
+
+      expect(positions.length).to.equal(2);
+
+      expect(positions[0].ccy).to.equal(targetCurrency);
+      expect(positions[0].maturity).to.equal(maturities[0]);
+      expect(positions[0].futureValue).to.equal('-250000000000000000');
+      expect(positions[0].presentValue).to.equal('-125000000000000000');
+
+      expect(positions[1].ccy).to.equal(targetCurrency2);
+      expect(positions[1].maturity).to.equal(maturities[0]);
+      expect(positions[1].futureValue).to.equal('-200000000000000000');
+      expect(positions[1].presentValue).to.equal('-100000000000000000');
+    });
+
+    it('Get an empty position list', async () => {
+      const positions = await lendingMarketControllerProxy.getPositions(
+        [targetCurrency],
+        alice.address,
+      );
+
+      expect(positions.length).to.equal(0);
     });
 
     it('Fill lending orders and check the total present value', async () => {
