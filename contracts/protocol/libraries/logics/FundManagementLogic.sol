@@ -709,18 +709,25 @@ library FundManagementLogic {
         positions = new ILendingMarketController.Position[](maturities.length);
 
         for (uint256 i; i < maturities.length; i++) {
-            FundManagementLogic.ActualFunds memory funds = calculateActualFunds(
-                _ccy,
-                maturities[i],
-                _user
-            );
+            (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturities[i], _user);
+
             positions[i] = ILendingMarketController.Position(
                 _ccy,
                 maturities[i],
-                funds.presentValue,
-                funds.futureValue
+                presentValue,
+                futureValue
             );
         }
+    }
+
+    function getPosition(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) public view returns (int256 presentValue, int256 futureValue) {
+        FundManagementLogic.ActualFunds memory funds = calculateActualFunds(_ccy, _maturity, _user);
+        presentValue = funds.presentValue;
+        futureValue = funds.futureValue;
     }
 
     function cleanUpAllFunds(address _user) external {

@@ -261,13 +261,12 @@ describe('LendingMarketController - Terminations', () => {
           alice.address,
         ),
       ).to.equal('-50000000000000000');
-      expect(
-        await lendingMarketControllerProxy.getFutureValue(
-          targetCurrency,
-          maturities[0],
-          alice.address,
-        ),
-      ).to.equal('-62500000000000000');
+
+      await lendingMarketControllerProxy
+        .getPosition(targetCurrency, maturities[0], alice.address)
+        .then(({ futureValue }) =>
+          expect(futureValue).to.equal('-62500000000000000'),
+        );
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
@@ -286,13 +285,9 @@ describe('LendingMarketController - Terminations', () => {
             user.address,
           ),
         ).to.equal('0');
-        expect(
-          await lendingMarketControllerProxy.getFutureValue(
-            targetCurrency,
-            maturities[0],
-            user.address,
-          ),
-        ).to.equal('0');
+        await lendingMarketControllerProxy
+          .getPosition(targetCurrency, maturities[0], user.address)
+          .then(({ futureValue }) => expect(futureValue).to.equal('0'));
       }
     });
 

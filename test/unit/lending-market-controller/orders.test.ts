@@ -464,21 +464,17 @@ describe('LendingMarketController - Orders', () => {
 
         const futureValues0 = await Promise.all(
           accounts.map((account) =>
-            lendingMarketControllerProxy.getFutureValue(
-              targetCurrency,
-              maturities[0],
-              account.address,
-            ),
+            lendingMarketControllerProxy
+              .getPosition(targetCurrency, maturities[0], account.address)
+              .then(({ futureValue }) => futureValue),
           ),
         );
 
         const futureValues1 = await Promise.all(
           accounts.map((account) =>
-            lendingMarketControllerProxy.getFutureValue(
-              targetCurrency,
-              maturities[1],
-              account.address,
-            ),
+            lendingMarketControllerProxy
+              .getPosition(targetCurrency, maturities[1], account.address)
+              .then(({ futureValue }) => futureValue),
           ),
         );
 
@@ -1232,11 +1228,9 @@ describe('LendingMarketController - Orders', () => {
           );
         const alicePVs = await Promise.all(
           [0, 1, 2].map((marketNo) =>
-            lendingMarketControllerProxy.getPresentValue(
-              targetCurrency,
-              maturities[marketNo],
-              alice.address,
-            ),
+            lendingMarketControllerProxy
+              .getPosition(targetCurrency, maturities[marketNo], alice.address)
+              .then(({ presentValue }) => presentValue),
           ),
         );
         const totalPresentValues = {
@@ -1569,11 +1563,12 @@ describe('LendingMarketController - Orders', () => {
         alice.address,
       );
 
-      const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
 
       const totalFV = await futureValueVaults[0].getTotalSupply(maturities[0]);
 
@@ -1596,16 +1591,18 @@ describe('LendingMarketController - Orders', () => {
         alice.address,
       );
 
-      const aliceFV2 = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturities[0],
-        alice.address,
-      );
-      const carolFV = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturities[0],
-        carol.address,
-      );
+      const { futureValue: aliceFV2 } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+      const { futureValue: carolFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          carol.address,
+        );
       const totalFV2 = await futureValueVaults[0].getTotalSupply(maturities[0]);
 
       expect(aliceFV2.add(carolFV).abs()).to.equal(totalFV2);
@@ -1649,19 +1646,20 @@ describe('LendingMarketController - Orders', () => {
         alice.address,
       );
 
-      const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
       const totalFV = await futureValueVaults[0].getTotalSupply(maturities[0]);
 
       expect(aliceFV.abs()).to.equal(totalFV);
     });
 
     it('Fill borrowing orders including own order', async () => {
-      const reserveFundFVBefore =
-        await lendingMarketControllerProxy.getFutureValue(
+      const { futureValue: reserveFundFVBefore } =
+        await lendingMarketControllerProxy.getPosition(
           targetCurrency,
           maturities[0],
           mockReserveFund.address,
@@ -1704,13 +1702,14 @@ describe('LendingMarketController - Orders', () => {
         alice.address,
       );
 
-      const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturities[0],
-        alice.address,
-      );
-      const reserveFundFVAfter =
-        await lendingMarketControllerProxy.getFutureValue(
+      const { futureValue: aliceFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+      const { futureValue: reserveFundFVAfter } =
+        await lendingMarketControllerProxy.getPosition(
           targetCurrency,
           maturities[0],
           mockReserveFund.address,
@@ -1782,16 +1781,18 @@ describe('LendingMarketController - Orders', () => {
         alice.address,
       );
 
-      const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturities[0],
-        alice.address,
-      );
-      const carolFV = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturities[0],
-        carol.address,
-      );
+      const { futureValue: aliceFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          alice.address,
+        );
+      const { futureValue: carolFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[0],
+          carol.address,
+        );
       const totalFV = await futureValueVaults[0].getTotalSupply(maturities[0]);
 
       expect(aliceFV.abs()).to.equal(0);
@@ -2483,11 +2484,12 @@ describe('LendingMarketController - Orders', () => {
             ),
           );
 
-        const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-          targetCurrency,
-          maturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
 
         expect(aliceFV).to.equal('0');
       });
@@ -2561,11 +2563,12 @@ describe('LendingMarketController - Orders', () => {
             ),
           );
 
-        const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-          targetCurrency,
-          maturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
 
         expect(aliceFV).to.equal('0');
       });
@@ -2627,11 +2630,12 @@ describe('LendingMarketController - Orders', () => {
             ),
           );
 
-        const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-          targetCurrency,
-          maturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
 
         expect(aliceFV).to.equal('1250000000000000');
       });
@@ -2667,11 +2671,12 @@ describe('LendingMarketController - Orders', () => {
             .unwindPosition(targetCurrency, maturities[0]),
         ).to.be.revertedWith('Order not found');
 
-        const aliceFV = await lendingMarketControllerProxy.getFutureValue(
-          targetCurrency,
-          maturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketControllerProxy.getPosition(
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          );
 
         expect(aliceFV).to.equal('-12500000000000000');
       });

@@ -334,11 +334,13 @@ describe('LendingMarketController - Itayose', () => {
 
       const [aliceFV, bobFV, carolFV] = await Promise.all(
         [alice, bob, carol].map((account) =>
-          lendingMarketControllerProxy.getFutureValue(
-            targetCurrency,
-            maturities[maturities.length - 1],
-            account.address,
-          ),
+          lendingMarketControllerProxy
+            .getPosition(
+              targetCurrency,
+              maturities[maturities.length - 1],
+              account.address,
+            )
+            .then(({ futureValue }) => futureValue),
         ),
       );
 
@@ -409,11 +411,12 @@ describe('LendingMarketController - Itayose', () => {
       const openingPrice = await lendingMarket.getOpeningUnitPrice();
       expect(openingPrice).to.equal('7500');
 
-      const carolFVBefore = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturity,
-        carol.address,
-      );
+      const { futureValue: carolFVBefore } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturity,
+          carol.address,
+        );
 
       expect(carolFVBefore).to.equal('0');
 
@@ -429,11 +432,12 @@ describe('LendingMarketController - Itayose', () => {
           ),
       ).to.emit(lendingMarket, 'OrdersTaken');
 
-      const carolFVAfter = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturity,
-        carol.address,
-      );
+      const { futureValue: carolFVAfter } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturity,
+          carol.address,
+        );
 
       expect(carolFVAfter).to.equal('-375000000000000');
     });
@@ -496,11 +500,12 @@ describe('LendingMarketController - Itayose', () => {
       const openingPrice = await lendingMarket.getOpeningUnitPrice();
       expect(openingPrice).to.equal('8000');
 
-      const bobFVBefore = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturity,
-        bob.address,
-      );
+      const { futureValue: bobFVBefore } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturity,
+          bob.address,
+        );
 
       expect(bobFVBefore).to.equal('125000000000000');
 
@@ -516,11 +521,12 @@ describe('LendingMarketController - Itayose', () => {
           ),
       ).to.emit(lendingMarket, 'OrdersTaken');
 
-      const bobFVAfter = await lendingMarketControllerProxy.getFutureValue(
-        targetCurrency,
-        maturity,
-        bob.address,
-      );
+      const { futureValue: bobFVAfter } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturity,
+          bob.address,
+        );
 
       expect(bobFVAfter).to.equal('250000000000000');
     });

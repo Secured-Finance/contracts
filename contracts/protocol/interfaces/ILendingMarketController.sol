@@ -65,18 +65,6 @@ interface ILendingMarketController {
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
-    function getFutureValue(
-        bytes32 ccy,
-        uint256 maturity,
-        address user
-    ) external view returns (int256 futureValue);
-
-    function getPresentValue(
-        bytes32 ccy,
-        uint256 maturity,
-        address user
-    ) external view returns (int256 presentValue);
-
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);
 
     function getTotalPresentValueInBaseCurrency(address user)
@@ -91,10 +79,16 @@ interface ILendingMarketController {
         view
         returns (Order[] memory activeOrders, Order[] memory inactiveOrders);
 
+    function getPosition(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) external view returns (int256 presentValue, int256 futureValue);
+
     function getPositions(bytes32[] memory ccys, address user)
         external
         view
-        returns (ILendingMarketController.Position[] memory positions);
+        returns (Position[] memory positions);
 
     function calculateFunds(bytes32 ccy, address user)
         external

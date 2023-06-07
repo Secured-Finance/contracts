@@ -180,11 +180,9 @@ describe('Integration Test: Order Book', async () => {
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
-            lendingMarketController.getFutureValue(
-              hexETH,
-              ethMaturities[0],
-              address,
-            ),
+            lendingMarketController
+              .getPosition(hexETH, ethMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
           ),
         );
 
@@ -224,11 +222,12 @@ describe('Integration Test: Order Book', async () => {
             .unwindPosition(hexETH, ethMaturities[0]),
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexETH,
-          ethMaturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            ethMaturities[0],
+            alice.address,
+          );
 
         expect(aliceFV).to.equal(0);
       });
@@ -301,11 +300,9 @@ describe('Integration Test: Order Book', async () => {
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
-            lendingMarketController.getFutureValue(
-              hexEFIL,
-              filMaturities[0],
-              address,
-            ),
+            lendingMarketController
+              .getPosition(hexEFIL, filMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
           ),
         );
 
@@ -360,11 +357,12 @@ describe('Integration Test: Order Book', async () => {
             .unwindPosition(hexEFIL, filMaturities[0]),
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            alice.address,
+          );
 
         expect(aliceFV).to.equal(0);
       });
@@ -436,11 +434,9 @@ describe('Integration Test: Order Book', async () => {
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
-            lendingMarketController.getFutureValue(
-              hexEFIL,
-              filMaturities[0],
-              address,
-            ),
+            lendingMarketController
+              .getPosition(hexEFIL, filMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
           ),
         );
 
@@ -449,11 +445,12 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Check lending position', async () => {
-        const bobFV = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          bob.address,
-        );
+        const { futureValue: bobFV } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            bob.address,
+          );
 
         expect(bobFV).to.equal(calculateFutureValue(orderAmount, '8000'));
       });
@@ -479,11 +476,12 @@ describe('Integration Test: Order Book', async () => {
 
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
-        const bobFV = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          bob.address,
-        );
+        const { futureValue: bobFV } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            bob.address,
+          );
 
         expect(bobFV).to.equal(0);
 
@@ -575,11 +573,9 @@ describe('Integration Test: Order Book', async () => {
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
-            lendingMarketController.getFutureValue(
-              hexEFIL,
-              filMaturities[0],
-              address,
-            ),
+            lendingMarketController
+              .getPosition(hexEFIL, filMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
           ),
         );
 
@@ -614,11 +610,9 @@ describe('Integration Test: Order Book', async () => {
 
         const [aliceFV, bobFV] = await Promise.all(
           [alice, bob].map(({ address }) =>
-            lendingMarketController.getFutureValue(
-              hexETH,
-              ethMaturities[0],
-              address,
-            ),
+            lendingMarketController
+              .getPosition(hexETH, ethMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
           ),
         );
 
@@ -670,11 +664,12 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Unwind orders partially', async () => {
-        const aliceFVBefore = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFVBefore } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            alice.address,
+          );
 
         await tokenVault.connect(dave).deposit(hexETH, depositAmount.mul(2), {
           value: depositAmount.mul(2),
@@ -696,11 +691,12 @@ describe('Integration Test: Order Book', async () => {
             .unwindPosition(hexEFIL, filMaturities[0]),
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
-        const aliceFVAfter = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFVAfter } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            alice.address,
+          );
 
         expect(aliceFVAfter.abs()).to.lte(aliceFVBefore.abs());
       });
@@ -774,11 +770,12 @@ describe('Integration Test: Order Book', async () => {
           filMaturities[0].sub(timestamp),
         );
 
-        const bobFV = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          bob.address,
-        );
+        const { futureValue: bobFV } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            bob.address,
+          );
 
         calculateFutureValue(orderAmount.div(2), 8000);
 
@@ -981,11 +978,9 @@ describe('Integration Test: Order Book', async () => {
         it(`Check orders`, async () => {
           const [aliceFV, bobFV] = await Promise.all(
             [alice, bob].map(({ address }) =>
-              lendingMarketController.getFutureValue(
-                hexEFIL,
-                filMaturities[1],
-                address,
-              ),
+              lendingMarketController
+                .getPosition(hexEFIL, filMaturities[1], address)
+                .then(({ futureValue }) => futureValue),
             ),
           );
           const { activeOrderIds: borrowOrderIds } =
@@ -1056,11 +1051,9 @@ describe('Integration Test: Order Book', async () => {
         it(`Check orders`, async () => {
           const [aliceFV, bobFV] = await Promise.all(
             [alice, bob].map(({ address }) =>
-              lendingMarketController.getFutureValue(
-                hexEFIL,
-                filMaturities[1],
-                address,
-              ),
+              lendingMarketController
+                .getPosition(hexEFIL, filMaturities[1], address)
+                .then(({ futureValue }) => futureValue),
             ),
           );
 
@@ -1149,11 +1142,9 @@ describe('Integration Test: Order Book', async () => {
         it(`Check orders`, async () => {
           const [aliceFV, bobFV] = await Promise.all(
             [alice, bob].map(({ address }) =>
-              lendingMarketController.getFutureValue(
-                hexEFIL,
-                filMaturities[1],
-                address,
-              ),
+              lendingMarketController
+                .getPosition(hexEFIL, filMaturities[1], address)
+                .then(({ futureValue }) => futureValue),
             ),
           );
 
@@ -1212,11 +1203,12 @@ describe('Integration Test: Order Book', async () => {
             '8000',
           );
 
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            alice.address,
+          );
         const unusedCollateral = await tokenVault.getUnusedCollateral(
           alice.address,
         );
@@ -1304,11 +1296,12 @@ describe('Integration Test: Order Book', async () => {
           alice.address,
           hexETH,
         );
-        const aliceFV = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          alice.address,
-        );
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            alice.address,
+          );
         const unusedCollateral = await tokenVault.getUnusedCollateral(
           alice.address,
         );
