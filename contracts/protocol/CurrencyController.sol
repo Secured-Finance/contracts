@@ -303,7 +303,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal {
-        require(_haircut > 0, "Incorrect haircut ratio");
         require(_haircut <= 10000, "Haircut ratio overflow");
 
         Storage.slot().haircuts[_ccy] = _haircut;

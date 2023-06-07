@@ -240,12 +240,6 @@ describe('CurrencyController', () => {
         .withArgs(currency);
     });
 
-    it('Fail to update a haircut due to incorrect ratio', async () => {
-      await expect(
-        currencyControllerProxy.updateHaircut(currency, 0),
-      ).to.be.revertedWith('Incorrect haircut ratio');
-    });
-
     it('Fail to update a haircut due to overflow', async () => {
       await expect(
         currencyControllerProxy.updateHaircut(currency, 10001),
