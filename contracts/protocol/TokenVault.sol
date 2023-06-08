@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Pausable} from "../dependencies/openzeppelin/contracts/security/Pausable.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
@@ -33,7 +34,7 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
  *
  * To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
  */
-contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
+contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Proxyable {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**
@@ -372,6 +373,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         external
         payable
         override
+        whenNotPaused
         onlyRegisteredCurrency(_ccy)
     {
         _deposit(msg.sender, _ccy, _amount);
@@ -387,7 +389,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _from,
         bytes32 _ccy,
         uint256 _amount
-    ) external payable override onlyAcceptedContracts {
+    ) external payable override whenNotPaused onlyAcceptedContracts {
         _deposit(_from, _ccy, _amount);
     }
 
@@ -399,6 +401,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     function withdraw(bytes32 _ccy, uint256 _amount)
         external
         override
+        whenNotPaused
         onlyRegisteredCurrency(_ccy)
     {
         _withdraw(msg.sender, _ccy, _amount);
@@ -414,7 +417,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _user,
         bytes32 _ccy,
         uint256 _amount
-    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+    ) external override whenNotPaused onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.addDepositAmount(_user, _ccy, _amount);
     }
 
@@ -428,7 +431,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         address _user,
         bytes32 _ccy,
         uint256 _amount
-    ) external override onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
+    ) external override whenNotPaused onlyAcceptedContracts onlyRegisteredCurrency(_ccy) {
         DepositManagementLogic.removeDepositAmount(_user, _ccy, _amount);
     }
 
@@ -447,6 +450,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     )
         external
         override
+        whenNotPaused
         onlyAcceptedContracts
         onlyRegisteredCurrency(_ccy)
         returns (uint256 untransferredAmount)
@@ -474,6 +478,20 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
             _liquidationProtocolFeeRate,
             _liquidatorFeeRate
         );
+    }
+
+    /**
+     * @notice Pauses the token vault.
+     */
+    function pauseVault() external override onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpauses the token vault.
+     */
+    function unpauseVault() external override onlyOwner {
+        _unpause();
     }
 
     function _deposit(

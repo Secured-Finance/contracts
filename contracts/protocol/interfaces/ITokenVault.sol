@@ -104,4 +104,8 @@ interface ITokenVault {
         address _receiver,
         uint256 _amount
     ) external returns (uint256 untransferredAmount);
+
+    function pauseVault() external;
+
+    function unpauseVault() external;
 }
