@@ -920,6 +920,25 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Redemption is required');
     });
 
+    it('Fail to withdraw due to insolvency', async () => {
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns('10000000000000');
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        '10000000000000',
+      );
+
+      await tokenVaultCaller.addDepositAmount(
+        owner.address,
+        targetCurrency,
+        '10000000000000',
+      );
+
+      await expect(
+        tokenVaultProxy.withdraw(targetCurrency, '10000000000000'),
+      ).to.be.revertedWith('Protocol is insolvent');
+    });
+
     it('Deposit funds from Alice', async () => {
       const valueInETH = '10000';
 

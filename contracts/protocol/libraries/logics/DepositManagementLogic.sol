@@ -264,6 +264,11 @@ library DepositManagementLogic {
         withdrawableAmount = getWithdrawableCollateral(_ccy, _user);
         withdrawableAmount = _amount > withdrawableAmount ? withdrawableAmount : _amount;
 
+        require(
+            Storage.slot().totalDepositAmount[_ccy] >= withdrawableAmount,
+            "Protocol is insolvent"
+        );
+
         Storage.slot().totalDepositAmount[_ccy] -= withdrawableAmount;
         removeDepositAmount(_user, _ccy, withdrawableAmount);
 

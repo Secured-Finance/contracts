@@ -726,13 +726,59 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Execute forced redemption', async () => {
-        await expect(
-          lendingMarketController.connect(alice).executeRedemption(),
-        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+        for (const user of [alice, carol, dave]) {
+          await expect(
+            lendingMarketController.connect(user).executeRedemption(),
+          ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+        }
 
         await expect(
           lendingMarketController.connect(bob).executeRedemption(),
         ).to.revertedWith('Insufficient collateral');
+
+        await expect(reserveFund.executeRedemption()).to.emit(
+          fundManagementLogic,
+          'RedemptionCompleted',
+        );
+      });
+
+      it('Withdraw all collateral', async () => {
+        for (const user of [alice, carol, dave]) {
+          const currencies = [hexETH, hexUSDC];
+
+          const deposits = await Promise.all(
+            currencies.map((ccy) =>
+              tokenVault.getDepositAmount(user.address, ccy),
+            ),
+          );
+
+          await tokenVault.connect(user).withdraw(hexETH, deposits[0]);
+          await tokenVault.connect(user).withdraw(hexUSDC, deposits[1]);
+
+          await Promise.all(
+            currencies.map((ccy) =>
+              tokenVault
+                .getDepositAmount(user.address, ccy)
+                .then((deposit) => expect(deposit).equal(0)),
+            ),
+          );
+        }
+
+        const rfETHDepositAmount = await tokenVault.getDepositAmount(
+          reserveFund.address,
+          hexETH,
+        );
+        const rfUSDCDepositAmount = await tokenVault.getDepositAmount(
+          reserveFund.address,
+          hexUSDC,
+        );
+
+        await expect(
+          reserveFund.withdraw(hexETH, rfETHDepositAmount),
+        ).to.revertedWith('Protocol is insolvent');
+        await expect(
+          reserveFund.withdraw(hexUSDC, rfUSDCDepositAmount),
+        ).to.revertedWith('Protocol is insolvent');
       });
     });
   });
