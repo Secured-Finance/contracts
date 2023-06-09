@@ -108,7 +108,7 @@ library FundManagementLogic {
         uint256 futureValue
     );
 
-    event RedemptionExecuted(bytes32 ccy, address indexed user, int256 amount);
+    event RedemptionCompleted(address indexed user, uint256 amount);
 
     event LiquidationExecuted(
         address indexed user,
@@ -377,30 +377,65 @@ library FundManagementLogic {
         }
     }
 
-    function executeRedemption(
-        bytes32 _redemptionCcy,
-        bytes32 _collateralCcy,
-        address _user
-    ) external {
-        int256 redemptionAmount = _resetFunds(_redemptionCcy, _user);
+    function executeRedemption(address _user) external {
+        require(!Storage.slot().isRedeemed[_user], "Already redeemed");
 
-        if (redemptionAmount > 0) {
-            _addDepositAtMarketTerminationPrice(
-                _redemptionCcy,
-                _user,
-                redemptionAmount.toUint256()
-            );
+        int256 redemptionAmountInBaseCurrency;
 
-            emit RedemptionExecuted(_redemptionCcy, _user, redemptionAmount);
-        } else if (redemptionAmount < 0) {
-            _removeDepositAtMarketTerminationPrice(
-                _redemptionCcy,
-                _user,
-                (-redemptionAmount).toUint256(),
-                _collateralCcy
+        bytes32[] memory currencies = Storage.slot().usedCurrencies[_user].values();
+
+        for (uint256 i; i < currencies.length; i++) {
+            int256 amountInCcy = _resetFunds(currencies[i], _user);
+
+            redemptionAmountInBaseCurrency += _convertToBaseCurrencyAtMarketTerminationPrice(
+                currencies[i],
+                amountInCcy
             );
-            emit RedemptionExecuted(_redemptionCcy, _user, redemptionAmount);
         }
+
+        bytes32[] memory collateralCurrencies = AddressResolverLib
+            .tokenVault()
+            .getCollateralCurrencies();
+
+        for (uint256 i; i < collateralCurrencies.length; i++) {
+            int256 amountInCcy = AddressResolverLib
+                .tokenVault()
+                .resetDepositAmount(_user, collateralCurrencies[i])
+                .toInt256();
+
+            redemptionAmountInBaseCurrency += _convertToBaseCurrencyAtMarketTerminationPrice(
+                collateralCurrencies[i],
+                amountInCcy
+            );
+        }
+
+        if (redemptionAmountInBaseCurrency > 0) {
+            uint256[] memory marketTerminationRatios = new uint256[](collateralCurrencies.length);
+            uint256 marketTerminationRatioTotal;
+
+            for (uint256 i; i < collateralCurrencies.length; i++) {
+                bytes32 ccy = collateralCurrencies[i];
+                marketTerminationRatios[i] = Storage.slot().marketTerminationRatios[ccy];
+                marketTerminationRatioTotal += marketTerminationRatios[i];
+            }
+
+            for (uint256 i; i < collateralCurrencies.length; i++) {
+                bytes32 ccy = collateralCurrencies[i];
+                uint256 addedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
+                    ccy,
+                    (redemptionAmountInBaseCurrency.toUint256() * marketTerminationRatios[i]).div(
+                        marketTerminationRatioTotal
+                    )
+                );
+
+                AddressResolverLib.tokenVault().addDepositAmount(_user, ccy, addedAmount);
+            }
+        } else if (redemptionAmountInBaseCurrency < 0) {
+            revert("Insufficient collateral");
+        }
+
+        Storage.slot().isRedeemed[_user] = true;
+        emit RedemptionCompleted(_user, redemptionAmountInBaseCurrency.toUint256());
     }
 
     function calculateActualFunds(
@@ -1043,10 +1078,10 @@ library FundManagementLogic {
         return (_futureValue * _unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
     }
 
-    function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
+    function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _amount)
         internal
         view
-        returns (uint256)
+        returns (int256)
     {
         if (_ccy == Storage.slot().baseCurrency) {
             return _amount;
@@ -1054,8 +1089,8 @@ library FundManagementLogic {
             uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
 
             return
-                (_amount * Storage.slot().marketTerminationPrices[_ccy].toUint256()).div(
-                    (10**decimals)
+                (_amount * Storage.slot().marketTerminationPrices[_ccy]).div(
+                    (10**decimals).toInt256()
                 );
         }
     }
@@ -1201,65 +1236,7 @@ library FundManagementLogic {
         }
 
         AddressResolverLib.genesisValueVault().resetGenesisValue(_ccy, _user);
-    }
 
-    function _addDepositAtMarketTerminationPrice(
-        bytes32 _ccy,
-        address _user,
-        uint256 _amount
-    ) internal {
-        bytes32[] memory collateralCurrencies = AddressResolverLib
-            .tokenVault()
-            .getCollateralCurrencies();
-
-        uint256[] memory marketTerminationRatios = new uint256[](collateralCurrencies.length);
-        uint256 marketTerminationRatioTotal;
-
-        for (uint256 i; i < collateralCurrencies.length; i++) {
-            bytes32 ccy = collateralCurrencies[i];
-            marketTerminationRatios[i] = Storage.slot().marketTerminationRatios[ccy];
-            marketTerminationRatioTotal += marketTerminationRatios[i];
-        }
-
-        uint256 amountInBaseCurrency = _convertToBaseCurrencyAtMarketTerminationPrice(
-            _ccy,
-            _amount
-        );
-
-        for (uint256 i; i < collateralCurrencies.length; i++) {
-            bytes32 ccy = collateralCurrencies[i];
-            uint256 addedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
-                ccy,
-                (amountInBaseCurrency * marketTerminationRatios[i]).div(marketTerminationRatioTotal)
-            );
-
-            AddressResolverLib.tokenVault().addDepositAmount(_user, ccy, addedAmount);
-        }
-    }
-
-    function _removeDepositAtMarketTerminationPrice(
-        bytes32 _ccy,
-        address _user,
-        uint256 _amount,
-        bytes32 _collateralCcy
-    ) internal {
-        require(
-            AddressResolverLib.tokenVault().isCollateral(_collateralCcy),
-            "Not registered as collateral"
-        );
-
-        uint256 depositAmount = AddressResolverLib.tokenVault().getDepositAmount(
-            _user,
-            _collateralCcy
-        );
-
-        uint256 removedAmount = _convertFromBaseCurrencyAtMarketTerminationPrice(
-            _collateralCcy,
-            _convertToBaseCurrencyAtMarketTerminationPrice(_ccy, _amount)
-        );
-
-        require(depositAmount >= removedAmount, "Not enough collateral");
-
-        AddressResolverLib.tokenVault().removeDepositAmount(_user, _collateralCcy, removedAmount);
+        Storage.slot().usedCurrencies[_user].remove(_ccy);
     }
 }

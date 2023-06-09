@@ -433,6 +433,20 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
+     * @notice Resets deposit amount.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     */
+    function resetDepositAmount(address _user, bytes32 _ccy)
+        external
+        onlyAcceptedContracts
+        onlyRegisteredCurrency(_ccy)
+        returns (uint256)
+    {
+        return DepositManagementLogic.resetDepositAmount(_user, _ccy);
+    }
+
+    /**
      * @notice Transfers the token from sender to receiver.
      * @param _ccy Currency name in bytes32
      * @param _from Sender's address
@@ -487,6 +501,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
                 _amount == msg.value,
             "Invalid amount"
         );
+        require(!lendingMarketController().isTerminated(), "Market terminated");
 
         DepositManagementLogic.deposit(_user, _ccy, _amount);
 
@@ -499,6 +514,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Proxyable {
         uint256 _amount
     ) internal {
         require(_amount > 0, "Invalid amount");
+        require(!lendingMarketController().isRedemptionRequired(_user), "Redemption is required");
 
         lendingMarketController().cleanUpFunds(_ccy, _user);
         uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);

@@ -29,6 +29,10 @@ contract TokenVaultCallerMock {
         tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
+    function resetDepositAmount(address user, bytes32 ccy) public {
+        tokenVault.resetDepositAmount(user, ccy);
+    }
+
     function depositFrom(
         address from,
         bytes32 ccy,
@@ -94,5 +98,13 @@ contract TokenVaultCallerMock {
 
     function cleanUpFunds(bytes32 _ccy, address _user) public returns (uint256 activeOrderCount) {
         return lendingMarketController.cleanUpFunds(_ccy, _user);
+    }
+
+    function isTerminated() public view returns (bool) {
+        return lendingMarketController.isTerminated();
+    }
+
+    function isRedemptionRequired(address _user) public view returns (bool) {
+        return lendingMarketController.isRedemptionRequired(_user);
     }
 }

@@ -19,9 +19,9 @@ interface ITokenVault {
 
     function isCovered(address user) external view returns (bool);
 
-    function isCollateral(bytes32 _ccy) external view returns (bool);
+    function isCollateral(bytes32 ccy) external view returns (bool);
 
-    function isCollateral(bytes32[] calldata _ccys)
+    function isCollateral(bytes32[] calldata ccys)
         external
         view
         returns (bool[] memory isCollateralCurrencies);
@@ -34,7 +34,7 @@ interface ITokenVault {
 
     function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw);
 
-    function getWithdrawableCollateral(bytes32 _ccy, address _user) external view returns (uint256);
+    function getWithdrawableCollateral(bytes32 ccy, address user) external view returns (uint256);
 
     function getCoverage(address user) external view returns (uint256 coverage);
 
@@ -55,7 +55,7 @@ interface ITokenVault {
             uint256 liquidatorFee
         );
 
-    function getTotalDepositAmount(bytes32 _ccy) external view returns (uint256);
+    function getTotalDepositAmount(bytes32 ccy) external view returns (uint256);
 
     function getDepositAmount(address user, bytes32 ccy) external view returns (uint256);
 
@@ -98,10 +98,12 @@ interface ITokenVault {
         uint256 amount
     ) external;
 
+    function resetDepositAmount(address user, bytes32 ccy) external returns (uint256 removedAmount);
+
     function transferFrom(
-        bytes32 _ccy,
-        address _sender,
-        address _receiver,
-        uint256 _amount
+        bytes32 ccy,
+        address sender,
+        address receiver,
+        uint256 amount
     ) external returns (uint256 untransferredAmount);
 }
