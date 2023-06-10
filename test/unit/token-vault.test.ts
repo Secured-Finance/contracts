@@ -960,4 +960,108 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Only Accepted Contracts');
     });
   });
+
+  describe.only('Pause/Unpause operations', async () => {
+    const arbitraryAmount = '1000';
+
+    beforeEach(async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+    });
+
+    it('Pause token vault', async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+
+      await tokenVaultProxy.pauseVault();
+      await expect(
+        tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
+        tokenVaultCaller.depositFrom(
+          alice.address,
+          targetCurrency,
+          arbitraryAmount,
+        ),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
+        tokenVaultCaller.addDepositAmount(
+          alice.address,
+          targetCurrency,
+          arbitraryAmount,
+        ),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
+        tokenVaultCaller.removeDepositAmount(
+          alice.address,
+          targetCurrency,
+          arbitraryAmount,
+        ),
+      ).to.be.revertedWith('Pausable: paused');
+
+      await expect(
+        tokenVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          arbitraryAmount,
+        ),
+      ).to.be.revertedWith('Pausable: paused');
+    });
+
+    it('Unpause token vault', async () => {
+      await tokenVaultProxy.unpauseVault();
+
+      await expect(
+        tokenVaultProxy.connect(alice).deposit(targetCurrency, arbitraryAmount),
+      ).to.be.not.reverted;
+
+      tokenVaultCaller.depositFrom(
+        alice.address,
+        targetCurrency,
+        arbitraryAmount,
+      );
+      await expect(
+        tokenVaultCaller.depositFrom(
+          alice.address,
+          targetCurrency,
+          arbitraryAmount,
+        ),
+      ).to.be.not.reverted;
+
+      await expect(
+        tokenVaultCaller.addDepositAmount(
+          alice.address,
+          targetCurrency,
+          arbitraryAmount,
+        ),
+      ).to.be.not.reverted;
+
+      await expect(
+        tokenVaultCaller.removeDepositAmount(
+          alice.address,
+          targetCurrency,
+          arbitraryAmount,
+        ),
+      ).to.be.not.reverted;
+
+      await expect(
+        tokenVaultCaller.transferFrom(
+          targetCurrency,
+          alice.address,
+          bob.address,
+          arbitraryAmount,
+        ),
+      ).to.be.not.reverted;
+    });
+  });
 });
