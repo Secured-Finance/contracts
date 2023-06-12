@@ -211,11 +211,12 @@ describe('Integration Test: Auto-rolls', async () => {
       const { futureValue: bobFV } = await futureValueVaults[0].getFutureValue(
         bob.address,
       );
-      const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
 
       expect(aliceFVBefore).to.equal('0');
       expect(bobFV).not.to.equal('0');
@@ -259,11 +260,12 @@ describe('Integration Test: Auto-rolls', async () => {
           8510,
         );
 
-      const aliceFVBefore = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceFVBefore } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
 
       // Auto-roll
       await executeAutoRoll('8500');
@@ -273,19 +275,21 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(carolCoverageAfter).to.equal('2000');
 
       // Check future value
-      const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
       expect(aliceActualFV).to.equal('0');
 
       // Check future value * genesis value
-      const aliceFVAfter = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { futureValue: aliceFVAfter } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       const aliceGVAfter = await lendingMarketController.getGenesisValue(
         hexETH,
@@ -357,21 +361,23 @@ describe('Integration Test: Auto-rolls', async () => {
           8100,
         );
 
-      const aliceFVBefore = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceFVBefore } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
 
       // Auto-roll
       await executeAutoRoll('8000');
 
       // Check future value
-      const aliceFVAfter = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { futureValue: aliceFVAfter } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       const { lendingCompoundFactor: lendingCF0 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
@@ -444,11 +450,12 @@ describe('Integration Test: Auto-rolls', async () => {
       await createSampleETHOrders(carol, maturities[0], '8000');
 
       // Check future value
-      const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
 
       expect(aliceActualFV).equal('125000000000000000');
     });
@@ -481,16 +488,18 @@ describe('Integration Test: Auto-rolls', async () => {
       await createSampleETHOrders(carol, maturities[1], '5000');
 
       // Check future value
-      const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
-      const bobActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        bob.address,
-      );
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
+      const { futureValue: bobActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          bob.address,
+        );
 
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
       const fee = calculateOrderFee(
@@ -522,16 +531,12 @@ describe('Integration Test: Auto-rolls', async () => {
         [alice, bob].map(async (user) =>
           Promise.all([
             lendingMarketController.getTotalPresentValue(hexETH, user.address),
-            lendingMarketController.getPresentValue(
-              hexETH,
-              maturities[0],
-              user.address,
-            ),
-            lendingMarketController.getPresentValue(
-              hexETH,
-              maturities[1],
-              user.address,
-            ),
+            lendingMarketController
+              .getPosition(hexETH, maturities[0], user.address)
+              .then(({ presentValue }) => presentValue),
+            lendingMarketController
+              .getPosition(hexETH, maturities[1], user.address)
+              .then(({ presentValue }) => presentValue),
           ]),
         ),
       );
@@ -539,16 +544,18 @@ describe('Integration Test: Auto-rolls', async () => {
       const [aliceTotalPVBefore, alicePV0Before, alicePV1Before] = alicePVs;
       const [bobTotalPVBefore, bobPV0Before, bobPV1Before] = bobPVs;
 
-      const aliceFV0Before = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const aliceFV1Before = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { futureValue: aliceFV0Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { futureValue: aliceFV1Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       expect(alicePV0Before).equal(orderAmount);
       expect(aliceTotalPVBefore).to.equal(alicePV0Before.add(alicePV1Before));
@@ -560,37 +567,34 @@ describe('Integration Test: Auto-rolls', async () => {
       // Auto-roll
       await executeAutoRoll();
 
-      // Check present value
       const aliceTotalPVAfter =
         await lendingMarketController.getTotalPresentValue(
           hexETH,
           alice.address,
         );
-      const alicePV0After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const alicePV1After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { presentValue: alicePV0After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { presentValue: alicePV1After, futureValue: aliceFV1After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
-      expect(alicePV0After).to.equal('0');
-      expect(alicePV1After).to.equal(aliceTotalPVAfter);
-
-      // Check future value
       const { lendingCompoundFactor: lendingCF0 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
       const { lendingCompoundFactor: lendingCF1 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
-      const aliceFV1After = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
 
+      // Check present value
+      expect(alicePV0After).to.equal('0');
+      expect(alicePV1After).to.equal(aliceTotalPVAfter);
+
+      // Check future value
       expect(
         aliceFV1After
           .sub(
@@ -606,29 +610,33 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it('Clean orders', async () => {
-      const alicePV0Before = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const alicePV1Before = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { presentValue: alicePV0Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { presentValue: alicePV1Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       await lendingMarketController.cleanUpFunds(hexETH, alice.address);
 
-      const alicePV0After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const alicePV1After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { presentValue: alicePV0After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { presentValue: alicePV1After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       expect(alicePV0Before).to.equal(alicePV0After);
       expect(alicePV1Before).to.equal(alicePV1After);
@@ -674,62 +682,63 @@ describe('Integration Test: Auto-rolls', async () => {
       await createSampleETHOrders(owner, maturities[1], '8333');
 
       // Check future value
-      const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
 
       expect(aliceActualFV).to.equal('1200048001920076803072');
     });
 
     for (let i = 0; i <= 9; i++) {
       it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
-        const aliceFV0Before = await lendingMarketController.getFutureValue(
-          hexETH,
-          maturities[0],
-          alice.address,
-        );
-        const aliceFV1Before = await lendingMarketController.getFutureValue(
-          hexETH,
-          maturities[1],
-          alice.address,
-        );
+        const { futureValue: aliceFV0Before } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+        const { futureValue: aliceFV1Before } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            alice.address,
+          );
 
         // Auto-roll
         await executeAutoRoll();
 
-        // Check present value
         const aliceTotalPVAfter =
           await lendingMarketController.getTotalPresentValue(
             hexETH,
             alice.address,
           );
-        const alicePV0After = await lendingMarketController.getPresentValue(
-          hexETH,
-          maturities[0],
-          alice.address,
-        );
-        const alicePV1After = await lendingMarketController.getPresentValue(
-          hexETH,
-          maturities[1],
-          alice.address,
-        );
 
-        expect(alicePV0After).to.equal('0');
-        expect(alicePV1After).to.equal(aliceTotalPVAfter);
+        const { presentValue: alicePV0After } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[0],
+            alice.address,
+          );
+        const { presentValue: alicePV1After, futureValue: aliceFV1After } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            alice.address,
+          );
 
-        // Check future value
         const { lendingCompoundFactor: lendingCF0 } =
           await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
         const { lendingCompoundFactor: lendingCF1 } =
           await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
-        const aliceFV1After = await lendingMarketController.getFutureValue(
-          hexETH,
-          maturities[1],
-          alice.address,
-        );
 
+        // Check present value
+        expect(alicePV0After).to.equal('0');
+        expect(alicePV1After).to.equal(aliceTotalPVAfter);
+
+        // Check future value
         expect(
           aliceFV1After
             .sub(
@@ -793,11 +802,12 @@ describe('Integration Test: Auto-rolls', async () => {
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check present value
-      const daveActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        dave.address,
-      );
+      const { futureValue: daveActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          dave.address,
+        );
 
       const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
       const davePV = await lendingMarketController.getTotalPresentValue(
@@ -910,38 +920,43 @@ describe('Integration Test: Auto-rolls', async () => {
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
-      const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
 
       expect(aliceActualFV).to.equal('125000000000000000');
     });
 
     it('Advance time', async () => {
-      const alicePV0Before = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const alicePV1Before = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { presentValue: alicePV0Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { presentValue: alicePV1Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       await time.increaseTo(maturities[0].toString());
-      const alicePV0After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const alicePV1After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { presentValue: alicePV0After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { presentValue: alicePV1After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       expect(alicePV0Before).to.equal(alicePV0After);
       expect(alicePV1Before).to.equal(alicePV1After);
@@ -965,16 +980,18 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it(`Execute auto-roll`, async () => {
-      const aliceFV0Before = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const aliceFV1Before = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
+      const { futureValue: aliceFV0Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { futureValue: aliceFV1Before } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
       // Auto-roll
       await createSampleETHOrders(carol, maturities[1], '8000');
@@ -986,37 +1003,35 @@ describe('Integration Test: Auto-rolls', async () => {
         maturities[maturities.length - 1],
       );
 
-      // Check present value
       const aliceTotalPVAfter =
         await lendingMarketController.getTotalPresentValue(
           hexETH,
           alice.address,
         );
-      const alicePV0After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[0],
-        alice.address,
-      );
-      const alicePV1After = await lendingMarketController.getPresentValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
 
-      expect(alicePV0After).to.equal('0');
-      expect(alicePV1After).to.equal(aliceTotalPVAfter);
+      const { presentValue: alicePV0After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[0],
+          alice.address,
+        );
+      const { presentValue: alicePV1After, futureValue: aliceFV1After } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[1],
+          alice.address,
+        );
 
-      // Check future value
       const { lendingCompoundFactor: lendingCF0 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[0]);
       const { lendingCompoundFactor: lendingCF1 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
-      const aliceFV1After = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[1],
-        alice.address,
-      );
 
+      // Check present value
+      expect(alicePV0After).to.equal('0');
+      expect(alicePV1After).to.equal(aliceTotalPVAfter);
+
+      // Check future value
       expect(
         aliceFV1After
           .sub(

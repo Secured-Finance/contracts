@@ -9,6 +9,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  PRICE_DIGIT,
   btcToETHRate,
   eFilToETHRate,
   wBtcToBTCRate,
@@ -590,12 +591,13 @@ describe('Integration Test: Deposit', async () => {
 
       const coverage = await tokenVault.getCoverage(alice.address);
 
-      const aliceFV = await lendingMarketController.getFutureValue(
-        hexWBTC,
-        wBTCMaturities[0],
-        alice.address,
-      );
-      const bobFV = await lendingMarketController.getFutureValue(
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexWBTC,
+          wBTCMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
         hexWBTC,
         wBTCMaturities[0],
         bob.address,
@@ -643,12 +645,13 @@ describe('Integration Test: Deposit', async () => {
         );
 
       const coverage = await tokenVault.getCoverage(alice.address);
-      const aliceFV = await lendingMarketController.getFutureValue(
-        hexEFIL,
-        filMaturities[0],
-        alice.address,
-      );
-      const bobFV = await lendingMarketController.getFutureValue(
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexEFIL,
+          filMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
         hexEFIL,
         filMaturities[0],
         bob.address,
@@ -745,12 +748,13 @@ describe('Integration Test: Deposit', async () => {
         .createOrder(hexEFIL, filMaturities[0], Side.BORROW, orderAmount, '0');
 
       const coverage = await tokenVault.getCoverage(alice.address);
-      const aliceFV = await lendingMarketController.getFutureValue(
-        hexEFIL,
-        filMaturities[0],
-        alice.address,
-      );
-      const bobFV = await lendingMarketController.getFutureValue(
+      const { futureValue: aliceFV, presentValue: alicePV } =
+        await lendingMarketController.getPosition(
+          hexEFIL,
+          filMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
         hexEFIL,
         filMaturities[0],
         bob.address,
@@ -763,7 +767,11 @@ describe('Integration Test: Deposit', async () => {
         filMaturities[0].sub(timestamp),
       );
 
-      expect(coverage.sub('4010').abs()).lte(1);
+      expect(
+        coverage
+          .sub(alicePV.abs().mul(PRICE_DIGIT).div(orderAmount.mul(5).div(2)))
+          .abs(),
+      ).lte(1);
       expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
     });
 
@@ -876,12 +884,13 @@ describe('Integration Test: Deposit', async () => {
         );
 
       const coverage = await tokenVault.getCoverage(alice.address);
-      const aliceFV = await lendingMarketController.getFutureValue(
-        hexEFIL,
-        filMaturities[0],
-        alice.address,
-      );
-      const bobFV = await lendingMarketController.getFutureValue(
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexEFIL,
+          filMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
         hexEFIL,
         filMaturities[0],
         bob.address,
@@ -931,12 +940,13 @@ describe('Integration Test: Deposit', async () => {
         .connect(alice)
         .createOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '0');
 
-      const aliceFV = await lendingMarketController.getFutureValue(
-        hexETH,
-        ethMaturities[0],
-        alice.address,
-      );
-      const bobFV = await lendingMarketController.getFutureValue(
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          ethMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
         hexETH,
         ethMaturities[0],
         bob.address,

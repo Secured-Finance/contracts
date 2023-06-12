@@ -173,27 +173,30 @@ describe('Performance Test: Auto-rolls', async () => {
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
-      const aliceActualFV = await lendingMarketController.getFutureValue(
-        hexEFIL,
-        maturities[0],
-        alice.address,
-      );
+      const { futureValue: aliceActualFV } =
+        await lendingMarketController.getPosition(
+          hexEFIL,
+          maturities[0],
+          alice.address,
+        );
 
       expect(aliceActualFV.sub('1250000000000000000000000').abs()).lte(1);
     });
 
     for (let i = 0; i < 800; i++) {
       it(`Execute auto-roll (${formatOrdinals(i + 1)} time)`, async () => {
-        const aliceFV0Before = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          maturities[0],
-          alice.address,
-        );
-        const aliceFV1Before = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          maturities[1],
-          alice.address,
-        );
+        const { futureValue: aliceFV0Before } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            maturities[0],
+            alice.address,
+          );
+        const { futureValue: aliceFV1Before } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            maturities[1],
+            alice.address,
+          );
 
         // Auto-roll
         await createSampleFILOrders(carol, maturities[1], '9523');
@@ -206,38 +209,35 @@ describe('Performance Test: Auto-rolls', async () => {
           maturities[maturities.length - 1],
         );
 
-        // Check present value
         const aliceTotalPVAfter =
           await lendingMarketController.getTotalPresentValue(
             hexEFIL,
             alice.address,
           );
-        const alicePV0After = await lendingMarketController.getPresentValue(
-          hexEFIL,
-          maturities[0],
-          alice.address,
-        );
-        const alicePV1After = await lendingMarketController.getPresentValue(
-          hexEFIL,
-          maturities[1],
-          alice.address,
-        );
+
+        const { lendingCompoundFactor: lendingCF0 } =
+          await genesisValueVault.getAutoRollLog(hexEFIL, maturities[0]);
+        const { lendingCompoundFactor: lendingCF1 } =
+          await genesisValueVault.getAutoRollLog(hexEFIL, maturities[1]);
+
+        const { futureValue: alicePV0After } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            maturities[0],
+            alice.address,
+          );
+        const { futureValue: aliceFV1After, presentValue: alicePV1After } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            maturities[1],
+            alice.address,
+          );
 
         // Check present value
         expect(alicePV0After).to.equal('0');
         expect(alicePV1After).to.equal(aliceTotalPVAfter);
 
         // Check future value
-        const { lendingCompoundFactor: lendingCF0 } =
-          await genesisValueVault.getAutoRollLog(hexEFIL, maturities[0]);
-        const { lendingCompoundFactor: lendingCF1 } =
-          await genesisValueVault.getAutoRollLog(hexEFIL, maturities[1]);
-        const aliceFV1After = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          maturities[1],
-          alice.address,
-        );
-
         expect(
           aliceFV1After
             .sub(
@@ -275,11 +275,12 @@ describe('Performance Test: Auto-rolls', async () => {
       ).to.emit(lendingMarkets[0], 'OrdersTaken');
 
       // Check future value
-      const ellenActualFV = await lendingMarketController.getFutureValue(
-        hexEFIL,
-        maturities[0],
-        ellen.address,
-      );
+      const { futureValue: ellenActualFV } =
+        await lendingMarketController.getPosition(
+          hexEFIL,
+          maturities[0],
+          ellen.address,
+        );
 
       expect(ellenActualFV).to.equal('1050089257586894886065316');
     });

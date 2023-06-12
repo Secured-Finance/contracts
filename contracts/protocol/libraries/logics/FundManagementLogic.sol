@@ -675,6 +675,61 @@ library FundManagementLogic {
         }
     }
 
+    function getPositions(bytes32[] memory _ccys, address _user)
+        external
+        view
+        returns (ILendingMarketController.Position[] memory positions)
+    {
+        uint256 totalPositionCount;
+
+        ILendingMarketController.Position[][]
+            memory positionLists = new ILendingMarketController.Position[][](_ccys.length);
+
+        for (uint256 i; i < _ccys.length; i++) {
+            positionLists[i] = getPositionsPerCurrency(_ccys[i], _user);
+            totalPositionCount += positionLists[i].length;
+        }
+
+        positions = new ILendingMarketController.Position[](totalPositionCount);
+        uint256 index;
+        for (uint256 i; i < positionLists.length; i++) {
+            for (uint256 j; j < positionLists[i].length; j++) {
+                positions[index] = positionLists[i][j];
+                index++;
+            }
+        }
+    }
+
+    function getPositionsPerCurrency(bytes32 _ccy, address _user)
+        public
+        view
+        returns (ILendingMarketController.Position[] memory positions)
+    {
+        uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
+        positions = new ILendingMarketController.Position[](maturities.length);
+
+        for (uint256 i; i < maturities.length; i++) {
+            (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturities[i], _user);
+
+            positions[i] = ILendingMarketController.Position(
+                _ccy,
+                maturities[i],
+                presentValue,
+                futureValue
+            );
+        }
+    }
+
+    function getPosition(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) public view returns (int256 presentValue, int256 futureValue) {
+        FundManagementLogic.ActualFunds memory funds = calculateActualFunds(_ccy, _maturity, _user);
+        presentValue = funds.presentValue;
+        futureValue = funds.futureValue;
+    }
+
     function cleanUpAllFunds(address _user) external {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
         for (uint256 i = 0; i < ccySet.length(); i++) {

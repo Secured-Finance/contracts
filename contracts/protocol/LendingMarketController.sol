@@ -311,38 +311,6 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the future value of the account for selected currency and maturity.
-     * @param _ccy Currency name in bytes32 for Lending Market
-     * @param _maturity The maturity of the market
-     * @param _user User's address
-     * @return futureValue The future value
-     */
-    function getFutureValue(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    ) external view override returns (int256 futureValue) {
-        futureValue = FundManagementLogic.calculateActualFunds(_ccy, _maturity, _user).futureValue;
-    }
-
-    /**
-     * @notice Gets the present value of the account for selected currency and maturity.
-     * @param _ccy Currency name in bytes32 for Lending Market
-     * @param _maturity The maturity of the market
-     * @param _user User's address
-     * @return presentValue The present value
-     */
-    function getPresentValue(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user
-    ) external view override returns (int256 presentValue) {
-        presentValue = FundManagementLogic
-            .calculateActualFunds(_ccy, _maturity, _user)
-            .presentValue;
-    }
-
-    /**
      * @notice Gets the total present value of the account for selected currency.
      * @param _ccy Currency name in bytes32 for Lending Market
      * @param _user User's address
@@ -402,9 +370,41 @@ contract LendingMarketController is
     function getOrders(bytes32[] memory _ccys, address _user)
         external
         view
+        override
         returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
     {
         (activeOrders, inactiveOrders) = LendingMarketUserLogic.getOrders(_ccys, _user);
+    }
+
+    /**
+     * @notice Gets user's active position from the future value vault
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the selected market
+     * @param _user User's address
+     * @return presentValue The present value of the position
+     * @return futureValue The future value of the position
+     */
+    function getPosition(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user
+    ) external view override returns (int256 presentValue, int256 futureValue) {
+        (presentValue, futureValue) = FundManagementLogic.getPosition(_ccy, _maturity, _user);
+    }
+
+    /**
+     * @notice Gets user's active positions from the future value vaults
+     * @param _ccys Currency name list in bytes32
+     * @param _user User's address
+     * @return positions The array of active positions
+     */
+    function getPositions(bytes32[] memory _ccys, address _user)
+        external
+        view
+        override
+        returns (Position[] memory positions)
+    {
+        positions = FundManagementLogic.getPositions(_ccys, _user);
     }
 
     /**

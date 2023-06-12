@@ -410,11 +410,12 @@ describe('Integration Test: Itayose', async () => {
     it('Check if clearing order process takes the opening price into accounts', async () => {
       const lendingMarket = lendingMarkets[lendingMarkets.length - 1];
       // Fetch the future value before the clean up process is called
-      const daveFVBefore = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[maturities.length - 1],
-        dave.address,
-      );
+      const { futureValue: daveFVBefore } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[maturities.length - 1],
+          dave.address,
+        );
 
       // inactive order will be cleaned up which affects the future value of dave
       await lendingMarketController
@@ -431,11 +432,12 @@ describe('Integration Test: Itayose', async () => {
         );
 
       // Fetch the future value after the clean up process was called
-      const daveFVAfter = await lendingMarketController.getFutureValue(
-        hexETH,
-        maturities[maturities.length - 1],
-        dave.address,
-      );
+      const { futureValue: daveFVAfter } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          maturities[maturities.length - 1],
+          dave.address,
+        );
 
       // Fetch the opening unit price decided by Itayose
       const openingUnitPrice = await lendingMarket.getOpeningUnitPrice();

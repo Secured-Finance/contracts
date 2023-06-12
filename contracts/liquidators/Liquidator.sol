@@ -62,7 +62,7 @@ contract Liquidator is ILiquidationReceiver {
         uint256 _receivedCollateralAmount
     ) external override returns (bool) {
         for (uint256 i = 0; i < collateralMaturities.length; i++) {
-            int256 fvAmount = lendingMarketController.getFutureValue(
+            (, int256 fvAmount) = lendingMarketController.getPosition(
                 _collateralCcy,
                 collateralMaturities[i],
                 address(this)
@@ -102,7 +102,7 @@ contract Liquidator is ILiquidationReceiver {
             ? address(this).balance
             : IERC20(collateralCcyAddr).balanceOf(address(this));
 
-        int256 debtFVAmount = lendingMarketController.getFutureValue(
+        (, int256 debtFVAmount) = lendingMarketController.getPosition(
             _debtCcy,
             _debtMaturity,
             address(this)

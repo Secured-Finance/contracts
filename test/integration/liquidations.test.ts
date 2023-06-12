@@ -82,11 +82,9 @@ describe('Integration Test: Liquidations', async () => {
           tokenVault.getDepositAmount(this.address, hexETH),
           tokenVault.getDepositAmount(this.address, hexUSDC),
           ...Object.entries(maturities).map(([key, maturity]) =>
-            lendingMarketController.getPresentValue(
-              getCcy(key.split('-')[0]),
-              maturity,
-              this.address,
-            ),
+            lendingMarketController
+              .getPosition(getCcy(key.split('-')[0]), maturity, this.address)
+              .then(({ presentValue }) => presentValue),
           ),
         ]);
 
@@ -589,8 +587,8 @@ describe('Integration Test: Liquidations', async () => {
           eFilToETHRate.mul('115').div('100'),
         );
 
-        const rfFutureValueBefore =
-          await lendingMarketController.getFutureValue(
+        const { futureValue: rfFutureValueBefore } =
+          await lendingMarketController.getPosition(
             hexEFIL,
             filMaturities[0],
             reserveFund.address,
@@ -610,11 +608,12 @@ describe('Integration Test: Liquidations', async () => {
           ),
         ).to.emit(fundManagementLogic, 'LiquidationExecuted');
 
-        const rfFutureValueAfter = await lendingMarketController.getFutureValue(
-          hexEFIL,
-          filMaturities[0],
-          reserveFund.address,
-        );
+        const { futureValue: rfFutureValueAfter } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            reserveFund.address,
+          );
         const tokenVaultBalanceAfter = await wETHToken.balanceOf(
           tokenVault.address,
         );
@@ -927,8 +926,8 @@ describe('Integration Test: Liquidations', async () => {
         });
         lendingInfo.show();
 
-        const liquidatorFutureValue =
-          await lendingMarketController.getFutureValue(
+        const { futureValue: liquidatorFutureValue } =
+          await lendingMarketController.getPosition(
             hexEFIL,
             filMaturities[0],
             liquidator.address,
