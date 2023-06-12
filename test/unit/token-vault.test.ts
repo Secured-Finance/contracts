@@ -961,7 +961,7 @@ describe('TokenVault', () => {
     });
   });
 
-  describe.only('Pause/Unpause operations', async () => {
+  describe('Pause/Unpause operations', async () => {
     const arbitraryAmount = '1000';
 
     beforeEach(async () => {
