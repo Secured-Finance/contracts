@@ -213,8 +213,6 @@ library DepositManagementLogic {
         uint256 _amount
     ) public {
         Storage.slot().depositAmounts[_user][_ccy] += _amount;
-        Storage.slot().totalDepositAmount[_ccy] += _amount;
-
         _updateUsedCurrencies(_user, _ccy);
     }
 
@@ -229,9 +227,17 @@ library DepositManagementLogic {
         );
 
         Storage.slot().depositAmounts[_user][_ccy] -= _amount;
-        Storage.slot().totalDepositAmount[_ccy] -= _amount;
-
         _updateUsedCurrencies(_user, _ccy);
+    }
+
+    function resetDepositAmount(address _user, bytes32 _ccy)
+        external
+        returns (uint256 removedAmount)
+    {
+        removedAmount = Storage.slot().depositAmounts[_user][_ccy];
+        Storage.slot().depositAmounts[_user][_ccy] = 0;
+
+        Storage.slot().usedCurrencies[_user].remove(_ccy);
     }
 
     function deposit(
@@ -245,7 +251,9 @@ library DepositManagementLogic {
             address(this),
             _amount
         );
+
         addDepositAmount(_user, _ccy, _amount);
+        Storage.slot().totalDepositAmount[_ccy] += _amount;
     }
 
     function withdraw(
@@ -256,7 +264,14 @@ library DepositManagementLogic {
         withdrawableAmount = getWithdrawableCollateral(_ccy, _user);
         withdrawableAmount = _amount > withdrawableAmount ? withdrawableAmount : _amount;
 
+        require(
+            Storage.slot().totalDepositAmount[_ccy] >= withdrawableAmount,
+            "Protocol is insolvent"
+        );
+
+        Storage.slot().totalDepositAmount[_ccy] -= withdrawableAmount;
         removeDepositAmount(_user, _ccy, withdrawableAmount);
+
         ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
 
         return withdrawableAmount;

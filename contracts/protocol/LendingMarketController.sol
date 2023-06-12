@@ -128,8 +128,16 @@ contract LendingMarketController is
      * @notice Gets if the protocol has not been terminated.
      * @return The boolean if the protocol has not been terminated
      */
-    function isTerminated() public view returns (bool) {
+    function isTerminated() public view override returns (bool) {
         return Storage.slot().marketTerminationDate > 0;
+    }
+
+    /**
+     * @notice Gets if the user needs to redeem the funds.
+     * @return The boolean if the user needs to redeem the funds
+     */
+    function isRedemptionRequired(address _user) external view override returns (bool) {
+        return isTerminated() && !Storage.slot().isRedeemed[_user];
     }
 
     /**
@@ -667,17 +675,10 @@ contract LendingMarketController is
      * @notice Redeems all lending and borrowing positions.
      * This function uses the present value as of the termination date.
      *
-     * @param _redemptionCcy Currency name of positions to be redeemed
-     * @param _collateralCcy Currency name of collateral
+     * @return True if the execution of the operation succeeds
      */
-    function executeRedemption(bytes32 _redemptionCcy, bytes32 _collateralCcy)
-        external
-        override
-        nonReentrant
-        ifInactive
-        returns (bool)
-    {
-        FundManagementLogic.executeRedemption(_redemptionCcy, _collateralCcy, msg.sender);
+    function executeRedemption() external override nonReentrant ifInactive returns (bool) {
+        FundManagementLogic.executeRedemption(msg.sender);
         return true;
     }
 

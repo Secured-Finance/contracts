@@ -41,8 +41,9 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.TOKEN_VAULT;
+        contracts = new bytes32[](2);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts[1] = Contracts.TOKEN_VAULT;
     }
 
     /**
@@ -88,7 +89,6 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
      * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
      */
-
     function withdraw(bytes32 _ccy, uint256 _amount) external override onlyOwner {
         tokenVault().withdraw(_ccy, _amount);
 
@@ -98,5 +98,12 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
         } else {
             ERC20Handler.safeTransfer(tokenAddress, msg.sender, _amount);
         }
+    }
+
+    /**
+     * @notice Redeems all lending and borrowing positions.
+     */
+    function executeRedemption() external override onlyOwner {
+        lendingMarketController().executeRedemption();
     }
 }

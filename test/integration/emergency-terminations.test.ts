@@ -23,6 +23,7 @@ describe('Integration Test: Emergency terminations', async () => {
   let dave: SignerWithAddress;
 
   let futureValueVaults: Contract[];
+  let reserveFund: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
 
@@ -164,6 +165,7 @@ describe('Integration Test: Emergency terminations', async () => {
       genesisDate,
       tokenVault,
       lendingMarketController,
+      reserveFund,
       wETHToken,
       eFILToken,
       usdcToken,
@@ -300,40 +302,47 @@ describe('Integration Test: Emergency terminations', async () => {
         const bobTotalCollateralBefore =
           await tokenVault.getTotalCollateralAmount(bob.address);
 
-        await expect(
-          lendingMarketController
-            .connect(alice)
-            .executeRedemption(hexETH, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+        // Execute forced redemption for alice
+        const alicePV =
+          await lendingMarketController.getTotalPresentValueInBaseCurrency(
+            alice.address,
+          );
 
-        await expect(
-          lendingMarketController
-            .connect(alice)
-            .executeRedemption(hexEFIL, hexUSDC),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+        await expect(lendingMarketController.connect(alice).executeRedemption())
+          .to.emit(fundManagementLogic, 'RedemptionCompleted')
+          .withArgs(alice.address, alicePV);
 
-        await expect(
-          lendingMarketController
-            .connect(bob)
-            .executeRedemption(hexETH, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+        // Execute forced redemption for bob
+        const [bobCollateral, bobPV] = await Promise.all([
+          tokenVault.getTotalCollateralAmount(bob.address),
+          lendingMarketController.getTotalPresentValueInBaseCurrency(
+            bob.address,
+          ),
+        ]);
 
-        await expect(
-          lendingMarketController
-            .connect(bob)
-            .executeRedemption(hexEFIL, hexUSDC),
-        )
-          .to.emit(fundManagementLogic, 'RedemptionExecuted')
-          .withArgs(hexEFIL, bob.address, orderAmountInFIL.mul(-1));
+        await expect(lendingMarketController.connect(bob).executeRedemption())
+          .to.emit(fundManagementLogic, 'RedemptionCompleted')
+          .withArgs(bob.address, bobCollateral.add(bobPV));
 
-        for (const user of [alice, bob]) {
+        // Execute forced redemption for others
+        await expect(
+          lendingMarketController.connect(carol).executeRedemption(),
+        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+        await expect(reserveFund.executeRedemption()).to.emit(
+          fundManagementLogic,
+          'RedemptionCompleted',
+        );
+
+        // Check future value
+        for (const { address } of [alice, bob, carol, reserveFund]) {
           const fv =
             await lendingMarketController.getTotalPresentValueInBaseCurrency(
-              user.address,
+              address,
             );
           expect(fv).equal(0);
         }
 
+        // Check collateral
         const aliceTotalCollateralAfter =
           await tokenVault.getTotalCollateralAmount(alice.address);
         const bobTotalCollateralAfter =
@@ -354,17 +363,29 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Withdraw all collateral', async () => {
-        for (const user of [alice, bob]) {
+        const rfETHDepositAmount = await tokenVault.getDepositAmount(
+          reserveFund.address,
+          hexETH,
+        );
+        const rfUSDCDepositAmount = await tokenVault.getDepositAmount(
+          reserveFund.address,
+          hexUSDC,
+        );
+
+        await reserveFund.withdraw(hexETH, rfETHDepositAmount);
+        await reserveFund.withdraw(hexUSDC, rfUSDCDepositAmount);
+
+        for (const user of [alice, bob, carol]) {
           const currencies = [hexETH, hexUSDC];
 
-          const depositsBefore = await Promise.all(
+          const deposits = await Promise.all(
             currencies.map((ccy) =>
               tokenVault.getDepositAmount(user.address, ccy),
             ),
           );
 
-          await tokenVault.connect(user).withdraw(hexETH, depositsBefore[0]);
-          await tokenVault.connect(user).withdraw(hexUSDC, depositsBefore[1]);
+          await tokenVault.connect(user).withdraw(hexETH, deposits[0]);
+          await tokenVault.connect(user).withdraw(hexUSDC, deposits[1]);
 
           await Promise.all(
             currencies.map((ccy) =>
@@ -374,6 +395,9 @@ describe('Integration Test: Emergency terminations', async () => {
             ),
           );
         }
+
+        expect(await tokenVault.getTotalDepositAmount(hexETH)).lte(1);
+        expect(await tokenVault.getTotalDepositAmount(hexUSDC)).lte(1);
       });
     });
 
@@ -438,24 +462,17 @@ describe('Integration Test: Emergency terminations', async () => {
 
       it('Execute forced redemption', async () => {
         await expect(
-          lendingMarketController
-            .connect(alice)
-            .executeRedemption(hexETH, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+          lendingMarketController.connect(alice).executeRedemption(),
+        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
 
-        await expect(
-          lendingMarketController
-            .connect(bob)
-            .executeRedemption(hexETH, hexETH),
-        )
-          .to.emit(fundManagementLogic, 'RedemptionExecuted')
+        await expect(lendingMarketController.connect(bob).executeRedemption())
+          .to.emit(fundManagementLogic, 'RedemptionCompleted')
           .withArgs(
-            hexETH,
             bob.address,
             orderAmountInETH
-              .mul(PCT_DIGIT + AUTO_ROLL_FEE_RATE)
-              .div(PCT_DIGIT)
-              .mul(-1),
+              .mul(2)
+              .sub(orderAmountInETH.mul(AUTO_ROLL_FEE_RATE).div(PCT_DIGIT))
+              .toString(),
           );
 
         for (const user of [alice, bob]) {
@@ -564,28 +581,12 @@ describe('Integration Test: Emergency terminations', async () => {
 
       it('Execute forced redemption', async () => {
         await expect(
-          lendingMarketController
-            .connect(alice)
-            .executeRedemption(hexETH, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+          lendingMarketController.connect(alice).executeRedemption(),
+        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
 
         await expect(
-          lendingMarketController
-            .connect(alice)
-            .executeRedemption(hexEFIL, hexUSDC),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
-
-        await expect(
-          lendingMarketController
-            .connect(bob)
-            .executeRedemption(hexETH, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
-
-        await expect(
-          lendingMarketController
-            .connect(bob)
-            .executeRedemption(hexEFIL, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+          lendingMarketController.connect(bob).executeRedemption(),
+        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
 
         for (const user of [alice, bob]) {
           const fv =
@@ -725,29 +726,59 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Execute forced redemption', async () => {
-        await expect(
-          lendingMarketController
-            .connect(alice)
-            .executeRedemption(hexETH, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+        for (const user of [alice, carol, dave]) {
+          await expect(
+            lendingMarketController.connect(user).executeRedemption(),
+          ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+        }
 
         await expect(
-          lendingMarketController
-            .connect(alice)
-            .executeRedemption(hexEFIL, hexUSDC),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
+          lendingMarketController.connect(bob).executeRedemption(),
+        ).to.revertedWith('Insufficient collateral');
+
+        await expect(reserveFund.executeRedemption()).to.emit(
+          fundManagementLogic,
+          'RedemptionCompleted',
+        );
+      });
+
+      it('Withdraw all collateral', async () => {
+        for (const user of [alice, carol, dave]) {
+          const currencies = [hexETH, hexUSDC];
+
+          const deposits = await Promise.all(
+            currencies.map((ccy) =>
+              tokenVault.getDepositAmount(user.address, ccy),
+            ),
+          );
+
+          await tokenVault.connect(user).withdraw(hexETH, deposits[0]);
+          await tokenVault.connect(user).withdraw(hexUSDC, deposits[1]);
+
+          await Promise.all(
+            currencies.map((ccy) =>
+              tokenVault
+                .getDepositAmount(user.address, ccy)
+                .then((deposit) => expect(deposit).equal(0)),
+            ),
+          );
+        }
+
+        const rfETHDepositAmount = await tokenVault.getDepositAmount(
+          reserveFund.address,
+          hexETH,
+        );
+        const rfUSDCDepositAmount = await tokenVault.getDepositAmount(
+          reserveFund.address,
+          hexUSDC,
+        );
 
         await expect(
-          lendingMarketController
-            .connect(bob)
-            .executeRedemption(hexETH, hexETH),
-        ).to.emit(fundManagementLogic, 'RedemptionExecuted');
-
+          reserveFund.withdraw(hexETH, rfETHDepositAmount),
+        ).to.revertedWith('Protocol is insolvent');
         await expect(
-          lendingMarketController
-            .connect(bob)
-            .executeRedemption(hexEFIL, hexETH),
-        ).to.revertedWith('Not enough collateral');
+          reserveFund.withdraw(hexUSDC, rfUSDCDepositAmount),
+        ).to.revertedWith('Protocol is insolvent');
       });
     });
   });

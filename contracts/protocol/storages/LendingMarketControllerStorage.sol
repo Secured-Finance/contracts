@@ -36,6 +36,8 @@ library LendingMarketControllerStorage {
         mapping(bytes32 => mapping(uint256 => ObservationPeriodLog)) observationPeriodLogs;
         // Mapping from maturity to latest estimated auto roll unit price per currency
         mapping(bytes32 => mapping(uint256 => uint256)) estimatedAutoRollUnitPrice;
+        // Mapping from user to redeemed flag
+        mapping(address => bool) isRedeemed;
     }
 
     function slot() internal pure returns (Storage storage r) {

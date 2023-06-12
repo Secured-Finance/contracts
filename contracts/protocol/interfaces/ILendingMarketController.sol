@@ -21,6 +21,10 @@ interface ILendingMarketController {
         int256 futureValue;
     }
 
+    function isTerminated() external view returns (bool);
+
+    function isRedemptionRequired(address _user) external view returns (bool);
+
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
@@ -172,9 +176,7 @@ interface ILendingMarketController {
         external
         returns (bool);
 
-    function executeRedemption(bytes32 redemptionCcy, bytes32 collateralCcy)
-        external
-        returns (bool);
+    function executeRedemption() external returns (bool);
 
     function executeLiquidationCall(
         bytes32 collateralCcy,

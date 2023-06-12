@@ -6,6 +6,7 @@ import { artifacts, ethers, waffle } from 'hardhat';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
+const LendingMarketController = artifacts.require('LendingMarketController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ReserveFund = artifacts.require('ReserveFund');
 const ProxyController = artifacts.require('ProxyController');
@@ -16,6 +17,7 @@ const { deployContract, deployMockContract } = waffle;
 
 describe('ReserveFund', () => {
   let mockTokenVault: MockContract;
+  let mockLendingMarketController: MockContract;
   let mockWETH: MockContract;
   let reserveFundProxy: Contract;
 
@@ -30,12 +32,17 @@ describe('ReserveFund', () => {
 
     // Set up for the mocks
     mockTokenVault = await deployMockContract(owner, TokenVault.abi);
+    mockLendingMarketController = await deployMockContract(
+      owner,
+      LendingMarketController.abi,
+    );
     mockWETH = await deployMockContract(owner, WETH9.abi);
     await mockTokenVault.mock.deposit.returns();
     await mockTokenVault.mock.withdraw.returns();
     await mockTokenVault.mock.getTokenAddress.returns(
       ethers.constants.AddressZero,
     );
+    await mockLendingMarketController.mock.executeRedemption.returns(true);
     await mockWETH.mock.transferFrom.returns(true);
     await mockWETH.mock.transfer.returns(true);
     await mockWETH.mock.approve.returns(true);
@@ -80,6 +87,7 @@ describe('ReserveFund', () => {
     // Set up for AddressResolver and build caches using MigrationAddressResolver
     const migrationTargets: [string, Contract][] = [
       ['TokenVault', mockTokenVault],
+      ['LendingMarketController', mockLendingMarketController],
       ['ReserveFund', reserveFundProxy],
     ];
 
@@ -132,6 +140,12 @@ describe('ReserveFund', () => {
   describe('Withdraw', async () => {
     it('Withdraw funds', async () => {
       await reserveFundProxy.withdraw(targetCurrency, '10000000');
+    });
+  });
+
+  describe('Redemption', async () => {
+    it('Execute redemption', async () => {
+      await reserveFundProxy.executeRedemption();
     });
   });
 });

@@ -254,6 +254,11 @@ describe('TokenVault', () => {
     });
 
     beforeEach(async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(false);
+      await mockLendingMarketController.mock.isRedemptionRequired.returns(
+        false,
+      );
+
       await tokenVaultProxy.registerCurrency(
         targetCurrency,
         mockERC20.address,
@@ -602,6 +607,57 @@ describe('TokenVault', () => {
       ).to.equal('0');
     });
 
+    it('Reset the collateral amount', async () => {
+      const signer = getUser();
+
+      const value = ethers.BigNumber.from('20000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const totalPresentValue = ethers.BigNumber.from('20000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        valueInETH,
+      );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,int256)'
+      ].returns(valueInETH);
+      await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
+        totalPresentValue,
+      );
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        true,
+      );
+
+      await tokenVaultCaller
+        .connect(signer)
+        .addDepositAmount(signer.address, targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address),
+      ).to.equal(value);
+
+      await tokenVaultCaller
+        .connect(signer)
+        .resetDepositAmount(signer.address, targetCurrency);
+
+      expect(
+        await tokenVaultProxy.getUnusedCollateral(signer.address),
+      ).to.equal('0');
+      expect(
+        await tokenVaultProxy.getTotalCollateralAmount(signer.address),
+      ).to.equal('0');
+    });
+
     it('Add an amount in a currency that is not accepted as collateral', async () => {
       const signer = getUser();
       const value = '10000000000000';
@@ -819,6 +875,12 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Only Accepted Contracts');
     });
 
+    it('Fail to call resetDepositAmount due to invalid caller', async () => {
+      await expect(
+        tokenVaultProxy.resetDepositAmount(alice.address, targetCurrency),
+      ).to.be.revertedWith('Only Accepted Contracts');
+    });
+
     it('Fail to call addDepositAmount due to invalid amount', async () => {
       const amount = ethers.BigNumber.from('20000000000000');
       await tokenVaultCaller.addDepositAmount(
@@ -840,6 +902,41 @@ describe('TokenVault', () => {
       await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
         'Invalid amount',
       );
+    });
+
+    it('Fail to call deposit due to lending market termination', async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(true);
+
+      await expect(
+        tokenVaultProxy.deposit(targetCurrency, '100'),
+      ).to.be.revertedWith('Market terminated');
+    });
+
+    it('Fail to withdraw due to redemption required', async () => {
+      await mockLendingMarketController.mock.isRedemptionRequired.returns(true);
+
+      await expect(
+        tokenVaultProxy.withdraw(targetCurrency, '10000000000000'),
+      ).to.be.revertedWith('Redemption is required');
+    });
+
+    it('Fail to withdraw due to insolvency', async () => {
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns('10000000000000');
+      await mockCurrencyController.mock.convertFromBaseCurrency.returns(
+        '10000000000000',
+      );
+
+      await tokenVaultCaller.addDepositAmount(
+        owner.address,
+        targetCurrency,
+        '10000000000000',
+      );
+
+      await expect(
+        tokenVaultProxy.withdraw(targetCurrency, '10000000000000'),
+      ).to.be.revertedWith('Protocol is insolvent');
     });
 
     it('Deposit funds from Alice', async () => {
