@@ -70,6 +70,12 @@ function addDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public
 function removeDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public
 ```
 
+### resetDepositAmount
+
+```solidity
+function resetDepositAmount(address _user, bytes32 _ccy) external returns (uint256 removedAmount)
+```
+
 ### deposit
 
 ```solidity

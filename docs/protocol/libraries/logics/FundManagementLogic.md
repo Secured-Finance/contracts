@@ -104,10 +104,10 @@ event OrderFilled(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint
 event OrdersFilledInAsync(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
 ```
 
-### RedemptionExecuted
+### RedemptionCompleted
 
 ```solidity
-event RedemptionExecuted(bytes32 ccy, address user, int256 amount)
+event RedemptionCompleted(address user, uint256 amount)
 ```
 
 ### LiquidationExecuted
@@ -155,7 +155,7 @@ function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _u
 ### executeRedemption
 
 ```solidity
-function executeRedemption(bytes32 _redemptionCcy, bytes32 _collateralCcy, address _user) external
+function executeRedemption(address _user) external
 ```
 
 ### calculateActualFunds
@@ -180,6 +180,24 @@ function calculateTotalFundsInBaseCurrency(address _user, bytes32 _depositCcy, u
 
 ```solidity
 function getUsedMaturities(bytes32 _ccy, address _user) public view returns (uint256[] maturities)
+```
+
+### getPositions
+
+```solidity
+function getPositions(bytes32[] _ccys, address _user) external view returns (struct ILendingMarketController.Position[] positions)
+```
+
+### getPositionsPerCurrency
+
+```solidity
+function getPositionsPerCurrency(bytes32 _ccy, address _user) public view returns (struct ILendingMarketController.Position[] positions)
+```
+
+### getPosition
+
+```solidity
+function getPosition(bytes32 _ccy, uint256 _maturity, address _user) public view returns (int256 presentValue, int256 futureValue)
 ```
 
 ### cleanUpAllFunds
@@ -245,7 +263,7 @@ function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pu
 ### _convertToBaseCurrencyAtMarketTerminationPrice
 
 ```solidity
-function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
+function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _amount) internal view returns (int256)
 ```
 
 ### _convertFromBaseCurrencyAtMarketTerminationPrice
@@ -276,17 +294,5 @@ function _calculateOrderFeeAmount(uint256 _maturity, uint256 _amount, uint256 _o
 
 ```solidity
 function _resetFunds(bytes32 _ccy, address _user) internal returns (int256 amount)
-```
-
-### _addDepositAtMarketTerminationPrice
-
-```solidity
-function _addDepositAtMarketTerminationPrice(bytes32 _ccy, address _user, uint256 _amount) internal
-```
-
-### _removeDepositAtMarketTerminationPrice
-
-```solidity
-function _removeDepositAtMarketTerminationPrice(bytes32 _ccy, address _user, uint256 _amount, bytes32 _collateralCcy) internal
 ```
 

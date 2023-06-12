@@ -16,6 +16,29 @@ struct Order {
 }
 ```
 
+### Position
+
+```solidity
+struct Position {
+  bytes32 ccy;
+  uint256 maturity;
+  int256 presentValue;
+  int256 futureValue;
+}
+```
+
+### isTerminated
+
+```solidity
+function isTerminated() external view returns (bool)
+```
+
+### isRedemptionRequired
+
+```solidity
+function isRedemptionRequired(address _user) external view returns (bool)
+```
+
 ### getGenesisDate
 
 ```solidity
@@ -82,18 +105,6 @@ function getMaturities(bytes32 ccy) external view returns (uint256[])
 function getUsedCurrencies(address user) external view returns (bytes32[])
 ```
 
-### getFutureValue
-
-```solidity
-function getFutureValue(bytes32 ccy, uint256 maturity, address user) external view returns (int256 futureValue)
-```
-
-### getPresentValue
-
-```solidity
-function getPresentValue(bytes32 ccy, uint256 maturity, address user) external view returns (int256 presentValue)
-```
-
 ### getTotalPresentValue
 
 ```solidity
@@ -110,6 +121,24 @@ function getTotalPresentValueInBaseCurrency(address user) external view returns 
 
 ```solidity
 function getGenesisValue(bytes32 ccy, address user) external view returns (int256 genesisValue)
+```
+
+### getOrders
+
+```solidity
+function getOrders(bytes32[] ccys, address user) external view returns (struct ILendingMarketController.Order[] activeOrders, struct ILendingMarketController.Order[] inactiveOrders)
+```
+
+### getPosition
+
+```solidity
+function getPosition(bytes32 _ccy, uint256 _maturity, address _user) external view returns (int256 presentValue, int256 futureValue)
+```
+
+### getPositions
+
+```solidity
+function getPositions(bytes32[] ccys, address user) external view returns (struct ILendingMarketController.Position[] positions)
 ```
 
 ### calculateFunds
@@ -181,7 +210,7 @@ function executeItayoseCalls(bytes32[] currencies, uint256 maturity) external re
 ### executeRedemption
 
 ```solidity
-function executeRedemption(bytes32 redemptionCcy, bytes32 collateralCcy) external returns (bool)
+function executeRedemption() external returns (bool)
 ```
 
 ### executeLiquidationCall

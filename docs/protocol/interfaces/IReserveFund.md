@@ -44,3 +44,9 @@ function deposit(bytes32 ccy, uint256 amount) external payable
 function withdraw(bytes32 ccy, uint256 amount) external
 ```
 
+### executeRedemption
+
+```solidity
+function executeRedemption() external
+```
+

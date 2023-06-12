@@ -116,6 +116,18 @@ function getOpeningUnitPrice() external view returns (uint256 openingUnitPrice, 
 function checkCircuitBreakerThreshold(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount)
 ```
 
+### _getBorrowCircuitBreakerThreshold
+
+```solidity
+function _getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) internal pure returns (uint256 cbThresholdUnitPrice)
+```
+
+### _getLendCircuitBreakerThreshold
+
+```solidity
+function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) internal pure returns (uint256 cbThresholdUnitPrice)
+```
+
 ### _nextOrderId
 
 ```solidity

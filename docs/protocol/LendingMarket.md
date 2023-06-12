@@ -470,7 +470,7 @@ and places new order if not match it.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
-| _circuitBreakerLimitRange | uint256 | Limit range in unit price for the circuit breaker |
+| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -506,7 +506,7 @@ Unwinds lending or borrowing positions by a specified future value amount.
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
 | _futureValue | uint256 | Amount of future value unwound |
-| _circuitBreakerLimitRange | uint256 | Limit range in unit price for the circuit breaker |
+| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

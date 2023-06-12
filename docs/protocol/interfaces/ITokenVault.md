@@ -47,13 +47,13 @@ function isCovered(address user) external view returns (bool)
 ### isCollateral
 
 ```solidity
-function isCollateral(bytes32 _ccy) external view returns (bool)
+function isCollateral(bytes32 ccy) external view returns (bool)
 ```
 
 ### isCollateral
 
 ```solidity
-function isCollateral(bytes32[] _ccys) external view returns (bool[] isCollateralCurrencies)
+function isCollateral(bytes32[] ccys) external view returns (bool[] isCollateralCurrencies)
 ```
 
 ### isRegisteredCurrency
@@ -83,7 +83,7 @@ function getWithdrawableCollateral(address user) external view returns (uint256 
 ### getWithdrawableCollateral
 
 ```solidity
-function getWithdrawableCollateral(bytes32 _ccy, address _user) external view returns (uint256)
+function getWithdrawableCollateral(bytes32 ccy, address user) external view returns (uint256)
 ```
 
 ### getCoverage
@@ -113,7 +113,7 @@ function getLiquidationAmount(address user, bytes32 liquidationCcy, uint256 liqu
 ### getTotalDepositAmount
 
 ```solidity
-function getTotalDepositAmount(bytes32 _ccy) external view returns (uint256)
+function getTotalDepositAmount(bytes32 ccy) external view returns (uint256)
 ```
 
 ### getDepositAmount
@@ -170,9 +170,27 @@ function addDepositAmount(address user, bytes32 ccy, uint256 amount) external
 function removeDepositAmount(address user, bytes32 ccy, uint256 amount) external
 ```
 
+### resetDepositAmount
+
+```solidity
+function resetDepositAmount(address user, bytes32 ccy) external returns (uint256 removedAmount)
+```
+
 ### transferFrom
 
 ```solidity
-function transferFrom(bytes32 _ccy, address _sender, address _receiver, uint256 _amount) external returns (uint256 untransferredAmount)
+function transferFrom(bytes32 ccy, address sender, address receiver, uint256 amount) external returns (uint256 untransferredAmount)
+```
+
+### pauseVault
+
+```solidity
+function pauseVault() external
+```
+
+### unpauseVault
+
+```solidity
+function unpauseVault() external
 ```
 

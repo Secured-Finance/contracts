@@ -110,6 +110,18 @@ Gets if the protocol has not been terminated.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the protocol has not been terminated |
 
+### isRedemptionRequired
+
+```solidity
+function isRedemptionRequired(address _user) external view returns (bool)
+```
+
+Gets if the user needs to redeem the funds.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the user needs to redeem the funds |
+
 ### getGenesisDate
 
 ```solidity
@@ -296,42 +308,6 @@ Get all the currencies in which the user has lending positions or orders.
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The array of the currency |
 
-### getFutureValue
-
-```solidity
-function getFutureValue(bytes32 _ccy, uint256 _maturity, address _user) external view returns (int256 futureValue)
-```
-
-Gets the future value of the account for selected currency and maturity.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 for Lending Market |
-| _maturity | uint256 | The maturity of the market |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| futureValue | int256 | The future value |
-
-### getPresentValue
-
-```solidity
-function getPresentValue(bytes32 _ccy, uint256 _maturity, address _user) external view returns (int256 presentValue)
-```
-
-Gets the present value of the account for selected currency and maturity.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 for Lending Market |
-| _maturity | uint256 | The maturity of the market |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| presentValue | int256 | The present value |
-
 ### getTotalPresentValue
 
 ```solidity
@@ -399,6 +375,42 @@ Gets user's active and inactive orders in the order book
 | ---- | ---- | ----------- |
 | activeOrders | struct ILendingMarketController.Order[] | The array of active orders in the order book |
 | inactiveOrders | struct ILendingMarketController.Order[] | The array of inactive orders |
+
+### getPosition
+
+```solidity
+function getPosition(bytes32 _ccy, uint256 _maturity, address _user) external view returns (int256 presentValue, int256 futureValue)
+```
+
+Gets user's active position from the future value vault
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the selected market |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| presentValue | int256 | The present value of the position |
+| futureValue | int256 | The future value of the position |
+
+### getPositions
+
+```solidity
+function getPositions(bytes32[] _ccys, address _user) external view returns (struct ILendingMarketController.Position[] positions)
+```
+
+Gets user's active positions from the future value vaults
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccys | bytes32[] | Currency name list in bytes32 |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| positions | struct ILendingMarketController.Position[] | The array of active positions |
 
 ### calculateFunds
 
@@ -587,7 +599,7 @@ Unwinds user's lending or borrowing positions by creating an opposite position o
 ### executeRedemption
 
 ```solidity
-function executeRedemption(bytes32 _redemptionCcy, bytes32 _collateralCcy) external returns (bool)
+function executeRedemption() external returns (bool)
 ```
 
 Redeems all lending and borrowing positions.
@@ -595,8 +607,7 @@ This function uses the present value as of the termination date.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _redemptionCcy | bytes32 | Currency name of positions to be redeemed |
-| _collateralCcy | bytes32 | Currency name of collateral |
+| [0] | bool | True if the execution of the operation succeeds |
 
 ### executeItayoseCalls
 

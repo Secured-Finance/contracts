@@ -34,3 +34,19 @@ uint256 MAXIMUM_ORDER_COUNT
 
 _Used for maximum order count per currency_
 
+### MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+
+```solidity
+uint256 MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+```
+
+_Used for minimum threshold for circuit breaker unitprice threshold_
+
+### MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
+
+```solidity
+uint256 MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
+```
+
+_Used for maximum threshold for circuit breaker unitprice threshold_
+

@@ -34,6 +34,7 @@ struct Storage {
   mapping(bytes32 => mapping(address => struct EnumerableSet.UintSet)) usedMaturities;
   mapping(bytes32 => mapping(uint256 => struct ObservationPeriodLog)) observationPeriodLogs;
   mapping(bytes32 => mapping(uint256 => uint256)) estimatedAutoRollUnitPrice;
+  mapping(address => bool) isRedeemed;
 }
 ```
 

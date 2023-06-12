@@ -90,3 +90,11 @@ _Withdraw funds by the caller from the token vault._
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
 
+### executeRedemption
+
+```solidity
+function executeRedemption() external
+```
+
+Redeems all lending and borrowing positions.
+

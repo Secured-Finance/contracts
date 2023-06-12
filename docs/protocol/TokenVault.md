@@ -441,6 +441,19 @@ Removes deposit amount.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
+### resetDepositAmount
+
+```solidity
+function resetDepositAmount(address _user, bytes32 _ccy) external returns (uint256)
+```
+
+Resets deposit amount.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccy | bytes32 | Currency name in bytes32 |
+
 ### transferFrom
 
 ```solidity
@@ -472,6 +485,22 @@ Triggers only be contract owner
 | _liquidationThresholdRate | uint256 | The auto liquidation threshold rate |
 | _liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
 | _liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
+
+### pauseVault
+
+```solidity
+function pauseVault() external
+```
+
+Pauses the token vault.
+
+### unpauseVault
+
+```solidity
+function unpauseVault() external
+```
+
+Unpauses the token vault.
 
 ### _deposit
 
