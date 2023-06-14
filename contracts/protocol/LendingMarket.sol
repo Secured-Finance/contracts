@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Pausable} from "../dependencies/openzeppelin/contracts/security/Pausable.sol";
 // interfaces
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
@@ -13,6 +12,7 @@ import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
+import {Pausable} from "./utils/Pausable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
 import {LendingMarketStorage as Storage} from "./storages/LendingMarketStorage.sol";

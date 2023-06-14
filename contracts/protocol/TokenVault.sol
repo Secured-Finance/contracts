@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {EnumerableSet} from "../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Pausable} from "../dependencies/openzeppelin/contracts/security/Pausable.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
@@ -17,6 +16,7 @@ import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
 import {Ownable} from "./utils/Ownable.sol";
+import {Pausable} from "./utils/Pausable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
 import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
