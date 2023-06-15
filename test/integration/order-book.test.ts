@@ -1129,7 +1129,10 @@ describe('Integration Test: Order Book', async () => {
               '9003',
             );
 
-          await expect(tx).to.emit(filLendingMarkets[1], 'OrdersTaken');
+          await expect(tx).to.emit(
+            filLendingMarkets[1],
+            'OrdersTakenPartially',
+          );
 
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(

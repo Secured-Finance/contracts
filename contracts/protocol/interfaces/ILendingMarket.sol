@@ -48,6 +48,18 @@ interface ILendingMarket {
         uint256 filledFutureValue
     );
 
+    event OrdersTakenPartially(
+        uint48 orderId,
+        address indexed taker,
+        ProtocolTypes.Side side,
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 filledAmount,
+        uint256 amount,
+        uint256 unitPrice,
+        uint256 filledFutureValue
+    );
+
     event OrderPartiallyTaken(
         uint48 orderId,
         address indexed maker,

@@ -365,7 +365,7 @@ describe('LendingMarketController - Terminations', () => {
             '200000000000000000',
             '8000',
           ),
-      ).to.emit(lendingMarket2, 'OrdersTaken');
+      ).to.emit(lendingMarket2, 'OrdersTakenPartially');
 
       const position1 = await lendingMarketControllerProxy.getPosition(
         targetCurrency,

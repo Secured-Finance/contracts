@@ -2021,8 +2021,8 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
-        await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx).to.emit(lendingMarket1, 'OrderMade');
+        await expect(tx).to.emit(lendingMarket1, 'OrdersTakenPartially');
       });
 
       it('Fill an own order', async () => {

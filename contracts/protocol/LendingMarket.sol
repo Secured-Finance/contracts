@@ -773,16 +773,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         filledOrder.amount = _amount - remainingAmount;
 
-        emit OrdersTaken(
-            _user,
-            _side,
-            Storage.slot().ccy,
-            Storage.slot().maturity,
-            filledOrder.amount,
-            filledOrder.unitPrice,
-            filledOrder.futureValue
-        );
-
         if (partiallyFilledOrder.futureValue > 0) {
             emit OrderPartiallyTaken(
                 partiallyFilledOrderId,
@@ -800,10 +790,40 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         if (remainingAmount > 0) {
             if (_ignoreRemainingAmount) {
                 filledOrder.ignoredAmount = remainingAmount;
+                emit OrdersTaken(
+                    _user,
+                    _side,
+                    Storage.slot().ccy,
+                    Storage.slot().maturity,
+                    filledOrder.amount,
+                    filledOrder.unitPrice,
+                    filledOrder.futureValue
+                );
             } else {
                 // Make a new order for the remaining amount of input
-                _makeOrder(_side, _user, remainingAmount, _unitPrice);
+                uint48 orderId = _makeOrder(_side, _user, remainingAmount, _unitPrice);
+                emit OrdersTakenPartially(
+                    orderId,
+                    _user,
+                    _side,
+                    Storage.slot().ccy,
+                    Storage.slot().maturity,
+                    filledOrder.amount,
+                    _amount,
+                    filledOrder.unitPrice,
+                    filledOrder.futureValue
+                );
             }
+        } else {
+            emit OrdersTaken(
+                _user,
+                _side,
+                Storage.slot().ccy,
+                Storage.slot().maturity,
+                filledOrder.amount,
+                filledOrder.unitPrice,
+                filledOrder.futureValue
+            );
         }
     }
 
