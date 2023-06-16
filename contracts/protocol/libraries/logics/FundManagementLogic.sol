@@ -740,12 +740,13 @@ library FundManagementLogic {
         view
         returns (ILendingMarketController.Position[] memory positions)
     {
-        uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
-        positions = new ILendingMarketController.Position[](maturities.length);
+        address[] memory lendingMarkets = Storage.slot().lendingMarkets[_ccy];
+        positions = new ILendingMarketController.Position[](lendingMarkets.length);
         uint256 positionIdx;
 
-        for (uint256 i; i < maturities.length; i++) {
-            (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturities[i], _user);
+        for (uint256 i; i < lendingMarkets.length; i++) {
+            uint256 maturity = ILendingMarket(lendingMarkets[i]).getMaturity();
+            (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturity, _user);
 
             if (futureValue == 0) {
                 assembly {
@@ -754,7 +755,7 @@ library FundManagementLogic {
             } else {
                 positions[positionIdx] = ILendingMarketController.Position(
                     _ccy,
-                    maturities[i],
+                    maturity,
                     presentValue,
                     futureValue
                 );
