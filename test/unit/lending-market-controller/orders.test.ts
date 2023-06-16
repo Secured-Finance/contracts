@@ -1003,6 +1003,16 @@ describe('LendingMarketController - Orders', () => {
         .connect(alice)
         .createOrder(
           targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '5000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
           maturities[0],
           Side.LEND,
           '100000000000000000',
@@ -1210,7 +1220,64 @@ describe('LendingMarketController - Orders', () => {
       expect(positions[1].presentValue).to.equal('-100000000000000000');
     });
 
-    it('Get an empty position list', async () => {
+    it('Get an active position after auto-rolls', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '8000',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await time.increaseTo(maturities[0].toString());
+      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+
+      const positions = await lendingMarketControllerProxy.getPositions(
+        [targetCurrency],
+        alice.address,
+      );
+
+      expect(positions.length).to.equal(1);
+
+      expect(positions[0].ccy).to.equal(targetCurrency);
+      expect(positions[0].maturity).to.equal(maturities[1]);
+      expect(positions[0].futureValue).not.to.equal('0');
+      expect(positions[0].presentValue).not.to.equal('0');
+    });
+
+    it('Get an empty position list of a user who has an open order', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '5000',
+        );
+
+      const positions = await lendingMarketControllerProxy.getPositions(
+        [targetCurrency],
+        alice.address,
+      );
+
+      expect(positions.length).to.equal(0);
+    });
+
+    it('Get an empty position list of a user who has no open order', async () => {
       const positions = await lendingMarketControllerProxy.getPositions(
         [targetCurrency],
         alice.address,
