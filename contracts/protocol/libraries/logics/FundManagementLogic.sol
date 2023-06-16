@@ -742,6 +742,7 @@ library FundManagementLogic {
     {
         uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         positions = new ILendingMarketController.Position[](maturities.length);
+        uint256 positionIdx;
 
         for (uint256 i; i < maturities.length; i++) {
             (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturities[i], _user);
@@ -751,12 +752,13 @@ library FundManagementLogic {
                     mstore(positions, sub(mload(positions), 1))
                 }
             } else {
-                positions[i] = ILendingMarketController.Position(
+                positions[positionIdx] = ILendingMarketController.Position(
                     _ccy,
                     maturities[i],
                     presentValue,
                     futureValue
                 );
+                positionIdx++;
             }
         }
     }

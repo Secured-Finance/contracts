@@ -1003,6 +1003,16 @@ describe('LendingMarketController - Orders', () => {
         .connect(alice)
         .createOrder(
           targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '100000000000000000',
+          '5000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
           maturities[0],
           Side.LEND,
           '100000000000000000',
