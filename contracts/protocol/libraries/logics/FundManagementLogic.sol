@@ -746,12 +746,18 @@ library FundManagementLogic {
         for (uint256 i; i < maturities.length; i++) {
             (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturities[i], _user);
 
-            positions[i] = ILendingMarketController.Position(
-                _ccy,
-                maturities[i],
-                presentValue,
-                futureValue
-            );
+            if (futureValue == 0) {
+                assembly {
+                    mstore(positions, sub(mload(positions), 1))
+                }
+            } else {
+                positions[i] = ILendingMarketController.Position(
+                    _ccy,
+                    maturities[i],
+                    presentValue,
+                    futureValue
+                );
+            }
         }
     }
 
