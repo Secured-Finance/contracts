@@ -19,7 +19,6 @@ interface ILendingMarketController {
         uint256 maturity;
         int256 presentValue;
         int256 futureValue;
-        uint256 midUnitPrice;
     }
 
     function isTerminated() external view returns (bool);
@@ -29,6 +28,8 @@ interface ILendingMarketController {
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
     function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
+
+    function getMidUnitPrice(bytes32 _ccy, uint256 _maturity) external view returns (uint256);
 
     function getLendingMarket(bytes32 ccy, uint256 maturity) external view returns (address);
 

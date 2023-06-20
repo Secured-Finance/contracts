@@ -240,6 +240,22 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets mid price per future value for the selected currency and maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @return uint256 the mid price per future value of the lending market
+     */
+    function getMidUnitPrice(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        address market = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+        return ILendingMarket(market).getMidUnitPrice();
+    }
+
+    /**
      * @notice Gets the order book of borrow.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the market
