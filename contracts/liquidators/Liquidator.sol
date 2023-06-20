@@ -60,9 +60,11 @@ contract Liquidator is ILiquidationReceiver {
         uint256[] calldata _collateralMaturities,
         bytes32 _debtCcy,
         uint256 _debtMaturity,
-        address _user
+        address _user,
+        uint24 _poolFee
     ) external {
         collateralMaturities = _collateralMaturities;
+        poolFee = _poolFee;
         lendingMarketController.executeForcedRepayment(
             _collateralCcy,
             _debtCcy,

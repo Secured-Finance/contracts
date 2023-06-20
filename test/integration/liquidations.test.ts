@@ -1680,6 +1680,7 @@ describe('Integration Test: Liquidations', async () => {
               hexEFIL,
               filMaturities[0],
               alice.address,
+              0,
             ),
         ).to.be.revertedWith('Currency is active');
 
@@ -1696,6 +1697,7 @@ describe('Integration Test: Liquidations', async () => {
             hexEFIL,
             filMaturities[0],
             alice.address,
+            0,
           )
           .then((tx) => tx.wait());
 
@@ -1868,6 +1870,7 @@ describe('Integration Test: Liquidations', async () => {
             hexEFIL,
             filMaturities[1],
             alice.address,
+            0,
           ),
         ).to.emit(liquidationLogic, 'ForcedRepaymentExecuted');
 
