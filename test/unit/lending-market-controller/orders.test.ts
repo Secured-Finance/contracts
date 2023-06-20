@@ -1262,7 +1262,7 @@ describe('LendingMarketController - Orders', () => {
       expect(positions[0].maturity).to.equal(maturities[1]);
       expect(positions[0].futureValue).not.to.equal('0');
       expect(positions[0].presentValue).not.to.equal('0');
-      expect(positions[0].midUnitPrice).not.to.equal('0');
+      expect(positions[0].midUnitPrice).to.equal('5000');
     });
 
     it('Get an empty position list of a user who has an open order', async () => {
