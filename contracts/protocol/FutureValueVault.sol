@@ -100,7 +100,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         uint256 _amount,
         uint256 _maturity,
         bool _isTaker
-    ) public override onlyAcceptedContracts returns (bool) {
+    ) public override onlyAcceptedContracts {
         require(_user != address(0), "Add to the zero address of lender");
         require(
             !hasFutureValueInPastMaturity(_user, _maturity),
@@ -114,8 +114,6 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
 
         int256 currentBalance = Storage.slot().balances[_user];
         _updateTotalSupply(_maturity, previousBalance, currentBalance, _isTaker);
-
-        return true;
     }
 
     /**
@@ -133,7 +131,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         uint256 _amount,
         uint256 _maturity,
         bool _isTaker
-    ) public override onlyAcceptedContracts returns (bool) {
+    ) public override onlyAcceptedContracts {
         require(_user != address(0), "Add to the zero address of borrower");
         require(
             !hasFutureValueInPastMaturity(_user, _maturity),
@@ -147,8 +145,6 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
 
         int256 currentBalance = Storage.slot().balances[_user];
         _updateTotalSupply(_maturity, previousBalance, currentBalance, _isTaker);
-
-        return true;
     }
 
     /**

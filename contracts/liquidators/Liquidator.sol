@@ -13,7 +13,7 @@ import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketCon
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
 
 contract Liquidator is ILiquidationReceiver {
-    bytes32 public baseCurrency;
+    bytes32 public immutable baseCurrency;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
     ISwapRouter public immutable uniswapRouter;

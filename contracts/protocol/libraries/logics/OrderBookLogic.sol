@@ -185,7 +185,7 @@ library OrderBookLogic {
             // Check if the order is filled by Itayose.
             // If the order is filled by Itayose, the opening unit price is used instead of the order's one.
             uint256 unitPrice = marketOrder.unitPrice;
-            if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
+            if (Storage.slot().isPreOrder[inActiveOrderIds[i]]) {
                 uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
                 unitPrice = _getUnitPriceForPreLendOrder(openingUnitPrice, unitPrice);
             }
@@ -236,7 +236,7 @@ library OrderBookLogic {
             // Check if the order is filled by Itayose.
             // If the order is filled by Itayose, the opening unit price is used instead of the order's one.
             uint256 unitPrice = marketOrder.unitPrice;
-            if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
+            if (Storage.slot().isPreOrder[inActiveOrderIds[i]]) {
                 uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
                 unitPrice = _getUnitPriceForPreBorrowOrder(openingUnitPrice, unitPrice);
             }
@@ -459,7 +459,7 @@ library OrderBookLogic {
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveLendOrderIds[i]];
-            uint256 unitPrice = Storage.slot().isPreOrder[inActiveLendOrderIds[i]] == true
+            uint256 unitPrice = Storage.slot().isPreOrder[inActiveLendOrderIds[i]]
                 ? _getUnitPriceForPreLendOrder(openingUnitPrice, marketOrder.unitPrice)
                 : marketOrder.unitPrice;
             OrderItem memory orderItem = orders.getOrderById(unitPrice, inActiveLendOrderIds[i]);
@@ -493,7 +493,7 @@ library OrderBookLogic {
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[inActiveBorrowOrderIds[i]];
-            uint256 unitPrice = Storage.slot().isPreOrder[inActiveBorrowOrderIds[i]] == true
+            uint256 unitPrice = Storage.slot().isPreOrder[inActiveBorrowOrderIds[i]]
                 ? _getUnitPriceForPreBorrowOrder(openingUnitPrice, marketOrder.unitPrice)
                 : marketOrder.unitPrice;
             OrderItem memory orderItem = orders.getOrderById(unitPrice, inActiveBorrowOrderIds[i]);

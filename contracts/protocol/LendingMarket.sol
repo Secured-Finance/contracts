@@ -402,9 +402,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Cancels the order.
      * @param _user User address
      * @param _orderId Market order id
-     * @return side The canceled order position type
-     * @return removedAmount The removed order amount from the order book by canceling
-     * @return unitPrice The canceled order unit price
      */
     function cancelOrder(address _user, uint48 _orderId)
         external
@@ -412,13 +409,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         onlyMaker(_user, _orderId)
         whenNotPaused
         onlyAcceptedContracts
-        returns (
-            ProtocolTypes.Side side,
-            uint256 removedAmount,
-            uint256 unitPrice
-        )
     {
-        (side, removedAmount, unitPrice) = OrderBookLogic.removeOrder(_user, _orderId);
+        (ProtocolTypes.Side side, uint256 removedAmount, uint256 unitPrice) = OrderBookLogic
+            .removeOrder(_user, _orderId);
 
         emit OrderCanceled(
             _orderId,
