@@ -303,8 +303,10 @@ describe('Integration Test: Emergency terminations', async () => {
             alice.address,
           );
 
-        await expect(lendingMarketController.connect(alice).executeRedemption())
-          .to.emit(fundManagementLogic, 'RedemptionCompleted')
+        await expect(
+          lendingMarketController.connect(alice).executeEmergencySettlement(),
+        )
+          .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
           .withArgs(alice.address, alicePV);
 
         // Execute forced redemption for bob
@@ -315,17 +317,19 @@ describe('Integration Test: Emergency terminations', async () => {
           ),
         ]);
 
-        await expect(lendingMarketController.connect(bob).executeRedemption())
-          .to.emit(fundManagementLogic, 'RedemptionCompleted')
+        await expect(
+          lendingMarketController.connect(bob).executeEmergencySettlement(),
+        )
+          .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
           .withArgs(bob.address, bobCollateral.add(bobPV));
 
         // Execute forced redemption for others
         await expect(
-          lendingMarketController.connect(carol).executeRedemption(),
-        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
-        await expect(reserveFund.executeRedemption()).to.emit(
+          lendingMarketController.connect(carol).executeEmergencySettlement(),
+        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
+        await expect(reserveFund.executeEmergencySettlement()).to.emit(
           fundManagementLogic,
-          'RedemptionCompleted',
+          'EmergencySettlementExecuted',
         );
 
         // Check future value
@@ -469,11 +473,13 @@ describe('Integration Test: Emergency terminations', async () => {
         );
 
         await expect(
-          lendingMarketController.connect(alice).executeRedemption(),
-        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+          lendingMarketController.connect(alice).executeEmergencySettlement(),
+        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
-        await expect(lendingMarketController.connect(bob).executeRedemption())
-          .to.emit(fundManagementLogic, 'RedemptionCompleted')
+        await expect(
+          lendingMarketController.connect(bob).executeEmergencySettlement(),
+        )
+          .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
           .withArgs(bob.address, bobDeposit.add(bobPV));
 
         for (const user of [alice, bob]) {
@@ -582,12 +588,12 @@ describe('Integration Test: Emergency terminations', async () => {
 
       it('Execute forced redemption', async () => {
         await expect(
-          lendingMarketController.connect(alice).executeRedemption(),
-        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+          lendingMarketController.connect(alice).executeEmergencySettlement(),
+        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
         await expect(
-          lendingMarketController.connect(bob).executeRedemption(),
-        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+          lendingMarketController.connect(bob).executeEmergencySettlement(),
+        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
         for (const user of [alice, bob]) {
           const fv =
@@ -729,17 +735,17 @@ describe('Integration Test: Emergency terminations', async () => {
       it('Execute forced redemption', async () => {
         for (const user of [alice, carol, dave]) {
           await expect(
-            lendingMarketController.connect(user).executeRedemption(),
-          ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+            lendingMarketController.connect(user).executeEmergencySettlement(),
+          ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
         }
 
         await expect(
-          lendingMarketController.connect(bob).executeRedemption(),
+          lendingMarketController.connect(bob).executeEmergencySettlement(),
         ).to.revertedWith('Insufficient collateral');
 
-        await expect(reserveFund.executeRedemption()).to.emit(
+        await expect(reserveFund.executeEmergencySettlement()).to.emit(
           fundManagementLogic,
-          'RedemptionCompleted',
+          'EmergencySettlementExecuted',
         );
       });
 

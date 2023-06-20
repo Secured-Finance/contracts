@@ -300,26 +300,43 @@ library DepositManagementLogic {
             liquidationAmountInBaseCurrency
         );
 
-        protocolFee = (liquidationAmount * Params.liquidationProtocolFeeRate()).div(
+        if (liquidationAmount > _liquidationAmountMaximum) {
+            liquidationAmount = _liquidationAmountMaximum;
+        }
+
+        (protocolFee, liquidatorFee) = calculateLiquidationFees(liquidationAmount);
+
+        // protocolFee = (liquidationAmount * Params.liquidationProtocolFeeRate()).div(
+        //     Constants.PCT_DIGIT
+        // );
+        // liquidatorFee = (liquidationAmount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
+        // uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
+
+        // if (liquidationTotalAmount > _liquidationAmountMaximum) {
+        //     liquidationTotalAmount = _liquidationAmountMaximum;
+        //     protocolFee = (liquidationTotalAmount * Params.liquidationProtocolFeeRate()).div(
+        //         Constants.PCT_DIGIT +
+        //             Params.liquidatorFeeRate() +
+        //             Params.liquidationProtocolFeeRate()
+        //     );
+        //     liquidatorFee = (liquidationTotalAmount * Params.liquidatorFeeRate()).div(
+        //         Constants.PCT_DIGIT +
+        //             Params.liquidatorFeeRate() +
+        //             Params.liquidationProtocolFeeRate()
+        //     );
+        //     liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
+        // }
+    }
+
+    function calculateLiquidationFees(uint256 _liquidationAmount)
+        public
+        view
+        returns (uint256 protocolFee, uint256 liquidatorFee)
+    {
+        protocolFee = (_liquidationAmount * Params.liquidationProtocolFeeRate()).div(
             Constants.PCT_DIGIT
         );
-        liquidatorFee = (liquidationAmount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
-        uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
-
-        if (liquidationTotalAmount > _liquidationAmountMaximum) {
-            liquidationTotalAmount = _liquidationAmountMaximum;
-            protocolFee = (liquidationTotalAmount * Params.liquidationProtocolFeeRate()).div(
-                Constants.PCT_DIGIT +
-                    Params.liquidatorFeeRate() +
-                    Params.liquidationProtocolFeeRate()
-            );
-            liquidatorFee = (liquidationTotalAmount * Params.liquidatorFeeRate()).div(
-                Constants.PCT_DIGIT +
-                    Params.liquidatorFeeRate() +
-                    Params.liquidationProtocolFeeRate()
-            );
-            liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
-        }
+        liquidatorFee = (_liquidationAmount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
     }
 
     function transferFrom(

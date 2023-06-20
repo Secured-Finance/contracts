@@ -42,7 +42,9 @@ describe('ReserveFund', () => {
     await mockTokenVault.mock.getTokenAddress.returns(
       ethers.constants.AddressZero,
     );
-    await mockLendingMarketController.mock.executeRedemption.returns(true);
+    await mockLendingMarketController.mock.executeEmergencySettlement.returns(
+      true,
+    );
     await mockWETH.mock.transferFrom.returns(true);
     await mockWETH.mock.transfer.returns(true);
     await mockWETH.mock.approve.returns(true);
@@ -145,7 +147,7 @@ describe('ReserveFund', () => {
 
   describe('Redemption', async () => {
     it('Execute redemption', async () => {
-      await reserveFundProxy.executeRedemption();
+      await reserveFundProxy.executeEmergencySettlement();
     });
   });
 });
