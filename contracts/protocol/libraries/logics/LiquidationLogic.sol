@@ -93,7 +93,7 @@ library LiquidationLogic {
             vars.liquidationAmountInCollateralCcy +
             vars.liquidatorFeeInCollateralCcy;
 
-        uint256 untransferredAmount = _transferCollateralForLiquidation(
+        uint256 untransferredAmount = _transferCollateral(
             _user,
             _liquidator,
             _collateralCcy,
@@ -188,8 +188,6 @@ library LiquidationLogic {
         );
         require(block.timestamp >= _debtMaturity + 1 weeks, "Invalid repayment");
 
-        ExecuteLiquidationVars memory vars;
-
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
         FundManagementLogic.cleanUpFunds(_collateralCcy, _user);
@@ -203,28 +201,29 @@ library LiquidationLogic {
 
         require(funds.futureValue < 0, "No debt in the selected maturity");
 
-        vars.liquidationAmountInDebtCcy = (-funds.futureValue).toUint256();
-        vars.liquidationAmountInCollateralCcy = AddressResolverLib.currencyController().convert(
+        uint256 liquidationAmountInDebtCcy = (-funds.futureValue).toUint256();
+        uint256 liquidationAmountInCollateralCcy = AddressResolverLib.currencyController().convert(
             _debtCcy,
             _collateralCcy,
-            vars.liquidationAmountInDebtCcy
+            liquidationAmountInDebtCcy
         );
 
-        (vars.protocolFeeInCollateralCcy, vars.liquidatorFeeInCollateralCcy) = AddressResolverLib
-            .tokenVault()
-            .calculateLiquidationFees(vars.liquidationAmountInCollateralCcy);
+        (
+            uint256 protocolFeeInCollateralCcy,
+            uint256 liquidatorFeeInCollateralCcy
+        ) = AddressResolverLib.tokenVault().calculateLiquidationFees(
+                liquidationAmountInCollateralCcy
+            );
 
-        // Transfer collateral from users to liquidators and reserve funds.
-        vars.receivedCollateralAmount =
-            vars.liquidationAmountInCollateralCcy +
-            vars.liquidatorFeeInCollateralCcy;
+        uint256 receivedCollateralAmount = liquidationAmountInCollateralCcy +
+            liquidatorFeeInCollateralCcy;
 
-        _transferCollateralForLiquidation(
+        _transferCollateral(
             _user,
             _executor,
             _collateralCcy,
-            vars.receivedCollateralAmount,
-            vars.protocolFeeInCollateralCcy
+            receivedCollateralAmount,
+            protocolFeeInCollateralCcy
         );
 
         if (_executor.code.length > 0) {
@@ -233,56 +232,30 @@ library LiquidationLogic {
                     _executor,
                     _user,
                     _collateralCcy,
-                    vars.receivedCollateralAmount
+                    receivedCollateralAmount
                 ),
                 "Invalid operation execution"
             );
-        }
 
-        // Transfer the debt from users to liquidators
-        vars.receivedDebtAmount = vars.liquidationAmountInDebtCcy;
-
-        // _transferFunds(
-        //     _user,
-        //     _executor,
-        //     _debtCcy,
-        //     _debtMaturity,
-        //     -vars.receivedDebtAmount.toInt256(),
-        //     vars.isDefaultMarket
-        // );
-
-        if (_executor.code.length > 0) {
             require(
                 ILiquidationReceiver(_executor).executeOperationForDebt(
                     _executor,
                     _user,
                     _collateralCcy,
-                    vars.receivedCollateralAmount,
+                    receivedCollateralAmount,
                     _debtCcy,
                     _debtMaturity,
-                    vars.receivedDebtAmount
+                    liquidationAmountInDebtCcy
                 ),
                 "Invalid operation execution"
             );
         }
 
-        // require(
-        //     AddressResolverLib.tokenVault().transferFrom(
-        //         _debtCcy,
-        //         _executor,
-        //         _user,
-        //         vars.liquidationAmountInDebtCcy
-        //     ) == 0,
-        //     "Not enough collateral in the selected currency"
-        // );
-
-        // FundManagementLogic.executeRepayment(_debtCcy, _debtMaturity, _user);
-
         AddressResolverLib.tokenVault().transferFrom(
             _debtCcy,
             _executor,
             _user,
-            vars.liquidationAmountInDebtCcy
+            liquidationAmountInDebtCcy
         );
 
         uint256 repaymentAmount = FundManagementLogic.executeRepayment(
@@ -291,18 +264,18 @@ library LiquidationLogic {
             _user
         );
 
-        require(repaymentAmount >= vars.liquidationAmountInDebtCcy, "Invalid repayment amount");
+        require(repaymentAmount == liquidationAmountInDebtCcy, "Invalid repayment amount");
 
         emit ForcedRepaymentExecuted(
             _user,
             _collateralCcy,
             _debtCcy,
             _debtMaturity,
-            vars.liquidationAmountInDebtCcy
+            liquidationAmountInDebtCcy
         );
     }
 
-    function _transferCollateralForLiquidation(
+    function _transferCollateral(
         address _from,
         address _to,
         bytes32 _ccy,

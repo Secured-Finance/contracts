@@ -694,8 +694,8 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Redeems all lending and borrowing positions.
-     * This function uses the present value as of the termination date.
+     * @notice Force settlement of all lending and borrowing positions.
+     * This function is executed under the present value as of the termination date.
      *
      * @return True if the execution of the operation succeeds
      */

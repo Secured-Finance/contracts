@@ -101,7 +101,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
     }
 
     /**
-     * @notice Redeems all lending and borrowing positions.
+     * @notice Force settlement of all lending and borrowing positions.
      */
     function executeEmergencySettlement() external override onlyOwner {
         lendingMarketController().executeEmergencySettlement();
