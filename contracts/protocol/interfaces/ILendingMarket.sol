@@ -181,13 +181,7 @@ interface ILendingMarket {
 
     function openMarket(uint256 maturity, uint256 openingDate) external returns (uint256);
 
-    function cancelOrder(address user, uint48 orderId)
-        external
-        returns (
-            ProtocolTypes.Side,
-            uint256,
-            uint256
-        );
+    function cancelOrder(address user, uint48 orderId) external;
 
     function createOrder(
         ProtocolTypes.Side side,

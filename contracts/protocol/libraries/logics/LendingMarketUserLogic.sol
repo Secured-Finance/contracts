@@ -32,7 +32,7 @@ library LendingMarketUserLogic {
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external returns (uint256 filledAmount) {
+    ) external {
         require(_amount > 0, "Invalid amount");
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
@@ -56,7 +56,7 @@ library LendingMarketUserLogic {
                 circuitBreakerLimitRange
             );
 
-        filledAmount = filledOrder.amount;
+        uint256 filledAmount = filledOrder.amount;
 
         // The case that an order is placed in the order book
         if ((filledAmount + filledOrder.ignoredAmount) != _amount) {

@@ -21,14 +21,14 @@ interface IFutureValueVault {
         uint256 amount,
         uint256 maturity,
         bool isTaker
-    ) external returns (bool);
+    ) external;
 
     function addBorrowFutureValue(
         address user,
         uint256 amount,
         uint256 maturity,
         bool isTaker
-    ) external returns (bool);
+    ) external;
 
     function transferFrom(
         address sender,
