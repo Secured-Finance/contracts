@@ -12,6 +12,7 @@ import {
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
 } from '../../common/constants';
+import { calculateFutureValue } from '../../common/orders';
 import { deployContracts } from './utils';
 
 describe('LendingMarketController - Liquidations', () => {
@@ -297,89 +298,6 @@ describe('LendingMarketController - Liquidations', () => {
         );
     });
 
-    it('Force repayment of overdue borrowing positions', async () => {
-      const orderAmount = ethers.BigNumber.from('100000000000000000');
-      const orderRate = ethers.BigNumber.from('8000');
-
-      await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
-      await mockCurrencyController.mock.currencyExists.returns(false);
-      await mockTokenVault.mock.calculateLiquidationFees.returns(
-        '100000000',
-        '50000000',
-      );
-      await mockCurrencyController.mock.convert.returns('100000000');
-
-      [alice, bob] = getUsers(3);
-
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .createOrder(
-          targetCurrency,
-          maturities[0],
-          Side.BORROW,
-          orderAmount,
-          orderRate,
-        );
-
-      await expect(
-        lendingMarketControllerProxy
-          .connect(bob)
-          .createOrder(
-            targetCurrency,
-            maturities[0],
-            Side.LEND,
-            orderAmount,
-            orderRate,
-          ),
-      ).to.emit(fundManagementLogic, 'OrderFilled');
-
-      await expect(
-        lendingMarketControllerProxy
-          .connect(owner)
-          .executeLiquidationCall(
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            alice.address,
-          ),
-      ).to.be.revertedWith('User has enough collateral');
-
-      await time.increaseTo(maturities[0].toString());
-
-      await expect(
-        lendingMarketControllerProxy
-          .connect(owner)
-          .executeLiquidationCall(
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            alice.address,
-          ),
-      ).to.be.revertedWith('User has enough collateral');
-
-      // Move to 1 weeks after maturity.
-      await time.increaseTo(maturities[0].add(604800).toString());
-
-      await expect(
-        lendingMarketControllerProxy
-          .connect(owner)
-          .executeForcedRepayment(
-            targetCurrency,
-            targetCurrency,
-            maturities[0],
-            alice.address,
-          ),
-      )
-        .to.emit(liquidationLogic, 'ForcedRepaymentExecuted')
-        .withArgs(
-          alice.address,
-          targetCurrency,
-          targetCurrency,
-          maturities[0],
-          '125000000000000000',
-        );
-    });
-
     it('Fail to liquidate a lending position due to no debt', async () => {
       [alice] = getUsers(1);
 
@@ -469,6 +387,166 @@ describe('LendingMarketController - Liquidations', () => {
             alice.address,
           ),
       ).to.be.revertedWith('Invalid liquidation');
+    });
+  });
+
+  describe('Delisting', async () => {
+    it('Execute repayment & redemption', async () => {
+      const orderAmount = ethers.BigNumber.from('100000000000000000');
+      const orderRate = ethers.BigNumber.from('8000');
+
+      [alice, bob] = getUsers(2);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          orderAmount,
+          orderRate,
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            orderRate,
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await time.increaseTo(maturities[0].toString());
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeRepayment(targetCurrency, maturities[0]),
+      )
+        .to.emit(fundManagementLogic, 'RepaymentExecuted')
+        .withArgs(
+          alice.address,
+          targetCurrency,
+          maturities[0],
+          calculateFutureValue(orderAmount, orderRate),
+        );
+
+      // Move to 1 weeks after maturity.
+      await time.increaseTo(maturities[0].add(604800).toString());
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .executeRedemption(targetCurrency, maturities[0]),
+      )
+        .to.emit(fundManagementLogic, 'RedemptionExecuted')
+        .withArgs(bob.address, targetCurrency, maturities[0], () => true);
+    });
+
+    it('Force repayment of overdue borrowing positions', async () => {
+      const orderAmount = ethers.BigNumber.from('100000000000000000');
+      const orderRate = ethers.BigNumber.from('8000');
+
+      await mockTokenVault.mock.getLiquidationAmount.returns(0, 0, 0);
+      await mockCurrencyController.mock.currencyExists.returns(false);
+      await mockTokenVault.mock.calculateLiquidationFees.returns(
+        '100000000',
+        '50000000',
+      );
+      await mockCurrencyController.mock.convert.returns('100000000');
+
+      [alice, bob] = getUsers(3);
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .createOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          orderAmount,
+          orderRate,
+        );
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            orderAmount,
+            orderRate,
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(owner)
+          .executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          ),
+      ).to.be.revertedWith('User has enough collateral');
+
+      await time.increaseTo(maturities[0].toString());
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(owner)
+          .executeLiquidationCall(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          ),
+      ).to.be.revertedWith('User has enough collateral');
+
+      // Move to 1 weeks after maturity.
+      await time.increaseTo(maturities[0].add(604800).toString());
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(owner)
+          .executeForcedRepayment(
+            targetCurrency,
+            targetCurrency,
+            maturities[0],
+            alice.address,
+          ),
+      )
+        .to.emit(liquidationLogic, 'ForcedRepaymentExecuted')
+        .withArgs(
+          alice.address,
+          targetCurrency,
+          targetCurrency,
+          maturities[0],
+          '125000000000000000',
+        );
+    });
+
+    it('Fail to repay due to active market', async () => {
+      await expect(
+        lendingMarketControllerProxy.executeRepayment(
+          targetCurrency,
+          maturities[0],
+        ),
+      ).revertedWith('Market is not matured');
+    });
+
+    it('Fail to redeem due to under repayment period', async () => {
+      await time.increaseTo(maturities[0].toString());
+
+      await expect(
+        lendingMarketControllerProxy.executeRedemption(
+          targetCurrency,
+          maturities[0],
+        ),
+      ).revertedWith('Not in the redemption period');
     });
   });
 });
