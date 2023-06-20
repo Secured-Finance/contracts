@@ -753,11 +753,13 @@ library FundManagementLogic {
                     mstore(positions, sub(mload(positions), 1))
                 }
             } else {
+                uint256 midUnitPrice = ILendingMarket(lendingMarkets[i]).getMidUnitPrice();
                 positions[positionIdx] = ILendingMarketController.Position(
                     _ccy,
                     maturity,
                     presentValue,
-                    futureValue
+                    futureValue,
+                    midUnitPrice
                 );
                 positionIdx++;
             }

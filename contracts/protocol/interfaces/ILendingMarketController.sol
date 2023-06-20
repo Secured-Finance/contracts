@@ -19,6 +19,7 @@ interface ILendingMarketController {
         uint256 maturity;
         int256 presentValue;
         int256 futureValue;
+        uint256 midUnitPrice;
     }
 
     function isTerminated() external view returns (bool);
