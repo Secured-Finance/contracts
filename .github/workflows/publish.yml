@@ -62,5 +62,5 @@ jobs:
         if: ${{ github.event.inputs.branch == 'main' }}
         run: |
           git switch develop
-          git merge main
+          git merge main --no-verify
           git push
