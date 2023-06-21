@@ -88,5 +88,5 @@ jobs:
         if: ${{ github.event.inputs.network == 'staging' }}
         run: |
           git switch develop
-          git merge main
+          git merge main --no-verify
           git push
