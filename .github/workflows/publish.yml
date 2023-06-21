@@ -17,6 +17,7 @@ on:
         default: 'patch'
         type: choice
         options:
+          - prerelease
           - patch
           - minor
           - major
@@ -54,7 +55,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm version ${{ github.event.inputs.versionLevel }} --no-commit-hooks -m "chore: upgrade to %s"
+          if [ ${{ github.event.inputs.versionLevel }} = 'prerelease' ]; then
+            npm version prerelease --preid beta --no-commit-hooks -m "chore: upgrade to %s"
+          else
+            npm version ${{ github.event.inputs.versionLevel }} --no-commit-hooks -m "chore: upgrade to %s"
+          fi
           npm publish
           git push --follow-tags
       - name: Merge main into develop
