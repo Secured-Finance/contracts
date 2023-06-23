@@ -232,7 +232,7 @@ const deployContracts = async () => {
     await currencyControllerProxy.addCurrency(
       currency.key,
       decimals,
-      currency.haircut,
+      8000, // For testing, set the haircut to 80%
       priceFeedAddresses,
     );
   }

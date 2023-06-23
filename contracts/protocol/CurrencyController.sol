@@ -206,6 +206,43 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets the converted amounts of currency.
+     * @param _fromCcy Currency to convert from
+     * @param _toCcy Currency to convert to
+     * @param _amounts Amounts to be converted
+     * @return amounts The converted amounts
+     */
+    function convert(
+        bytes32 _fromCcy,
+        bytes32 _toCcy,
+        uint256[] calldata _amounts
+    ) external view override returns (uint256[] memory amounts) {
+        if (_fromCcy == _toCcy) return _amounts;
+
+        if (_isBaseCurrency(_fromCcy)) {
+            return convertFromBaseCurrency(_toCcy, _amounts);
+        }
+
+        if (_isBaseCurrency(_toCcy)) {
+            return convertToBaseCurrency(_fromCcy, _amounts);
+        }
+
+        int256 fromPrice = _getLastPrice(_fromCcy);
+        int256 toPrice = _getLastPrice(_toCcy);
+
+        amounts = new uint256[](_amounts.length);
+        for (uint256 i = 0; i < _amounts.length; i++) {
+            if (_amounts[i] == 0) continue;
+
+            amounts[i] = (_amounts[i] *
+                uint256(fromPrice) *
+                10**Storage.slot().decimalsCaches[_toCcy]).div(
+                    10**Storage.slot().decimalsCaches[_fromCcy] * uint256(toPrice)
+                );
+        }
+    }
+
+    /**
      * @notice Gets the converted amount in the base currency.
      * @param _ccy Currency that has to be converted to the base currency
      * @param _amount Amount to be converted
@@ -251,8 +288,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _amounts Amounts to be converted
      * @return amounts The converted amounts
      */
-    function convertToBaseCurrency(bytes32 _ccy, uint256[] memory _amounts)
-        external
+    function convertToBaseCurrency(bytes32 _ccy, uint256[] calldata _amounts)
+        public
         view
         override
         returns (uint256[] memory amounts)
@@ -286,6 +323,30 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         amount = (_amount * 10**Storage.slot().decimalsCaches[_ccy]).div(
             _getLastPrice(_ccy).toUint256()
         );
+    }
+
+    /**
+     * @notice Gets the converted amounts to the selected currency from the base currency.
+     * @param _ccy Currency that has to be converted to the base currency.
+     * @param _amounts Amounts in the base currency to be converted
+     * @return amounts The converted amounts
+     */
+    function convertFromBaseCurrency(bytes32 _ccy, uint256[] calldata _amounts)
+        public
+        view
+        override
+        returns (uint256[] memory amounts)
+    {
+        if (_isBaseCurrency(_ccy)) return _amounts;
+
+        amounts = new uint256[](_amounts.length);
+        for (uint256 i = 0; i < _amounts.length; i++) {
+            if (_amounts[i] == 0) continue;
+
+            amounts[i] = (_amounts[i] * 10**Storage.slot().decimalsCaches[_ccy]).div(
+                _getLastPrice(_ccy).toUint256()
+            );
+        }
     }
 
     function _isBaseCurrency(bytes32 _ccy) internal view returns (bool) {

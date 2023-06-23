@@ -303,12 +303,20 @@ describe('CurrencyController', () => {
     });
 
     it('Get the converted amount(uint256) in the selected currency', async () => {
-      const amount = await currencyControllerProxy.convertFromBaseCurrency(
-        currency,
-        10000000000,
-      );
+      const amount = await currencyControllerProxy[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ](currency, 10000000000);
 
       expect(amount).to.equal('1000000000000000000');
+    });
+
+    it('Get the converted amount(uint256) in the selected currency', async () => {
+      const amounts = await currencyControllerProxy[
+        'convertFromBaseCurrency(bytes32,uint256[])'
+      ](currency, [10000000000]);
+
+      expect(amounts.length).to.equal(1);
+      expect(amounts[0]).to.equal('1000000000000000000');
     });
   });
 });

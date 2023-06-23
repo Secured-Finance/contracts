@@ -235,12 +235,27 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
      * @return totalCollateralAmount The total collateral amount in ETH
      */
     function getTotalCollateralAmount(address _user)
-        public
+        external
         view
         override
         returns (uint256 totalCollateralAmount)
     {
         (totalCollateralAmount, , ) = DepositManagementLogic.getCollateralAmount(_user);
+    }
+
+    /**
+     * @notice Gets the total collateral amount of the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return amount The collateral amount
+     */
+    function getCollateralAmount(bytes32 _ccy, address _user)
+        external
+        view
+        override
+        returns (uint256 amount)
+    {
+        (amount, , ) = DepositManagementLogic.getCollateralAmount(_ccy, _user);
     }
 
     /**

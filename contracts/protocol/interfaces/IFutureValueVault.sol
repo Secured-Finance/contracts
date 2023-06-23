@@ -48,5 +48,9 @@ interface IFutureValueVault {
 
     function addInitialTotalSupply(uint256 maturity, int256 amount) external;
 
-    function resetFutureValue(address _user) external;
+    function executeForcedReset(address user) external;
+
+    function executeForcedReset(address user, int256 amount)
+        external
+        returns (int256 removedAmount, int256 balance);
 }

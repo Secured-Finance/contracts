@@ -1036,15 +1036,15 @@ describe('Integration Test: Liquidations', async () => {
           await tokenVault.getDepositAmount(bob.address, hexUSDC),
         ).to.equal(0);
 
-        expect(await tokenVault.getTotalCollateralAmount(bob.address)).to.equal(
-          0,
-        );
+        expect(
+          await lendingMarketController.getTotalPresentValue(
+            hexUSDC,
+            bob.address,
+          ),
+        ).not.to.equal(0);
       });
 
       it('Create orders on the FIL market', async () => {
-        await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH, {
-          value: orderAmountInETH,
-        });
         await lendingMarketController
           .connect(bob)
           .createOrder(
@@ -1105,7 +1105,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(3));
+        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(3).div(2));
 
         const lendingInfoBefore = await lendingInfo.load('User(Before)', {
           EFIL: filMaturities[0],
@@ -1242,15 +1242,15 @@ describe('Integration Test: Liquidations', async () => {
           await tokenVault.getDepositAmount(bob.address, hexUSDC),
         ).to.equal(0);
 
-        expect(await tokenVault.getTotalCollateralAmount(bob.address)).to.equal(
-          0,
-        );
+        expect(
+          await lendingMarketController.getTotalPresentValue(
+            hexUSDC,
+            bob.address,
+          ),
+        ).not.to.equal(0);
       });
 
       it('Create orders on the FIL market', async () => {
-        await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH, {
-          value: orderAmountInETH,
-        });
         await lendingMarketController
           .connect(bob)
           .createOrder(
@@ -1309,7 +1309,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(3));
+        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(3).div(2));
 
         const lendingInfoBefore = await lendingInfo.load('User(Before)', {
           EFIL: filMaturities[0],

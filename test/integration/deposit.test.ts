@@ -905,9 +905,6 @@ describe('Integration Test: Deposit', async () => {
 
       expect(coverage.sub('5000').abs()).lte(1);
       expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
-      expect(await tokenVault.getTotalCollateralAmount(bob.address)).to.equal(
-        0,
-      );
     });
 
     it('Fill an order on the ETH market', async () => {

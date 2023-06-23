@@ -689,7 +689,7 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        FundManagementLogic.executeRepayment(_ccy, _maturity, msg.sender);
+        FundManagementLogic.executeRepayment(_ccy, _maturity, msg.sender, 0);
         return true;
     }
 
