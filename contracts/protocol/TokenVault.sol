@@ -318,13 +318,19 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         return DepositManagementLogic.getUsedCurrencies(_user);
     }
 
-    function calculateLiquidationFees(uint256 _liquidationAmount)
+    /**
+     * @notice Gets the actual fee amounts calculated by rates.
+     * @param _amount Liquidation amount
+     * @return protocolFee Liquidation fee amount received by protocol
+     * @return liquidatorFee Liquidation fee amount received by liquidators
+     */
+    function calculateLiquidationFees(uint256 _amount)
         external
         view
         override
         returns (uint256 protocolFee, uint256 liquidatorFee)
     {
-        return DepositManagementLogic.calculateLiquidationFees(_liquidationAmount);
+        return DepositManagementLogic.calculateLiquidationFees(_amount);
     }
 
     /**
@@ -460,17 +466,18 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     /**
-     * @notice Resets deposit amount.
+     * @notice Forces a reset of the user's deposit amount.
      * @param _user User's address
      * @param _ccy Currency name in bytes32
      */
-    function resetDepositAmount(address _user, bytes32 _ccy)
+    function executeForcedReset(address _user, bytes32 _ccy)
         external
+        override
         onlyAcceptedContracts
         onlyRegisteredCurrency(_ccy)
         returns (uint256)
     {
-        return DepositManagementLogic.resetDepositAmount(_user, _ccy);
+        return DepositManagementLogic.executeForcedReset(_user, _ccy);
     }
 
     /**

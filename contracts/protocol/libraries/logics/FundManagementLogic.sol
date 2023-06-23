@@ -288,7 +288,7 @@ library FundManagementLogic {
         for (uint256 i; i < collateralCurrencies.length; i++) {
             int256 amountInCcy = AddressResolverLib
                 .tokenVault()
-                .resetDepositAmount(_user, collateralCurrencies[i])
+                .executeForcedReset(_user, collateralCurrencies[i])
                 .toInt256();
 
             redemptionAmountInBaseCurrency += _convertToBaseCurrencyAtMarketTerminationPrice(

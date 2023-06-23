@@ -648,7 +648,7 @@ describe('TokenVault', () => {
 
       await tokenVaultCaller
         .connect(signer)
-        .resetDepositAmount(signer.address, targetCurrency);
+        .executeForcedReset(signer.address, targetCurrency);
 
       expect(
         await tokenVaultProxy.getUnusedCollateral(signer.address),
@@ -876,9 +876,9 @@ describe('TokenVault', () => {
       ).to.be.revertedWith('Only Accepted Contracts');
     });
 
-    it('Fail to call resetDepositAmount due to invalid caller', async () => {
+    it('Fail to call executeForcedReset due to invalid caller', async () => {
       await expect(
-        tokenVaultProxy.resetDepositAmount(alice.address, targetCurrency),
+        tokenVaultProxy.executeForcedReset(alice.address, targetCurrency),
       ).to.be.revertedWith('Only Accepted Contracts');
     });
 

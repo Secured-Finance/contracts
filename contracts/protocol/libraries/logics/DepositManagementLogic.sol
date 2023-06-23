@@ -256,7 +256,7 @@ library DepositManagementLogic {
         _updateUsedCurrencies(_user, _ccy);
     }
 
-    function resetDepositAmount(address _user, bytes32 _ccy)
+    function executeForcedReset(address _user, bytes32 _ccy)
         external
         returns (uint256 removedAmount)
     {
@@ -351,7 +351,7 @@ library DepositManagementLogic {
 
         uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
 
-        // NOTE: If `totalCollateralAmount > _collateralAmount` is true, it means that a user has collateral in other currencies
+        // NOTE: If `totalCollateralAmount > collateralAmount` is true, it means that a user has collateral in other currencies
         // In this case, this liquidation is not covered by the reserve fund.
         // Therefore, we need to keep the total liquidation amount within the maximum amount.
         if (liquidationTotalAmount > collateralAmount && totalCollateralAmount > collateralAmount) {
@@ -370,15 +370,13 @@ library DepositManagementLogic {
         }
     }
 
-    function calculateLiquidationFees(uint256 _liquidationAmount)
+    function calculateLiquidationFees(uint256 _amount)
         public
         view
         returns (uint256 protocolFee, uint256 liquidatorFee)
     {
-        protocolFee = (_liquidationAmount * Params.liquidationProtocolFeeRate()).div(
-            Constants.PCT_DIGIT
-        );
-        liquidatorFee = (_liquidationAmount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
+        protocolFee = (_amount * Params.liquidationProtocolFeeRate()).div(Constants.PCT_DIGIT);
+        liquidatorFee = (_amount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
     }
 
     function transferFrom(

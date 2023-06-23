@@ -669,6 +669,12 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Redeem user's lending positions.
+     * Redemption can only be executed once the market has matured after the currency has been delisted.
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     */
     function executeRedemption(bytes32 _ccy, uint256 _maturity)
         external
         override
@@ -681,6 +687,12 @@ contract LendingMarketController is
         return true;
     }
 
+    /**
+     * @notice Repay user's borrowing positions.
+     * Repayment can only be executed once the market has matured after the currency has been delisted.
+     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _maturity The maturity of the selected market
+     */
     function executeRepayment(bytes32 _ccy, uint256 _maturity)
         external
         override

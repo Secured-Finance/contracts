@@ -29,8 +29,8 @@ contract TokenVaultCallerMock {
         tokenVault.removeDepositAmount(user, ccy, amount);
     }
 
-    function resetDepositAmount(address user, bytes32 ccy) public {
-        tokenVault.resetDepositAmount(user, ccy);
+    function executeForcedReset(address user, bytes32 ccy) public {
+        tokenVault.executeForcedReset(user, ccy);
     }
 
     function depositFrom(
