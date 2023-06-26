@@ -62,8 +62,8 @@ contract OrderStatisticsTreeContract {
             .getNode(value);
     }
 
-    function getOrderByID(uint256 value, uint48 orderOd) public view returns (OrderItem memory) {
-        return tree.getOrderById(value, orderOd);
+    function getOrderByID(uint256 value, uint48 orderId) public view returns (OrderItem memory) {
+        return tree.getOrderById(value, orderId);
     }
 
     function getRootCount() public view returns (uint256 _orderCounter) {

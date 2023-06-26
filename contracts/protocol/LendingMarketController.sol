@@ -834,7 +834,7 @@ contract LendingMarketController is
      * @notice Clean up all funds of the user
      * @param _user User's address
      */
-    function cleanUpAllFunds(address _user) external override returns (bool) {
+    function cleanUpAllFunds(address _user) external override nonReentrant returns (bool) {
         FundManagementLogic.cleanUpAllFunds(_user);
         return true;
     }
@@ -849,6 +849,7 @@ contract LendingMarketController is
     function cleanUpFunds(bytes32 _ccy, address _user)
         external
         override
+        nonReentrant
         returns (uint256 totalActiveOrderCount)
     {
         return FundManagementLogic.cleanUpFunds(_ccy, _user);
