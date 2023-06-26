@@ -37,7 +37,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderId Market order id
      */
     modifier onlyMaker(address user, uint48 _orderId) {
-        (, , , address maker, , ) = getOrder(_orderId);
+        (, , , address maker, , , ) = getOrder(_orderId);
         require(maker != address(0), "Order not found");
         require(user == maker, "Caller is not the maker");
         _;
@@ -276,6 +276,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return maker The order maker
      * @return amount Order amount
      * @return timestamp Timestamp when the order was created
+     * @return isPreOrder The boolean if the order is a pre-order.
      */
     function getOrder(uint48 _orderId)
         public
@@ -287,7 +288,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 maturity,
             address maker,
             uint256 amount,
-            uint256 timestamp
+            uint256 timestamp,
+            bool isPreOrder
         )
     {
         return OrderBookLogic.getOrder(_orderId);
@@ -533,7 +535,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 ignoreRemainingAmount
             );
         } else if (!ignoreRemainingAmount) {
-            _makeOrder(_side, _user, _amount, executedUnitPrice);
+            _makeOrder(_side, _user, _amount, executedUnitPrice, false);
         } else {
             emit OrderBlockedByCircuitBreaker(
                 _user,
@@ -570,8 +572,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             revert("Opposite side order exists");
         }
 
-        uint48 orderId = _makeOrder(_side, _user, _amount, _unitPrice);
-        Storage.slot().isPreOrder[orderId] = true;
+        _makeOrder(_side, _user, _amount, _unitPrice, true);
     }
 
     /**
@@ -718,9 +719,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        bool _isPreOrder
     ) private returns (uint48 orderId) {
         orderId = OrderBookLogic.insertOrder(_side, _user, _amount, _unitPrice);
+        if (_isPreOrder) {
+            Storage.slot().isPreOrder[orderId] = true;
+        }
 
         emit OrderMade(
             orderId,
@@ -729,7 +734,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             Storage.slot().ccy,
             Storage.slot().maturity,
             _amount,
-            _unitPrice
+            _unitPrice,
+            _isPreOrder
         );
     }
 
@@ -796,7 +802,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 filledOrder.ignoredAmount = remainingAmount;
             } else {
                 // Make a new order for the remaining amount of input
-                _makeOrder(_side, _user, remainingAmount, _unitPrice);
+                _makeOrder(_side, _user, remainingAmount, _unitPrice, false);
             }
         }
     }
