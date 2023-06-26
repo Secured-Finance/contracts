@@ -85,6 +85,7 @@ interface ILendingMarket {
         uint256 borrowUnitPrice;
         uint256 lendUnitPrice;
         uint256 midUnitPrice;
+        uint256 openingUnitPrice;
         bool isReady;
     }
 

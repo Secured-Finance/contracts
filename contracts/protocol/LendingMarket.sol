@@ -121,6 +121,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 borrowUnitPrice: OrderBookLogic.getLowestBorrowingUnitPrice(),
                 lendUnitPrice: OrderBookLogic.getHighestLendingUnitPrice(),
                 midUnitPrice: getMidUnitPrice(),
+                openingUnitPrice: Storage.slot().openingUnitPrices[Storage.slot().maturity],
                 isReady: isReady()
             });
     }
