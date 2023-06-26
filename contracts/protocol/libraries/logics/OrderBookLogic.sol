@@ -692,18 +692,15 @@ library OrderBookLogic {
     }
 
     function _getLendOrderAmounts(uint48 _orderId)
-        private
+        internal
         view
         returns (uint256 presentValue, uint256 futureValue)
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
-        require(marketOrder.maturity != 0, "Invalid Order ID");
-
         OrderItem memory orderItem = Storage.slot().lendOrders[marketOrder.maturity].getOrderById(
             marketOrder.unitPrice,
             _orderId
         );
-        presentValue += orderItem.amount;
         uint256 unitPrice = marketOrder.unitPrice;
 
         if (Storage.slot().isPreOrder[_orderId]) {
@@ -711,22 +708,20 @@ library OrderBookLogic {
             unitPrice = openingUnitPrice < unitPrice ? openingUnitPrice : unitPrice;
         }
 
+        presentValue = orderItem.amount;
         futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 
     function _getBorrowOrderAmounts(uint48 _orderId)
-        private
+        internal
         view
         returns (uint256 presentValue, uint256 futureValue)
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
-        require(marketOrder.maturity != 0, "Invalid Order ID");
-
         OrderItem memory orderItem = Storage.slot().borrowOrders[marketOrder.maturity].getOrderById(
             marketOrder.unitPrice,
             _orderId
         );
-        presentValue += orderItem.amount;
         uint256 unitPrice = marketOrder.unitPrice;
 
         if (Storage.slot().isPreOrder[_orderId]) {
@@ -734,6 +729,7 @@ library OrderBookLogic {
             unitPrice = openingUnitPrice > unitPrice ? openingUnitPrice : unitPrice;
         }
 
+        presentValue = orderItem.amount;
         futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 }
