@@ -463,14 +463,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             activeLendOrderCount,
             removedLendOrderFutureValue,
             removedLendOrderAmount
-        ) = OrderBookLogic.cleanLendOrders(_user, maturity);
+        ) = OrderBookLogic.cleanLendOrders(_user);
 
         (
             borrowOrderIds,
             activeBorrowOrderCount,
             removedBorrowOrderFutureValue,
             removedBorrowOrderAmount
-        ) = OrderBookLogic.cleanBorrowOrders(_user, maturity);
+        ) = OrderBookLogic.cleanBorrowOrders(_user);
 
         if (removedLendOrderAmount > 0) {
             emit OrdersCleaned(
