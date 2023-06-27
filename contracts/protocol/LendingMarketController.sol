@@ -800,7 +800,7 @@ contract LendingMarketController is
      * @notice Executes an emergency termination to stop the protocol. Once this function is executed,
      * the protocol cannot be run again. Also, users will only be able to redeem and withdraw.
      */
-    function executeEmergencyTermination() external override nonReentrant ifActive onlyOwner {
+    function executeEmergencyTermination() external override ifActive onlyOwner {
         LendingMarketOperationLogic.executeEmergencyTermination();
     }
 
