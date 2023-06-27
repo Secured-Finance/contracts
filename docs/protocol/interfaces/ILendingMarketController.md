@@ -13,6 +13,7 @@ struct Order {
   uint256 unitPrice;
   uint256 amount;
   uint256 timestamp;
+  bool isPreOrder;
 }
 ```
 

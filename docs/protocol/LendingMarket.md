@@ -295,7 +295,7 @@ Gets if the market is under the pre-order period.
 ### getOrder
 
 ```solidity
-function getOrder(uint48 _orderId) public view returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp)
+function getOrder(uint48 _orderId) public view returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
 ```
 
 Gets the market order from the order book.
@@ -312,6 +312,7 @@ Gets the market order from the order book.
 | maker | address | The order maker |
 | amount | uint256 | Order amount |
 | timestamp | uint256 | Timestamp when the order was created |
+| isPreOrder | bool | The boolean if the order is a pre-order. |
 
 ### getTotalAmountFromLendOrders
 
@@ -413,7 +414,7 @@ Opens market
 ### cancelOrder
 
 ```solidity
-function cancelOrder(address _user, uint48 _orderId) external returns (enum ProtocolTypes.Side side, uint256 removedAmount, uint256 unitPrice)
+function cancelOrder(address _user, uint48 _orderId) external
 ```
 
 Cancels the order.
@@ -422,12 +423,6 @@ Cancels the order.
 | ---- | ---- | ----------- |
 | _user | address | User address |
 | _orderId | uint48 | Market order id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| side | enum ProtocolTypes.Side | The canceled order position type |
-| removedAmount | uint256 | The removed order amount from the order book by canceling |
-| unitPrice | uint256 | The canceled order unit price |
 
 ### cleanUpOrders
 
@@ -557,7 +552,7 @@ function _updateUserMaturity(address _user) private
 ### _makeOrder
 
 ```solidity
-function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint48 orderId)
+function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _isPreOrder) private returns (uint48 orderId)
 ```
 
 Makes new market order.
@@ -568,6 +563,7 @@ Makes new market order.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Preferable interest unit price |
+| _isPreOrder | bool |  |
 
 ### _takeOrder
 

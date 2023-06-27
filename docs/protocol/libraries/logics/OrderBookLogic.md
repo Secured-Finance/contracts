@@ -41,7 +41,7 @@ function getBorrowOrderBook(uint256 _limit) external view returns (uint256[] uni
 ### getOrder
 
 ```solidity
-function getOrder(uint48 _orderId) external view returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp)
+function getOrder(uint48 _orderId) external view returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
 ```
 
 ### getTotalAmountFromLendOrders
@@ -89,13 +89,13 @@ function dropOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _fut
 ### cleanLendOrders
 
 ```solidity
-function cleanLendOrders(address _user, uint256 _maturity) external returns (uint48[] orderIds, uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
+function cleanLendOrders(address _user) external returns (uint48[] orderIds, uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
 ```
 
 ### cleanBorrowOrders
 
 ```solidity
-function cleanBorrowOrders(address _user, uint256 _maturity) external returns (uint48[] orderIds, uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
+function cleanBorrowOrders(address _user) external returns (uint48[] orderIds, uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
 ```
 
 ### removeOrder
@@ -146,15 +146,15 @@ Increases and returns id of last order in order book.
 function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) internal
 ```
 
-### _getUnitPriceForPreLendOrder
+### _getLendOrderAmounts
 
 ```solidity
-function _getUnitPriceForPreLendOrder(uint256 openingUnitPrice, uint256 unitPrice) private pure returns (uint256)
+function _getLendOrderAmounts(uint48 _orderId) internal view returns (uint256 presentValue, uint256 futureValue)
 ```
 
-### _getUnitPriceForPreBorrowOrder
+### _getBorrowOrderAmounts
 
 ```solidity
-function _getUnitPriceForPreBorrowOrder(uint256 openingUnitPrice, uint256 unitPrice) private pure returns (uint256)
+function _getBorrowOrderAmounts(uint48 _orderId) internal view returns (uint256 presentValue, uint256 futureValue)
 ```
 

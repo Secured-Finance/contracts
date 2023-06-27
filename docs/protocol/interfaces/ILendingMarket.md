@@ -32,7 +32,7 @@ event OrderCanceled(uint48 orderId, address maker, enum ProtocolTypes.Side side,
 ### OrderMade
 
 ```solidity
-event OrderMade(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice)
+event OrderMade(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice, bool isPreOrder)
 ```
 
 ### OrdersTaken
@@ -81,6 +81,7 @@ struct Market {
   uint256 borrowUnitPrice;
   uint256 lendUnitPrice;
   uint256 midUnitPrice;
+  uint256 openingUnitPrice;
   bool isReady;
 }
 ```
@@ -178,7 +179,7 @@ function isPreOrderPeriod() external returns (bool)
 ### getOrder
 
 ```solidity
-function getOrder(uint48 orderId) external view returns (enum ProtocolTypes.Side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp)
+function getOrder(uint48 orderId) external view returns (enum ProtocolTypes.Side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
 ```
 
 ### getTotalAmountFromLendOrders
@@ -220,7 +221,7 @@ function openMarket(uint256 maturity, uint256 openingDate) external returns (uin
 ### cancelOrder
 
 ```solidity
-function cancelOrder(address user, uint48 orderId) external returns (enum ProtocolTypes.Side, uint256, uint256)
+function cancelOrder(address user, uint48 orderId) external
 ```
 
 ### createOrder
