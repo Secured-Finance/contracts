@@ -112,7 +112,8 @@ library OrderBookLogic {
             uint256 maturity,
             address maker,
             uint256 amount,
-            uint256 timestamp
+            uint256 timestamp,
+            bool isPreOrder
         )
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
@@ -131,14 +132,13 @@ library OrderBookLogic {
         }
 
         if (orderItem.maker != address(0)) {
-            return (
-                marketOrder.side,
-                marketOrder.unitPrice,
-                marketOrder.maturity,
-                orderItem.maker,
-                orderItem.amount,
-                orderItem.timestamp
-            );
+            side = marketOrder.side;
+            unitPrice = marketOrder.unitPrice;
+            maturity = marketOrder.maturity;
+            maker = orderItem.maker;
+            amount = orderItem.amount;
+            timestamp = orderItem.timestamp;
+            isPreOrder = Storage.slot().isPreOrder[_orderId];
         }
     }
 

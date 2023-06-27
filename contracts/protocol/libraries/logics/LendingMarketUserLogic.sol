@@ -333,7 +333,8 @@ library LendingMarketUserLogic {
             uint256 maturity,
             ,
             uint256 amount,
-            uint256 timestamp
+            uint256 timestamp,
+            bool isPreOrder
         ) = _market.getOrder(_orderId);
 
         order = ILendingMarketController.Order(
@@ -343,7 +344,8 @@ library LendingMarketUserLogic {
             side,
             unitPrice,
             amount,
-            timestamp
+            timestamp,
+            isPreOrder
         );
     }
 

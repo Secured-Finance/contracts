@@ -35,7 +35,8 @@ interface ILendingMarket {
         bytes32 ccy,
         uint256 maturity,
         uint256 amount,
-        uint256 unitPrice
+        uint256 unitPrice,
+        bool isPreOrder
     );
 
     event OrdersTaken(
@@ -142,7 +143,8 @@ interface ILendingMarket {
             uint256 maturity,
             address maker,
             uint256 amount,
-            uint256 timestamp
+            uint256 timestamp,
+            bool isPreOrder
         );
 
     function getTotalAmountFromLendOrders(address user)
