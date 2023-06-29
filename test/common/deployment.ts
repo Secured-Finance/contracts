@@ -12,7 +12,6 @@ import {
   toBytes32,
 } from '../../utils/strings';
 import {
-  AUTO_ROLL_FEE_RATE,
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_PROTOCOL_FEE_RATE,
@@ -286,7 +285,6 @@ const deployContracts = async () => {
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
-      AUTO_ROLL_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
   }

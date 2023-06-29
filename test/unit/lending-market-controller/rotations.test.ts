@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
+import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
@@ -8,12 +9,15 @@ import { ethers } from 'hardhat';
 import { Side } from '../../../utils/constants';
 import { getGenesisDate } from '../../../utils/dates';
 import {
-  AUTO_ROLL_FEE_RATE,
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
   PRICE_DIGIT,
 } from '../../common/constants';
+import {
+  calculateAutoRolledBorrowingCompoundFactor,
+  calculateAutoRolledLendingCompoundFactor,
+} from '../../common/orders';
 import { deployContracts } from './utils';
 
 const BP = ethers.BigNumber.from(PRICE_DIGIT);
@@ -84,7 +88,6 @@ describe('LendingMarketController - Rotations', () => {
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
-      AUTO_ROLL_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
     for (let i = 0; i < 5; i++) {
@@ -188,27 +191,35 @@ describe('LendingMarketController - Rotations', () => {
       expect(logs[1].prev).to.equal(maturities[0]);
       expect(logs[1].next).to.equal(maturities[2]);
       expect(logs[1].lendingCompoundFactor).to.equal(
-        logs[0].lendingCompoundFactor
-          .mul(BP.pow(2).sub(logs[1].unitPrice.mul(AUTO_ROLL_FEE_RATE)))
-          .div(logs[1].unitPrice.mul(BP)),
+        calculateAutoRolledLendingCompoundFactor(
+          logs[0].lendingCompoundFactor,
+          maturities[1].sub(maturities[0]),
+          logs[1].unitPrice,
+        ),
       );
       expect(logs[1].borrowingCompoundFactor).to.equal(
-        logs[0].borrowingCompoundFactor
-          .mul(BP.pow(2).add(logs[1].unitPrice.mul(AUTO_ROLL_FEE_RATE)))
-          .div(logs[1].unitPrice.mul(BP)),
+        calculateAutoRolledBorrowingCompoundFactor(
+          logs[0].borrowingCompoundFactor,
+          maturities[1].sub(maturities[0]),
+          logs[1].unitPrice,
+        ),
       );
 
       expect(logs[2].prev).to.equal(maturities[1]);
       expect(logs[2].next).to.equal('0');
       expect(logs[2].lendingCompoundFactor).to.equal(
-        logs[1].lendingCompoundFactor
-          .mul(BP.pow(2).sub(logs[2].unitPrice.mul(AUTO_ROLL_FEE_RATE)))
-          .div(logs[2].unitPrice.mul(BP)),
+        calculateAutoRolledLendingCompoundFactor(
+          logs[1].lendingCompoundFactor,
+          maturities[2].sub(maturities[1]),
+          logs[2].unitPrice,
+        ),
       );
       expect(logs[2].borrowingCompoundFactor).to.equal(
-        logs[1].borrowingCompoundFactor
-          .mul(BP.pow(2).add(logs[2].unitPrice.mul(AUTO_ROLL_FEE_RATE)))
-          .div(logs[2].unitPrice.mul(BP)),
+        calculateAutoRolledBorrowingCompoundFactor(
+          logs[1].borrowingCompoundFactor,
+          maturities[2].sub(maturities[1]),
+          logs[2].unitPrice,
+        ),
       );
     });
 
@@ -419,7 +430,7 @@ describe('LendingMarketController - Rotations', () => {
       await time.increaseTo(maturities[0].sub('21600').toString());
 
       await lendingMarketControllerProxy
-        .connect(alice)
+        .connect(carol)
         .createOrder(
           targetCurrency,
           maturities[1],
@@ -428,7 +439,7 @@ describe('LendingMarketController - Rotations', () => {
           '8000',
         );
       await lendingMarketControllerProxy
-        .connect(bob)
+        .connect(dave)
         .createOrder(
           targetCurrency,
           maturities[1],
@@ -438,7 +449,7 @@ describe('LendingMarketController - Rotations', () => {
         );
 
       await lendingMarketControllerProxy
-        .connect(alice)
+        .connect(carol)
         .createOrder(
           targetCurrency,
           maturities[1],
@@ -447,7 +458,7 @@ describe('LendingMarketController - Rotations', () => {
           '10000',
         );
       await lendingMarketControllerProxy
-        .connect(bob)
+        .connect(dave)
         .createOrder(
           targetCurrency,
           maturities[1],
@@ -458,17 +469,65 @@ describe('LendingMarketController - Rotations', () => {
 
       await time.increaseTo(maturities[0].toString());
 
+      const [aliceFVBefore, bobFVBefore] = await Promise.all(
+        [alice, bob].map(async ({ address }) =>
+          lendingMarketControllerProxy
+            .getPosition(targetCurrency, maturities[0], address)
+            .then(({ futureValue }) => futureValue),
+        ),
+      );
+
       await expect(
         lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
       ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
 
-      const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
+      const autoRollLogBefore = await genesisValueVaultProxy.getAutoRollLog(
+        targetCurrency,
+        maturities[0],
+      );
+      const autoRollLogAfter = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,
         maturities[1],
       );
 
-      expect(autoRollLog.prev).to.equal(maturities[0]);
-      expect(autoRollLog.unitPrice).to.equal('8571');
+      expect(autoRollLogAfter.prev).to.equal(maturities[0]);
+      expect(autoRollLogAfter.unitPrice).to.equal('8571');
+
+      const [aliceFVAfter, bobFVAfter] = await Promise.all(
+        [alice, bob].map(async ({ address }) =>
+          lendingMarketControllerProxy
+            .getPosition(targetCurrency, maturities[1], address)
+            .then(({ futureValue }) => futureValue),
+        ),
+      );
+
+      expect(aliceFVAfter).to.equal(
+        BigNumberJS(aliceFVBefore.toString())
+          .times(
+            calculateAutoRolledLendingCompoundFactor(
+              autoRollLogBefore.lendingCompoundFactor,
+              maturities[1].sub(maturities[0]),
+              8571,
+            ).toString(),
+          )
+          .div(autoRollLogBefore.lendingCompoundFactor.toString())
+          .dp(0)
+          .toFixed(),
+      );
+
+      expect(bobFVAfter).to.equal(
+        BigNumberJS(bobFVBefore.toString())
+          .times(
+            calculateAutoRolledBorrowingCompoundFactor(
+              autoRollLogBefore.borrowingCompoundFactor,
+              maturities[1].sub(maturities[0]),
+              8571,
+            ).toString(),
+          )
+          .div(autoRollLogBefore.borrowingCompoundFactor.toString())
+          .dp(0)
+          .toFixed(),
+      );
     });
 
     it('Rotate markets using the estimated auto-roll price', async () => {

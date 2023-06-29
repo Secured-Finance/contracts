@@ -11,7 +11,6 @@ library LendingMarketConfigurationLogic {
     using RoundingUint256 for uint256;
 
     event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
-    event AutoRollFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event ObservationPeriodUpdated(uint256 previousPeriod, uint256 period);
 
@@ -51,17 +50,6 @@ library LendingMarketConfigurationLogic {
             Storage.slot().orderFeeRates[_ccy] = _orderFeeRate;
 
             emit OrderFeeRateUpdated(_ccy, previousRate, _orderFeeRate);
-        }
-    }
-
-    function updateAutoRollFeeRate(bytes32 _ccy, uint256 _autoRollFeeRate) external {
-        require(_autoRollFeeRate <= Constants.PCT_DIGIT, "Invalid auto-roll fee rate");
-        uint256 previousRate = Storage.slot().autoRollFeeRates[_ccy];
-
-        if (_autoRollFeeRate != previousRate) {
-            Storage.slot().autoRollFeeRates[_ccy] = _autoRollFeeRate;
-
-            emit AutoRollFeeRateUpdated(_ccy, previousRate, _autoRollFeeRate);
         }
     }
 

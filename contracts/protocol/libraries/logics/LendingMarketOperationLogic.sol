@@ -143,7 +143,7 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function rotateLendingMarkets(bytes32 _ccy, uint256 _autoRollFeeRate)
+    function rotateLendingMarkets(bytes32 _ccy, uint256 _orderFeeRate)
         external
         returns (uint256 toMaturity)
     {
@@ -176,7 +176,7 @@ library LendingMarketOperationLogic {
             fromMaturity,
             nextMaturity,
             _calculateAutoRollUnitPrice(_ccy, nextMaturity),
-            _autoRollFeeRate
+            _orderFeeRate
         );
 
         Storage.slot().maturityLendingMarkets[_ccy][toMaturity] = currentMarketAddr;

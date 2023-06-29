@@ -496,7 +496,6 @@ contract LendingMarketController is
      * @param _genesisDate The genesis date when the initial market is opened
      * @param _compoundFactor The initial compound factor when the initial market is opened
      * @param _orderFeeRate The order fee rate received by protocol
-     * @param _autoRollFeeRate The auto roll fee rate received by protocol
      * @param _circuitBreakerLimitRange The circuit breaker limit range
      */
     function initializeLendingMarket(
@@ -504,7 +503,6 @@ contract LendingMarketController is
         uint256 _genesisDate,
         uint256 _compoundFactor,
         uint256 _orderFeeRate,
-        uint256 _autoRollFeeRate,
         uint256 _circuitBreakerLimitRange
     ) external override onlyOwner {
         require(_compoundFactor > 0, "Invalid compound factor");
@@ -512,7 +510,6 @@ contract LendingMarketController is
 
         LendingMarketOperationLogic.initializeCurrencySetting(_ccy, _genesisDate, _compoundFactor);
         updateOrderFeeRate(_ccy, _orderFeeRate);
-        updateAutoRollFeeRate(_ccy, _autoRollFeeRate);
         updateCircuitBreakerLimitRange(_ccy, _circuitBreakerLimitRange);
     }
 
@@ -786,7 +783,7 @@ contract LendingMarketController is
     {
         uint256 newMaturity = LendingMarketOperationLogic.rotateLendingMarkets(
             _ccy,
-            getAutoRollFeeRate(_ccy)
+            getOrderFeeRate(_ccy)
         );
 
         FundManagementLogic.convertFutureValueToGenesisValue(

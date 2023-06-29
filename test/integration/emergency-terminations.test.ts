@@ -6,12 +6,7 @@ import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
 import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
-import {
-  AUTO_ROLL_FEE_RATE,
-  PCT_DIGIT,
-  eFilToETHRate,
-  usdcToETHRate,
-} from '../common/constants';
+import { eFilToETHRate, usdcToETHRate } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
@@ -443,7 +438,7 @@ describe('Integration Test: Emergency terminations', async () => {
         // Move to 6 hours (21600 sec) before maturity.
         await time.increaseTo(maturities[0].sub('21600').toString());
         await createSampleETHOrders(carol, maturities[0], '8000', '0');
-        await createSampleETHOrders(carol, maturities[1], '8000');
+        await createSampleETHOrders(carol, maturities[1], '8000', '0');
 
         await time.increaseTo(maturities[0].toString());
         await lendingMarketController
@@ -461,19 +456,25 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Execute forced redemption', async () => {
+        const { presentValue: bobPV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            maturities[1],
+            bob.address,
+          );
+
+        const bobDeposit = await tokenVault.getDepositAmount(
+          bob.address,
+          hexETH,
+        );
+
         await expect(
           lendingMarketController.connect(alice).executeRedemption(),
         ).to.emit(fundManagementLogic, 'RedemptionCompleted');
 
         await expect(lendingMarketController.connect(bob).executeRedemption())
           .to.emit(fundManagementLogic, 'RedemptionCompleted')
-          .withArgs(
-            bob.address,
-            orderAmountInETH
-              .mul(2)
-              .sub(orderAmountInETH.mul(AUTO_ROLL_FEE_RATE).div(PCT_DIGIT))
-              .toString(),
-          );
+          .withArgs(bob.address, bobDeposit.add(bobPV));
 
         for (const user of [alice, bob]) {
           const fv =
