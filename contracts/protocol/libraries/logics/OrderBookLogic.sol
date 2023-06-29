@@ -623,12 +623,12 @@ library OrderBookLogic {
     ) internal pure returns (uint256 cbThresholdUnitPrice) {
         // NOTE: Formula of circuit breaker threshold for borrow orders:
         // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
-        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 den = _unitPrice *
+        uint256 numerator = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
+        uint256 denominator = _unitPrice *
             Constants.PCT_DIGIT +
             (Constants.PRICE_DIGIT - _unitPrice) *
             (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = num.div(den);
+        cbThresholdUnitPrice = numerator.div(denominator);
 
         if (_unitPrice > cbThresholdUnitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
             cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;

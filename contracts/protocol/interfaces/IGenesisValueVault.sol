@@ -90,7 +90,7 @@ interface IGenesisValueVault {
         uint256 maturity,
         uint256 nextMaturity,
         uint256 unitPrice,
-        uint256 feeRate
+        uint256 orderFeeRate
     ) external;
 
     function updateGenesisValueWithFutureValue(

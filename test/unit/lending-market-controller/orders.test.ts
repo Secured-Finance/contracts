@@ -9,7 +9,6 @@ import moment from 'moment';
 import { Side } from '../../../utils/constants';
 import { getGenesisDate } from '../../../utils/dates';
 import {
-  AUTO_ROLL_FEE_RATE,
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
@@ -89,7 +88,6 @@ describe('LendingMarketController - Orders', () => {
         genesisDate,
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
-        AUTO_ROLL_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
       );
       const res = await lendingMarketControllerProxy.getGenesisDate(
@@ -127,7 +125,6 @@ describe('LendingMarketController - Orders', () => {
         genesisDate,
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
-        AUTO_ROLL_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
       );
       await lendingMarketControllerProxy.createLendingMarket(
@@ -162,7 +159,6 @@ describe('LendingMarketController - Orders', () => {
         genesisDate,
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
-        AUTO_ROLL_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
@@ -216,7 +212,6 @@ describe('LendingMarketController - Orders', () => {
         genesisDate,
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
-        AUTO_ROLL_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
       );
       for (let i = 0; i < 5; i++) {

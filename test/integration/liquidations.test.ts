@@ -916,6 +916,7 @@ describe('Integration Test: Liquidations', async () => {
           collateralCcy,
           debtCcy,
           debtMaturity,
+          receivedCollateralAmount,
           receivedDebtAmount,
         } = receipt.events.find(
           ({ event }) => event === 'OperationExecuteForDebt',
@@ -947,7 +948,8 @@ describe('Integration Test: Liquidations', async () => {
 
         expect(liquidatorFutureValue).to.equal(0);
         expect(liquidatorDepositAmount).not.equal(0);
-        expect(receivedDebtAmount).to.equal(filledOrderAmount.div(2));
+        expect(receivedDebtAmount).lt(filledOrderAmount.div(2));
+        expect(receivedCollateralAmount).gt(depositAmount);
       });
     });
 

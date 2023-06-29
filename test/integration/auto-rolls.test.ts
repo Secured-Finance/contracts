@@ -8,7 +8,6 @@ import { ethers } from 'hardhat';
 import { Side } from '../../utils/constants';
 import { hexEFIL, hexETH } from '../../utils/strings';
 import {
-  AUTO_ROLL_FEE_RATE,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -16,7 +15,10 @@ import {
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
-import { calculateOrderFee } from '../common/orders';
+import {
+  calculateAutoRolledLendingCompoundFactor,
+  calculateOrderFee,
+} from '../common/orders';
 import { Signers } from '../common/signers';
 
 const BP = ethers.BigNumber.from(PRICE_DIGIT);
@@ -332,9 +334,11 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(autoRollLog2.next).to.equal('0');
       expect(autoRollLog2.unitPrice).to.equal('8500');
       expect(autoRollLog2.lendingCompoundFactor).to.equal(
-        autoRollLog1.lendingCompoundFactor
-          .mul(BP.pow(2).sub(autoRollLog2.unitPrice.mul(AUTO_ROLL_FEE_RATE)))
-          .div(autoRollLog2.unitPrice.mul(BP)),
+        calculateAutoRolledLendingCompoundFactor(
+          autoRollLog1.lendingCompoundFactor,
+          maturities[1].sub(maturities[0]),
+          autoRollLog2.unitPrice,
+        ),
       );
     });
 
@@ -407,9 +411,11 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(autoRollLog2.next).to.equal('0');
       expect(autoRollLog2.unitPrice).to.equal('8000');
       expect(autoRollLog2.lendingCompoundFactor).to.equal(
-        autoRollLog1.lendingCompoundFactor
-          .mul(BP.pow(2).sub(autoRollLog2.unitPrice.mul(AUTO_ROLL_FEE_RATE)))
-          .div(BP.mul(autoRollLog2.unitPrice)),
+        calculateAutoRolledLendingCompoundFactor(
+          autoRollLog1.lendingCompoundFactor,
+          maturities[1].sub(maturities[0]),
+          autoRollLog2.unitPrice,
+        ),
       );
     });
   });
