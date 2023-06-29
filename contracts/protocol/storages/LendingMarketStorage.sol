@@ -11,6 +11,11 @@ struct MarketOrder {
     uint256 timestamp;
 }
 
+struct ItayoseLog {
+    uint256 lastLendUnitPrice;
+    uint256 lastBorrowUnitPrice;
+}
+
 library LendingMarketStorage {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
 
@@ -22,7 +27,7 @@ library LendingMarketStorage {
         uint256 openingDate;
         uint256 maturity;
         // Mapping from maturity to opening unit price
-        mapping(uint256 => uint256) openingUnitPrices;
+        mapping(uint256 => uint256) openingUnitPrices; // TODO: Merge with itayoseLogs when executing forced deployment
         // Mapping from maturity to boolean if the market is ready or not
         mapping(uint256 => bool) isReady;
         // Mapping from user to active lend order ids
@@ -41,6 +46,8 @@ library LendingMarketStorage {
         mapping(uint256 => OrderStatisticsTreeLib.Tree) borrowOrders;
         // Mapping from order side to threshold unit price of circuit breaker per block
         mapping(uint256 => mapping(ProtocolTypes.Side => uint256)) circuitBreakerThresholdUnitPrices;
+        // Mapping from maturity to Itayose log
+        mapping(uint256 => ItayoseLog) itayoseLogs;
     }
 
     function slot() internal pure returns (Storage storage r) {
