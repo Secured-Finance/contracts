@@ -68,7 +68,7 @@ event MarketOpened(uint256 maturity, uint256 prevMaturity)
 ### ItayoseExecuted
 
 ```solidity
-event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingPrice)
+event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 offsetAmount)
 ```
 
 ### Market

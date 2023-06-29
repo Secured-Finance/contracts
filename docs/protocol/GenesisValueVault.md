@@ -143,7 +143,7 @@ function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice) external
 ### executeAutoRoll
 
 ```solidity
-function executeAutoRoll(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice, uint256 _feeRate) external
+function executeAutoRoll(bytes32 _ccy, uint256 _maturity, uint256 _nextMaturity, uint256 _unitPrice, uint256 _orderFeeRate) external
 ```
 
 ### _updateAutoRollLogs
@@ -250,6 +250,6 @@ function _calculateBalanceFluctuationByAutoRolls(bytes32 _ccy, int256 _balance, 
 ### _updateCompoundFactor
 
 ```solidity
-function _updateCompoundFactor(bytes32 _ccy, uint256 _unitPrice, uint256 _feeRate) private
+function _updateCompoundFactor(bytes32 _ccy, uint256 _unitPrice, uint256 _orderFeeRate, uint256 _currentMaturity) private
 ```
 

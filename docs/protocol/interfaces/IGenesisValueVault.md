@@ -47,7 +47,7 @@ function getGenesisValue(bytes32 ccy, address user) external view returns (int25
 ### getMaturityGenesisValue
 
 ```solidity
-function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity) external view returns (int256)
+function getMaturityGenesisValue(bytes32 ccy, uint256 maturity) external view returns (int256)
 ```
 
 ### getCurrentMaturity
@@ -77,7 +77,7 @@ function getAutoRollLog(bytes32 ccy, uint256 maturity) external view returns (st
 ### getLatestAutoRollLog
 
 ```solidity
-function getLatestAutoRollLog(bytes32 _ccy) external view returns (struct AutoRollLog)
+function getLatestAutoRollLog(bytes32 ccy) external view returns (struct AutoRollLog)
 ```
 
 ### getGenesisValueInFutureValue
@@ -89,7 +89,7 @@ function getGenesisValueInFutureValue(bytes32 ccy, address user) external view r
 ### calculateFVFromFV
 
 ```solidity
-function calculateFVFromFV(bytes32 _ccy, uint256 _basisMaturity, uint256 _destinationMaturity, int256 _futureValue) external view returns (int256)
+function calculateFVFromFV(bytes32 ccy, uint256 basisMaturity, uint256 destinationMaturity, int256 futureValue) external view returns (int256)
 ```
 
 ### calculateGVFromFV
@@ -125,13 +125,13 @@ function initializeCurrencySetting(bytes32 ccy, uint8 decimals, uint256 compound
 ### updateInitialCompoundFactor
 
 ```solidity
-function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice) external
+function updateInitialCompoundFactor(bytes32 ccy, uint256 unitPrice) external
 ```
 
 ### executeAutoRoll
 
 ```solidity
-function executeAutoRoll(bytes32 ccy, uint256 maturity, uint256 nextMaturity, uint256 unitPrice, uint256 feeRate) external
+function executeAutoRoll(bytes32 ccy, uint256 maturity, uint256 nextMaturity, uint256 unitPrice, uint256 orderFeeRate) external
 ```
 
 ### updateGenesisValueWithFutureValue
@@ -149,7 +149,7 @@ function updateGenesisValueWithResidualAmount(bytes32 ccy, address user, uint256
 ### transferFrom
 
 ```solidity
-function transferFrom(bytes32 _ccy, address _sender, address _receiver, int256 _amount) external
+function transferFrom(bytes32 ccy, address sender, address receiver, int256 amount) external
 ```
 
 ### cleanUpGenesisValue
@@ -161,6 +161,6 @@ function cleanUpGenesisValue(bytes32 ccy, address user, uint256 maturity) extern
 ### resetGenesisValue
 
 ```solidity
-function resetGenesisValue(bytes32 _ccy, address _user) external
+function resetGenesisValue(bytes32 ccy, address user) external
 ```
 

@@ -107,7 +107,7 @@ function removeOrder(address _user, uint48 _orderId) external returns (enum Prot
 ### getOpeningUnitPrice
 
 ```solidity
-function getOpeningUnitPrice() external view returns (uint256 openingUnitPrice, uint256 totalOffsetAmount)
+function getOpeningUnitPrice() external view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
 ### checkCircuitBreakerThreshold
