@@ -15,7 +15,7 @@ import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 import {Pausable} from "./utils/Pausable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
-import {LendingMarketStorage as Storage} from "./storages/LendingMarketStorage.sol";
+import {LendingMarketStorage as Storage, ItayoseLog} from "./storages/LendingMarketStorage.sol";
 
 /**
  * @notice Implements the module that allows lending market participants to create/cancel market orders,
@@ -625,7 +625,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         )
     {
-        (openingUnitPrice, totalOffsetAmount) = OrderBookLogic.getOpeningUnitPrice();
+        uint256 lastLendUnitPrice;
+        uint256 lastBorrowUnitPrice;
+
+        (
+            openingUnitPrice,
+            lastLendUnitPrice,
+            lastBorrowUnitPrice,
+            totalOffsetAmount
+        ) = OrderBookLogic.getOpeningUnitPrice();
 
         if (totalOffsetAmount > 0) {
             ProtocolTypes.Side[2] memory sides = [
@@ -671,11 +679,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 }
             }
 
-            emit ItayoseExecuted(Storage.slot().ccy, Storage.slot().maturity, openingUnitPrice);
+            emit ItayoseExecuted(
+                Storage.slot().ccy,
+                Storage.slot().maturity,
+                openingUnitPrice,
+                lastLendUnitPrice,
+                lastBorrowUnitPrice,
+                totalOffsetAmount
+            );
         }
 
         Storage.slot().isReady[Storage.slot().maturity] = true;
         Storage.slot().openingUnitPrices[Storage.slot().maturity] = openingUnitPrice;
+        Storage.slot().itayoseLogs[Storage.slot().maturity] = ItayoseLog(
+            lastLendUnitPrice,
+            lastBorrowUnitPrice
+        );
         openingDate = Storage.slot().openingDate;
     }
 

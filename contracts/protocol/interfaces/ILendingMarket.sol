@@ -77,7 +77,14 @@ interface ILendingMarket {
 
     event MarketOpened(uint256 maturity, uint256 prevMaturity);
 
-    event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingPrice);
+    event ItayoseExecuted(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 openingUnitPrice,
+        uint256 lastLendUnitPrice,
+        uint256 lastBorrowUnitPrice,
+        uint256 offsetAmount
+    );
 
     struct Market {
         bytes32 ccy;

@@ -499,7 +499,12 @@ library OrderBookLogic {
     function getOpeningUnitPrice()
         external
         view
-        returns (uint256 openingUnitPrice, uint256 totalOffsetAmount)
+        returns (
+            uint256 openingUnitPrice,
+            uint256 lastLendUnitPrice,
+            uint256 lastBorrowUnitPrice,
+            uint256 totalOffsetAmount
+        )
     {
         uint256 lendUnitPrice = getHighestLendingUnitPrice();
         uint256 borrowUnitPrice = getLowestBorrowingUnitPrice();
@@ -521,10 +526,13 @@ library OrderBookLogic {
         // return mid price when no lending and borrowing orders overwrap
         if (borrowUnitPrice > lendUnitPrice) {
             openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
-            return (openingUnitPrice, 0);
+            return (openingUnitPrice, 0, 0, 0);
         }
 
         while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {
+            lastLendUnitPrice = lendUnitPrice;
+            lastBorrowUnitPrice = borrowUnitPrice;
+
             if (lendAmount > borrowAmount) {
                 openingUnitPrice = lendUnitPrice;
                 totalOffsetAmount += borrowAmount;
@@ -705,7 +713,11 @@ library OrderBookLogic {
 
         if (Storage.slot().isPreOrder[_orderId]) {
             uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-            unitPrice = openingUnitPrice < unitPrice ? openingUnitPrice : unitPrice;
+            uint256 lastLendUnitPrice = Storage
+                .slot()
+                .itayoseLogs[marketOrder.maturity]
+                .lastLendUnitPrice;
+            unitPrice = lastLendUnitPrice <= unitPrice ? openingUnitPrice : unitPrice;
         }
 
         presentValue = orderItem.amount;
@@ -726,7 +738,11 @@ library OrderBookLogic {
 
         if (Storage.slot().isPreOrder[_orderId]) {
             uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-            unitPrice = openingUnitPrice > unitPrice ? openingUnitPrice : unitPrice;
+            uint256 lastBorrowUnitPrice = Storage
+                .slot()
+                .itayoseLogs[marketOrder.maturity]
+                .lastBorrowUnitPrice;
+            unitPrice = lastBorrowUnitPrice >= unitPrice ? openingUnitPrice : unitPrice;
         }
 
         presentValue = orderItem.amount;
