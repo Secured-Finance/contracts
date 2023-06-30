@@ -61,6 +61,11 @@ interface ITokenVault {
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
+    function calculateLiquidationFees(uint256 _liquidationAmount)
+        external
+        view
+        returns (uint256 protocolFee, uint256 liquidatorFee);
+
     function getCollateralParameters()
         external
         view

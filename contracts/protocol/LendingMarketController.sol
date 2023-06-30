@@ -11,6 +11,7 @@ import {Contracts} from "./libraries/Contracts.sol";
 import {FundManagementLogic} from "./libraries/logics/FundManagementLogic.sol";
 import {LendingMarketOperationLogic} from "./libraries/logics/LendingMarketOperationLogic.sol";
 import {LendingMarketUserLogic} from "./libraries/logics/LendingMarketUserLogic.sol";
+import {LiquidationLogic} from "./libraries/logics/LiquidationLogic.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {MixinLendingMarketConfiguration} from "./mixins/MixinLendingMarketConfiguration.sol";
@@ -668,14 +669,38 @@ contract LendingMarketController is
         return true;
     }
 
+    function executeRedemption(bytes32 _ccy, uint256 _maturity)
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        ifActive
+        returns (bool)
+    {
+        FundManagementLogic.executeRedemption(_ccy, _maturity, msg.sender);
+        return true;
+    }
+
+    function executeRepayment(bytes32 _ccy, uint256 _maturity)
+        external
+        override
+        nonReentrant
+        ifValidMaturity(_ccy, _maturity)
+        ifActive
+        returns (bool)
+    {
+        FundManagementLogic.executeRepayment(_ccy, _maturity, msg.sender);
+        return true;
+    }
+
     /**
-     * @notice Redeems all lending and borrowing positions.
-     * This function uses the present value as of the termination date.
+     * @notice Force settlement of all lending and borrowing positions.
+     * This function is executed under the present value as of the termination date.
      *
      * @return True if the execution of the operation succeeds
      */
-    function executeRedemption() external override nonReentrant ifInactive returns (bool) {
-        FundManagementLogic.executeRedemption(msg.sender);
+    function executeEmergencySettlement() external override nonReentrant ifInactive returns (bool) {
+        FundManagementLogic.executeEmergencySettlement(msg.sender);
         return true;
     }
 
@@ -754,7 +779,39 @@ contract LendingMarketController is
         ifActive
         returns (bool)
     {
-        FundManagementLogic.executeLiquidation(
+        LiquidationLogic.executeLiquidation(
+            msg.sender,
+            _user,
+            _collateralCcy,
+            _debtCcy,
+            _debtMaturity
+        );
+
+        return true;
+    }
+
+    /**
+     * @notice Execute forced repayment for a borrowing position if repayment date is over.
+     * @param _collateralCcy Currency name to be used as collateral
+     * @param _debtCcy Currency name to be used as debt
+     * @param _debtMaturity The market maturity of the debt
+     * @param _user User's address
+     * @return True if the execution of the operation succeeds
+     */
+    function executeForcedRepayment(
+        bytes32 _collateralCcy,
+        bytes32 _debtCcy,
+        uint256 _debtMaturity,
+        address _user
+    )
+        external
+        override
+        isNotLocked
+        ifValidMaturity(_debtCcy, _debtMaturity)
+        ifActive
+        returns (bool)
+    {
+        LiquidationLogic.executeForcedRepayment(
             msg.sender,
             _user,
             _collateralCcy,
@@ -781,6 +838,8 @@ contract LendingMarketController is
         hasLendingMarket(_ccy)
         ifActive
     {
+        require(currencyController().currencyExists(_ccy), "Invalid currency");
+
         uint256 newMaturity = LendingMarketOperationLogic.rotateLendingMarkets(
             _ccy,
             getOrderFeeRate(_ccy)

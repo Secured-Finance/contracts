@@ -303,6 +303,15 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         return DepositManagementLogic.getUsedCurrencies(_user);
     }
 
+    function calculateLiquidationFees(uint256 _liquidationAmount)
+        external
+        view
+        override
+        returns (uint256 protocolFee, uint256 liquidatorFee)
+    {
+        return DepositManagementLogic.calculateLiquidationFees(_liquidationAmount);
+    }
+
     /**
      * @notice Gets the collateral parameters
      * @return liquidationThresholdRate Auto liquidation threshold rate

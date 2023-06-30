@@ -270,8 +270,10 @@ describe('LendingMarketController - Terminations', () => {
 
       for (const user of [alice, bob]) {
         await expect(
-          lendingMarketControllerProxy.connect(user).executeRedemption(),
-        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+          lendingMarketControllerProxy
+            .connect(user)
+            .executeEmergencySettlement(),
+        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
         const { futureValue, presentValue } =
           await lendingMarketControllerProxy.getPosition(
@@ -394,17 +396,19 @@ describe('LendingMarketController - Terminations', () => {
       ).to.equal(true);
 
       await expect(
-        lendingMarketControllerProxy.connect(bob).executeRedemption(),
-      ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+        lendingMarketControllerProxy.connect(bob).executeEmergencySettlement(),
+      ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
       expect(
         await lendingMarketControllerProxy.isRedemptionRequired(bob.address),
       ).to.equal(false);
 
       await expect(
-        lendingMarketControllerProxy.connect(alice).executeRedemption(),
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeEmergencySettlement(),
       )
-        .to.emit(fundManagementLogic, 'RedemptionCompleted')
+        .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
         .withArgs(alice.address, '200000000000000000');
 
       for (const user of [alice, bob]) {
@@ -488,8 +492,10 @@ describe('LendingMarketController - Terminations', () => {
 
       for (const user of [alice, bob]) {
         await expect(
-          lendingMarketControllerProxy.connect(user).executeRedemption(),
-        ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+          lendingMarketControllerProxy
+            .connect(user)
+            .executeEmergencySettlement(),
+        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
         expect(
           await lendingMarketControllerProxy.getGenesisValue(
@@ -543,7 +549,9 @@ describe('LendingMarketController - Terminations', () => {
       ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       await expect(
-        lendingMarketControllerProxy.connect(alice).executeRedemption(),
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeEmergencySettlement(),
       ).to.revertedWith('Insufficient collateral');
     });
 
@@ -590,11 +598,15 @@ describe('LendingMarketController - Terminations', () => {
       ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       await expect(
-        lendingMarketControllerProxy.connect(alice).executeRedemption(),
-      ).to.emit(fundManagementLogic, 'RedemptionCompleted');
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeEmergencySettlement(),
+      ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
       await expect(
-        lendingMarketControllerProxy.connect(alice).executeRedemption(),
+        lendingMarketControllerProxy
+          .connect(alice)
+          .executeEmergencySettlement(),
       ).to.revertedWith('Already redeemed');
     });
   });
