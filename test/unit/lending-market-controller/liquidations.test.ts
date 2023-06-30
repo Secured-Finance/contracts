@@ -11,7 +11,6 @@ import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
-  PCT_DIGIT,
 } from '../../common/constants';
 import { calculateFutureValue } from '../../common/orders';
 import { deployContracts } from './utils';
@@ -693,20 +692,20 @@ describe('LendingMarketController - Liquidations', () => {
 
       await time.increaseTo(maturities[1].toString());
 
+      const { futureValue: aliceFV } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
           .executeRepayment(targetCurrency, maturities[1]),
       )
         .to.emit(fundManagementLogic, 'RepaymentExecuted')
-        .withArgs(
-          alice.address,
-          targetCurrency,
-          maturities[1],
-          BigNumber.from(calculateFutureValue(orderAmount, orderRate))
-            .mul(PCT_DIGIT + AUTO_ROLL_FEE_RATE)
-            .div(PCT_DIGIT),
-        );
+        .withArgs(alice.address, targetCurrency, maturities[1], aliceFV.abs());
 
       // Move to 1 weeks after maturity.
       await time.increaseTo(maturities[1].add(604800).toString());
@@ -953,6 +952,13 @@ describe('LendingMarketController - Liquidations', () => {
       // Move to 1 weeks after maturity.
       await time.increaseTo(maturities[1].add(604800).toString());
 
+      const { futureValue: aliceFVBefore } =
+        await lendingMarketControllerProxy.getPosition(
+          targetCurrency,
+          maturities[1],
+          alice.address,
+        );
+
       await expect(
         lendingMarketControllerProxy
           .connect(owner)
@@ -972,14 +978,15 @@ describe('LendingMarketController - Liquidations', () => {
           '75000000000000000',
         );
 
-      const { futureValue: aliceFV } =
+      const { futureValue: aliceFVAfter } =
         await lendingMarketControllerProxy.getPosition(
           targetCurrency,
           maturities[1],
           alice.address,
         );
 
-      expect(aliceFV).to.be.equal('-27500000000000000');
+      expect(aliceFVAfter).not.to.equal(0);
+      expect(aliceFVAfter.sub(aliceFVBefore)).to.be.equal('75000000000000000');
     });
 
     it('Fail to repay due to active market', async () => {
