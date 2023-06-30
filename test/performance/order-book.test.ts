@@ -111,12 +111,15 @@ describe('Performance Test: Order Book', async () => {
             let totalAmount = BigNumber.from(0);
             let signerIdx = 1;
             let user: Wallet = Wallet.createRandom();
+            let unitPrice = '0';
 
             process.stdout.write('        Ordered: 0');
 
             for (let i = 0; i < test; i++) {
               process.stdout.write('\r\x1b[K');
               process.stdout.write(`        Ordered: ${i}/${test}`);
+
+              unitPrice = String(8000 - i);
 
               if (i % 5 === 0) {
                 user = waffle.provider.createEmptyWallet();
@@ -168,7 +171,7 @@ describe('Performance Test: Order Book', async () => {
                   maturities[0],
                   Side.LEND,
                   orderAmount,
-                  String(10000 - i),
+                  unitPrice,
                 )
                 .then((tx) => tx.wait());
 
@@ -213,7 +216,7 @@ describe('Performance Test: Order Book', async () => {
                 currencyKey,
                 maturities[0],
                 totalAmount,
-                '0',
+                unitPrice,
                 () => true,
               );
 

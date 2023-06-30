@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
-import { Contract, Wallet } from 'ethers';
+import { BigNumber, Contract, Wallet } from 'ethers';
 import { deployments, ethers } from 'hardhat';
 import { Side } from '../utils/constants';
 import { hexEFIL, hexETH, toBytes32 } from '../utils/strings';
@@ -22,7 +23,10 @@ describe('ZC e2e test', async () => {
   let proxyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
+  let reserveFund: Contract;
   let eFILToken: Contract;
+
+  let maturities: BigNumber[];
 
   before('Set up for testing', async () => {
     const blockNumber = await ethers.provider.getBlockNumber();
@@ -76,12 +80,14 @@ describe('ZC e2e test', async () => {
     // Get proxy contracts
     tokenVault = await getProxy('TokenVault');
     lendingMarketController = await getProxy('LendingMarketController');
+    reserveFund = await getProxy('ReserveFund');
 
     console.table(
       {
         proxyController,
         tokenVault,
         lendingMarketController,
+        reserveFund,
       },
       ['address'],
     );
@@ -92,6 +98,8 @@ describe('ZC e2e test', async () => {
         .connect(ownerSigner)
         .transfer(aliceSigner.address, orderAmountInFIL);
     }
+
+    maturities = await lendingMarketController.getMaturities(targetCurrency);
   });
 
   it('Deposit ETH', async () => {
@@ -151,11 +159,6 @@ describe('ZC e2e test', async () => {
   });
 
   it('Take order', async function () {
-    // Get FIL market maturities & contract addresses
-    const maturities = await lendingMarketController.getMaturities(
-      targetCurrency,
-    );
-
     const marketAddress = await lendingMarketController.getLendingMarket(
       targetCurrency,
       maturities[0],
@@ -181,11 +184,12 @@ describe('ZC e2e test', async () => {
       this.skip();
     }
 
-    const [futureValueAliceBefore] = await futureValueVault.getFutureValue(
-      aliceSigner.address,
-    );
-    const [futureValueBobBefore] = await futureValueVault.getFutureValue(
-      bobSigner.address,
+    const [aliceFVBefore, bobFVBefore, reserveFundFVBefore] = await Promise.all(
+      [aliceSigner, bobSigner, reserveFund].map(({ address }) =>
+        lendingMarketController
+          .getPosition(targetCurrency, maturities[0], address)
+          .then(({ futureValue }) => futureValue),
+      ),
     );
 
     const { workingBorrowOrdersAmount: workingOrdersAmountBefore } =
@@ -218,29 +222,38 @@ describe('ZC e2e test', async () => {
       )
       .then((tx) => tx.wait());
 
-    await lendingMarketController.cleanUpFunds(
-      targetCurrency,
-      aliceSigner.address,
-    );
-    await lendingMarketController.cleanUpFunds(
-      targetCurrency,
-      bobSigner.address,
-    );
-
     // Calculate the future value from order unitPrice & amount
     // NOTE: The formula is: futureValue = amount / unitPrice.
-    const calculatedFV = ethers.BigNumber.from(orderAmountInFIL)
-      .mul(BP)
-      .div(orderUnitPrice);
+    const calculatedFV = BigNumberJS(orderAmountInFIL)
+      .times(BP)
+      .div(orderUnitPrice)
+      .dp(0)
+      .toFixed();
 
-    // Check the future value of Alice
-    const [futureValueAliceAfter] = await futureValueVault.getFutureValue(
+    // Check the future values
+    const [aliceFVAfter, bobFVAfter, reserveFundFVAfter] = await Promise.all(
+      [aliceSigner, bobSigner, reserveFund].map(({ address }) =>
+        lendingMarketController
+          .getPosition(targetCurrency, maturities[0], address)
+          .then(({ futureValue }) => futureValue),
+      ),
+    );
+    const orderFee = reserveFundFVAfter.sub(reserveFundFVBefore);
+
+    expect(aliceFVAfter.sub(aliceFVBefore)).to.equal(calculatedFV);
+    expect(bobFVAfter.sub(bobFVBefore).add(orderFee).abs()).to.equal(
+      calculatedFV,
+    );
+
+    await lendingMarketController.cleanUpFunds(
+      targetCurrency,
+      aliceSigner.address,
+    );
+    const [aliceFVInFutureValueVault] = await futureValueVault.getFutureValue(
       aliceSigner.address,
     );
 
-    expect(
-      futureValueAliceAfter.sub(futureValueAliceBefore).toString(),
-    ).to.equal(calculatedFV.toString());
+    expect(aliceFVAfter).to.equal(aliceFVInFutureValueVault);
 
     // Check the future value and working amount of Bob
     const { workingBorrowOrdersAmount: workingOrdersAmountAfter } =
@@ -248,13 +261,7 @@ describe('ZC e2e test', async () => {
         targetCurrency,
         bobSigner.address,
       );
-    const [futureValueBobAfter] = await futureValueVault.getFutureValue(
-      bobSigner.address,
-    );
 
-    expect(futureValueBobAfter.sub(futureValueBobBefore).toString()).to.equal(
-      `-${calculatedFV.toString()}`,
-    );
     expect(workingOrdersAmountAfter).to.equal(workingOrdersAmountBefore);
   });
 });
