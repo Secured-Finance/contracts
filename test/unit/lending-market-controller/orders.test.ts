@@ -2096,7 +2096,6 @@ describe('LendingMarketController - Orders', () => {
           );
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx).to.emit(lendingMarket1, 'OrderMade');
-        await expect(tx).to.emit(lendingMarket1, 'OrdersTakenPartially');
       });
 
       it('Fill an own order', async () => {

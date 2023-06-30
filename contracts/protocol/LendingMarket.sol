@@ -535,7 +535,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 ignoreRemainingAmount
             );
         } else if (!ignoreRemainingAmount) {
-            _makeOrder(_side, _user, _amount, executedUnitPrice, false);
+            _makeOrder(_side, _user, 0, _amount, executedUnitPrice, false);
         } else {
             emit OrderBlockedByCircuitBreaker(
                 _user,
@@ -572,7 +572,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             revert("Opposite side order exists");
         }
 
-        _makeOrder(_side, _user, _amount, _unitPrice, true);
+        _makeOrder(_side, _user, 0, _amount, _unitPrice, true);
     }
 
     /**
@@ -731,17 +731,19 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Makes new market order.
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
-     * @param _amount Amount of funds the maker wants to borrow/lend
+     * @param _filledAmount Amount of fund that is already filled
+     * @param _orderAmount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Preferable interest unit price
      */
     function _makeOrder(
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _amount,
+        uint256 _filledAmount,
+        uint256 _orderAmount,
         uint256 _unitPrice,
         bool _isPreOrder
     ) private returns (uint48 orderId) {
-        orderId = OrderBookLogic.insertOrder(_side, _user, _amount, _unitPrice);
+        orderId = OrderBookLogic.insertOrder(_side, _user, _orderAmount, _unitPrice);
         if (_isPreOrder) {
             Storage.slot().isPreOrder[orderId] = true;
         }
@@ -752,7 +754,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             _side,
             Storage.slot().ccy,
             Storage.slot().maturity,
-            _amount,
+            _filledAmount,
+            _orderAmount + _filledAmount,
             _unitPrice,
             _isPreOrder
         );
@@ -809,7 +812,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         if (remainingAmount > 0) {
             if (_ignoreRemainingAmount) {
                 filledOrder.ignoredAmount = remainingAmount;
+                uint48 orderId = OrderBookLogic.nextOrderId();
                 emit OrdersTaken(
+                    orderId,
                     _user,
                     _side,
                     Storage.slot().ccy,
@@ -820,21 +825,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 );
             } else {
                 // Make a new order for the remaining amount of input
-                uint48 orderId = _makeOrder(_side, _user, remainingAmount, _unitPrice, false);
-                emit OrdersTakenPartially(
-                    orderId,
-                    _user,
-                    _side,
-                    Storage.slot().ccy,
-                    Storage.slot().maturity,
-                    filledOrder.amount,
-                    _amount,
-                    filledOrder.unitPrice,
-                    filledOrder.futureValue
-                );
+                _makeOrder(_side, _user, filledOrder.amount, remainingAmount, _unitPrice, false);
             }
         } else {
+            uint48 orderId = OrderBookLogic.nextOrderId();
             emit OrdersTaken(
+                orderId,
                 _user,
                 _side,
                 Storage.slot().ccy,
@@ -875,7 +871,9 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
             ) = OrderBookLogic.dropOrders(_side, 0, _futureValue, executedUnitPrice);
 
+            uint48 orderId = OrderBookLogic.nextOrderId();
             emit OrdersTaken(
+                orderId,
                 _user,
                 _side,
                 Storage.slot().ccy,

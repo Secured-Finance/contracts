@@ -215,7 +215,6 @@ describe('Integration Test: Order Book', async () => {
             '8000',
             { value: orderAmount.mul(2) },
           );
-
         await expect(
           lendingMarketController
             .connect(alice)
@@ -235,7 +234,7 @@ describe('Integration Test: Order Book', async () => {
       after(async () => {
         await lendingMarketController
           .connect(carol)
-          .cancelOrder(hexETH, ethMaturities[0], '4');
+          .cancelOrder(hexETH, ethMaturities[0], '5');
       });
     });
 
@@ -370,7 +369,7 @@ describe('Integration Test: Order Book', async () => {
       after(async () => {
         await lendingMarketController
           .connect(dave)
-          .cancelOrder(hexEFIL, filMaturities[0], '4');
+          .cancelOrder(hexEFIL, filMaturities[0], '5');
       });
     });
 
@@ -1129,10 +1128,7 @@ describe('Integration Test: Order Book', async () => {
               '9003',
             );
 
-          await expect(tx).to.emit(
-            filLendingMarkets[1],
-            'OrdersTakenPartially',
-          );
+          await expect(tx).to.emit(filLendingMarkets[1], 'OrderMade');
 
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(

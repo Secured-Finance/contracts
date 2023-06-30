@@ -534,6 +534,7 @@ describe('LendingMarket', () => {
             )
               .to.emit(lendingMarket, 'OrdersTaken')
               .withArgs(
+                3,
                 bob.address,
                 side,
                 targetCurrency,
@@ -575,6 +576,7 @@ describe('LendingMarket', () => {
           await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              3,
               bob.address,
               side,
               targetCurrency,
@@ -587,6 +589,7 @@ describe('LendingMarket', () => {
           await expect(carolTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              4,
               carol.address,
               side,
               targetCurrency,
@@ -632,6 +635,7 @@ describe('LendingMarket', () => {
           await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              3,
               bob.address,
               side,
               targetCurrency,
@@ -668,6 +672,7 @@ describe('LendingMarket', () => {
           )
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              4,
               carol.address,
               side,
               targetCurrency,
@@ -742,6 +747,7 @@ describe('LendingMarket', () => {
           await expect(carolTx2)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              5,
               carol.address,
               side,
               targetCurrency,
@@ -784,6 +790,7 @@ describe('LendingMarket', () => {
           await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              3,
               bob.address,
               side,
               targetCurrency,
@@ -841,6 +848,7 @@ describe('LendingMarket', () => {
           await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              3,
               bob.address,
               side,
               targetCurrency,
@@ -923,6 +931,7 @@ describe('LendingMarket', () => {
           await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              3,
               bob.address,
               side,
               targetCurrency,
@@ -1004,6 +1013,7 @@ describe('LendingMarket', () => {
           await expect(bobTx)
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              3,
               bob.address,
               side,
               targetCurrency,
@@ -1084,6 +1094,7 @@ describe('LendingMarket', () => {
           )
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              3,
               bob.address,
               side,
               targetCurrency,
@@ -1106,6 +1117,7 @@ describe('LendingMarket', () => {
           )
             .to.emit(lendingMarket, 'OrdersTaken')
             .withArgs(
+              4,
               bob.address,
               side,
               targetCurrency,
@@ -1148,6 +1160,7 @@ describe('LendingMarket', () => {
         )
           .to.emit(lendingMarket, 'OrdersTaken')
           .withArgs(
+            6,
             bob.address,
             Side.LEND,
             targetCurrency,

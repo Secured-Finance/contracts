@@ -330,7 +330,7 @@ library OrderBookLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external returns (uint48 orderId) {
-        orderId = _nextOrderId();
+        orderId = nextOrderId();
         Storage.slot().orders[orderId] = MarketOrder(
             _side,
             _unitPrice,
@@ -679,7 +679,7 @@ library OrderBookLogic {
      * @notice Increases and returns id of last order in order book.
      * @return The new order id
      */
-    function _nextOrderId() internal returns (uint48) {
+    function nextOrderId() public returns (uint48) {
         Storage.slot().lastOrderId++;
         return Storage.slot().lastOrderId;
     }
