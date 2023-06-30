@@ -24,15 +24,6 @@ contract MixinLendingMarketConfiguration is Ownable {
     }
 
     /**
-     * @notice Gets the auto-roll fee rate
-     * @param _ccy Currency name in bytes32
-     * @return The auto-roll fee rate received by protocol
-     */
-    function getAutoRollFeeRate(bytes32 _ccy) public view returns (uint256) {
-        return Storage.slot().autoRollFeeRates[_ccy];
-    }
-
-    /**
      * @notice Gets the limit range in unit price for the circuit breaker
      * @param _ccy Currency name in bytes32
      * @return The auto-roll fee rate received by protocol
@@ -56,15 +47,6 @@ contract MixinLendingMarketConfiguration is Ownable {
      */
     function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) public onlyOwner {
         LendingMarketConfigurationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
-    }
-
-    /**
-     * @notice Updates the auto-roll fee rate
-     * @param _ccy Currency name in bytes32
-     * @param _autoRollFeeRate The order fee rate received by protocol
-     */
-    function updateAutoRollFeeRate(bytes32 _ccy, uint256 _autoRollFeeRate) public onlyOwner {
-        LendingMarketConfigurationLogic.updateAutoRollFeeRate(_ccy, _autoRollFeeRate);
     }
 
     /**

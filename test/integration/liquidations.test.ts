@@ -14,7 +14,7 @@ import {
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
-import { getAmountWithUnwindFee } from '../common/orders';
+import { calculateFutureValue, getAmountWithUnwindFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
 const ERROR_RANGE = BigNumber.from(1000);
@@ -38,6 +38,7 @@ describe('Integration Test: Liquidations', async () => {
   let usdcToUSDPriceFeed: Contract;
 
   let fundManagementLogic: Contract;
+  let liquidationLogic: Contract;
 
   let mockUniswapRouter: Contract;
   let mockUniswapQuoter: Contract;
@@ -129,7 +130,11 @@ describe('Integration Test: Liquidations', async () => {
     });
 
   const rotateAllMarkets = async () => {
-    await time.increaseTo(usdcMaturities[0].sub('21600').toString());
+    const { timestamp } = await ethers.provider.getBlock('latest');
+
+    if (usdcMaturities[0].gt(timestamp)) {
+      await time.increaseTo(usdcMaturities[0].sub('21600').toString());
+    }
 
     await lendingMarketController
       .connect(owner)
@@ -159,7 +164,9 @@ describe('Integration Test: Liquidations', async () => {
         '8000',
       );
 
-    await time.increaseTo(usdcMaturities[0].toString());
+    if (usdcMaturities[0].gt(timestamp)) {
+      await time.increaseTo(usdcMaturities[0].toString());
+    }
 
     await lendingMarketController.connect(owner).rotateLendingMarkets(hexEFIL);
     await lendingMarketController.connect(owner).rotateLendingMarkets(hexUSDC);
@@ -209,6 +216,7 @@ describe('Integration Test: Liquidations', async () => {
     ({
       genesisDate,
       fundManagementLogic,
+      liquidationLogic,
       addressResolver,
       currencyController,
       tokenVault,
@@ -257,13 +265,13 @@ describe('Integration Test: Liquidations', async () => {
 
     await eFILToken
       .connect(owner)
-      .transfer(mockUniswapRouter.address, initialFILBalance);
+      .transfer(mockUniswapRouter.address, initialFILBalance.mul(10));
     await usdcToken
       .connect(owner)
-      .transfer(mockUniswapRouter.address, initialUSDCBalance);
+      .transfer(mockUniswapRouter.address, initialUSDCBalance.mul(10));
     await owner.sendTransaction({
       to: mockUniswapRouter.address,
-      value: initialETHBalance,
+      value: initialETHBalance.mul(10),
     });
 
     // Deploy Lending Markets for ETH market
@@ -394,10 +402,7 @@ describe('Integration Test: Liquidations', async () => {
             10,
           )
           .then(async (tx) => {
-            await expect(tx).to.emit(
-              fundManagementLogic,
-              'LiquidationExecuted',
-            );
+            await expect(tx).to.emit(liquidationLogic, 'LiquidationExecuted');
             return tx.wait();
           });
 
@@ -606,7 +611,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             10,
           ),
-        ).to.emit(fundManagementLogic, 'LiquidationExecuted');
+        ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
         const { futureValue: rfFutureValueAfter } =
           await lendingMarketController.getPosition(
@@ -633,7 +638,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             10,
           ),
-        ).to.emit(fundManagementLogic, 'LiquidationExecuted');
+        ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
         const tokenVaultBalanceAfter2 = await wETHToken.balanceOf(
           tokenVault.address,
@@ -797,7 +802,7 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             10,
           ),
-        ).to.emit(fundManagementLogic, 'LiquidationExecuted');
+        ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
         const lendingInfoAfter = await lendingInfo.load('After', {
           EFIL: filMaturities[1],
@@ -916,6 +921,7 @@ describe('Integration Test: Liquidations', async () => {
           collateralCcy,
           debtCcy,
           debtMaturity,
+          receivedCollateralAmount,
           receivedDebtAmount,
         } = receipt.events.find(
           ({ event }) => event === 'OperationExecuteForDebt',
@@ -947,7 +953,8 @@ describe('Integration Test: Liquidations', async () => {
 
         expect(liquidatorFutureValue).to.equal(0);
         expect(liquidatorDepositAmount).not.equal(0);
-        expect(receivedDebtAmount).to.equal(filledOrderAmount.div(2));
+        expect(receivedDebtAmount).lt(filledOrderAmount.div(2));
+        expect(receivedCollateralAmount).gt(depositAmount);
       });
     });
 
@@ -1520,7 +1527,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(fundManagementLogic, 'LiquidationExecuted');
+      ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         EFIL: filMaturities[0],
@@ -1562,7 +1569,7 @@ describe('Integration Test: Liquidations', async () => {
           alice.address,
           10,
         ),
-      ).to.emit(fundManagementLogic, 'LiquidationExecuted');
+      ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
         EFIL: filMaturities[0],
@@ -1575,6 +1582,396 @@ describe('Integration Test: Liquidations', async () => {
       expect(lendingInfoAfter.pvs[0].sub(lendingInfoBefore.pvs[0]).abs()).to.lt(
         ERROR_RANGE,
       );
+    });
+  });
+
+  describe('Delisting', async () => {
+    let decimals: BigNumber;
+    let haircut: BigNumber;
+
+    before(async () => {
+      decimals = await currencyController.getDecimals(hexEFIL);
+      haircut = await currencyController.getHaircut(hexEFIL);
+    });
+
+    afterEach(async () => {
+      if (!(await currencyController.currencyExists(hexEFIL))) {
+        await currencyController.addCurrency(hexEFIL, decimals, haircut, []);
+      }
+    });
+
+    describe('Repay and redeem positions', async () => {
+      const filledOrderAmount = BigNumber.from('200000000000000000000');
+      const depositAmount = BigNumber.from('2000000000000000000');
+      const orderUnitPrice = '8000';
+
+      let lendingInfo: LendingInfo;
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(3);
+        await resetContractInstances();
+
+        lendingInfo = new LendingInfo(alice.address);
+      });
+
+      it('Create orders', async () => {
+        lendingInfo = new LendingInfo(alice.address);
+
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+        await tokenVault.connect(owner).deposit(hexETH, depositAmount.mul(3), {
+          value: depositAmount.mul(3),
+        });
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            filledOrderAmount,
+            orderUnitPrice,
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndCreateOrder(
+              hexEFIL,
+              filMaturities[0],
+              Side.LEND,
+              filledOrderAmount,
+              '0',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        expect(
+          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+        ).to.equal(filledOrderAmount);
+      });
+
+      it('Delist a currency', async () => {
+        await currencyController.removeCurrency(hexEFIL);
+
+        expect(await currencyController.currencyExists(hexEFIL)).to.false;
+      });
+
+      it('Execute repayment & redemption', async () => {
+        await lendingInfo.load('Before', {
+          EFIL: filMaturities[0],
+        });
+
+        // Move to maturity date.
+        await time.increaseTo(filMaturities[0].toString());
+
+        await tokenVault
+          .connect(alice)
+          .deposit(hexEFIL, filledOrderAmount.div(4));
+        await lendingMarketController
+          .connect(alice)
+          .executeRepayment(hexEFIL, filMaturities[0]);
+
+        // Move to 1 weeks after maturity.
+        await time.increaseTo(filMaturities[0].add(604800).toString());
+
+        await lendingMarketController
+          .connect(bob)
+          .executeRedemption(hexEFIL, filMaturities[0]);
+
+        const lendingInfoAfter = await lendingInfo.load('After', {
+          EFIL: filMaturities[0],
+        });
+        lendingInfo.show();
+
+        expect(lendingInfoAfter.coverage).to.equal(0);
+        expect(lendingInfoAfter.pvs[0]).to.equal(0);
+        expect(lendingInfoAfter.filDeposit).to.equal(0);
+      });
+    });
+
+    describe('Force a repayment of a borrowing position', async () => {
+      const filledOrderAmount = BigNumber.from('200000000000000000000');
+      const depositAmount = BigNumber.from('2000000000000000000');
+      const orderUnitPrice = '8000';
+
+      let lendingInfo: LendingInfo;
+      let aliceInitialBalance: BigNumber;
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(3);
+        await resetContractInstances();
+
+        lendingInfo = new LendingInfo(alice.address);
+      });
+
+      it('Create orders', async () => {
+        lendingInfo = new LendingInfo(alice.address);
+        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+        await tokenVault.connect(owner).deposit(hexETH, depositAmount.mul(3), {
+          value: depositAmount.mul(3),
+        });
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            filledOrderAmount,
+            orderUnitPrice,
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndCreateOrder(
+              hexEFIL,
+              filMaturities[0],
+              Side.LEND,
+              filledOrderAmount,
+              '0',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        expect(
+          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+        ).to.equal(filledOrderAmount);
+      });
+
+      it('Withdraw', async () => {
+        await tokenVault
+          .connect(alice)
+          .withdraw(hexEFIL, '200000000000000000000');
+
+        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
+          filledOrderAmount,
+        );
+      });
+
+      it('Execute forced repayment', async () => {
+        await lendingInfo.load('Before', {
+          EFIL: filMaturities[0],
+        });
+
+        await time.increaseTo(filMaturities[0].toString());
+
+        await expect(
+          liquidator
+            .connect(carol)
+            .executeForcedRepayment(
+              hexETH,
+              ethMaturities,
+              hexEFIL,
+              filMaturities[0],
+              alice.address,
+              0,
+            ),
+        ).to.be.revertedWith('Currency is active');
+
+        await currencyController.removeCurrency(hexEFIL);
+
+        // Move to 1 weeks after maturity.
+        await time.increaseTo(filMaturities[0].add(604800).toString());
+
+        const receipt = await liquidator
+          .connect(carol)
+          .executeForcedRepayment(
+            hexETH,
+            ethMaturities,
+            hexEFIL,
+            filMaturities[0],
+            alice.address,
+            0,
+          )
+          .then((tx) => tx.wait());
+
+        const {
+          user,
+          collateralCcy,
+          debtCcy,
+          debtMaturity,
+          receivedDebtAmount,
+        } = receipt.events.find(
+          ({ event }) => event === 'OperationExecuteForDebt',
+        ).args;
+
+        const lendingInfoAfter = await lendingInfo.load('After', {
+          EFIL: filMaturities[0],
+        });
+        lendingInfo.show();
+
+        const { futureValue: liquidatorFutureValue } =
+          await lendingMarketController.getPosition(
+            hexEFIL,
+            filMaturities[0],
+            liquidator.address,
+          );
+        const liquidatorDepositAmount = await tokenVault.getDepositAmount(
+          liquidator.address,
+          hexEFIL,
+        );
+
+        expect(user).to.equal(alice.address);
+        expect(collateralCcy).to.equal(hexETH);
+        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtMaturity).to.equal(filMaturities[0]);
+        expect(lendingInfoAfter.coverage).to.equal(0);
+        expect(liquidatorFutureValue).to.equal(0);
+        expect(liquidatorDepositAmount).not.equal(0);
+        expect(receivedDebtAmount).to.equal(
+          calculateFutureValue(filledOrderAmount, orderUnitPrice),
+        );
+      });
+    });
+
+    describe('Force a repayment of a borrowing position after auto-roll', async () => {
+      const filledOrderAmount = BigNumber.from('180000000000000000000');
+      const depositAmount = BigNumber.from('2000000000000000000');
+      let lendingInfo: LendingInfo;
+      let aliceInitialBalance: BigNumber;
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        await resetContractInstances();
+      });
+
+      it('Create orders', async () => {
+        lendingInfo = new LendingInfo(alice.address);
+        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+        await tokenVault.connect(owner).deposit(hexETH, depositAmount.mul(3), {
+          value: depositAmount.mul(3),
+        });
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            filledOrderAmount,
+            '8000',
+          );
+        await lendingMarketController
+          .connect(owner)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            filledOrderAmount.mul(2),
+            '8000',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndCreateOrder(
+              hexEFIL,
+              filMaturities[0],
+              Side.LEND,
+              filledOrderAmount,
+              '0',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        await lendingMarketController
+          .connect(owner)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.LEND,
+            '10000000000000000000',
+            '7999',
+          );
+
+        expect(
+          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+        ).to.equal(filledOrderAmount);
+      });
+
+      it('Withdraw', async () => {
+        await tokenVault
+          .connect(alice)
+          .withdraw(hexEFIL, '200000000000000000000');
+
+        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
+          filledOrderAmount,
+        );
+      });
+
+      it('Execute auto-roll', async () => {
+        await rotateAllMarkets();
+      });
+
+      it('Execute forced repayment', async () => {
+        await lendingMarketController
+          .connect(owner)
+          .createOrder(
+            hexEFIL,
+            filMaturities[1],
+            Side.BORROW,
+            '1000000000',
+            '8001',
+          );
+
+        await lendingMarketController
+          .connect(owner)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[1],
+            Side.LEND,
+            '1000000000',
+            '7999',
+          );
+
+        await lendingMarketController
+          .connect(owner)
+          .createOrder(
+            hexEFIL,
+            filMaturities[1],
+            Side.BORROW,
+            filledOrderAmount.mul(2),
+            '8000',
+          );
+
+        const lendingInfoBefore = await lendingInfo.load('Before', {
+          EFIL: filMaturities[1],
+        });
+
+        await currencyController.removeCurrency(hexEFIL);
+
+        // Move to 1 weeks after maturity.
+        await time.increaseTo(filMaturities[1].add(604800).toString());
+
+        await expect(
+          liquidator.executeForcedRepayment(
+            hexETH,
+            ethMaturities,
+            hexEFIL,
+            filMaturities[1],
+            alice.address,
+            0,
+          ),
+        ).to.emit(liquidationLogic, 'ForcedRepaymentExecuted');
+
+        const lendingInfoAfter = await lendingInfo.load('After', {
+          EFIL: filMaturities[1],
+        });
+        lendingInfo.show();
+
+        expect(lendingInfoAfter.coverage).to.equal(0);
+        expect(lendingInfoAfter.pvs[0]).to.equal(0);
+      });
     });
   });
 });

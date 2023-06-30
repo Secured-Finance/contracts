@@ -12,7 +12,6 @@ import {
   toBytes32,
 } from '../../utils/strings';
 import {
-  AUTO_ROLL_FEE_RATE,
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_PROTOCOL_FEE_RATE,
@@ -47,6 +46,14 @@ const deployContracts = async () => {
     .getContractFactory('FundManagementLogic', {
       libraries: {
         QuickSort: quickSort.address,
+      },
+    })
+    .then((factory) => factory.deploy());
+
+  const liquidationLogic = await ethers
+    .getContractFactory('LiquidationLogic', {
+      libraries: {
+        FundManagementLogic: fundManagementLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -96,6 +103,7 @@ const deployContracts = async () => {
           LendingMarketUserLogic: lendingMarketUserLogic.address,
           LendingMarketConfigurationLogic:
             lendingMarketConfigurationLogic.address,
+          LiquidationLogic: liquidationLogic.address,
         },
       })
       .then((factory) => factory.deploy()),
@@ -286,7 +294,6 @@ const deployContracts = async () => {
       genesisDate,
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
-      AUTO_ROLL_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
   }
@@ -315,6 +322,9 @@ const deployContracts = async () => {
       lendingMarketControllerProxy.address,
     ),
     lendingMarketOperationLogic: lendingMarketOperationLogic.attach(
+      lendingMarketControllerProxy.address,
+    ),
+    liquidationLogic: liquidationLogic.attach(
       lendingMarketControllerProxy.address,
     ),
   };

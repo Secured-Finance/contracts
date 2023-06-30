@@ -112,7 +112,8 @@ library OrderBookLogic {
             uint256 maturity,
             address maker,
             uint256 amount,
-            uint256 timestamp
+            uint256 timestamp,
+            bool isPreOrder
         )
     {
         MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
@@ -131,14 +132,13 @@ library OrderBookLogic {
         }
 
         if (orderItem.maker != address(0)) {
-            return (
-                marketOrder.side,
-                marketOrder.unitPrice,
-                marketOrder.maturity,
-                orderItem.maker,
-                orderItem.amount,
-                orderItem.timestamp
-            );
+            side = marketOrder.side;
+            unitPrice = marketOrder.unitPrice;
+            maturity = marketOrder.maturity;
+            maker = orderItem.maker;
+            amount = orderItem.amount;
+            timestamp = orderItem.timestamp;
+            isPreOrder = Storage.slot().isPreOrder[_orderId];
         }
     }
 
@@ -153,7 +153,6 @@ library OrderBookLogic {
         )
     {
         (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = getLendOrderIds(_user);
-
         maturity = Storage.slot().userCurrentMaturities[_user];
 
         for (uint256 i = 0; i < activeOrderIds.length; i++) {
@@ -169,28 +168,12 @@ library OrderBookLogic {
         }
 
         for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
-            MarketOrder memory marketOrder = Storage.slot().orders[inActiveOrderIds[i]];
-            if (maturity == 0) {
-                maturity = marketOrder.maturity;
-            }
-            // Sum future values in the maturity of orders
+            // Sum future values in the maturity of orders.
             // It will be the future value when the order is created, even if the market is rotated
             // and maturity is updated.
-            OrderItem memory orderItem = Storage
-                .slot()
-                .lendOrders[marketOrder.maturity]
-                .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
-            inactiveAmount += orderItem.amount;
-
-            // Check if the order is filled by Itayose.
-            // If the order is filled by Itayose, the opening unit price is used instead of the order's one.
-            uint256 unitPrice = marketOrder.unitPrice;
-            if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
-                uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-                unitPrice = _getUnitPriceForPreLendOrder(openingUnitPrice, unitPrice);
-            }
-
-            inactiveFutureValue += (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
+            (uint256 presentValue, uint256 futureValue) = _getLendOrderAmounts(inActiveOrderIds[i]);
+            inactiveAmount += presentValue;
+            inactiveFutureValue += futureValue;
         }
     }
 
@@ -207,6 +190,7 @@ library OrderBookLogic {
         (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = getBorrowOrderIds(
             _user
         );
+        maturity = Storage.slot().userCurrentMaturities[_user];
 
         for (uint256 i = 0; i < activeOrderIds.length; i++) {
             MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
@@ -223,25 +207,14 @@ library OrderBookLogic {
         maturity = Storage.slot().userCurrentMaturities[_user];
 
         for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
-            MarketOrder memory marketOrder = Storage.slot().orders[inActiveOrderIds[i]];
             // Sum future values in the maturity of orders
             // It will be the future value when the order is created, even if the market is rotated
             // and maturity is updated.
-            OrderItem memory orderItem = Storage
-                .slot()
-                .borrowOrders[marketOrder.maturity]
-                .getOrderById(marketOrder.unitPrice, inActiveOrderIds[i]);
-            inactiveAmount += orderItem.amount;
-
-            // Check if the order is filled by Itayose.
-            // If the order is filled by Itayose, the opening unit price is used instead of the order's one.
-            uint256 unitPrice = marketOrder.unitPrice;
-            if (Storage.slot().isPreOrder[inActiveOrderIds[i]] == true) {
-                uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-                unitPrice = _getUnitPriceForPreBorrowOrder(openingUnitPrice, unitPrice);
-            }
-
-            inactiveFutureValue += (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
+            (uint256 presentValue, uint256 futureValue) = _getBorrowOrderAmounts(
+                inActiveOrderIds[i]
+            );
+            inactiveAmount += presentValue;
+            inactiveFutureValue += futureValue;
         }
     }
 
@@ -436,7 +409,7 @@ library OrderBookLogic {
         partiallyFilledFutureValue = partiallyFilledOrder.futureValue;
     }
 
-    function cleanLendOrders(address _user, uint256 _maturity)
+    function cleanLendOrders(address _user)
         external
         returns (
             uint48[] memory orderIds,
@@ -454,23 +427,19 @@ library OrderBookLogic {
         activeOrderCount = activeLendOrderIds.length;
         uint256 inactiveOrderCount = inActiveLendOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
-        OrderStatisticsTreeLib.Tree storage orders = Storage.slot().lendOrders[_maturity];
-        uint256 openingUnitPrice = Storage.slot().openingUnitPrices[_maturity];
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
-            MarketOrder memory marketOrder = Storage.slot().orders[inActiveLendOrderIds[i]];
-            uint256 unitPrice = Storage.slot().isPreOrder[inActiveLendOrderIds[i]] == true
-                ? _getUnitPriceForPreLendOrder(openingUnitPrice, marketOrder.unitPrice)
-                : marketOrder.unitPrice;
-            OrderItem memory orderItem = orders.getOrderById(unitPrice, inActiveLendOrderIds[i]);
-            removedFutureValue += orders.getFutureValue(unitPrice, inActiveLendOrderIds[i]);
-            removedOrderAmount += orderItem.amount;
+            (uint256 presentValue, uint256 futureValue) = _getLendOrderAmounts(
+                inActiveLendOrderIds[i]
+            );
 
-            orderIds[i] = orderItem.orderId;
+            removedOrderAmount += presentValue;
+            removedFutureValue += futureValue;
+            orderIds[i] = inActiveLendOrderIds[i];
         }
     }
 
-    function cleanBorrowOrders(address _user, uint256 _maturity)
+    function cleanBorrowOrders(address _user)
         external
         returns (
             uint48[] memory orderIds,
@@ -488,20 +457,15 @@ library OrderBookLogic {
         activeOrderCount = activeBorrowOrderIds.length;
         uint256 inactiveOrderCount = inActiveBorrowOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
-        OrderStatisticsTreeLib.Tree storage orders = Storage.slot().borrowOrders[_maturity];
-        uint256 openingUnitPrice = Storage.slot().openingUnitPrices[_maturity];
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
-            MarketOrder memory marketOrder = Storage.slot().orders[inActiveBorrowOrderIds[i]];
-            uint256 unitPrice = Storage.slot().isPreOrder[inActiveBorrowOrderIds[i]] == true
-                ? _getUnitPriceForPreBorrowOrder(openingUnitPrice, marketOrder.unitPrice)
-                : marketOrder.unitPrice;
-            OrderItem memory orderItem = orders.getOrderById(unitPrice, inActiveBorrowOrderIds[i]);
-            removedFutureValue += orders.getFutureValue(unitPrice, inActiveBorrowOrderIds[i]);
+            (uint256 presentValue, uint256 futureValue) = _getBorrowOrderAmounts(
+                inActiveBorrowOrderIds[i]
+            );
 
-            removedOrderAmount += orderItem.amount;
-
-            orderIds[i] = orderItem.orderId;
+            removedOrderAmount += presentValue;
+            removedFutureValue += futureValue;
+            orderIds[i] = inActiveBorrowOrderIds[i];
         }
     }
 
@@ -535,7 +499,12 @@ library OrderBookLogic {
     function getOpeningUnitPrice()
         external
         view
-        returns (uint256 openingUnitPrice, uint256 totalOffsetAmount)
+        returns (
+            uint256 openingUnitPrice,
+            uint256 lastLendUnitPrice,
+            uint256 lastBorrowUnitPrice,
+            uint256 totalOffsetAmount
+        )
     {
         uint256 lendUnitPrice = getHighestLendingUnitPrice();
         uint256 borrowUnitPrice = getLowestBorrowingUnitPrice();
@@ -557,10 +526,13 @@ library OrderBookLogic {
         // return mid price when no lending and borrowing orders overwrap
         if (borrowUnitPrice > lendUnitPrice) {
             openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
-            return (openingUnitPrice, 0);
+            return (openingUnitPrice, 0, 0, 0);
         }
 
         while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {
+            lastLendUnitPrice = lendUnitPrice;
+            lastBorrowUnitPrice = borrowUnitPrice;
+
             if (lendAmount > borrowAmount) {
                 openingUnitPrice = lendUnitPrice;
                 totalOffsetAmount += borrowAmount;
@@ -659,12 +631,12 @@ library OrderBookLogic {
     ) internal pure returns (uint256 cbThresholdUnitPrice) {
         // NOTE: Formula of circuit breaker threshold for borrow orders:
         // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
-        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 den = _unitPrice *
+        uint256 numerator = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
+        uint256 denominator = _unitPrice *
             Constants.PCT_DIGIT +
             (Constants.PRICE_DIGIT - _unitPrice) *
             (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = num.div(den);
+        cbThresholdUnitPrice = numerator.div(denominator);
 
         if (_unitPrice > cbThresholdUnitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
             cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
@@ -727,19 +699,53 @@ library OrderBookLogic {
         }
     }
 
-    function _getUnitPriceForPreLendOrder(uint256 openingUnitPrice, uint256 unitPrice)
-        private
-        pure
-        returns (uint256)
+    function _getLendOrderAmounts(uint48 _orderId)
+        internal
+        view
+        returns (uint256 presentValue, uint256 futureValue)
     {
-        return openingUnitPrice < unitPrice ? openingUnitPrice : unitPrice;
+        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
+        OrderItem memory orderItem = Storage.slot().lendOrders[marketOrder.maturity].getOrderById(
+            marketOrder.unitPrice,
+            _orderId
+        );
+        uint256 unitPrice = marketOrder.unitPrice;
+
+        if (Storage.slot().isPreOrder[_orderId]) {
+            uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
+            uint256 lastLendUnitPrice = Storage
+                .slot()
+                .itayoseLogs[marketOrder.maturity]
+                .lastLendUnitPrice;
+            unitPrice = lastLendUnitPrice <= unitPrice ? openingUnitPrice : unitPrice;
+        }
+
+        presentValue = orderItem.amount;
+        futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 
-    function _getUnitPriceForPreBorrowOrder(uint256 openingUnitPrice, uint256 unitPrice)
-        private
-        pure
-        returns (uint256)
+    function _getBorrowOrderAmounts(uint48 _orderId)
+        internal
+        view
+        returns (uint256 presentValue, uint256 futureValue)
     {
-        return openingUnitPrice > unitPrice ? openingUnitPrice : unitPrice;
+        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
+        OrderItem memory orderItem = Storage.slot().borrowOrders[marketOrder.maturity].getOrderById(
+            marketOrder.unitPrice,
+            _orderId
+        );
+        uint256 unitPrice = marketOrder.unitPrice;
+
+        if (Storage.slot().isPreOrder[_orderId]) {
+            uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
+            uint256 lastBorrowUnitPrice = Storage
+                .slot()
+                .itayoseLogs[marketOrder.maturity]
+                .lastBorrowUnitPrice;
+            unitPrice = lastBorrowUnitPrice >= unitPrice ? openingUnitPrice : unitPrice;
+        }
+
+        presentValue = orderItem.amount;
+        futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 }

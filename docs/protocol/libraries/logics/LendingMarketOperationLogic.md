@@ -41,7 +41,7 @@ function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (s
 ### rotateLendingMarkets
 
 ```solidity
-function rotateLendingMarkets(bytes32 _ccy, uint256 _autoRollFeeRate) external returns (uint256 toMaturity)
+function rotateLendingMarkets(bytes32 _ccy, uint256 _orderFeeRate) external returns (uint256 toMaturity)
 ```
 
 ### executeEmergencyTermination

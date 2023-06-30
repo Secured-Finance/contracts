@@ -59,6 +59,14 @@ const deployContracts = async (owner: SignerWithAddress) => {
     })
     .then((factory) => factory.deploy());
 
+  const liquidationLogic = await ethers
+    .getContractFactory('LiquidationLogic', {
+      libraries: {
+        FundManagementLogic: fundManagementLogic.address,
+      },
+    })
+    .then((factory) => factory.deploy());
+
   const lendingMarketUserLogic = await ethers
     .getContractFactory('LendingMarketUserLogic', {
       libraries: {
@@ -87,6 +95,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
         LendingMarketUserLogic: lendingMarketUserLogic.address,
         LendingMarketConfigurationLogic:
           lendingMarketConfigurationLogic.address,
+        LiquidationLogic: liquidationLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -202,6 +211,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
     // logics
     fundManagementLogic,
     lendingMarketOperationLogic,
+    liquidationLogic,
   };
 };
 

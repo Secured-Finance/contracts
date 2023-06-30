@@ -856,11 +856,7 @@ describe('TokenVault', () => {
         debtAmount,
       );
 
-      expect(
-        liquidationAmounts.liquidationAmount
-          .add(liquidationAmounts.protocolFee)
-          .add(liquidationAmounts.liquidatorFee),
-      ).to.equal(debtAmount);
+      expect(liquidationAmounts.liquidationAmount).to.equal(debtAmount);
     });
 
     it('Fail to call addDepositAmount due to invalid caller', async () => {

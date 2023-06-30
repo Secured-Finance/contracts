@@ -1,7 +1,6 @@
 import { BigNumber } from 'ethers';
 
 export const ORDER_FEE_RATE = 100;
-export const AUTO_ROLL_FEE_RATE = 250;
 export const CIRCUIT_BREAKER_LIMIT_RANGE = 1000;
 export const LIQUIDATION_THRESHOLD_RATE = 12500;
 export const LIQUIDATION_PROTOCOL_FEE_RATE = 200;

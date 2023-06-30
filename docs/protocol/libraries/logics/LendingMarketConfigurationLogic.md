@@ -8,12 +8,6 @@
 event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
 ```
 
-### AutoRollFeeRateUpdated
-
-```solidity
-event AutoRollFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
-```
-
 ### CircuitBreakerLimitRangeUpdated
 
 ```solidity
@@ -54,12 +48,6 @@ function calculateOrderFeeAmount(bytes32 _ccy, uint256 _amount, uint256 _maturit
 
 ```solidity
 function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) external
-```
-
-### updateAutoRollFeeRate
-
-```solidity
-function updateAutoRollFeeRate(bytes32 _ccy, uint256 _autoRollFeeRate) external
 ```
 
 ### updateCircuitBreakerLimitRange

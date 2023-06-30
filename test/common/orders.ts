@@ -58,3 +58,57 @@ export const calculateFutureValue = (
     .dp(0)
     .toFixed();
 };
+
+export const calculateAutoRolledLendingCompoundFactor = (
+  compoundFactor: BigNumber,
+  currentMaturity: BigNumber,
+  unitPrice: BigNumber | number,
+) => {
+  return BigNumber.from(
+    BigNumberJS(
+      compoundFactor
+        .mul(
+          BigNumber.from(PRICE_DIGIT)
+            .mul(PCT_DIGIT)
+            .mul(SECONDS_IN_YEAR)
+            .sub(currentMaturity.mul(unitPrice).mul(ORDER_FEE_RATE)),
+        )
+        .toString(),
+    )
+      .div(
+        BigNumber.from(PRICE_DIGIT)
+          .mul(SECONDS_IN_YEAR)
+          .mul(unitPrice)
+          .toString(),
+      )
+      .dp(0)
+      .toFixed(),
+  );
+};
+
+export const calculateAutoRolledBorrowingCompoundFactor = (
+  compoundFactor: BigNumber,
+  currentMaturity: BigNumber,
+  unitPrice: BigNumber | number,
+) => {
+  return BigNumber.from(
+    BigNumberJS(
+      compoundFactor
+        .mul(
+          BigNumber.from(PRICE_DIGIT)
+            .mul(PCT_DIGIT)
+            .mul(SECONDS_IN_YEAR)
+            .add(currentMaturity.mul(unitPrice).mul(ORDER_FEE_RATE)),
+        )
+        .toString(),
+    )
+      .div(
+        BigNumber.from(PRICE_DIGIT)
+          .mul(SECONDS_IN_YEAR)
+          .mul(unitPrice)
+          .toString(),
+      )
+      .dp(0)
+      .toFixed(),
+  );
+};

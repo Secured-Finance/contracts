@@ -29,13 +29,13 @@ function hasFutureValueInPastMaturity(address user, uint256 maturity) external v
 ### addLendFutureValue
 
 ```solidity
-function addLendFutureValue(address user, uint256 amount, uint256 maturity, bool isTaker) external returns (bool)
+function addLendFutureValue(address user, uint256 amount, uint256 maturity, bool isTaker) external
 ```
 
 ### addBorrowFutureValue
 
 ```solidity
-function addBorrowFutureValue(address user, uint256 amount, uint256 maturity, bool isTaker) external returns (bool)
+function addBorrowFutureValue(address user, uint256 amount, uint256 maturity, bool isTaker) external
 ```
 
 ### transferFrom

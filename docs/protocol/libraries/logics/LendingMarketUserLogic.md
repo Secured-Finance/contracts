@@ -5,7 +5,7 @@
 ### createOrder
 
 ```solidity
-function createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external returns (uint256 filledAmount)
+function createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
 ```
 
 ### createPreOrder

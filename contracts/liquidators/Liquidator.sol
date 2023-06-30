@@ -13,7 +13,7 @@ import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketCon
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
 
 contract Liquidator is ILiquidationReceiver {
-    bytes32 public baseCurrency;
+    bytes32 public immutable baseCurrency;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
     ISwapRouter public immutable uniswapRouter;
@@ -48,6 +48,24 @@ contract Liquidator is ILiquidationReceiver {
         collateralMaturities = _collateralMaturities;
         poolFee = _poolFee;
         lendingMarketController.executeLiquidationCall(
+            _collateralCcy,
+            _debtCcy,
+            _debtMaturity,
+            _user
+        );
+    }
+
+    function executeForcedRepayment(
+        bytes32 _collateralCcy,
+        uint256[] calldata _collateralMaturities,
+        bytes32 _debtCcy,
+        uint256 _debtMaturity,
+        address _user,
+        uint24 _poolFee
+    ) external {
+        collateralMaturities = _collateralMaturities;
+        poolFee = _poolFee;
+        lendingMarketController.executeForcedRepayment(
             _collateralCcy,
             _debtCcy,
             _debtMaturity,
@@ -102,13 +120,7 @@ contract Liquidator is ILiquidationReceiver {
             ? address(this).balance
             : IERC20(collateralCcyAddr).balanceOf(address(this));
 
-        (, int256 debtFVAmount) = lendingMarketController.getPosition(
-            _debtCcy,
-            _debtMaturity,
-            address(this)
-        );
-
-        if (debtFVAmount < 0 && collateralTokenBalance != 0) {
+        if (_receivedDebtAmount > 0 && collateralTokenBalance != 0) {
             _executeSwap(
                 collateralCcyAddr,
                 debtCcyAddr,
@@ -130,7 +142,12 @@ contract Liquidator is ILiquidationReceiver {
 
         if (debtTokenBalance != 0) {
             tokenVault.deposit(_debtCcy, debtTokenBalance);
-            lendingMarketController.unwindPosition(_debtCcy, _debtMaturity);
+
+            // If debt is expired, it is under the repayment phase. In this case, we don't need to unwind the position.
+            // Instead, repayment will be executed on the protocol side using the liquidator's deposit.
+            if (_debtMaturity >= block.timestamp) {
+                lendingMarketController.unwindPosition(_debtCcy, _debtMaturity);
+            }
         }
 
         emit OperationExecuteForDebt(

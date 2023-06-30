@@ -37,6 +37,16 @@ const func: DeployFunction = async function ({
     return result;
   });
 
+  deployResults['LiquidationLogic'] = await deploy('LiquidationLogic', {
+    from: deployer,
+    libraries: {
+      FundManagementLogic: deployResults['FundManagementLogic'].address,
+    },
+  }).then((result) => {
+    executeIfNewlyDeployment('LiquidationLogic', result);
+    return result;
+  });
+
   await deploy('LendingMarketUserLogic', {
     from: deployer,
     libraries: {

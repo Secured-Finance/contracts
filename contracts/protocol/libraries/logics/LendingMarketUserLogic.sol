@@ -32,7 +32,7 @@ library LendingMarketUserLogic {
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
-    ) external returns (uint256 filledAmount) {
+    ) external {
         require(_amount > 0, "Invalid amount");
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
@@ -56,7 +56,7 @@ library LendingMarketUserLogic {
                 circuitBreakerLimitRange
             );
 
-        filledAmount = filledOrder.amount;
+        uint256 filledAmount = filledOrder.amount;
 
         // The case that an order is placed in the order book
         if ((filledAmount + filledOrder.ignoredAmount) != _amount) {
@@ -333,7 +333,8 @@ library LendingMarketUserLogic {
             uint256 maturity,
             ,
             uint256 amount,
-            uint256 timestamp
+            uint256 timestamp,
+            bool isPreOrder
         ) = _market.getOrder(_orderId);
 
         order = ILendingMarketController.Order(
@@ -343,7 +344,8 @@ library LendingMarketUserLogic {
             side,
             unitPrice,
             amount,
-            timestamp
+            timestamp,
+            isPreOrder
         );
     }
 
@@ -379,6 +381,7 @@ library LendingMarketUserLogic {
 
         uint256 cbLimitRange = LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy);
         uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
+        uint256 currentMaturity = _maturity >= block.timestamp ? _maturity - block.timestamp : 0;
 
         if (_futureValue > 0) {
             side = ProtocolTypes.Side.BORROW;
@@ -387,7 +390,6 @@ library LendingMarketUserLogic {
             // NOTE: The formula is:
             // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
             // amount = totalAmountInFV / (1 + actualRate)
-            uint256 currentMaturity = _maturity - block.timestamp;
             uint256 amountInFV = (_futureValue.toUint256() *
                 Constants.SECONDS_IN_YEAR *
                 Constants.PCT_DIGIT).div(
@@ -406,7 +408,6 @@ library LendingMarketUserLogic {
             // NOTE: The formula is:
             // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
             // amount = totalAmountInFV / (1 - actualRate)
-            uint256 currentMaturity = _maturity - block.timestamp;
             uint256 amountInFV = ((-_futureValue).toUint256() *
                 Constants.SECONDS_IN_YEAR *
                 Constants.PCT_DIGIT).div(

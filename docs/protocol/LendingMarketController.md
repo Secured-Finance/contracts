@@ -470,7 +470,7 @@ Gets if the lending market is initialized.
 ### initializeLendingMarket
 
 ```solidity
-function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _autoRollFeeRate, uint256 _circuitBreakerLimitRange) external
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _circuitBreakerLimitRange) external
 ```
 
 Initialize the lending market to set a genesis date and compound factor
@@ -481,7 +481,6 @@ Initialize the lending market to set a genesis date and compound factor
 | _genesisDate | uint256 | The genesis date when the initial market is opened |
 | _compoundFactor | uint256 | The initial compound factor when the initial market is opened |
 | _orderFeeRate | uint256 | The order fee rate received by protocol |
-| _autoRollFeeRate | uint256 | The auto roll fee rate received by protocol |
 | _circuitBreakerLimitRange | uint256 | The circuit breaker limit range |
 
 ### createLendingMarket

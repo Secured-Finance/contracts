@@ -15,5 +15,5 @@ interface IReserveFund {
 
     function withdraw(bytes32 ccy, uint256 amount) external;
 
-    function executeRedemption() external;
+    function executeEmergencySettlement() external;
 }
