@@ -245,17 +245,17 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
 
     /**
      * @notice Gets the total collateral amount of the selected currency.
-     * @param _ccy Currency name in bytes32
      * @param _user User's address
+     * @param _ccy Currency name in bytes32
      * @return amount The collateral amount
      */
-    function getCollateralAmount(bytes32 _ccy, address _user)
+    function getCollateralAmount(address _user, bytes32 _ccy)
         external
         view
         override
         returns (uint256 amount)
     {
-        (amount, , ) = DepositManagementLogic.getCollateralAmount(_ccy, _user);
+        (amount, , ) = DepositManagementLogic.getCollateralAmount(_user, _ccy);
     }
 
     /**

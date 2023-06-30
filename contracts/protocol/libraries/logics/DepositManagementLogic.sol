@@ -88,7 +88,7 @@ library DepositManagementLogic {
         return calculateCollateral(_user, "", 0, false);
     }
 
-    function getCollateralAmount(bytes32 _ccy, address _user)
+    function getCollateralAmount(address _user, bytes32 _ccy)
         public
         view
         returns (
@@ -322,7 +322,7 @@ library DepositManagementLogic {
 
         ) = getCollateralAmount(_user);
 
-        (uint256 collateralAmount, , ) = getCollateralAmount(_liquidationCcy, _user);
+        (uint256 collateralAmount, , ) = getCollateralAmount(_user, _liquidationCcy);
 
         require(collateralAmount != 0, "Not enough collateral in the selected currency");
 

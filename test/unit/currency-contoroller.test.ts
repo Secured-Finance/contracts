@@ -293,7 +293,7 @@ describe('CurrencyController', () => {
       expect(amount).to.equal('100');
     });
 
-    it('Get the array of converted amount(uint256[]) in ETH', async () => {
+    it('Get the array of converted amounts(uint256[]) in ETH', async () => {
       const amounts = await currencyControllerProxy[
         'convertToBaseCurrency(bytes32,uint256[])'
       ](currency, [10000000000]);
@@ -317,6 +317,33 @@ describe('CurrencyController', () => {
 
       expect(amounts.length).to.equal(1);
       expect(amounts[0]).to.equal('1000000000000000000');
+    });
+
+    it('Get the converted amount in the selected currency from another selected currency', async () => {
+      const currency2 = ethers.utils.formatBytes32String(`TestCcy1`);
+      await currencyControllerProxy.addCurrency(currency2, 18, 9000, [
+        mockPriceFeed.address,
+      ]);
+
+      const amount = await currencyControllerProxy[
+        'convert(bytes32,bytes32,uint256)'
+      ](currency, currency2, 10000000000);
+
+      expect(amount).to.equal(10000000000);
+    });
+
+    it('Get the converted amounts in the selected currency from another selected currency', async () => {
+      const currency2 = ethers.utils.formatBytes32String(`TestCcy2`);
+      await currencyControllerProxy.addCurrency(currency2, 18, 9000, [
+        mockPriceFeed.address,
+      ]);
+
+      const amounts = await currencyControllerProxy[
+        'convert(bytes32,bytes32,uint256[])'
+      ](currency, currency2, [10000000000]);
+
+      expect(amounts.length).to.equal(1);
+      expect(amounts[0]).to.equal(10000000000);
     });
   });
 });

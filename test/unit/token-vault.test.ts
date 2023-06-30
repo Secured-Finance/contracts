@@ -283,16 +283,23 @@ describe('TokenVault', () => {
       const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
       expect(currencies[0]).to.equal(targetCurrency);
 
-      const collateralAmount = await tokenVaultProxy.getDepositAmount(
+      const depositAmount = await tokenVaultProxy.getDepositAmount(
         alice.address,
         targetCurrency,
       );
-      expect(collateralAmount).to.equal(value);
+      expect(depositAmount).to.equal(value);
 
-      const totalCollateralAmount = await tokenVaultProxy.getTotalDepositAmount(
+      const collateralAmount = await tokenVaultProxy.getCollateralAmount(
+        alice.address,
         targetCurrency,
       );
-      expect(totalCollateralAmount).to.equal(collateralAmount);
+
+      expect(collateralAmount).to.equal(value);
+
+      const totalDepositAmount = await tokenVaultProxy.getTotalDepositAmount(
+        targetCurrency,
+      );
+      expect(totalDepositAmount).to.equal(depositAmount);
     });
 
     it('Deposit into collateral book using ETH', async () => {
@@ -309,16 +316,16 @@ describe('TokenVault', () => {
       const currencies = await tokenVaultProxy.getUsedCurrencies(alice.address);
       expect(currencies.includes(ETH)).to.true;
 
-      const collateralAmount = await tokenVaultProxy.getDepositAmount(
+      const depositAmount = await tokenVaultProxy.getDepositAmount(
         alice.address,
         ETH,
       );
-      expect(collateralAmount).to.equal(valueInETH);
+      expect(depositAmount).to.equal(valueInETH);
 
-      const totalCollateralAmount = await tokenVaultProxy.getTotalDepositAmount(
+      const totalDepositAmount = await tokenVaultProxy.getTotalDepositAmount(
         ETH,
       );
-      expect(totalCollateralAmount).to.equal(collateralAmount);
+      expect(totalDepositAmount).to.equal(depositAmount);
     });
 
     it('Add the working orders & Withdraw', async () => {
@@ -404,10 +411,10 @@ describe('TokenVault', () => {
         tokenVaultProxy.connect(bob).withdraw(targetCurrency, '10000000000000'),
       ).to.emit(tokenVaultProxy, 'Withdraw');
 
-      const totalCollateralAmount = await tokenVaultProxy.getTotalDepositAmount(
+      const totalDepositAmount = await tokenVaultProxy.getTotalDepositAmount(
         targetCurrency,
       );
-      expect(totalCollateralAmount).to.equal('10000000000000');
+      expect(totalDepositAmount).to.equal('10000000000000');
     });
 
     it('Add the borrowed amount', async () => {

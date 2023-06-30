@@ -42,7 +42,7 @@ interface ITokenVault {
 
     function getTotalCollateralAmount(address user) external view returns (uint256);
 
-    function getCollateralAmount(bytes32 ccy, address user) external view returns (uint256);
+    function getCollateralAmount(address user, bytes32 ccy) external view returns (uint256);
 
     function getLiquidationAmount(
         address user,
