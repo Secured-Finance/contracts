@@ -268,11 +268,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the market last executed lend and borrow unit price in itayose.
+     * @notice Gets the market itayose logs.
      * @return lastLendUnitPrice The market last executed lend unit price in itayose
      * @return lastBorrowUnitPrice The market last executed borrow unit price in itayose
      */
-    function getItayoseLastExecutedPrices()
+    function getItayoseLog()
         external
         view
         override

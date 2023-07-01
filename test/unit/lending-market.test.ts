@@ -348,7 +348,7 @@ describe('LendingMarket', () => {
         expect(openingPrice).to.equal(test.openingPrice);
 
         const { lastLendUnitPrice, lastBorrowUnitPrice } =
-          await lendingMarket.getItayoseLastExecutedPrices();
+          await lendingMarket.getItayoseLog();
 
         expect(lastLendUnitPrice).to.equal(test.lastLendUnitPrice);
         expect(lastBorrowUnitPrice).to.equal(test.lastBorrowUnitPrice);
