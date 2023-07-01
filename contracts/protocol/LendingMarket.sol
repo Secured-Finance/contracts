@@ -268,6 +268,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Gets the market last executed lend and borrow unit price in itayose.
+     * @return lastLendUnitPrice The market last executed lend unit price in itayose
+     * @return lastBorrowUnitPrice The market last executed borrow unit price in itayose
+     */
+    function getItayoseLastExecutedPrices()
+        external
+        view
+        override
+        returns (uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice)
+    {
+        ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[Storage.slot().maturity];
+        lastLendUnitPrice = itayoseLog.lastLendUnitPrice;
+        lastBorrowUnitPrice = itayoseLog.lastBorrowUnitPrice;
+    }
+
+    /**
      * @notice Gets the market order from the order book.
      * @param _orderId The market order id
      * @return side Order position type, Borrow or Lend

@@ -141,6 +141,8 @@ interface ILendingMarket {
 
     function isPreOrderPeriod() external returns (bool);
 
+    function getItayoseLastExecutedPrices() external view returns (uint256, uint256);
+
     function getOrder(uint48 orderId)
         external
         view
