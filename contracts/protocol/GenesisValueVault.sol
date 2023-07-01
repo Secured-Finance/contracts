@@ -355,21 +355,54 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     }
 
     /**
-     * @notice Resets all genesis values of the user.
+     * @notice Forces a reset of the user's genesis value.
      * @param _ccy Currency name in bytes32
      * @param _user User's address
      */
-    function resetGenesisValue(bytes32 _ccy, address _user)
+    function executeForcedReset(bytes32 _ccy, address _user)
         external
         override
         onlyAcceptedContracts
     {
         int256 removedAmount = Storage.slot().balances[_ccy][_user];
+
         if (removedAmount != 0) {
             Storage.slot().balances[_ccy][_user] = 0;
-
             emit Transfer(_ccy, _user, address(0), removedAmount);
         }
+    }
+
+    /**
+     * @notice Forces a reset of the user's genesis value.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _amountInFV The amount in the future value to reset
+     */
+    function executeForcedReset(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        int256 _amountInFV
+    ) external override onlyAcceptedContracts returns (int256 removedAmountInFV, int256 balance) {
+        int256 _amount = calculateGVFromFV(_ccy, _maturity, _amountInFV);
+        int256 removedAmount = Storage.slot().balances[_ccy][_user];
+
+        require(
+            (_amount > 0 && removedAmount >= 0) || (_amount < 0 && removedAmount <= 0),
+            "Invalid amount"
+        );
+
+        if ((_amount > 0 && _amount < removedAmount) || (_amount < 0 && _amount > removedAmount)) {
+            removedAmount = _amount;
+        }
+
+        if (removedAmount != 0) {
+            Storage.slot().balances[_ccy][_user] -= removedAmount;
+            emit Transfer(_ccy, _user, address(0), removedAmount);
+        }
+
+        removedAmountInFV = calculateFVFromGV(_ccy, _maturity, removedAmount);
+        balance = Storage.slot().balances[_ccy][_user];
     }
 
     function getBalanceFluctuationByAutoRolls(

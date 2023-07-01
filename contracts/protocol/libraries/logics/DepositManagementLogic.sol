@@ -31,7 +31,7 @@ library DepositManagementLogic {
         uint256 _unsettledOrderAmount,
         bool _isUnsettledBorrowOrder
     ) public view returns (bool) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getCollateralAmount(
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = calculateCollateral(
             _user,
             _unsettledOrderCcy,
             _unsettledOrderAmount,
@@ -82,13 +82,41 @@ library DepositManagementLogic {
         returns (
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
-            uint256 totalActualCollateral
+            uint256 totalDeposit
         )
     {
-        return getCollateralAmount(_user, "", 0, false);
+        return calculateCollateral(_user, "", 0, false);
     }
 
-    function getCollateralAmount(
+    function getCollateralAmount(address _user, bytes32 _ccy)
+        public
+        view
+        returns (
+            uint256 totalCollateral,
+            uint256 totalUsedCollateral,
+            uint256 totalDeposit
+        )
+    {
+        (
+            uint256 workingLendOrdersAmount,
+            ,
+            uint256 collateralAmount,
+            uint256 lentAmount,
+            uint256 workingBorrowOrdersAmount,
+            uint256 debtAmount,
+            uint256 borrowedAmount
+        ) = AddressResolverLib.lendingMarketController().calculateFunds(_ccy, _user);
+
+        uint256 plusDeposit = Storage.slot().depositAmounts[_user][_ccy] + borrowedAmount;
+        uint256 minusDeposit = workingLendOrdersAmount + lentAmount;
+        uint256 plusCollateral = plusDeposit + collateralAmount;
+
+        totalCollateral = plusCollateral >= minusDeposit ? plusCollateral - minusDeposit : 0;
+        totalUsedCollateral = workingBorrowOrdersAmount + debtAmount;
+        totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
+    }
+
+    function calculateCollateral(
         address _user,
         bytes32 _unsettledOrderCcy,
         uint256 _unsettledOrderAmount,
@@ -99,7 +127,7 @@ library DepositManagementLogic {
         returns (
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
-            uint256 totalActualCollateral
+            uint256 totalDeposit
         )
     {
         CalculatedFundVars memory vars;
@@ -149,29 +177,27 @@ library DepositManagementLogic {
 
         uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInBaseCurrency(_user);
 
-        uint256 actualPlusCollateral = totalInternalDepositAmount + vars.borrowedAmount;
-        uint256 minusCollateral = vars.workingLendOrdersAmount + vars.lentAmount;
-        uint256 plusCollateral = actualPlusCollateral + vars.collateralAmount;
+        uint256 plusDeposit = totalInternalDepositAmount + vars.borrowedAmount;
+        uint256 minusDeposit = vars.workingLendOrdersAmount + vars.lentAmount;
+        uint256 plusCollateral = plusDeposit + vars.collateralAmount;
 
-        totalCollateral = plusCollateral >= minusCollateral ? plusCollateral - minusCollateral : 0;
+        totalCollateral = plusCollateral >= minusDeposit ? plusCollateral - minusDeposit : 0;
         totalUsedCollateral =
             vars.workingBorrowOrdersAmount +
             vars.debtAmount +
             unsettledBorrowOrdersAmountInBaseCurrency;
-        totalActualCollateral = actualPlusCollateral >= minusCollateral
-            ? actualPlusCollateral - minusCollateral
-            : 0;
+        totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
     }
 
     function getWithdrawableCollateral(address _user) public view returns (uint256) {
         (
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
-            uint256 totalActualCollateral
+            uint256 totalDeposit
         ) = getCollateralAmount(_user);
 
         if (totalUsedCollateral == 0) {
-            return totalActualCollateral;
+            return totalDeposit;
         } else if (
             totalCollateral * Constants.PRICE_DIGIT >
             totalUsedCollateral * Params.liquidationThresholdRate()
@@ -182,7 +208,7 @@ library DepositManagementLogic {
                 Constants.PRICE_DIGIT -
                 (totalUsedCollateral) *
                 Params.liquidationThresholdRate()).div(Constants.PRICE_DIGIT);
-            return maxWithdraw >= totalActualCollateral ? totalActualCollateral : maxWithdraw;
+            return maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw;
         } else {
             return 0;
         }
@@ -230,7 +256,7 @@ library DepositManagementLogic {
         _updateUsedCurrencies(_user, _ccy);
     }
 
-    function resetDepositAmount(address _user, bytes32 _ccy)
+    function executeForcedReset(address _user, bytes32 _ccy)
         external
         returns (uint256 removedAmount)
     {
@@ -290,15 +316,32 @@ library DepositManagementLogic {
             uint256 liquidatorFee
         )
     {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getCollateralAmount(_user);
-        uint256 liquidationAmountInBaseCurrency = totalCollateral * Constants.PCT_DIGIT >=
-            totalUsedCollateral * Params.liquidationThresholdRate()
+        (
+            uint256 totalCollateralInBaseCcy,
+            uint256 totalUsedCollateralInBaseCcy,
+
+        ) = getCollateralAmount(_user);
+
+        (uint256 collateralAmount, , ) = getCollateralAmount(_user, _liquidationCcy);
+
+        require(collateralAmount != 0, "Not enough collateral in the selected currency");
+
+        uint256 liquidationAmountInBaseCcy = totalCollateralInBaseCcy * Constants.PCT_DIGIT >=
+            totalUsedCollateralInBaseCcy * Params.liquidationThresholdRate()
             ? 0
-            : totalUsedCollateral.div(2);
-        liquidationAmount = AddressResolverLib.currencyController().convertFromBaseCurrency(
+            : totalUsedCollateralInBaseCcy.div(2);
+
+        uint256[] memory amountsInBaseCcy = new uint256[](2);
+        amountsInBaseCcy[0] = liquidationAmountInBaseCcy;
+        amountsInBaseCcy[1] = totalCollateralInBaseCcy;
+
+        uint256[] memory amounts = AddressResolverLib.currencyController().convertFromBaseCurrency(
             _liquidationCcy,
-            liquidationAmountInBaseCurrency
+            amountsInBaseCcy
         );
+
+        liquidationAmount = amounts[0];
+        uint256 totalCollateralAmount = amounts[1];
 
         if (liquidationAmount > _liquidationAmountMaximum) {
             liquidationAmount = _liquidationAmountMaximum;
@@ -306,37 +349,34 @@ library DepositManagementLogic {
 
         (protocolFee, liquidatorFee) = calculateLiquidationFees(liquidationAmount);
 
-        // protocolFee = (liquidationAmount * Params.liquidationProtocolFeeRate()).div(
-        //     Constants.PCT_DIGIT
-        // );
-        // liquidatorFee = (liquidationAmount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
-        // uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
+        uint256 liquidationTotalAmount = liquidationAmount + protocolFee + liquidatorFee;
 
-        // if (liquidationTotalAmount > _liquidationAmountMaximum) {
-        //     liquidationTotalAmount = _liquidationAmountMaximum;
-        //     protocolFee = (liquidationTotalAmount * Params.liquidationProtocolFeeRate()).div(
-        //         Constants.PCT_DIGIT +
-        //             Params.liquidatorFeeRate() +
-        //             Params.liquidationProtocolFeeRate()
-        //     );
-        //     liquidatorFee = (liquidationTotalAmount * Params.liquidatorFeeRate()).div(
-        //         Constants.PCT_DIGIT +
-        //             Params.liquidatorFeeRate() +
-        //             Params.liquidationProtocolFeeRate()
-        //     );
-        //     liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
-        // }
+        // NOTE: If `totalCollateralAmount > collateralAmount` is true, it means that a user has collateral in other currencies
+        // In this case, this liquidation is not covered by the reserve fund.
+        // Therefore, we need to keep the total liquidation amount within the maximum amount.
+        if (liquidationTotalAmount > collateralAmount && totalCollateralAmount > collateralAmount) {
+            liquidationTotalAmount = collateralAmount;
+            protocolFee = (liquidationTotalAmount * Params.liquidationProtocolFeeRate()).div(
+                Constants.PCT_DIGIT +
+                    Params.liquidatorFeeRate() +
+                    Params.liquidationProtocolFeeRate()
+            );
+            liquidatorFee = (liquidationTotalAmount * Params.liquidatorFeeRate()).div(
+                Constants.PCT_DIGIT +
+                    Params.liquidatorFeeRate() +
+                    Params.liquidationProtocolFeeRate()
+            );
+            liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
+        }
     }
 
-    function calculateLiquidationFees(uint256 _liquidationAmount)
+    function calculateLiquidationFees(uint256 _amount)
         public
         view
         returns (uint256 protocolFee, uint256 liquidatorFee)
     {
-        protocolFee = (_liquidationAmount * Params.liquidationProtocolFeeRate()).div(
-            Constants.PCT_DIGIT
-        );
-        liquidatorFee = (_liquidationAmount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
+        protocolFee = (_amount * Params.liquidationProtocolFeeRate()).div(Constants.PCT_DIGIT);
+        liquidatorFee = (_amount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
     }
 
     function transferFrom(

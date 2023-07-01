@@ -230,10 +230,11 @@ library FundManagementLogic {
 
         cleanUpFunds(_ccy, _user);
 
-        int256 amountInFV = _resetFundsPerMaturity(_ccy, _maturity, _user);
-        require(amountInFV > 0, "No redemption amount");
+        int256 amount = calculateActualFunds(_ccy, _maturity, _user).futureValue;
+        require(amount > 0, "No redemption amount");
 
-        uint256 redemptionAmount = amountInFV.toUint256();
+        uint256 redemptionAmount = _resetFundsPerMaturity(_ccy, _maturity, _user, amount)
+            .toUint256();
         AddressResolverLib.tokenVault().addDepositAmount(_user, _ccy, redemptionAmount);
 
         emit RedemptionExecuted(_user, _ccy, _maturity, redemptionAmount);
@@ -242,16 +243,20 @@ library FundManagementLogic {
     function executeRepayment(
         bytes32 _ccy,
         uint256 _maturity,
-        address _user
+        address _user,
+        uint256 _amount
     ) public returns (uint256 repaymentAmount) {
         require(block.timestamp >= _maturity, "Market is not matured");
 
         cleanUpFunds(_ccy, _user);
 
-        int256 amountInFV = _resetFundsPerMaturity(_ccy, _maturity, _user);
-        require(amountInFV < 0, "No repayment amount");
+        int256 resetAmount = _amount == 0
+            ? calculateActualFunds(_ccy, _maturity, _user).futureValue
+            : -_amount.toInt256();
 
-        repaymentAmount = (-amountInFV).toUint256();
+        require(resetAmount < 0, "No repayment amount");
+
+        repaymentAmount = (-_resetFundsPerMaturity(_ccy, _maturity, _user, resetAmount)).toUint256();
         AddressResolverLib.tokenVault().removeDepositAmount(_user, _ccy, repaymentAmount);
 
         emit RepaymentExecuted(_user, _ccy, _maturity, repaymentAmount);
@@ -283,7 +288,7 @@ library FundManagementLogic {
         for (uint256 i; i < collateralCurrencies.length; i++) {
             int256 amountInCcy = AddressResolverLib
                 .tokenVault()
-                .resetDepositAmount(_user, collateralCurrencies[i])
+                .executeForcedReset(_user, collateralCurrencies[i])
                 .toInt256();
 
             redemptionAmountInBaseCurrency += _convertToBaseCurrencyAtMarketTerminationPrice(
@@ -1015,11 +1020,8 @@ library FundManagementLogic {
         );
     }
 
-    function _resetFundsPerCurrency(bytes32 _ccy, address _user)
-        internal
-        returns (int256 amountInPV)
-    {
-        amountInPV = calculateActualFunds(_ccy, 0, _user).presentValue;
+    function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {
+        amount = calculateActualFunds(_ccy, 0, _user).presentValue;
 
         uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         for (uint256 j; j < maturities.length; j++) {
@@ -1027,10 +1029,10 @@ library FundManagementLogic {
                 Storage.slot().futureValueVaults[_ccy][
                     Storage.slot().maturityLendingMarkets[_ccy][maturities[j]]
                 ]
-            ).resetFutureValue(_user);
+            ).executeForcedReset(_user);
         }
 
-        AddressResolverLib.genesisValueVault().resetGenesisValue(_ccy, _user);
+        AddressResolverLib.genesisValueVault().executeForcedReset(_ccy, _user);
 
         Storage.slot().usedCurrencies[_user].remove(_ccy);
     }
@@ -1038,27 +1040,37 @@ library FundManagementLogic {
     function _resetFundsPerMaturity(
         bytes32 _ccy,
         uint256 _maturity,
-        address _user
-    ) internal returns (int256 amountInFV) {
-        amountInFV = calculateActualFunds(_ccy, _maturity, _user).futureValue;
+        address _user,
+        int256 _amount
+    ) internal returns (int256 totalRemovedAmount) {
+        int256 currentFVAmount;
+        int256 currentGVAmount;
 
-        IFutureValueVault(
+        (totalRemovedAmount, currentFVAmount) = IFutureValueVault(
             Storage.slot().futureValueVaults[_ccy][
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
             ]
-        ).resetFutureValue(_user);
+        ).executeForcedReset(_user, _amount);
+
+        int256 remainingAmount = _amount - totalRemovedAmount;
 
         bool isDefaultMarket = Storage.slot().maturityLendingMarkets[_ccy][_maturity] ==
             Storage.slot().lendingMarkets[_ccy][0];
 
-        if (isDefaultMarket) {
-            AddressResolverLib.genesisValueVault().resetGenesisValue(_ccy, _user);
+        if (isDefaultMarket && remainingAmount != 0) {
+            int256 removedAmount;
+            (removedAmount, currentGVAmount) = AddressResolverLib
+                .genesisValueVault()
+                .executeForcedReset(_ccy, _maturity, _user, remainingAmount);
+            totalRemovedAmount += removedAmount;
         }
 
-        Storage.slot().usedMaturities[_ccy][_user].remove(_maturity);
+        if (currentFVAmount == 0 && currentGVAmount == 0) {
+            Storage.slot().usedMaturities[_ccy][_user].remove(_maturity);
 
-        if (Storage.slot().usedMaturities[_ccy][_user].length() == 0) {
-            Storage.slot().usedCurrencies[_user].remove(_ccy);
+            if (Storage.slot().usedMaturities[_ccy][_user].length() == 0) {
+                Storage.slot().usedCurrencies[_user].remove(_ccy);
+            }
         }
     }
 }

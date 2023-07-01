@@ -116,5 +116,12 @@ interface IGenesisValueVault {
         uint256 maturity
     ) external;
 
-    function resetGenesisValue(bytes32 ccy, address user) external;
+    function executeForcedReset(bytes32 _ccy, address _user) external;
+
+    function executeForcedReset(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        int256 _amountInFV
+    ) external returns (int256 removedAmount, int256 balance);
 }

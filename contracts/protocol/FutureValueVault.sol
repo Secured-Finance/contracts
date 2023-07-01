@@ -234,16 +234,46 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     }
 
     /**
-     * @notice Resets the future value of the user
+     * @notice Forces a reset of the user's future value.
      * @param _user User's address
      */
-    function resetFutureValue(address _user) external override onlyAcceptedContracts {
+    function executeForcedReset(address _user) external override onlyAcceptedContracts {
         int256 removedAmount = Storage.slot().balances[_user];
-        if (removedAmount != 0) {
-            Storage.slot().balances[_user] = 0;
 
+        if (removedAmount != 0) {
+            Storage.slot().balances[_user] -= removedAmount;
             emit Transfer(_user, address(0), removedAmount);
         }
+    }
+
+    /**
+     * @notice Forces a reset of the user's future value.
+     * @param _user User's address
+     * @param _amount The amount to reset
+     */
+    function executeForcedReset(address _user, int256 _amount)
+        external
+        override
+        onlyAcceptedContracts
+        returns (int256 removedAmount, int256 balance)
+    {
+        removedAmount = Storage.slot().balances[_user];
+
+        require(
+            (_amount > 0 && removedAmount >= 0) || (_amount < 0 && removedAmount <= 0),
+            "Invalid amount"
+        );
+
+        if ((_amount > 0 && _amount < removedAmount) || (_amount < 0 && _amount > removedAmount)) {
+            removedAmount = _amount;
+        }
+
+        if (removedAmount != 0) {
+            Storage.slot().balances[_user] -= removedAmount;
+            emit Transfer(_user, address(0), removedAmount);
+        }
+
+        balance = Storage.slot().balances[_user];
     }
 
     function _updateTotalSupply(

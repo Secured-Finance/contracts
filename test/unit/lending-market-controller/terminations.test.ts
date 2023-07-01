@@ -120,7 +120,7 @@ describe('LendingMarketController - Terminations', () => {
 
   describe('Terminations', async () => {
     it('Execute an emergency termination without an order', async () => {
-      await mockTokenVault.mock.resetDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
       await expect(
@@ -220,7 +220,7 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Execute an emergency termination with orders of single market', async () => {
-      await mockTokenVault.mock.resetDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
       const lendingMarket1 = lendingMarketProxies[0];
@@ -288,7 +288,7 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Execute an emergency termination with orders of multiple markets', async () => {
-      await mockTokenVault.mock.resetDepositAmount.returns(
+      await mockTokenVault.mock.executeForcedReset.returns(
         '150000000000000000',
       );
       await mockTokenVault.mock.isCollateral.returns(true);
@@ -425,7 +425,7 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Execute an emergency termination with orders after auto-rolls', async () => {
-      await mockTokenVault.mock.resetDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
       const lendingMarket1 = lendingMarketProxies[0];
@@ -507,7 +507,7 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Fail to redeem due to a insolvent user', async () => {
-      await mockTokenVault.mock.resetDepositAmount.returns('40000000000000000');
+      await mockTokenVault.mock.executeForcedReset.returns('40000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
       const lendingMarket1 = lendingMarketProxies[0];
@@ -556,7 +556,7 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Fail to redeem due to 2nd execution', async () => {
-      await mockTokenVault.mock.resetDepositAmount.returns('50000000000000000');
+      await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
       const lendingMarket1 = lendingMarketProxies[0];

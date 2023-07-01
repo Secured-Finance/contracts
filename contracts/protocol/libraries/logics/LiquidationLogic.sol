@@ -7,25 +7,24 @@ import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {FundManagementLogic} from "./FundManagementLogic.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
 // liquidation
 import {ILiquidationReceiver} from "../../../liquidators/interfaces/ILiquidationReceiver.sol";
 
 library LiquidationLogic {
+    using RoundingUint256 for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
 
     struct ExecuteLiquidationVars {
-        address reserveFund;
         uint256 liquidationAmountInCollateralCcy;
         uint256 liquidationAmountInDebtCcy;
         uint256 protocolFeeInCollateralCcy;
         uint256 liquidatorFeeInCollateralCcy;
         bool isDefaultMarket;
-        bool isReserveFundPaused;
         uint256 receivedCollateralAmount;
-        uint256 receivedDebtAmount;
     }
 
     event LiquidationExecuted(
@@ -52,6 +51,10 @@ library LiquidationLogic {
         uint256 _debtMaturity
     ) external {
         ExecuteLiquidationVars memory vars;
+
+        vars.isDefaultMarket =
+            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
+            Storage.slot().lendingMarkets[_debtCcy][0];
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
@@ -82,12 +85,6 @@ library LiquidationLogic {
             vars.liquidationAmountInCollateralCcy
         );
 
-        vars.isDefaultMarket =
-            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
-            Storage.slot().lendingMarkets[_debtCcy][0];
-        vars.isReserveFundPaused = AddressResolverLib.reserveFund().isPaused();
-        vars.reserveFund = address(AddressResolverLib.reserveFund());
-
         // Transfer collateral from users to liquidators and reserve funds.
         vars.receivedCollateralAmount =
             vars.liquidationAmountInCollateralCcy +
@@ -97,30 +94,50 @@ library LiquidationLogic {
             _user,
             _liquidator,
             _collateralCcy,
-            vars.receivedCollateralAmount,
-            vars.protocolFeeInCollateralCcy
+            vars.receivedCollateralAmount
         );
 
-        // Cover insolvent amounts using reserve funds.
-        if (untransferredAmount > 0 && !vars.isReserveFundPaused) {
-            uint256 insolventAmountInDebtCcy = AddressResolverLib.currencyController().convert(
+        if (untransferredAmount == 0) {
+            _transferCollateral(
+                _user,
+                address(AddressResolverLib.reserveFund()),
                 _collateralCcy,
-                _debtCcy,
-                untransferredAmount
+                vars.protocolFeeInCollateralCcy
             );
+        } else if (untransferredAmount > 0) {
+            (
+                uint256 untransferredAmountInDebtCcy,
+                uint256 receivedCollateralAmountInDebtCcy,
+                uint256 liquidatorFeeInDebtCcy
+            ) = _convertLiquidationAmounts(
+                    _collateralCcy,
+                    _debtCcy,
+                    untransferredAmount,
+                    vars.receivedCollateralAmount,
+                    vars.liquidatorFeeInCollateralCcy
+                );
 
-            if (AddressResolverLib.tokenVault().getTotalCollateralAmount(_user) == 0) {
-                insolventAmountInDebtCcy = _transferFunds(
-                    vars.reserveFund,
+            // Use reserve funds to cover insolvent amounts if user does not have collateral in other currencies.
+            if (
+                !AddressResolverLib.reserveFund().isPaused() &&
+                AddressResolverLib.tokenVault().getTotalCollateralAmount(_user) == 0
+            ) {
+                untransferredAmountInDebtCcy = _transferFunds(
+                    address(AddressResolverLib.reserveFund()),
                     _liquidator,
                     _debtCcy,
                     _debtMaturity,
-                    insolventAmountInDebtCcy.toInt256(),
+                    untransferredAmountInDebtCcy.toInt256(),
                     vars.isDefaultMarket
                 ).toUint256();
             }
 
-            vars.liquidationAmountInDebtCcy -= insolventAmountInDebtCcy;
+            // Adjust the liquidation amount for debt.
+            vars.liquidationAmountInDebtCcy = _calculateTransferredAmount(
+                receivedCollateralAmountInDebtCcy,
+                untransferredAmountInDebtCcy,
+                liquidatorFeeInDebtCcy
+            );
         }
 
         if (_liquidator.code.length > 0) {
@@ -137,14 +154,12 @@ library LiquidationLogic {
 
         // Transfer the debt from users to liquidators
         if (vars.liquidationAmountInDebtCcy > 0) {
-            vars.receivedDebtAmount = vars.liquidationAmountInDebtCcy;
-
             _transferFunds(
                 _user,
                 _liquidator,
                 _debtCcy,
                 _debtMaturity,
-                -vars.receivedDebtAmount.toInt256(),
+                -vars.liquidationAmountInDebtCcy.toInt256(),
                 vars.isDefaultMarket
             );
 
@@ -157,7 +172,7 @@ library LiquidationLogic {
                         vars.receivedCollateralAmount,
                         _debtCcy,
                         _debtMaturity,
-                        vars.receivedDebtAmount
+                        vars.liquidationAmountInDebtCcy
                     ),
                     "Invalid operation execution"
                 );
@@ -218,13 +233,40 @@ library LiquidationLogic {
         uint256 receivedCollateralAmount = liquidationAmountInCollateralCcy +
             liquidatorFeeInCollateralCcy;
 
-        _transferCollateral(
+        uint256 untransferredAmount = _transferCollateral(
             _user,
             _executor,
             _collateralCcy,
-            receivedCollateralAmount,
-            protocolFeeInCollateralCcy
+            receivedCollateralAmount
         );
+
+        if (untransferredAmount == 0) {
+            _transferCollateral(
+                _user,
+                address(AddressResolverLib.reserveFund()),
+                _collateralCcy,
+                protocolFeeInCollateralCcy
+            );
+        } else {
+            (
+                uint256 untransferredAmountInDebtCcy,
+                uint256 receivedCollateralAmountInDebtCcy,
+                uint256 liquidatorFeeInDebtCcy
+            ) = _convertLiquidationAmounts(
+                    _collateralCcy,
+                    _debtCcy,
+                    untransferredAmount,
+                    receivedCollateralAmount,
+                    liquidatorFeeInCollateralCcy
+                );
+
+            // Adjust the liquidation amount for debt.
+            liquidationAmountInDebtCcy = _calculateTransferredAmount(
+                receivedCollateralAmountInDebtCcy,
+                untransferredAmountInDebtCcy,
+                liquidatorFeeInDebtCcy
+            );
+        }
 
         if (_executor.code.length > 0) {
             require(
@@ -261,7 +303,8 @@ library LiquidationLogic {
         uint256 repaymentAmount = FundManagementLogic.executeRepayment(
             _debtCcy,
             _debtMaturity,
-            _user
+            _user,
+            liquidationAmountInDebtCcy
         );
 
         require(repaymentAmount == liquidationAmountInDebtCcy, "Invalid repayment amount");
@@ -279,32 +322,17 @@ library LiquidationLogic {
         address _from,
         address _to,
         bytes32 _ccy,
-        uint256 _amount,
-        uint256 _fee
+        uint256 _amount
     ) internal returns (uint256 untransferredAmount) {
-        address reserveFund = address(AddressResolverLib.reserveFund());
-
         untransferredAmount = AddressResolverLib.tokenVault().transferFrom(
             _ccy,
             _from,
-            reserveFund,
-            _fee
+            _to,
+            _amount
         );
 
         // If `untransferredAmount` is not 0, the user has not enough deposit in the collateral currency.
         // Therefore, the liquidators and the reserve fund obtain zero-coupon bonds instead of the user's collateral.
-        if (untransferredAmount > 0) {
-            _transferFunds(_from, reserveFund, _ccy, untransferredAmount.toInt256());
-            untransferredAmount = _amount;
-        } else {
-            untransferredAmount = AddressResolverLib.tokenVault().transferFrom(
-                _ccy,
-                _from,
-                _to,
-                _amount
-            );
-        }
-
         if (untransferredAmount > 0) {
             untransferredAmount = _transferFunds(_from, _to, _ccy, untransferredAmount.toInt256())
                 .toUint256();
@@ -410,5 +438,50 @@ library LiquidationLogic {
         if (_amount != untransferredAmount) {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);
         }
+    }
+
+    function _convertLiquidationAmounts(
+        bytes32 _collateralCcy,
+        bytes32 _debtCcy,
+        uint256 _untransferredAmount,
+        uint256 _receivedCollateralAmount,
+        uint256 _liquidatorFeeInCollateralCcy
+    )
+        internal
+        view
+        returns (
+            uint256 untransferredAmountInDebtCcy,
+            uint256 receivedCollateralAmountInDebtCcy,
+            uint256 liquidatorFeeInDebtCcy
+        )
+    {
+        uint256[] memory amountsInCollateralCcy = new uint256[](3);
+        amountsInCollateralCcy[0] = _untransferredAmount;
+        amountsInCollateralCcy[1] = _receivedCollateralAmount;
+        amountsInCollateralCcy[2] = _liquidatorFeeInCollateralCcy;
+
+        uint256[] memory amountsInDebtCcy = AddressResolverLib.currencyController().convert(
+            _collateralCcy,
+            _debtCcy,
+            amountsInCollateralCcy
+        );
+
+        untransferredAmountInDebtCcy = amountsInDebtCcy[0];
+        receivedCollateralAmountInDebtCcy = amountsInDebtCcy[1];
+        liquidatorFeeInDebtCcy = amountsInDebtCcy[2];
+    }
+
+    function _calculateTransferredAmount(
+        uint256 totalAmount,
+        uint256 untransferredAmount,
+        uint256 feeAmount
+    ) internal pure returns (uint256) {
+        // NOTE: The formula is:
+        // transferredTotalAmount = totalAmount - untransferredAmount;
+        // untransferredFeeAmount = feeAmount * (transferredTotalAmount / totalAmount);
+        uint256 transferredTotalAmount = totalAmount - untransferredAmount;
+        uint256 untransferredFeeAmount = (feeAmount * transferredTotalAmount).div(totalAmount);
+
+        return transferredTotalAmount - untransferredFeeAmount;
     }
 }

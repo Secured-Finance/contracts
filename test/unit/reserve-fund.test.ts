@@ -145,8 +145,8 @@ describe('ReserveFund', () => {
     });
   });
 
-  describe('Redemption', async () => {
-    it('Execute redemption', async () => {
+  describe('Emergency Settlement', async () => {
+    it('Execute emergency settlement', async () => {
       await reserveFundProxy.executeEmergencySettlement();
     });
   });
