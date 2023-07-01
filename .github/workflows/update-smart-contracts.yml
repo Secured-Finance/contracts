@@ -64,7 +64,7 @@ jobs:
         shell: bash
         id: diff
         run: |
-          echo "count=$(git diff --staged --name-only . | wc -l)" >> $GITHUB_OUTPUT
+          echo "count=$(git diff --name-only . | wc -l)" >> $GITHUB_OUTPUT
       - name: Run a Loan Test on fork environment
         if: ${{ steps.diff.outputs.count > 0 }}
         env:
