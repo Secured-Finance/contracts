@@ -69,7 +69,6 @@ const func: DeployFunction = async function ({
           genesisDate,
           process.env.INITIAL_COMPOUND_FACTOR,
           currency.orderFeeRate,
-          currency.autoRollFeeRate,
           currency.circuitBreakerLimitRange,
         )
         .then((tx) => tx.wait());

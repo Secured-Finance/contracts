@@ -11,6 +11,15 @@ struct MarketOrder {
 }
 ```
 
+## ItayoseLog
+
+```solidity
+struct ItayoseLog {
+  uint256 lastLendUnitPrice;
+  uint256 lastBorrowUnitPrice;
+}
+```
+
 ## LendingMarketStorage
 
 ### STORAGE_SLOT
@@ -37,6 +46,7 @@ struct Storage {
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) lendOrders;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) borrowOrders;
   mapping(uint256 => mapping(enum ProtocolTypes.Side => uint256)) circuitBreakerThresholdUnitPrices;
+  mapping(uint256 => struct ItayoseLog) itayoseLogs;
 }
 ```
 

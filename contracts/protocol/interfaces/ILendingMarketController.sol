@@ -12,6 +12,7 @@ interface ILendingMarketController {
         uint256 unitPrice;
         uint256 amount;
         uint256 timestamp;
+        bool isPreOrder;
     }
 
     struct Position {
@@ -132,7 +133,6 @@ interface ILendingMarketController {
         uint256 genesisDate,
         uint256 compoundFactor,
         uint256 orderFeeRate,
-        uint256 autoRollFeeRate,
         uint256 circuitBreakerLimitRange
     ) external;
 
@@ -176,13 +176,24 @@ interface ILendingMarketController {
         external
         returns (bool);
 
-    function executeRedemption() external returns (bool);
+    function executeRedemption(bytes32 _ccy, uint256 _maturity) external returns (bool);
+
+    function executeRepayment(bytes32 _ccy, uint256 _maturity) external returns (bool);
+
+    function executeEmergencySettlement() external returns (bool);
 
     function executeLiquidationCall(
         bytes32 collateralCcy,
         bytes32 debtCcy,
         uint256 debtMaturity,
         address user
+    ) external returns (bool);
+
+    function executeForcedRepayment(
+        bytes32 _collateralCcy,
+        bytes32 _debtCcy,
+        uint256 _debtMaturity,
+        address _user
     ) external returns (bool);
 
     function cancelOrder(

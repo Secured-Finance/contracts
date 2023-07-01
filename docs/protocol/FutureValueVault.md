@@ -87,7 +87,7 @@ Gets if the account has the future value amount in the selected maturity.
 ### addLendFutureValue
 
 ```solidity
-function addLendFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public returns (bool)
+function addLendFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
 ```
 
 Adds the future value amount for lending deals.
@@ -106,7 +106,7 @@ is the taker._
 ### addBorrowFutureValue
 
 ```solidity
-function addBorrowFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public returns (bool)
+function addBorrowFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
 ```
 
 Adds the future value amount for borrowing deals.

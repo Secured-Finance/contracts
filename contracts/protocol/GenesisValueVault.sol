@@ -225,7 +225,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             "First autoRollLog already finalized"
         );
 
-        _updateCompoundFactor(_ccy, _unitPrice, 0);
+        _updateCompoundFactor(_ccy, _unitPrice, 0, 0);
         Storage.slot().autoRollLogs[_ccy][maturity] = AutoRollLog({
             unitPrice: _unitPrice,
             lendingCompoundFactor: Storage.slot().lendingCompoundFactors[_ccy],
@@ -240,9 +240,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _maturity,
         uint256 _nextMaturity,
         uint256 _unitPrice,
-        uint256 _feeRate
+        uint256 _orderFeeRate
     ) external override onlyAcceptedContracts {
-        _updateCompoundFactor(_ccy, _unitPrice, _feeRate);
+        _updateCompoundFactor(_ccy, _unitPrice, _orderFeeRate, _nextMaturity - _maturity);
         _updateAutoRollLogs(_ccy, _maturity, _nextMaturity, _unitPrice);
 
         emit AutoRollExecuted(
@@ -548,23 +548,27 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     function _updateCompoundFactor(
         bytes32 _ccy,
         uint256 _unitPrice,
-        uint256 _feeRate
+        uint256 _orderFeeRate,
+        uint256 _currentMaturity
     ) private {
-        require(_feeRate <= Constants.PCT_DIGIT, "Invalid fee rate");
+        require(_orderFeeRate <= Constants.PCT_DIGIT, "Invalid fee rate");
 
         // Save actual compound factor here due to calculating the genesis value from future value.
         // NOTE: The formula is:
         // autoRollRate = 1 / unitPrice
-        // newLendingCompoundFactor = currentLendingCompoundFactor * (autoRollRate - feeRate)
-        // newBorrowingCompoundFactor = currentBorrowingCompoundFactor * (autoRollRate + feeRate)
-        Storage.slot().lendingCompoundFactors[_ccy] =
-            (Storage.slot().lendingCompoundFactors[_ccy] *
-                (Constants.PRICE_DIGIT * Constants.PCT_DIGIT - _feeRate * _unitPrice)) /
-            (Constants.PCT_DIGIT * _unitPrice);
+        // rollFeeRate = orderFeeRate * (currentMaturity / SECONDS_IN_YEAR)
+        // newLendingCompoundFactor = currentLendingCompoundFactor * (autoRollRate - rollFeeRate)
+        // newBorrowingCompoundFactor = currentBorrowingCompoundFactor * (autoRollRate + rollFeeRate)
+        uint256 denominator = (Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR * _unitPrice);
 
-        Storage.slot().borrowingCompoundFactors[_ccy] =
-            (Storage.slot().borrowingCompoundFactors[_ccy] *
-                (Constants.PRICE_DIGIT * Constants.PCT_DIGIT + _feeRate * _unitPrice)) /
-            (Constants.PCT_DIGIT * _unitPrice);
+        Storage.slot().lendingCompoundFactors[_ccy] = (Storage.slot().lendingCompoundFactors[_ccy] *
+            ((Constants.PRICE_DIGIT * Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR) -
+                (_orderFeeRate * _currentMaturity * _unitPrice))).div(denominator);
+
+        Storage.slot().borrowingCompoundFactors[_ccy] = (Storage.slot().borrowingCompoundFactors[
+            _ccy
+        ] *
+            ((Constants.PRICE_DIGIT * Constants.PCT_DIGIT * Constants.SECONDS_IN_YEAR) +
+                (_orderFeeRate * _currentMaturity * _unitPrice))).div(denominator);
     }
 }

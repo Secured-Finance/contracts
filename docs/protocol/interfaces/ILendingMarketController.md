@@ -13,6 +13,7 @@ struct Order {
   uint256 unitPrice;
   uint256 amount;
   uint256 timestamp;
+  bool isPreOrder;
 }
 ```
 
@@ -162,7 +163,7 @@ function isInitializedLendingMarket(bytes32 ccy) external view returns (bool)
 ### initializeLendingMarket
 
 ```solidity
-function initializeLendingMarket(bytes32 ccy, uint256 genesisDate, uint256 compoundFactor, uint256 orderFeeRate, uint256 autoRollFeeRate, uint256 circuitBreakerLimitRange) external
+function initializeLendingMarket(bytes32 ccy, uint256 genesisDate, uint256 compoundFactor, uint256 orderFeeRate, uint256 circuitBreakerLimitRange) external
 ```
 
 ### createLendingMarket

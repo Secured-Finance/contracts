@@ -24,10 +24,7 @@ interface IGenesisValueVault {
 
     function getGenesisValue(bytes32 ccy, address user) external view returns (int256);
 
-    function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity)
-        external
-        view
-        returns (int256);
+    function getMaturityGenesisValue(bytes32 ccy, uint256 maturity) external view returns (int256);
 
     function getCurrentMaturity(bytes32 ccy) external view returns (uint256);
 
@@ -40,15 +37,15 @@ interface IGenesisValueVault {
         view
         returns (AutoRollLog memory);
 
-    function getLatestAutoRollLog(bytes32 _ccy) external view returns (AutoRollLog memory);
+    function getLatestAutoRollLog(bytes32 ccy) external view returns (AutoRollLog memory);
 
     function getGenesisValueInFutureValue(bytes32 ccy, address user) external view returns (int256);
 
     function calculateFVFromFV(
-        bytes32 _ccy,
-        uint256 _basisMaturity,
-        uint256 _destinationMaturity,
-        int256 _futureValue
+        bytes32 ccy,
+        uint256 basisMaturity,
+        uint256 destinationMaturity,
+        int256 futureValue
     ) external view returns (int256);
 
     function calculateGVFromFV(
@@ -83,14 +80,14 @@ interface IGenesisValueVault {
         uint256 maturity
     ) external;
 
-    function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice) external;
+    function updateInitialCompoundFactor(bytes32 ccy, uint256 unitPrice) external;
 
     function executeAutoRoll(
         bytes32 ccy,
         uint256 maturity,
         uint256 nextMaturity,
         uint256 unitPrice,
-        uint256 feeRate
+        uint256 orderFeeRate
     ) external;
 
     function updateGenesisValueWithFutureValue(
@@ -107,10 +104,10 @@ interface IGenesisValueVault {
     ) external;
 
     function transferFrom(
-        bytes32 _ccy,
-        address _sender,
-        address _receiver,
-        int256 _amount
+        bytes32 ccy,
+        address sender,
+        address receiver,
+        int256 amount
     ) external;
 
     function cleanUpGenesisValue(
@@ -119,5 +116,5 @@ interface IGenesisValueVault {
         uint256 maturity
     ) external;
 
-    function resetGenesisValue(bytes32 _ccy, address _user) external;
+    function resetGenesisValue(bytes32 ccy, address user) external;
 }

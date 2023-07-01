@@ -35,7 +35,8 @@ interface ILendingMarket {
         bytes32 ccy,
         uint256 maturity,
         uint256 amount,
-        uint256 unitPrice
+        uint256 unitPrice,
+        bool isPreOrder
     );
 
     event OrdersTaken(
@@ -76,7 +77,14 @@ interface ILendingMarket {
 
     event MarketOpened(uint256 maturity, uint256 prevMaturity);
 
-    event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingPrice);
+    event ItayoseExecuted(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 openingUnitPrice,
+        uint256 lastLendUnitPrice,
+        uint256 lastBorrowUnitPrice,
+        uint256 offsetAmount
+    );
 
     struct Market {
         bytes32 ccy;
@@ -85,6 +93,7 @@ interface ILendingMarket {
         uint256 borrowUnitPrice;
         uint256 lendUnitPrice;
         uint256 midUnitPrice;
+        uint256 openingUnitPrice;
         bool isReady;
     }
 
@@ -141,7 +150,8 @@ interface ILendingMarket {
             uint256 maturity,
             address maker,
             uint256 amount,
-            uint256 timestamp
+            uint256 timestamp,
+            bool isPreOrder
         );
 
     function getTotalAmountFromLendOrders(address user)
