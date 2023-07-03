@@ -269,18 +269,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Gets the market itayose logs.
-     * @return lastLendUnitPrice The market last executed lend unit price in itayose
-     * @return lastBorrowUnitPrice The market last executed borrow unit price in itayose
+     * @param _maturity The market maturity
+     * @return ItayoseLog of the market
      */
-    function getItayoseLog()
-        external
-        view
-        override
-        returns (uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice)
-    {
-        ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[Storage.slot().maturity];
-        lastLendUnitPrice = itayoseLog.lastLendUnitPrice;
-        lastBorrowUnitPrice = itayoseLog.lastBorrowUnitPrice;
+    function getItayoseLog(uint256 _maturity) external view override returns (ItayoseLog memory) {
+        return Storage.slot().itayoseLogs[_maturity];
     }
 
     /**

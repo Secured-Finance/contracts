@@ -198,9 +198,10 @@ describe('LendingMarket', () => {
   });
 
   describe('Itayose', async () => {
+    let maturity;
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
-      const maturity = moment(timestamp * 1000)
+      maturity = moment(timestamp * 1000)
         .add(1, 'M')
         .unix();
 
@@ -347,11 +348,12 @@ describe('LendingMarket', () => {
 
         expect(openingPrice).to.equal(test.openingPrice);
 
-        const { lastLendUnitPrice, lastBorrowUnitPrice } =
-          await lendingMarket.getItayoseLog();
+        const itayoseLog = await lendingMarket.getItayoseLog(maturity);
 
-        expect(lastLendUnitPrice).to.equal(test.lastLendUnitPrice);
-        expect(lastBorrowUnitPrice).to.equal(test.lastBorrowUnitPrice);
+        expect(itayoseLog.lastLendUnitPrice).to.equal(test.lastLendUnitPrice);
+        expect(itayoseLog.lastBorrowUnitPrice).to.equal(
+          test.lastBorrowUnitPrice,
+        );
       });
     }
 
