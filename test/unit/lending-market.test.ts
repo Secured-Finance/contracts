@@ -198,9 +198,10 @@ describe('LendingMarket', () => {
   });
 
   describe('Itayose', async () => {
+    let maturity;
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
-      const maturity = moment(timestamp * 1000)
+      maturity = moment(timestamp * 1000)
         .add(1, 'M')
         .unix();
 
@@ -221,6 +222,8 @@ describe('LendingMarket', () => {
           { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
         ],
         shouldItayoseExecuted: true,
+        lastLendUnitPrice: 8300,
+        lastBorrowUnitPrice: 8000,
       },
       {
         openingPrice: '8000',
@@ -231,6 +234,8 @@ describe('LendingMarket', () => {
           { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
         ],
         shouldItayoseExecuted: true,
+        lastLendUnitPrice: 8300,
+        lastBorrowUnitPrice: 8000,
       },
       {
         openingPrice: '8150',
@@ -241,6 +246,8 @@ describe('LendingMarket', () => {
           { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
         ],
         shouldItayoseExecuted: true,
+        lastLendUnitPrice: 8300,
+        lastBorrowUnitPrice: 8000,
       },
       {
         openingPrice: '9000',
@@ -251,6 +258,8 @@ describe('LendingMarket', () => {
           { side: Side.LEND, unitPrice: '9000', amount: '300000000000000' },
         ],
         shouldItayoseExecuted: true,
+        lastLendUnitPrice: 9000,
+        lastBorrowUnitPrice: 8500,
       },
       {
         openingPrice: '8200',
@@ -263,6 +272,8 @@ describe('LendingMarket', () => {
           { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
         ],
         shouldItayoseExecuted: true,
+        lastLendUnitPrice: 8200,
+        lastBorrowUnitPrice: 8100,
       },
       {
         openingPrice: '4000', // 0 + 8,000 = 4,000 / 2
@@ -272,6 +283,8 @@ describe('LendingMarket', () => {
           { side: Side.BORROW, unitPrice: '8000', amount: '50000000000000' },
         ],
         shouldItayoseExecuted: false,
+        lastLendUnitPrice: 0,
+        lastBorrowUnitPrice: 0,
       },
       {
         openingPrice: '9150', // 10,000 + 8,300 = 9,150 / 2
@@ -281,6 +294,8 @@ describe('LendingMarket', () => {
           { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
         ],
         shouldItayoseExecuted: false,
+        lastLendUnitPrice: 0,
+        lastBorrowUnitPrice: 0,
       },
       {
         openingPrice: '8150', // 7,800 + 8,500 / 2
@@ -289,6 +304,8 @@ describe('LendingMarket', () => {
           { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
         ],
         shouldItayoseExecuted: false,
+        lastLendUnitPrice: 0,
+        lastBorrowUnitPrice: 0,
       },
     ];
 
@@ -330,6 +347,13 @@ describe('LendingMarket', () => {
         const openingPrice = await lendingMarket.getOpeningUnitPrice();
 
         expect(openingPrice).to.equal(test.openingPrice);
+
+        const itayoseLog = await lendingMarket.getItayoseLog(maturity);
+
+        expect(itayoseLog.lastLendUnitPrice).to.equal(test.lastLendUnitPrice);
+        expect(itayoseLog.lastBorrowUnitPrice).to.equal(
+          test.lastBorrowUnitPrice,
+        );
       });
     }
 

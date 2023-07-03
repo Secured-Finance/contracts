@@ -268,6 +268,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Gets the market itayose logs.
+     * @param _maturity The market maturity
+     * @return ItayoseLog of the market
+     */
+    function getItayoseLog(uint256 _maturity) external view override returns (ItayoseLog memory) {
+        return Storage.slot().itayoseLogs[_maturity];
+    }
+
+    /**
      * @notice Gets the market order from the order book.
      * @param _orderId The market order id
      * @return side Order position type, Borrow or Lend

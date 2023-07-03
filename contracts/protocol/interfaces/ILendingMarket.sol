@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
-import {MarketOrder} from "../storages/LendingMarketStorage.sol";
+import {MarketOrder, ItayoseLog} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
     struct FilledOrder {
@@ -140,6 +140,8 @@ interface ILendingMarket {
     function isItayosePeriod() external view returns (bool);
 
     function isPreOrderPeriod() external returns (bool);
+
+    function getItayoseLog(uint256 maturity) external view returns (ItayoseLog memory);
 
     function getOrder(uint48 orderId)
         external
