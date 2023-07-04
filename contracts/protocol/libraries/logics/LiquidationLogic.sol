@@ -122,7 +122,7 @@ library LiquidationLogic {
                 !AddressResolverLib.reserveFund().isPaused() &&
                 AddressResolverLib.tokenVault().getTotalCollateralAmount(_user) == 0
             ) {
-                untransferredAmountInDebtCcy = _transferFunds(
+                untransferredAmountInDebtCcy = _transferPositionsPerMaturity(
                     address(AddressResolverLib.reserveFund()),
                     _liquidator,
                     _debtCcy,
@@ -154,7 +154,7 @@ library LiquidationLogic {
 
         // Transfer the debt from users to liquidators
         if (vars.liquidationAmountInDebtCcy > 0) {
-            _transferFunds(
+            _transferPositionsPerMaturity(
                 _user,
                 _liquidator,
                 _debtCcy,
@@ -334,38 +334,41 @@ library LiquidationLogic {
         // If `untransferredAmount` is not 0, the user has not enough deposit in the collateral currency.
         // Therefore, the liquidators and the reserve fund obtain zero-coupon bonds instead of the user's collateral.
         if (untransferredAmount > 0) {
-            untransferredAmount = _transferFunds(_from, _to, _ccy, untransferredAmount.toInt256())
-                .toUint256();
+            untransferredAmount = _transferPositionsPerCurrency(
+                _from,
+                _to,
+                _ccy,
+                untransferredAmount.toInt256()
+            ).toUint256();
         }
     }
 
-    function _transferFunds(
+    function _transferPositionsPerCurrency(
         address _from,
         address _to,
         bytes32 _ccy,
         int256 _amount
     ) internal returns (int256 untransferredAmount) {
+        untransferredAmount = _transferGenesisValue(_from, _to, _ccy, _amount);
+
         uint256[] memory maturities = FundManagementLogic.getUsedMaturities(_ccy, _from);
-        address defaultMarketAddress = Storage.slot().lendingMarkets[_ccy][0];
-        untransferredAmount = _amount;
 
         for (uint256 i; i < maturities.length; i++) {
             if (untransferredAmount == 0) {
                 break;
             }
 
-            untransferredAmount = _transferFunds(
+            untransferredAmount = _transferFutureValues(
                 _from,
                 _to,
                 _ccy,
                 maturities[i],
-                untransferredAmount,
-                Storage.slot().maturityLendingMarkets[_ccy][maturities[i]] == defaultMarketAddress
+                untransferredAmount
             );
         }
     }
 
-    function _transferFunds(
+    function _transferPositionsPerMaturity(
         address _from,
         address _to,
         bytes32 _ccy,
@@ -373,44 +376,67 @@ library LiquidationLogic {
         int256 _amount,
         bool _isDefaultMarket
     ) internal returns (int256 untransferredAmount) {
+        untransferredAmount = _isDefaultMarket
+            ? _transferGenesisValue(_from, _to, _ccy, _amount)
+            : _amount;
+
+        untransferredAmount = _transferFutureValues(
+            _from,
+            _to,
+            _ccy,
+            _maturity,
+            untransferredAmount
+        );
+    }
+
+    function _transferGenesisValue(
+        address _from,
+        address _to,
+        bytes32 _ccy,
+        int256 _amount
+    ) internal returns (int256 untransferredAmount) {
         untransferredAmount = _amount;
         bool isDebt = _amount < 0;
 
-        if (_isDefaultMarket) {
-            int256 userGVAmount = AddressResolverLib.genesisValueVault().getGenesisValue(
-                _ccy,
-                _from
+        int256 userGVAmount = AddressResolverLib.genesisValueVault().getGenesisValue(_ccy, _from);
+
+        if ((isDebt && userGVAmount < 0) || (!isDebt && userGVAmount > 0)) {
+            uint256 currentMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(
+                _ccy
             );
 
-            if ((isDebt && userGVAmount < 0) || (!isDebt && userGVAmount > 0)) {
-                uint256 currentMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(
-                    _ccy
-                );
+            int256 gvAmount = AddressResolverLib.genesisValueVault().calculateGVFromFV(
+                _ccy,
+                0,
+                FundManagementLogic.calculateFVFromPV(_ccy, currentMaturity, untransferredAmount)
+            );
 
-                int256 gvAmount = AddressResolverLib.genesisValueVault().calculateGVFromFV(
-                    _ccy,
-                    0,
-                    FundManagementLogic.calculateFVFromPV(
-                        _ccy,
-                        currentMaturity,
-                        untransferredAmount
-                    )
-                );
-
-                if ((isDebt && userGVAmount > gvAmount) || (!isDebt && userGVAmount < gvAmount)) {
-                    gvAmount = userGVAmount;
-                }
-
-                // Due to the negative genesis value, the liquidator's genesis value is decreased.
-                AddressResolverLib.genesisValueVault().transferFrom(_ccy, _from, _to, gvAmount);
-
-                untransferredAmount -= FundManagementLogic.calculatePVFromFV(
-                    _ccy,
-                    currentMaturity,
-                    AddressResolverLib.genesisValueVault().calculateFVFromGV(_ccy, 0, gvAmount)
-                );
+            if ((isDebt && userGVAmount > gvAmount) || (!isDebt && userGVAmount < gvAmount)) {
+                gvAmount = userGVAmount;
             }
+
+            // Due to the negative genesis value, the liquidator's genesis value is decreased.
+            AddressResolverLib.genesisValueVault().transferFrom(_ccy, _from, _to, gvAmount);
+
+            untransferredAmount -= FundManagementLogic.calculatePVFromFV(
+                _ccy,
+                currentMaturity,
+                AddressResolverLib.genesisValueVault().calculateFVFromGV(_ccy, 0, gvAmount)
+            );
+
+            FundManagementLogic.registerCurrency(_ccy, _to);
         }
+    }
+
+    function _transferFutureValues(
+        address _from,
+        address _to,
+        bytes32 _ccy,
+        uint256 _maturity,
+        int256 _amount
+    ) internal returns (int256 untransferredAmount) {
+        untransferredAmount = _amount;
+        bool isDebt = _amount < 0;
 
         IFutureValueVault futureValueVault = IFutureValueVault(
             Storage.slot().futureValueVaults[_ccy][
@@ -433,9 +459,7 @@ library LiquidationLogic {
 
             futureValueVault.transferFrom(_from, _to, fvAmount, _maturity);
             untransferredAmount -= FundManagementLogic.calculatePVFromFV(_ccy, _maturity, fvAmount);
-        }
 
-        if (_amount != untransferredAmount) {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);
         }
     }

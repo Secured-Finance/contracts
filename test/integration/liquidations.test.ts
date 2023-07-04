@@ -179,13 +179,16 @@ describe('Integration Test: Liquidations', async () => {
       );
   };
 
-  const resetContractInstances = async () => {
+  const resetMaturities = async () => {
     [ethMaturities, filMaturities, usdcMaturities] = await Promise.all(
       [hexETH, hexEFIL, hexUSDC].map((hexCcy) =>
         lendingMarketController.getMaturities(hexCcy),
       ),
     );
+  };
 
+  const resetContractInstances = async () => {
+    await resetMaturities();
     await rotateAllMarkets();
 
     [ethMaturities, filMaturities, usdcMaturities] = await Promise.all(
@@ -1105,7 +1108,7 @@ describe('Integration Test: Liquidations', async () => {
       });
     });
 
-    describe("Liquidate a borrowing position using deposits and the user's lending positions", async () => {
+    describe("Liquidate a borrowing position using the user's deposits and lending positions", async () => {
       const orderAmountInETH = BigNumber.from('1000000000000000000');
       const orderAmountInFIL = orderAmountInETH
         .mul(BigNumber.from(10).pow(18))
@@ -1302,6 +1305,253 @@ describe('Integration Test: Liquidations', async () => {
         });
 
         liquidatorLendingInfo.show();
+      });
+    });
+
+    describe("Liquidate a borrowing position using the user's lending positions after two auto-rolls", async () => {
+      const orderAmountInETH = BigNumber.from('1000000000000000000');
+      const orderAmountInFIL = orderAmountInETH
+        .mul(BigNumber.from(10).pow(18))
+        .div(eFilToETHRate);
+      const orderAmountInUSDC = orderAmountInETH
+        .mul(BigNumber.from(10).pow(6))
+        .div(usdcToETHRate);
+
+      let lendingInfo: LendingInfo;
+      let bobInitialBalance: BigNumber;
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(3);
+        await resetContractInstances();
+
+        lendingInfo = new LendingInfo(bob.address);
+      });
+
+      it('Create orders on the USDC market', async () => {
+        bobInitialBalance = await eFILToken.balanceOf(bob.address);
+
+        await tokenVault
+          .connect(alice)
+          .deposit(hexETH, orderAmountInETH.mul(2), {
+            value: orderAmountInETH.mul(2),
+          });
+        await tokenVault
+          .connect(owner)
+          .deposit(hexETH, orderAmountInETH.mul(4), {
+            value: orderAmountInETH.mul(4),
+          });
+
+        await lendingMarketController
+          .connect(alice)
+          .createOrder(
+            hexUSDC,
+            filMaturities[1],
+            Side.BORROW,
+            orderAmountInUSDC,
+            '8000',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .depositAndCreateOrder(
+              hexUSDC,
+              filMaturities[1],
+              Side.LEND,
+              orderAmountInUSDC,
+              '0',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        await lendingMarketController
+          .connect(owner)
+          .createOrder(
+            hexUSDC,
+            filMaturities[1],
+            Side.BORROW,
+            orderAmountInUSDC.mul(2),
+            '8000',
+          );
+
+        await lendingMarketController
+          .connect(owner)
+          .depositAndCreateOrder(
+            hexUSDC,
+            filMaturities[1],
+            Side.LEND,
+            orderAmountInUSDC,
+            '7999',
+          );
+
+        expect(
+          await tokenVault.getDepositAmount(bob.address, hexUSDC),
+        ).to.equal(0);
+
+        expect(
+          await lendingMarketController.getTotalPresentValue(
+            hexUSDC,
+            bob.address,
+          ),
+        ).not.to.equal(0);
+      });
+
+      it('Create orders on the FIL market', async () => {
+        await lendingMarketController
+          .connect(bob)
+          .createOrder(
+            hexEFIL,
+            filMaturities[1],
+            Side.BORROW,
+            orderAmountInFIL.div(2),
+            '8000',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(alice)
+            .depositAndCreateOrder(
+              hexEFIL,
+              filMaturities[1],
+              Side.LEND,
+              orderAmountInFIL.div(2),
+              '0',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        await lendingMarketController
+          .connect(owner)
+          .createOrder(
+            hexEFIL,
+            filMaturities[1],
+            Side.BORROW,
+            orderAmountInFIL,
+            '8000',
+          );
+
+        await lendingMarketController
+          .connect(owner)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[1],
+            Side.LEND,
+            orderAmountInFIL,
+            '7999',
+          );
+
+        expect(
+          await tokenVault.getDepositAmount(bob.address, hexEFIL),
+        ).to.equal(orderAmountInFIL.div(2));
+      });
+
+      it('Execute auto-roll twice', async () => {
+        await rotateAllMarkets();
+        await resetMaturities();
+
+        await rotateAllMarkets();
+        await resetMaturities();
+      });
+
+      it('Withdraw', async () => {
+        await tokenVault
+          .connect(bob)
+          .withdraw(hexEFIL, orderAmountInFIL.div(2));
+
+        const bobBalanceAfter = await eFILToken.balanceOf(bob.address);
+
+        expect(bobBalanceAfter.sub(bobInitialBalance)).to.equal(
+          orderAmountInFIL.div(2),
+        );
+      });
+
+      it('Create orders for unwinding', async () => {
+        await lendingMarketController
+          .connect(owner)
+          .depositAndCreateOrder(
+            hexUSDC,
+            filMaturities[0],
+            Side.LEND,
+            orderAmountInUSDC.mul(2),
+            '8000',
+          );
+
+        await lendingMarketController
+          .connect(owner)
+          .createOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmountInFIL,
+            '10000',
+          );
+
+        await lendingMarketController
+          .connect(owner)
+          .depositAndCreateOrder(
+            hexEFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmountInFIL,
+            '9999',
+          );
+      });
+
+      it('Execute liquidation', async () => {
+        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(6).div(5));
+
+        await usdcToken
+          .connect(carol)
+          .approve(lendingMarketController.address, orderAmountInUSDC);
+        await tokenVault.connect(carol).deposit(hexUSDC, orderAmountInUSDC);
+
+        await lendingInfo.load('User(Before)', {
+          EFIL: filMaturities[0],
+          USDC: usdcMaturities[0],
+        });
+
+        const liquidatorLendingInfo = new LendingInfo(carol.address);
+        await liquidatorLendingInfo.load('Liquidator(Before)', {
+          EFIL: filMaturities[0],
+          USDC: usdcMaturities[0],
+        });
+
+        await lendingMarketController
+          .connect(carol)
+          .executeLiquidationCall(
+            hexUSDC,
+            hexEFIL,
+            filMaturities[0],
+            bob.address,
+          )
+          .then((tx) => tx.wait());
+
+        await lendingInfo.load('User(After)', {
+          EFIL: filMaturities[0],
+          USDC: usdcMaturities[0],
+        });
+        lendingInfo.show();
+
+        const liquidatorInfoAfter = await liquidatorLendingInfo.load(
+          'Liquidator(After)',
+          {
+            EFIL: filMaturities[0],
+            USDC: usdcMaturities[0],
+          },
+        );
+
+        liquidatorLendingInfo.show();
+
+        expect(liquidatorInfoAfter.coverage).gt(0);
+        expect(liquidatorInfoAfter.pvs[0]).lt(0);
+        expect(liquidatorInfoAfter.pvs[1]).gt(0);
+
+        const pv0InUSDC = liquidatorInfoAfter.pvs[0]
+          .mul(eFilToETHRate.mul(6).div(5))
+          .div(BigNumber.from(10).pow(12))
+          .div(usdcToETHRate);
+
+        expect(
+          liquidatorInfoAfter.pvs[1].mul(100).div(pv0InUSDC).abs(),
+        ).to.equal(105);
       });
     });
 

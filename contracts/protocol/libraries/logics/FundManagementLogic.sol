@@ -215,9 +215,13 @@ library FundManagementLogic {
         if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
             Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
 
-            if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-                Storage.slot().usedCurrencies[_user].add(_ccy);
-            }
+            registerCurrency(_ccy, _user);
+        }
+    }
+
+    function registerCurrency(bytes32 _ccy, address _user) public {
+        if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
+            Storage.slot().usedCurrencies[_user].add(_ccy);
         }
     }
 
