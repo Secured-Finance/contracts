@@ -213,8 +213,6 @@ library FundManagementLogic {
 
             registerCurrencyAndMaturity(_ccy, _maturity, reserveFundAddr);
         }
-
-        // emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledAmountInFV);
     }
 
     function registerCurrencyAndMaturity(
