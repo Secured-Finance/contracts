@@ -128,16 +128,6 @@ library LendingMarketUserLogic {
             ProtocolTypes.Side side
         ) = _unwindPosition(_ccy, _maturity, _user, futureValue);
 
-        emit FundManagementLogic.OrderPartiallyFilled(
-            partiallyFilledOrder.orderId,
-            partiallyFilledOrder.maker,
-            _ccy,
-            side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
-            _maturity,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue
-        );
-
         updateFundsForTaker(
             _ccy,
             _maturity,
