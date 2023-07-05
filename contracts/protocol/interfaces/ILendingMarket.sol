@@ -26,6 +26,7 @@ interface ILendingMarket {
     }
 
     struct PartiallyFilledOrder {
+        uint48 orderId;
         address maker;
         uint256 amount;
         uint256 futureValue;
@@ -41,22 +42,14 @@ interface ILendingMarket {
         uint256 unitPrice
     );
 
-    event OrderPartiallyFilled(
-        uint48 orderId,
-        address indexed maker,
-        ProtocolTypes.Side side,
-        bytes32 indexed ccy,
-        uint256 maturity,
-        uint256 filledAmount,
-        uint256 filledFutureValue
-    );
-
     event OrdersCleaned(
         uint48[] orderIds,
         address indexed maker,
         ProtocolTypes.Side side,
         bytes32 indexed ccy,
-        uint256 maturity
+        uint256 maturity,
+        uint256 amount,
+        uint256 futureValue
     );
 
     event OrderExecuted(

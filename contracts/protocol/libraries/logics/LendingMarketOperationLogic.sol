@@ -12,6 +12,9 @@ import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../BokkyPooBahsDateTim
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
+import {FundManagementLogic} from "./FundManagementLogic.sol";
+// types
+import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
@@ -115,6 +118,30 @@ library LendingMarketOperationLogic {
                 partiallyFilledLendingOrder,
                 partiallyFilledBorrowingOrder
             ) = market.executeItayoseCall();
+
+            if (partiallyFilledLendingOrder.futureValue > 0) {
+                emit FundManagementLogic.OrderPartiallyFilled(
+                    partiallyFilledLendingOrder.orderId,
+                    partiallyFilledLendingOrder.maker,
+                    _ccy,
+                    ProtocolTypes.Side.LEND,
+                    _maturity,
+                    partiallyFilledLendingOrder.amount,
+                    partiallyFilledLendingOrder.futureValue
+                );
+            }
+
+            if (partiallyFilledBorrowingOrder.futureValue > 0) {
+                emit FundManagementLogic.OrderPartiallyFilled(
+                    partiallyFilledBorrowingOrder.orderId,
+                    partiallyFilledBorrowingOrder.maker,
+                    _ccy,
+                    ProtocolTypes.Side.BORROW,
+                    _maturity,
+                    partiallyFilledBorrowingOrder.amount,
+                    partiallyFilledBorrowingOrder.futureValue
+                );
+            }
 
             if (totalOffsetAmount > 0) {
                 address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];

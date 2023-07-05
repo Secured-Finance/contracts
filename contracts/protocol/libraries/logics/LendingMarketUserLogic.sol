@@ -128,6 +128,16 @@ library LendingMarketUserLogic {
             ProtocolTypes.Side side
         ) = _unwindPosition(_ccy, _maturity, _user, futureValue);
 
+        emit FundManagementLogic.OrderPartiallyFilled(
+            partiallyFilledOrder.orderId,
+            partiallyFilledOrder.maker,
+            _ccy,
+            side == ProtocolTypes.Side.LEND ? ProtocolTypes.Side.BORROW : ProtocolTypes.Side.LEND,
+            _maturity,
+            partiallyFilledOrder.amount,
+            partiallyFilledOrder.futureValue
+        );
+
         updateFundsForTaker(
             _ccy,
             _maturity,
@@ -189,6 +199,15 @@ library LendingMarketUserLogic {
                 _filledAmount,
                 _filledAmountInFV
             );
+
+            emit FundManagementLogic.OrderFilled(
+                _user,
+                _ccy,
+                _side,
+                _maturity,
+                _filledAmount,
+                _filledAmountInFV
+            );
         }
     }
 
@@ -208,6 +227,16 @@ library LendingMarketUserLogic {
                 partiallyFilledOrder.futureValue,
                 0,
                 false
+            );
+
+            emit FundManagementLogic.OrderPartiallyFilled(
+                partiallyFilledOrder.orderId,
+                partiallyFilledOrder.maker,
+                _ccy,
+                _side,
+                _maturity,
+                partiallyFilledOrder.amount,
+                partiallyFilledOrder.futureValue
             );
         }
     }

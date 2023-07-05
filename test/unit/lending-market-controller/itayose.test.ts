@@ -96,7 +96,7 @@ describe('LendingMarketController - Itayose', () => {
       maturities = await lendingMarketControllerProxy.getMaturities(currency);
     };
 
-    it('Execute Itayose call on the initial markets', async () => {
+    it('Execute Itayose call on the initial markets, the opening price become the same as the lending order', async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
       const openingDate = moment(timestamp * 1000)
         .add(2, 'h')
@@ -176,12 +176,22 @@ describe('LendingMarketController - Itayose', () => {
       await time.increaseTo(openingDate);
 
       // Execute Itayose call on the first market
-      await expect(
-        lendingMarketControllerProxy.executeItayoseCalls(
-          [targetCurrency],
+      const tx = await lendingMarketControllerProxy.executeItayoseCalls(
+        [targetCurrency],
+        maturities[0],
+      );
+      await expect(tx).to.emit(lendingMarketProxies[0], 'ItayoseExecuted');
+      await expect(tx)
+        .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
+        .withArgs(
+          3,
+          bob.address,
+          targetCurrency,
+          Side.LEND,
           maturities[0],
-        ),
-      ).to.emit(lendingMarketProxies[0], 'ItayoseExecuted');
+          '100000000000000',
+          calculateFutureValue('100000000000000', expectedOpeningPrice),
+        );
 
       const openingPrice = await lendingMarketProxies[0].getOpeningUnitPrice();
 
@@ -236,6 +246,121 @@ describe('LendingMarketController - Itayose', () => {
         expect(isOpenedAfter).to.true;
         expect(lendingCompoundFactor).to.equal(currentLendingCompoundFactor);
       }
+    });
+
+    it('Execute Itayose call on the initial markets, the opening price become the same as the borrowing order', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const openingDate = moment(timestamp * 1000)
+        .add(2, 'h')
+        .unix();
+
+      await initialize(targetCurrency, openingDate);
+
+      await genesisValueVaultProxy
+        .getLatestAutoRollLog(targetCurrency)
+        .then(
+          ({
+            unitPrice,
+            lendingCompoundFactor,
+            borrowingCompoundFactor,
+            next,
+            prev,
+          }) => {
+            expect(unitPrice).to.equal('10000');
+            expect(lendingCompoundFactor).to.equal(INITIAL_COMPOUND_FACTOR);
+            expect(borrowingCompoundFactor).to.equal(INITIAL_COMPOUND_FACTOR);
+            expect(next).to.equal('0');
+            expect(prev).to.equal('0');
+          },
+        );
+
+      const orders = [
+        {
+          side: Side.BORROW,
+          unitPrice: '8500',
+          amount: '300000000000000',
+          user: carol,
+        },
+        {
+          side: Side.LEND,
+          unitPrice: '8600',
+          amount: '200000000000000',
+          user: alice,
+        },
+        {
+          side: Side.LEND,
+          unitPrice: '8300',
+          amount: '200000000000000',
+          user: bob,
+        },
+      ];
+
+      // the matching amount of the above orders
+      const expectedOpeningPrice = '8500';
+      const expectedFilledAmount = BigNumber.from('200000000000000');
+
+      for (const order of orders) {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(order.user)
+            .executePreOrder(
+              targetCurrency,
+              maturities[0],
+              order.side,
+              order.amount,
+              order.unitPrice,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(order.user)
+            .executePreOrder(
+              targetCurrency,
+              maturities[1],
+              order.side,
+              order.amount,
+              order.unitPrice,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+      }
+
+      await time.increaseTo(openingDate);
+
+      // Execute Itayose call on the first market
+      const tx = await lendingMarketControllerProxy.executeItayoseCalls(
+        [targetCurrency],
+        maturities[0],
+      );
+      await expect(tx).to.emit(lendingMarketProxies[0], 'ItayoseExecuted');
+      await expect(tx)
+        .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
+        .withArgs(
+          1,
+          carol.address,
+          targetCurrency,
+          Side.BORROW,
+          maturities[0],
+          '200000000000000',
+          calculateFutureValue('200000000000000', expectedOpeningPrice),
+        );
+
+      const openingPrice = await lendingMarketProxies[0].getOpeningUnitPrice();
+
+      expect(openingPrice).to.equal(expectedOpeningPrice);
+
+      const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
+        .getFutureValueVault(targetCurrency, maturities[0])
+        .then((address) => ethers.getContractAt('FutureValueVault', address));
+
+      const totalSupplyAfterItayoseExecuted =
+        await futureValueVaultProxy.getTotalSupply(maturities[0]);
+
+      expect(
+        totalSupplyAfterItayoseExecuted.sub(
+          calculateFutureValue(expectedFilledAmount, openingPrice),
+        ),
+      ).lte(1);
     });
 
     it('Fill a borrowing pre-order whose unit price is lower than the opening price after Itayose call.', async () => {

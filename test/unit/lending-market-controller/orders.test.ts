@@ -2131,12 +2131,12 @@ describe('LendingMarketController - Orders', () => {
           );
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
-          .to.emit(lendingMarket1, 'OrderPartiallyFilled')
+          .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
           .withArgs(
             () => true,
             bob.address,
-            Side.LEND,
             targetCurrency,
+            Side.LEND,
             maturities[0],
             '30000000000000000',
             '37500000000000000',
@@ -2633,7 +2633,7 @@ describe('LendingMarketController - Orders', () => {
               targetCurrency,
               maturities[0],
               Side.LEND,
-              '30000000000000000',
+              '40000000000000000',
               '8000',
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
@@ -2661,6 +2661,22 @@ describe('LendingMarketController - Orders', () => {
             alice.address,
             targetCurrency,
             Side.BORROW,
+            maturities[0],
+            () => true, // any value
+            getAmountWithUnwindFee(
+              Side.BORROW,
+              BigNumber.from('12500000000000000'),
+              maturities[0].sub(timestamp),
+            ),
+          );
+
+        await expect(tx)
+          .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
+          .withArgs(
+            () => true,
+            bob.address,
+            targetCurrency,
+            Side.LEND,
             maturities[0],
             () => true, // any value
             getAmountWithUnwindFee(
