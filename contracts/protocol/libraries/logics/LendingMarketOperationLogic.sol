@@ -119,30 +119,6 @@ library LendingMarketOperationLogic {
                 partiallyFilledBorrowingOrder
             ) = market.executeItayoseCall();
 
-            if (partiallyFilledLendingOrder.futureValue > 0) {
-                emit FundManagementLogic.OrderPartiallyFilled(
-                    partiallyFilledLendingOrder.orderId,
-                    partiallyFilledLendingOrder.maker,
-                    _ccy,
-                    ProtocolTypes.Side.LEND,
-                    _maturity,
-                    partiallyFilledLendingOrder.amount,
-                    partiallyFilledLendingOrder.futureValue
-                );
-            }
-
-            if (partiallyFilledBorrowingOrder.futureValue > 0) {
-                emit FundManagementLogic.OrderPartiallyFilled(
-                    partiallyFilledBorrowingOrder.orderId,
-                    partiallyFilledBorrowingOrder.maker,
-                    _ccy,
-                    ProtocolTypes.Side.BORROW,
-                    _maturity,
-                    partiallyFilledBorrowingOrder.amount,
-                    partiallyFilledBorrowingOrder.futureValue
-                );
-            }
-
             if (totalOffsetAmount > 0) {
                 address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
                 IFutureValueVault(futureValueVault).addInitialTotalSupply(
