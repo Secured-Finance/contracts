@@ -25,7 +25,7 @@ library LendingMarketUserLogic {
     using SafeCast for int256;
     using RoundingUint256 for uint256;
 
-    function createOrder(
+    function executeOrder(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
@@ -48,7 +48,7 @@ library LendingMarketUserLogic {
         (
             ILendingMarket.FilledOrder memory filledOrder,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
-        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
+        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).executeOrder(
                 _side,
                 _user,
                 _amount,
@@ -85,7 +85,7 @@ library LendingMarketUserLogic {
         Storage.slot().usedCurrencies[_user].add(_ccy);
     }
 
-    function createPreOrder(
+    function executePreOrder(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
@@ -105,7 +105,7 @@ library LendingMarketUserLogic {
             "Not enough collateral"
         );
 
-        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createPreOrder(
+        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).executePreOrder(
             _side,
             _user,
             _amount,

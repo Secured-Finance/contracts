@@ -38,14 +38,14 @@ contract LendingMarketCaller {
         ILendingMarket(lendingMarkets[_index]).openMarket(_maturity, _openingDate);
     }
 
-    function createOrder(
+    function executeOrder(
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice,
         uint256 _circuitBreakerLimitRange,
         uint256 _index
     ) external {
-        ILendingMarket(lendingMarkets[_index]).createOrder(
+        ILendingMarket(lendingMarkets[_index]).executeOrder(
             _side,
             msg.sender,
             _amount,
@@ -54,13 +54,13 @@ contract LendingMarketCaller {
         );
     }
 
-    function createPreOrder(
+    function executePreOrder(
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice,
         uint256 _index
     ) external {
-        ILendingMarket(lendingMarkets[_index]).createPreOrder(
+        ILendingMarket(lendingMarkets[_index]).executePreOrder(
             _side,
             msg.sender,
             _amount,

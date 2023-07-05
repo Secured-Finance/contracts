@@ -56,7 +56,7 @@ describe('Performance Test: Auto-rolls', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(
+      .executeOrder(
         hexEFIL,
         maturity,
         Side.BORROW,
@@ -66,7 +66,7 @@ describe('Performance Test: Auto-rolls', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(
+      .executeOrder(
         hexEFIL,
         maturity,
         Side.LEND,
@@ -160,7 +160,7 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             maturities[0],
             Side.LEND,
@@ -172,7 +172,7 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
@@ -262,7 +262,7 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(ellen)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             maturities[0],
             Side.LEND,
@@ -274,7 +274,7 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(dave)
-          .createOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value

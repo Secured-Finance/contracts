@@ -59,7 +59,7 @@ interface ILendingMarket {
         uint256 maturity
     );
 
-    event OrderCreated(
+    event OrderExecuted(
         address indexed user,
         ProtocolTypes.Side side,
         bytes32 indexed ccy,
@@ -75,7 +75,7 @@ interface ILendingMarket {
         uint256 cbThresholdUnitPrice
     );
 
-    event PreOrderCreated(
+    event PreOrderExecuted(
         address indexed user,
         ProtocolTypes.Side side,
         bytes32 indexed ccy,
@@ -217,7 +217,7 @@ interface ILendingMarket {
 
     function cancelOrder(address user, uint48 orderId) external;
 
-    function createOrder(
+    function executeOrder(
         ProtocolTypes.Side side,
         address account,
         uint256 amount,
@@ -227,7 +227,7 @@ interface ILendingMarket {
         external
         returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder);
 
-    function createPreOrder(
+    function executePreOrder(
         ProtocolTypes.Side side,
         address user,
         uint256 amount,

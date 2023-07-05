@@ -201,7 +201,7 @@ describe('ZC e2e test', async () => {
     // Make lend orders
     await lendingMarketController
       .connect(aliceSigner)
-      .createOrder(
+      .executeOrder(
         targetCurrency,
         maturities[0],
         Side.LEND,
@@ -213,7 +213,7 @@ describe('ZC e2e test', async () => {
     // Make borrow orders
     await lendingMarketController
       .connect(bobSigner)
-      .createOrder(
+      .executeOrder(
         targetCurrency,
         maturities[0],
         Side.BORROW,

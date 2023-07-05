@@ -151,7 +151,7 @@ describe('LendingMarketController - Itayose', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(order.user)
-            .createPreOrder(
+            .executePreOrder(
               targetCurrency,
               maturities[0],
               order.side,
@@ -163,7 +163,7 @@ describe('LendingMarketController - Itayose', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(order.user)
-            .createPreOrder(
+            .executePreOrder(
               targetCurrency,
               maturities[1],
               order.side,
@@ -281,7 +281,7 @@ describe('LendingMarketController - Itayose', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(order.user)
-            .createPreOrder(
+            .executePreOrder(
               targetCurrency,
               maturities[0],
               order.side,
@@ -321,7 +321,7 @@ describe('LendingMarketController - Itayose', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(dave)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.LEND,
@@ -385,7 +385,7 @@ describe('LendingMarketController - Itayose', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(order.user)
-            .createPreOrder(
+            .executePreOrder(
               targetCurrency,
               maturities[0],
               order.side,
@@ -425,7 +425,7 @@ describe('LendingMarketController - Itayose', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(carol)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.BORROW,
@@ -453,7 +453,7 @@ describe('LendingMarketController - Itayose', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -462,7 +462,7 @@ describe('LendingMarketController - Itayose', () => {
         );
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -508,7 +508,7 @@ describe('LendingMarketController - Itayose', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(order.user)
-            .createPreOrder(
+            .executePreOrder(
               targetCurrency,
               maturities[maturities.length - 1],
               order.side,
@@ -603,7 +603,7 @@ describe('LendingMarketController - Itayose', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(order.user)
-            .createPreOrder(
+            .executePreOrder(
               targetCurrency,
               maturity,
               order.side,
@@ -637,7 +637,7 @@ describe('LendingMarketController - Itayose', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturity,
             Side.LEND,
@@ -692,7 +692,7 @@ describe('LendingMarketController - Itayose', () => {
         await expect(
           lendingMarketControllerProxy
             .connect(order.user)
-            .createPreOrder(
+            .executePreOrder(
               targetCurrency,
               maturity,
               order.side,
@@ -726,7 +726,7 @@ describe('LendingMarketController - Itayose', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(carol)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturity,
             Side.BORROW,

@@ -53,7 +53,7 @@ describe('Integration Test: Itayose', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(
+      .executeOrder(
         hexETH,
         maturity,
         Side.BORROW,
@@ -63,7 +63,7 @@ describe('Integration Test: Itayose', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(
+      .executeOrder(
         hexETH,
         maturity,
         Side.LEND,
@@ -143,7 +143,7 @@ describe('Integration Test: Itayose', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[0],
             Side.LEND,
@@ -158,7 +158,7 @@ describe('Integration Test: Itayose', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
@@ -175,7 +175,7 @@ describe('Integration Test: Itayose', async () => {
     it('Execute auto-roll', async () => {
       await lendingMarketController
         .connect(carol)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexETH,
           maturities[1],
           Side.LEND,
@@ -187,7 +187,7 @@ describe('Integration Test: Itayose', async () => {
         );
       await lendingMarketController
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           hexETH,
           maturities[1],
           Side.BORROW,
@@ -243,7 +243,7 @@ describe('Integration Test: Itayose', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[0],
             Side.LEND,
@@ -258,7 +258,7 @@ describe('Integration Test: Itayose', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
@@ -284,7 +284,7 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(dave)
-        .depositAndCreatePreOrder(
+        .depositAndExecutesPreOrder(
           hexETH,
           maturity,
           Side.LEND,
@@ -295,7 +295,7 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(dave)
-        .depositAndCreatePreOrder(
+        .depositAndExecutesPreOrder(
           hexETH,
           maturity,
           Side.LEND,
@@ -306,17 +306,17 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(ellen)
-        .createPreOrder(hexETH, maturity, Side.BORROW, orderAmount, 7300);
+        .executePreOrder(hexETH, maturity, Side.BORROW, orderAmount, 7300);
 
       await lendingMarketController
         .connect(ellen)
-        .createPreOrder(hexETH, maturity, Side.BORROW, orderAmount, 7500);
+        .executePreOrder(hexETH, maturity, Side.BORROW, orderAmount, 7500);
     });
 
     it('Execute auto-roll', async () => {
       await lendingMarketController
         .connect(carol)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexETH,
           maturities[1],
           Side.LEND,
@@ -328,7 +328,7 @@ describe('Integration Test: Itayose', async () => {
         );
       await lendingMarketController
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           hexETH,
           maturities[1],
           Side.BORROW,
@@ -386,7 +386,7 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(alice)
-        .depositAndCreatePreOrder(
+        .depositAndExecutesPreOrder(
           hexETH,
           maturity,
           Side.LEND,
@@ -397,7 +397,7 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(bob)
-        .createPreOrder(hexETH, maturity, Side.BORROW, orderAmount, 7300);
+        .executePreOrder(hexETH, maturity, Side.BORROW, orderAmount, 7300);
 
       // Auto-roll
       await time.increaseTo(maturities[0].toString());
@@ -426,7 +426,7 @@ describe('Integration Test: Itayose', async () => {
       // Inactive order will be cleaned up which affects the future value of alice
       await lendingMarketController
         .connect(alice)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexETH,
           maturities[1],
           Side.LEND,
@@ -476,7 +476,7 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(alice)
-        .depositAndCreatePreOrder(
+        .depositAndExecutesPreOrder(
           hexETH,
           maturity,
           Side.LEND,
@@ -487,7 +487,7 @@ describe('Integration Test: Itayose', async () => {
 
       await lendingMarketController
         .connect(bob)
-        .createPreOrder(
+        .executePreOrder(
           hexETH,
           maturity,
           Side.BORROW,
@@ -522,7 +522,7 @@ describe('Integration Test: Itayose', async () => {
       // Inactive order will be cleaned up which affects the future value of alice
       await lendingMarketController
         .connect(alice)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexETH,
           maturities[1],
           Side.LEND,

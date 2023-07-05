@@ -58,11 +58,11 @@ describe('Integration Test: Order Book', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
+      .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETH, ethMaturities[0], Side.LEND, '1000', '7800');
+      .executeOrder(hexETH, ethMaturities[0], Side.LEND, '1000', '7800');
   };
 
   const createSampleFILOrders = async (user: SignerWithAddress) => {
@@ -76,11 +76,11 @@ describe('Integration Test: Order Book', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
+      .executeOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
+      .executeOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
   };
 
   before('Deploy Contracts', async () => {
@@ -152,7 +152,7 @@ describe('Integration Test: Order Book', async () => {
       it('Fill an order on the ETH market', async () => {
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             ethMaturities[0],
             Side.LEND,
@@ -163,7 +163,7 @@ describe('Integration Test: Order Book', async () => {
 
         const { blockHash } = await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexETH,
             ethMaturities[0],
             Side.BORROW,
@@ -207,7 +207,7 @@ describe('Integration Test: Order Book', async () => {
       it('Unwind all orders', async () => {
         await lendingMarketController
           .connect(carol)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             ethMaturities[0],
             Side.BORROW,
@@ -273,7 +273,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -283,7 +283,7 @@ describe('Integration Test: Order Book', async () => {
 
         const { blockHash } = await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -331,7 +331,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(dave)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -407,7 +407,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -417,7 +417,7 @@ describe('Integration Test: Order Book', async () => {
 
         const { blockHash } = await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -462,7 +462,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(carol)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -546,7 +546,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -556,7 +556,7 @@ describe('Integration Test: Order Book', async () => {
 
         const { blockHash } = await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -588,7 +588,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             ethMaturities[0],
             Side.LEND,
@@ -599,7 +599,13 @@ describe('Integration Test: Order Book', async () => {
 
         const { blockHash } = await lendingMarketController
           .connect(alice)
-          .createOrder(hexETH, ethMaturities[0], Side.BORROW, orderAmount, '0');
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '0',
+          );
 
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
@@ -677,7 +683,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(dave)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -731,7 +737,7 @@ describe('Integration Test: Order Book', async () => {
       it('Fill orders on the FIL market', async () => {
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -741,7 +747,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -755,7 +761,7 @@ describe('Integration Test: Order Book', async () => {
 
         const { blockHash } = await lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -814,7 +820,7 @@ describe('Integration Test: Order Book', async () => {
       it('Fill orders on the FIL market', async () => {
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -824,7 +830,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -842,7 +848,7 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -852,7 +858,7 @@ describe('Integration Test: Order Book', async () => {
 
         const tx = await lendingMarketController
           .connect(carol)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -864,7 +870,7 @@ describe('Integration Test: Order Book', async () => {
         await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(tx)
-          .to.emit(filLendingMarkets[0], 'OrderCreated')
+          .to.emit(filLendingMarkets[0], 'OrderExecuted')
           .withArgs(
             carol.address,
             Side.LEND,
@@ -884,7 +890,7 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(dave)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -960,7 +966,7 @@ describe('Integration Test: Order Book', async () => {
           await expect(
             lendingMarketController
               .connect(signer1)
-              .createOrder(
+              .executeOrder(
                 hexEFIL,
                 filMaturities[1],
                 input.side1,
@@ -971,7 +977,7 @@ describe('Integration Test: Order Book', async () => {
 
           const tx = await lendingMarketController
             .connect(signer2)
-            .createOrder(
+            .executeOrder(
               hexEFIL,
               filMaturities[1],
               input.side2,
@@ -1033,7 +1039,7 @@ describe('Integration Test: Order Book', async () => {
           await expect(
             lendingMarketController
               .connect(signer1)
-              .createOrder(
+              .executeOrder(
                 hexEFIL,
                 filMaturities[1],
                 input.side1,
@@ -1044,7 +1050,7 @@ describe('Integration Test: Order Book', async () => {
 
           const tx = lendingMarketController
             .connect(signer2)
-            .createOrder(
+            .executeOrder(
               hexEFIL,
               filMaturities[1],
               input.side2,
@@ -1113,7 +1119,7 @@ describe('Integration Test: Order Book', async () => {
           await expect(
             lendingMarketController
               .connect(signer1)
-              .createOrder(
+              .executeOrder(
                 hexEFIL,
                 filMaturities[1],
                 input.side1,
@@ -1124,7 +1130,7 @@ describe('Integration Test: Order Book', async () => {
           await expect(
             lendingMarketController
               .connect(signer1)
-              .createOrder(
+              .executeOrder(
                 hexEFIL,
                 filMaturities[1],
                 input.side1,
@@ -1135,7 +1141,7 @@ describe('Integration Test: Order Book', async () => {
 
           const tx = await lendingMarketController
             .connect(signer2)
-            .createOrder(
+            .executeOrder(
               hexEFIL,
               filMaturities[1],
               input.side2,
@@ -1209,7 +1215,7 @@ describe('Integration Test: Order Book', async () => {
       it('Place a borrowing order on the FIL market', async () => {
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -1295,7 +1301,7 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,

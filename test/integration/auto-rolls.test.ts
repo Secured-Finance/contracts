@@ -66,11 +66,11 @@ describe('Integration Test: Auto-rolls', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETH, maturity, Side.BORROW, '1000000', unitPrice);
+      .executeOrder(hexETH, maturity, Side.BORROW, '1000000', unitPrice);
 
     await lendingMarketController
       .connect(user)
-      .createOrder(hexETH, maturity, Side.LEND, '1000000', unitPrice);
+      .executeOrder(hexETH, maturity, Side.LEND, '1000000', unitPrice);
   };
 
   const executeAutoRoll = async (unitPrice?: string) => {
@@ -174,7 +174,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[0],
             Side.LEND,
@@ -189,7 +189,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(carol)
-          .createOrder(
+          .executeOrder(
             hexETH,
             maturities[0],
             Side.LEND,
@@ -201,13 +201,13 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(carol)
-          .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 8010),
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 8010),
       ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
@@ -245,7 +245,7 @@ describe('Integration Test: Auto-rolls', async () => {
     it('Execute auto-roll (1st time)', async () => {
       await lendingMarketController
         .connect(carol)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexETH,
           maturities[1],
           Side.LEND,
@@ -257,7 +257,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
       await lendingMarketController
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           hexETH,
           maturities[1],
           Side.BORROW,
@@ -348,7 +348,7 @@ describe('Integration Test: Auto-rolls', async () => {
     it('Execute auto-roll (2nd time)', async () => {
       await lendingMarketController
         .connect(carol)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexETH,
           maturities[1],
           Side.LEND,
@@ -360,7 +360,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
       await lendingMarketController
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           hexETH,
           maturities[1],
           Side.BORROW,
@@ -438,7 +438,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[0],
             Side.LEND,
@@ -453,7 +453,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await createSampleETHOrders(carol, maturities[0], '8000');
@@ -477,7 +477,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[1],
             Side.LEND,
@@ -491,7 +491,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       const tx = await lendingMarketController
         .connect(bob)
-        .createOrder(hexETH, maturities[1], Side.BORROW, orderAmount, 0);
+        .executeOrder(hexETH, maturities[1], Side.BORROW, orderAmount, 0);
       await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
       await createSampleETHOrders(carol, maturities[1], '5000');
@@ -670,7 +670,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[0],
             Side.LEND,
@@ -685,7 +685,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await createSampleETHOrders(owner, maturities[1], '8333');
@@ -785,7 +785,7 @@ describe('Integration Test: Auto-rolls', async () => {
         await expect(
           lendingMarketController
             .connect(user)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexETH,
               maturities[0],
               Side.LEND,
@@ -801,7 +801,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(dave)
-          .createOrder(
+          .executeOrder(
             hexETH,
             maturities[0],
             Side.BORROW,
@@ -910,7 +910,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[0],
             Side.LEND,
@@ -925,7 +925,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
+          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
@@ -975,7 +975,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexETH,
             maturities[0],
             Side.LEND,

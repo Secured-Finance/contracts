@@ -505,7 +505,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Creates the order. Takes the order if the order is matched,
+     * @notice Executes an order. Takes orders if the order is matched,
      * and places new order if not match it.
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
@@ -515,7 +515,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order on the order book
      */
-    function createOrder(
+    function executeOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -562,7 +562,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
         }
 
-        emit OrderCreated(
+        emit OrderExecuted(
             _user,
             _side,
             Storage.slot().ccy,
@@ -580,14 +580,14 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
+     * @notice Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
      * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
      *
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
      */
-    function createPreOrder(
+    function executePreOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -607,7 +607,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint48 orderId = _makeOrder(_side, _user, _amount, _unitPrice);
         Storage.slot().isPreOrder[orderId] = true;
 
-        emit PreOrderCreated(
+        emit PreOrderExecuted(
             _user,
             _side,
             Storage.slot().ccy,

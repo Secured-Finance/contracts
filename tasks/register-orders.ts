@@ -228,7 +228,7 @@ task('register-orders', 'Registers order data into the selected lending market')
 
         if (order.side === Side.LEND) {
           await lendingMarketController
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               marketCurrencyName,
               maturity,
               order.side,
@@ -241,7 +241,7 @@ task('register-orders', 'Registers order data into the selected lending market')
             .then((tx) => tx.wait());
         } else {
           await lendingMarketController
-            .createOrder(
+            .executeOrder(
               marketCurrencyName,
               maturity,
               order.side,
