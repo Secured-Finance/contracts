@@ -92,12 +92,11 @@ describe('ZC e2e test', async () => {
       ['address'],
     );
 
-    // Transfer mock eFIL token
-    if (!process.env.TOKEN_EFIL) {
-      eFILToken
-        .connect(ownerSigner)
-        .transfer(aliceSigner.address, orderAmountInFIL);
-    }
+    // Transfer eFIL token for testing
+    await eFILToken
+      .connect(ownerSigner)
+      .transfer(aliceSigner.address, orderAmountInFIL)
+      .then((tx) => tx.wait());
 
     maturities = await lendingMarketController.getMaturities(targetCurrency);
   });
@@ -124,9 +123,7 @@ describe('ZC e2e test', async () => {
 
       await tokenVault
         .connect(aliceSigner)
-        .deposit(hexEFIL, depositAmountInFIL, {
-          value: depositAmountInFIL,
-        })
+        .deposit(hexEFIL, depositAmountInFIL)
         .then((tx) => tx.wait());
 
       const aliceDepositAmountAfter = await tokenVault.getDepositAmount(
