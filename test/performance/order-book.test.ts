@@ -209,14 +209,20 @@ describe('Performance Test: Order Book', async () => {
               );
 
             await expect(tx)
-              .to.emit(lendingMarkets[0], 'OrdersTaken')
+              .to.emit(lendingMarkets[0], 'OrderCreated')
               .withArgs(
                 signers[0].address,
                 Side.BORROW,
                 currencyKey,
                 maturities[0],
                 totalAmount,
+                0,
+                totalAmount,
                 unitPrice,
+                () => true,
+                0,
+                0,
+                0,
                 () => true,
               );
 

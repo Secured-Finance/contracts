@@ -13,7 +13,10 @@ import {
   INITIAL_COMPOUND_FACTOR,
   ORDER_FEE_RATE,
 } from '../../common/constants';
-import { getAmountWithUnwindFee } from '../../common/orders';
+import {
+  calculateFutureValue,
+  getAmountWithUnwindFee,
+} from '../../common/orders';
 import { deployContracts } from './utils';
 
 describe('LendingMarketController - Orders', () => {
@@ -394,31 +397,49 @@ describe('LendingMarketController - Orders', () => {
           '8720',
         )
         .then(async (tx) => {
-          await expect(tx).to.emit(lendingMarket1, 'OrderMade');
           await expect(tx).to.not.emit(fundManagementLogic, 'OrderFilled');
+          await expect(tx)
+            .to.emit(lendingMarket1, 'OrderCreated')
+            .withArgs(
+              alice.address,
+              Side.LEND,
+              targetCurrency,
+              maturities[0],
+              '100000000000000000',
+              '8720',
+              0,
+              0,
+              0,
+              1,
+              '100000000000000000',
+              '8720',
+              () => true,
+            );
         });
 
-      await lendingMarketControllerProxy
-        .connect(bob)
-        .createOrder(
-          targetCurrency,
-          maturities[0],
-          Side.LEND,
-          '50000000000000000',
-          '8720',
-        )
-        .then((tx) => expect(tx).to.emit(lendingMarket1, 'OrderMade'));
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '50000000000000000',
+            '8720',
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
-      await lendingMarketControllerProxy
-        .connect(bob)
-        .createOrder(
-          targetCurrency,
-          maturities[0],
-          Side.BORROW,
-          '100000000000000000',
-          '8880',
-        )
-        .then((tx) => expect(tx).to.emit(lendingMarket1, 'OrderMade'));
+      await expect(
+        lendingMarketControllerProxy
+          .connect(bob)
+          .createOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '100000000000000000',
+            '8880',
+          ),
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketControllerProxy
@@ -1908,8 +1929,23 @@ describe('LendingMarketController - Orders', () => {
           );
 
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
-        await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
-        await expect(tx).to.not.emit(lendingMarket1, 'OrderMade');
+        await expect(tx)
+          .to.emit(lendingMarket1, 'OrderCreated')
+          .withArgs(
+            carol.address,
+            Side.BORROW,
+            targetCurrency,
+            maturities[0],
+            '100000000000000000',
+            '8800',
+            '100000000000000000',
+            '8800',
+            calculateFutureValue('100000000000000000', '8800'),
+            0,
+            0,
+            0,
+            () => true,
+          );
       });
 
       it('Fill all borrowing orders at one rate', async () => {
@@ -1946,8 +1982,23 @@ describe('LendingMarketController - Orders', () => {
           );
 
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
-        await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
-        await expect(tx).to.not.emit(lendingMarket1, 'OrderMade');
+        await expect(tx)
+          .to.emit(lendingMarket1, 'OrderCreated')
+          .withArgs(
+            carol.address,
+            Side.LEND,
+            targetCurrency,
+            maturities[0],
+            '100000000000000000',
+            '8800',
+            '100000000000000000',
+            '8800',
+            calculateFutureValue('100000000000000000', '8800'),
+            0,
+            0,
+            0,
+            () => true,
+          );
       });
 
       it('Fill orders partially at one rate', async () => {
@@ -2002,18 +2053,24 @@ describe('LendingMarketController - Orders', () => {
           );
 
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
-        await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx)
-          .to.not.emit(lendingMarket1, 'OrderMade')
+          .to.emit(lendingMarket1, 'OrderCreated')
           .withArgs(
-            4,
-            0,
-            bob.address,
-            Side.LEND,
+            ellen.address,
+            Side.BORROW,
             targetCurrency,
             maturities[0],
             '100000000000000000',
             '8800',
+            '100000000000000000',
+            '8800',
+            calculateFutureValue('200000000000000000', '8800').sub(
+              calculateFutureValue('100000000000000000', '8800'),
+            ),
+            0,
+            0,
+            0,
+            () => true,
           );
       });
 
@@ -2049,9 +2106,8 @@ describe('LendingMarketController - Orders', () => {
             '8000',
           );
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
-        await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
         await expect(tx)
-          .to.emit(lendingMarket1, 'OrderPartiallyTaken')
+          .to.emit(lendingMarket1, 'OrderPartiallyFilled')
           .withArgs(
             () => true,
             bob.address,
@@ -2060,6 +2116,23 @@ describe('LendingMarketController - Orders', () => {
             maturities[0],
             '30000000000000000',
             '37500000000000000',
+          );
+        await expect(tx)
+          .to.emit(lendingMarket1, 'OrderCreated')
+          .withArgs(
+            carol.address,
+            Side.BORROW,
+            targetCurrency,
+            maturities[0],
+            '80000000000000000',
+            '8000',
+            '80000000000000000',
+            '8000',
+            calculateFutureValue('80000000000000000', '8000'),
+            0,
+            0,
+            0,
+            () => true,
           );
       });
 
@@ -2095,8 +2168,23 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
-        await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
-        await expect(tx).to.emit(lendingMarket1, 'OrderMade');
+        await expect(tx)
+          .to.emit(lendingMarket1, 'OrderCreated')
+          .withArgs(
+            carol.address,
+            Side.BORROW,
+            targetCurrency,
+            maturities[0],
+            '120000000000000000',
+            '8800',
+            '100000000000000000',
+            '8800',
+            calculateFutureValue('100000000000000000', '8800'),
+            3,
+            '20000000000000000',
+            '8800',
+            () => true,
+          );
       });
 
       it('Fill an own order', async () => {

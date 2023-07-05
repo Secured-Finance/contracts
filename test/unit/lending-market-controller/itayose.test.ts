@@ -23,6 +23,8 @@ describe('LendingMarketController - Itayose', () => {
   let genesisValueVaultProxy: Contract;
   let lendingMarketProxies: Contract[];
 
+  let fundManagementLogic: Contract;
+
   let maturities: BigNumber[];
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -53,7 +55,12 @@ describe('LendingMarketController - Itayose', () => {
       mockTokenVault,
       lendingMarketControllerProxy,
       genesisValueVaultProxy,
+      fundManagementLogic,
     } = await deployContracts(owner));
+
+    fundManagementLogic = fundManagementLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
 
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockTokenVault.mock.isCovered.returns(true);
@@ -151,7 +158,7 @@ describe('LendingMarketController - Itayose', () => {
               order.amount,
               order.unitPrice,
             ),
-        ).to.emit(lendingMarketProxies[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketControllerProxy
@@ -163,7 +170,7 @@ describe('LendingMarketController - Itayose', () => {
               order.amount,
               order.unitPrice,
             ),
-        ).to.emit(lendingMarketProxies[1], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       }
 
       await time.increaseTo(openingDate);
@@ -281,7 +288,7 @@ describe('LendingMarketController - Itayose', () => {
               order.amount,
               order.unitPrice,
             ),
-        ).to.emit(lendingMarketProxies[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       }
 
       await time.increaseTo(openingDate);
@@ -321,7 +328,7 @@ describe('LendingMarketController - Itayose', () => {
             '100000000000000',
             '8020',
           ),
-      ).to.emit(lendingMarketProxies[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const { futureValue: carolFV } =
         await lendingMarketControllerProxy.getPosition(
@@ -385,7 +392,7 @@ describe('LendingMarketController - Itayose', () => {
               order.amount,
               order.unitPrice,
             ),
-        ).to.emit(lendingMarketProxies[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       }
 
       await time.increaseTo(openingDate);
@@ -425,7 +432,7 @@ describe('LendingMarketController - Itayose', () => {
             '300000000000000',
             '8060',
           ),
-      ).to.emit(lendingMarketProxies[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const { futureValue: daveFV } =
         await lendingMarketControllerProxy.getPosition(
@@ -508,7 +515,7 @@ describe('LendingMarketController - Itayose', () => {
               order.amount,
               order.unitPrice,
             ),
-        ).to.emit(lendingMarket, 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       }
 
       await time.increaseTo(maturities[maturities.length - 2].toString());
@@ -603,7 +610,7 @@ describe('LendingMarketController - Itayose', () => {
               order.amount,
               order.unitPrice,
             ),
-        ).to.emit(lendingMarket, 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       }
 
       await time.increaseTo(openingDate);
@@ -637,7 +644,7 @@ describe('LendingMarketController - Itayose', () => {
             '300000000000000',
             '8500',
           ),
-      ).to.emit(lendingMarket, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const { futureValue: carolFVAfter } =
         await lendingMarketControllerProxy.getPosition(
@@ -692,7 +699,7 @@ describe('LendingMarketController - Itayose', () => {
               order.amount,
               order.unitPrice,
             ),
-        ).to.emit(lendingMarket, 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       }
 
       await time.increaseTo(openingDate);
@@ -726,7 +733,7 @@ describe('LendingMarketController - Itayose', () => {
             '100000000000000',
             '8000',
           ),
-      ).to.emit(lendingMarket, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const { futureValue: bobFVAfter } =
         await lendingMarketControllerProxy.getPosition(

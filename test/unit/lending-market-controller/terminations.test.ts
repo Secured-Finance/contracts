@@ -255,7 +255,7 @@ describe('LendingMarketController - Terminations', () => {
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await lendingMarketControllerProxy
         .getPosition(targetCurrency, maturities[0], alice.address)
@@ -325,7 +325,7 @@ describe('LendingMarketController - Terminations', () => {
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency2`);
       const lendingMarket2Proxies = await initialize(targetCurrency2);
@@ -365,7 +365,7 @@ describe('LendingMarketController - Terminations', () => {
             '200000000000000000',
             '8000',
           ),
-      ).to.emit(lendingMarket2, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const position1 = await lendingMarketControllerProxy.getPosition(
         targetCurrency,
@@ -450,7 +450,7 @@ describe('LendingMarketController - Terminations', () => {
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Move to 6 hours (21600 sec) before maturity.
       await time.increaseTo(maturities[0].sub('21600').toString());
@@ -542,7 +542,7 @@ describe('LendingMarketController - Terminations', () => {
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
@@ -591,7 +591,7 @@ describe('LendingMarketController - Terminations', () => {
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),

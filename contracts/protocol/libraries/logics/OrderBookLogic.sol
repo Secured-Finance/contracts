@@ -556,7 +556,7 @@ library OrderBookLogic {
         }
     }
 
-    function checkCircuitBreakerThreshold(
+    function getOrderExecutionConditions(
         ProtocolTypes.Side _side,
         uint256 _unitPrice,
         uint256 _circuitBreakerLimitRange
@@ -565,13 +565,14 @@ library OrderBookLogic {
         returns (
             bool isFilled,
             uint256 executedUnitPrice,
+            uint256 cbThresholdUnitPrice,
             bool ignoreRemainingAmount
         )
     {
         require(_circuitBreakerLimitRange < Constants.PCT_DIGIT, "CB limit can not be so high");
-        uint256 cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[
-            block.number
-        ][_side];
+        cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
+            _side
+        ];
         bool isLend = _side == ProtocolTypes.Side.LEND;
         bool orderExists;
         uint256 bestUnitPrice;

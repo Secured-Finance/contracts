@@ -5,9 +5,22 @@ import "../types/ProtocolTypes.sol";
 import {MarketOrder, ItayoseLog} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
-    struct FilledOrder {
-        uint256 unitPrice;
+    struct OrderExecutionConditions {
+        bool isFilled;
+        uint256 executedUnitPrice;
+        uint256 cbThresholdUnitPrice;
+        bool ignoreRemainingAmount;
+    }
+
+    struct PlacedOrder {
+        uint48 orderId;
         uint256 amount;
+        uint256 unitPrice;
+    }
+
+    struct FilledOrder {
+        uint256 amount;
+        uint256 unitPrice;
         uint256 futureValue;
         uint256 ignoredAmount;
     }
@@ -28,28 +41,7 @@ interface ILendingMarket {
         uint256 unitPrice
     );
 
-    event OrderMade(
-        uint48 orderId,
-        address indexed maker,
-        ProtocolTypes.Side side,
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 amount,
-        uint256 unitPrice,
-        bool isPreOrder
-    );
-
-    event OrdersTaken(
-        address indexed taker,
-        ProtocolTypes.Side side,
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 filledAmount,
-        uint256 unitPrice,
-        uint256 filledFutureValue
-    );
-
-    event OrderPartiallyTaken(
+    event OrderPartiallyFilled(
         uint48 orderId,
         address indexed maker,
         ProtocolTypes.Side side,
@@ -67,12 +59,42 @@ interface ILendingMarket {
         uint256 maturity
     );
 
-    event OrderBlockedByCircuitBreaker(
+    event OrderCreated(
         address indexed user,
-        bytes32 indexed ccy,
         ProtocolTypes.Side side,
+        bytes32 indexed ccy,
         uint256 indexed maturity,
-        uint256 thresholdUnitPrice
+        uint256 inputAmount,
+        uint256 inputUnitPrice,
+        uint256 filledAmount,
+        uint256 filledUnitPrice,
+        uint256 filledFutureValue,
+        uint48 placedOrderId,
+        uint256 placedAmount,
+        uint256 placedUnitPrice,
+        uint256 cbThresholdUnitPrice
+    );
+
+    event PreOrderCreated(
+        address indexed user,
+        ProtocolTypes.Side side,
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 amount,
+        uint256 unitPrice,
+        uint48 orderId
+    );
+
+    event PositionUnwound(
+        address indexed user,
+        ProtocolTypes.Side side,
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 futureValue,
+        uint256 filledAmount,
+        uint256 filledUnitPrice,
+        uint256 filledFutureValue,
+        uint256 cbThresholdUnitPrice
     );
 
     event MarketOpened(uint256 maturity, uint256 prevMaturity);
@@ -212,7 +234,7 @@ interface ILendingMarket {
         uint256 unitPrice
     ) external;
 
-    function unwind(
+    function unwindPosition(
         ProtocolTypes.Side side,
         address user,
         uint256 futureValue,

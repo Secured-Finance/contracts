@@ -26,6 +26,8 @@ describe('Integration Test: Itayose', async () => {
   let wETHToken: Contract;
   let eFILToken: Contract;
 
+  let fundManagementLogic: Contract;
+
   let genesisDate: number;
   let maturities: BigNumber[];
 
@@ -105,6 +107,7 @@ describe('Integration Test: Itayose', async () => {
       wETHToken,
       eFILToken,
       lendingMarketOperationLogic,
+      fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
@@ -150,13 +153,13 @@ describe('Integration Test: Itayose', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
           .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
       const { futureValue: aliceFVBefore } =
@@ -250,13 +253,13 @@ describe('Integration Test: Itayose', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
           .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
       const { futureValue: aliceFVBefore } =

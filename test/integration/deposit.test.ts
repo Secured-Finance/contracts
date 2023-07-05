@@ -34,6 +34,8 @@ describe('Integration Test: Deposit', async () => {
   let eFILToken: Contract;
   let wBTCToken: Contract;
 
+  let fundManagementLogic: Contract;
+
   let genesisDate: number;
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
@@ -72,6 +74,7 @@ describe('Integration Test: Deposit', async () => {
       usdcToken,
       eFILToken,
       wBTCToken,
+      fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -994,7 +997,7 @@ describe('Integration Test: Deposit', async () => {
             filOrderAmount,
             '8000',
           ),
-      ).to.emit(lendingMarketsForEFIL[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await wBTCToken.connect(bob).approve(tokenVault.address, wbtcOrderAmount);
 
@@ -1008,7 +1011,7 @@ describe('Integration Test: Deposit', async () => {
             wbtcOrderAmount,
             '8000',
           ),
-      ).to.emit(lendingMarketsForWBTC[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
     });
 
     // Test if the following error doesn't happen anymore

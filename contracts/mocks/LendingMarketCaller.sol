@@ -68,13 +68,13 @@ contract LendingMarketCaller {
         );
     }
 
-    function unwind(
+    function unwindPosition(
         ProtocolTypes.Side _side,
         uint256 _futureValue,
         uint256 _circuitBreakerLimitRange,
         uint256 _index
     ) external {
-        ILendingMarket(lendingMarkets[_index]).unwind(
+        ILendingMarket(lendingMarkets[_index]).unwindPosition(
             _side,
             msg.sender,
             _futureValue,

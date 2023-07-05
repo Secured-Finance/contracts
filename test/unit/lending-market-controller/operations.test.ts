@@ -27,9 +27,9 @@ describe('LendingMarketController - Operations', () => {
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
-  let lendingMarketProxies: Contract[];
   let futureValueVaultProxies: Contract[];
 
+  let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
 
   let maturities: BigNumber[];
@@ -64,9 +64,13 @@ describe('LendingMarketController - Operations', () => {
       beaconProxyControllerProxy,
       lendingMarketControllerProxy,
       genesisValueVaultProxy,
+      fundManagementLogic,
       lendingMarketOperationLogic,
     } = await deployContracts(owner));
 
+    fundManagementLogic = fundManagementLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
     lendingMarketOperationLogic = lendingMarketOperationLogic.attach(
       lendingMarketControllerProxy.address,
     );
@@ -93,15 +97,6 @@ describe('LendingMarketController - Operations', () => {
         genesisDate,
       );
     }
-
-    const marketAddresses =
-      await lendingMarketControllerProxy.getLendingMarkets(currency);
-
-    lendingMarketProxies = await Promise.all(
-      marketAddresses.map((address) =>
-        ethers.getContractAt('LendingMarket', address),
-      ),
-    );
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
 
@@ -461,8 +456,7 @@ describe('LendingMarketController - Operations', () => {
           '8000',
         );
 
-      const lendingMarket1 = lendingMarketProxies[0];
-      await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
+      await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
       await rotateLendingMarkets();
       await checkGenesisValue();

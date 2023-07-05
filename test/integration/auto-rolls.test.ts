@@ -39,6 +39,8 @@ describe('Integration Test: Auto-rolls', async () => {
   let wETHToken: Contract;
   let eFILToken: Contract;
 
+  let fundManagementLogic: Contract;
+
   let genesisDate: number;
   let maturities: BigNumber[];
 
@@ -122,6 +124,7 @@ describe('Integration Test: Auto-rolls', async () => {
       lendingMarketController,
       wETHToken,
       eFILToken,
+      fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -181,7 +184,7 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
@@ -193,19 +196,19 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount.mul(3),
             8000,
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(carol)
           .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 8010),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
           .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
       const { futureValue: aliceFVBefore } =
@@ -445,13 +448,13 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
           .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await createSampleETHOrders(carol, maturities[0], '8000');
 
@@ -484,12 +487,12 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[1], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       const tx = await lendingMarketController
         .connect(bob)
         .createOrder(hexETH, maturities[1], Side.BORROW, orderAmount, 0);
-      await expect(tx).to.emit(lendingMarkets[1], 'OrdersTaken');
+      await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
       await createSampleETHOrders(carol, maturities[1], '5000');
 
@@ -677,13 +680,13 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
           .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await createSampleETHOrders(owner, maturities[1], '8333');
 
@@ -792,7 +795,7 @@ describe('Integration Test: Auto-rolls', async () => {
                 value: orderAmount,
               },
             ),
-        ).to.emit(lendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
       }
 
       await expect(
@@ -805,7 +808,7 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount.mul(3),
             0,
           ),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check present value
       const { futureValue: daveActualFV } =
@@ -917,13 +920,13 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
           .createOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
       const { futureValue: aliceActualFV } =

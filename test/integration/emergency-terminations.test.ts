@@ -205,7 +205,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInETH,
               8000,
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -218,7 +218,7 @@ describe('Integration Test: Emergency terminations', async () => {
               0,
               { value: orderAmountInETH },
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
         const { futureValue: aliceFV } =
@@ -252,7 +252,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInFIL,
               8000,
             ),
-        ).to.emit(filLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -264,7 +264,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInFIL,
               0,
             ),
-        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
         const { futureValue: aliceFV } =
@@ -422,7 +422,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInETH,
               8000,
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -435,7 +435,7 @@ describe('Integration Test: Emergency terminations', async () => {
               0,
               { value: orderAmountInETH },
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Execute auto-roll', async () => {
@@ -514,7 +514,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInETH,
               8000,
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -527,7 +527,7 @@ describe('Integration Test: Emergency terminations', async () => {
               0,
               { value: orderAmountInETH },
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill an order on the FIL market with depositing USDC', async () => {
@@ -552,7 +552,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInFIL.div(10),
               8000,
             ),
-        ).to.emit(filLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -564,7 +564,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInFIL.div(10),
               0,
             ),
-        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Update a price feed to change the eFIL price', async () => {
@@ -627,7 +627,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInETH,
               8000,
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -640,7 +640,7 @@ describe('Integration Test: Emergency terminations', async () => {
               0,
               { value: orderAmountInETH },
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill an order on the FIL market with depositing USDC', async () => {
@@ -665,7 +665,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInFIL,
               8000,
             ),
-        ).to.emit(filLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -677,7 +677,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInFIL,
               0,
             ),
-        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Fill an order for a huge amount to store fees in the reserve funds', async () => {
@@ -697,7 +697,7 @@ describe('Integration Test: Emergency terminations', async () => {
               orderAmountInETH.mul(1000),
               8000,
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrderMade');
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
         await expect(
           lendingMarketController
@@ -710,7 +710,7 @@ describe('Integration Test: Emergency terminations', async () => {
               0,
               { value: orderAmountInETH.mul(1000) },
             ),
-        ).to.emit(ethLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
       it('Update a price feed to change the eFIL price', async () => {

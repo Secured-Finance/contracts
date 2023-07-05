@@ -10,11 +10,13 @@ import {
 } from './constants';
 
 export const calculateOrderFee = (
-  orderAmount: BigNumber,
+  orderAmount: BigNumber | string,
   unitPrice: BigNumber | string | number,
   currentMaturity: BigNumber,
 ) => {
-  const fv = orderAmount.mul(PRICE_DIGIT).div(unitPrice);
+  const fv = BigNumber.from(orderAmount.toString())
+    .mul(PRICE_DIGIT)
+    .div(unitPrice);
 
   return fv
     .mul(ORDER_FEE_RATE)
@@ -49,14 +51,16 @@ export const getAmountWithUnwindFee = (
 };
 
 export const calculateFutureValue = (
-  orderAmount: BigNumber,
+  orderAmount: BigNumber | string,
   unitPrice: BigNumber | string | number,
 ) => {
-  return BigNumberJS(orderAmount.toString())
-    .times(PRICE_DIGIT)
-    .div(unitPrice.toString())
-    .dp(0)
-    .toFixed();
+  return BigNumber.from(
+    BigNumberJS(orderAmount.toString())
+      .times(PRICE_DIGIT)
+      .div(unitPrice.toString())
+      .dp(0)
+      .toFixed(),
+  );
 };
 
 export const calculateAutoRolledLendingCompoundFactor = (

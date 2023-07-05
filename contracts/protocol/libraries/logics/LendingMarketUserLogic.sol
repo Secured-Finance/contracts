@@ -400,7 +400,7 @@ library LendingMarketUserLogic {
 
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwind(side, _user, amountInFV, cbLimitRange);
+            ).unwindPosition(side, _user, amountInFV, cbLimitRange);
         } else if (_futureValue < 0) {
             side = ProtocolTypes.Side.LEND;
             // To unwind all positions, calculate the future value taking into account
@@ -418,7 +418,7 @@ library LendingMarketUserLogic {
 
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwind(side, _user, amountInFV, cbLimitRange);
+            ).unwindPosition(side, _user, amountInFV, cbLimitRange);
         }
     }
 }

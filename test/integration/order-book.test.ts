@@ -864,8 +864,22 @@ describe('Integration Test: Order Book', async () => {
         await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(tx)
-          .to.emit(filLendingMarkets[0], 'OrderBlockedByCircuitBreaker')
-          .withArgs(carol.address, hexEFIL, Side.LEND, filMaturities[0], 8163);
+          .to.emit(filLendingMarkets[0], 'OrderCreated')
+          .withArgs(
+            carol.address,
+            Side.LEND,
+            hexEFIL,
+            filMaturities[0],
+            orderAmount.div(2),
+            0,
+            0,
+            0,
+            0,
+            () => true,
+            0,
+            0,
+            8163,
+          );
 
         await expect(
           lendingMarketController
@@ -877,7 +891,7 @@ describe('Integration Test: Order Book', async () => {
               orderAmount.div(3),
               '0',
             ),
-        ).to.emit(filLendingMarkets[0], 'OrdersTaken');
+        ).to.emit(fundManagementLogic, 'OrderFilled');
       });
     });
   });
@@ -953,7 +967,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount,
                 '9001',
               ),
-          ).to.emit(filLendingMarkets[1], 'OrderMade');
+          ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
           const tx = await lendingMarketController
             .connect(signer2)
@@ -965,7 +979,7 @@ describe('Integration Test: Order Book', async () => {
               '9001',
             );
 
-          await expect(tx).to.emit(filLendingMarkets[1], 'OrdersTaken');
+          await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(
@@ -1026,7 +1040,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount,
                 '9002',
               ),
-          ).to.emit(filLendingMarkets[1], 'OrderMade');
+          ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
           const tx = lendingMarketController
             .connect(signer2)
@@ -1038,7 +1052,7 @@ describe('Integration Test: Order Book', async () => {
               '9002',
             );
 
-          await expect(tx).to.emit(filLendingMarkets[1], 'OrdersTaken');
+          await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(
@@ -1106,7 +1120,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount.div(2),
                 '9003',
               ),
-          ).to.emit(filLendingMarkets[1], 'OrderMade');
+          ).to.not.emit(fundManagementLogic, 'OrderFilled');
           await expect(
             lendingMarketController
               .connect(signer1)
@@ -1117,7 +1131,7 @@ describe('Integration Test: Order Book', async () => {
                 collateralAmount.div(2),
                 '9003',
               ),
-          ).to.emit(filLendingMarkets[1], 'OrderMade');
+          ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
           const tx = await lendingMarketController
             .connect(signer2)
@@ -1129,7 +1143,7 @@ describe('Integration Test: Order Book', async () => {
               '9003',
             );
 
-          await expect(tx).to.emit(filLendingMarkets[1], 'OrdersTaken');
+          await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(
