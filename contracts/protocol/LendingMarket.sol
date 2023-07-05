@@ -491,7 +491,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 Storage.slot().ccy,
                 Storage.slot().maturity,
                 removedLendOrderAmount,
-                removedBorrowOrderFutureValue
+                removedLendOrderFutureValue
             );
         }
 
