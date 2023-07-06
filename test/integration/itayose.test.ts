@@ -354,7 +354,9 @@ describe('Integration Test: Itayose', async () => {
         maturities[maturities.length - 1],
       );
       const marketInfo = await lendingMarket.getMarket();
-      const openingUnitPrice = await lendingMarket.getOpeningUnitPrice();
+      const { openingUnitPrice } = await lendingMarket.getItayoseLog(
+        maturities[maturities.length - 1],
+      );
 
       expect(await lendingMarket.isOpened()).to.true;
       expect(marketInfo.openingDate).to.equal(maturities[0]);

@@ -354,9 +354,11 @@ describe('LendingMarket', () => {
             }
           });
 
-        const openingPrice = await lendingMarket.getOpeningUnitPrice();
+        const { openingUnitPrice } = await lendingMarket.getItayoseLog(
+          maturity,
+        );
 
-        expect(openingPrice).to.equal(test.openingPrice);
+        expect(openingUnitPrice).to.equal(test.openingPrice);
 
         const itayoseLog = await lendingMarket.getItayoseLog(maturity);
 
