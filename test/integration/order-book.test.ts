@@ -15,7 +15,7 @@ import { deployContracts } from '../common/deployment';
 import {
   calculateFutureValue,
   calculateOrderFee,
-  getAmountWithUnwindFee,
+  getAmountWithOrderFee,
 } from '../common/orders';
 import { Signers } from '../common/signers';
 
@@ -491,16 +491,10 @@ describe('Integration Test: Order Book', async () => {
           hexEFIL,
         );
 
-        const amount = getAmountWithUnwindFee(
-          Side.BORROW,
-          orderAmount,
-          filMaturities[0].sub(timestamp),
-        );
-
         expect(
           bobFILDepositAmount
             .sub(
-              getAmountWithUnwindFee(
+              getAmountWithOrderFee(
                 Side.BORROW,
                 orderAmount,
                 filMaturities[0].sub(timestamp),

@@ -25,29 +25,31 @@ export const calculateOrderFee = (
     .div(PCT_DIGIT);
 };
 
-export const getAmountWithUnwindFee = (
+export const getAmountWithOrderFee = (
   side: number,
   orderAmount: BigNumber,
   currentMaturity: BigNumber,
 ) => {
-  return BigNumberJS(orderAmount.toString())
-    .times(SECONDS_IN_YEAR)
-    .times(PCT_DIGIT)
-    .div(
-      side === Side.LEND
-        ? BigNumberJS(SECONDS_IN_YEAR)
-            .times(PCT_DIGIT)
-            .minus(
-              BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
-            )
-        : BigNumberJS(SECONDS_IN_YEAR)
-            .times(PCT_DIGIT)
-            .plus(
-              BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
-            ),
-    )
-    .dp(0)
-    .toFixed();
+  return BigNumber.from(
+    BigNumberJS(orderAmount.toString())
+      .times(SECONDS_IN_YEAR)
+      .times(PCT_DIGIT)
+      .div(
+        side === Side.LEND
+          ? BigNumberJS(SECONDS_IN_YEAR)
+              .times(PCT_DIGIT)
+              .minus(
+                BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
+              )
+          : BigNumberJS(SECONDS_IN_YEAR)
+              .times(PCT_DIGIT)
+              .plus(
+                BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
+              ),
+      )
+      .dp(0)
+      .toFixed(),
+  );
 };
 
 export const calculateFutureValue = (

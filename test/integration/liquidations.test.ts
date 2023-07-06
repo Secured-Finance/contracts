@@ -14,7 +14,7 @@ import {
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
-import { calculateFutureValue, getAmountWithUnwindFee } from '../common/orders';
+import { calculateFutureValue, getAmountWithOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
 const ERROR_RANGE = BigNumber.from(1000);
@@ -474,7 +474,7 @@ describe('Integration Test: Liquidations', async () => {
         const { timestamp } = await ethers.provider.getBlock(receipt.blockHash);
         const unwindFee = receivedDebtAmount
           .sub(
-            getAmountWithUnwindFee(
+            getAmountWithOrderFee(
               Side.LEND,
               receivedDebtAmount,
               filMaturities[0].sub(timestamp),

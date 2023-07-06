@@ -15,7 +15,7 @@ import {
 } from '../../common/constants';
 import {
   calculateFutureValue,
-  getAmountWithUnwindFee,
+  getAmountWithOrderFee,
 } from '../../common/orders';
 import { deployContracts } from './utils';
 
@@ -2663,12 +2663,18 @@ describe('LendingMarketController - Orders', () => {
             Side.BORROW,
             maturities[0],
             () => true, // any value
-            getAmountWithUnwindFee(
+            getAmountWithOrderFee(
               Side.BORROW,
               BigNumber.from('12500000000000000'),
               maturities[0].sub(timestamp),
             ),
           );
+
+        const partiallyFilledAmount = getAmountWithOrderFee(
+          Side.BORROW,
+          BigNumber.from('10000000000000000'),
+          maturities[0].sub(timestamp),
+        );
 
         await expect(tx)
           .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
@@ -2678,12 +2684,8 @@ describe('LendingMarketController - Orders', () => {
             targetCurrency,
             Side.LEND,
             maturities[0],
-            () => true, // any value
-            getAmountWithUnwindFee(
-              Side.BORROW,
-              BigNumber.from('12500000000000000'),
-              maturities[0].sub(timestamp),
-            ),
+            partiallyFilledAmount,
+            calculateFutureValue(partiallyFilledAmount, '8000'),
           );
 
         const { futureValue: aliceFV } =
@@ -2758,7 +2760,7 @@ describe('LendingMarketController - Orders', () => {
             Side.LEND,
             maturities[0],
             () => true, // any value
-            getAmountWithUnwindFee(
+            getAmountWithOrderFee(
               Side.LEND,
               BigNumber.from('12500000000000000'),
               maturities[0].sub(timestamp),
@@ -2825,7 +2827,7 @@ describe('LendingMarketController - Orders', () => {
             Side.BORROW,
             maturities[0],
             () => true, // any value
-            getAmountWithUnwindFee(
+            getAmountWithOrderFee(
               Side.BORROW,
               BigNumber.from('11250000000000000'),
               maturities[0].sub(timestamp),
