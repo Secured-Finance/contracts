@@ -94,4 +94,8 @@ contract LendingMarketCaller {
     {
         return ILendingMarket(lendingMarkets[_index]).executeItayoseCall();
     }
+
+    function cleanUpOrders(address _user, uint256 _index) external {
+        ILendingMarket(lendingMarkets[_index]).cleanUpOrders(_user);
+    }
 }

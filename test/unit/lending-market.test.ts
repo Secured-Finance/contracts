@@ -1263,6 +1263,80 @@ describe('LendingMarket', () => {
       });
     }
 
+    describe('Clean up orders', async () => {
+      it('Clean up a lending order', async () => {
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            Side.LEND,
+            '100000000000000',
+            '8000',
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          );
+
+        await lendingMarketCaller
+          .connect(bob)
+          .executeOrder(
+            Side.BORROW,
+            '100000000000000',
+            '8000',
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          );
+
+        await expect(
+          lendingMarketCaller.cleanUpOrders(alice.address, currentMarketIdx),
+        )
+          .to.emit(lendingMarket, 'OrdersCleaned')
+          .withArgs(
+            [1],
+            alice.address,
+            Side.LEND,
+            targetCurrency,
+            maturity,
+            '100000000000000',
+            '125000000000000',
+          );
+      });
+
+      it('Clean up a borrowing order', async () => {
+        await lendingMarketCaller
+          .connect(bob)
+          .executeOrder(
+            Side.BORROW,
+            '100000000000000',
+            '8000',
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          );
+
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            Side.LEND,
+            '100000000000000',
+            '8000',
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          );
+
+        await expect(
+          lendingMarketCaller.cleanUpOrders(bob.address, currentMarketIdx),
+        )
+          .to.emit(lendingMarket, 'OrdersCleaned')
+          .withArgs(
+            [1],
+            bob.address,
+            Side.BORROW,
+            targetCurrency,
+            maturity,
+            '100000000000000',
+            '125000000000000',
+          );
+      });
+    });
+
     describe('Unwind', async () => {
       it('Unwind a position partially until the circuit breaker threshold', async () => {
         await createInitialOrders(Side.LEND, 8000);
