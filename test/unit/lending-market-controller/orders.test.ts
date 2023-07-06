@@ -15,6 +15,7 @@ import {
 } from '../../common/constants';
 import {
   calculateFutureValue,
+  calculatePresentValue,
   getAmountWithOrderFee,
 } from '../../common/orders';
 import { deployContracts } from './utils';
@@ -2670,10 +2671,13 @@ describe('LendingMarketController - Orders', () => {
             ),
           );
 
-        const partiallyFilledAmount = getAmountWithOrderFee(
-          Side.BORROW,
-          BigNumber.from('10000000000000000'),
-          maturities[0].sub(timestamp),
+        const partiallyFilledAmount = calculatePresentValue(
+          getAmountWithOrderFee(
+            Side.BORROW,
+            BigNumber.from('12500000000000000'),
+            maturities[0].sub(timestamp),
+          ),
+          '8000',
         );
 
         await expect(tx)

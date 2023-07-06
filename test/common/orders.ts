@@ -65,6 +65,19 @@ export const calculateFutureValue = (
   );
 };
 
+export const calculatePresentValue = (
+  orderAmount: BigNumber | string,
+  unitPrice: BigNumber | string | number,
+) => {
+  return BigNumber.from(
+    BigNumberJS(orderAmount.toString())
+      .times(unitPrice.toString())
+      .div(PRICE_DIGIT)
+      .dp(0)
+      .toFixed(),
+  );
+};
+
 export const calculateAutoRolledLendingCompoundFactor = (
   compoundFactor: BigNumber,
   currentMaturity: BigNumber,
