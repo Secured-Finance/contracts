@@ -12,6 +12,7 @@ struct MarketOrder {
 }
 
 struct ItayoseLog {
+    uint256 openingUnitPrice;
     uint256 lastLendUnitPrice;
     uint256 lastBorrowUnitPrice;
 }
@@ -26,8 +27,6 @@ library LendingMarketStorage {
         uint48 lastOrderId;
         uint256 openingDate;
         uint256 maturity;
-        // Mapping from maturity to opening unit price
-        mapping(uint256 => uint256) openingUnitPrices; // TODO: Merge with itayoseLogs when executing forced deployment
         // Mapping from maturity to boolean if the market is ready or not
         mapping(uint256 => bool) isReady;
         // Mapping from user to active lend order ids

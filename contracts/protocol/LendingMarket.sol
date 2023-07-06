@@ -121,7 +121,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 borrowUnitPrice: OrderBookLogic.getLowestBorrowingUnitPrice(),
                 lendUnitPrice: OrderBookLogic.getHighestLendingUnitPrice(),
                 midUnitPrice: getMidUnitPrice(),
-                openingUnitPrice: Storage.slot().openingUnitPrices[Storage.slot().maturity],
+                openingUnitPrice: Storage
+                    .slot()
+                    .itayoseLogs[Storage.slot().maturity]
+                    .openingUnitPrice,
                 isReady: isReady()
             });
     }
@@ -210,14 +213,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      */
     function getOpeningDate() external view override returns (uint256 openingDate) {
         return Storage.slot().openingDate;
-    }
-
-    /**
-     * @notice Gets the market opening unit price.
-     * @return openingUnitPrices The market opening unit price
-     */
-    function getOpeningUnitPrice() external view override returns (uint256 openingUnitPrices) {
-        return Storage.slot().openingUnitPrices[Storage.slot().maturity];
     }
 
     /**
@@ -756,8 +751,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         }
 
         Storage.slot().isReady[Storage.slot().maturity] = true;
-        Storage.slot().openingUnitPrices[Storage.slot().maturity] = openingUnitPrice;
         Storage.slot().itayoseLogs[Storage.slot().maturity] = ItayoseLog(
+            openingUnitPrice,
             lastLendUnitPrice,
             lastBorrowUnitPrice
         );

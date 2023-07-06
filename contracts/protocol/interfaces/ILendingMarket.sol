@@ -144,8 +144,6 @@ interface ILendingMarket {
 
     function getOpeningDate() external view returns (uint256);
 
-    function getOpeningUnitPrice() external view returns (uint256);
-
     function isReady() external view returns (bool);
 
     function isMatured() external view returns (bool);

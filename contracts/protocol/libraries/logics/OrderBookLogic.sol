@@ -6,7 +6,7 @@ import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
-import {LendingMarketStorage as Storage, MarketOrder} from "../../storages/LendingMarketStorage.sol";
+import {LendingMarketStorage as Storage, MarketOrder, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
 
 library OrderBookLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
@@ -713,12 +713,11 @@ library OrderBookLogic {
         uint256 unitPrice = marketOrder.unitPrice;
 
         if (Storage.slot().isPreOrder[_orderId]) {
-            uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-            uint256 lastLendUnitPrice = Storage
-                .slot()
-                .itayoseLogs[marketOrder.maturity]
-                .lastLendUnitPrice;
-            unitPrice = lastLendUnitPrice <= unitPrice ? openingUnitPrice : unitPrice;
+            ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[marketOrder.maturity];
+
+            unitPrice = itayoseLog.lastLendUnitPrice <= unitPrice
+                ? itayoseLog.openingUnitPrice
+                : unitPrice;
         }
 
         presentValue = orderItem.amount;
@@ -738,12 +737,11 @@ library OrderBookLogic {
         uint256 unitPrice = marketOrder.unitPrice;
 
         if (Storage.slot().isPreOrder[_orderId]) {
-            uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-            uint256 lastBorrowUnitPrice = Storage
-                .slot()
-                .itayoseLogs[marketOrder.maturity]
-                .lastBorrowUnitPrice;
-            unitPrice = lastBorrowUnitPrice >= unitPrice ? openingUnitPrice : unitPrice;
+            ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[marketOrder.maturity];
+
+            unitPrice = itayoseLog.lastBorrowUnitPrice >= unitPrice
+                ? itayoseLog.openingUnitPrice
+                : unitPrice;
         }
 
         presentValue = orderItem.amount;
