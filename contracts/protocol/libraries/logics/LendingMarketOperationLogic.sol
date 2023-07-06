@@ -12,6 +12,9 @@ import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../BokkyPooBahsDateTim
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
+import {FundManagementLogic} from "./FundManagementLogic.sol";
+// types
+import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 

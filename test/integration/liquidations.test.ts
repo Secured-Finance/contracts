@@ -14,7 +14,7 @@ import {
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
-import { calculateFutureValue, getAmountWithUnwindFee } from '../common/orders';
+import { calculateFutureValue, getAmountWithOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
 const ERROR_RANGE = BigNumber.from(1000);
@@ -138,11 +138,17 @@ describe('Integration Test: Liquidations', async () => {
 
     await lendingMarketController
       .connect(owner)
-      .createOrder(hexEFIL, filMaturities[1], Side.BORROW, '100000000', '8000');
+      .executeOrder(
+        hexEFIL,
+        filMaturities[1],
+        Side.BORROW,
+        '100000000',
+        '8000',
+      );
 
     await lendingMarketController
       .connect(owner)
-      .depositAndCreateOrder(
+      .depositAndExecuteOrder(
         hexEFIL,
         filMaturities[1],
         Side.LEND,
@@ -152,11 +158,11 @@ describe('Integration Test: Liquidations', async () => {
 
     await lendingMarketController
       .connect(owner)
-      .createOrder(hexUSDC, usdcMaturities[1], Side.BORROW, '100000', '8000');
+      .executeOrder(hexUSDC, usdcMaturities[1], Side.BORROW, '100000', '8000');
 
     await lendingMarketController
       .connect(owner)
-      .depositAndCreateOrder(
+      .depositAndExecuteOrder(
         hexUSDC,
         usdcMaturities[1],
         Side.LEND,
@@ -323,7 +329,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -334,7 +340,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -345,7 +351,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -355,7 +361,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -468,7 +474,7 @@ describe('Integration Test: Liquidations', async () => {
         const { timestamp } = await ethers.provider.getBlock(receipt.blockHash);
         const unwindFee = receivedDebtAmount
           .sub(
-            getAmountWithUnwindFee(
+            getAmountWithOrderFee(
               Side.LEND,
               receivedDebtAmount,
               filMaturities[0].sub(timestamp),
@@ -532,7 +538,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -541,7 +547,7 @@ describe('Integration Test: Liquidations', async () => {
           );
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -552,7 +558,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -563,7 +569,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -702,7 +708,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -711,7 +717,7 @@ describe('Integration Test: Liquidations', async () => {
           );
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -722,7 +728,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -733,7 +739,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -764,7 +770,7 @@ describe('Integration Test: Liquidations', async () => {
       it('Execute liquidation', async () => {
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[1],
             Side.BORROW,
@@ -774,7 +780,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[1],
             Side.LEND,
@@ -784,7 +790,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[1],
             Side.BORROW,
@@ -844,7 +850,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -855,7 +861,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -866,7 +872,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -876,7 +882,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -985,7 +991,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -996,7 +1002,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -1007,7 +1013,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[1],
             Side.BORROW,
@@ -1017,7 +1023,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[1],
             Side.LEND,
@@ -1142,7 +1148,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexUSDC,
             filMaturities[0],
             Side.BORROW,
@@ -1153,7 +1159,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexUSDC,
               filMaturities[0],
               Side.LEND,
@@ -1164,7 +1170,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexUSDC,
             filMaturities[0],
             Side.BORROW,
@@ -1174,7 +1180,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexUSDC,
             filMaturities[0],
             Side.LEND,
@@ -1197,7 +1203,7 @@ describe('Integration Test: Liquidations', async () => {
       it('Create orders on the FIL market', async () => {
         await lendingMarketController
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -1208,7 +1214,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -1219,7 +1225,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -1229,7 +1235,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -1343,7 +1349,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexUSDC,
             filMaturities[1],
             Side.BORROW,
@@ -1354,7 +1360,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexUSDC,
               filMaturities[1],
               Side.LEND,
@@ -1365,7 +1371,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexUSDC,
             filMaturities[1],
             Side.BORROW,
@@ -1375,7 +1381,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexUSDC,
             filMaturities[1],
             Side.LEND,
@@ -1398,7 +1404,7 @@ describe('Integration Test: Liquidations', async () => {
       it('Create orders on the FIL market', async () => {
         await lendingMarketController
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[1],
             Side.BORROW,
@@ -1409,7 +1415,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[1],
               Side.LEND,
@@ -1420,7 +1426,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[1],
             Side.BORROW,
@@ -1430,7 +1436,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[1],
             Side.LEND,
@@ -1466,7 +1472,7 @@ describe('Integration Test: Liquidations', async () => {
       it('Create orders for unwinding', async () => {
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexUSDC,
             filMaturities[0],
             Side.LEND,
@@ -1476,7 +1482,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -1486,7 +1492,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -1594,7 +1600,7 @@ describe('Integration Test: Liquidations', async () => {
         for (let i = 0; i < 2; i++) {
           await lendingMarketController
             .connect(alice)
-            .createOrder(
+            .executeOrder(
               hexUSDC,
               filMaturities[i],
               Side.BORROW,
@@ -1605,7 +1611,7 @@ describe('Integration Test: Liquidations', async () => {
           await expect(
             lendingMarketController
               .connect(bob)
-              .depositAndCreateOrder(
+              .depositAndExecuteOrder(
                 hexUSDC,
                 filMaturities[i],
                 Side.LEND,
@@ -1616,7 +1622,7 @@ describe('Integration Test: Liquidations', async () => {
 
           await lendingMarketController
             .connect(owner)
-            .createOrder(
+            .executeOrder(
               hexUSDC,
               filMaturities[i],
               Side.BORROW,
@@ -1626,7 +1632,7 @@ describe('Integration Test: Liquidations', async () => {
 
           await lendingMarketController
             .connect(owner)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexUSDC,
               filMaturities[i],
               Side.LEND,
@@ -1650,7 +1656,7 @@ describe('Integration Test: Liquidations', async () => {
       it('Create orders on the FIL market', async () => {
         await lendingMarketController
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -1661,7 +1667,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(alice)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -1672,7 +1678,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -1682,7 +1688,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -1793,7 +1799,7 @@ describe('Integration Test: Liquidations', async () => {
       // Create order on FIL market
       await lendingMarketController
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           hexEFIL,
           filMaturities[0],
           Side.BORROW,
@@ -1803,7 +1809,7 @@ describe('Integration Test: Liquidations', async () => {
 
       await lendingMarketController
         .connect(owner)
-        .createOrder(
+        .executeOrder(
           hexEFIL,
           filMaturities[0],
           Side.BORROW,
@@ -1814,7 +1820,7 @@ describe('Integration Test: Liquidations', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -1825,7 +1831,7 @@ describe('Integration Test: Liquidations', async () => {
 
       await lendingMarketController
         .connect(owner)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexEFIL,
           filMaturities[0],
           Side.LEND,
@@ -1847,7 +1853,7 @@ describe('Integration Test: Liquidations', async () => {
       // Create order on USDC market
       await lendingMarketController
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           hexUSDC,
           usdcMaturities[0],
           Side.BORROW,
@@ -1856,7 +1862,7 @@ describe('Integration Test: Liquidations', async () => {
         );
       await lendingMarketController
         .connect(owner)
-        .createOrder(
+        .executeOrder(
           hexUSDC,
           usdcMaturities[0],
           Side.BORROW,
@@ -1867,7 +1873,7 @@ describe('Integration Test: Liquidations', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexUSDC,
             usdcMaturities[0],
             Side.LEND,
@@ -1878,7 +1884,7 @@ describe('Integration Test: Liquidations', async () => {
 
       await lendingMarketController
         .connect(owner)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexUSDC,
           usdcMaturities[0],
           Side.LEND,
@@ -2023,7 +2029,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -2034,7 +2040,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -2115,7 +2121,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -2126,7 +2132,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -2255,7 +2261,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -2266,7 +2272,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -2393,7 +2399,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -2402,7 +2408,7 @@ describe('Integration Test: Liquidations', async () => {
           );
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -2413,7 +2419,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,
@@ -2424,7 +2430,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
@@ -2455,7 +2461,7 @@ describe('Integration Test: Liquidations', async () => {
       it('Execute forced repayment', async () => {
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[1],
             Side.BORROW,
@@ -2465,7 +2471,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[1],
             Side.LEND,
@@ -2475,7 +2481,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[1],
             Side.BORROW,
@@ -2541,7 +2547,7 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             hexEFIL,
             filMaturities[0],
             Side.BORROW,
@@ -2552,7 +2558,7 @@ describe('Integration Test: Liquidations', async () => {
         await expect(
           lendingMarketController
             .connect(bob)
-            .depositAndCreateOrder(
+            .depositAndExecuteOrder(
               hexEFIL,
               filMaturities[0],
               Side.LEND,

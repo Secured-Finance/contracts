@@ -38,14 +38,14 @@ contract LendingMarketCaller {
         ILendingMarket(lendingMarkets[_index]).openMarket(_maturity, _openingDate);
     }
 
-    function createOrder(
+    function executeOrder(
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice,
         uint256 _circuitBreakerLimitRange,
         uint256 _index
     ) external {
-        ILendingMarket(lendingMarkets[_index]).createOrder(
+        ILendingMarket(lendingMarkets[_index]).executeOrder(
             _side,
             msg.sender,
             _amount,
@@ -54,13 +54,13 @@ contract LendingMarketCaller {
         );
     }
 
-    function createPreOrder(
+    function executePreOrder(
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice,
         uint256 _index
     ) external {
-        ILendingMarket(lendingMarkets[_index]).createPreOrder(
+        ILendingMarket(lendingMarkets[_index]).executePreOrder(
             _side,
             msg.sender,
             _amount,
@@ -68,13 +68,13 @@ contract LendingMarketCaller {
         );
     }
 
-    function unwind(
+    function unwindPosition(
         ProtocolTypes.Side _side,
         uint256 _futureValue,
         uint256 _circuitBreakerLimitRange,
         uint256 _index
     ) external {
-        ILendingMarket(lendingMarkets[_index]).unwind(
+        ILendingMarket(lendingMarkets[_index]).unwindPosition(
             _side,
             msg.sender,
             _futureValue,
@@ -93,5 +93,9 @@ contract LendingMarketCaller {
         )
     {
         return ILendingMarket(lendingMarkets[_index]).executeItayoseCall();
+    }
+
+    function cleanUpOrders(address _user, uint256 _index) external {
+        ILendingMarket(lendingMarkets[_index]).cleanUpOrders(_user);
     }
 }

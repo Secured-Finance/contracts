@@ -34,6 +34,8 @@ describe('Integration Test: Deposit', async () => {
   let eFILToken: Contract;
   let wBTCToken: Contract;
 
+  let fundManagementLogic: Contract;
+
   let genesisDate: number;
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
@@ -72,6 +74,7 @@ describe('Integration Test: Deposit', async () => {
       usdcToken,
       eFILToken,
       wBTCToken,
+      fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -544,19 +547,19 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
+        .executeOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
+        .executeOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexWBTC, wBTCMaturities[0], Side.BORROW, '1000', '8200');
+        .executeOrder(hexWBTC, wBTCMaturities[0], Side.BORROW, '1000', '8200');
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexWBTC, wBTCMaturities[0], Side.LEND, '1000', '7800');
+        .executeOrder(hexWBTC, wBTCMaturities[0], Side.LEND, '1000', '7800');
     });
 
     it('Fill an order(WBTC)', async () => {
@@ -572,7 +575,7 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           hexWBTC,
           wBTCMaturities[0],
           Side.BORROW,
@@ -581,7 +584,7 @@ describe('Integration Test: Deposit', async () => {
         );
       const tx = await lendingMarketController
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           hexWBTC,
           wBTCMaturities[0],
           Side.LEND,
@@ -627,7 +630,7 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           hexEFIL,
           filMaturities[0],
           Side.BORROW,
@@ -636,7 +639,7 @@ describe('Integration Test: Deposit', async () => {
         );
       const tx = await lendingMarketController
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           hexEFIL,
           filMaturities[0],
           Side.LEND,
@@ -721,11 +724,11 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
+        .executeOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
+        .executeOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
     });
 
     it('Fill an order', async () => {
@@ -741,11 +744,17 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(bob)
-        .createOrder(hexEFIL, filMaturities[0], Side.LEND, orderAmount, '8000');
+        .executeOrder(
+          hexEFIL,
+          filMaturities[0],
+          Side.LEND,
+          orderAmount,
+          '8000',
+        );
 
       const tx = await lendingMarketController
         .connect(alice)
-        .createOrder(hexEFIL, filMaturities[0], Side.BORROW, orderAmount, '0');
+        .executeOrder(hexEFIL, filMaturities[0], Side.BORROW, orderAmount, '0');
 
       const coverage = await tokenVault.getCoverage(alice.address);
       const { futureValue: aliceFV, presentValue: alicePV } =
@@ -830,19 +839,19 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
+        .executeOrder(hexEFIL, filMaturities[0], Side.BORROW, '1000', '8200');
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
+        .executeOrder(hexEFIL, filMaturities[0], Side.LEND, '1000', '7800');
 
       await lendingMarketController
         .connect(carol)
-        .createOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
+        .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
 
       await lendingMarketController
         .connect(carol)
-        .depositAndCreateOrder(
+        .depositAndExecuteOrder(
           hexETH,
           ethMaturities[0],
           Side.LEND,
@@ -865,7 +874,7 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           hexEFIL,
           filMaturities[0],
           Side.BORROW,
@@ -875,7 +884,7 @@ describe('Integration Test: Deposit', async () => {
 
       const tx = await lendingMarketController
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           hexEFIL,
           filMaturities[0],
           Side.LEND,
@@ -925,7 +934,7 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           hexETH,
           ethMaturities[0],
           Side.BORROW,
@@ -935,7 +944,7 @@ describe('Integration Test: Deposit', async () => {
 
       const tx = await lendingMarketController
         .connect(alice)
-        .createOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '0');
+        .executeOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '0');
 
       const { futureValue: aliceFV } =
         await lendingMarketController.getPosition(
@@ -987,28 +996,28 @@ describe('Integration Test: Deposit', async () => {
       await expect(
         lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             filMaturities[0],
             Side.LEND,
             filOrderAmount,
             '8000',
           ),
-      ).to.emit(lendingMarketsForEFIL[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await wBTCToken.connect(bob).approve(tokenVault.address, wbtcOrderAmount);
 
       await expect(
         lendingMarketController
           .connect(bob)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexWBTC,
             wBTCMaturities[0],
             Side.LEND,
             wbtcOrderAmount,
             '8000',
           ),
-      ).to.emit(lendingMarketsForWBTC[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
     });
 
     // Test if the following error doesn't happen anymore

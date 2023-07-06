@@ -138,7 +138,7 @@ interface ILendingMarketController {
 
     function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external;
 
-    function createOrder(
+    function executeOrder(
         bytes32 ccy,
         uint256 maturity,
         ProtocolTypes.Side side,
@@ -146,7 +146,7 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external returns (bool);
 
-    function depositAndCreateOrder(
+    function depositAndExecuteOrder(
         bytes32 ccy,
         uint256 maturity,
         ProtocolTypes.Side side,
@@ -154,7 +154,7 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external payable returns (bool);
 
-    function createPreOrder(
+    function executePreOrder(
         bytes32 ccy,
         uint256 maturity,
         ProtocolTypes.Side side,
@@ -162,7 +162,7 @@ interface ILendingMarketController {
         uint256 unitPrice
     ) external returns (bool);
 
-    function depositAndCreatePreOrder(
+    function depositAndExecutesPreOrder(
         bytes32 ccy,
         uint256 maturity,
         ProtocolTypes.Side side,

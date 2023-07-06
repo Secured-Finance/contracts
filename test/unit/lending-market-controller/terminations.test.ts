@@ -132,7 +132,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('Already terminated');
 
       await expect(
-        lendingMarketControllerProxy.createOrder(
+        lendingMarketControllerProxy.executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -142,7 +142,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('Already terminated');
 
       await expect(
-        lendingMarketControllerProxy.depositAndCreateOrder(
+        lendingMarketControllerProxy.depositAndExecuteOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -152,7 +152,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('Already terminated');
 
       await expect(
-        lendingMarketControllerProxy.createPreOrder(
+        lendingMarketControllerProxy.executePreOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -162,7 +162,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('Already terminated');
 
       await expect(
-        lendingMarketControllerProxy.depositAndCreatePreOrder(
+        lendingMarketControllerProxy.depositAndExecutesPreOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -227,7 +227,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -237,7 +237,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -248,14 +248,14 @@ describe('LendingMarketController - Terminations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.LEND,
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await lendingMarketControllerProxy
         .getPosition(targetCurrency, maturities[0], alice.address)
@@ -297,7 +297,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -307,7 +307,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -318,14 +318,14 @@ describe('LendingMarketController - Terminations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.LEND,
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency2`);
       const lendingMarket2Proxies = await initialize(targetCurrency2);
@@ -337,7 +337,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency2,
           maturities[0],
           Side.LEND,
@@ -347,7 +347,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency2,
           maturities[0],
           Side.LEND,
@@ -358,14 +358,14 @@ describe('LendingMarketController - Terminations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             targetCurrency2,
             maturities[0],
             Side.BORROW,
             '200000000000000000',
             '8000',
           ),
-      ).to.emit(lendingMarket2, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const position1 = await lendingMarketControllerProxy.getPosition(
         targetCurrency,
@@ -432,7 +432,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -443,21 +443,21 @@ describe('LendingMarketController - Terminations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.LEND,
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Move to 6 hours (21600 sec) before maturity.
       await time.increaseTo(maturities[0].sub('21600').toString());
 
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.LEND,
@@ -466,7 +466,7 @@ describe('LendingMarketController - Terminations', () => {
         );
       await lendingMarketControllerProxy
         .connect(dave)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -514,7 +514,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -524,7 +524,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -535,14 +535,14 @@ describe('LendingMarketController - Terminations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.LEND,
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
@@ -563,7 +563,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -573,7 +573,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -584,14 +584,14 @@ describe('LendingMarketController - Terminations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(bob)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.LEND,
             '50000000000000000',
             '0',
           ),
-      ).to.emit(lendingMarket1, 'OrdersTaken');
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),

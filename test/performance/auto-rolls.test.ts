@@ -30,6 +30,8 @@ describe('Performance Test: Auto-rolls', async () => {
   let lendingMarkets: Contract[] = [];
   let eFILToken: Contract;
 
+  let fundManagementLogic: Contract;
+
   let genesisDate: number;
   let maturities: BigNumber[];
 
@@ -54,7 +56,7 @@ describe('Performance Test: Auto-rolls', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(
+      .executeOrder(
         hexEFIL,
         maturity,
         Side.BORROW,
@@ -64,7 +66,7 @@ describe('Performance Test: Auto-rolls', async () => {
 
     await lendingMarketController
       .connect(user)
-      .createOrder(
+      .executeOrder(
         hexEFIL,
         maturity,
         Side.LEND,
@@ -83,6 +85,7 @@ describe('Performance Test: Auto-rolls', async () => {
       tokenVault,
       lendingMarketController,
       eFILToken,
+      fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
@@ -157,20 +160,20 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(alice)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             maturities[0],
             Side.LEND,
             orderAmount,
             '8000',
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(bob)
-          .createOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+          .executeOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -259,20 +262,20 @@ describe('Performance Test: Auto-rolls', async () => {
       await expect(
         lendingMarketController
           .connect(ellen)
-          .depositAndCreateOrder(
+          .depositAndExecuteOrder(
             hexEFIL,
             maturities[0],
             Side.LEND,
             orderAmount,
             '9523',
           ),
-      ).to.emit(lendingMarkets[0], 'OrderMade');
+      ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(
         lendingMarketController
           .connect(dave)
-          .createOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
-      ).to.emit(lendingMarkets[0], 'OrdersTaken');
+          .executeOrder(hexEFIL, maturities[0], Side.BORROW, orderAmount, 0),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
       const { futureValue: ellenActualFV } =

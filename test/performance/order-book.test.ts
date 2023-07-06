@@ -166,7 +166,7 @@ describe('Performance Test: Order Book', async () => {
 
               await lendingMarketController
                 .connect(user)
-                .createOrder(
+                .executeOrder(
                   currencyKey,
                   maturities[0],
                   Side.LEND,
@@ -200,7 +200,7 @@ describe('Performance Test: Order Book', async () => {
 
             const tx = await lendingMarketController
               .connect(signers[0])
-              .createOrder(
+              .executeOrder(
                 currencyKey,
                 maturities[0],
                 Side.BORROW,
@@ -209,14 +209,20 @@ describe('Performance Test: Order Book', async () => {
               );
 
             await expect(tx)
-              .to.emit(lendingMarkets[0], 'OrdersTaken')
+              .to.emit(lendingMarkets[0], 'OrderExecuted')
               .withArgs(
                 signers[0].address,
                 Side.BORROW,
                 currencyKey,
                 maturities[0],
                 totalAmount,
+                0,
+                totalAmount,
                 unitPrice,
+                () => true,
+                0,
+                0,
+                0,
                 () => true,
               );
 

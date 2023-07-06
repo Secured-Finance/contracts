@@ -10,11 +10,13 @@ import {
 } from './constants';
 
 export const calculateOrderFee = (
-  orderAmount: BigNumber,
+  orderAmount: BigNumber | string,
   unitPrice: BigNumber | string | number,
   currentMaturity: BigNumber,
 ) => {
-  const fv = orderAmount.mul(PRICE_DIGIT).div(unitPrice);
+  const fv = BigNumber.from(orderAmount.toString())
+    .mul(PRICE_DIGIT)
+    .div(unitPrice);
 
   return fv
     .mul(ORDER_FEE_RATE)
@@ -23,40 +25,57 @@ export const calculateOrderFee = (
     .div(PCT_DIGIT);
 };
 
-export const getAmountWithUnwindFee = (
+export const getAmountWithOrderFee = (
   side: number,
   orderAmount: BigNumber,
   currentMaturity: BigNumber,
 ) => {
-  return BigNumberJS(orderAmount.toString())
-    .times(SECONDS_IN_YEAR)
-    .times(PCT_DIGIT)
-    .div(
-      side === Side.LEND
-        ? BigNumberJS(SECONDS_IN_YEAR)
-            .times(PCT_DIGIT)
-            .minus(
-              BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
-            )
-        : BigNumberJS(SECONDS_IN_YEAR)
-            .times(PCT_DIGIT)
-            .plus(
-              BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
-            ),
-    )
-    .dp(0)
-    .toFixed();
+  return BigNumber.from(
+    BigNumberJS(orderAmount.toString())
+      .times(SECONDS_IN_YEAR)
+      .times(PCT_DIGIT)
+      .div(
+        side === Side.LEND
+          ? BigNumberJS(SECONDS_IN_YEAR)
+              .times(PCT_DIGIT)
+              .minus(
+                BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
+              )
+          : BigNumberJS(SECONDS_IN_YEAR)
+              .times(PCT_DIGIT)
+              .plus(
+                BigNumberJS(ORDER_FEE_RATE).times(currentMaturity.toString()),
+              ),
+      )
+      .dp(0)
+      .toFixed(),
+  );
 };
 
 export const calculateFutureValue = (
-  orderAmount: BigNumber,
+  orderAmount: BigNumber | string,
   unitPrice: BigNumber | string | number,
 ) => {
-  return BigNumberJS(orderAmount.toString())
-    .times(PRICE_DIGIT)
-    .div(unitPrice.toString())
-    .dp(0)
-    .toFixed();
+  return BigNumber.from(
+    BigNumberJS(orderAmount.toString())
+      .times(PRICE_DIGIT)
+      .div(unitPrice.toString())
+      .dp(0)
+      .toFixed(),
+  );
+};
+
+export const calculatePresentValue = (
+  orderAmount: BigNumber | string,
+  unitPrice: BigNumber | string | number,
+) => {
+  return BigNumber.from(
+    BigNumberJS(orderAmount.toString())
+      .times(unitPrice.toString())
+      .div(PRICE_DIGIT)
+      .dp(0)
+      .toFixed(),
+  );
 };
 
 export const calculateAutoRolledLendingCompoundFactor = (
