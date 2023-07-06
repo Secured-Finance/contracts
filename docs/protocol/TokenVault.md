@@ -250,7 +250,7 @@ Gets the total amount of the unused collateral
 ### getTotalCollateralAmount
 
 ```solidity
-function getTotalCollateralAmount(address _user) public view returns (uint256 totalCollateralAmount)
+function getTotalCollateralAmount(address _user) external view returns (uint256 totalCollateralAmount)
 ```
 
 Gets the total collateral amount.
@@ -262,6 +262,23 @@ Gets the total collateral amount.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | totalCollateralAmount | uint256 | The total collateral amount in ETH |
+
+### getCollateralAmount
+
+```solidity
+function getCollateralAmount(address _user, bytes32 _ccy) external view returns (uint256 amount)
+```
+
+Gets the total collateral amount of the selected currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amount | uint256 | The collateral amount |
 
 ### getLiquidationAmount
 
@@ -331,6 +348,23 @@ Gets the currencies that the user used as collateral.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The currency names in bytes32 |
+
+### calculateLiquidationFees
+
+```solidity
+function calculateLiquidationFees(uint256 _amount) external view returns (uint256 protocolFee, uint256 liquidatorFee)
+```
+
+Gets the actual fee amounts calculated by rates.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _amount | uint256 | Liquidation amount |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| protocolFee | uint256 | Liquidation fee amount received by protocol |
+| liquidatorFee | uint256 | Liquidation fee amount received by liquidators |
 
 ### getCollateralParameters
 
@@ -441,13 +475,13 @@ Removes deposit amount.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to withdraw. |
 
-### resetDepositAmount
+### executeForcedReset
 
 ```solidity
-function resetDepositAmount(address _user, bytes32 _ccy) external returns (uint256)
+function executeForcedReset(address _user, bytes32 _ccy) external returns (uint256)
 ```
 
-Resets deposit amount.
+Forces a reset of the user's deposit amount.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

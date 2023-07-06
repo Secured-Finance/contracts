@@ -199,6 +199,24 @@ Gets the converted amount of currency.
 | ---- | ---- | ----------- |
 | amount | uint256 | The converted amount |
 
+### convert
+
+```solidity
+function convert(bytes32 _fromCcy, bytes32 _toCcy, uint256[] _amounts) external view returns (uint256[] amounts)
+```
+
+Gets the converted amounts of currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _fromCcy | bytes32 | Currency to convert from |
+| _toCcy | bytes32 | Currency to convert to |
+| _amounts | uint256[] | Amounts to be converted |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amounts | uint256[] | The converted amounts |
+
 ### convertToBaseCurrency
 
 ```solidity
@@ -236,7 +254,7 @@ Gets the converted amount in the base currency.
 ### convertToBaseCurrency
 
 ```solidity
-function convertToBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
+function convertToBaseCurrency(bytes32 _ccy, uint256[] _amounts) public view returns (uint256[] amounts)
 ```
 
 Gets the converted amounts in the base currency.
@@ -266,6 +284,23 @@ Gets the converted amount to the selected currency from the base currency.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | amount | uint256 | The converted amount |
+
+### convertFromBaseCurrency
+
+```solidity
+function convertFromBaseCurrency(bytes32 _ccy, uint256[] _amounts) public view returns (uint256[] amounts)
+```
+
+Gets the converted amounts to the selected currency from the base currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency that has to be converted to the base currency. |
+| _amounts | uint256[] | Amounts in the base currency to be converted |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amounts | uint256[] | The converted amounts |
 
 ### _isBaseCurrency
 

@@ -101,7 +101,13 @@ function getUnusedCollateral(address user) external view returns (uint256)
 ### getTotalCollateralAmount
 
 ```solidity
-function getTotalCollateralAmount(address party) external view returns (uint256)
+function getTotalCollateralAmount(address user) external view returns (uint256)
+```
+
+### getCollateralAmount
+
+```solidity
+function getCollateralAmount(address user, bytes32 ccy) external view returns (uint256)
 ```
 
 ### getLiquidationAmount
@@ -126,6 +132,12 @@ function getDepositAmount(address user, bytes32 ccy) external view returns (uint
 
 ```solidity
 function getUsedCurrencies(address user) external view returns (bytes32[])
+```
+
+### calculateLiquidationFees
+
+```solidity
+function calculateLiquidationFees(uint256 _liquidationAmount) external view returns (uint256 protocolFee, uint256 liquidatorFee)
 ```
 
 ### getCollateralParameters
@@ -170,10 +182,10 @@ function addDepositAmount(address user, bytes32 ccy, uint256 amount) external
 function removeDepositAmount(address user, bytes32 ccy, uint256 amount) external
 ```
 
-### resetDepositAmount
+### executeForcedReset
 
 ```solidity
-function resetDepositAmount(address user, bytes32 ccy) external returns (uint256 removedAmount)
+function executeForcedReset(address user, bytes32 ccy) external returns (uint256 removedAmount)
 ```
 
 ### transferFrom

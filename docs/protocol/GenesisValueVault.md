@@ -176,18 +176,33 @@ function transferFrom(bytes32 _ccy, address _sender, address _receiver, int256 _
 function cleanUpGenesisValue(bytes32 _ccy, address _user, uint256 _maturity) external
 ```
 
-### resetGenesisValue
+### executeForcedReset
 
 ```solidity
-function resetGenesisValue(bytes32 _ccy, address _user) external
+function executeForcedReset(bytes32 _ccy, address _user) external
 ```
 
-Resets all genesis values of the user.
+Forces a reset of the user's genesis value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
+
+### executeForcedReset
+
+```solidity
+function executeForcedReset(bytes32 _ccy, uint256 _maturity, address _user, int256 _amountInFV) external returns (int256 removedAmountInFV, int256 balance)
+```
+
+Forces a reset of the user's genesis value.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 |  |
+| _user | address | User's address |
+| _amountInFV | int256 | The amount in the future value to reset |
 
 ### getBalanceFluctuationByAutoRolls
 

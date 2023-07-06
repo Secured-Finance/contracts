@@ -15,6 +15,7 @@ struct MarketOrder {
 
 ```solidity
 struct ItayoseLog {
+  uint256 openingUnitPrice;
   uint256 lastLendUnitPrice;
   uint256 lastBorrowUnitPrice;
 }
@@ -36,7 +37,6 @@ struct Storage {
   uint48 lastOrderId;
   uint256 openingDate;
   uint256 maturity;
-  mapping(uint256 => uint256) openingUnitPrices;
   mapping(uint256 => bool) isReady;
   mapping(address => uint48[]) activeLendOrderIds;
   mapping(address => uint48[]) activeBorrowOrderIds;

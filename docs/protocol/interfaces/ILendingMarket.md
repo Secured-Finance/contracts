@@ -2,12 +2,33 @@
 
 ## ILendingMarket
 
+### OrderExecutionConditions
+
+```solidity
+struct OrderExecutionConditions {
+  bool isFilled;
+  uint256 executedUnitPrice;
+  uint256 cbThresholdUnitPrice;
+  bool ignoreRemainingAmount;
+}
+```
+
+### PlacedOrder
+
+```solidity
+struct PlacedOrder {
+  uint48 orderId;
+  uint256 amount;
+  uint256 unitPrice;
+}
+```
+
 ### FilledOrder
 
 ```solidity
 struct FilledOrder {
-  uint256 unitPrice;
   uint256 amount;
+  uint256 unitPrice;
   uint256 futureValue;
   uint256 ignoredAmount;
 }
@@ -17,6 +38,7 @@ struct FilledOrder {
 
 ```solidity
 struct PartiallyFilledOrder {
+  uint48 orderId;
   address maker;
   uint256 amount;
   uint256 futureValue;
@@ -29,34 +51,28 @@ struct PartiallyFilledOrder {
 event OrderCanceled(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice)
 ```
 
-### OrderMade
-
-```solidity
-event OrderMade(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice, bool isPreOrder)
-```
-
-### OrdersTaken
-
-```solidity
-event OrdersTaken(address taker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 filledAmount, uint256 unitPrice, uint256 filledFutureValue)
-```
-
-### OrderPartiallyTaken
-
-```solidity
-event OrderPartiallyTaken(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 filledAmount, uint256 filledFutureValue)
-```
-
 ### OrdersCleaned
 
 ```solidity
-event OrdersCleaned(uint48[] orderIds, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity)
+event OrdersCleaned(uint48[] orderIds, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 futureValue)
 ```
 
-### OrderBlockedByCircuitBreaker
+### OrderExecuted
 
 ```solidity
-event OrderBlockedByCircuitBreaker(address user, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 thresholdUnitPrice)
+event OrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 inputUnitPrice, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, uint48 placedOrderId, uint256 placedAmount, uint256 placedUnitPrice, uint256 cbThresholdUnitPrice)
+```
+
+### PreOrderExecuted
+
+```solidity
+event PreOrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice, uint48 orderId)
+```
+
+### PositionUnwound
+
+```solidity
+event PositionUnwound(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 futureValue, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, uint256 cbThresholdUnitPrice)
 ```
 
 ### MarketOpened
@@ -140,12 +156,6 @@ function getCurrency() external view returns (bytes32)
 function getOpeningDate() external view returns (uint256)
 ```
 
-### getOpeningUnitPrice
-
-```solidity
-function getOpeningUnitPrice() external view returns (uint256)
-```
-
 ### isReady
 
 ```solidity
@@ -174,6 +184,12 @@ function isItayosePeriod() external view returns (bool)
 
 ```solidity
 function isPreOrderPeriod() external returns (bool)
+```
+
+### getItayoseLog
+
+```solidity
+function getItayoseLog(uint256 maturity) external view returns (struct ItayoseLog)
 ```
 
 ### getOrder
@@ -224,22 +240,22 @@ function openMarket(uint256 maturity, uint256 openingDate) external returns (uin
 function cancelOrder(address user, uint48 orderId) external
 ```
 
-### createOrder
+### executeOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side side, address account, uint256 amount, uint256 unitPrice, uint256 circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function executeOrder(enum ProtocolTypes.Side side, address account, uint256 amount, uint256 unitPrice, uint256 circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
-### createPreOrder
+### executePreOrder
 
 ```solidity
-function createPreOrder(enum ProtocolTypes.Side side, address user, uint256 amount, uint256 unitPrice) external
+function executePreOrder(enum ProtocolTypes.Side side, address user, uint256 amount, uint256 unitPrice) external
 ```
 
-### unwind
+### unwindPosition
 
 ```solidity
-function unwind(enum ProtocolTypes.Side side, address user, uint256 futureValue, uint256 circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwindPosition(enum ProtocolTypes.Side side, address user, uint256 futureValue, uint256 circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 ### executeItayoseCall

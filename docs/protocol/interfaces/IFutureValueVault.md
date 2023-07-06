@@ -56,9 +56,15 @@ function removeFutureValue(address user, uint256 activeMaturity) external return
 function addInitialTotalSupply(uint256 maturity, int256 amount) external
 ```
 
-### resetFutureValue
+### executeForcedReset
 
 ```solidity
-function resetFutureValue(address _user) external
+function executeForcedReset(address user) external
+```
+
+### executeForcedReset
+
+```solidity
+function executeForcedReset(address user, int256 amount) external returns (int256 removedAmount, int256 balance)
 ```
 

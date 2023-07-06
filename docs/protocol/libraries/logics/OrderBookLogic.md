@@ -110,10 +110,10 @@ function removeOrder(address _user, uint48 _orderId) external returns (enum Prot
 function getOpeningUnitPrice() external view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
-### checkCircuitBreakerThreshold
+### getOrderExecutionConditions
 
 ```solidity
-function checkCircuitBreakerThreshold(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount)
+function getOrderExecutionConditions(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, uint256 cbThresholdUnitPrice, bool ignoreRemainingAmount)
 ```
 
 ### _getBorrowCircuitBreakerThreshold

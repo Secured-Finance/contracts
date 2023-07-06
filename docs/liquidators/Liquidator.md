@@ -62,6 +62,12 @@ receive() external payable
 function executeLiquidationCall(bytes32 _collateralCcy, uint256[] _collateralMaturities, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) external
 ```
 
+### executeForcedRepayment
+
+```solidity
+function executeForcedRepayment(bytes32 _collateralCcy, uint256[] _collateralMaturities, bytes32 _debtCcy, uint256 _debtMaturity, address _user, uint24 _poolFee) external
+```
+
 ### executeOperationForCollateral
 
 ```solidity
