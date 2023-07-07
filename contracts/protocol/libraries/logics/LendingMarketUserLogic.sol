@@ -318,11 +318,11 @@ library LendingMarketUserLogic {
         );
 
         for (uint256 i; i < activeLendOrderIds.length; i++) {
-            activeOrders[i] = _getActiveOrder(_ccy, market, activeLendOrderIds[i]);
+            activeOrders[i] = _getOrder(_ccy, market, activeLendOrderIds[i]);
         }
 
         for (uint256 i; i < activeBorrowOrderIds.length; i++) {
-            activeOrders[activeLendOrderIds.length + i] = _getActiveOrder(
+            activeOrders[activeLendOrderIds.length + i] = _getOrder(
                 _ccy,
                 market,
                 activeBorrowOrderIds[i]
@@ -330,11 +330,11 @@ library LendingMarketUserLogic {
         }
 
         for (uint256 i; i < inActiveLendOrderIds.length; i++) {
-            inactiveOrders[i] = _getInactiveOrder(_ccy, market, inActiveLendOrderIds[i]);
+            inactiveOrders[i] = _getOrder(_ccy, market, inActiveLendOrderIds[i]);
         }
 
         for (uint256 i; i < inActiveBorrowOrderIds.length; i++) {
-            inactiveOrders[inActiveLendOrderIds.length + i] = _getInactiveOrder(
+            inactiveOrders[inActiveLendOrderIds.length + i] = _getOrder(
                 _ccy,
                 market,
                 inActiveBorrowOrderIds[i]
@@ -342,34 +342,7 @@ library LendingMarketUserLogic {
         }
     }
 
-    function _getActiveOrder(
-        bytes32 _ccy,
-        ILendingMarket _market,
-        uint48 _orderId
-    ) internal view returns (ILendingMarketController.Order memory order) {
-        (
-            ProtocolTypes.Side side,
-            uint256 unitPrice,
-            uint256 maturity,
-            ,
-            uint256 amount,
-            uint256 timestamp,
-            bool isPreOrder
-        ) = _market.getOrder(_orderId);
-
-        order = ILendingMarketController.Order(
-            _orderId,
-            _ccy,
-            maturity,
-            side,
-            unitPrice,
-            amount,
-            timestamp,
-            isPreOrder
-        );
-    }
-
-    function _getInactiveOrder(
+    function _getOrder(
         bytes32 _ccy,
         ILendingMarket _market,
         uint48 _orderId
