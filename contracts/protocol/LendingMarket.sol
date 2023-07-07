@@ -130,16 +130,31 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the highest borrow price per future value.
-     * @return The highest borrow price per future value
+     * @notice Gets unit price Thresholds by CircuitBreaker.
+     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
+     * @return maxLendUnitPrice The maximum unit price for lending
+     * @return minBorrowUnitPrice The minimum unit price for borrowing
+     */
+    function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange)
+        external
+        view
+        override
+        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+    {
+        return OrderBookLogic.getCircuitBreakerThresholds(_circuitBreakerLimitRange);
+    }
+
+    /**
+     * @notice Gets the lowest borrow price per future value.
+     * @return The lowest borrow price per future value
      */
     function getBorrowUnitPrice() external view override returns (uint256) {
         return OrderBookLogic.getLowestBorrowingUnitPrice();
     }
 
     /**
-     * @notice Gets the lowest lend price per future value.
-     * @return The lowest lend price per future value
+     * @notice Gets the highest lend price per future value.
+     * @return The highest lend price per future value
      */
     function getLendUnitPrice() external view override returns (uint256) {
         return OrderBookLogic.getHighestLendingUnitPrice();

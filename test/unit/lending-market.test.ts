@@ -547,6 +547,47 @@ describe('LendingMarket', () => {
 
       return offsetUnitPrice;
     };
+    describe('Get circuit breaker thresholds', async () => {
+      it('Get circuit breaker thresholds on the empty order book', async () => {
+        const { maxLendUnitPrice, minBorrowUnitPrice } =
+          await lendingMarket.getCircuitBreakerThresholds(
+            CIRCUIT_BREAKER_RATE_RANGE,
+          );
+
+        expect(maxLendUnitPrice).to.equal('10000');
+        expect(minBorrowUnitPrice).to.equal('1');
+      });
+
+      it('Get circuit breaker thresholds on the non-empty order book', async () => {
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            Side.LEND,
+            '100000000000000',
+            '5000',
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          );
+
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            Side.BORROW,
+            '100000000000000',
+            '9950',
+            CIRCUIT_BREAKER_RATE_RANGE,
+            currentMarketIdx,
+          );
+
+        const { maxLendUnitPrice, minBorrowUnitPrice } =
+          await lendingMarket.getCircuitBreakerThresholds(
+            CIRCUIT_BREAKER_RATE_RANGE,
+          );
+
+        expect(maxLendUnitPrice).to.equal('9960');
+        expect(minBorrowUnitPrice).to.equal('4800');
+      });
+    });
 
     for (const side of [Side.BORROW, Side.LEND]) {
       const title = side === Side.BORROW ? 'Borrow Orders' : 'Lend Orders';
