@@ -83,12 +83,11 @@ library LendingMarketOperationLogic {
         view
         returns (ILendingMarketController.LendingMarketDetail[] memory lendingMarketDetails)
     {
-        ILendingMarketController.LendingMarketDetail[]
-            memory maturities = new ILendingMarketController.LendingMarketDetail[](
-                Storage.slot().lendingMarkets[_ccy].length
-            );
+        lendingMarketDetails = new ILendingMarketController.LendingMarketDetail[](
+            Storage.slot().lendingMarkets[_ccy].length
+        );
 
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+        for (uint256 i; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
             ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
             uint256 maturity = market.getMaturity();
 
@@ -103,7 +102,7 @@ library LendingMarketOperationLogic {
                 bool isReady
             ) = getLendingMarketDetail(_ccy, maturity);
 
-            maturities[i] = ILendingMarketController.LendingMarketDetail(
+            lendingMarketDetails[i] = ILendingMarketController.LendingMarketDetail(
                 _ccy,
                 maturity,
                 bestLendUnitPrice,
@@ -116,8 +115,6 @@ library LendingMarketOperationLogic {
                 isReady
             );
         }
-
-        return maturities;
     }
 
     function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity)
