@@ -133,12 +133,12 @@ library OrderBookLogic {
 
         if (orderItem.maker != address(0)) {
             side = marketOrder.side;
-            unitPrice = marketOrder.unitPrice;
             maturity = marketOrder.maturity;
             maker = orderItem.maker;
             amount = orderItem.amount;
             timestamp = orderItem.timestamp;
             isPreOrder = Storage.slot().isPreOrder[_orderId];
+            unitPrice = _getOrderUnitPrice(side, maturity, marketOrder.unitPrice, isPreOrder);
         }
     }
 
@@ -710,15 +710,13 @@ library OrderBookLogic {
             marketOrder.unitPrice,
             _orderId
         );
-        uint256 unitPrice = marketOrder.unitPrice;
 
-        if (Storage.slot().isPreOrder[_orderId]) {
-            ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[marketOrder.maturity];
-
-            unitPrice = itayoseLog.lastLendUnitPrice <= unitPrice
-                ? itayoseLog.openingUnitPrice
-                : unitPrice;
-        }
+        uint256 unitPrice = _getOrderUnitPrice(
+            marketOrder.side,
+            marketOrder.maturity,
+            marketOrder.unitPrice,
+            Storage.slot().isPreOrder[_orderId]
+        );
 
         presentValue = orderItem.amount;
         futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
@@ -734,17 +732,33 @@ library OrderBookLogic {
             marketOrder.unitPrice,
             _orderId
         );
-        uint256 unitPrice = marketOrder.unitPrice;
-
-        if (Storage.slot().isPreOrder[_orderId]) {
-            ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[marketOrder.maturity];
-
-            unitPrice = itayoseLog.lastBorrowUnitPrice >= unitPrice
-                ? itayoseLog.openingUnitPrice
-                : unitPrice;
-        }
+        uint256 unitPrice = _getOrderUnitPrice(
+            marketOrder.side,
+            marketOrder.maturity,
+            marketOrder.unitPrice,
+            Storage.slot().isPreOrder[_orderId]
+        );
 
         presentValue = orderItem.amount;
         futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
+    }
+
+    function _getOrderUnitPrice(
+        ProtocolTypes.Side side,
+        uint256 maturity,
+        uint256 orderPrice,
+        bool isPreOrder
+    ) internal view returns (uint256) {
+        if (!isPreOrder) return orderPrice;
+        ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[maturity];
+        if (
+            itayoseLog.openingUnitPrice != 0 &&
+            ((side == ProtocolTypes.Side.BORROW && orderPrice <= itayoseLog.lastBorrowUnitPrice) ||
+                (side == ProtocolTypes.Side.LEND && orderPrice >= itayoseLog.lastLendUnitPrice))
+        ) {
+            return itayoseLog.openingUnitPrice;
+        } else {
+            return orderPrice;
+        }
     }
 }

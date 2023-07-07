@@ -18,7 +18,6 @@ import {FundManagementLogic} from "./FundManagementLogic.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
-import {ItayoseLog} from "../../storages/LendingMarketStorage.sol";
 
 library LendingMarketUserLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -357,15 +356,6 @@ library LendingMarketUserLogic {
             bool isPreOrder
         ) = _market.getOrder(_orderId);
 
-        ItayoseLog memory itayoseLog = _market.getItayoseLog(maturity);
-        if (
-            isPreOrder &&
-            itayoseLog.openingUnitPrice != 0 &&
-            ((side == ProtocolTypes.Side.BORROW && unitPrice <= itayoseLog.lastBorrowUnitPrice) ||
-                (side == ProtocolTypes.Side.LEND && unitPrice >= itayoseLog.lastLendUnitPrice))
-        ) {
-            unitPrice = itayoseLog.openingUnitPrice;
-        }
         order = ILendingMarketController.Order(
             _orderId,
             _ccy,
