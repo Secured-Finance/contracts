@@ -886,7 +886,7 @@ describe('LendingMarketController - Itayose', () => {
       expect(bobFVAfter).to.equal('250000000000000');
     });
 
-    it('Filled lending pre-order should be returned as inactive orders with opening unit price', async () => {
+    it('Filled pre-order should be returned as inactive orders with opening unit price', async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
       const openingDate = moment(timestamp * 1000)
         .add(2, 'h')
