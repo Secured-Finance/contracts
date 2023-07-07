@@ -18,6 +18,7 @@ import {FundManagementLogic} from "./FundManagementLogic.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
+import {ItayoseLog} from "../../storages/LendingMarketStorage.sol";
 
 library LendingMarketUserLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -317,11 +318,11 @@ library LendingMarketUserLogic {
         );
 
         for (uint256 i; i < activeLendOrderIds.length; i++) {
-            activeOrders[i] = _getOrder(_ccy, market, activeLendOrderIds[i]);
+            activeOrders[i] = _getActiveOrder(_ccy, market, activeLendOrderIds[i]);
         }
 
         for (uint256 i; i < activeBorrowOrderIds.length; i++) {
-            activeOrders[activeLendOrderIds.length + i] = _getOrder(
+            activeOrders[activeLendOrderIds.length + i] = _getActiveOrder(
                 _ccy,
                 market,
                 activeBorrowOrderIds[i]
@@ -329,11 +330,11 @@ library LendingMarketUserLogic {
         }
 
         for (uint256 i; i < inActiveLendOrderIds.length; i++) {
-            inactiveOrders[i] = _getOrder(_ccy, market, inActiveLendOrderIds[i]);
+            inactiveOrders[i] = _getInactiveOrder(_ccy, market, inActiveLendOrderIds[i]);
         }
 
         for (uint256 i; i < inActiveBorrowOrderIds.length; i++) {
-            inactiveOrders[inActiveLendOrderIds.length + i] = _getOrder(
+            inactiveOrders[inActiveLendOrderIds.length + i] = _getInactiveOrder(
                 _ccy,
                 market,
                 inActiveBorrowOrderIds[i]
@@ -341,7 +342,7 @@ library LendingMarketUserLogic {
         }
     }
 
-    function _getOrder(
+    function _getActiveOrder(
         bytes32 _ccy,
         ILendingMarket _market,
         uint48 _orderId
@@ -356,6 +357,42 @@ library LendingMarketUserLogic {
             bool isPreOrder
         ) = _market.getOrder(_orderId);
 
+        order = ILendingMarketController.Order(
+            _orderId,
+            _ccy,
+            maturity,
+            side,
+            unitPrice,
+            amount,
+            timestamp,
+            isPreOrder
+        );
+    }
+
+    function _getInactiveOrder(
+        bytes32 _ccy,
+        ILendingMarket _market,
+        uint48 _orderId
+    ) internal view returns (ILendingMarketController.Order memory order) {
+        (
+            ProtocolTypes.Side side,
+            uint256 unitPrice,
+            uint256 maturity,
+            ,
+            uint256 amount,
+            uint256 timestamp,
+            bool isPreOrder
+        ) = _market.getOrder(_orderId);
+
+        ItayoseLog memory itayoseLog = _market.getItayoseLog(maturity);
+        if (
+            isPreOrder &&
+            itayoseLog.openingUnitPrice != 0 &&
+            ((side == ProtocolTypes.Side.BORROW && unitPrice <= itayoseLog.lastBorrowUnitPrice) ||
+                (side == ProtocolTypes.Side.LEND && unitPrice >= itayoseLog.lastLendUnitPrice))
+        ) {
+            unitPrice = itayoseLog.openingUnitPrice;
+        }
         order = ILendingMarketController.Order(
             _orderId,
             _ccy,
