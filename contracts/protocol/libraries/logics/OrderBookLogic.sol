@@ -744,21 +744,21 @@ library OrderBookLogic {
     }
 
     function _getOrderUnitPrice(
-        ProtocolTypes.Side side,
-        uint256 maturity,
-        uint256 orderPrice,
-        bool isPreOrder
+        ProtocolTypes.Side _side,
+        uint256 _maturity,
+        uint256 _unitPrice,
+        bool _isPreOrder
     ) internal view returns (uint256) {
-        if (!isPreOrder) return orderPrice;
-        ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[maturity];
+        if (!_isPreOrder) return _unitPrice;
+        ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[_maturity];
         if (
             itayoseLog.openingUnitPrice != 0 &&
-            ((side == ProtocolTypes.Side.BORROW && orderPrice <= itayoseLog.lastBorrowUnitPrice) ||
-                (side == ProtocolTypes.Side.LEND && orderPrice >= itayoseLog.lastLendUnitPrice))
+            ((_side == ProtocolTypes.Side.BORROW && _unitPrice <= itayoseLog.lastBorrowUnitPrice) ||
+                (_side == ProtocolTypes.Side.LEND && _unitPrice >= itayoseLog.lastLendUnitPrice))
         ) {
             return itayoseLog.openingUnitPrice;
         } else {
-            return orderPrice;
+            return _unitPrice;
         }
     }
 }
