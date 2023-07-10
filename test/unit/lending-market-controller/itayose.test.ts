@@ -885,5 +885,151 @@ describe('LendingMarketController - Itayose', () => {
 
       expect(bobFVAfter).to.equal('250000000000000');
     });
+
+    it('Filled pre-order should be returned as inactive orders with opening unit price', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const openingDate = moment(timestamp * 1000)
+        .add(2, 'h')
+        .unix();
+
+      await initialize(targetCurrency, openingDate);
+
+      const orders = [
+        {
+          side: Side.BORROW,
+          unitPrice: '8070',
+          amount: '100000000000000',
+          user: alice,
+        },
+        {
+          side: Side.BORROW,
+          unitPrice: '8000',
+          amount: '200000000000000',
+          user: alice,
+        },
+        {
+          side: Side.LEND,
+          unitPrice: '8100',
+          amount: '200000000000000',
+          user: bob,
+        },
+        {
+          side: Side.LEND,
+          unitPrice: '8060',
+          amount: '300000000000000',
+          user: bob,
+        },
+      ];
+
+      // the matching amount of the above orders
+      const expectedOpeningPrice = '8050';
+      const expectedFilledAmount = BigNumber.from('200000000000000');
+      const expectedLastLendUnitPrice = '8100';
+      const expectedLastBorrowUnitPrice = '8000';
+
+      for (const order of orders) {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(order.user)
+            .executePreOrder(
+              targetCurrency,
+              maturities[0],
+              order.side,
+              order.amount,
+              order.unitPrice,
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+      }
+
+      await time.increaseTo(openingDate);
+
+      // Execute Itayose call on the first market
+      await expect(
+        lendingMarketControllerProxy.executeItayoseCalls(
+          [targetCurrency],
+          maturities[0],
+        ),
+      ).to.emit(lendingMarketProxies[0], 'ItayoseExecuted');
+
+      const { openingUnitPrice, lastLendUnitPrice, lastBorrowUnitPrice } =
+        await lendingMarketProxies[0].getItayoseLog(maturities[0]);
+
+      expect(openingUnitPrice).to.equal(expectedOpeningPrice);
+      expect(lastLendUnitPrice).to.equal(expectedLastLendUnitPrice);
+      expect(lastBorrowUnitPrice).to.equal(expectedLastBorrowUnitPrice);
+
+      const aliceOrders = await lendingMarketControllerProxy.getOrders(
+        [targetCurrency],
+        alice.address,
+      );
+
+      expect(aliceOrders.activeOrders.length).to.equal(1);
+      expect(aliceOrders.inactiveOrders.length).to.equal(1);
+
+      expect(aliceOrders.activeOrders[0].ccy).to.equal(targetCurrency);
+      expect(aliceOrders.activeOrders[0].side).to.equal(Side.BORROW);
+      expect(aliceOrders.activeOrders[0].unitPrice).to.equal('8070');
+      expect(aliceOrders.activeOrders[0].maturity).to.equal(maturities[0]);
+      expect(aliceOrders.activeOrders[0].amount).to.equal('100000000000000');
+      expect(aliceOrders.activeOrders[0].isPreOrder).to.equal(true);
+
+      expect(aliceOrders.inactiveOrders[0].ccy).to.equal(targetCurrency);
+      expect(aliceOrders.inactiveOrders[0].side).to.equal(Side.BORROW);
+      expect(aliceOrders.inactiveOrders[0].unitPrice).to.equal(
+        openingUnitPrice,
+      );
+      expect(aliceOrders.inactiveOrders[0].maturity).to.equal(maturities[0]);
+      expect(aliceOrders.inactiveOrders[0].amount).to.equal('200000000000000');
+      expect(aliceOrders.inactiveOrders[0].isPreOrder).to.equal(true);
+
+      let bobOrders = await lendingMarketControllerProxy.getOrders(
+        [targetCurrency],
+        bob.address,
+      );
+
+      expect(bobOrders.activeOrders.length).to.equal(1);
+      expect(bobOrders.inactiveOrders.length).to.equal(1);
+
+      expect(bobOrders.activeOrders[0].ccy).to.equal(targetCurrency);
+      expect(bobOrders.activeOrders[0].side).to.equal(Side.LEND);
+      expect(bobOrders.activeOrders[0].unitPrice).to.equal('8060');
+      expect(bobOrders.activeOrders[0].maturity).to.equal(maturities[0]);
+      expect(bobOrders.activeOrders[0].amount).to.equal('300000000000000');
+      expect(bobOrders.activeOrders[0].isPreOrder).to.equal(true);
+
+      expect(bobOrders.inactiveOrders[0].ccy).to.equal(targetCurrency);
+      expect(bobOrders.inactiveOrders[0].side).to.equal(Side.LEND);
+      expect(bobOrders.inactiveOrders[0].unitPrice).to.equal(openingUnitPrice);
+      expect(bobOrders.inactiveOrders[0].maturity).to.equal(maturities[0]);
+      expect(bobOrders.inactiveOrders[0].amount).to.equal('200000000000000');
+      expect(bobOrders.inactiveOrders[0].isPreOrder).to.equal(true);
+
+      await expect(
+        lendingMarketControllerProxy
+          .connect(dave)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.BORROW,
+            '300000000000000',
+            '0',
+          ),
+      ).to.emit(fundManagementLogic, 'OrderFilled');
+
+      bobOrders = await lendingMarketControllerProxy.getOrders(
+        [targetCurrency],
+        bob.address,
+      );
+
+      expect(bobOrders.activeOrders.length).to.equal(0);
+      expect(bobOrders.inactiveOrders.length).to.equal(2);
+
+      expect(bobOrders.inactiveOrders[1].ccy).to.equal(targetCurrency);
+      expect(bobOrders.inactiveOrders[1].side).to.equal(Side.LEND);
+      expect(bobOrders.inactiveOrders[1].unitPrice).to.equal('8060');
+      expect(bobOrders.inactiveOrders[1].maturity).to.equal(maturities[0]);
+      expect(bobOrders.inactiveOrders[1].amount).to.equal('300000000000000');
+      expect(bobOrders.inactiveOrders[1].isPreOrder).to.equal(true);
+    });
   });
 });
