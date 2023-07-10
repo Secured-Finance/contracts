@@ -114,6 +114,11 @@ interface ILendingMarket {
 
     function getMarket() external view returns (Market memory);
 
+    function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange)
+        external
+        view
+        returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold);
+
     function getBorrowUnitPrice() external view returns (uint256 unitPrice);
 
     function getLendUnitPrice() external view returns (uint256 unitPrice);

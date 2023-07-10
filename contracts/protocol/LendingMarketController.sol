@@ -175,6 +175,49 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets detailed information on the lending market.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @return bestLendUnitPrice The best lend price per future value
+     * @return bestBorrowUnitPrice The best borrow price per future value
+     * @return midUnitPrice The mid price per future value
+     * @return maxLendUnitPrice The maximum unit price for lending
+     * @return minBorrowUnitPrice The minimum unit price for borrowing
+     * @return openingUnitPrice The opening price when Itayose is executed
+     * @return openingDate The timestamp when the market opens
+     * @return isReady The boolean if the market is ready or not
+     */
+    function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        returns (
+            uint256 bestLendUnitPrice,
+            uint256 bestBorrowUnitPrice,
+            uint256 midUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 openingUnitPrice,
+            uint256 openingDate,
+            bool isReady
+        )
+    {
+        return LendingMarketOperationLogic.getLendingMarketDetail(_ccy, _maturity);
+    }
+
+    /**
+     * @notice Gets the array of detailed information on the lending market.
+     * @param _ccys Currency name list in bytes32
+     * @return lendingMarketDetails The array of Detailed information on the lending market.
+     */
+    function getLendingMarketDetails(bytes32[] memory _ccys)
+        external
+        view
+        returns (LendingMarketDetail[] memory lendingMarketDetails)
+    {
+        return LendingMarketOperationLogic.getLendingMarketDetails(_ccys);
+    }
+
+    /**
      * @notice Gets the feture value contract address for the selected currency and maturity.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the market

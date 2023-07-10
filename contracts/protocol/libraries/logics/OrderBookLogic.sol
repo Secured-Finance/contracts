@@ -582,7 +582,7 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = _getLendCircuitBreakerThreshold(
+                cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -595,7 +595,7 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = _getBorrowCircuitBreakerThreshold(
+                cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -626,10 +626,26 @@ library OrderBookLogic {
             : bestUnitPrice >= executedUnitPrice;
     }
 
-    function _getBorrowCircuitBreakerThreshold(
-        uint256 _circuitBreakerLimitRange,
-        uint256 _unitPrice
-    ) internal pure returns (uint256 cbThresholdUnitPrice) {
+    function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange)
+        external
+        view
+        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+    {
+        maxLendUnitPrice = getLendCircuitBreakerThreshold(
+            _circuitBreakerLimitRange,
+            getLowestBorrowingUnitPrice()
+        );
+        minBorrowUnitPrice = getBorrowCircuitBreakerThreshold(
+            _circuitBreakerLimitRange,
+            getHighestLendingUnitPrice()
+        );
+    }
+
+    function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
+        public
+        pure
+        returns (uint256 cbThresholdUnitPrice)
+    {
         // NOTE: Formula of circuit breaker threshold for borrow orders:
         // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
         uint256 numerator = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
@@ -650,8 +666,8 @@ library OrderBookLogic {
         }
     }
 
-    function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        internal
+    function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
+        public
         pure
         returns (uint256 cbThresholdUnitPrice)
     {

@@ -114,6 +114,92 @@ describe('LendingMarketController - Operations', () => {
   });
 
   describe('Operations', async () => {
+    it('Get the lending market detail with empty order book', async () => {
+      const detail = await lendingMarketControllerProxy.getLendingMarketDetail(
+        targetCurrency,
+        maturities[0],
+      );
+
+      expect(detail.bestLendUnitPrice).to.equal('10000');
+      expect(detail.bestBorrowUnitPrice).to.equal('0');
+      expect(detail.midUnitPrice).to.equal('5000');
+      expect(detail.maxLendUnitPrice).to.equal('10000');
+      expect(detail.minBorrowUnitPrice).to.equal('1');
+      expect(detail.openingUnitPrice).to.equal('0');
+      expect(detail.isReady).to.equal(true);
+    });
+
+    it('Get the lending market detail with non-empty order book', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '5000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '9950',
+        );
+
+      const detail = await lendingMarketControllerProxy.getLendingMarketDetail(
+        targetCurrency,
+        maturities[0],
+      );
+
+      expect(detail.bestLendUnitPrice).to.equal('9950');
+      expect(detail.bestBorrowUnitPrice).to.equal('5000');
+      expect(detail.midUnitPrice).to.equal('7475');
+      expect(detail.maxLendUnitPrice).to.equal('9960');
+      expect(detail.minBorrowUnitPrice).to.equal('4800');
+      expect(detail.openingUnitPrice).to.equal('0');
+      expect(detail.isReady).to.equal(true);
+    });
+
+    it('Get the multiple lending market details', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '5000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '9950',
+        );
+
+      const details =
+        await lendingMarketControllerProxy.getLendingMarketDetails([
+          targetCurrency,
+        ]);
+
+      expect(details.length).to.equal(5);
+      expect(details[0].bestLendUnitPrice).to.equal('9950');
+      expect(details[0].bestBorrowUnitPrice).to.equal('5000');
+      expect(details[0].midUnitPrice).to.equal('7475');
+      expect(details[0].maxLendUnitPrice).to.equal('9960');
+      expect(details[0].minBorrowUnitPrice).to.equal('4800');
+      expect(details[0].openingUnitPrice).to.equal('0');
+      expect(details[0].isReady).to.equal(true);
+    });
+
     it('Pause lending markets', async () => {
       await lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency);
 
@@ -123,7 +209,7 @@ describe('LendingMarketController - Operations', () => {
           .executeOrder(
             targetCurrency,
             maturities[0],
-            0,
+            Side.LEND,
             '100000000000000000',
             '8000',
           ),
@@ -136,7 +222,7 @@ describe('LendingMarketController - Operations', () => {
         .executeOrder(
           targetCurrency,
           maturities[0],
-          0,
+          Side.LEND,
           '100000000000000000',
           '8000',
         );
