@@ -24,7 +24,7 @@ describe('Integration Test: Itayose', async () => {
   let lendingMarketController: Contract;
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
-  let eFILToken: Contract;
+  let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
 
@@ -37,7 +37,7 @@ describe('Integration Test: Itayose', async () => {
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
-      await eFILToken
+      await wFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
     });
@@ -105,7 +105,7 @@ describe('Integration Test: Itayose', async () => {
       tokenVault,
       lendingMarketController,
       wETHToken,
-      eFILToken,
+      wFILToken,
       lendingMarketOperationLogic,
       fundManagementLogic,
     } = await deployContracts());

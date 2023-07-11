@@ -90,7 +90,7 @@ describe('CurrencyController', () => {
     });
 
     it('Add a currency except for ETH as a supported currency', async () => {
-      const currency = ethers.utils.formatBytes32String('EFIL');
+      const currency = ethers.utils.formatBytes32String('WFIL');
 
       // Set up for the mocks
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);

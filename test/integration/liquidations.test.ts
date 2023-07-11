@@ -5,12 +5,12 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
+import { hexETH, hexUSDC, hexWFIL } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  eFilToETHRate,
+  wFilToETHRate,
   usdcToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -32,9 +32,9 @@ describe('Integration Test: Liquidations', async () => {
   let lendingMarketController: Contract;
   let reserveFund: Contract;
   let wETHToken: Contract;
-  let eFILToken: Contract;
+  let wFILToken: Contract;
   let usdcToken: Contract;
-  let eFilToETHPriceFeed: Contract;
+  let wFilToETHPriceFeed: Contract;
   let usdcToUSDPriceFeed: Contract;
 
   let fundManagementLogic: Contract;
@@ -69,8 +69,8 @@ describe('Integration Test: Liquidations', async () => {
         switch (key) {
           case 'USDC':
             return hexUSDC;
-          case 'EFIL':
-            return hexEFIL;
+          case 'WFIL':
+            return hexWFIL;
           default:
             return hexETH;
         }
@@ -79,7 +79,7 @@ describe('Integration Test: Liquidations', async () => {
       const [coverage, filDeposit, ethDeposit, usdcDeposit, ...pvs] =
         await Promise.all([
           tokenVault.getCoverage(this.address),
-          tokenVault.getDepositAmount(this.address, hexEFIL),
+          tokenVault.getDepositAmount(this.address, hexWFIL),
           tokenVault.getDepositAmount(this.address, hexETH),
           tokenVault.getDepositAmount(this.address, hexUSDC),
           ...Object.entries(maturities).map(([key, maturity]) =>
@@ -99,7 +99,7 @@ describe('Integration Test: Liquidations', async () => {
           obj[`PV(${key})`] = pvs[idx].toString();
           return obj;
         }, {}),
-        'Deposit(EFIL)': filDeposit.toString(),
+        'Deposit(WFIL)': filDeposit.toString(),
         'Deposit(ETH)': ethDeposit.toString(),
         'Deposit(USDC)': usdcDeposit.toString(),
       };
@@ -114,14 +114,14 @@ describe('Integration Test: Liquidations', async () => {
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
       if (owner) {
-        await eFILToken
+        await wFILToken
           .connect(owner)
           .transfer(signer.address, initialFILBalance);
         await usdcToken
           .connect(owner)
           .transfer(signer.address, initialUSDCBalance);
       }
-      await eFILToken
+      await wFILToken
         .connect(signer)
         .approve(tokenVault.address, ethers.constants.MaxUint256);
       await usdcToken
@@ -139,7 +139,7 @@ describe('Integration Test: Liquidations', async () => {
     await lendingMarketController
       .connect(owner)
       .executeOrder(
-        hexEFIL,
+        hexWFIL,
         filMaturities[1],
         Side.BORROW,
         '100000000',
@@ -149,7 +149,7 @@ describe('Integration Test: Liquidations', async () => {
     await lendingMarketController
       .connect(owner)
       .depositAndExecuteOrder(
-        hexEFIL,
+        hexWFIL,
         filMaturities[1],
         Side.LEND,
         '100000000',
@@ -174,20 +174,20 @@ describe('Integration Test: Liquidations', async () => {
       await time.increaseTo(usdcMaturities[0].toString());
     }
 
-    await lendingMarketController.connect(owner).rotateLendingMarkets(hexEFIL);
+    await lendingMarketController.connect(owner).rotateLendingMarkets(hexWFIL);
     await lendingMarketController.connect(owner).rotateLendingMarkets(hexUSDC);
 
     await lendingMarketController
       .connect(owner)
       .executeItayoseCalls(
-        [hexEFIL, hexUSDC],
+        [hexWFIL, hexUSDC],
         usdcMaturities[usdcMaturities.length - 1],
       );
   };
 
   const resetMaturities = async () => {
     [ethMaturities, filMaturities, usdcMaturities] = await Promise.all(
-      [hexETH, hexEFIL, hexUSDC].map((hexCcy) =>
+      [hexETH, hexWFIL, hexUSDC].map((hexCcy) =>
         lendingMarketController.getMaturities(hexCcy),
       ),
     );
@@ -198,12 +198,12 @@ describe('Integration Test: Liquidations', async () => {
     await rotateAllMarkets();
 
     [ethMaturities, filMaturities, usdcMaturities] = await Promise.all(
-      [hexETH, hexEFIL, hexUSDC].map((hexCcy) =>
+      [hexETH, hexWFIL, hexUSDC].map((hexCcy) =>
         lendingMarketController.getMaturities(hexCcy),
       ),
     );
 
-    await eFilToETHPriceFeed.updateAnswer(eFilToETHRate);
+    await wFilToETHPriceFeed.updateAnswer(wFilToETHRate);
     await usdcToUSDPriceFeed.updateAnswer(usdcToETHRate);
 
     liquidator = await ethers
@@ -232,14 +232,14 @@ describe('Integration Test: Liquidations', async () => {
       lendingMarketController,
       reserveFund,
       wETHToken,
-      eFILToken,
+      wFILToken,
       usdcToken,
-      eFilToETHPriceFeed,
+      wFilToETHPriceFeed,
       usdcToUSDPriceFeed,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
+    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
     await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
 
     mockUniswapRouter = await ethers
@@ -254,10 +254,10 @@ describe('Integration Test: Liquidations', async () => {
       );
 
     await mockUniswapRouter.setToken(hexETH, wETHToken.address);
-    await mockUniswapRouter.setToken(hexEFIL, eFILToken.address);
+    await mockUniswapRouter.setToken(hexWFIL, wFILToken.address);
     await mockUniswapRouter.setToken(hexUSDC, usdcToken.address);
     await mockUniswapQuoter.setToken(hexETH, wETHToken.address);
-    await mockUniswapQuoter.setToken(hexEFIL, eFILToken.address);
+    await mockUniswapQuoter.setToken(hexWFIL, wFILToken.address);
     await mockUniswapQuoter.setToken(hexUSDC, usdcToken.address);
 
     await tokenVault.setCollateralParameters(
@@ -267,12 +267,12 @@ describe('Integration Test: Liquidations', async () => {
     );
 
     await tokenVault.updateCurrency(hexETH, true);
-    await tokenVault.updateCurrency(hexEFIL, false);
+    await tokenVault.updateCurrency(hexWFIL, false);
     await tokenVault.updateCurrency(hexUSDC, true);
 
     [owner] = await getUsers(1);
 
-    await eFILToken
+    await wFILToken
       .connect(owner)
       .transfer(mockUniswapRouter.address, initialFILBalance.mul(10));
     await usdcToken
@@ -286,7 +286,7 @@ describe('Integration Test: Liquidations', async () => {
     // Deploy Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexEFIL, genesisDate)
+        .createLendingMarket(hexWFIL, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
         .createLendingMarket(hexUSDC, genesisDate)
@@ -318,7 +318,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -330,7 +330,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -341,7 +341,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -352,7 +352,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -362,7 +362,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             '10000000000000000000',
@@ -370,28 +370,28 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(
-          eFilToETHRate.mul('110').div('100'),
+        await wFilToETHPriceFeed.updateAnswer(
+          wFilToETHRate.mul('110').div('100'),
         );
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
         const reserveFundDepositBefore = await tokenVault.getDepositAmount(
           reserveFund.address,
@@ -405,7 +405,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeLiquidationCall(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             alice.address,
             10,
@@ -422,7 +422,7 @@ describe('Integration Test: Liquidations', async () => {
         ).args;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
         lendingInfo.show();
 
@@ -439,7 +439,7 @@ describe('Integration Test: Liquidations', async () => {
             .executeLiquidationCall(
               hexETH,
               ethMaturities,
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               alice.address,
               10,
@@ -448,14 +448,14 @@ describe('Integration Test: Liquidations', async () => {
 
         const [
           liquidatorBalanceETH,
-          liquidatorBalanceEFIL,
+          liquidatorBalanceWFIL,
           reserveFundDepositETHAfter,
-          reserveFundDepositEFILAfter,
+          reserveFundDepositWFILAfter,
         ] = await Promise.all(
           [liquidator, reserveFund]
             .map(({ address }) => [
               tokenVault.getDepositAmount(address, hexETH),
-              tokenVault.getDepositAmount(address, hexEFIL),
+              tokenVault.getDepositAmount(address, hexWFIL),
             ])
             .flat(),
         );
@@ -463,12 +463,12 @@ describe('Integration Test: Liquidations', async () => {
           reserveFundDepositBefore,
         );
 
-        const protocolFeeEFIL = await currencyController[
+        const protocolFeeWFIL = await currencyController[
           'convert(bytes32,bytes32,uint256)'
-        ](hexETH, hexEFIL, protocolFeeETH);
+        ](hexETH, hexWFIL, protocolFeeETH);
 
         expect(liquidatorBalanceETH).to.equal(0);
-        expect(reserveFundDepositEFILAfter).to.equal(0);
+        expect(reserveFundDepositWFILAfter).to.equal(0);
 
         // Check fees
         const { timestamp } = await ethers.provider.getBlock(receipt.blockHash);
@@ -484,12 +484,12 @@ describe('Integration Test: Liquidations', async () => {
 
         expect(receivedDebtAmount).to.equal(filledOrderAmount.div(2));
         expect(
-          liquidatorBalanceEFIL
+          liquidatorBalanceWFIL
             .add(unwindFee)
             .sub(receivedDebtAmount.mul(liquidatorFeeRate).div('10000'))
             .abs(),
         ).to.lte(1);
-        expect(protocolFeeEFIL).to.equal(
+        expect(protocolFeeWFIL).to.equal(
           receivedDebtAmount.mul(liquidationProtocolFeeRate).div('10000'),
         );
 
@@ -503,13 +503,13 @@ describe('Integration Test: Liquidations', async () => {
         expect(reserveFundsAmountAfterWithdrawal).to.equal('0');
 
         // Deposit to the reserve funds
-        await eFILToken.connect(owner).approve(reserveFund.address, '1000');
+        await wFILToken.connect(owner).approve(reserveFund.address, '1000');
         await expect(
-          reserveFund.connect(owner).deposit(hexEFIL, '1000'),
+          reserveFund.connect(owner).deposit(hexWFIL, '1000'),
         ).to.emit(tokenVault, 'Deposit');
 
         const reserveFundsAmountAfterDeposit =
-          await tokenVault.getDepositAmount(reserveFund.address, hexEFIL);
+          await tokenVault.getDepositAmount(reserveFund.address, hexWFIL);
         expect(reserveFundsAmountAfterDeposit).to.equal('1000');
       });
     });
@@ -527,7 +527,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -539,7 +539,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -548,7 +548,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -559,7 +559,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -570,7 +570,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             filledOrderAmount,
@@ -578,16 +578,16 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(
           aliceBalanceAfter
             .sub(aliceInitialBalance)
@@ -597,25 +597,25 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute liquidation twice', async () => {
-        await eFilToETHPriceFeed.updateAnswer(
-          eFilToETHRate.mul('115').div('100'),
+        await wFilToETHPriceFeed.updateAnswer(
+          wFilToETHRate.mul('115').div('100'),
         );
 
         const { futureValue: rfFutureValueBefore } =
           await lendingMarketController.getPosition(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             reserveFund.address,
           );
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
 
         await expect(
           liquidator.executeLiquidationCall(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             alice.address,
             10,
@@ -624,7 +624,7 @@ describe('Integration Test: Liquidations', async () => {
 
         const { futureValue: rfFutureValueAfter } =
           await lendingMarketController.getPosition(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             reserveFund.address,
           );
@@ -632,7 +632,7 @@ describe('Integration Test: Liquidations', async () => {
           tokenVault.address,
         );
         const lendingInfoAfter1 = await lendingInfo.load('After1', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
 
         expect(rfFutureValueAfter.lt(rfFutureValueBefore));
@@ -642,7 +642,7 @@ describe('Integration Test: Liquidations', async () => {
           liquidator.executeLiquidationCall(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             alice.address,
             10,
@@ -653,7 +653,7 @@ describe('Integration Test: Liquidations', async () => {
           tokenVault.address,
         );
         const lendingInfoAfter2 = await lendingInfo.load('After2', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
 
         lendingInfo.show();
@@ -675,7 +675,7 @@ describe('Integration Test: Liquidations', async () => {
           liquidator.executeLiquidationCall(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             alice.address,
             10,
@@ -697,7 +697,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -709,7 +709,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -718,7 +718,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -729,7 +729,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -740,7 +740,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             '10000000000000000000',
@@ -748,16 +748,16 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
@@ -771,7 +771,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.BORROW,
             '1000000000',
@@ -781,7 +781,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.LEND,
             '1000000000',
@@ -791,7 +791,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -799,14 +799,14 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
 
         await expect(
           liquidator.executeLiquidationCall(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             alice.address,
             10,
@@ -814,7 +814,7 @@ describe('Integration Test: Liquidations', async () => {
         ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
         lendingInfo.show();
 
@@ -839,7 +839,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -851,7 +851,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -862,7 +862,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -873,7 +873,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -883,7 +883,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             '10000000000000000000',
@@ -891,26 +891,26 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul('3'));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul('3'));
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
 
         const receipt = await liquidator
@@ -918,7 +918,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeLiquidationCall(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             alice.address,
             10,
@@ -937,24 +937,24 @@ describe('Integration Test: Liquidations', async () => {
         ).args;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
         lendingInfo.show();
 
         const { futureValue: liquidatorFutureValue } =
           await lendingMarketController.getPosition(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             liquidator.address,
           );
         const liquidatorDepositAmount = await tokenVault.getDepositAmount(
           liquidator.address,
-          hexEFIL,
+          hexWFIL,
         );
 
         expect(user).to.equal(alice.address);
         expect(collateralCcy).to.equal(hexETH);
-        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtCcy).to.equal(hexWFIL);
         expect(debtMaturity).to.equal(filMaturities[0]);
 
         expect(lendingInfoAfter.coverage.gt(lendingInfoBefore.coverage)).to
@@ -980,7 +980,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -992,7 +992,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -1003,7 +1003,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -1014,7 +1014,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -1024,7 +1024,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.LEND,
             '10000000000000000000',
@@ -1032,16 +1032,16 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
@@ -1052,10 +1052,10 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul('3'));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul('3'));
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
 
         await reserveFund.pause();
@@ -1065,7 +1065,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeLiquidationCall(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             alice.address,
             10,
@@ -1085,24 +1085,24 @@ describe('Integration Test: Liquidations', async () => {
         ).args;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
         lendingInfo.show();
 
         const { futureValue: liquidatorFutureValue } =
           await lendingMarketController.getPosition(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             liquidator.address,
           );
         const liquidatorDepositAmount = await tokenVault.getDepositAmount(
           liquidator.address,
-          hexEFIL,
+          hexWFIL,
         );
 
         expect(user).to.equal(alice.address);
         expect(collateralCcy).to.equal(hexETH);
-        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtCcy).to.equal(hexWFIL);
         expect(debtMaturity).to.equal(filMaturities[1]);
 
         expect(lendingInfoAfter.coverage.gt(lendingInfoBefore.coverage)).to
@@ -1118,7 +1118,7 @@ describe('Integration Test: Liquidations', async () => {
       const orderAmountInETH = BigNumber.from('1000000000000000000');
       const orderAmountInFIL = orderAmountInETH
         .mul(BigNumber.from(10).pow(18))
-        .div(eFilToETHRate);
+        .div(wFilToETHRate);
       const orderAmountInUSDC = orderAmountInETH
         .mul(BigNumber.from(10).pow(6))
         .div(usdcToETHRate);
@@ -1133,7 +1133,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Create orders on the USDC market', async () => {
-        bobInitialBalance = await eFILToken.balanceOf(bob.address);
+        bobInitialBalance = await wFILToken.balanceOf(bob.address);
 
         await tokenVault
           .connect(alice)
@@ -1204,7 +1204,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(bob)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL.div(2),
@@ -1215,7 +1215,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(alice)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               orderAmountInFIL.div(2),
@@ -1226,7 +1226,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL,
@@ -1236,7 +1236,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             orderAmountInFIL,
@@ -1244,16 +1244,16 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(bob.address, hexEFIL),
+          await tokenVault.getDepositAmount(bob.address, hexWFIL),
         ).to.equal(orderAmountInFIL.div(2));
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(bob)
-          .withdraw(hexEFIL, orderAmountInFIL.div(2));
+          .withdraw(hexWFIL, orderAmountInFIL.div(2));
 
-        const bobBalanceAfter = await eFILToken.balanceOf(bob.address);
+        const bobBalanceAfter = await wFILToken.balanceOf(bob.address);
 
         expect(bobBalanceAfter.sub(bobInitialBalance)).to.equal(
           orderAmountInFIL.div(2),
@@ -1261,10 +1261,10 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(3).div(2));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul(3).div(2));
 
         const lendingInfoBefore = await lendingInfo.load('User(Before)', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           USDC: usdcMaturities[0],
         });
 
@@ -1273,7 +1273,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeLiquidationCall(
             hexUSDC,
             usdcMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             bob.address,
             10,
@@ -1286,14 +1286,14 @@ describe('Integration Test: Liquidations', async () => {
           ).args;
 
         const lendingInfoAfter = await lendingInfo.load('User(After)', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           USDC: usdcMaturities[0],
         });
         lendingInfo.show();
 
         expect(user).to.equal(bob.address);
         expect(collateralCcy).to.equal(hexUSDC);
-        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtCcy).to.equal(hexWFIL);
         expect(debtMaturity).to.equal(filMaturities[0]);
 
         expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to
@@ -1306,7 +1306,7 @@ describe('Integration Test: Liquidations', async () => {
 
         const liquidatorLendingInfo = new LendingInfo(liquidator.address);
         await liquidatorLendingInfo.load('Liquidator', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           USDC: usdcMaturities[0],
         });
 
@@ -1318,7 +1318,7 @@ describe('Integration Test: Liquidations', async () => {
       const orderAmountInETH = BigNumber.from('1000000000000000000');
       const orderAmountInFIL = orderAmountInETH
         .mul(BigNumber.from(10).pow(18))
-        .div(eFilToETHRate);
+        .div(wFilToETHRate);
       const orderAmountInUSDC = orderAmountInETH
         .mul(BigNumber.from(10).pow(6))
         .div(usdcToETHRate);
@@ -1334,7 +1334,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Create orders on the USDC market', async () => {
-        bobInitialBalance = await eFILToken.balanceOf(bob.address);
+        bobInitialBalance = await wFILToken.balanceOf(bob.address);
 
         await tokenVault
           .connect(alice)
@@ -1405,7 +1405,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(bob)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.BORROW,
             orderAmountInFIL.div(2),
@@ -1416,7 +1416,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(alice)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[1],
               Side.LEND,
               orderAmountInFIL.div(2),
@@ -1427,7 +1427,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.BORROW,
             orderAmountInFIL,
@@ -1437,7 +1437,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.LEND,
             orderAmountInFIL,
@@ -1445,7 +1445,7 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(bob.address, hexEFIL),
+          await tokenVault.getDepositAmount(bob.address, hexWFIL),
         ).to.equal(orderAmountInFIL.div(2));
       });
 
@@ -1460,9 +1460,9 @@ describe('Integration Test: Liquidations', async () => {
       it('Withdraw', async () => {
         await tokenVault
           .connect(bob)
-          .withdraw(hexEFIL, orderAmountInFIL.div(2));
+          .withdraw(hexWFIL, orderAmountInFIL.div(2));
 
-        const bobBalanceAfter = await eFILToken.balanceOf(bob.address);
+        const bobBalanceAfter = await wFILToken.balanceOf(bob.address);
 
         expect(bobBalanceAfter.sub(bobInitialBalance)).to.equal(
           orderAmountInFIL.div(2),
@@ -1483,7 +1483,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL,
@@ -1493,7 +1493,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             orderAmountInFIL,
@@ -1502,7 +1502,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(6).div(5));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul(6).div(5));
 
         await usdcToken
           .connect(carol)
@@ -1510,13 +1510,13 @@ describe('Integration Test: Liquidations', async () => {
         await tokenVault.connect(carol).deposit(hexUSDC, orderAmountInUSDC);
 
         await lendingInfo.load('User(Before)', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           USDC: usdcMaturities[0],
         });
 
         const liquidatorLendingInfo = new LendingInfo(carol.address);
         await liquidatorLendingInfo.load('Liquidator(Before)', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           USDC: usdcMaturities[0],
         });
 
@@ -1524,14 +1524,14 @@ describe('Integration Test: Liquidations', async () => {
           .connect(carol)
           .executeLiquidationCall(
             hexUSDC,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             bob.address,
           )
           .then((tx) => tx.wait());
 
         await lendingInfo.load('User(After)', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           USDC: usdcMaturities[0],
         });
         lendingInfo.show();
@@ -1539,7 +1539,7 @@ describe('Integration Test: Liquidations', async () => {
         const liquidatorInfoAfter = await liquidatorLendingInfo.load(
           'Liquidator(After)',
           {
-            EFIL: filMaturities[0],
+            WFIL: filMaturities[0],
             USDC: usdcMaturities[0],
           },
         );
@@ -1551,7 +1551,7 @@ describe('Integration Test: Liquidations', async () => {
         expect(liquidatorInfoAfter.pvs[1]).gt(0);
 
         const pv0InUSDC = liquidatorInfoAfter.pvs[0]
-          .mul(eFilToETHRate.mul(6).div(5))
+          .mul(wFilToETHRate.mul(6).div(5))
           .div(BigNumber.from(10).pow(12))
           .div(usdcToETHRate);
 
@@ -1565,7 +1565,7 @@ describe('Integration Test: Liquidations', async () => {
       const orderAmountInETH = BigNumber.from('1000000000000000000');
       const orderAmountInFIL = orderAmountInETH
         .mul(BigNumber.from(10).pow(18))
-        .div(eFilToETHRate);
+        .div(wFilToETHRate);
       const orderAmountInUSDC = orderAmountInETH
         .mul(BigNumber.from(10).pow(6))
         .div(usdcToETHRate);
@@ -1584,7 +1584,7 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Create orders on the multiple USDC markets', async () => {
-        bobInitialBalance = await eFILToken.balanceOf(bob.address);
+        bobInitialBalance = await wFILToken.balanceOf(bob.address);
 
         await tokenVault
           .connect(alice)
@@ -1657,7 +1657,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(bob)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL.div(2),
@@ -1668,7 +1668,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(alice)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               orderAmountInFIL.div(2),
@@ -1679,7 +1679,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL,
@@ -1689,7 +1689,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             orderAmountInFIL,
@@ -1697,14 +1697,14 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(bob.address, hexEFIL),
+          await tokenVault.getDepositAmount(bob.address, hexWFIL),
         ).to.equal(orderAmountInFIL.div(2));
       });
 
       it('Withdraw', async () => {
-        await tokenVault.connect(bob).withdraw(hexEFIL, orderAmountInFIL);
+        await tokenVault.connect(bob).withdraw(hexWFIL, orderAmountInFIL);
 
-        const bobBalanceAfter = await eFILToken.balanceOf(bob.address);
+        const bobBalanceAfter = await wFILToken.balanceOf(bob.address);
 
         expect(bobBalanceAfter.sub(bobInitialBalance)).to.equal(
           orderAmountInFIL.div(2),
@@ -1712,10 +1712,10 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute liquidation', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(3).div(2));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul(3).div(2));
 
         const lendingInfoBefore = await lendingInfo.load('User(Before)', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           'USDC-1': usdcMaturities[0],
           'USDC-2': usdcMaturities[1],
         });
@@ -1725,7 +1725,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeLiquidationCall(
             hexUSDC,
             usdcMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             bob.address,
             10,
@@ -1738,7 +1738,7 @@ describe('Integration Test: Liquidations', async () => {
           ).args;
 
         const lendingInfoAfter = await lendingInfo.load('User(After)', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           'USDC-1': usdcMaturities[0],
           'USDC-2': usdcMaturities[1],
         });
@@ -1746,7 +1746,7 @@ describe('Integration Test: Liquidations', async () => {
 
         expect(user).to.equal(bob.address);
         expect(collateralCcy).to.equal(hexUSDC);
-        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtCcy).to.equal(hexWFIL);
         expect(debtMaturity).to.equal(filMaturities[0]);
 
         expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to
@@ -1759,7 +1759,7 @@ describe('Integration Test: Liquidations', async () => {
 
         const liquidatorLendingInfo = new LendingInfo(liquidator.address);
         await liquidatorLendingInfo.load('Liquidator', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
           'USDC-1': usdcMaturities[0],
           'USDC-2': usdcMaturities[1],
         });
@@ -1783,7 +1783,7 @@ describe('Integration Test: Liquidations', async () => {
       await resetContractInstances();
       lendingInfo = new LendingInfo(alice.address);
 
-      const aliceFILBalanceBefore = await eFILToken.balanceOf(alice.address);
+      const aliceFILBalanceBefore = await wFILToken.balanceOf(alice.address);
       const aliceUSDCBalanceBefore = await usdcToken.balanceOf(alice.address);
 
       await tokenVault.connect(alice).deposit(hexETH, depositAmountInETH, {
@@ -1800,7 +1800,7 @@ describe('Integration Test: Liquidations', async () => {
       await lendingMarketController
         .connect(alice)
         .executeOrder(
-          hexEFIL,
+          hexWFIL,
           filMaturities[0],
           Side.BORROW,
           filledOrderAmountInFIL,
@@ -1810,7 +1810,7 @@ describe('Integration Test: Liquidations', async () => {
       await lendingMarketController
         .connect(owner)
         .executeOrder(
-          hexEFIL,
+          hexWFIL,
           filMaturities[0],
           Side.BORROW,
           filledOrderAmountInFIL.mul(2),
@@ -1821,7 +1821,7 @@ describe('Integration Test: Liquidations', async () => {
         lendingMarketController
           .connect(bob)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             filledOrderAmountInFIL,
@@ -1832,7 +1832,7 @@ describe('Integration Test: Liquidations', async () => {
       await lendingMarketController
         .connect(owner)
         .depositAndExecuteOrder(
-          hexEFIL,
+          hexWFIL,
           filMaturities[0],
           Side.LEND,
           '10000000000000000000',
@@ -1840,12 +1840,12 @@ describe('Integration Test: Liquidations', async () => {
         );
 
       expect(
-        await tokenVault.getDepositAmount(alice.address, hexEFIL),
+        await tokenVault.getDepositAmount(alice.address, hexWFIL),
       ).to.equal(filledOrderAmountInFIL);
 
-      await tokenVault.connect(alice).withdraw(hexEFIL, filledOrderAmountInFIL);
+      await tokenVault.connect(alice).withdraw(hexWFIL, filledOrderAmountInFIL);
 
-      const aliceFILBalanceAfter = await eFILToken.balanceOf(alice.address);
+      const aliceFILBalanceAfter = await wFILToken.balanceOf(alice.address);
       expect(aliceFILBalanceAfter.sub(aliceFILBalanceBefore)).to.equal(
         filledOrderAmountInFIL,
       );
@@ -1908,16 +1908,16 @@ describe('Integration Test: Liquidations', async () => {
 
     it('Take orders from both FIL & USDC markets, Liquidate the larger position', async () => {
       await lendingInfo.load('Before1', {
-        EFIL: filMaturities[0],
+        WFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
-      await eFilToETHPriceFeed.updateAnswer(
-        eFilToETHRate.mul('110').div('100'),
+      await wFilToETHPriceFeed.updateAnswer(
+        wFilToETHRate.mul('110').div('100'),
       );
 
       const lendingInfoBefore = await lendingInfo.load('Before2', {
-        EFIL: filMaturities[0],
+        WFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
@@ -1925,7 +1925,7 @@ describe('Integration Test: Liquidations', async () => {
         liquidator.executeLiquidationCall(
           hexETH,
           ethMaturities,
-          hexEFIL,
+          hexWFIL,
           usdcMaturities[0],
           alice.address,
           10,
@@ -1933,7 +1933,7 @@ describe('Integration Test: Liquidations', async () => {
       ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
-        EFIL: filMaturities[0],
+        WFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
       lendingInfo.show();
@@ -1950,16 +1950,16 @@ describe('Integration Test: Liquidations', async () => {
 
     it('Take orders from both FIL & USDC markets, Liquidate the smaller position', async () => {
       await lendingInfo.load('Before1', {
-        EFIL: filMaturities[0],
+        WFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
-      await eFilToETHPriceFeed.updateAnswer(
-        eFilToETHRate.mul('110').div('100'),
+      await wFilToETHPriceFeed.updateAnswer(
+        wFilToETHRate.mul('110').div('100'),
       );
 
       const lendingInfoBefore = await lendingInfo.load('Before2', {
-        EFIL: filMaturities[0],
+        WFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
 
@@ -1975,7 +1975,7 @@ describe('Integration Test: Liquidations', async () => {
       ).to.emit(liquidationLogic, 'LiquidationExecuted');
 
       const lendingInfoAfter = await lendingInfo.load('After', {
-        EFIL: filMaturities[0],
+        WFIL: filMaturities[0],
         USDC: usdcMaturities[0],
       });
       lendingInfo.show();
@@ -1993,13 +1993,13 @@ describe('Integration Test: Liquidations', async () => {
     let haircut: BigNumber;
 
     before(async () => {
-      decimals = await currencyController.getDecimals(hexEFIL);
-      haircut = await currencyController.getHaircut(hexEFIL);
+      decimals = await currencyController.getDecimals(hexWFIL);
+      haircut = await currencyController.getHaircut(hexWFIL);
     });
 
     afterEach(async () => {
-      if (!(await currencyController.currencyExists(hexEFIL))) {
-        await currencyController.addCurrency(hexEFIL, decimals, haircut, []);
+      if (!(await currencyController.currencyExists(hexWFIL))) {
+        await currencyController.addCurrency(hexWFIL, decimals, haircut, []);
       }
     });
 
@@ -2030,7 +2030,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -2041,7 +2041,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -2050,19 +2050,19 @@ describe('Integration Test: Liquidations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Delist a currency', async () => {
-        await currencyController.removeCurrency(hexEFIL);
+        await currencyController.removeCurrency(hexWFIL);
 
-        expect(await currencyController.currencyExists(hexEFIL)).to.false;
+        expect(await currencyController.currencyExists(hexWFIL)).to.false;
       });
 
       it('Execute repayment & redemption', async () => {
         await lendingInfo.load('Before', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
 
         // Move to maturity date.
@@ -2070,20 +2070,20 @@ describe('Integration Test: Liquidations', async () => {
 
         await tokenVault
           .connect(alice)
-          .deposit(hexEFIL, filledOrderAmount.div(4));
+          .deposit(hexWFIL, filledOrderAmount.div(4));
         await lendingMarketController
           .connect(alice)
-          .executeRepayment(hexEFIL, filMaturities[0]);
+          .executeRepayment(hexWFIL, filMaturities[0]);
 
         // Move to 1 weeks after maturity.
         await time.increaseTo(filMaturities[0].add(604800).toString());
 
         await lendingMarketController
           .connect(bob)
-          .executeRedemption(hexEFIL, filMaturities[0]);
+          .executeRedemption(hexWFIL, filMaturities[0]);
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
         lendingInfo.show();
 
@@ -2110,7 +2110,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -2122,7 +2122,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -2133,7 +2133,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -2142,16 +2142,16 @@ describe('Integration Test: Liquidations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
@@ -2159,7 +2159,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Execute forced repayment', async () => {
         await lendingInfo.load('Before', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
 
         await time.increaseTo(filMaturities[0].toString());
@@ -2170,14 +2170,14 @@ describe('Integration Test: Liquidations', async () => {
             .executeForcedRepayment(
               hexETH,
               ethMaturities,
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               alice.address,
               0,
             ),
         ).to.be.revertedWith('Currency is active');
 
-        await currencyController.removeCurrency(hexEFIL);
+        await currencyController.removeCurrency(hexWFIL);
 
         // Move to 1 weeks after maturity.
         await time.increaseTo(filMaturities[0].add(604800).toString());
@@ -2187,7 +2187,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeForcedRepayment(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             alice.address,
             0,
@@ -2205,24 +2205,24 @@ describe('Integration Test: Liquidations', async () => {
         ).args;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
         lendingInfo.show();
 
         const { futureValue: liquidatorFutureValue } =
           await lendingMarketController.getPosition(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             liquidator.address,
           );
         const liquidatorDepositAmount = await tokenVault.getDepositAmount(
           liquidator.address,
-          hexEFIL,
+          hexWFIL,
         );
 
         expect(user).to.equal(alice.address);
         expect(collateralCcy).to.equal(hexETH);
-        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtCcy).to.equal(hexWFIL);
         expect(debtMaturity).to.equal(filMaturities[0]);
         expect(lendingInfoAfter.coverage).to.equal(0);
         expect(liquidatorFutureValue).to.equal(0);
@@ -2250,7 +2250,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -2262,7 +2262,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -2273,7 +2273,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -2282,26 +2282,26 @@ describe('Integration Test: Liquidations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
       });
 
       it('Execute forced repayment', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul('3'));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul('3'));
 
         await lendingInfo.load('Before', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
 
         await time.increaseTo(filMaturities[0].toString());
@@ -2312,14 +2312,14 @@ describe('Integration Test: Liquidations', async () => {
             .executeForcedRepayment(
               hexETH,
               ethMaturities,
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               alice.address,
               0,
             ),
         ).to.be.revertedWith('Currency is active');
 
-        await currencyController.removeCurrency(hexEFIL);
+        await currencyController.removeCurrency(hexWFIL);
 
         // Move to 1 weeks after maturity.
         await time.increaseTo(filMaturities[0].add(604800).toString());
@@ -2329,7 +2329,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeForcedRepayment(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             alice.address,
             0,
@@ -2347,24 +2347,24 @@ describe('Integration Test: Liquidations', async () => {
         ).args;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[0],
+          WFIL: filMaturities[0],
         });
         lendingInfo.show();
 
         const { futureValue: liquidatorFutureValue } =
           await lendingMarketController.getPosition(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             liquidator.address,
           );
         const liquidatorDepositAmount = await tokenVault.getDepositAmount(
           liquidator.address,
-          hexEFIL,
+          hexWFIL,
         );
 
         expect(user).to.equal(alice.address);
         expect(collateralCcy).to.equal(hexETH);
-        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtCcy).to.equal(hexWFIL);
         expect(debtMaturity).to.equal(filMaturities[0]);
         expect(lendingInfoAfter.coverage).to.equal(ethers.constants.MaxUint256);
         expect(liquidatorFutureValue).to.equal(0);
@@ -2388,7 +2388,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -2400,7 +2400,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -2409,7 +2409,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -2420,7 +2420,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -2431,7 +2431,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.LEND,
             '10000000000000000000',
@@ -2439,16 +2439,16 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
@@ -2462,7 +2462,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.BORROW,
             '1000000000',
@@ -2472,7 +2472,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .depositAndExecuteOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.LEND,
             '1000000000',
@@ -2482,7 +2482,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(owner)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             Side.BORROW,
             filledOrderAmount.mul(2),
@@ -2490,10 +2490,10 @@ describe('Integration Test: Liquidations', async () => {
           );
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
 
-        await currencyController.removeCurrency(hexEFIL);
+        await currencyController.removeCurrency(hexWFIL);
 
         // Move to 1 weeks after maturity.
         await time.increaseTo(filMaturities[1].add(604800).toString());
@@ -2502,7 +2502,7 @@ describe('Integration Test: Liquidations', async () => {
           liquidator.executeForcedRepayment(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             alice.address,
             0,
@@ -2510,7 +2510,7 @@ describe('Integration Test: Liquidations', async () => {
         ).to.emit(liquidationLogic, 'ForcedRepaymentExecuted');
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
         lendingInfo.show();
 
@@ -2536,7 +2536,7 @@ describe('Integration Test: Liquidations', async () => {
 
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
-        aliceInitialBalance = await eFILToken.balanceOf(alice.address);
+        aliceInitialBalance = await wFILToken.balanceOf(alice.address);
 
         await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
           value: depositAmount,
@@ -2548,7 +2548,7 @@ describe('Integration Test: Liquidations', async () => {
         await lendingMarketController
           .connect(alice)
           .executeOrder(
-            hexEFIL,
+            hexWFIL,
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
@@ -2559,7 +2559,7 @@ describe('Integration Test: Liquidations', async () => {
           lendingMarketController
             .connect(bob)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               filMaturities[0],
               Side.LEND,
               filledOrderAmount,
@@ -2568,16 +2568,16 @@ describe('Integration Test: Liquidations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         expect(
-          await tokenVault.getDepositAmount(alice.address, hexEFIL),
+          await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
       });
 
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexEFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '200000000000000000000');
 
-        const aliceBalanceAfter = await eFILToken.balanceOf(alice.address);
+        const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
           filledOrderAmount,
         );
@@ -2588,10 +2588,10 @@ describe('Integration Test: Liquidations', async () => {
       });
 
       it('Execute forced repayment', async () => {
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul('3'));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul('3'));
 
         await lendingInfo.load('Before', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
 
         await time.increaseTo(filMaturities[1].toString());
@@ -2602,14 +2602,14 @@ describe('Integration Test: Liquidations', async () => {
             .executeForcedRepayment(
               hexETH,
               ethMaturities,
-              hexEFIL,
+              hexWFIL,
               filMaturities[1],
               alice.address,
               0,
             ),
         ).to.be.revertedWith('Currency is active');
 
-        await currencyController.removeCurrency(hexEFIL);
+        await currencyController.removeCurrency(hexWFIL);
 
         // Move to 1 weeks after maturity.
         await time.increaseTo(filMaturities[1].add(604800).toString());
@@ -2619,7 +2619,7 @@ describe('Integration Test: Liquidations', async () => {
           .executeForcedRepayment(
             hexETH,
             ethMaturities,
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             alice.address,
             0,
@@ -2637,24 +2637,24 @@ describe('Integration Test: Liquidations', async () => {
         ).args;
 
         const lendingInfoAfter = await lendingInfo.load('After', {
-          EFIL: filMaturities[1],
+          WFIL: filMaturities[1],
         });
         lendingInfo.show();
 
         const { futureValue: liquidatorFutureValue } =
           await lendingMarketController.getPosition(
-            hexEFIL,
+            hexWFIL,
             filMaturities[1],
             liquidator.address,
           );
         const liquidatorDepositAmount = await tokenVault.getDepositAmount(
           liquidator.address,
-          hexEFIL,
+          hexWFIL,
         );
 
         expect(user).to.equal(alice.address);
         expect(collateralCcy).to.equal(hexETH);
-        expect(debtCcy).to.equal(hexEFIL);
+        expect(debtCcy).to.equal(hexWFIL);
         expect(debtMaturity).to.equal(filMaturities[1]);
         expect(lendingInfoAfter.coverage).to.equal(ethers.constants.MaxUint256);
         expect(liquidatorFutureValue).to.equal(0);
