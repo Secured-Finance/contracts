@@ -306,20 +306,24 @@ library OrderBookLogic {
         }
     }
 
-    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
-        external
-        view
-        returns (uint256 amount)
-    {
-        if (_side == ProtocolTypes.Side.BORROW) {
+    function calculateFilledAmount(
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external view returns (uint256 filledAmount, uint256 filledAmountInFV) {
+        if (_side == ProtocolTypes.Side.LEND) {
             return
-                Storage.slot().lendOrders[Storage.slot().maturity].estimateDroppedAmountFromRight(
-                    _futureValue
+                Storage.slot().borrowOrders[Storage.slot().maturity].calculateDroppedAmountFromLeft(
+                    _amount,
+                    0,
+                    _unitPrice
                 );
         } else {
             return
-                Storage.slot().borrowOrders[Storage.slot().maturity].estimateDroppedAmountFromLeft(
-                    _futureValue
+                Storage.slot().lendOrders[Storage.slot().maturity].calculateDroppedAmountFromRight(
+                    _amount,
+                    0,
+                    _unitPrice
                 );
         }
     }
@@ -360,7 +364,7 @@ library OrderBookLogic {
     function dropOrders(
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _futureValue,
+        uint256 _amountInFV,
         uint256 _unitPrice
     )
         external
@@ -386,8 +390,8 @@ library OrderBookLogic {
                 partiallyFilledOrder
             ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
                 _amount,
-                _unitPrice,
-                _futureValue
+                _amountInFV,
+                _unitPrice
             );
         } else if (_side == ProtocolTypes.Side.LEND) {
             (
@@ -398,8 +402,8 @@ library OrderBookLogic {
                 partiallyFilledOrder
             ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
                 _amount,
-                _unitPrice,
-                _futureValue
+                _amountInFV,
+                _unitPrice
             );
         }
 

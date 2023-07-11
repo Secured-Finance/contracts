@@ -359,7 +359,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets active and inactive order IDs in the lending order book
+     * @notice Gets active and inactive order IDs in the lending order book.
      * @param _user User's address
      */
     function getLendOrderIds(address _user)
@@ -372,7 +372,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets active and inactive order IDs in the borrowing order book
+     * @notice Gets active and inactive order IDs in the borrowing order book.
      * @param _user User's address
      */
     function getBorrowOrderIds(address _user)
@@ -385,19 +385,19 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Estimates the filled amount at the time of order creation on the order book
-     * using the future value amount.
+     * @notice Calculates the amount to be filled when executing an order in the order book.
      * @param _side Order position type, Borrow or Lend
-     * @param _futureValue Future value amount
-     * @return amount The estimated amount in the present value that is filled on the order book
+     * @param _amount Amount of funds the user wants to borrow/lend
+     * @param _unitPrice Unit price user want to borrow/lend
+     * @return filledAmount The amount that is filled on the order book
+     * @return filledAmountInFV The amount in the future value that is filled on the order book
      */
-    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
-        external
-        view
-        override
-        returns (uint256 amount)
-    {
-        return OrderBookLogic.estimateFilledAmount(_side, _futureValue);
+    function calculateFilledAmount(
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) external view override returns (uint256 filledAmount, uint256 filledAmountInFV) {
+        return OrderBookLogic.calculateFilledAmount(_side, _amount, _unitPrice);
     }
 
     /**
@@ -523,8 +523,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * and places new order if not match it.
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _amount Amount of funds the user wants to borrow/lend
+     * @param _unitPrice Unit price user wish to borrow/lend
      * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order on the order book
@@ -599,7 +599,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      *
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _unitPrice Unit price taker wish to borrow/lend
      */
     function executePreOrder(
         ProtocolTypes.Side _side,
@@ -824,7 +824,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Amount of unit price taken
+     * @param _unitPrice Unit price taken
      * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after filling orders
      */
     function _takeOrders(
