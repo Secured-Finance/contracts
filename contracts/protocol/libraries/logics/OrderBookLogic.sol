@@ -311,6 +311,8 @@ library OrderBookLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external view returns (uint256 filledAmount, uint256 filledAmountInFV) {
+        if (_amount == 0) return (0, 0);
+
         if (_side == ProtocolTypes.Side.LEND) {
             return
                 Storage.slot().borrowOrders[Storage.slot().maturity].calculateDroppedAmountFromLeft(

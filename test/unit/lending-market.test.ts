@@ -161,6 +161,15 @@ describe('LendingMarket', () => {
           currentMarketIdx,
         );
 
+      const zeroOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        0,
+        0,
+      );
+
+      expect(zeroOrderResult.filledAmount).to.equal('0');
+      expect(zeroOrderResult.filledAmountInFV).to.equal('0');
+
       const marketOrderResult = await lendingMarket.calculateFilledAmount(
         Side.BORROW,
         '100000000000000',
@@ -196,6 +205,15 @@ describe('LendingMarket', () => {
         '200000000000000',
         0,
       );
+
+      const zeroOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.LEND,
+        0,
+        0,
+      );
+
+      expect(zeroOrderResult.filledAmount).to.equal('0');
+      expect(zeroOrderResult.filledAmountInFV).to.equal('0');
 
       expect(marketOrderResult.filledAmount).to.equal('200000000000000');
       expect(marketOrderResult.filledAmountInFV).to.equal('250000000000000');
