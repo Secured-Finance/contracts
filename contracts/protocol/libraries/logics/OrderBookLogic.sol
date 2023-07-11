@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {OrderStatisticsTreeLib, PartiallyFilledOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
+import {OrderStatisticsTreeLib, PartiallyRemovedOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
@@ -361,7 +361,7 @@ library OrderBookLogic {
         }
     }
 
-    function dropOrders(
+    function fillOrders(
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _amountInFV,
@@ -379,7 +379,7 @@ library OrderBookLogic {
             uint256 remainingAmount
         )
     {
-        PartiallyFilledOrder memory partiallyFilledOrder;
+        PartiallyRemovedOrder memory partiallyRemovedOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
             (
@@ -387,7 +387,7 @@ library OrderBookLogic {
                 filledAmount,
                 filledFutureValue,
                 remainingAmount,
-                partiallyFilledOrder
+                partiallyRemovedOrder
             ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
                 _amount,
                 _amountInFV,
@@ -399,7 +399,7 @@ library OrderBookLogic {
                 filledAmount,
                 filledFutureValue,
                 remainingAmount,
-                partiallyFilledOrder
+                partiallyRemovedOrder
             ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
                 _amount,
                 _amountInFV,
@@ -407,10 +407,10 @@ library OrderBookLogic {
             );
         }
 
-        partiallyFilledOrderId = partiallyFilledOrder.orderId;
-        partiallyFilledMaker = partiallyFilledOrder.maker;
-        partiallyFilledAmount = partiallyFilledOrder.amount;
-        partiallyFilledFutureValue = partiallyFilledOrder.futureValue;
+        partiallyFilledOrderId = partiallyRemovedOrder.orderId;
+        partiallyFilledMaker = partiallyRemovedOrder.maker;
+        partiallyFilledAmount = partiallyRemovedOrder.amount;
+        partiallyFilledFutureValue = partiallyRemovedOrder.futureValue;
     }
 
     function cleanLendOrders(address _user)

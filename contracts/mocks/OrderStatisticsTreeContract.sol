@@ -14,8 +14,8 @@ contract OrderStatisticsTreeContract {
     event Drop(
         uint256 droppedAmount,
         uint256 droppedAmountInFV,
-        uint256 filledOrderAmount,
-        uint256 filledOrderAmountInFV
+        uint256 removedOrderAmount,
+        uint256 removedOrderAmountInFV
     );
 
     constructor() {}
@@ -115,13 +115,13 @@ contract OrderStatisticsTreeContract {
             uint256 droppedAmount,
             uint256 droppedAmountInFV,
             ,
-            PartiallyFilledOrder memory partiallyFilledOrder
+            PartiallyRemovedOrder memory partiallyRemovedOrder
         ) = tree.dropLeft(value, amountInFV, limitValue);
         emit Drop(
             droppedAmount,
             droppedAmountInFV,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue
+            partiallyRemovedOrder.amount,
+            partiallyRemovedOrder.futureValue
         );
     }
 
@@ -135,13 +135,13 @@ contract OrderStatisticsTreeContract {
             uint256 droppedAmount,
             uint256 droppedAmountInFV,
             ,
-            PartiallyFilledOrder memory partiallyFilledOrder
+            PartiallyRemovedOrder memory partiallyRemovedOrder
         ) = tree.dropRight(amount, amountInFV, limitValue);
         emit Drop(
             droppedAmount,
             droppedAmountInFV,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue
+            partiallyRemovedOrder.amount,
+            partiallyRemovedOrder.futureValue
         );
     }
 }

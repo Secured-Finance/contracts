@@ -13,7 +13,7 @@ struct RemainingOrder {
     uint256 unitPrice;
 }
 
-struct PartiallyFilledOrder {
+struct PartiallyRemovedOrder {
     uint48 orderId;
     address maker;
     uint256 amount;
@@ -497,7 +497,7 @@ library OrderStatisticsTreeLib {
             uint256 droppedAmount,
             uint256 droppedAmountInFV,
             uint256 remainingAmount,
-            PartiallyFilledOrder memory partiallyFilledOrder
+            PartiallyRemovedOrder memory partiallyRemovedOrder
         )
     {
         uint256 cursor = first(self);
@@ -523,11 +523,15 @@ library OrderStatisticsTreeLib {
             if (exceededAmount > 0) {
                 cursor = droppedValue;
                 // Update order ids in the node.
-                partiallyFilledOrder = fillOrders(self, cursor, cursorNodeAmount - exceededAmount);
+                partiallyRemovedOrder = removeOrders(
+                    self,
+                    cursor,
+                    cursorNodeAmount - exceededAmount
+                );
             } else if (exceededAmountInFV > 0) {
                 cursor = droppedValue;
                 // Update order ids in the node.
-                partiallyFilledOrder = fillOrders(
+                partiallyRemovedOrder = removeOrders(
                     self,
                     cursor,
                     cursorNodeAmount - _calculatePresentValue(cursor, exceededAmountInFV)
@@ -588,7 +592,7 @@ library OrderStatisticsTreeLib {
             uint256 droppedAmount,
             uint256 droppedAmountInFV,
             uint256 remainingAmount,
-            PartiallyFilledOrder memory partiallyFilledOrder
+            PartiallyRemovedOrder memory partiallyRemovedOrder
         )
     {
         uint256 cursor = last(self);
@@ -614,11 +618,15 @@ library OrderStatisticsTreeLib {
             if (exceededAmount > 0) {
                 cursor = droppedValue;
                 // Update order ids in the node.
-                partiallyFilledOrder = fillOrders(self, cursor, cursorNodeAmount - exceededAmount);
+                partiallyRemovedOrder = removeOrders(
+                    self,
+                    cursor,
+                    cursorNodeAmount - exceededAmount
+                );
             } else if (exceededAmountInFV > 0) {
                 cursor = droppedValue;
                 // Update order ids in the node.
-                partiallyFilledOrder = fillOrders(
+                partiallyRemovedOrder = removeOrders(
                     self,
                     cursor,
                     cursorNodeAmount - _calculatePresentValue(cursor, exceededAmountInFV)
@@ -761,14 +769,11 @@ library OrderStatisticsTreeLib {
         remove(self, value);
     }
 
-    /**
-     * @dev Reduces order amount once market order taken.
-     */
-    function fillOrders(
+    function removeOrders(
         Tree storage self,
         uint256 value,
         uint256 _amount
-    ) internal returns (PartiallyFilledOrder memory partiallyFilledOrder) {
+    ) internal returns (PartiallyRemovedOrder memory partiallyRemovedOrder) {
         Node storage gn = self.nodes[value];
 
         require(
@@ -787,7 +792,7 @@ library OrderStatisticsTreeLib {
                 remainingAmount -= currentOrder.amount;
                 orderId = currentOrder.next;
             } else {
-                partiallyFilledOrder = PartiallyFilledOrder(
+                partiallyRemovedOrder = PartiallyRemovedOrder(
                     currentOrder.orderId,
                     currentOrder.maker,
                     remainingAmount,
@@ -799,13 +804,13 @@ library OrderStatisticsTreeLib {
         }
 
         if (currentOrder.orderId != 0) {
-            _dropOrders(self, value, currentOrder.orderId);
+            _removeOrders(self, value, currentOrder.orderId);
         }
 
-        if (partiallyFilledOrder.amount > 0) {
-            self.nodes[value].orders[partiallyFilledOrder.orderId].amount -= partiallyFilledOrder
+        if (partiallyRemovedOrder.amount > 0) {
+            self.nodes[value].orders[partiallyRemovedOrder.orderId].amount -= partiallyRemovedOrder
                 .amount;
-            self.nodes[value].orderTotalAmount -= partiallyFilledOrder.amount;
+            self.nodes[value].orderTotalAmount -= partiallyRemovedOrder.amount;
         }
     }
 
@@ -1009,9 +1014,9 @@ library OrderStatisticsTreeLib {
     }
 
     /**
-     * @dev Drop the OrderItems older than or equal `orderId` from the list
+     * @dev Remove the OrderItems older than or equal `orderId` from the list
      */
-    function _dropOrders(
+    function _removeOrders(
         Tree storage self,
         uint256 value,
         uint48 orderId
