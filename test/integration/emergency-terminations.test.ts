@@ -5,8 +5,8 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
-import { eFilToETHRate, usdcToETHRate } from '../common/constants';
+import { hexETH, hexUSDC, hexWFIL } from '../../utils/strings';
+import { usdcToETHRate, wFilToETHRate } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
@@ -29,8 +29,8 @@ describe('Integration Test: Emergency terminations', async () => {
   let filLendingMarkets: Contract[] = [];
   let wETHToken: Contract;
   let usdcToken: Contract;
-  let eFILToken: Contract;
-  let eFilToETHPriceFeed: Contract;
+  let wFILToken: Contract;
+  let wFilToETHPriceFeed: Contract;
 
   let genesisDate: number;
   let maturities: BigNumber[];
@@ -45,11 +45,11 @@ describe('Integration Test: Emergency terminations', async () => {
     .div(usdcToETHRate);
   const orderAmountInFIL = orderAmountInETH
     .mul(BigNumber.from(10).pow(18))
-    .div(eFilToETHRate);
+    .div(wFilToETHRate);
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
-      await eFILToken
+      await wFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
       await usdcToken
@@ -94,13 +94,13 @@ describe('Integration Test: Emergency terminations', async () => {
     unitPrice: string,
     diffAmount = '1000',
   ) => {
-    await eFILToken.connect(user).approve(tokenVault.address, orderAmountInETH);
-    await tokenVault.connect(user).deposit(hexEFIL, orderAmountInETH);
+    await wFILToken.connect(user).approve(tokenVault.address, orderAmountInETH);
+    await tokenVault.connect(user).deposit(hexWFIL, orderAmountInETH);
 
     await lendingMarketController
       .connect(user)
       .executeOrder(
-        hexEFIL,
+        hexWFIL,
         maturity,
         Side.BORROW,
         '1000000',
@@ -110,7 +110,7 @@ describe('Integration Test: Emergency terminations', async () => {
     await lendingMarketController
       .connect(user)
       .executeOrder(
-        hexEFIL,
+        hexWFIL,
         maturity,
         Side.LEND,
         '1000000',
@@ -132,7 +132,7 @@ describe('Integration Test: Emergency terminations', async () => {
             ),
           ),
         lendingMarketController
-          .getLendingMarkets(hexEFIL)
+          .getLendingMarkets(hexWFIL)
           .then((addresses) =>
             Promise.all(
               addresses.map((address) =>
@@ -162,21 +162,21 @@ describe('Integration Test: Emergency terminations', async () => {
       lendingMarketController,
       reserveFund,
       wETHToken,
-      eFILToken,
+      wFILToken,
       usdcToken,
-      eFilToETHPriceFeed,
+      wFilToETHPriceFeed,
       lendingMarketOperationLogic,
       fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, true);
     await tokenVault.registerCurrency(hexUSDC, usdcToken.address, true);
-    await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
+    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
       await lendingMarketController.createLendingMarket(hexETH, genesisDate);
-      await lendingMarketController.createLendingMarket(hexEFIL, genesisDate);
+      await lendingMarketController.createLendingMarket(hexWFIL, genesisDate);
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);
@@ -231,7 +231,7 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Fill an order on the FIL market with depositing USDC', async () => {
-        await eFILToken
+        await wFILToken
           .connect(alice)
           .approve(tokenVault.address, orderAmountInFIL);
 
@@ -246,7 +246,7 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(bob)
             .executeOrder(
-              hexEFIL,
+              hexWFIL,
               maturities[0],
               Side.BORROW,
               orderAmountInFIL,
@@ -258,7 +258,7 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(alice)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               maturities[0],
               Side.LEND,
               orderAmountInFIL,
@@ -531,7 +531,7 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Fill an order on the FIL market with depositing USDC', async () => {
-        await eFILToken
+        await wFILToken
           .connect(alice)
           .approve(tokenVault.address, orderAmountInFIL);
 
@@ -546,7 +546,7 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(bob)
             .executeOrder(
-              hexEFIL,
+              hexWFIL,
               maturities[0],
               Side.BORROW,
               orderAmountInFIL.div(10),
@@ -558,7 +558,7 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(alice)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               maturities[0],
               Side.LEND,
               orderAmountInFIL.div(10),
@@ -567,14 +567,14 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
-      it('Update a price feed to change the eFIL price', async () => {
+      it('Update a price feed to change the wFIL price', async () => {
         await createSampleETHOrders(carol, maturities[0], '8000');
         await createSampleFILOrders(carol, maturities[0], '8000');
 
         const coverageBefore = await tokenVault.getCoverage(bob.address);
         expect(coverageBefore).lt('8000');
 
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(20));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul(20));
 
         const coverageAfter = await tokenVault.getCoverage(bob.address);
         expect(coverageAfter).gte('8000');
@@ -644,7 +644,7 @@ describe('Integration Test: Emergency terminations', async () => {
       });
 
       it('Fill an order on the FIL market with depositing USDC', async () => {
-        await eFILToken
+        await wFILToken
           .connect(alice)
           .approve(tokenVault.address, orderAmountInFIL);
 
@@ -659,7 +659,7 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(bob)
             .executeOrder(
-              hexEFIL,
+              hexWFIL,
               maturities[0],
               Side.BORROW,
               orderAmountInFIL,
@@ -671,7 +671,7 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController
             .connect(alice)
             .depositAndExecuteOrder(
-              hexEFIL,
+              hexWFIL,
               maturities[0],
               Side.LEND,
               orderAmountInFIL,
@@ -713,14 +713,14 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
       });
 
-      it('Update a price feed to change the eFIL price', async () => {
+      it('Update a price feed to change the wFIL price', async () => {
         await createSampleETHOrders(carol, maturities[0], '8000');
         await createSampleFILOrders(carol, maturities[0], '8000');
 
         const coverageBefore = await tokenVault.getCoverage(bob.address);
         expect(coverageBefore).lt('8000');
 
-        await eFilToETHPriceFeed.updateAnswer(eFilToETHRate.mul(5));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul(5));
 
         const coverageAfter = await tokenVault.getCoverage(bob.address);
         expect(coverageAfter).gte('8000');

@@ -6,7 +6,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexEFIL, hexETH } from '../../utils/strings';
+import { hexETH, hexWFIL } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -37,7 +37,7 @@ describe('Integration Test: Auto-rolls', async () => {
   let lendingMarketController: Contract;
   let lendingMarkets: Contract[] = [];
   let wETHToken: Contract;
-  let eFILToken: Contract;
+  let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
 
@@ -50,7 +50,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
-      await eFILToken
+      await wFILToken
         .connect(owner)
         .transfer(signer.address, initialFILBalance);
     });
@@ -123,12 +123,12 @@ describe('Integration Test: Auto-rolls', async () => {
       tokenVault,
       lendingMarketController,
       wETHToken,
-      eFILToken,
+      wFILToken,
       fundManagementLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
-    await tokenVault.registerCurrency(hexEFIL, eFILToken.address, false);
+    await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
     await tokenVault.setCollateralParameters(
       LIQUIDATION_THRESHOLD_RATE,
@@ -140,14 +140,14 @@ describe('Integration Test: Auto-rolls', async () => {
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexEFIL, genesisDate);
+      await lendingMarketController.createLendingMarket(hexWFIL, genesisDate);
       await lendingMarketController.createLendingMarket(hexETH, genesisDate);
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createLendingMarket(hexEFIL, maturities[0]);
+    await lendingMarketController.createLendingMarket(hexWFIL, maturities[0]);
     await lendingMarketController.createLendingMarket(hexETH, maturities[0]);
   });
 

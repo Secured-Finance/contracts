@@ -4,7 +4,7 @@ import { BigNumber, Contract, Wallet } from 'ethers';
 import { ethers, waffle } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
+import { hexETH, hexUSDC, hexWFIL } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -49,7 +49,7 @@ describe('Performance Test: Order Book', async () => {
     // Deploy Lending Markets
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexEFIL, genesisDate)
+        .createLendingMarket(hexWFIL, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
         .createLendingMarket(hexETH, genesisDate)
@@ -61,7 +61,7 @@ describe('Performance Test: Order Book', async () => {
   });
 
   beforeEach('Set maturities', async () => {
-    maturities = await lendingMarketController.getMaturities(hexEFIL);
+    maturities = await lendingMarketController.getMaturities(hexWFIL);
   });
 
   describe('Take orders without the order cleaning', async () => {

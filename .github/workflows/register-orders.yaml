@@ -22,10 +22,10 @@ on:
       marketCurrency:
         description: 'MarketCurrency'
         required: true
-        default: 'EFIL'
+        default: 'WFIL'
         type: choice
         options:
-          - EFIL
+          - WFIL
           - ETH
           - USDC
           - WBTC

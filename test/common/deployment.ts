@@ -131,6 +131,7 @@ const deployContracts = async () => {
   }
 
   const eFILToken = tokens['eFIL'];
+  const wFILToken = tokens['wFIL'];
   const usdcToken = tokens['USDC'];
   const wBTCToken = tokens['WBTC'];
   const wETHToken = tokens['WETH'];
@@ -317,6 +318,7 @@ const deployContracts = async () => {
     proxyController,
     reserveFund: reserveFundProxy,
     eFILToken,
+    wFILToken,
     wETHToken,
     wBTCToken,
     usdcToken,
