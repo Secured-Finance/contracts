@@ -108,6 +108,12 @@ struct Market {
 function getMarket() external view returns (struct ILendingMarket.Market)
 ```
 
+### getCircuitBreakerThresholds
+
+```solidity
+function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange) external view returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold)
+```
+
 ### getBorrowUnitPrice
 
 ```solidity

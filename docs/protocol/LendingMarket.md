@@ -112,17 +112,34 @@ Gets the market data.
 | ---- | ---- | ----------- |
 | market | struct ILendingMarket.Market | The market data |
 
+### getCircuitBreakerThresholds
+
+```solidity
+function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+```
+
+Gets unit price Thresholds by CircuitBreaker.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| maxLendUnitPrice | uint256 | The maximum unit price for lending |
+| minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
+
 ### getBorrowUnitPrice
 
 ```solidity
 function getBorrowUnitPrice() external view returns (uint256)
 ```
 
-Gets the highest borrow price per future value.
+Gets the lowest borrow price per future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The highest borrow price per future value |
+| [0] | uint256 | The lowest borrow price per future value |
 
 ### getLendUnitPrice
 
@@ -130,11 +147,11 @@ Gets the highest borrow price per future value.
 function getLendUnitPrice() external view returns (uint256)
 ```
 
-Gets the lowest lend price per future value.
+Gets the highest lend price per future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The lowest lend price per future value |
+| [0] | uint256 | The highest lend price per future value |
 
 ### getMidUnitPrice
 

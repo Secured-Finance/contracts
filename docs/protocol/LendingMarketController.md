@@ -171,6 +171,46 @@ Gets the lending market contract address for the selected currency and maturity.
 | ---- | ---- | ----------- |
 | [0] | address | The lending market address |
 
+### getLendingMarketDetail
+
+```solidity
+function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+```
+
+Gets detailed information on the lending market.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the market |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| bestLendUnitPrice | uint256 | The best lend price per future value |
+| bestBorrowUnitPrice | uint256 | The best borrow price per future value |
+| midUnitPrice | uint256 | The mid price per future value |
+| maxLendUnitPrice | uint256 | The maximum unit price for lending |
+| minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
+| openingUnitPrice | uint256 | The opening price when Itayose is executed |
+| openingDate | uint256 | The timestamp when the market opens |
+| isReady | bool | The boolean if the market is ready or not |
+
+### getLendingMarketDetails
+
+```solidity
+function getLendingMarketDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+```
+
+Gets the array of detailed information on the lending market.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccys | bytes32[] | Currency name list in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lendingMarketDetails | struct ILendingMarketController.LendingMarketDetail[] | The array of Detailed information on the lending market. |
+
 ### getFutureValueVault
 
 ```solidity

@@ -28,6 +28,23 @@ struct Position {
 }
 ```
 
+### LendingMarketDetail
+
+```solidity
+struct LendingMarketDetail {
+  bytes32 ccy;
+  uint256 maturity;
+  uint256 bestLendUnitPrice;
+  uint256 bestBorrowUnitPrice;
+  uint256 midUnitPrice;
+  uint256 maxLendUnitPrice;
+  uint256 minBorrowUnitPrice;
+  uint256 openingUnitPrice;
+  uint256 openingDate;
+  bool isReady;
+}
+```
+
 ### isTerminated
 
 ```solidity
