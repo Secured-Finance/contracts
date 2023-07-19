@@ -3,6 +3,7 @@ import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
+import { Side } from '../../utils/constants';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -243,6 +244,92 @@ describe('TokenVault', () => {
       await expect(
         tokenVaultProxy.setCollateralParameters('1', '1', '10001'),
       ).to.be.revertedWith('Invalid liquidator fee rate');
+    });
+  });
+
+  describe('Coverage', async () => {
+    before(async () => {
+      await mockLendingMarketController.mock.isTerminated.returns(false);
+    });
+
+    beforeEach(async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+    });
+
+    it('Calculate the coverage without deposit', async () => {
+      const signer = getUser();
+      const value = '20000000000000';
+
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(value);
+
+      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal('0');
+      expect(
+        await tokenVaultProxy.calculateCoverage(
+          signer.address,
+          targetCurrency,
+          0,
+          Side.BORROW,
+        ),
+      ).to.equal('0');
+
+      expect(
+        await tokenVaultProxy.calculateCoverage(
+          signer.address,
+          targetCurrency,
+          1000,
+          Side.BORROW,
+        ),
+      ).to.equal(ethers.constants.MaxUint256);
+    });
+
+    it('Calculate the coverage with deposit', async () => {
+      const signer = getUser();
+      const value = '20000000000000';
+
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(value);
+      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        value,
+        true,
+      );
+
+      await expect(
+        tokenVaultProxy.connect(signer).deposit(targetCurrency, value),
+      )
+        .to.emit(tokenVaultProxy, 'Deposit')
+        .withArgs(signer.address, targetCurrency, value);
+
+      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal('0');
+      expect(
+        await tokenVaultProxy.calculateCoverage(
+          signer.address,
+          targetCurrency,
+          0,
+          Side.BORROW,
+        ),
+      ).to.equal('0');
+
+      expect(
+        await tokenVaultProxy.calculateCoverage(
+          signer.address,
+          targetCurrency,
+          value,
+          Side.BORROW,
+        ),
+      ).to.equal('5000');
     });
   });
 

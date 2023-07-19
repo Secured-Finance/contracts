@@ -53,6 +53,23 @@ interface ILendingMarketController {
 
     function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
+    function getOrderEstimation(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    )
+        external
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 coverage,
+            uint256 orderFeeInFV
+        );
+
     function getBorrowOrderBook(
         bytes32 ccy,
         uint256 maturity,

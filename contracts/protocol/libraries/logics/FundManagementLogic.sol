@@ -181,7 +181,7 @@ library FundManagementLogic {
         ];
 
         uint256 feeInFV = _isTaker
-            ? _calculateOrderFeeAmount(_maturity, _filledAmountInFV, _orderFeeRate)
+            ? calculateOrderFeeAmount(_maturity, _filledAmountInFV, _orderFeeRate)
             : 0;
 
         if (_side == ProtocolTypes.Side.BORROW) {
@@ -983,6 +983,22 @@ library FundManagementLogic {
         return (_futureValue * _unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
     }
 
+    function calculateOrderFeeAmount(
+        uint256 _maturity,
+        uint256 _amount,
+        uint256 _orderFeeRate
+    ) public view returns (uint256 orderFeeAmount) {
+        require(block.timestamp < _maturity, "Invalid maturity");
+        uint256 currentMaturity = _maturity - block.timestamp;
+
+        // NOTE: The formula is:
+        // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+        // orderFeeAmount = amount * actualRate
+        orderFeeAmount = (_orderFeeRate * currentMaturity * _amount).div(
+            Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT
+        );
+    }
+
     function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _amount)
         internal
         view
@@ -1014,22 +1030,6 @@ library FundManagementLogic {
                     Storage.slot().marketTerminationPrices[_ccy].toUint256()
                 );
         }
-    }
-
-    function _calculateOrderFeeAmount(
-        uint256 _maturity,
-        uint256 _amount,
-        uint256 _orderFeeRate
-    ) internal view returns (uint256 orderFeeAmount) {
-        require(block.timestamp < _maturity, "Invalid maturity");
-        uint256 currentMaturity = _maturity - block.timestamp;
-
-        // NOTE: The formula is:
-        // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
-        // orderFeeAmount = amount * actualRate
-        orderFeeAmount = (_orderFeeRate * currentMaturity * _amount).div(
-            Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT
-        );
     }
 
     function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {

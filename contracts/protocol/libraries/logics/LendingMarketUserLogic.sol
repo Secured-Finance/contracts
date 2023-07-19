@@ -25,6 +25,46 @@ library LendingMarketUserLogic {
     using SafeCast for int256;
     using RoundingUint256 for uint256;
 
+    function getOrderEstimation(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    )
+        external
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV,
+            uint256 coverage
+        )
+    {
+        uint256 circuitBreakerLimitRange = LendingMarketConfigurationLogic
+            .getCircuitBreakerLimitRange(_ccy);
+        uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
+
+        (lastUnitPrice, filledAmount, filledAmountInFV) = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).calculateFilledAmount(_side, _amount, _unitPrice, circuitBreakerLimitRange);
+
+        orderFeeInFV = FundManagementLogic.calculateOrderFeeAmount(
+            _maturity,
+            filledAmountInFV,
+            orderFeeRate
+        );
+
+        coverage = AddressResolverLib.tokenVault().calculateCoverage(
+            _user,
+            _ccy,
+            filledAmount,
+            _side
+        );
+    }
+
     function executeOrder(
         bytes32 _ccy,
         uint256 _maturity,

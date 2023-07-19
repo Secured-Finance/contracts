@@ -165,8 +165,10 @@ describe('LendingMarket', () => {
         Side.BORROW,
         0,
         0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(zeroOrderResult.lastUnitPrice).to.equal('0');
       expect(zeroOrderResult.filledAmount).to.equal('0');
       expect(zeroOrderResult.filledAmountInFV).to.equal('0');
 
@@ -174,8 +176,10 @@ describe('LendingMarket', () => {
         Side.BORROW,
         '100000000000000',
         0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(marketOrderResult.lastUnitPrice).to.equal('8000');
       expect(marketOrderResult.filledAmount).to.equal('100000000000000');
       expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
 
@@ -183,8 +187,10 @@ describe('LendingMarket', () => {
         Side.BORROW,
         '100000000000000',
         '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(limitOrderResult.lastUnitPrice).to.equal('8000');
       expect(limitOrderResult.filledAmount).to.equal('100000000000000');
       expect(limitOrderResult.filledAmountInFV).to.equal('125000000000000');
     });
@@ -204,17 +210,21 @@ describe('LendingMarket', () => {
         Side.LEND,
         '200000000000000',
         0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
       const zeroOrderResult = await lendingMarket.calculateFilledAmount(
         Side.LEND,
         0,
         0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(zeroOrderResult.lastUnitPrice).to.equal('0');
       expect(zeroOrderResult.filledAmount).to.equal('0');
       expect(zeroOrderResult.filledAmountInFV).to.equal('0');
 
+      expect(marketOrderResult.lastUnitPrice).to.equal('8000');
       expect(marketOrderResult.filledAmount).to.equal('200000000000000');
       expect(marketOrderResult.filledAmountInFV).to.equal('250000000000000');
 
@@ -222,8 +232,10 @@ describe('LendingMarket', () => {
         Side.LEND,
         '200000000000000',
         '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(limitOrderResult.lastUnitPrice).to.equal('8000');
       expect(limitOrderResult.filledAmount).to.equal('200000000000000');
       expect(limitOrderResult.filledAmountInFV).to.equal('250000000000000');
     });
@@ -253,8 +265,10 @@ describe('LendingMarket', () => {
         Side.BORROW,
         '150000000000000',
         0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(marketOrderResult.lastUnitPrice).to.equal('7900');
       expect(marketOrderResult.filledAmount).to.equal('150000000000000');
       expect(marketOrderResult.filledAmountInFV).to.equal('188291139240507');
 
@@ -262,8 +276,10 @@ describe('LendingMarket', () => {
         Side.BORROW,
         '150000000000000',
         '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(limitOrderResult1.lastUnitPrice).to.equal('8000');
       expect(limitOrderResult1.filledAmount).to.equal('100000000000000');
       expect(limitOrderResult1.filledAmountInFV).to.equal('125000000000000');
 
@@ -271,8 +287,10 @@ describe('LendingMarket', () => {
         Side.BORROW,
         '150000000000000',
         '7900',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(limitOrderResult2.lastUnitPrice).to.equal('7900');
       expect(limitOrderResult2.filledAmount).to.equal('150000000000000');
       expect(limitOrderResult2.filledAmountInFV).to.equal('188291139240507');
     });
@@ -302,8 +320,10 @@ describe('LendingMarket', () => {
         Side.LEND,
         '250000000000000',
         0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(marketOrderResult.lastUnitPrice).to.equal('8100');
       expect(marketOrderResult.filledAmount).to.equal('250000000000000');
       expect(marketOrderResult.filledAmountInFV).to.equal('311728395061729');
 
@@ -311,8 +331,10 @@ describe('LendingMarket', () => {
         Side.LEND,
         '250000000000000',
         '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(limitOrderResult1.lastUnitPrice).to.equal('8000');
       expect(limitOrderResult1.filledAmount).to.equal('200000000000000');
       expect(limitOrderResult1.filledAmountInFV).to.equal('250000000000000');
 
@@ -320,10 +342,56 @@ describe('LendingMarket', () => {
         Side.LEND,
         '250000000000000',
         '8100',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
       );
 
+      expect(limitOrderResult2.lastUnitPrice).to.equal('8100');
       expect(limitOrderResult2.filledAmount).to.equal('250000000000000');
       expect(limitOrderResult2.filledAmountInFV).to.equal('311728395061729');
+    });
+
+    it('Calculate the blocked order amount by the circuit breaker', async () => {
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.LEND,
+          '100000000000000',
+          '8000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.LEND,
+          '100000000000000',
+          '7000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '200000000000000',
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(marketOrderResult.lastUnitPrice).to.equal('8000');
+      expect(marketOrderResult.filledAmount).to.equal('100000000000000');
+      expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
+
+      const limitOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '200000000000000',
+        '7000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult.lastUnitPrice).to.equal('8000');
+      expect(limitOrderResult.filledAmount).to.equal('100000000000000');
+      expect(limitOrderResult.filledAmountInFV).to.equal('125000000000000');
     });
   });
 

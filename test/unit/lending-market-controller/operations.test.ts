@@ -51,6 +51,8 @@ describe('LendingMarketController - Operations', () => {
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
+
+    await initialize(targetCurrency);
   });
 
   before(async () => {
@@ -108,10 +110,6 @@ describe('LendingMarketController - Operations', () => {
       ),
     );
   };
-
-  beforeEach(async () => {
-    await initialize(targetCurrency);
-  });
 
   describe('Operations', async () => {
     it('Get the lending market detail with empty order book', async () => {

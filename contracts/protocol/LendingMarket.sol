@@ -389,15 +389,33 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the user wants to borrow/lend
      * @param _unitPrice Unit price user want to borrow/lend
+     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
+     * @return lastUnitPrice The last unit price that is filled on the order book
      * @return filledAmount The amount that is filled on the order book
      * @return filledAmountInFV The amount in the future value that is filled on the order book
      */
     function calculateFilledAmount(
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice
-    ) external view override returns (uint256 filledAmount, uint256 filledAmountInFV) {
-        return OrderBookLogic.calculateFilledAmount(_side, _amount, _unitPrice);
+        uint256 _unitPrice,
+        uint256 _circuitBreakerLimitRange
+    )
+        external
+        view
+        override
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV
+        )
+    {
+        return
+            OrderBookLogic.calculateFilledAmount(
+                _side,
+                _amount,
+                _unitPrice,
+                _circuitBreakerLimitRange
+            );
     }
 
     /**

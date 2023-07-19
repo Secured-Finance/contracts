@@ -93,7 +93,15 @@ contract OrderStatisticsTreeContract {
         uint256 amount,
         uint256 amountInFV,
         uint256 limitValue
-    ) public view returns (uint256 droppedAmount, uint256 droppedAmountInFV) {
+    )
+        public
+        view
+        returns (
+            uint256 droppedValue,
+            uint256 droppedAmount,
+            uint256 droppedAmountInFV
+        )
+    {
         return tree.calculateDroppedAmountFromLeft(amount, amountInFV, limitValue);
     }
 
@@ -101,7 +109,15 @@ contract OrderStatisticsTreeContract {
         uint256 amount,
         uint256 amountInFV,
         uint256 limitValue
-    ) public view returns (uint256 droppedAmount, uint256 droppedAmountInFV) {
+    )
+        public
+        view
+        returns (
+            uint256 droppedValue,
+            uint256 droppedAmount,
+            uint256 droppedAmountInFV
+        )
+    {
         return tree.calculateDroppedAmountFromRight(amount, amountInFV, limitValue);
     }
 

@@ -309,23 +309,50 @@ library OrderBookLogic {
     function calculateFilledAmount(
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice
-    ) external view returns (uint256 filledAmount, uint256 filledAmountInFV) {
-        if (_amount == 0) return (0, 0);
+        uint256 _unitPrice,
+        uint256 _circuitBreakerLimitRange
+    )
+        external
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV
+        )
+    {
+        if (_amount == 0) return (0, 0, 0);
 
         if (_side == ProtocolTypes.Side.LEND) {
+            uint256 cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
+                _circuitBreakerLimitRange,
+                getLowestBorrowingUnitPrice()
+            );
+
+            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice > cbThresholdUnitPrice)
+                ? cbThresholdUnitPrice
+                : _unitPrice;
+
             return
                 Storage.slot().borrowOrders[Storage.slot().maturity].calculateDroppedAmountFromLeft(
                     _amount,
                     0,
-                    _unitPrice
+                    executedUnitPrice
                 );
         } else {
+            uint256 cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
+                _circuitBreakerLimitRange,
+                getHighestLendingUnitPrice()
+            );
+
+            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice < cbThresholdUnitPrice)
+                ? cbThresholdUnitPrice
+                : _unitPrice;
+
             return
                 Storage.slot().lendOrders[Storage.slot().maturity].calculateDroppedAmountFromRight(
                     _amount,
                     0,
-                    _unitPrice
+                    executedUnitPrice
                 );
         }
     }

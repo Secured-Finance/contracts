@@ -460,8 +460,16 @@ library OrderStatisticsTreeLib {
         uint256 amount,
         uint256 amountInFV,
         uint256 limitValue
-    ) internal view returns (uint256 droppedAmount, uint256 droppedAmountInFV) {
-        (, , , droppedAmount, droppedAmountInFV, , ) = _calculateDroppedAmountFromLeft(
+    )
+        internal
+        view
+        returns (
+            uint256 droppedValue,
+            uint256 droppedAmount,
+            uint256 droppedAmountInFV
+        )
+    {
+        (droppedValue, , , droppedAmount, droppedAmountInFV, , ) = _calculateDroppedAmountFromLeft(
             self,
             amount,
             amountInFV,
@@ -475,8 +483,16 @@ library OrderStatisticsTreeLib {
         uint256 amount,
         uint256 amountInFV,
         uint256 limitValue
-    ) internal view returns (uint256 droppedAmount, uint256 droppedAmountInFV) {
-        (, , , droppedAmount, droppedAmountInFV, , ) = _calculateDroppedAmountFromRight(
+    )
+        internal
+        view
+        returns (
+            uint256 droppedValue,
+            uint256 droppedAmount,
+            uint256 droppedAmountInFV
+        )
+    {
+        (droppedValue, , , droppedAmount, droppedAmountInFV, , ) = _calculateDroppedAmountFromRight(
             self,
             amount,
             amountInFV,
