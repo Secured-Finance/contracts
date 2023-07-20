@@ -97,33 +97,10 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     /**
      * @notice Gets if the collateral has enough coverage.
      * @param _user User's address
-     * @param _orderCcy Currency name in bytes32 of an order to be added
-     * @param _orderAmount Amount of an order to be added
-     * @param _orderSide Order position type of an order to be added
-     * @return The boolean if the collateral has sufficient coverage or not
-     */
-    function isCovered(
-        address _user,
-        bytes32 _orderCcy,
-        uint256 _orderAmount,
-        ProtocolTypes.Side _orderSide
-    ) external view override returns (bool) {
-        return
-            DepositManagementLogic.isCovered(
-                _user,
-                _orderCcy,
-                _orderAmount,
-                ProtocolTypes.Side.BORROW == _orderSide
-            );
-    }
-
-    /**
-     * @notice Gets if the collateral has enough coverage.
-     * @param _user User's address
      * @return The boolean if the collateral has sufficient coverage or not
      */
     function isCovered(address _user) public view override returns (bool) {
-        return DepositManagementLogic.isCovered(_user, "", 0, false);
+        return DepositManagementLogic.isCovered(_user);
     }
 
     /**

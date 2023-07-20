@@ -25,17 +25,12 @@ library DepositManagementLogic {
         bool isEnoughDeposit;
     }
 
-    function isCovered(
-        address _user,
-        bytes32 _unsettledOrderCcy,
-        uint256 _unsettledOrderAmount,
-        bool _isUnsettledBorrowOrder
-    ) public view returns (bool) {
+    function isCovered(address _user) public view returns (bool) {
         (uint256 totalCollateral, uint256 totalUsedCollateral, ) = calculateCollateral(
             _user,
-            _unsettledOrderCcy,
-            _unsettledOrderAmount,
-            _isUnsettledBorrowOrder
+            "",
+            0,
+            false
         );
 
         return
@@ -67,7 +62,11 @@ library DepositManagementLogic {
             ,
             ,
             uint256 borrowedAmount
-        ) = AddressResolverLib.lendingMarketController().calculateFunds(_ccy, _user);
+        ) = AddressResolverLib.lendingMarketController().calculateFunds(
+                _ccy,
+                _user,
+                Params.liquidationThresholdRate()
+            );
 
         return
             Storage.slot().depositAmounts[_user][_ccy] +
@@ -105,7 +104,11 @@ library DepositManagementLogic {
             uint256 workingBorrowOrdersAmount,
             uint256 debtAmount,
             uint256 borrowedAmount
-        ) = AddressResolverLib.lendingMarketController().calculateFunds(_ccy, _user);
+        ) = AddressResolverLib.lendingMarketController().calculateFunds(
+                _ccy,
+                _user,
+                Params.liquidationThresholdRate()
+            );
 
         uint256 plusDeposit = Storage.slot().depositAmounts[_user][_ccy] + borrowedAmount;
         uint256 minusDeposit = workingLendOrdersAmount + lentAmount;
@@ -187,7 +190,8 @@ library DepositManagementLogic {
         ) = AddressResolverLib.lendingMarketController().calculateTotalFundsInBaseCurrency(
             _user,
             _unsettledOrderCcy,
-            depositAmount
+            depositAmount,
+            Params.liquidationThresholdRate()
         );
 
         require(

@@ -57,7 +57,8 @@ contract TokenVaultCallerMock {
     function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
-        uint256 _depositAmount
+        uint256 _depositAmount,
+        uint256 _liquidationThresholdRate
     )
         public
         view
@@ -76,11 +77,16 @@ contract TokenVaultCallerMock {
             lendingMarketController.calculateTotalFundsInBaseCurrency(
                 _user,
                 _depositCcy,
-                _depositAmount
+                _depositAmount,
+                _liquidationThresholdRate
             );
     }
 
-    function calculateFunds(bytes32 _ccy, address _user)
+    function calculateFunds(
+        bytes32 _ccy,
+        address _user,
+        uint256 _liquidationThresholdRate
+    )
         public
         view
         returns (
@@ -93,7 +99,7 @@ contract TokenVaultCallerMock {
             uint256 borrowedAmount
         )
     {
-        return lendingMarketController.calculateFunds(_ccy, _user);
+        return lendingMarketController.calculateFunds(_ccy, _user, _liquidationThresholdRate);
     }
 
     function cleanUpFunds(bytes32 _ccy, address _user) public returns (uint256 activeOrderCount) {

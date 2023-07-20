@@ -27,8 +27,6 @@ describe('Integration Test: Deposit', async () => {
   let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
-  let lendingMarketsForWFIL: Contract[] = [];
-  let lendingMarketsForWBTC: Contract[] = [];
   let wETHToken: Contract;
   let usdcToken: Contract;
   let wFILToken: Contract;
@@ -98,26 +96,6 @@ describe('Integration Test: Deposit', async () => {
       await lendingMarketController.createLendingMarket(hexWBTC, genesisDate);
       await lendingMarketController.createLendingMarket(hexUSDC, genesisDate);
     }
-
-    lendingMarketsForWFIL = await lendingMarketController
-      .getLendingMarkets(hexWFIL)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
-
-    lendingMarketsForWBTC = await lendingMarketController
-      .getLendingMarkets(hexWBTC)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
   });
 
   describe('Deposit ETH, Withdraw all collateral', async () => {

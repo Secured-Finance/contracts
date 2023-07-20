@@ -11,6 +11,7 @@ import { getGenesisDate } from '../../../utils/dates';
 import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
+  LIQUIDATION_THRESHOLD_RATE,
   ORDER_FEE_RATE,
 } from '../../common/constants';
 import { deployContracts } from './utils';
@@ -678,11 +679,13 @@ describe('LendingMarketController - Operations', () => {
       const aliceFunds = await lendingMarketControllerProxy.calculateFunds(
         targetCurrency,
         alice.address,
+        LIQUIDATION_THRESHOLD_RATE,
       );
 
       const bobFunds = await lendingMarketControllerProxy.calculateFunds(
         targetCurrency,
         bob.address,
+        LIQUIDATION_THRESHOLD_RATE,
       );
 
       expect(aliceFunds.workingLendOrdersAmount).to.equal('0');
@@ -734,11 +737,13 @@ describe('LendingMarketController - Operations', () => {
       const aliceFunds = await lendingMarketControllerProxy.calculateFunds(
         targetCurrency,
         alice.address,
+        LIQUIDATION_THRESHOLD_RATE,
       );
 
       const bobFunds = await lendingMarketControllerProxy.calculateFunds(
         targetCurrency,
         bob.address,
+        LIQUIDATION_THRESHOLD_RATE,
       );
 
       expect(aliceFunds.workingLendOrdersAmount).to.equal('70000000000000000');
