@@ -171,10 +171,10 @@ describe('ZC e2e test', async () => {
       console.log('Skip the order step since the market not open');
       this.skip();
     }
-    // Make lend order
+
     await lendingMarketController
       .connect(aliceSigner)
-      .createOrder(
+      .executeOrder(
         targetCurrency,
         maturities[0],
         Side.LEND,
@@ -300,18 +300,18 @@ describe('ZC e2e test', async () => {
   it('Withdraw ETH', async () => {
     const bobDepositAmountBefore = await tokenVault.getDepositAmount(
       bobSigner.address,
-      hexEFIL,
+      hexWFIL,
     );
     const withdrawAmount = '100000';
 
     await tokenVault
       .connect(bobSigner)
-      .withdraw(hexEFIL, withdrawAmount)
+      .withdraw(hexWFIL, withdrawAmount)
       .then((tx) => tx.wait());
 
     const bobDepositAmountAfter = await tokenVault.getDepositAmount(
       bobSigner.address,
-      hexEFIL,
+      hexWFIL,
     );
 
     expect(
