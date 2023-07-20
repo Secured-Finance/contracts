@@ -199,11 +199,9 @@ task('register-orders', 'Registers order data into the selected lending market')
           availableAmountInETH.toString(),
         );
       } else {
-        const depositValueInCollateralCurrency =
-          await currencyController.convertFromBaseCurrency(
-            collateralCurrencyName,
-            depositValueInETH,
-          );
+        const depositValueInCollateralCurrency = await currencyController[
+          'convertFromBaseCurrency(bytes32,uint256)'
+        ](collateralCurrencyName, depositValueInETH);
 
         await tokenVault
           .deposit(collateralCurrencyName, depositValueInCollateralCurrency, {
