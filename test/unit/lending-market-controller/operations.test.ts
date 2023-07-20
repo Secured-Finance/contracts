@@ -27,9 +27,9 @@ describe('LendingMarketController - Operations', () => {
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
-  let lendingMarketProxies: Contract[];
   let futureValueVaultProxies: Contract[];
 
+  let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
 
   let maturities: BigNumber[];
@@ -64,9 +64,13 @@ describe('LendingMarketController - Operations', () => {
       beaconProxyControllerProxy,
       lendingMarketControllerProxy,
       genesisValueVaultProxy,
+      fundManagementLogic,
       lendingMarketOperationLogic,
     } = await deployContracts(owner));
 
+    fundManagementLogic = fundManagementLogic.attach(
+      lendingMarketControllerProxy.address,
+    );
     lendingMarketOperationLogic = lendingMarketOperationLogic.attach(
       lendingMarketControllerProxy.address,
     );
@@ -94,15 +98,6 @@ describe('LendingMarketController - Operations', () => {
       );
     }
 
-    const marketAddresses =
-      await lendingMarketControllerProxy.getLendingMarkets(currency);
-
-    lendingMarketProxies = await Promise.all(
-      marketAddresses.map((address) =>
-        ethers.getContractAt('LendingMarket', address),
-      ),
-    );
-
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
 
     futureValueVaultProxies = await Promise.all(
@@ -119,16 +114,102 @@ describe('LendingMarketController - Operations', () => {
   });
 
   describe('Operations', async () => {
+    it('Get the lending market detail with empty order book', async () => {
+      const detail = await lendingMarketControllerProxy.getLendingMarketDetail(
+        targetCurrency,
+        maturities[0],
+      );
+
+      expect(detail.bestLendUnitPrice).to.equal('10000');
+      expect(detail.bestBorrowUnitPrice).to.equal('0');
+      expect(detail.midUnitPrice).to.equal('5000');
+      expect(detail.maxLendUnitPrice).to.equal('10000');
+      expect(detail.minBorrowUnitPrice).to.equal('1');
+      expect(detail.openingUnitPrice).to.equal('0');
+      expect(detail.isReady).to.equal(true);
+    });
+
+    it('Get the lending market detail with non-empty order book', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '5000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '9950',
+        );
+
+      const detail = await lendingMarketControllerProxy.getLendingMarketDetail(
+        targetCurrency,
+        maturities[0],
+      );
+
+      expect(detail.bestLendUnitPrice).to.equal('9950');
+      expect(detail.bestBorrowUnitPrice).to.equal('5000');
+      expect(detail.midUnitPrice).to.equal('7475');
+      expect(detail.maxLendUnitPrice).to.equal('9960');
+      expect(detail.minBorrowUnitPrice).to.equal('4800');
+      expect(detail.openingUnitPrice).to.equal('0');
+      expect(detail.isReady).to.equal(true);
+    });
+
+    it('Get the multiple lending market details', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '5000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '9950',
+        );
+
+      const details =
+        await lendingMarketControllerProxy.getLendingMarketDetails([
+          targetCurrency,
+        ]);
+
+      expect(details.length).to.equal(5);
+      expect(details[0].bestLendUnitPrice).to.equal('9950');
+      expect(details[0].bestBorrowUnitPrice).to.equal('5000');
+      expect(details[0].midUnitPrice).to.equal('7475');
+      expect(details[0].maxLendUnitPrice).to.equal('9960');
+      expect(details[0].minBorrowUnitPrice).to.equal('4800');
+      expect(details[0].openingUnitPrice).to.equal('0');
+      expect(details[0].isReady).to.equal(true);
+    });
+
     it('Pause lending markets', async () => {
       await lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency);
 
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
-            0,
+            Side.LEND,
             '100000000000000000',
             '8000',
           ),
@@ -138,10 +219,10 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
-          0,
+          Side.LEND,
           '100000000000000000',
           '8000',
         );
@@ -176,7 +257,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -185,7 +266,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -194,7 +275,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -203,7 +284,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -213,7 +294,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.LEND,
@@ -222,7 +303,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.LEND,
@@ -231,7 +312,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -240,7 +321,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -270,7 +351,7 @@ describe('LendingMarketController - Operations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             maturities[0],
             Side.LEND,
@@ -282,7 +363,7 @@ describe('LendingMarketController - Operations', () => {
       await expect(
         lendingMarketControllerProxy
           .connect(alice)
-          .createOrder(
+          .executeOrder(
             targetCurrency,
             newMaturities[newMaturities.length - 1],
             Side.LEND,
@@ -293,7 +374,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           newMaturities[newMaturities.length - 2],
           Side.LEND,
@@ -303,7 +384,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           newMaturities[newMaturities.length - 2],
           Side.BORROW,
@@ -425,7 +506,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.LEND,
@@ -434,7 +515,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -444,7 +525,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -453,7 +534,7 @@ describe('LendingMarketController - Operations', () => {
         );
       const tx = await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -461,8 +542,7 @@ describe('LendingMarketController - Operations', () => {
           '8000',
         );
 
-      const lendingMarket1 = lendingMarketProxies[0];
-      await expect(tx).to.emit(lendingMarket1, 'OrdersTaken');
+      await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
       await rotateLendingMarkets();
       await checkGenesisValue();
@@ -473,7 +553,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.LEND,
@@ -482,7 +562,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -491,7 +571,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -500,7 +580,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -514,7 +594,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.LEND,
@@ -523,7 +603,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[1],
           Side.BORROW,
@@ -533,7 +613,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -542,7 +622,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -561,7 +641,7 @@ describe('LendingMarketController - Operations', () => {
     it('Calculate the total funds from inactive lending order list', async () => {
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -570,7 +650,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -580,7 +660,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -589,7 +669,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(dave)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -617,7 +697,7 @@ describe('LendingMarketController - Operations', () => {
     it('Calculate the total funds from inactive borrowing order list', async () => {
       await lendingMarketControllerProxy
         .connect(bob)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -626,7 +706,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(alice)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,
@@ -636,7 +716,7 @@ describe('LendingMarketController - Operations', () => {
 
       await lendingMarketControllerProxy
         .connect(carol)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.BORROW,
@@ -645,7 +725,7 @@ describe('LendingMarketController - Operations', () => {
         );
       await lendingMarketControllerProxy
         .connect(dave)
-        .createOrder(
+        .executeOrder(
           targetCurrency,
           maturities[0],
           Side.LEND,

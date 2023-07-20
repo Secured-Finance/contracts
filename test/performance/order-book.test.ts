@@ -4,7 +4,7 @@ import { BigNumber, Contract, Wallet } from 'ethers';
 import { ethers, waffle } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexEFIL, hexETH, hexUSDC } from '../../utils/strings';
+import { hexETH, hexUSDC, hexWFIL } from '../../utils/strings';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -49,7 +49,7 @@ describe('Performance Test: Order Book', async () => {
     // Deploy Lending Markets
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexEFIL, genesisDate)
+        .createLendingMarket(hexWFIL, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
         .createLendingMarket(hexETH, genesisDate)
@@ -61,7 +61,7 @@ describe('Performance Test: Order Book', async () => {
   });
 
   beforeEach('Set maturities', async () => {
-    maturities = await lendingMarketController.getMaturities(hexEFIL);
+    maturities = await lendingMarketController.getMaturities(hexWFIL);
   });
 
   describe('Take orders without the order cleaning', async () => {
@@ -166,7 +166,7 @@ describe('Performance Test: Order Book', async () => {
 
               await lendingMarketController
                 .connect(user)
-                .createOrder(
+                .executeOrder(
                   currencyKey,
                   maturities[0],
                   Side.LEND,
@@ -200,7 +200,7 @@ describe('Performance Test: Order Book', async () => {
 
             const tx = await lendingMarketController
               .connect(signers[0])
-              .createOrder(
+              .executeOrder(
                 currencyKey,
                 maturities[0],
                 Side.BORROW,
@@ -209,14 +209,20 @@ describe('Performance Test: Order Book', async () => {
               );
 
             await expect(tx)
-              .to.emit(lendingMarkets[0], 'OrdersTaken')
+              .to.emit(lendingMarkets[0], 'OrderExecuted')
               .withArgs(
                 signers[0].address,
                 Side.BORROW,
                 currencyKey,
                 maturities[0],
                 totalAmount,
+                0,
+                totalAmount,
                 unitPrice,
+                () => true,
+                0,
+                0,
+                0,
                 () => true,
               );
 

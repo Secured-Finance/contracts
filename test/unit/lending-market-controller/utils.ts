@@ -20,9 +20,6 @@ const ProxyController = artifacts.require('ProxyController');
 const ReserveFund = artifacts.require('ReserveFund');
 
 // libraries
-const LendingMarketOperationLogic = artifacts.require(
-  'LendingMarketOperationLogic',
-);
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const LendingMarketConfigurationLogic = artifacts.require(
   'LendingMarketConfigurationLogic',
@@ -48,10 +45,15 @@ const deployContracts = async (owner: SignerWithAddress) => {
     owner,
     LendingMarketConfigurationLogic,
   );
-  const lendingMarketOperationLogic = await deployContract(
-    owner,
-    LendingMarketOperationLogic,
-  );
+
+  const lendingMarketOperationLogic = await ethers
+    .getContractFactory('LendingMarketOperationLogic', {
+      libraries: {
+        LendingMarketConfigurationLogic:
+          lendingMarketConfigurationLogic.address,
+      },
+    })
+    .then((factory) => factory.deploy());
 
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {

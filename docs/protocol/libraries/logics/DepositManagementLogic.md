@@ -37,13 +37,19 @@ function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint
 ### getCollateralAmount
 
 ```solidity
-function getCollateralAmount(address _user) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalActualCollateral)
+function getCollateralAmount(address _user) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
 ```
 
 ### getCollateralAmount
 
 ```solidity
-function getCollateralAmount(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, bool _isUnsettledBorrowOrder) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalActualCollateral)
+function getCollateralAmount(address _user, bytes32 _ccy) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+```
+
+### calculateCollateral
+
+```solidity
+function calculateCollateral(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, bool _isUnsettledBorrowOrder) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
 ```
 
 ### getWithdrawableCollateral
@@ -70,10 +76,10 @@ function addDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public
 function removeDepositAmount(address _user, bytes32 _ccy, uint256 _amount) public
 ```
 
-### resetDepositAmount
+### executeForcedReset
 
 ```solidity
-function resetDepositAmount(address _user, bytes32 _ccy) external returns (uint256 removedAmount)
+function executeForcedReset(address _user, bytes32 _ccy) external returns (uint256 removedAmount)
 ```
 
 ### deposit
@@ -92,6 +98,12 @@ function withdraw(address _user, bytes32 _ccy, uint256 _amount) public returns (
 
 ```solidity
 function getLiquidationAmount(address _user, bytes32 _liquidationCcy, uint256 _liquidationAmountMaximum) public view returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee)
+```
+
+### calculateLiquidationFees
+
+```solidity
+function calculateLiquidationFees(uint256 _amount) public view returns (uint256 protocolFee, uint256 liquidatorFee)
 ```
 
 ### transferFrom

@@ -28,6 +28,23 @@ struct Position {
 }
 ```
 
+### LendingMarketDetail
+
+```solidity
+struct LendingMarketDetail {
+  bytes32 ccy;
+  uint256 maturity;
+  uint256 bestLendUnitPrice;
+  uint256 bestBorrowUnitPrice;
+  uint256 midUnitPrice;
+  uint256 maxLendUnitPrice;
+  uint256 minBorrowUnitPrice;
+  uint256 openingUnitPrice;
+  uint256 openingDate;
+  bool isReady;
+}
+```
+
 ### isTerminated
 
 ```solidity
@@ -172,28 +189,28 @@ function initializeLendingMarket(bytes32 ccy, uint256 genesisDate, uint256 compo
 function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external
 ```
 
-### createOrder
+### executeOrder
 
 ```solidity
-function createOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external returns (bool)
+function executeOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external returns (bool)
 ```
 
-### depositAndCreateOrder
+### depositAndExecuteOrder
 
 ```solidity
-function depositAndCreateOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external payable returns (bool)
+function depositAndExecuteOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external payable returns (bool)
 ```
 
-### createPreOrder
+### executePreOrder
 
 ```solidity
-function createPreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external returns (bool)
+function executePreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external returns (bool)
 ```
 
-### depositAndCreatePreOrder
+### depositAndExecutesPreOrder
 
 ```solidity
-function depositAndCreatePreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external payable returns (bool)
+function depositAndExecutesPreOrder(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice) external payable returns (bool)
 ```
 
 ### unwindPosition
@@ -211,13 +228,31 @@ function executeItayoseCalls(bytes32[] currencies, uint256 maturity) external re
 ### executeRedemption
 
 ```solidity
-function executeRedemption() external returns (bool)
+function executeRedemption(bytes32 _ccy, uint256 _maturity) external returns (bool)
+```
+
+### executeRepayment
+
+```solidity
+function executeRepayment(bytes32 _ccy, uint256 _maturity) external returns (bool)
+```
+
+### executeEmergencySettlement
+
+```solidity
+function executeEmergencySettlement() external returns (bool)
 ```
 
 ### executeLiquidationCall
 
 ```solidity
 function executeLiquidationCall(bytes32 collateralCcy, bytes32 debtCcy, uint256 debtMaturity, address user) external returns (bool)
+```
+
+### executeForcedRepayment
+
+```solidity
+function executeForcedRepayment(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user) external returns (bool)
 ```
 
 ### cancelOrder

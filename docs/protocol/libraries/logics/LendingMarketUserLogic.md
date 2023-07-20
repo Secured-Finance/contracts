@@ -2,16 +2,16 @@
 
 ## LendingMarketUserLogic
 
-### createOrder
+### executeOrder
 
 ```solidity
-function createOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
+function executeOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
 ```
 
-### createPreOrder
+### executePreOrder
 
 ```solidity
-function createPreOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
+function executePreOrder(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external
 ```
 
 ### unwindPosition

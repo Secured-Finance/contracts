@@ -26,6 +26,24 @@ event EmergencyTerminationExecuted(uint256 timestamp)
 function initializeCurrencySetting(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor) external
 ```
 
+### getLendingMarketDetails
+
+```solidity
+function getLendingMarketDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+```
+
+### getLendingMarketDetailsPerCurrency
+
+```solidity
+function getLendingMarketDetailsPerCurrency(bytes32 _ccy) public view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+```
+
+### getLendingMarketDetail
+
+```solidity
+function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity) public view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+```
+
 ### createLendingMarket
 
 ```solidity

@@ -25,7 +25,7 @@ library LendingMarketUserLogic {
     using SafeCast for int256;
     using RoundingUint256 for uint256;
 
-    function createOrder(
+    function executeOrder(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
@@ -48,7 +48,7 @@ library LendingMarketUserLogic {
         (
             ILendingMarket.FilledOrder memory filledOrder,
             ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
-        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createOrder(
+        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).executeOrder(
                 _side,
                 _user,
                 _amount,
@@ -85,7 +85,7 @@ library LendingMarketUserLogic {
         Storage.slot().usedCurrencies[_user].add(_ccy);
     }
 
-    function createPreOrder(
+    function executePreOrder(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
@@ -105,7 +105,7 @@ library LendingMarketUserLogic {
             "Not enough collateral"
         );
 
-        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).createPreOrder(
+        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).executePreOrder(
             _side,
             _user,
             _amount,
@@ -189,6 +189,15 @@ library LendingMarketUserLogic {
                 _filledAmount,
                 _filledAmountInFV
             );
+
+            emit FundManagementLogic.OrderFilled(
+                _user,
+                _ccy,
+                _side,
+                _maturity,
+                _filledAmount,
+                _filledAmountInFV
+            );
         }
     }
 
@@ -208,6 +217,16 @@ library LendingMarketUserLogic {
                 partiallyFilledOrder.futureValue,
                 0,
                 false
+            );
+
+            emit FundManagementLogic.OrderPartiallyFilled(
+                partiallyFilledOrder.orderId,
+                partiallyFilledOrder.maker,
+                _ccy,
+                _side,
+                _maturity,
+                partiallyFilledOrder.amount,
+                partiallyFilledOrder.futureValue
             );
         }
     }
@@ -400,7 +419,7 @@ library LendingMarketUserLogic {
 
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwind(side, _user, amountInFV, cbLimitRange);
+            ).unwindPosition(side, _user, amountInFV, cbLimitRange);
         } else if (_futureValue < 0) {
             side = ProtocolTypes.Side.LEND;
             // To unwind all positions, calculate the future value taking into account
@@ -418,7 +437,7 @@ library LendingMarketUserLogic {
 
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
                 Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwind(side, _user, amountInFV, cbLimitRange);
+            ).unwindPosition(side, _user, amountInFV, cbLimitRange);
         }
     }
 }

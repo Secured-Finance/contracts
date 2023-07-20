@@ -10,7 +10,7 @@ for selected currency and maturity and has the calculation logic for the Genesis
 Deployed Lending Markets are rotated and reused as it reaches the maturity date. At the time of rotation,
 a new maturity date is set and the compound factor is updated.
 
-The users mainly call this contract to create orders to lend or borrow funds.
+The users mainly call this contract to execute orders to lend or borrow funds.
 
 ### hasLendingMarket
 
@@ -170,6 +170,46 @@ Gets the lending market contract address for the selected currency and maturity.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | address | The lending market address |
+
+### getLendingMarketDetail
+
+```solidity
+function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+```
+
+Gets detailed information on the lending market.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the market |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| bestLendUnitPrice | uint256 | The best lend price per future value |
+| bestBorrowUnitPrice | uint256 | The best borrow price per future value |
+| midUnitPrice | uint256 | The mid price per future value |
+| maxLendUnitPrice | uint256 | The maximum unit price for lending |
+| minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
+| openingUnitPrice | uint256 | The opening price when Itayose is executed |
+| openingDate | uint256 | The timestamp when the market opens |
+| isReady | bool | The boolean if the market is ready or not |
+
+### getLendingMarketDetails
+
+```solidity
+function getLendingMarketDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+```
+
+Gets the array of detailed information on the lending market.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccys | bytes32[] | Currency name list in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lendingMarketDetails | struct ILendingMarketController.LendingMarketDetail[] | The array of Detailed information on the lending market. |
 
 ### getFutureValueVault
 
@@ -497,13 +537,13 @@ Reverts on deployment market with existing currency and term
 | _ccy | bytes32 | Main currency for new lending market |
 | _openingDate | uint256 | Timestamp when the lending market opens |
 
-### createOrder
+### executeOrder
 
 ```solidity
-function createOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external returns (bool)
+function executeOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external returns (bool)
 ```
 
-Creates an order. Takes orders if the orders are matched,
+Executes an order. Takes orders if the order is matched,
 and places new order if not match it.
 
 In addition, converts the future value to the genesis value if there is future value in past maturity
@@ -521,13 +561,13 @@ before the execution of order creation.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### depositAndCreateOrder
+### depositAndExecuteOrder
 
 ```solidity
-function depositAndCreateOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external payable returns (bool)
+function depositAndExecuteOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external payable returns (bool)
 ```
 
-Deposits funds and creates an order at the same time.
+Deposits funds and executes an order at the same time.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -541,13 +581,13 @@ Deposits funds and creates an order at the same time.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### createPreOrder
+### executePreOrder
 
 ```solidity
-function createPreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) public returns (bool)
+function executePreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) public returns (bool)
 ```
 
-Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
+Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
 before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
 
 | Name | Type | Description |
@@ -562,13 +602,13 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### depositAndCreatePreOrder
+### depositAndExecutesPreOrder
 
 ```solidity
-function depositAndCreatePreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external payable returns (bool)
+function depositAndExecutesPreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external payable returns (bool)
 ```
 
-Deposits funds and creates a pre-order at the same time.
+Deposits funds and executes a pre-order at the same time.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -598,11 +638,39 @@ Unwinds user's lending or borrowing positions by creating an opposite position o
 ### executeRedemption
 
 ```solidity
-function executeRedemption() external returns (bool)
+function executeRedemption(bytes32 _ccy, uint256 _maturity) external returns (bool)
 ```
 
-Redeems all lending and borrowing positions.
-This function uses the present value as of the termination date.
+Redeem user's lending positions.
+Redemption can only be executed once the market has matured after the currency has been delisted.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
+
+### executeRepayment
+
+```solidity
+function executeRepayment(bytes32 _ccy, uint256 _maturity) external returns (bool)
+```
+
+Repay user's borrowing positions.
+Repayment can only be executed once the market has matured after the currency has been delisted.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _maturity | uint256 | The maturity of the selected market |
+
+### executeEmergencySettlement
+
+```solidity
+function executeEmergencySettlement() external returns (bool)
+```
+
+Force settlement of all lending and borrowing positions.
+This function is executed under the present value as of the termination date.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -642,6 +710,25 @@ function executeLiquidationCall(bytes32 _collateralCcy, bytes32 _debtCcy, uint25
 ```
 
 Liquidates a lending or borrowing position if the user's coverage is hight.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _collateralCcy | bytes32 | Currency name to be used as collateral |
+| _debtCcy | bytes32 | Currency name to be used as debt |
+| _debtMaturity | uint256 | The market maturity of the debt |
+| _user | address | User's address |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | True if the execution of the operation succeeds |
+
+### executeForcedRepayment
+
+```solidity
+function executeForcedRepayment(bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity, address _user) external returns (bool)
+```
+
+Execute forced repayment for a borrowing position if repayment date is over.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

@@ -6,7 +6,7 @@ import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
-import {LendingMarketStorage as Storage, MarketOrder} from "../../storages/LendingMarketStorage.sol";
+import {LendingMarketStorage as Storage, MarketOrder, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
 
 library OrderBookLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
@@ -133,12 +133,12 @@ library OrderBookLogic {
 
         if (orderItem.maker != address(0)) {
             side = marketOrder.side;
-            unitPrice = marketOrder.unitPrice;
             maturity = marketOrder.maturity;
             maker = orderItem.maker;
             amount = orderItem.amount;
             timestamp = orderItem.timestamp;
             isPreOrder = Storage.slot().isPreOrder[_orderId];
+            unitPrice = _getOrderUnitPrice(side, maturity, marketOrder.unitPrice, isPreOrder);
         }
     }
 
@@ -556,7 +556,7 @@ library OrderBookLogic {
         }
     }
 
-    function checkCircuitBreakerThreshold(
+    function getOrderExecutionConditions(
         ProtocolTypes.Side _side,
         uint256 _unitPrice,
         uint256 _circuitBreakerLimitRange
@@ -565,13 +565,14 @@ library OrderBookLogic {
         returns (
             bool isFilled,
             uint256 executedUnitPrice,
+            uint256 cbThresholdUnitPrice,
             bool ignoreRemainingAmount
         )
     {
         require(_circuitBreakerLimitRange < Constants.PCT_DIGIT, "CB limit can not be so high");
-        uint256 cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[
-            block.number
-        ][_side];
+        cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
+            _side
+        ];
         bool isLend = _side == ProtocolTypes.Side.LEND;
         bool orderExists;
         uint256 bestUnitPrice;
@@ -581,7 +582,7 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = _getLendCircuitBreakerThreshold(
+                cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -594,7 +595,7 @@ library OrderBookLogic {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = _getBorrowCircuitBreakerThreshold(
+                cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -625,10 +626,26 @@ library OrderBookLogic {
             : bestUnitPrice >= executedUnitPrice;
     }
 
-    function _getBorrowCircuitBreakerThreshold(
-        uint256 _circuitBreakerLimitRange,
-        uint256 _unitPrice
-    ) internal pure returns (uint256 cbThresholdUnitPrice) {
+    function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange)
+        external
+        view
+        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+    {
+        maxLendUnitPrice = getLendCircuitBreakerThreshold(
+            _circuitBreakerLimitRange,
+            getLowestBorrowingUnitPrice()
+        );
+        minBorrowUnitPrice = getBorrowCircuitBreakerThreshold(
+            _circuitBreakerLimitRange,
+            getHighestLendingUnitPrice()
+        );
+    }
+
+    function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
+        public
+        pure
+        returns (uint256 cbThresholdUnitPrice)
+    {
         // NOTE: Formula of circuit breaker threshold for borrow orders:
         // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
         uint256 numerator = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
@@ -649,8 +666,8 @@ library OrderBookLogic {
         }
     }
 
-    function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        internal
+    function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
+        public
         pure
         returns (uint256 cbThresholdUnitPrice)
     {
@@ -709,16 +726,13 @@ library OrderBookLogic {
             marketOrder.unitPrice,
             _orderId
         );
-        uint256 unitPrice = marketOrder.unitPrice;
 
-        if (Storage.slot().isPreOrder[_orderId]) {
-            uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-            uint256 lastLendUnitPrice = Storage
-                .slot()
-                .itayoseLogs[marketOrder.maturity]
-                .lastLendUnitPrice;
-            unitPrice = lastLendUnitPrice <= unitPrice ? openingUnitPrice : unitPrice;
-        }
+        uint256 unitPrice = _getOrderUnitPrice(
+            marketOrder.side,
+            marketOrder.maturity,
+            marketOrder.unitPrice,
+            Storage.slot().isPreOrder[_orderId]
+        );
 
         presentValue = orderItem.amount;
         futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
@@ -734,18 +748,33 @@ library OrderBookLogic {
             marketOrder.unitPrice,
             _orderId
         );
-        uint256 unitPrice = marketOrder.unitPrice;
-
-        if (Storage.slot().isPreOrder[_orderId]) {
-            uint256 openingUnitPrice = Storage.slot().openingUnitPrices[marketOrder.maturity];
-            uint256 lastBorrowUnitPrice = Storage
-                .slot()
-                .itayoseLogs[marketOrder.maturity]
-                .lastBorrowUnitPrice;
-            unitPrice = lastBorrowUnitPrice >= unitPrice ? openingUnitPrice : unitPrice;
-        }
+        uint256 unitPrice = _getOrderUnitPrice(
+            marketOrder.side,
+            marketOrder.maturity,
+            marketOrder.unitPrice,
+            Storage.slot().isPreOrder[_orderId]
+        );
 
         presentValue = orderItem.amount;
         futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
+    }
+
+    function _getOrderUnitPrice(
+        ProtocolTypes.Side _side,
+        uint256 _maturity,
+        uint256 _unitPrice,
+        bool _isPreOrder
+    ) internal view returns (uint256) {
+        if (!_isPreOrder) return _unitPrice;
+        ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[_maturity];
+        if (
+            itayoseLog.openingUnitPrice != 0 &&
+            ((_side == ProtocolTypes.Side.BORROW && _unitPrice <= itayoseLog.lastBorrowUnitPrice) ||
+                (_side == ProtocolTypes.Side.LEND && _unitPrice >= itayoseLog.lastLendUnitPrice))
+        ) {
+            return itayoseLog.openingUnitPrice;
+        } else {
+            return _unitPrice;
+        }
     }
 }

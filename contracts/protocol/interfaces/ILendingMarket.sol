@@ -2,17 +2,31 @@
 pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
-import {MarketOrder} from "../storages/LendingMarketStorage.sol";
+import {MarketOrder, ItayoseLog} from "../storages/LendingMarketStorage.sol";
 
 interface ILendingMarket {
-    struct FilledOrder {
-        uint256 unitPrice;
+    struct OrderExecutionConditions {
+        bool isFilled;
+        uint256 executedUnitPrice;
+        uint256 cbThresholdUnitPrice;
+        bool ignoreRemainingAmount;
+    }
+
+    struct PlacedOrder {
+        uint48 orderId;
         uint256 amount;
+        uint256 unitPrice;
+    }
+
+    struct FilledOrder {
+        uint256 amount;
+        uint256 unitPrice;
         uint256 futureValue;
         uint256 ignoredAmount;
     }
 
     struct PartiallyFilledOrder {
+        uint48 orderId;
         address maker;
         uint256 amount;
         uint256 futureValue;
@@ -28,51 +42,52 @@ interface ILendingMarket {
         uint256 unitPrice
     );
 
-    event OrderMade(
-        uint48 orderId,
-        address indexed maker,
-        ProtocolTypes.Side side,
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 amount,
-        uint256 unitPrice,
-        bool isPreOrder
-    );
-
-    event OrdersTaken(
-        address indexed taker,
-        ProtocolTypes.Side side,
-        bytes32 ccy,
-        uint256 maturity,
-        uint256 filledAmount,
-        uint256 unitPrice,
-        uint256 filledFutureValue
-    );
-
-    event OrderPartiallyTaken(
-        uint48 orderId,
-        address indexed maker,
-        ProtocolTypes.Side side,
-        bytes32 indexed ccy,
-        uint256 maturity,
-        uint256 filledAmount,
-        uint256 filledFutureValue
-    );
-
     event OrdersCleaned(
         uint48[] orderIds,
         address indexed maker,
         ProtocolTypes.Side side,
         bytes32 indexed ccy,
-        uint256 maturity
+        uint256 maturity,
+        uint256 amount,
+        uint256 futureValue
     );
 
-    event OrderBlockedByCircuitBreaker(
+    event OrderExecuted(
         address indexed user,
-        bytes32 indexed ccy,
         ProtocolTypes.Side side,
+        bytes32 indexed ccy,
         uint256 indexed maturity,
-        uint256 thresholdUnitPrice
+        uint256 inputAmount,
+        uint256 inputUnitPrice,
+        uint256 filledAmount,
+        uint256 filledUnitPrice,
+        uint256 filledFutureValue,
+        uint48 placedOrderId,
+        uint256 placedAmount,
+        uint256 placedUnitPrice,
+        uint256 cbThresholdUnitPrice
+    );
+
+    event PreOrderExecuted(
+        address indexed user,
+        ProtocolTypes.Side side,
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 amount,
+        uint256 unitPrice,
+        uint48 orderId
+    );
+
+    event PositionUnwound(
+        address indexed user,
+        ProtocolTypes.Side side,
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 futureValue,
+        uint256 filledAmount,
+        uint256 filledUnitPrice,
+        uint256 filledFutureValue,
+        uint256 cbThresholdUnitPrice
     );
 
     event MarketOpened(uint256 maturity, uint256 prevMaturity);
@@ -98,6 +113,11 @@ interface ILendingMarket {
     }
 
     function getMarket() external view returns (Market memory);
+
+    function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange)
+        external
+        view
+        returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold);
 
     function getBorrowUnitPrice() external view returns (uint256 unitPrice);
 
@@ -129,8 +149,6 @@ interface ILendingMarket {
 
     function getOpeningDate() external view returns (uint256);
 
-    function getOpeningUnitPrice() external view returns (uint256);
-
     function isReady() external view returns (bool);
 
     function isMatured() external view returns (bool);
@@ -140,6 +158,8 @@ interface ILendingMarket {
     function isItayosePeriod() external view returns (bool);
 
     function isPreOrderPeriod() external returns (bool);
+
+    function getItayoseLog(uint256 maturity) external view returns (ItayoseLog memory);
 
     function getOrder(uint48 orderId)
         external
@@ -193,7 +213,7 @@ interface ILendingMarket {
 
     function cancelOrder(address user, uint48 orderId) external;
 
-    function createOrder(
+    function executeOrder(
         ProtocolTypes.Side side,
         address account,
         uint256 amount,
@@ -203,14 +223,14 @@ interface ILendingMarket {
         external
         returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder);
 
-    function createPreOrder(
+    function executePreOrder(
         ProtocolTypes.Side side,
         address user,
         uint256 amount,
         uint256 unitPrice
     ) external;
 
-    function unwind(
+    function unwindPosition(
         ProtocolTypes.Side side,
         address user,
         uint256 futureValue,

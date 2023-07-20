@@ -32,7 +32,7 @@ import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarke
  * Deployed Lending Markets are rotated and reused as it reaches the maturity date. At the time of rotation,
  * a new maturity date is set and the compound factor is updated.
  *
- * The users mainly call this contract to create orders to lend or borrow funds.
+ * The users mainly call this contract to execute orders to lend or borrow funds.
  */
 contract LendingMarketController is
     ILendingMarketController,
@@ -172,6 +172,49 @@ contract LendingMarketController is
         returns (address)
     {
         return Storage.slot().maturityLendingMarkets[_ccy][_maturity];
+    }
+
+    /**
+     * @notice Gets detailed information on the lending market.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the market
+     * @return bestLendUnitPrice The best lend price per future value
+     * @return bestBorrowUnitPrice The best borrow price per future value
+     * @return midUnitPrice The mid price per future value
+     * @return maxLendUnitPrice The maximum unit price for lending
+     * @return minBorrowUnitPrice The minimum unit price for borrowing
+     * @return openingUnitPrice The opening price when Itayose is executed
+     * @return openingDate The timestamp when the market opens
+     * @return isReady The boolean if the market is ready or not
+     */
+    function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        returns (
+            uint256 bestLendUnitPrice,
+            uint256 bestBorrowUnitPrice,
+            uint256 midUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 openingUnitPrice,
+            uint256 openingDate,
+            bool isReady
+        )
+    {
+        return LendingMarketOperationLogic.getLendingMarketDetail(_ccy, _maturity);
+    }
+
+    /**
+     * @notice Gets the array of detailed information on the lending market.
+     * @param _ccys Currency name list in bytes32
+     * @return lendingMarketDetails The array of Detailed information on the lending market.
+     */
+    function getLendingMarketDetails(bytes32[] memory _ccys)
+        external
+        view
+        returns (LendingMarketDetail[] memory lendingMarketDetails)
+    {
+        return LendingMarketOperationLogic.getLendingMarketDetails(_ccys);
     }
 
     /**
@@ -530,7 +573,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Creates an order. Takes orders if the orders are matched,
+     * @notice Executes an order. Takes orders if the order is matched,
      * and places new order if not match it.
      *
      * In addition, converts the future value to the genesis value if there is future value in past maturity
@@ -543,19 +586,26 @@ contract LendingMarketController is
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
      * @return True if the execution of the operation succeeds
      */
-    function createOrder(
+    function executeOrder(
         bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
     ) external override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        LendingMarketUserLogic.createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
+        LendingMarketUserLogic.executeOrder(
+            _ccy,
+            _maturity,
+            msg.sender,
+            _side,
+            _amount,
+            _unitPrice
+        );
         return true;
     }
 
     /**
-     * @notice Deposits funds and creates an order at the same time.
+     * @notice Deposits funds and executes an order at the same time.
      *
      * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
@@ -564,7 +614,7 @@ contract LendingMarketController is
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
      * @return True if the execution of the operation succeeds
      */
-    function depositAndCreateOrder(
+    function depositAndExecuteOrder(
         bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
@@ -580,12 +630,19 @@ contract LendingMarketController is
         returns (bool)
     {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        LendingMarketUserLogic.createOrder(_ccy, _maturity, msg.sender, _side, _amount, _unitPrice);
+        LendingMarketUserLogic.executeOrder(
+            _ccy,
+            _maturity,
+            msg.sender,
+            _side,
+            _amount,
+            _unitPrice
+        );
         return true;
     }
 
     /**
-     * @notice Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
+     * @notice Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
      * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
      *
      * @param _ccy Currency name in bytes32 of the selected market
@@ -595,14 +652,14 @@ contract LendingMarketController is
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
      * @return True if the execution of the operation succeeds
      */
-    function createPreOrder(
+    function executePreOrder(
         bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
         uint256 _unitPrice
     ) public override nonReentrant ifValidMaturity(_ccy, _maturity) ifActive returns (bool) {
-        LendingMarketUserLogic.createPreOrder(
+        LendingMarketUserLogic.executePreOrder(
             _ccy,
             _maturity,
             msg.sender,
@@ -615,7 +672,7 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Deposits funds and creates a pre-order at the same time.
+     * @notice Deposits funds and executes a pre-order at the same time.
      *
      * @param _ccy Currency name in bytes32 of the selected market
      * @param _maturity The maturity of the selected market
@@ -624,7 +681,7 @@ contract LendingMarketController is
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
      * @return True if the execution of the operation succeeds
      */
-    function depositAndCreatePreOrder(
+    function depositAndExecutesPreOrder(
         bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
@@ -640,7 +697,7 @@ contract LendingMarketController is
         returns (bool)
     {
         tokenVault().depositFrom{value: msg.value}(msg.sender, _ccy, _amount);
-        LendingMarketUserLogic.createPreOrder(
+        LendingMarketUserLogic.executePreOrder(
             _ccy,
             _maturity,
             msg.sender,

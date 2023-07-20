@@ -4,10 +4,10 @@ import { expect } from 'chai';
 import { BigNumber, Contract, Wallet } from 'ethers';
 import { deployments, ethers } from 'hardhat';
 import { Side } from '../utils/constants';
-import { hexEFIL, hexETH, toBytes32 } from '../utils/strings';
+import { hexETH, toBytes32, hexWFIL } from '../utils/strings';
 
 describe('ZC e2e test', async () => {
-  const targetCurrency = hexEFIL;
+  const targetCurrency = hexWFIL;
   const BP = 10000;
   const depositAmountInETH = '10000000000000000000';
   const orderAmountInFIL = '500000000000000000';
@@ -24,7 +24,7 @@ describe('ZC e2e test', async () => {
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let reserveFund: Contract;
-  let eFILToken: Contract;
+  let wFILToken: Contract;
 
   let maturities: BigNumber[];
 
@@ -73,9 +73,9 @@ describe('ZC e2e test', async () => {
       .get('ProxyController')
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
-    const eFILTokenAddress =
-      process.env.TOKEN_EFIL || (await deployments.get('MockEFIL')).address;
-    eFILToken = await ethers.getContractAt('MockEFIL', eFILTokenAddress);
+    const wFILTokenAddress =
+      process.env.TOKEN_WFIL || (await deployments.get('MockWFIL')).address;
+    wFILToken = await ethers.getContractAt('MockWFIL', wFILTokenAddress);
 
     // Get proxy contracts
     tokenVault = await getProxy('TokenVault');
@@ -92,12 +92,11 @@ describe('ZC e2e test', async () => {
       ['address'],
     );
 
-    // Transfer mock eFIL token
-    if (!process.env.TOKEN_EFIL) {
-      eFILToken
-        .connect(ownerSigner)
-        .transfer(aliceSigner.address, orderAmountInFIL);
-    }
+    // Transfer wFIL token for testing
+    await wFILToken
+      .connect(ownerSigner)
+      .transfer(aliceSigner.address, orderAmountInFIL)
+      .then((tx) => tx.wait());
 
     maturities = await lendingMarketController.getMaturities(targetCurrency);
   });
@@ -105,7 +104,7 @@ describe('ZC e2e test', async () => {
   it('Deposit ETH', async () => {
     const aliceDepositAmountBefore = await tokenVault.getDepositAmount(
       aliceSigner.address,
-      hexEFIL,
+      hexWFIL,
     );
     const bobDepositAmountBefore = await tokenVault.getDepositAmount(
       bobSigner.address,
@@ -117,21 +116,19 @@ describe('ZC e2e test', async () => {
       const depositAmountInFIL = ethers.BigNumber.from(orderAmountInFIL).sub(
         aliceDepositAmountBefore,
       );
-      await eFILToken
+      await wFILToken
         .connect(aliceSigner)
         .approve(tokenVault.address, depositAmountInFIL)
         .then((tx) => tx.wait());
 
       await tokenVault
         .connect(aliceSigner)
-        .deposit(hexEFIL, depositAmountInFIL, {
-          value: depositAmountInFIL,
-        })
+        .deposit(hexWFIL, depositAmountInFIL)
         .then((tx) => tx.wait());
 
       const aliceDepositAmountAfter = await tokenVault.getDepositAmount(
         aliceSigner.address,
-        hexEFIL,
+        hexWFIL,
       );
 
       expect(
@@ -236,7 +233,7 @@ describe('ZC e2e test', async () => {
     // Make lend orders
     await lendingMarketController
       .connect(aliceSigner)
-      .createOrder(
+      .executeOrder(
         targetCurrency,
         maturities[0],
         Side.LEND,
@@ -248,7 +245,7 @@ describe('ZC e2e test', async () => {
     // Make borrow orders
     await lendingMarketController
       .connect(bobSigner)
-      .createOrder(
+      .executeOrder(
         targetCurrency,
         maturities[0],
         Side.BORROW,

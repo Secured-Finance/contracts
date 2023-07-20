@@ -5,6 +5,7 @@ import {IERC20} from "../../../dependencies/openzeppelin/contracts/token/ERC20/I
 import {SafeCast} from "../../../dependencies/openzeppelin/contracts/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
+import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
@@ -12,6 +13,10 @@ import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../BokkyPooBahsDateTim
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
+import {FundManagementLogic} from "./FundManagementLogic.sol";
+import {LendingMarketConfigurationLogic} from "./LendingMarketConfigurationLogic.sol";
+// types
+import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage, ObservationPeriodLog} from "../../storages/LendingMarketControllerStorage.sol";
 
@@ -46,6 +51,101 @@ library LendingMarketOperationLogic {
         );
 
         Storage.slot().genesisDates[_ccy] = _genesisDate;
+    }
+
+    function getLendingMarketDetails(bytes32[] memory _ccys)
+        external
+        view
+        returns (ILendingMarketController.LendingMarketDetail[] memory lendingMarketDetails)
+    {
+        uint256 totalCount;
+
+        ILendingMarketController.LendingMarketDetail[][]
+            memory detailLists = new ILendingMarketController.LendingMarketDetail[][](_ccys.length);
+
+        for (uint256 i; i < _ccys.length; i++) {
+            detailLists[i] = getLendingMarketDetailsPerCurrency(_ccys[i]);
+            totalCount += detailLists[i].length;
+        }
+
+        lendingMarketDetails = new ILendingMarketController.LendingMarketDetail[](totalCount);
+        uint256 index;
+        for (uint256 i; i < detailLists.length; i++) {
+            for (uint256 j; j < detailLists[i].length; j++) {
+                lendingMarketDetails[index] = detailLists[i][j];
+                index++;
+            }
+        }
+    }
+
+    function getLendingMarketDetailsPerCurrency(bytes32 _ccy)
+        public
+        view
+        returns (ILendingMarketController.LendingMarketDetail[] memory lendingMarketDetails)
+    {
+        lendingMarketDetails = new ILendingMarketController.LendingMarketDetail[](
+            Storage.slot().lendingMarkets[_ccy].length
+        );
+
+        for (uint256 i; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
+            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
+            uint256 maturity = market.getMaturity();
+
+            (
+                uint256 bestLendUnitPrice,
+                uint256 bestBorrowUnitPrice,
+                uint256 midUnitPrice,
+                uint256 maxLendUnitPrice,
+                uint256 minBorrowUnitPrice,
+                uint256 openingUnitPrice,
+                uint256 openingDate,
+                bool isReady
+            ) = getLendingMarketDetail(_ccy, maturity);
+
+            lendingMarketDetails[i] = ILendingMarketController.LendingMarketDetail(
+                _ccy,
+                maturity,
+                bestLendUnitPrice,
+                bestBorrowUnitPrice,
+                midUnitPrice,
+                maxLendUnitPrice,
+                minBorrowUnitPrice,
+                openingUnitPrice,
+                openingDate,
+                isReady
+            );
+        }
+    }
+
+    function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity)
+        public
+        view
+        returns (
+            uint256 bestLendUnitPrice,
+            uint256 bestBorrowUnitPrice,
+            uint256 midUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 openingUnitPrice,
+            uint256 openingDate,
+            bool isReady
+        )
+    {
+        ILendingMarket market = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        );
+
+        ILendingMarket.Market memory marketData = market.getMarket();
+        bestLendUnitPrice = marketData.borrowUnitPrice;
+        bestBorrowUnitPrice = marketData.lendUnitPrice;
+        midUnitPrice = marketData.midUnitPrice;
+        openingUnitPrice = marketData.openingUnitPrice;
+        openingDate = marketData.openingDate;
+        isReady = marketData.isReady;
+
+        (maxLendUnitPrice, minBorrowUnitPrice) = market.getCircuitBreakerThresholds(
+            LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy)
+        );
     }
 
     function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external {

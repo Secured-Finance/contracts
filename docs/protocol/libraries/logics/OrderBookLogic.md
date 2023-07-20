@@ -110,22 +110,28 @@ function removeOrder(address _user, uint48 _orderId) external returns (enum Prot
 function getOpeningUnitPrice() external view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
-### checkCircuitBreakerThreshold
+### getOrderExecutionConditions
 
 ```solidity
-function checkCircuitBreakerThreshold(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount)
+function getOrderExecutionConditions(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, uint256 cbThresholdUnitPrice, bool ignoreRemainingAmount)
 ```
 
-### _getBorrowCircuitBreakerThreshold
+### getCircuitBreakerThresholds
 
 ```solidity
-function _getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) internal pure returns (uint256 cbThresholdUnitPrice)
+function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
 ```
 
-### _getLendCircuitBreakerThreshold
+### getBorrowCircuitBreakerThreshold
 
 ```solidity
-function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) internal pure returns (uint256 cbThresholdUnitPrice)
+function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) public pure returns (uint256 cbThresholdUnitPrice)
+```
+
+### getLendCircuitBreakerThreshold
+
+```solidity
+function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) public pure returns (uint256 cbThresholdUnitPrice)
 ```
 
 ### _nextOrderId
@@ -156,5 +162,11 @@ function _getLendOrderAmounts(uint48 _orderId) internal view returns (uint256 pr
 
 ```solidity
 function _getBorrowOrderAmounts(uint48 _orderId) internal view returns (uint256 presentValue, uint256 futureValue)
+```
+
+### _getOrderUnitPrice
+
+```solidity
+function _getOrderUnitPrice(enum ProtocolTypes.Side _side, uint256 _maturity, uint256 _unitPrice, bool _isPreOrder) internal view returns (uint256)
 ```
 

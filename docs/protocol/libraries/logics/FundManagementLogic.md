@@ -2,21 +2,6 @@
 
 ## FundManagementLogic
 
-### ExecuteLiquidationVars
-
-```solidity
-struct ExecuteLiquidationVars {
-  address reserveFund;
-  uint256 liquidationAmountInCollateralCcy;
-  uint256 protocolFeeInCollateralCcy;
-  uint256 liquidatorFeeInCollateralCcy;
-  bool isDefaultMarket;
-  bool isReserveFundPaused;
-  uint256 receivedCollateralAmount;
-  uint256 receivedDebtAmount;
-}
-```
-
 ### CalculatedTotalFundInBaseCurrencyVars
 
 ```solidity
@@ -104,16 +89,28 @@ event OrderFilled(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint
 event OrdersFilledInAsync(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
 ```
 
-### RedemptionCompleted
+### OrderPartiallyFilled
 
 ```solidity
-event RedemptionCompleted(address user, uint256 amount)
+event OrderPartiallyFilled(uint48 orderId, address maker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
 ```
 
-### LiquidationExecuted
+### RedemptionExecuted
 
 ```solidity
-event LiquidationExecuted(address user, bytes32 collateralCcy, bytes32 debtCcy, uint256 debtMaturity, uint256 debtAmount)
+event RedemptionExecuted(address user, bytes32 ccy, uint256 maturity, uint256 amount)
+```
+
+### RepaymentExecuted
+
+```solidity
+event RepaymentExecuted(address user, bytes32 ccy, uint256 maturity, uint256 amount)
+```
+
+### EmergencySettlementExecuted
+
+```solidity
+event EmergencySettlementExecuted(address user, uint256 amount)
 ```
 
 ### convertFutureValueToGenesisValue
@@ -134,12 +131,6 @@ Converts the future value to the genesis value if there is balance in the past m
 | ---- | ---- | ----------- |
 | [0] | int256 | Current future value amount after update |
 
-### executeLiquidation
-
-```solidity
-function executeLiquidation(address _liquidator, address _user, bytes32 _collateralCcy, bytes32 _debtCcy, uint256 _debtMaturity) external
-```
-
 ### updateFunds
 
 ```solidity
@@ -152,10 +143,28 @@ function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum Protoc
 function registerCurrencyAndMaturity(bytes32 _ccy, uint256 _maturity, address _user) public
 ```
 
+### registerCurrency
+
+```solidity
+function registerCurrency(bytes32 _ccy, address _user) public
+```
+
 ### executeRedemption
 
 ```solidity
-function executeRedemption(address _user) external
+function executeRedemption(bytes32 _ccy, uint256 _maturity, address _user) external
+```
+
+### executeRepayment
+
+```solidity
+function executeRepayment(bytes32 _ccy, uint256 _maturity, address _user, uint256 _amount) public returns (uint256 repaymentAmount)
+```
+
+### executeEmergencySettlement
+
+```solidity
+function executeEmergencySettlement(address _user) external
 ```
 
 ### calculateActualFunds
@@ -242,22 +251,22 @@ function _getFundsFromInactiveLendOrders(bytes32 _ccy, address _user, struct Fun
 function _calculatePVandFVInDefaultMarket(bytes32 _ccy, uint256 _maturity, int256 _futureValueInMaturity) internal view returns (int256 presentValue, int256 futureValue)
 ```
 
-### _calculatePVFromFV
+### calculatePVFromFV
 
 ```solidity
-function _calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue) internal view returns (int256 presentValue)
+function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue) public view returns (int256 presentValue)
 ```
 
-### _calculateFVFromPV
+### calculateFVFromPV
 
 ```solidity
-function _calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) internal view returns (int256)
+function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) public view returns (int256)
 ```
 
-### _calculatePVFromFV
+### calculatePVFromFV
 
 ```solidity
-function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
+function calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) public pure returns (int256)
 ```
 
 ### _convertToBaseCurrencyAtMarketTerminationPrice
@@ -272,27 +281,21 @@ function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _am
 function _convertFromBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
 ```
 
-### _transferFunds
-
-```solidity
-function _transferFunds(address _from, address _to, bytes32 _ccy, int256 _amount) internal returns (int256 untransferredAmount)
-```
-
-### _transferFunds
-
-```solidity
-function _transferFunds(address _from, address _to, bytes32 _ccy, uint256 _maturity, int256 _amount, bool _isDefaultMarket) internal returns (int256 untransferredAmount)
-```
-
 ### _calculateOrderFeeAmount
 
 ```solidity
 function _calculateOrderFeeAmount(uint256 _maturity, uint256 _amount, uint256 _orderFeeRate) internal view returns (uint256 orderFeeAmount)
 ```
 
-### _resetFunds
+### _resetFundsPerCurrency
 
 ```solidity
-function _resetFunds(bytes32 _ccy, address _user) internal returns (int256 amount)
+function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount)
+```
+
+### _resetFundsPerMaturity
+
+```solidity
+function _resetFundsPerMaturity(bytes32 _ccy, uint256 _maturity, address _user, int256 _amount) internal returns (int256 totalRemovedAmount)
 ```
 

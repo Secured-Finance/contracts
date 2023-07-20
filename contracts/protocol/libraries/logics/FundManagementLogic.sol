@@ -97,6 +97,16 @@ library FundManagementLogic {
         uint256 futureValue
     );
 
+    event OrderPartiallyFilled(
+        uint48 orderId,
+        address indexed maker,
+        bytes32 indexed ccy,
+        ProtocolTypes.Side side,
+        uint256 maturity,
+        uint256 amount,
+        uint256 futureValue
+    );
+
     event RedemptionExecuted(
         address indexed user,
         bytes32 indexed ccy,
@@ -203,8 +213,6 @@ library FundManagementLogic {
 
             registerCurrencyAndMaturity(_ccy, _maturity, reserveFundAddr);
         }
-
-        emit OrderFilled(_user, _ccy, _side, _maturity, _filledAmount, _filledAmountInFV);
     }
 
     function registerCurrencyAndMaturity(
@@ -215,9 +223,13 @@ library FundManagementLogic {
         if (!Storage.slot().usedMaturities[_ccy][_user].contains(_maturity)) {
             Storage.slot().usedMaturities[_ccy][_user].add(_maturity);
 
-            if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-                Storage.slot().usedCurrencies[_user].add(_ccy);
-            }
+            registerCurrency(_ccy, _user);
+        }
+    }
+
+    function registerCurrency(bytes32 _ccy, address _user) public {
+        if (!Storage.slot().usedCurrencies[_user].contains(_ccy)) {
+            Storage.slot().usedCurrencies[_user].add(_ccy);
         }
     }
 

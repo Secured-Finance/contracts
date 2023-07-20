@@ -170,17 +170,30 @@ Adds initial total supply at market opening
 | _maturity | uint256 | The maturity of the market |
 | _amount | int256 | The amount to add |
 
-### resetFutureValue
+### executeForcedReset
 
 ```solidity
-function resetFutureValue(address _user) external
+function executeForcedReset(address _user) external
 ```
 
-Resets the future value of the user
+Forces a reset of the user's future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
+
+### executeForcedReset
+
+```solidity
+function executeForcedReset(address _user, int256 _amount) external returns (int256 removedAmount, int256 balance)
+```
+
+Forces a reset of the user's future value.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _amount | int256 | The amount to reset |
 
 ### _updateTotalSupply
 

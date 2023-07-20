@@ -40,7 +40,7 @@ _Used for maximum order count per currency_
 uint256 MINIMUM_CIRCUIT_BREAKER_THRESHOLD
 ```
 
-_Used for minimum threshold for circuit breaker unitprice threshold_
+_Used for minimum threshold for circuit breaker unit price threshold_
 
 ### MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
 
@@ -48,5 +48,5 @@ _Used for minimum threshold for circuit breaker unitprice threshold_
 uint256 MAXIMUM_CIRCUIT_BREAKER_THRESHOLD
 ```
 
-_Used for maximum threshold for circuit breaker unitprice threshold_
+_Used for maximum threshold for circuit breaker unit price threshold_
 

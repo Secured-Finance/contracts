@@ -112,17 +112,34 @@ Gets the market data.
 | ---- | ---- | ----------- |
 | market | struct ILendingMarket.Market | The market data |
 
+### getCircuitBreakerThresholds
+
+```solidity
+function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+```
+
+Gets unit price Thresholds by CircuitBreaker.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| maxLendUnitPrice | uint256 | The maximum unit price for lending |
+| minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
+
 ### getBorrowUnitPrice
 
 ```solidity
 function getBorrowUnitPrice() external view returns (uint256)
 ```
 
-Gets the highest borrow price per future value.
+Gets the lowest borrow price per future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The highest borrow price per future value |
+| [0] | uint256 | The lowest borrow price per future value |
 
 ### getLendUnitPrice
 
@@ -130,11 +147,11 @@ Gets the highest borrow price per future value.
 function getLendUnitPrice() external view returns (uint256)
 ```
 
-Gets the lowest lend price per future value.
+Gets the highest lend price per future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The lowest lend price per future value |
+| [0] | uint256 | The highest lend price per future value |
 
 ### getMidUnitPrice
 
@@ -220,18 +237,6 @@ Gets the market opening date.
 | ---- | ---- | ----------- |
 | openingDate | uint256 | The market opening date |
 
-### getOpeningUnitPrice
-
-```solidity
-function getOpeningUnitPrice() external view returns (uint256 openingUnitPrices)
-```
-
-Gets the market opening unit price.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| openingUnitPrices | uint256 | The market opening unit price |
-
 ### isReady
 
 ```solidity
@@ -291,6 +296,22 @@ Gets if the market is under the pre-order period.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the market is under the pre-order period. |
+
+### getItayoseLog
+
+```solidity
+function getItayoseLog(uint256 _maturity) external view returns (struct ItayoseLog)
+```
+
+Gets the market itayose logs.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _maturity | uint256 | The market maturity |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | struct ItayoseLog | ItayoseLog of the market |
 
 ### getOrder
 
@@ -450,13 +471,13 @@ for lazy evaluation if the collateral is enough or not._
 | removedBorrowOrderAmount | uint256 | The total PV amount of the removed borrow order amount from the order book |
 | maturity | uint256 | The maturity of the removed orders |
 
-### createOrder
+### executeOrder
 
 ```solidity
-function createOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function executeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
-Creates the order. Takes the order if the order is matched,
+Executes an order. Takes orders if the order is matched,
 and places new order if not match it.
 
 | Name | Type | Description |
@@ -472,13 +493,13 @@ and places new order if not match it.
 | filledOrder | struct ILendingMarket.FilledOrder | User's Filled order of the user |
 | partiallyFilledOrder | struct ILendingMarket.PartiallyFilledOrder | Partially filled order on the order book |
 
-### createPreOrder
+### executePreOrder
 
 ```solidity
-function createPreOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external
+function executePreOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external
 ```
 
-Creates a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
+Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
 before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
 
 | Name | Type | Description |
@@ -488,10 +509,10 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
 
-### unwind
+### unwindPosition
 
 ```solidity
-function unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwindPosition(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 Unwinds lending or borrowing positions by a specified future value amount.
@@ -552,10 +573,10 @@ function _updateUserMaturity(address _user) private
 ### _makeOrder
 
 ```solidity
-function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _isPreOrder) private returns (uint48 orderId)
+function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint48 orderId)
 ```
 
-Makes new market order.
+Makes a new order in the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -563,15 +584,14 @@ Makes new market order.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Preferable interest unit price |
-| _isPreOrder | bool |  |
 
-### _takeOrder
+### _takeOrders
 
 ```solidity
-function _takeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function _takeOrders(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, struct ILendingMarket.PlacedOrder placedOrder)
 ```
 
-Takes the market order.
+Takes orders in the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -579,11 +599,11 @@ Takes the market order.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taken |
-| _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after taking orders |
+| _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after filling orders |
 
-### _unwind
+### _unwindPosition
 
 ```solidity
-function _unwind(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function _unwindPosition(enum ProtocolTypes.Side _side, uint256 _futureValue, uint256 _unitPrice) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
 ```
 

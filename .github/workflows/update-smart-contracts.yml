@@ -33,11 +33,11 @@ jobs:
           echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
           echo "MARKET_OBSERVATION_PERIOD=${{ vars.MARKET_OBSERVATION_PERIOD }}" >> $GITHUB_ENV
-          echo "TOKEN_EFIL=${{ vars.TOKEN_EFIL }}" >> $GITHUB_ENV
+          echo "TOKEN_WFIL=${{ vars.TOKEN_WFIL }}" >> $GITHUB_ENV
           echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
-          echo "EFIL_TO_ETH_RATE=${{ vars.EFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "WFIL_TO_ETH_RATE=${{ vars.WFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "WBTC_TO_BTC_RATE=${{ vars.WBTC_TO_BTC_RATE }}" >> $GITHUB_ENV
           echo "BTC_TO_ETH_RATE=${{ vars.BTC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV
@@ -111,11 +111,11 @@ jobs:
           echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
           echo "MARKET_OBSERVATION_PERIOD=${{ vars.MARKET_OBSERVATION_PERIOD }}" >> $GITHUB_ENV
-          echo "TOKEN_EFIL=${{ vars.TOKEN_EFIL }}" >> $GITHUB_ENV
+          echo "TOKEN_WFIL=${{ vars.TOKEN_WFIL }}" >> $GITHUB_ENV
           echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
           echo "TOKEN_WETH=${{ vars.TOKEN_WETH }}" >> $GITHUB_ENV
-          echo "EFIL_TO_ETH_RATE=${{ vars.EFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
+          echo "WFIL_TO_ETH_RATE=${{ vars.WFIL_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "WBTC_TO_BTC_RATE=${{ vars.WBTC_TO_BTC_RATE }}" >> $GITHUB_ENV
           echo "BTC_TO_ETH_RATE=${{ vars.BTC_TO_ETH_RATE }}" >> $GITHUB_ENV
           echo "USDC_TO_ETH_RATE=${{ vars.USDC_TO_ETH_RATE }}" >> $GITHUB_ENV

@@ -44,10 +44,10 @@ event PriceFeedRemoved(bytes32 ccy)
 function convert(bytes32 _fromCcy, bytes32 _toCcy, uint256 _amount) external view returns (uint256 amount)
 ```
 
-### convertFromBaseCurrency
+### convert
 
 ```solidity
-function convertFromBaseCurrency(bytes32 _ccy, uint256 _amountETH) external view returns (uint256 amount)
+function convert(bytes32 _fromCcy, bytes32 _toCcy, uint256[] _amounts) external view returns (uint256[] amounts)
 ```
 
 ### convertToBaseCurrency
@@ -66,6 +66,18 @@ function convertToBaseCurrency(bytes32 _ccy, int256 _amount) external view retur
 
 ```solidity
 function convertToBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
+```
+
+### convertFromBaseCurrency
+
+```solidity
+function convertFromBaseCurrency(bytes32 _ccy, uint256 _amountETH) external view returns (uint256 amount)
+```
+
+### convertFromBaseCurrency
+
+```solidity
+function convertFromBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
 ```
 
 ### getBaseCurrency
