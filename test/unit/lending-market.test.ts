@@ -6,6 +6,7 @@ import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
 
 import { Side } from '../../utils/constants';
+import { CIRCUIT_BREAKER_LIMIT_RANGE } from '../common/constants';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
@@ -137,6 +138,261 @@ describe('LendingMarket', () => {
     await beaconProxyControllerProxy.setLendingMarketImpl(
       lendingMarket.address,
     );
+  });
+
+  describe('Calculate amounts to be filled', async () => {
+    beforeEach(async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const maturity = moment(timestamp * 1000)
+        .add(1, 'M')
+        .unix();
+
+      await initialize(maturity, timestamp);
+    });
+
+    it('Calculate the filled amount from one lending order', async () => {
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.LEND,
+          '100000000000000',
+          '8000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      const zeroOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        0,
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(zeroOrderResult.lastUnitPrice).to.equal('0');
+      expect(zeroOrderResult.filledAmount).to.equal('0');
+      expect(zeroOrderResult.filledAmountInFV).to.equal('0');
+
+      const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '100000000000000',
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(marketOrderResult.lastUnitPrice).to.equal('8000');
+      expect(marketOrderResult.filledAmount).to.equal('100000000000000');
+      expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
+
+      const limitOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '100000000000000',
+        '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult.lastUnitPrice).to.equal('8000');
+      expect(limitOrderResult.filledAmount).to.equal('100000000000000');
+      expect(limitOrderResult.filledAmountInFV).to.equal('125000000000000');
+    });
+
+    it('Calculate the filled amount from one borrowing order', async () => {
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.BORROW,
+          '200000000000000',
+          '8000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.LEND,
+        '200000000000000',
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      const zeroOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.LEND,
+        0,
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(zeroOrderResult.lastUnitPrice).to.equal('0');
+      expect(zeroOrderResult.filledAmount).to.equal('0');
+      expect(zeroOrderResult.filledAmountInFV).to.equal('0');
+
+      expect(marketOrderResult.lastUnitPrice).to.equal('8000');
+      expect(marketOrderResult.filledAmount).to.equal('200000000000000');
+      expect(marketOrderResult.filledAmountInFV).to.equal('250000000000000');
+
+      const limitOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.LEND,
+        '200000000000000',
+        '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult.lastUnitPrice).to.equal('8000');
+      expect(limitOrderResult.filledAmount).to.equal('200000000000000');
+      expect(limitOrderResult.filledAmountInFV).to.equal('250000000000000');
+    });
+
+    it('Calculate the filled amount from multiple lending order', async () => {
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.LEND,
+          '100000000000000',
+          '8000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.LEND,
+          '100000000000000',
+          '7900',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '150000000000000',
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(marketOrderResult.lastUnitPrice).to.equal('7900');
+      expect(marketOrderResult.filledAmount).to.equal('150000000000000');
+      expect(marketOrderResult.filledAmountInFV).to.equal('188291139240507');
+
+      const limitOrderResult1 = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '150000000000000',
+        '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult1.lastUnitPrice).to.equal('8000');
+      expect(limitOrderResult1.filledAmount).to.equal('100000000000000');
+      expect(limitOrderResult1.filledAmountInFV).to.equal('125000000000000');
+
+      const limitOrderResult2 = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '150000000000000',
+        '7900',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult2.lastUnitPrice).to.equal('7900');
+      expect(limitOrderResult2.filledAmount).to.equal('150000000000000');
+      expect(limitOrderResult2.filledAmountInFV).to.equal('188291139240507');
+    });
+
+    it('Calculate the filled amount from multiple borrowing order', async () => {
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.BORROW,
+          '200000000000000',
+          '8000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.BORROW,
+          '100000000000000',
+          '8100',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.LEND,
+        '250000000000000',
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(marketOrderResult.lastUnitPrice).to.equal('8100');
+      expect(marketOrderResult.filledAmount).to.equal('250000000000000');
+      expect(marketOrderResult.filledAmountInFV).to.equal('311728395061729');
+
+      const limitOrderResult1 = await lendingMarket.calculateFilledAmount(
+        Side.LEND,
+        '250000000000000',
+        '8000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult1.lastUnitPrice).to.equal('8000');
+      expect(limitOrderResult1.filledAmount).to.equal('200000000000000');
+      expect(limitOrderResult1.filledAmountInFV).to.equal('250000000000000');
+
+      const limitOrderResult2 = await lendingMarket.calculateFilledAmount(
+        Side.LEND,
+        '250000000000000',
+        '8100',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult2.lastUnitPrice).to.equal('8100');
+      expect(limitOrderResult2.filledAmount).to.equal('250000000000000');
+      expect(limitOrderResult2.filledAmountInFV).to.equal('311728395061729');
+    });
+
+    it('Calculate the blocked order amount by the circuit breaker', async () => {
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.LEND,
+          '100000000000000',
+          '8000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      await lendingMarketCaller
+        .connect(alice)
+        .executeOrder(
+          Side.LEND,
+          '100000000000000',
+          '7000',
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          currentMarketIdx,
+        );
+
+      const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '200000000000000',
+        0,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(marketOrderResult.lastUnitPrice).to.equal('8000');
+      expect(marketOrderResult.filledAmount).to.equal('100000000000000');
+      expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
+
+      const limitOrderResult = await lendingMarket.calculateFilledAmount(
+        Side.BORROW,
+        '200000000000000',
+        '7000',
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(limitOrderResult.lastUnitPrice).to.equal('8000');
+      expect(limitOrderResult.filledAmount).to.equal('100000000000000');
+      expect(limitOrderResult.filledAmountInFV).to.equal('125000000000000');
+    });
   });
 
   describe('Pre-Order', async () => {
@@ -498,7 +754,6 @@ describe('LendingMarket', () => {
   });
 
   describe('Circuit Breaker', async () => {
-    const CIRCUIT_BREAKER_RATE_RANGE = 1000;
     const CIRCUIT_BREAKER_BORROW_THRESHOLD = 8374;
     const CIRCUIT_BREAKER_LEND_THRESHOLD = 8629;
     const MAX_DIFFERENCE = 200;
@@ -531,7 +786,7 @@ describe('LendingMarket', () => {
           side,
           '100000000000000',
           unitPrice,
-          CIRCUIT_BREAKER_RATE_RANGE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
           currentMarketIdx,
         );
 
@@ -541,7 +796,7 @@ describe('LendingMarket', () => {
           side,
           '100000000000000',
           offsetUnitPrice,
-          CIRCUIT_BREAKER_RATE_RANGE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
           currentMarketIdx,
         );
 
@@ -551,7 +806,7 @@ describe('LendingMarket', () => {
       it('Get circuit breaker thresholds on the empty order book', async () => {
         const { maxLendUnitPrice, minBorrowUnitPrice } =
           await lendingMarket.getCircuitBreakerThresholds(
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
           );
 
         expect(maxLendUnitPrice).to.equal('10000');
@@ -565,7 +820,7 @@ describe('LendingMarket', () => {
             Side.LEND,
             '100000000000000',
             '5000',
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
             currentMarketIdx,
           );
 
@@ -575,13 +830,13 @@ describe('LendingMarket', () => {
             Side.BORROW,
             '100000000000000',
             '9950',
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
             currentMarketIdx,
           );
 
         const { maxLendUnitPrice, minBorrowUnitPrice } =
           await lendingMarket.getCircuitBreakerThresholds(
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
           );
 
         expect(maxLendUnitPrice).to.equal('9960');
@@ -608,7 +863,7 @@ describe('LendingMarket', () => {
                   side,
                   '200000000000000',
                   unitPrice,
-                  CIRCUIT_BREAKER_RATE_RANGE,
+                  CIRCUIT_BREAKER_LIMIT_RANGE,
                   currentMarketIdx,
                 ),
             )
@@ -642,7 +897,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               0,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -652,7 +907,7 @@ describe('LendingMarket', () => {
               side,
               '150000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -711,7 +966,7 @@ describe('LendingMarket', () => {
               side,
               '100000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -721,7 +976,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -774,7 +1029,7 @@ describe('LendingMarket', () => {
                 side,
                 '50000000000000',
                 '0',
-                CIRCUIT_BREAKER_RATE_RANGE,
+                CIRCUIT_BREAKER_LIMIT_RANGE,
                 currentMarketIdx,
               ),
           )
@@ -809,7 +1064,7 @@ describe('LendingMarket', () => {
               side,
               '100000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -819,7 +1074,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               0,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -829,7 +1084,7 @@ describe('LendingMarket', () => {
               oppositeOrderSide,
               '100000000000000',
               lendingOrderAmount,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -839,7 +1094,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               0,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -897,7 +1152,7 @@ describe('LendingMarket', () => {
               side,
               '100000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -907,7 +1162,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -968,7 +1223,7 @@ describe('LendingMarket', () => {
               side,
               '100000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -978,7 +1233,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               offsetUnitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1038,7 +1293,7 @@ describe('LendingMarket', () => {
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1048,7 +1303,7 @@ describe('LendingMarket', () => {
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               offsetUnitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1060,7 +1315,7 @@ describe('LendingMarket', () => {
               side,
               '100000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1070,7 +1325,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               offsetUnitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1129,7 +1384,7 @@ describe('LendingMarket', () => {
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1139,7 +1394,7 @@ describe('LendingMarket', () => {
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               offsetUnitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1151,7 +1406,7 @@ describe('LendingMarket', () => {
               side,
               '100000000000000',
               '0',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1161,7 +1416,7 @@ describe('LendingMarket', () => {
               side,
               '50000000000000',
               offsetUnitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1233,7 +1488,7 @@ describe('LendingMarket', () => {
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1243,7 +1498,7 @@ describe('LendingMarket', () => {
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice2,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             );
 
@@ -1254,7 +1509,7 @@ describe('LendingMarket', () => {
                 side,
                 '100000000000000',
                 '0',
-                CIRCUIT_BREAKER_RATE_RANGE,
+                CIRCUIT_BREAKER_LIMIT_RANGE,
                 currentMarketIdx,
               ),
           )
@@ -1282,7 +1537,7 @@ describe('LendingMarket', () => {
                 side,
                 '100000000000000',
                 isBorrow ? 1 : 10000,
-                CIRCUIT_BREAKER_RATE_RANGE,
+                CIRCUIT_BREAKER_LIMIT_RANGE,
                 currentMarketIdx,
               ),
           )
@@ -1314,7 +1569,7 @@ describe('LendingMarket', () => {
             Side.LEND,
             '100000000000000',
             '8000',
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
             currentMarketIdx,
           );
 
@@ -1324,7 +1579,7 @@ describe('LendingMarket', () => {
             Side.BORROW,
             '100000000000000',
             '8000',
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
             currentMarketIdx,
           );
 
@@ -1350,7 +1605,7 @@ describe('LendingMarket', () => {
             Side.BORROW,
             '100000000000000',
             '8000',
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
             currentMarketIdx,
           );
 
@@ -1360,7 +1615,7 @@ describe('LendingMarket', () => {
             Side.LEND,
             '100000000000000',
             '8000',
-            CIRCUIT_BREAKER_RATE_RANGE,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
             currentMarketIdx,
           );
 
@@ -1391,7 +1646,7 @@ describe('LendingMarket', () => {
               Side.BORROW,
               '100000000000000',
               0,
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             ),
         ).to.emit(lendingMarket, 'OrderExecuted');
@@ -1404,7 +1659,7 @@ describe('LendingMarket', () => {
             .unwindPosition(
               Side.LEND,
               '125000000000000',
-              CIRCUIT_BREAKER_RATE_RANGE,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
               currentMarketIdx,
             ),
         )

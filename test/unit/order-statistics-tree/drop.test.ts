@@ -42,7 +42,7 @@ export interface UnwindCondition {
   inputs: {
     title: string;
     droppedAmount: number;
-    limitFutureValue: number;
+    droppedAmountInFV: number;
     filledAmount: number;
     filledFutureValue: number;
   }[];
@@ -204,8 +204,8 @@ describe('OrderStatisticsTree - drop values', () => {
 
                 await ost[test.method](
                   input.targetAmount,
-                  input?.limitValue || 0,
                   0,
+                  input?.limitValue || 0,
                 );
                 const totalAmountAfter = await getTotalAmount('<After>');
 
@@ -225,7 +225,7 @@ describe('OrderStatisticsTree - drop values', () => {
         for (const condition of test.lendingUnwindOrders) {
           describe(condition.title, async () => {
             for (const input of condition.inputs) {
-              const title = `${input.title}: Unwind future value ${input?.limitFutureValue}`;
+              const title = `${input.title}: Unwind future value ${input?.droppedAmountInFV}`;
 
               it(title, async () => {
                 for (const order of condition.orders) {
@@ -238,16 +238,16 @@ describe('OrderStatisticsTree - drop values', () => {
                 }
                 const totalAmountBefore = await getTotalAmount('<Before>');
 
-                const { droppedAmount, droppedFutureValue } = await ost[
+                const { droppedAmount, droppedAmountInFV } = await ost[
                   test.method
-                ](0, 0, input.limitFutureValue).then(
+                ](0, input.droppedAmountInFV, 0).then(
                   ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
                 );
 
                 const totalAmountAfter = await getTotalAmount('<After>');
 
                 expect(droppedAmount.toNumber()).equal(input.filledAmount);
-                expect(droppedFutureValue.toNumber()).equal(
+                expect(droppedAmountInFV.toNumber()).equal(
                   input.filledFutureValue,
                 );
                 expect(
@@ -272,60 +272,93 @@ describe('OrderStatisticsTree - drop values', () => {
       const tests = [
         {
           label: 'Drop 1 node partially',
-          droppedFVAmount: 62500000,
-          estimatedPVAmount: 50000000,
+          fvAmount: 62500000,
+          pvAmount: 50000000,
         },
         {
           label: 'Drop 1 node',
-          droppedFVAmount: 125000000,
-          estimatedPVAmount: 100000000,
+          fvAmount: 125000000,
+          pvAmount: 100000000,
         },
         {
           label: 'Drop 1 node, Fill 1 node partially',
-          droppedFVAmount: 250000000,
-          estimatedPVAmount: 200012500,
+          fvAmount: 250000000,
+          pvAmount: 200012500,
         },
         {
           label: 'Drop 2 nodes, Fill 1 node partially',
-          droppedFVAmount: 625000000,
-          estimatedPVAmount: 500062505,
+          fvAmount: 625000000,
+          pvAmount: 500062505,
         },
       ];
 
-      for (const test of tests) {
-        it(test.label, async () => {
-          for (const order of orders) {
-            await ost.insertAmountValue(
-              order.unitPrice,
-              order.orderId,
-              constants.AddressZero,
-              order.amount,
+      describe('Estimate the dropped FV amount by PV amount ', async () => {
+        for (const test of tests) {
+          it(test.label, async () => {
+            for (const order of orders) {
+              await ost.insertAmountValue(
+                order.unitPrice,
+                order.orderId,
+                constants.AddressZero,
+                order.amount,
+              );
+            }
+
+            const { droppedAmountInFV: estimatedAmount } =
+              await ost.calculateDroppedAmountFromLeft(test.pvAmount, 0, 0);
+            expect(estimatedAmount.toNumber()).equal(test.fvAmount);
+
+            const totalAmountBefore = await getTotalAmount('<Before>');
+
+            const { droppedAmount } = await ost
+              .dropValuesFromFirst(test.pvAmount, 0, 0)
+              .then(
+                ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+              );
+
+            const totalAmountAfter = await getTotalAmount('<After>');
+
+            expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
+            expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
+              totalAmountBefore,
             );
-          }
+          });
+        }
+      });
 
-          const droppedFVAmount = await ost.estimateDroppedAmountFromFirst(
-            test.droppedFVAmount,
-          );
-          expect(droppedFVAmount.toNumber()).equal(test.estimatedPVAmount);
+      describe('Estimate the dropped PV amount by FV amount ', async () => {
+        for (const test of tests) {
+          it(test.label, async () => {
+            for (const order of orders) {
+              await ost.insertAmountValue(
+                order.unitPrice,
+                order.orderId,
+                constants.AddressZero,
+                order.amount,
+              );
+            }
 
-          const totalAmountBefore = await getTotalAmount('<Before>');
+            const { droppedAmount: estimatedAmount } =
+              await ost.calculateDroppedAmountFromLeft(0, test.fvAmount, 0);
+            expect(estimatedAmount.toNumber()).equal(test.pvAmount);
 
-          const { droppedAmount } = await ost
-            .dropValuesFromFirst(test.estimatedPVAmount, 0, 0)
-            .then(
-              ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+            const totalAmountBefore = await getTotalAmount('<Before>');
+
+            const { droppedAmount } = await ost
+              .dropValuesFromFirst(0, test.fvAmount, 0)
+              .then(
+                ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+              );
+
+            const totalAmountAfter = await getTotalAmount('<After>');
+
+            expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
+            expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
+              totalAmountBefore,
             );
-
-          const totalAmountAfter = await getTotalAmount('<After>');
-
-          expect(droppedAmount.toString()).to.equal(
-            test.estimatedPVAmount.toString(),
-          );
-          expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
-            totalAmountBefore,
-          );
-        });
-      }
+          });
+        }
+      });
     });
 
     describe('Estimate the dropped amount from the borrowing tree', async () => {
@@ -338,60 +371,93 @@ describe('OrderStatisticsTree - drop values', () => {
       const tests = [
         {
           label: 'Drop 1 node partially',
-          droppedFVAmount: 62500000,
-          estimatedPVAmount: 50000000,
+          fvAmount: 62500000,
+          pvAmount: 50000000,
         },
         {
           label: 'Drop 1 node',
-          droppedFVAmount: 125000000,
-          estimatedPVAmount: 100000000,
+          fvAmount: 125000000,
+          pvAmount: 100000000,
         },
         {
           label: 'Drop 1 node, Fill 1 node partially',
-          droppedFVAmount: 250000000,
-          estimatedPVAmount: 199987500,
+          fvAmount: 250000000,
+          pvAmount: 199987500,
         },
         {
           label: 'Drop 2 nodes, Fill 1 node partially',
-          droppedFVAmount: 625000000,
-          estimatedPVAmount: 499937505,
+          fvAmount: 625000000,
+          pvAmount: 499937505,
         },
       ];
 
-      for (const test of tests) {
-        it(test.label, async () => {
-          for (const order of orders) {
-            await ost.insertAmountValue(
-              order.unitPrice,
-              order.orderId,
-              constants.AddressZero,
-              order.amount,
+      describe('Estimate the dropped FV amount by PV amount ', async () => {
+        for (const test of tests) {
+          it(test.label, async () => {
+            for (const order of orders) {
+              await ost.insertAmountValue(
+                order.unitPrice,
+                order.orderId,
+                constants.AddressZero,
+                order.amount,
+              );
+            }
+
+            const { droppedAmountInFV: estimatedAmount } =
+              await ost.calculateDroppedAmountFromRight(test.pvAmount, 0, 0);
+            expect(estimatedAmount.toNumber()).equal(test.fvAmount);
+
+            const totalAmountBefore = await getTotalAmount('<Before>');
+
+            const { droppedAmount } = await ost
+              .dropValuesFromLast(test.pvAmount, 0, 0)
+              .then(
+                ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+              );
+
+            const totalAmountAfter = await getTotalAmount('<After>');
+
+            expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
+            expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
+              totalAmountBefore,
             );
-          }
+          });
+        }
+      });
 
-          const droppedFVAmount = await ost.estimateDroppedAmountFromLast(
-            test.droppedFVAmount,
-          );
-          expect(droppedFVAmount.toNumber()).equal(test.estimatedPVAmount);
+      describe('Estimate the dropped PV amount by FV amount ', async () => {
+        for (const test of tests) {
+          it(test.label, async () => {
+            for (const order of orders) {
+              await ost.insertAmountValue(
+                order.unitPrice,
+                order.orderId,
+                constants.AddressZero,
+                order.amount,
+              );
+            }
 
-          const totalAmountBefore = await getTotalAmount('<Before>');
+            const { droppedAmount: estimatedAmount } =
+              await ost.calculateDroppedAmountFromRight(0, test.fvAmount, 0);
+            expect(estimatedAmount.toNumber()).equal(test.pvAmount);
 
-          const { droppedAmount } = await ost
-            .dropValuesFromLast(test.estimatedPVAmount, 0, 0)
-            .then(
-              ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+            const totalAmountBefore = await getTotalAmount('<Before>');
+
+            const { droppedAmount } = await ost
+              .dropValuesFromLast(0, test.fvAmount, 0)
+              .then(
+                ({ logs }) => logs.find(({ event }) => event === 'Drop').args,
+              );
+
+            const totalAmountAfter = await getTotalAmount('<After>');
+
+            expect(droppedAmount.toString()).to.equal(test.pvAmount.toString());
+            expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
+              totalAmountBefore,
             );
-
-          const totalAmountAfter = await getTotalAmount('<After>');
-
-          expect(droppedAmount.toString()).to.equal(
-            test.estimatedPVAmount.toString(),
-          );
-          expect(totalAmountAfter.add(droppedAmount.toString())).to.equal(
-            totalAmountBefore,
-          );
-        });
-      }
+          });
+        }
+      });
     });
   });
 });

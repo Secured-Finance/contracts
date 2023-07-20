@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {OrderStatisticsTreeLib, PartiallyFilledOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
+import {OrderStatisticsTreeLib, PartiallyRemovedOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
@@ -306,20 +306,53 @@ library OrderBookLogic {
         }
     }
 
-    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
+    function calculateFilledAmount(
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice,
+        uint256 _circuitBreakerLimitRange
+    )
         external
         view
-        returns (uint256 amount)
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV
+        )
     {
-        if (_side == ProtocolTypes.Side.BORROW) {
+        if (_amount == 0) return (0, 0, 0);
+
+        if (_side == ProtocolTypes.Side.LEND) {
+            uint256 cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
+                _circuitBreakerLimitRange,
+                getLowestBorrowingUnitPrice()
+            );
+
+            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice > cbThresholdUnitPrice)
+                ? cbThresholdUnitPrice
+                : _unitPrice;
+
             return
-                Storage.slot().lendOrders[Storage.slot().maturity].estimateDroppedAmountFromRight(
-                    _futureValue
+                Storage.slot().borrowOrders[Storage.slot().maturity].calculateDroppedAmountFromLeft(
+                    _amount,
+                    0,
+                    executedUnitPrice
                 );
         } else {
+            uint256 cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
+                _circuitBreakerLimitRange,
+                getHighestLendingUnitPrice()
+            );
+
+            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice < cbThresholdUnitPrice)
+                ? cbThresholdUnitPrice
+                : _unitPrice;
+
             return
-                Storage.slot().borrowOrders[Storage.slot().maturity].estimateDroppedAmountFromLeft(
-                    _futureValue
+                Storage.slot().lendOrders[Storage.slot().maturity].calculateDroppedAmountFromRight(
+                    _amount,
+                    0,
+                    executedUnitPrice
                 );
         }
     }
@@ -357,10 +390,10 @@ library OrderBookLogic {
         }
     }
 
-    function dropOrders(
+    function fillOrders(
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _futureValue,
+        uint256 _amountInFV,
         uint256 _unitPrice
     )
         external
@@ -375,7 +408,7 @@ library OrderBookLogic {
             uint256 remainingAmount
         )
     {
-        PartiallyFilledOrder memory partiallyFilledOrder;
+        PartiallyRemovedOrder memory partiallyRemovedOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
             (
@@ -383,11 +416,11 @@ library OrderBookLogic {
                 filledAmount,
                 filledFutureValue,
                 remainingAmount,
-                partiallyFilledOrder
+                partiallyRemovedOrder
             ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
                 _amount,
-                _unitPrice,
-                _futureValue
+                _amountInFV,
+                _unitPrice
             );
         } else if (_side == ProtocolTypes.Side.LEND) {
             (
@@ -395,18 +428,18 @@ library OrderBookLogic {
                 filledAmount,
                 filledFutureValue,
                 remainingAmount,
-                partiallyFilledOrder
+                partiallyRemovedOrder
             ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
                 _amount,
-                _unitPrice,
-                _futureValue
+                _amountInFV,
+                _unitPrice
             );
         }
 
-        partiallyFilledOrderId = partiallyFilledOrder.orderId;
-        partiallyFilledMaker = partiallyFilledOrder.maker;
-        partiallyFilledAmount = partiallyFilledOrder.amount;
-        partiallyFilledFutureValue = partiallyFilledOrder.futureValue;
+        partiallyFilledOrderId = partiallyRemovedOrder.orderId;
+        partiallyFilledMaker = partiallyRemovedOrder.maker;
+        partiallyFilledAmount = partiallyRemovedOrder.amount;
+        partiallyFilledFutureValue = partiallyRemovedOrder.futureValue;
     }
 
     function cleanLendOrders(address _user)

@@ -13,9 +13,9 @@ contract OrderStatisticsTreeContract {
 
     event Drop(
         uint256 droppedAmount,
-        uint256 droppedFutureValue,
-        uint256 filledOrderAmount,
-        uint256 filledOrderFutureValue
+        uint256 droppedAmountInFV,
+        uint256 removedOrderAmount,
+        uint256 removedOrderAmountInFV
     );
 
     constructor() {}
@@ -89,59 +89,75 @@ contract OrderStatisticsTreeContract {
         tree.removeOrder(value, orderId);
     }
 
-    function estimateDroppedAmountFromFirst(uint256 targetFutureValue)
+    function calculateDroppedAmountFromLeft(
+        uint256 amount,
+        uint256 amountInFV,
+        uint256 limitValue
+    )
         public
         view
-        returns (uint256 droppedAmount)
+        returns (
+            uint256 droppedValue,
+            uint256 droppedAmount,
+            uint256 droppedAmountInFV
+        )
     {
-        return tree.estimateDroppedAmountFromLeft(targetFutureValue);
+        return tree.calculateDroppedAmountFromLeft(amount, amountInFV, limitValue);
     }
 
-    function estimateDroppedAmountFromLast(uint256 targetFutureValue)
+    function calculateDroppedAmountFromRight(
+        uint256 amount,
+        uint256 amountInFV,
+        uint256 limitValue
+    )
         public
         view
-        returns (uint256 droppedAmount)
+        returns (
+            uint256 droppedValue,
+            uint256 droppedAmount,
+            uint256 droppedAmountInFV
+        )
     {
-        return tree.estimateDroppedAmountFromRight(targetFutureValue);
+        return tree.calculateDroppedAmountFromRight(amount, amountInFV, limitValue);
     }
 
     function dropValuesFromFirst(
         uint256 value,
-        uint256 limitValue,
-        uint256 limitFutureValue
+        uint256 amountInFV,
+        uint256 limitValue
     ) public {
         (
             ,
             uint256 droppedAmount,
-            uint256 droppedFutureValue,
+            uint256 droppedAmountInFV,
             ,
-            PartiallyFilledOrder memory partiallyFilledOrder
-        ) = tree.dropLeft(value, limitValue, limitFutureValue);
+            PartiallyRemovedOrder memory partiallyRemovedOrder
+        ) = tree.dropLeft(value, amountInFV, limitValue);
         emit Drop(
             droppedAmount,
-            droppedFutureValue,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue
+            droppedAmountInFV,
+            partiallyRemovedOrder.amount,
+            partiallyRemovedOrder.futureValue
         );
     }
 
     function dropValuesFromLast(
-        uint256 value,
-        uint256 limitValue,
-        uint256 limitFutureValue
+        uint256 amount,
+        uint256 amountInFV,
+        uint256 limitValue
     ) public {
         (
             ,
             uint256 droppedAmount,
-            uint256 droppedFutureValue,
+            uint256 droppedAmountInFV,
             ,
-            PartiallyFilledOrder memory partiallyFilledOrder
-        ) = tree.dropRight(value, limitValue, limitFutureValue);
+            PartiallyRemovedOrder memory partiallyRemovedOrder
+        ) = tree.dropRight(amount, amountInFV, limitValue);
         emit Drop(
             droppedAmount,
-            droppedFutureValue,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue
+            droppedAmountInFV,
+            partiallyRemovedOrder.amount,
+            partiallyRemovedOrder.futureValue
         );
     }
 }

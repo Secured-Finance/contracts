@@ -116,6 +116,26 @@ library DepositManagementLogic {
         totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
     }
 
+    function calculateCoverage(
+        address _user,
+        bytes32 _unsettledOrderCcy,
+        uint256 _unsettledOrderAmount,
+        bool _isUnsettledBorrowOrder
+    ) external view returns (uint256 coverage) {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = calculateCollateral(
+            _user,
+            _unsettledOrderCcy,
+            _unsettledOrderAmount,
+            _isUnsettledBorrowOrder
+        );
+
+        if (totalCollateral == 0) {
+            coverage = totalUsedCollateral == 0 ? 0 : type(uint256).max;
+        } else {
+            coverage = (totalUsedCollateral * Constants.PCT_DIGIT) / totalCollateral;
+        }
+    }
+
     function calculateCollateral(
         address _user,
         bytes32 _unsettledOrderCcy,

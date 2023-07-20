@@ -204,10 +204,19 @@ interface ILendingMarket {
         view
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
 
-    function estimateFilledAmount(ProtocolTypes.Side side, uint256 futureValue)
+    function calculateFilledAmount(
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice,
+        uint256 _circuitBreakerLimitRange
+    )
         external
         view
-        returns (uint256 amount);
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV
+        );
 
     function openMarket(uint256 maturity, uint256 openingDate) external returns (uint256);
 

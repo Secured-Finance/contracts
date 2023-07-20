@@ -359,7 +359,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets active and inactive order IDs in the lending order book
+     * @notice Gets active and inactive order IDs in the lending order book.
      * @param _user User's address
      */
     function getLendOrderIds(address _user)
@@ -372,7 +372,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets active and inactive order IDs in the borrowing order book
+     * @notice Gets active and inactive order IDs in the borrowing order book.
      * @param _user User's address
      */
     function getBorrowOrderIds(address _user)
@@ -385,19 +385,37 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Estimates the filled amount at the time of order creation on the order book
-     * using the future value amount.
+     * @notice Calculates the amount to be filled when executing an order in the order book.
      * @param _side Order position type, Borrow or Lend
-     * @param _futureValue Future value amount
-     * @return amount The estimated amount in the present value that is filled on the order book
+     * @param _amount Amount of funds the user wants to borrow/lend
+     * @param _unitPrice Unit price user want to borrow/lend
+     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
+     * @return lastUnitPrice The last unit price that is filled on the order book
+     * @return filledAmount The amount that is filled on the order book
+     * @return filledAmountInFV The amount in the future value that is filled on the order book
      */
-    function estimateFilledAmount(ProtocolTypes.Side _side, uint256 _futureValue)
+    function calculateFilledAmount(
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice,
+        uint256 _circuitBreakerLimitRange
+    )
         external
         view
         override
-        returns (uint256 amount)
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV
+        )
     {
-        return OrderBookLogic.estimateFilledAmount(_side, _futureValue);
+        return
+            OrderBookLogic.calculateFilledAmount(
+                _side,
+                _amount,
+                _unitPrice,
+                _circuitBreakerLimitRange
+            );
     }
 
     /**
@@ -523,8 +541,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * and places new order if not match it.
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _amount Amount of funds the user wants to borrow/lend
+     * @param _unitPrice Unit price user wish to borrow/lend
      * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order on the order book
@@ -561,7 +579,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         );
 
         if (conditions.isFilled) {
-            (filledOrder, partiallyFilledOrder, placedOrder) = _takeOrders(
+            (filledOrder, partiallyFilledOrder, placedOrder) = _fillOrders(
                 _side,
                 _user,
                 _amount,
@@ -570,7 +588,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
         } else if (!conditions.ignoreRemainingAmount) {
             placedOrder = PlacedOrder(
-                _makeOrder(_side, _user, _amount, conditions.executedUnitPrice),
+                _placeOrder(_side, _user, _amount, conditions.executedUnitPrice),
                 _amount,
                 conditions.executedUnitPrice
             );
@@ -599,7 +617,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      *
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _unitPrice Unit price taker wish to borrow/lend
      */
     function executePreOrder(
         ProtocolTypes.Side _side,
@@ -618,7 +636,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             revert("Opposite side order exists");
         }
 
-        uint48 orderId = _makeOrder(_side, _user, _amount, _unitPrice);
+        uint48 orderId = _placeOrder(_side, _user, _amount, _unitPrice);
         Storage.slot().isPreOrder[orderId] = true;
 
         emit PreOrderExecuted(
@@ -736,7 +754,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                     uint256 partiallyFilledAmount,
                     uint256 partiallyFilledFutureValue,
 
-                ) = OrderBookLogic.dropOrders(sides[i], totalOffsetAmount, 0, 0);
+                ) = OrderBookLogic.fillOrders(sides[i], totalOffsetAmount, 0, 0);
 
                 if (partiallyFilledFutureValue > 0) {
                     if (sides[i] == ProtocolTypes.Side.LEND) {
@@ -810,7 +828,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Preferable interest unit price
      */
-    function _makeOrder(
+    function _placeOrder(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -824,10 +842,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Amount of unit price taken
+     * @param _unitPrice Unit price taken
      * @param _ignoreRemainingAmount Boolean for whether to ignore the remaining amount after filling orders
      */
-    function _takeOrders(
+    function _fillOrders(
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
@@ -852,7 +870,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             partiallyFilledOrder.amount,
             partiallyFilledOrder.futureValue,
             remainingAmount
-        ) = OrderBookLogic.dropOrders(_side, _amount, 0, _unitPrice);
+        ) = OrderBookLogic.fillOrders(_side, _amount, 0, _unitPrice);
 
         filledOrder.amount = _amount - remainingAmount;
 
@@ -862,7 +880,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             } else {
                 // Make a new order for the remaining amount of input
                 placedOrder = PlacedOrder(
-                    _makeOrder(_side, _user, remainingAmount, _unitPrice),
+                    _placeOrder(_side, _user, remainingAmount, _unitPrice),
                     remainingAmount,
                     _unitPrice
                 );
@@ -887,6 +905,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             partiallyFilledOrder.amount,
             partiallyFilledOrder.futureValue,
 
-        ) = OrderBookLogic.dropOrders(_side, 0, _futureValue, _unitPrice);
+        ) = OrderBookLogic.fillOrders(_side, 0, _futureValue, _unitPrice);
     }
 }

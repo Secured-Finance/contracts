@@ -9,6 +9,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  PCT_DIGIT,
   wFilToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
@@ -161,6 +162,16 @@ describe('Integration Test: Order Book', async () => {
             { value: orderAmount },
           );
 
+        const estimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '8000',
+          );
+
         const { blockHash } = await lendingMarketController
           .connect(alice)
           .executeOrder(
@@ -188,6 +199,14 @@ describe('Integration Test: Order Book', async () => {
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
         expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
+
+        expect(orderAmount).to.equal(estimation.filledAmount);
+        expect(
+          aliceFV
+            .mul(PCT_DIGIT)
+            .div(estimation.filledAmountInFV.add(estimation.orderFeeInFV))
+            .abs(),
+        ).gte(BigNumber.from(PCT_DIGIT).sub(1));
       });
 
       it('Check collateral', async () => {
@@ -621,7 +640,6 @@ describe('Integration Test: Order Book', async () => {
       });
 
       it('Check collateral', async () => {
-        const coverage = await tokenVault.getCoverage(alice.address);
         const aliceFILDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
           hexWFIL,

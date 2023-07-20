@@ -12,9 +12,9 @@ interface ITokenVault {
 
     function isCovered(
         address user,
-        bytes32 ccy,
-        uint256 unsettledExp,
-        ProtocolTypes.Side unsettledOrderSide
+        bytes32 orderCcy,
+        uint256 orderAmount,
+        ProtocolTypes.Side orderSide
     ) external view returns (bool);
 
     function isCovered(address user) external view returns (bool);
@@ -62,6 +62,13 @@ interface ITokenVault {
     function getDepositAmount(address user, bytes32 ccy) external view returns (uint256);
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
+
+    function calculateCoverage(
+        address user,
+        bytes32 orderCcy,
+        uint256 orderAmount,
+        ProtocolTypes.Side orderSide
+    ) external view returns (uint256 coverage);
 
     function calculateLiquidationFees(uint256 _liquidationAmount)
         external

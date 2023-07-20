@@ -97,22 +97,23 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     /**
      * @notice Gets if the collateral has enough coverage.
      * @param _user User's address
-     * @param _unsettledOrderCcy Additional unsettled order currency name in bytes32
-     * @param _unsettledOrderAmount Additional unsettled order amount
+     * @param _orderCcy Currency name in bytes32 of an order to be added
+     * @param _orderAmount Amount of an order to be added
+     * @param _orderSide Order position type of an order to be added
      * @return The boolean if the collateral has sufficient coverage or not
      */
     function isCovered(
         address _user,
-        bytes32 _unsettledOrderCcy,
-        uint256 _unsettledOrderAmount,
-        ProtocolTypes.Side _unsettledOrderSide
+        bytes32 _orderCcy,
+        uint256 _orderAmount,
+        ProtocolTypes.Side _orderSide
     ) external view override returns (bool) {
         return
             DepositManagementLogic.isCovered(
                 _user,
-                _unsettledOrderCcy,
-                _unsettledOrderAmount,
-                ProtocolTypes.Side.BORROW == _unsettledOrderSide
+                _orderCcy,
+                _orderAmount,
+                ProtocolTypes.Side.BORROW == _orderSide
             );
     }
 
@@ -207,14 +208,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
      * @return coverage The rate of collateral used
      */
     function getCoverage(address _user) external view override returns (uint256 coverage) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = DepositManagementLogic
-            .getCollateralAmount(_user);
-
-        if (totalCollateral == 0) {
-            coverage = totalUsedCollateral == 0 ? 0 : type(uint256).max;
-        } else {
-            coverage = (totalUsedCollateral * Constants.PCT_DIGIT) / totalCollateral;
-        }
+        return DepositManagementLogic.calculateCoverage(_user, "", 0, false);
     }
 
     /**
@@ -316,6 +310,29 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
      */
     function getUsedCurrencies(address _user) public view override returns (bytes32[] memory) {
         return DepositManagementLogic.getUsedCurrencies(_user);
+    }
+
+    /**
+     * @notice Calculates the rate of collateral used.
+     * @param _user User's address
+     * @param _orderCcy Currency name in bytes32 of an order to be added
+     * @param _orderAmount Amount of an order to be added
+     * @param _orderSide Order position type of an order to be added
+     * @return coverage The rate of collateral used
+     */
+    function calculateCoverage(
+        address _user,
+        bytes32 _orderCcy,
+        uint256 _orderAmount,
+        ProtocolTypes.Side _orderSide
+    ) external view override returns (uint256 coverage) {
+        return
+            DepositManagementLogic.calculateCoverage(
+                _user,
+                _orderCcy,
+                _orderAmount,
+                ProtocolTypes.Side.BORROW == _orderSide
+            );
     }
 
     /**
