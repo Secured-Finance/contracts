@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {ReentrancyGuard} from "../dependencies/openzeppelin/contracts/security/ReentrancyGuard.sol";
 // interfaces
 import {IReserveFund} from "./interfaces/IReserveFund.sol";
 // libraries
@@ -17,7 +18,7 @@ import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
 /**
  * @notice Implements managing of the reserve fund.
  */
-contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
+contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, ReentrancyGuard {
     receive() external payable {}
 
     /**
@@ -105,5 +106,23 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
      */
     function executeEmergencySettlement() external override onlyOwner {
         lendingMarketController().executeEmergencySettlement();
+    }
+
+    /**
+     * @dev Execute an arbitrary transaction by Secured Finance team.
+     * @param _to Address to be called
+     * @param _data Encoded function to be called
+     */
+    function executeTransaction(address payable _to, bytes memory _data)
+        external
+        payable
+        override
+        nonReentrant
+        onlyOwner
+    {
+        (bool success, ) = _to.call{value: msg.value}(_data);
+        require(success, "Transaction failed");
+
+        emit ExecuteTransaction(msg.sender, _to, msg.value, _data);
     }
 }

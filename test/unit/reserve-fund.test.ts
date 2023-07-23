@@ -150,4 +150,17 @@ describe('ReserveFund', () => {
       await reserveFundProxy.executeEmergencySettlement();
     });
   });
+
+  describe('Execute transaction', async () => {
+    it('Call TokenVault', async () => {
+      const payload = mockTokenVault.interface.encodeFunctionData('withdraw', [
+        ethers.utils.formatBytes32String('WETH'),
+        10000,
+      ]);
+      await reserveFundProxy.executeTransaction(
+        mockTokenVault.address,
+        payload,
+      );
+    });
+  });
 });

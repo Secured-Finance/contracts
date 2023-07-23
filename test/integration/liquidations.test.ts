@@ -494,8 +494,15 @@ describe('Integration Test: Liquidations', async () => {
         );
 
         // Withdraw from the reserve funds
+        const withdrawPayload = tokenVault.interface.encodeFunctionData(
+          'withdraw(bytes32,uint256)',
+          [hexETH, protocolFeeETH],
+        );
+
         await expect(
-          reserveFund.connect(owner).withdraw(hexETH, protocolFeeETH),
+          reserveFund
+            .connect(owner)
+            .executeTransaction(tokenVault.address, withdrawPayload, {}),
         ).to.emit(tokenVault, 'Withdraw');
 
         const reserveFundsAmountAfterWithdrawal =
@@ -503,9 +510,27 @@ describe('Integration Test: Liquidations', async () => {
         expect(reserveFundsAmountAfterWithdrawal).to.equal('0');
 
         // Deposit to the reserve funds
-        await wFILToken.connect(owner).approve(reserveFund.address, '1000');
+        await wFILToken.connect(owner).transfer(reserveFund.address, '1000');
+
+        // ReserveFund contract has to approve TokenVault to move its fund
+        const approvePayload = wFILToken.interface.encodeFunctionData(
+          'approve(address,uint256)',
+          [tokenVault.address, 1000],
+        );
         await expect(
-          reserveFund.connect(owner).deposit(hexWFIL, '1000'),
+          reserveFund
+            .connect(owner)
+            .executeTransaction(wFILToken.address, approvePayload, {}),
+        ).to.emit(wFILToken, 'Approval');
+
+        const depositPayload = tokenVault.interface.encodeFunctionData(
+          'deposit(bytes32,uint256)',
+          [hexWFIL, 1000],
+        );
+        await expect(
+          reserveFund
+            .connect(owner)
+            .executeTransaction(tokenVault.address, depositPayload, {}),
         ).to.emit(tokenVault, 'Deposit');
 
         const reserveFundsAmountAfterDeposit =
