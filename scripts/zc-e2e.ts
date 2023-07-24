@@ -183,10 +183,15 @@ describe('ZC e2e test', async () => {
       )
       .then((tx) => tx.wait());
 
+    const { activeOrders } = await lendingMarketController.getOrders(
+      [targetCurrency],
+      aliceSigner.address,
+    );
+
     await expect(
       lendingMarketController
         .connect(aliceSigner)
-        .cancelOrder(targetCurrency, maturities[0], '1'),
+        .cancelOrder(targetCurrency, maturities[0], activeOrders[0].orderId),
     ).to.emit(lendingMarket, 'OrderCanceled');
   });
 
@@ -297,7 +302,7 @@ describe('ZC e2e test', async () => {
     expect(workingOrdersAmountAfter).to.equal(workingOrdersAmountBefore);
   });
 
-  it('Withdraw ETH', async () => {
+  it('Withdraw WFIL', async () => {
     const bobDepositAmountBefore = await tokenVault.getDepositAmount(
       bobSigner.address,
       hexWFIL,
