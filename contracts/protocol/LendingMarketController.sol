@@ -506,6 +506,7 @@ contract LendingMarketController is
      * for the selected currency.
      * @param _ccy Currency name in bytes32
      * @param _user User's address
+     * @param _liquidationThresholdRate The liquidation threshold rate
      * @return workingLendOrdersAmount The working orders amount on the lend order book
      * @return claimableAmount The claimable amount due to the lending orders being filled on the order book
      * @return collateralAmount The actual collateral amount that is calculated by netting using the haircut.
@@ -514,7 +515,11 @@ contract LendingMarketController is
      * @return debtAmount The debt amount due to the borrow orders being filled on the order book
      * @return borrowedAmount The borrowed amount due to the borrow orders being filled on the order book
      */
-    function calculateFunds(bytes32 _ccy, address _user)
+    function calculateFunds(
+        bytes32 _ccy,
+        address _user,
+        uint256 _liquidationThresholdRate
+    )
         external
         view
         override
@@ -529,7 +534,7 @@ contract LendingMarketController is
         )
     {
         if (Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-            return FundManagementLogic.calculateFunds(_ccy, _user);
+            return FundManagementLogic.calculateFunds(_ccy, _user, _liquidationThresholdRate);
         }
     }
 
@@ -543,7 +548,8 @@ contract LendingMarketController is
     function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
-        uint256 _depositAmount
+        uint256 _depositAmount,
+        uint256 _liquidationThresholdRate
     )
         external
         view
@@ -563,7 +569,8 @@ contract LendingMarketController is
             FundManagementLogic.calculateTotalFundsInBaseCurrency(
                 _user,
                 _depositCcy,
-                _depositAmount
+                _depositAmount,
+                _liquidationThresholdRate
             );
     }
 

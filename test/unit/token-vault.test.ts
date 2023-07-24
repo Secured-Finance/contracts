@@ -637,14 +637,6 @@ describe('TokenVault', () => {
       );
 
       expect(await tokenVaultProxy.getCoverage(ellen.address)).to.equal('5000');
-      expect(
-        await tokenVaultProxy['isCovered(address,bytes32,uint256,uint8)'](
-          ellen.address,
-          targetCurrency,
-          '1',
-          1,
-        ),
-      ).to.false;
     });
 
     it('Add and remove the collateral amount', async () => {

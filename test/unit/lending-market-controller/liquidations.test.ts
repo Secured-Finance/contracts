@@ -567,9 +567,6 @@ describe('LendingMarketController - Liquidations', () => {
     it('Fail to liquidate a borrowing position due to insufficient collateral', async () => {
       [alice, bob] = getUsers(2);
 
-      // Set up for the mocks
-      await mockTokenVault.mock['isCovered(address)'].returns(false);
-
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -589,6 +586,9 @@ describe('LendingMarketController - Liquidations', () => {
           '100000000',
           '8000',
         );
+
+      // Set up for the mocks
+      await mockTokenVault.mock.isCovered.returns(false);
 
       await expect(
         lendingMarketControllerProxy

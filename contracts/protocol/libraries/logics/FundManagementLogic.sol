@@ -29,6 +29,8 @@ library FundManagementLogic {
     using RoundingInt256 for int256;
 
     struct CalculatedTotalFundInBaseCurrencyVars {
+        address user;
+        uint256 liquidationThresholdRate;
         bool[] isCollateral;
         bytes32 ccy;
         uint256[] amounts;
@@ -495,7 +497,11 @@ library FundManagementLogic {
         }
     }
 
-    function calculateFunds(bytes32 _ccy, address _user)
+    function calculateFunds(
+        bytes32 _ccy,
+        address _user,
+        uint256 _liquidationThresholdRate
+    )
         public
         view
         returns (
@@ -518,15 +524,32 @@ library FundManagementLogic {
         debtAmount = funds.debtAmount;
 
         if (claimableAmount > 0) {
-            uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
-            collateralAmount = (claimableAmount * haircut).div(Constants.PCT_DIGIT);
+            // If the debt and claimable amount are in the same currency, the claimable amount can be allocated
+            // as collateral up to the amount that the liquidation threshold is reached.
+            // For calculation purposes, the working amount for borrowing orders is treated as potential debt in addition.
+            uint256 maxAllocableCollateralAmountInSameCcy = ((debtAmount +
+                workingBorrowOrdersAmount) * _liquidationThresholdRate).div(Constants.PCT_DIGIT);
+
+            // If the claimable amount is over the allocable amount as collateral, the over amount is used as collateral
+            // for the other currency after being multiplied by a haircut.
+            if (claimableAmount > maxAllocableCollateralAmountInSameCcy) {
+                uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
+                collateralAmount =
+                    maxAllocableCollateralAmountInSameCcy +
+                    (haircut * (claimableAmount - maxAllocableCollateralAmountInSameCcy)).div(
+                        Constants.PCT_DIGIT
+                    );
+            } else {
+                collateralAmount = claimableAmount;
+            }
         }
     }
 
     function calculateTotalFundsInBaseCurrency(
         address _user,
         bytes32 _depositCcy,
-        uint256 _depositAmount
+        uint256 _depositAmount,
+        uint256 _liquidationThresholdRate
     )
         external
         view
@@ -544,6 +567,8 @@ library FundManagementLogic {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
         CalculatedTotalFundInBaseCurrencyVars memory vars;
 
+        vars.user = _user;
+        vars.liquidationThresholdRate = _liquidationThresholdRate;
         vars.isCollateral = AddressResolverLib.tokenVault().isCollateral(currencySet.values());
         vars.plusDepositAmount = _depositAmount;
 
@@ -567,7 +592,7 @@ library FundManagementLogic {
                 vars.amounts[4],
                 vars.amounts[5],
                 vars.amounts[6]
-            ) = calculateFunds(vars.ccy, _user);
+            ) = calculateFunds(vars.ccy, vars.user, vars.liquidationThresholdRate);
 
             if (vars.ccy == _depositCcy) {
                 // plusDepositAmount: depositAmount + borrowedAmount

@@ -77,11 +77,6 @@ library LendingMarketUserLogic {
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
-        require(
-            AddressResolverLib.tokenVault().isCovered(_user, _ccy, _amount, _side),
-            "Not enough collateral"
-        );
-
         uint256 circuitBreakerLimitRange = LendingMarketConfigurationLogic
             .getCircuitBreakerLimitRange(_ccy);
 
@@ -123,6 +118,8 @@ library LendingMarketUserLogic {
         );
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
+
+        require(AddressResolverLib.tokenVault().isCovered(_user), "Not enough collateral");
     }
 
     function executePreOrder(
@@ -140,17 +137,16 @@ library LendingMarketUserLogic {
 
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
-        require(
-            AddressResolverLib.tokenVault().isCovered(_user, _ccy, _amount, _side),
-            "Not enough collateral"
-        );
-
         ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).executePreOrder(
             _side,
             _user,
             _amount,
             _unitPrice
         );
+
+        Storage.slot().usedCurrencies[_user].add(_ccy);
+
+        require(AddressResolverLib.tokenVault().isCovered(_user), "Not enough collateral");
     }
 
     function unwindPosition(

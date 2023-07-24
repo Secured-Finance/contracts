@@ -13,6 +13,7 @@ import {
 } from '../../utils/strings';
 import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
+  HAIRCUT,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -240,7 +241,7 @@ const deployContracts = async () => {
     await currencyControllerProxy.addCurrency(
       currency.key,
       decimals,
-      8000, // For testing, set the haircut to 80%
+      HAIRCUT,
       priceFeedAddresses,
     );
   }
