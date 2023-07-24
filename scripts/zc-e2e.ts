@@ -155,6 +155,46 @@ describe('ZC e2e test', async () => {
     }
   });
 
+  it('Cancel order', async function () {
+    const marketAddress = await lendingMarketController.getLendingMarket(
+      targetCurrency,
+      maturities[0],
+    );
+
+    const lendingMarket = await ethers.getContractAt(
+      'LendingMarket',
+      marketAddress,
+    );
+
+    const isMarketOpened = await lendingMarket.isOpened();
+    if (!isMarketOpened) {
+      console.log('Skip the order step since the market not open');
+      this.skip();
+    }
+
+    await lendingMarketController
+      .connect(aliceSigner)
+      .executeOrder(
+        targetCurrency,
+        maturities[0],
+        Side.LEND,
+        orderAmountInFIL,
+        orderUnitPrice,
+      )
+      .then((tx) => tx.wait());
+
+    const { activeOrders } = await lendingMarketController.getOrders(
+      [targetCurrency],
+      aliceSigner.address,
+    );
+
+    await expect(
+      lendingMarketController
+        .connect(aliceSigner)
+        .cancelOrder(targetCurrency, maturities[0], activeOrders[0].orderId),
+    ).to.emit(lendingMarket, 'OrderCanceled');
+  });
+
   it('Take order', async function () {
     const marketAddress = await lendingMarketController.getLendingMarket(
       targetCurrency,
@@ -260,5 +300,27 @@ describe('ZC e2e test', async () => {
       );
 
     expect(workingOrdersAmountAfter).to.equal(workingOrdersAmountBefore);
+  });
+
+  it('Withdraw WFIL', async () => {
+    const bobDepositAmountBefore = await tokenVault.getDepositAmount(
+      bobSigner.address,
+      hexWFIL,
+    );
+    const withdrawAmount = '100000';
+
+    await tokenVault
+      .connect(bobSigner)
+      .withdraw(hexWFIL, withdrawAmount)
+      .then((tx) => tx.wait());
+
+    const bobDepositAmountAfter = await tokenVault.getDepositAmount(
+      bobSigner.address,
+      hexWFIL,
+    );
+
+    expect(
+      bobDepositAmountBefore.sub(bobDepositAmountAfter).toString(),
+    ).to.equal(withdrawAmount);
   });
 });
