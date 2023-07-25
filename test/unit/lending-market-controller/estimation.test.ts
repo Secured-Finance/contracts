@@ -9,12 +9,13 @@ import { getGenesisDate } from '../../../utils/dates';
 import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
+  LIQUIDATION_THRESHOLD_RATE,
   ORDER_FEE_RATE,
 } from '../../common/constants';
 import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
 import { deployContracts } from './utils';
 
-describe('LendingMarketController - Operations', () => {
+describe('LendingMarketController - Estimations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let lendingMarketControllerProxy: Contract;
@@ -29,6 +30,7 @@ describe('LendingMarketController - Operations', () => {
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   beforeEach(async () => {
@@ -42,7 +44,7 @@ describe('LendingMarketController - Operations', () => {
   });
 
   before(async () => {
-    [owner, alice, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, ...signers] = await ethers.getSigners();
 
     ({
       mockCurrencyController,
@@ -65,7 +67,8 @@ describe('LendingMarketController - Operations', () => {
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
     await mockTokenVault.mock.isCovered.returns(true);
-    await mockTokenVault.mock.calculateCoverage.returns(1000);
+    await mockTokenVault.mock['isCollateral(bytes32[])'].returns([true]);
+    await mockTokenVault.mock.calculateCoverage.returns('1000', false);
   });
 
   const initialize = async (currency: string) => {
@@ -86,7 +89,176 @@ describe('LendingMarketController - Operations', () => {
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
   };
 
-  describe('Estimations', async () => {
+  describe('Total Funds Calculations', async () => {
+    const updateReturnValuesOfConvertToBaseCurrencyMock = async (inputs?: {
+      workingLendOrdersAmount?: string | number | BigNumber;
+      claimableAmount?: string | number | BigNumber;
+      collateralAmount?: string | number | BigNumber;
+      lentAmount?: string | number | BigNumber;
+      workingBorrowOrdersAmount?: string | number | BigNumber;
+      debtAmount?: string | number | BigNumber;
+      borrowedAmount?: string | number | BigNumber;
+    }) => {
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256[])'
+      ].returns([
+        inputs?.workingLendOrdersAmount ?? 0,
+        inputs?.claimableAmount ?? 0,
+        inputs?.collateralAmount ?? 0,
+        inputs?.lentAmount ?? 0,
+        inputs?.workingBorrowOrdersAmount ?? 0,
+        inputs?.debtAmount ?? 0,
+        inputs?.borrowedAmount ?? 0,
+      ]);
+    };
+
+    it('Calculate total funds without positions', async () => {
+      await updateReturnValuesOfConvertToBaseCurrencyMock({
+        workingLendOrdersAmount: '1000000000',
+        claimableAmount: '2000000000',
+        collateralAmount: '3000000000',
+        lentAmount: '4000000000',
+        workingBorrowOrdersAmount: '5000000000',
+        debtAmount: '6000000000',
+        borrowedAmount: '7000000000',
+      });
+
+      const totalFunds =
+        await lendingMarketControllerProxy.calculateTotalFundsInBaseCurrency(
+          alice.address,
+          {
+            ccy: targetCurrency,
+            claimableAmount: 0,
+            debtAmount: 0,
+            lentAmount: 0,
+            borrowedAmount: 0,
+          },
+          0,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+      expect(totalFunds.totalWorkingLendOrdersAmount).to.equal('1000000000');
+      expect(totalFunds.totalClaimableAmount).to.equal('2000000000');
+      expect(totalFunds.totalCollateralAmount).to.equal('3000000000');
+      expect(totalFunds.totalLentAmount).to.equal('4000000000');
+      expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('5000000000');
+      expect(totalFunds.totalDebtAmount).to.equal('6000000000');
+      expect(totalFunds.totalBorrowedAmount).to.equal('7000000000');
+      expect(totalFunds.isEnoughDepositInAdditionalFundsCcy).to.equal(true);
+    });
+
+    it('Calculate total funds with positions', async () => {
+      await updateReturnValuesOfConvertToBaseCurrencyMock({
+        workingLendOrdersAmount: '7000000000',
+        claimableAmount: '6000000000',
+        collateralAmount: '5000000000',
+        lentAmount: '4000000000',
+        workingBorrowOrdersAmount: '3000000000',
+        debtAmount: '2000000000',
+        borrowedAmount: '1000000000',
+      });
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '1000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '1000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.BORROW,
+          '2000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(owner)
+        .executeOrder(
+          targetCurrency,
+          maturities[1],
+          Side.LEND,
+          '2000000000',
+          '8000',
+        );
+
+      const totalFunds =
+        await lendingMarketControllerProxy.calculateTotalFundsInBaseCurrency(
+          bob.address,
+          {
+            ccy: targetCurrency,
+            claimableAmount: 0,
+            debtAmount: 0,
+            lentAmount: 0,
+            borrowedAmount: 0,
+          },
+          0,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+      expect(totalFunds.totalWorkingLendOrdersAmount).to.equal('7000000000');
+      expect(totalFunds.totalClaimableAmount).to.equal('6000000000');
+      expect(totalFunds.totalCollateralAmount).to.equal('5000000000');
+      expect(totalFunds.totalLentAmount).to.equal('4000000000');
+      expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('3000000000');
+      expect(totalFunds.totalDebtAmount).to.equal('2000000000');
+      expect(totalFunds.totalBorrowedAmount).to.equal('1000000000');
+      expect(totalFunds.isEnoughDepositInAdditionalFundsCcy).to.equal(true);
+    });
+
+    it('Calculate total funds with additional lent amount exceeded deposit amount', async () => {
+      await updateReturnValuesOfConvertToBaseCurrencyMock({
+        workingLendOrdersAmount: '7000000000',
+        claimableAmount: '6000000000',
+        collateralAmount: '5000000000',
+        lentAmount: '4000000000',
+        workingBorrowOrdersAmount: '3000000000',
+        debtAmount: '2000000000',
+        borrowedAmount: '1000000000',
+      });
+
+      const totalFunds =
+        await lendingMarketControllerProxy.calculateTotalFundsInBaseCurrency(
+          alice.address,
+          {
+            ccy: targetCurrency,
+            claimableAmount: 0,
+            debtAmount: 0,
+            lentAmount: 3000000000,
+            borrowedAmount: 0,
+          },
+          0,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+      expect(totalFunds.totalWorkingLendOrdersAmount).to.equal('7000000000');
+      expect(totalFunds.totalClaimableAmount).to.equal('6000000000');
+      expect(totalFunds.totalCollateralAmount).to.equal('5000000000');
+      expect(totalFunds.totalLentAmount).to.equal('4000000000');
+      expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('3000000000');
+      expect(totalFunds.totalDebtAmount).to.equal('2000000000');
+      expect(totalFunds.totalBorrowedAmount).to.equal('1000000000');
+      expect(totalFunds.isEnoughDepositInAdditionalFundsCcy).to.equal(false);
+    });
+  });
+
+  describe('Order Estimations', async () => {
     const conditions = [
       {
         title:
@@ -211,6 +383,8 @@ describe('LendingMarketController - Operations', () => {
             condition.input.side,
             condition.input.amount,
             condition.input.unitPrice,
+            '0',
+            false,
           );
 
         const { timestamp } = await ethers.provider.getBlock('latest');

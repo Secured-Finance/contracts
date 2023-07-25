@@ -30,13 +30,12 @@ library FundManagementLogic {
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
+        ILendingMarketController.AdditionalFunds additionalFunds;
         uint256 liquidationThresholdRate;
         bool[] isCollateral;
-        bytes32 ccy;
-        uint256[] amounts;
-        uint256[] amountsInBaseCurrency;
-        uint256 plusDepositAmount;
-        uint256 minusDepositAmount;
+        bytes32[] ccys;
+        uint256 plusDepositAmountInCcy;
+        uint256 minusDepositAmountInCcy;
     }
 
     struct ActualFunds {
@@ -500,6 +499,7 @@ library FundManagementLogic {
     function calculateFunds(
         bytes32 _ccy,
         address _user,
+        ILendingMarketController.AdditionalFunds memory _additionalFunds,
         uint256 _liquidationThresholdRate
     )
         public
@@ -517,11 +517,11 @@ library FundManagementLogic {
         ActualFunds memory funds = calculateActualFunds(_ccy, 0, _user);
 
         workingLendOrdersAmount = funds.workingLendOrdersAmount;
-        lentAmount = funds.lentAmount;
+        claimableAmount = funds.claimableAmount + _additionalFunds.claimableAmount;
+        lentAmount = funds.lentAmount + _additionalFunds.lentAmount;
         workingBorrowOrdersAmount = funds.workingBorrowOrdersAmount;
-        borrowedAmount = funds.borrowedAmount;
-        claimableAmount = funds.claimableAmount;
-        debtAmount = funds.debtAmount;
+        debtAmount = funds.debtAmount + _additionalFunds.debtAmount;
+        borrowedAmount = funds.borrowedAmount + _additionalFunds.borrowedAmount;
 
         if (claimableAmount > 0) {
             // If the debt and claimable amount are in the same currency, the claimable amount can be allocated
@@ -547,8 +547,8 @@ library FundManagementLogic {
 
     function calculateTotalFundsInBaseCurrency(
         address _user,
-        bytes32 _depositCcy,
-        uint256 _depositAmount,
+        ILendingMarketController.AdditionalFunds calldata _additionalFunds,
+        uint256 _depositAmountInAdditionalFundsCcy,
         uint256 _liquidationThresholdRate
     )
         external
@@ -561,21 +561,42 @@ library FundManagementLogic {
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
             uint256 totalBorrowedAmount,
-            bool isEnoughDeposit
+            bool isEnoughDepositInAdditionalFundsCcy
         )
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
         CalculatedTotalFundInBaseCurrencyVars memory vars;
 
+        if (
+            !currencySet.contains(_additionalFunds.ccy) &&
+            AddressResolverLib.currencyController().currencyExists(_additionalFunds.ccy)
+        ) {
+            uint256 length = currencySet.length();
+            vars.ccys = new bytes32[](length + 1);
+            for (uint256 i; i < length; i++) {
+                vars.ccys[i] = currencySet.at(i);
+            }
+            vars.ccys[length] = _additionalFunds.ccy;
+        } else {
+            vars.ccys = currencySet.values();
+        }
+
         vars.user = _user;
+        vars.additionalFunds = _additionalFunds;
         vars.liquidationThresholdRate = _liquidationThresholdRate;
-        vars.isCollateral = AddressResolverLib.tokenVault().isCollateral(currencySet.values());
-        vars.plusDepositAmount = _depositAmount;
+        vars.plusDepositAmountInCcy = _depositAmountInAdditionalFundsCcy;
+        vars.isCollateral = AddressResolverLib.tokenVault().isCollateral(vars.ccys);
 
         // Calculate total funds from the user's order list
-        for (uint256 i = 0; i < currencySet.length(); i++) {
-            vars.ccy = currencySet.at(i);
-            vars.amounts = new uint256[](7);
+        for (uint256 i; i < vars.ccys.length; i++) {
+            bytes32 ccy = vars.ccys[i];
+            uint256[] memory amounts = new uint256[](7);
+
+            ILendingMarketController.AdditionalFunds memory additionalFunds;
+
+            if (ccy == vars.additionalFunds.ccy) {
+                additionalFunds = vars.additionalFunds;
+            }
 
             // 0: workingLendOrdersAmount
             // 1: claimableAmount
@@ -585,43 +606,44 @@ library FundManagementLogic {
             // 5: debtAmount
             // 6: borrowedAmount
             (
-                vars.amounts[0],
-                vars.amounts[1],
-                vars.amounts[2],
-                vars.amounts[3],
-                vars.amounts[4],
-                vars.amounts[5],
-                vars.amounts[6]
-            ) = calculateFunds(vars.ccy, vars.user, vars.liquidationThresholdRate);
+                amounts[0],
+                amounts[1],
+                amounts[2],
+                amounts[3],
+                amounts[4],
+                amounts[5],
+                amounts[6]
+            ) = calculateFunds(ccy, vars.user, additionalFunds, vars.liquidationThresholdRate);
 
-            if (vars.ccy == _depositCcy) {
+            if (ccy == vars.additionalFunds.ccy) {
                 // plusDepositAmount: depositAmount + borrowedAmount
                 // minusDepositAmount: workingLendOrdersAmount + lentAmount
-                vars.plusDepositAmount += vars.amounts[6];
-                vars.minusDepositAmount += vars.amounts[0] + vars.amounts[3];
+                vars.plusDepositAmountInCcy += amounts[6];
+                vars.minusDepositAmountInCcy += amounts[0] + amounts[3];
             }
 
-            vars.amountsInBaseCurrency = AddressResolverLib
+            uint256[] memory amountsInBaseCurrency = AddressResolverLib
                 .currencyController()
-                .convertToBaseCurrency(vars.ccy, vars.amounts);
+                .convertToBaseCurrency(ccy, amounts);
 
-            totalClaimableAmount += vars.amountsInBaseCurrency[1];
-            totalCollateralAmount += vars.amountsInBaseCurrency[2];
-            totalWorkingBorrowOrdersAmount += vars.amountsInBaseCurrency[4];
-            totalDebtAmount += vars.amountsInBaseCurrency[5];
+            totalClaimableAmount += amountsInBaseCurrency[1];
+            totalCollateralAmount += amountsInBaseCurrency[2];
+            totalWorkingBorrowOrdersAmount += amountsInBaseCurrency[4];
+            totalDebtAmount += amountsInBaseCurrency[5];
 
             // NOTE: Lent amount and working lend orders amount are excluded here as they are not used
             // for the collateral calculation.
             // Those amounts need only to check whether there is enough deposit amount in the selected currency.
             if (vars.isCollateral[i]) {
-                totalWorkingLendOrdersAmount += vars.amountsInBaseCurrency[0];
-                totalLentAmount += vars.amountsInBaseCurrency[3];
-                totalBorrowedAmount += vars.amountsInBaseCurrency[6];
+                totalWorkingLendOrdersAmount += amountsInBaseCurrency[0];
+                totalLentAmount += amountsInBaseCurrency[3];
+                totalBorrowedAmount += amountsInBaseCurrency[6];
             }
         }
 
         // Check if the user has enough collateral in the selected currency.
-        isEnoughDeposit = vars.plusDepositAmount >= vars.minusDepositAmount;
+        isEnoughDepositInAdditionalFundsCcy =
+            vars.plusDepositAmountInCcy >= vars.minusDepositAmountInCcy;
     }
 
     function getUsedMaturities(bytes32 _ccy, address _user)
@@ -984,6 +1006,17 @@ library FundManagementLogic {
             Storage.slot().maturityLendingMarkets[_ccy][_maturity]
         ).getMidUnitPrice();
         presentValue = calculatePVFromFV(_futureValue, unitPriceInBasisMaturity);
+    }
+
+    function calculatePVFromFV(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _futureValue
+    ) public view returns (uint256 presentValue) {
+        uint256 unitPriceInBasisMaturity = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).getMidUnitPrice();
+        presentValue = (_futureValue * unitPriceInBasisMaturity).div(Constants.PRICE_DIGIT);
     }
 
     function calculateFVFromPV(

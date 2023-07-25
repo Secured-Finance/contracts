@@ -2947,9 +2947,7 @@ describe('LendingMarketController - Orders', () => {
               '100000000000000000',
               '8000',
             ),
-        ).not.to.be.revertedWith(
-          'Not enough collateral in the selected currency',
-        );
+        ).not.to.be.revertedWith('Not enough deposit in the selected currency');
 
         await expect(
           lendingMarketControllerProxy

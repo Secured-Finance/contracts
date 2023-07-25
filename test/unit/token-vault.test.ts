@@ -1,9 +1,8 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
-import { Contract } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
-import { Side } from '../../utils/constants';
 import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
@@ -248,53 +247,53 @@ describe('TokenVault', () => {
   });
 
   describe('Coverage', async () => {
+    const value = BigNumber.from('20000000000000');
+    const CALCULATE_COVERAGE_INPUTS = {
+      ccy: '',
+      claimableAmount: 0,
+      debtAmount: 0,
+      lentAmount: 0,
+      borrowedAmount: 0,
+    };
+
+    const updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock =
+      async (inputs: {
+        workingLendOrdersAmount?: number | BigNumber | string;
+        claimableAmount?: number | BigNumber | string;
+        collateralAmount?: number | BigNumber | string;
+        lentAmount?: number | BigNumber | string;
+        workingBorrowOrdersAmount?: number | BigNumber | string;
+        debtAmount?: number | BigNumber | string;
+        borrowedAmount?: number | BigNumber | string;
+        isEnoughDepositInAdditionalFundsCcy?: boolean;
+      }) => {
+        return mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
+          inputs.workingLendOrdersAmount || 0,
+          inputs.claimableAmount || 0,
+          inputs.collateralAmount || 0,
+          inputs.lentAmount || 0,
+          inputs.workingBorrowOrdersAmount || 0,
+          inputs.debtAmount || 0,
+          inputs.borrowedAmount || 0,
+          typeof inputs.isEnoughDepositInAdditionalFundsCcy === 'boolean'
+            ? inputs.isEnoughDepositInAdditionalFundsCcy
+            : true,
+        );
+      };
+
     before(async () => {
       await mockLendingMarketController.mock.isTerminated.returns(false);
     });
 
     beforeEach(async () => {
+      CALCULATE_COVERAGE_INPUTS.ccy = targetCurrency;
+
       await tokenVaultProxy.registerCurrency(
         targetCurrency,
         mockERC20.address,
         true,
       );
-    });
 
-    it('Calculate the coverage without deposit', async () => {
-      const signer = getUser();
-      const value = '20000000000000';
-
-      await mockCurrencyController.mock[
-        'convertToBaseCurrency(bytes32,uint256)'
-      ].returns(value);
-
-      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal('0');
-      expect(
-        await tokenVaultProxy.calculateCoverage(
-          signer.address,
-          targetCurrency,
-          0,
-          Side.BORROW,
-        ),
-      ).to.equal('0');
-
-      expect(
-        await tokenVaultProxy.calculateCoverage(
-          signer.address,
-          targetCurrency,
-          1000,
-          Side.BORROW,
-        ),
-      ).to.equal(ethers.constants.MaxUint256);
-    });
-
-    it('Calculate the coverage with deposit', async () => {
-      const signer = getUser();
-      const value = '20000000000000';
-
-      await mockCurrencyController.mock[
-        'convertToBaseCurrency(bytes32,uint256)'
-      ].returns(value);
       await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
         0,
         0,
@@ -302,9 +301,32 @@ describe('TokenVault', () => {
         0,
         0,
         0,
-        value,
+        0,
         true,
       );
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(0);
+    });
+
+    it('Calculate the coverage without deposit', async () => {
+      const signer = getUser();
+
+      expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal('0');
+      await tokenVaultProxy
+        .calculateCoverage(signer.address, CALCULATE_COVERAGE_INPUTS)
+        .then(({ coverage, isInsufficientDepositAmount }) => {
+          expect(coverage).to.equal('0');
+          expect(isInsufficientDepositAmount).to.equal(false);
+        });
+    });
+
+    it('Calculate the coverage with deposit', async () => {
+      const signer = getUser();
+
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(value);
 
       await expect(
         tokenVaultProxy.connect(signer).deposit(targetCurrency, value),
@@ -313,23 +335,77 @@ describe('TokenVault', () => {
         .withArgs(signer.address, targetCurrency, value);
 
       expect(await tokenVaultProxy.getCoverage(signer.address)).to.equal('0');
-      expect(
-        await tokenVaultProxy.calculateCoverage(
-          signer.address,
-          targetCurrency,
-          0,
-          Side.BORROW,
-        ),
-      ).to.equal('0');
 
-      expect(
-        await tokenVaultProxy.calculateCoverage(
-          signer.address,
-          targetCurrency,
-          value,
-          Side.BORROW,
-        ),
-      ).to.equal('5000');
+      await tokenVaultProxy
+        .calculateCoverage(signer.address, CALCULATE_COVERAGE_INPUTS)
+        .then(({ coverage, isInsufficientDepositAmount }) => {
+          expect(coverage).to.equal(0);
+          expect(isInsufficientDepositAmount).to.equal(false);
+        });
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount: value.div(2),
+      });
+
+      await tokenVaultProxy
+        .calculateCoverage(signer.address, CALCULATE_COVERAGE_INPUTS)
+        .then(({ coverage, isInsufficientDepositAmount }) => {
+          expect(coverage).to.equal(5000);
+          expect(isInsufficientDepositAmount).to.equal(false);
+        });
+    });
+
+    it('Calculate the coverage for borrowing orders', async () => {
+      const signer = getUser();
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount: value,
+      });
+
+      await tokenVaultProxy
+        .calculateCoverage(signer.address, CALCULATE_COVERAGE_INPUTS)
+        .then(({ coverage, isInsufficientDepositAmount }) => {
+          expect(coverage).to.equal(ethers.constants.MaxUint256);
+          expect(isInsufficientDepositAmount).to.equal(false);
+        });
+    });
+
+    it('Calculate the coverage for lending orders', async () => {
+      const signer = getUser();
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        lentAmount: value,
+      });
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
+      await tokenVaultProxy
+        .calculateCoverage(signer.address, CALCULATE_COVERAGE_INPUTS)
+        .then(({ coverage, isInsufficientDepositAmount }) => {
+          expect(coverage).to.equal(0);
+          expect(isInsufficientDepositAmount).to.equal(false);
+        });
+    });
+
+    it('Calculate the coverage for lending orders that exceed the deposit amount.', async () => {
+      const signer = getUser();
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        lentAmount: value.mul(2),
+        isEnoughDepositInAdditionalFundsCcy: false,
+      });
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
+      await tokenVaultProxy
+        .calculateCoverage(signer.address, {
+          ...CALCULATE_COVERAGE_INPUTS,
+          lentAmount: value,
+        })
+        .then(({ coverage, isInsufficientDepositAmount }) => {
+          expect(coverage).to.equal(0);
+          expect(isInsufficientDepositAmount).to.equal(true);
+        });
     });
   });
 
@@ -982,7 +1058,7 @@ describe('TokenVault', () => {
           targetCurrency,
           amount.add('1'),
         ),
-      ).to.be.revertedWith('Not enough collateral in the selected currency');
+      ).to.be.revertedWith('Not enough deposit in the selected currency');
     });
 
     it('Fail to call deposit due to invalid amount', async () => {
@@ -1029,7 +1105,7 @@ describe('TokenVault', () => {
     it('Fail to get liquidation amount due to no collateral', async () => {
       await expect(
         tokenVaultProxy.getLiquidationAmount(owner.address, targetCurrency, 1),
-      ).to.be.revertedWith('Not enough collateral in the selected currency');
+      ).to.be.revertedWith('Zero collateral in the selected currency');
     });
 
     it('Deposit funds from Alice', async () => {

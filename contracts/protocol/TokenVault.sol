@@ -10,6 +10,7 @@ import {ERC20Handler} from "./libraries/ERC20Handler.sol";
 import {DepositManagementLogic} from "./libraries/logics/DepositManagementLogic.sol";
 // interfaces
 import {ITokenVault} from "./interfaces/ITokenVault.sol";
+import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // types
@@ -185,7 +186,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
      * @return coverage The rate of collateral used
      */
     function getCoverage(address _user) external view override returns (uint256 coverage) {
-        return DepositManagementLogic.calculateCoverage(_user, "", 0, false);
+        return DepositManagementLogic.getCoverage(_user);
     }
 
     /**
@@ -290,26 +291,17 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     /**
-     * @notice Calculates the rate of collateral used.
+     * @notice Calculates the collateral rate used when additional funds are had by the user.
      * @param _user User's address
-     * @param _orderCcy Currency name in bytes32 of an order to be added
-     * @param _orderAmount Amount of an order to be added
-     * @param _orderSide Order position type of an order to be added
+     * @param _additionalFunds Additional funds for calculating the coverage
      * @return coverage The rate of collateral used
+     * @return isInsufficientDepositAmount The boolean if the lent amount in the selected currency is insufficient for the deposit amount or not
      */
     function calculateCoverage(
         address _user,
-        bytes32 _orderCcy,
-        uint256 _orderAmount,
-        ProtocolTypes.Side _orderSide
-    ) external view override returns (uint256 coverage) {
-        return
-            DepositManagementLogic.calculateCoverage(
-                _user,
-                _orderCcy,
-                _orderAmount,
-                ProtocolTypes.Side.BORROW == _orderSide
-            );
+        ILendingMarketController.AdditionalFunds memory _additionalFunds
+    ) external view override returns (uint256 coverage, bool isInsufficientDepositAmount) {
+        return DepositManagementLogic.calculateCoverage(_user, _additionalFunds);
     }
 
     /**

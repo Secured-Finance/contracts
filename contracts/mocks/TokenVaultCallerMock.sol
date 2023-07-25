@@ -56,8 +56,8 @@ contract TokenVaultCallerMock {
 
     function calculateTotalFundsInBaseCurrency(
         address _user,
-        bytes32 _depositCcy,
-        uint256 _depositAmount,
+        ILendingMarketController.AdditionalFunds calldata _additionalFunds,
+        uint256 _depositAmountInAdditionalFundsCcy,
         uint256 _liquidationThresholdRate
     )
         public
@@ -76,8 +76,8 @@ contract TokenVaultCallerMock {
         return
             lendingMarketController.calculateTotalFundsInBaseCurrency(
                 _user,
-                _depositCcy,
-                _depositAmount,
+                _additionalFunds,
+                _depositAmountInAdditionalFundsCcy,
                 _liquidationThresholdRate
             );
     }

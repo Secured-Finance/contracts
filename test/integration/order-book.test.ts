@@ -186,6 +186,8 @@ describe('Integration Test: Order Book', async () => {
             Side.BORROW,
             orderAmount,
             '8000',
+            '0',
+            false,
           );
 
         const { blockHash } = await lendingMarketController
@@ -385,7 +387,7 @@ describe('Integration Test: Order Book', async () => {
           lendingMarketController
             .connect(alice)
             .unwindPosition(hexWFIL, filMaturities[0]),
-        ).to.be.revertedWith('Not enough collateral in the selected currency');
+        ).to.be.revertedWith('Not enough deposit in the selected currency');
 
         // Deposit the amount that is not enough due to fees being deducted.
         await wFILToken
@@ -746,6 +748,7 @@ describe('Integration Test: Order Book', async () => {
     describe('Fill multiple orders on different order sides in multiple markets', async () => {
       const depositAmount = initialETHBalance.div(5);
       const orderAmount = depositAmount.mul(3).div(5);
+      const orderAmount2 = orderAmount.mul(4).div(5);
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
@@ -767,7 +770,7 @@ describe('Integration Test: Order Book', async () => {
         expect(aliceDepositAmount).to.equal(depositAmount);
       });
 
-      it('Fill an order on the ETH market', async () => {
+      it('Fill an order on the ETH market(1)', async () => {
         await lendingMarketController
           .connect(bob)
           .depositAndExecuteOrder(
@@ -808,7 +811,7 @@ describe('Integration Test: Order Book', async () => {
         expect(bobFV.sub(orderAmount.mul(5).div(2))).lte(1);
       });
 
-      it('Fill an order on the ETH market', async () => {
+      it('Fill an order on the ETH market(2)', async () => {
         expect(await tokenVault.getCoverage(bob.address)).to.equal('0');
 
         await lendingMarketController
@@ -817,7 +820,7 @@ describe('Integration Test: Order Book', async () => {
             hexETH,
             ethMaturities[1],
             Side.BORROW,
-            orderAmount.mul(4).div(5),
+            orderAmount2,
             '8000',
           );
 
@@ -832,9 +835,7 @@ describe('Integration Test: Order Book', async () => {
         expect(bobFundsBefore.workingLendOrdersAmount).to.equal(0);
         expect(bobFundsBefore.claimableAmount).to.equal(orderAmount);
         expect(bobFundsBefore.collateralAmount).to.equal(orderAmount);
-        expect(bobFundsBefore.workingBorrowOrdersAmount).to.equal(
-          orderAmount.mul(4).div(5),
-        );
+        expect(bobFundsBefore.workingBorrowOrdersAmount).to.equal(orderAmount2);
         expect(bobFundsBefore.debtAmount).to.equal(0);
         expect(bobFundsBefore.borrowedAmount).to.equal(0);
 
@@ -844,14 +845,14 @@ describe('Integration Test: Order Book', async () => {
             hexETH,
             ethMaturities[1],
             Side.LEND,
-            orderAmount.mul(4).div(5),
+            orderAmount2,
             '0',
-            { value: orderAmount.mul(4).div(5) },
+            { value: orderAmount2 },
           );
 
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
-          orderAmount.mul(4).div(5),
+          orderAmount2,
           '8000',
           ethMaturities[1].sub(timestamp),
         );
@@ -865,7 +866,7 @@ describe('Integration Test: Order Book', async () => {
         );
 
         expect(aliceFV.add(bobFV).add(fee)).to.lte(1);
-        expect(bobFV.sub(orderAmount.mul(4).div(5))).lte(1);
+        expect(bobFV.sub(orderAmount2)).lte(1);
 
         const bobFundsAfter = await lendingMarketController.calculateFunds(
           hexETH,
@@ -877,10 +878,14 @@ describe('Integration Test: Order Book', async () => {
         expect(bobFundsAfter.claimableAmount).to.equal(orderAmount);
         expect(bobFundsAfter.collateralAmount).to.equal(orderAmount);
         expect(bobFundsAfter.workingBorrowOrdersAmount).to.equal(0);
-        expect(bobFundsAfter.debtAmount).to.equal(orderAmount.mul(4).div(5));
-        expect(bobFundsAfter.borrowedAmount).to.equal(
-          orderAmount.mul(4).div(5),
-        );
+        expect(bobFundsAfter.debtAmount).to.equal(orderAmount2);
+        expect(bobFundsAfter.borrowedAmount).to.equal(orderAmount2);
+
+        const bobCoverage = orderAmount2
+          .mul(PCT_DIGIT)
+          .div(calculateFutureValue(orderAmount2, '8000').add(orderAmount2));
+
+        expect(await tokenVault.getCoverage(bob.address)).to.equal(bobCoverage);
       });
     });
 
