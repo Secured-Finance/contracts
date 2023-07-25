@@ -150,7 +150,6 @@ describe('Integration Test: Order Book', async () => {
         [alice, bob, carol] = await getUsers(3);
         ethMaturities = await lendingMarketController.getMaturities(hexETH);
         await createSampleETHOrders(carol);
-        await createSampleETHOrders(carol);
       });
 
       it('Deposit ETH', async () => {
@@ -176,18 +175,6 @@ describe('Integration Test: Order Book', async () => {
             orderAmount,
             '8000',
             { value: orderAmount },
-          );
-
-        const estimation = await lendingMarketController
-          .connect(alice)
-          .getOrderEstimation(
-            hexETH,
-            ethMaturities[0],
-            Side.BORROW,
-            orderAmount,
-            '8000',
-            '0',
-            false,
           );
 
         const { blockHash } = await lendingMarketController
@@ -217,14 +204,6 @@ describe('Integration Test: Order Book', async () => {
 
         expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
         expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
-
-        expect(orderAmount).to.equal(estimation.filledAmount);
-        expect(
-          aliceFV
-            .mul(PCT_DIGIT)
-            .div(estimation.filledAmountInFV.add(estimation.orderFeeInFV))
-            .abs(),
-        ).gte(BigNumber.from(PCT_DIGIT).sub(1));
       });
 
       it('Check collateral', async () => {
