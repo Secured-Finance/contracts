@@ -156,20 +156,20 @@ interface ILendingMarketController {
     function calculateTotalFundsInBaseCurrency(
         address user,
         AdditionalFunds calldata _additionalFunds,
-        uint256 depositAmountInAdditionalFundsCcy,
         uint256 liquidationThresholdRate
     )
         external
         view
         returns (
+            uint256 plusDepositAmountInAdditionalFundsCcy,
+            uint256 minusDepositAmountInAdditionalFundsCcy,
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
             uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount,
-            bool isEnoughDepositInAdditionalFundsCcy
+            uint256 totalBorrowedAmount
         );
 
     function isInitializedLendingMarket(bytes32 ccy) external view returns (bool);

@@ -34,8 +34,6 @@ library FundManagementLogic {
         uint256 liquidationThresholdRate;
         bool[] isCollateral;
         bytes32[] ccys;
-        uint256 plusDepositAmountInCcy;
-        uint256 minusDepositAmountInCcy;
     }
 
     struct ActualFunds {
@@ -548,20 +546,20 @@ library FundManagementLogic {
     function calculateTotalFundsInBaseCurrency(
         address _user,
         ILendingMarketController.AdditionalFunds calldata _additionalFunds,
-        uint256 _depositAmountInAdditionalFundsCcy,
         uint256 _liquidationThresholdRate
     )
         external
         view
         returns (
+            uint256 plusDepositAmountInAdditionalFundsCcy,
+            uint256 minusDepositAmountInAdditionalFundsCcy,
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
             uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount,
-            bool isEnoughDepositInAdditionalFundsCcy
+            uint256 totalBorrowedAmount
         )
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
@@ -584,7 +582,6 @@ library FundManagementLogic {
         vars.user = _user;
         vars.additionalFunds = _additionalFunds;
         vars.liquidationThresholdRate = _liquidationThresholdRate;
-        vars.plusDepositAmountInCcy = _depositAmountInAdditionalFundsCcy;
         vars.isCollateral = AddressResolverLib.tokenVault().isCollateral(vars.ccys);
 
         // Calculate total funds from the user's order list
@@ -616,10 +613,10 @@ library FundManagementLogic {
             ) = calculateFunds(ccy, vars.user, additionalFunds, vars.liquidationThresholdRate);
 
             if (ccy == vars.additionalFunds.ccy) {
-                // plusDepositAmount: depositAmount + borrowedAmount
+                // plusDepositAmount: borrowedAmount
                 // minusDepositAmount: workingLendOrdersAmount + lentAmount
-                vars.plusDepositAmountInCcy += amounts[6];
-                vars.minusDepositAmountInCcy += amounts[0] + amounts[3];
+                plusDepositAmountInAdditionalFundsCcy += amounts[6];
+                minusDepositAmountInAdditionalFundsCcy += amounts[0] + amounts[3];
             }
 
             uint256[] memory amountsInBaseCurrency = AddressResolverLib
@@ -640,10 +637,6 @@ library FundManagementLogic {
                 totalBorrowedAmount += amountsInBaseCurrency[6];
             }
         }
-
-        // Check if the user has enough collateral in the selected currency.
-        isEnoughDepositInAdditionalFundsCcy =
-            vars.plusDepositAmountInCcy >= vars.minusDepositAmountInCcy;
     }
 
     function getUsedMaturities(bytes32 _ccy, address _user)

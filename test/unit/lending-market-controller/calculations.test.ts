@@ -15,7 +15,7 @@ import {
 import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
 import { deployContracts } from './utils';
 
-describe('LendingMarketController - Estimations', () => {
+describe('LendingMarketController - Calculations', () => {
   let mockCurrencyController: MockContract;
   let mockTokenVault: MockContract;
   let lendingMarketControllerProxy: Contract;
@@ -133,7 +133,6 @@ describe('LendingMarketController - Estimations', () => {
             lentAmount: 0,
             borrowedAmount: 0,
           },
-          0,
           LIQUIDATION_THRESHOLD_RATE,
         );
 
@@ -144,7 +143,8 @@ describe('LendingMarketController - Estimations', () => {
       expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('5000000000');
       expect(totalFunds.totalDebtAmount).to.equal('6000000000');
       expect(totalFunds.totalBorrowedAmount).to.equal('7000000000');
-      expect(totalFunds.isEnoughDepositInAdditionalFundsCcy).to.equal(true);
+      expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal('0');
+      expect(totalFunds.minusDepositAmountInAdditionalFundsCcy).to.equal('0');
     });
 
     it('Calculate total funds with positions', async () => {
@@ -208,7 +208,6 @@ describe('LendingMarketController - Estimations', () => {
             lentAmount: 0,
             borrowedAmount: 0,
           },
-          0,
           LIQUIDATION_THRESHOLD_RATE,
         );
 
@@ -219,7 +218,10 @@ describe('LendingMarketController - Estimations', () => {
       expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('3000000000');
       expect(totalFunds.totalDebtAmount).to.equal('2000000000');
       expect(totalFunds.totalBorrowedAmount).to.equal('1000000000');
-      expect(totalFunds.isEnoughDepositInAdditionalFundsCcy).to.equal(true);
+      expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal(
+        '2000000000',
+      );
+      expect(totalFunds.minusDepositAmountInAdditionalFundsCcy).to.equal('0');
     });
 
     it('Calculate total funds with additional lent amount exceeded deposit amount', async () => {
@@ -243,7 +245,6 @@ describe('LendingMarketController - Estimations', () => {
             lentAmount: 3000000000,
             borrowedAmount: 0,
           },
-          0,
           LIQUIDATION_THRESHOLD_RATE,
         );
 
@@ -254,7 +255,10 @@ describe('LendingMarketController - Estimations', () => {
       expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('3000000000');
       expect(totalFunds.totalDebtAmount).to.equal('2000000000');
       expect(totalFunds.totalBorrowedAmount).to.equal('1000000000');
-      expect(totalFunds.isEnoughDepositInAdditionalFundsCcy).to.equal(false);
+      expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal('0');
+      expect(totalFunds.minusDepositAmountInAdditionalFundsCcy).to.equal(
+        '3000000000',
+      );
     });
   });
 

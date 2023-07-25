@@ -18,13 +18,14 @@ library DepositManagementLogic {
     using RoundingUint256 for uint256;
 
     struct CalculatedFundVars {
+        uint256 plusDepositAmountInAdditionalFundsCcy;
+        uint256 minusDepositAmountInAdditionalFundsCcy;
         uint256 workingLendOrdersAmount;
         uint256 collateralAmount;
         uint256 lentAmount;
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
         uint256 borrowedAmount;
-        bool isEnoughDepositInAdditionalFundsCcy;
     }
 
     function isCovered(address _user) public view returns (bool) {
@@ -173,31 +174,29 @@ library DepositManagementLogic {
     {
         CalculatedFundVars memory vars;
 
-        uint256 depositAmountInAdditionalFundsCcy = Storage.slot().depositAmounts[_user][
-            _funds.ccy
-        ];
-
         (
+            vars.plusDepositAmountInAdditionalFundsCcy,
+            vars.minusDepositAmountInAdditionalFundsCcy,
             vars.workingLendOrdersAmount,
             ,
             vars.collateralAmount,
             vars.lentAmount,
             vars.workingBorrowOrdersAmount,
             vars.debtAmount,
-            vars.borrowedAmount,
-            vars.isEnoughDepositInAdditionalFundsCcy
+            vars.borrowedAmount
         ) = AddressResolverLib.lendingMarketController().calculateTotalFundsInBaseCurrency(
             _user,
             _funds,
-            depositAmountInAdditionalFundsCcy,
             Params.liquidationThresholdRate()
         );
 
-        // require(
-        //     vars.isEnoughDepositInAdditionalFundsCcy || _funds.lentAmount == 0,
-        //     "Not enough deposit in the selected currency"
-        // );
-        if (!vars.isEnoughDepositInAdditionalFundsCcy && _funds.lentAmount != 0) {
+        // Check if the user has enough deposit amount for lending in the selected currency.
+        if (
+            _funds.lentAmount != 0 &&
+            (vars.plusDepositAmountInAdditionalFundsCcy +
+                Storage.slot().depositAmounts[_user][_funds.ccy] <
+                vars.minusDepositAmountInAdditionalFundsCcy)
+        ) {
             isInsufficientDepositAmount = true;
         }
 

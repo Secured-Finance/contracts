@@ -560,34 +560,32 @@ contract LendingMarketController is
      * for all currencies in base currency.
      * @param _user User's address
      * @param _additionalFunds The funds to be added for calculating the total funds
-     * @param _depositAmountInAdditionalFundsCcy The amount to be deposited in the same currency as the additional funds
      * @param _liquidationThresholdRate The liquidation threshold rate
      */
     function calculateTotalFundsInBaseCurrency(
         address _user,
         AdditionalFunds calldata _additionalFunds,
-        uint256 _depositAmountInAdditionalFundsCcy,
         uint256 _liquidationThresholdRate
     )
         external
         view
         override
         returns (
+            uint256 plusDepositAmountInAdditionalFundsCcy,
+            uint256 minusDepositAmountInAdditionalFundsCcy,
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
             uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount,
-            bool isEnoughDepositInAdditionalFundsCcy
+            uint256 totalBorrowedAmount
         )
     {
         return
             FundManagementLogic.calculateTotalFundsInBaseCurrency(
                 _user,
                 _additionalFunds,
-                _depositAmountInAdditionalFundsCcy,
                 _liquidationThresholdRate
             );
     }

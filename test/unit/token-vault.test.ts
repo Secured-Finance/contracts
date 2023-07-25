@@ -92,7 +92,8 @@ describe('TokenVault', () => {
       0,
       0,
       0,
-      true,
+      0,
+      0,
     );
     await mockLendingMarketController.mock.calculateFunds.returns(
       0,
@@ -258,6 +259,8 @@ describe('TokenVault', () => {
 
     const updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock =
       async (inputs: {
+        plusDepositAmountInAdditionalFundsCcy?: number | BigNumber | string;
+        minusDepositAmountInAdditionalFundsCcy?: number | BigNumber | string;
         workingLendOrdersAmount?: number | BigNumber | string;
         claimableAmount?: number | BigNumber | string;
         collateralAmount?: number | BigNumber | string;
@@ -268,6 +271,8 @@ describe('TokenVault', () => {
         isEnoughDepositInAdditionalFundsCcy?: boolean;
       }) => {
         return mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
+          inputs.plusDepositAmountInAdditionalFundsCcy || 0,
+          inputs.minusDepositAmountInAdditionalFundsCcy || 0,
           inputs.workingLendOrdersAmount || 0,
           inputs.claimableAmount || 0,
           inputs.collateralAmount || 0,
@@ -275,9 +280,6 @@ describe('TokenVault', () => {
           inputs.workingBorrowOrdersAmount || 0,
           inputs.debtAmount || 0,
           inputs.borrowedAmount || 0,
-          typeof inputs.isEnoughDepositInAdditionalFundsCcy === 'boolean'
-            ? inputs.isEnoughDepositInAdditionalFundsCcy
-            : true,
         );
       };
 
@@ -302,7 +304,8 @@ describe('TokenVault', () => {
         0,
         0,
         0,
-        true,
+        0,
+        0,
       );
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256)'
@@ -391,8 +394,9 @@ describe('TokenVault', () => {
       const signer = getUser();
 
       await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        plusDepositAmountInAdditionalFundsCcy: '0',
+        minusDepositAmountInAdditionalFundsCcy: value.mul(2),
         lentAmount: value.mul(2),
-        isEnoughDepositInAdditionalFundsCcy: false,
       });
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
@@ -522,7 +526,8 @@ describe('TokenVault', () => {
         0,
         0,
         0,
-        true,
+        0,
+        0,
       );
 
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('0');
@@ -544,10 +549,11 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
+        0,
         usedValue,
         0,
         0,
-        true,
       );
 
       expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
@@ -606,8 +612,9 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
+        0,
         borrowedAmount,
-        true,
       );
 
       await tokenVaultProxy.connect(carol).deposit(targetCurrency, value);
@@ -645,9 +652,10 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
+        0,
         debtAmount,
         0,
-        true,
       );
 
       await tokenVaultProxy.connect(dave).deposit(targetCurrency, value);
@@ -694,9 +702,10 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
+        0,
         debtAmount,
         0,
-        false,
       );
 
       await tokenVaultProxy.connect(ellen).deposit(targetCurrency, value);
@@ -743,7 +752,8 @@ describe('TokenVault', () => {
         0,
         0,
         0,
-        true,
+        0,
+        0,
       );
 
       await tokenVaultCaller
@@ -797,7 +807,8 @@ describe('TokenVault', () => {
         0,
         0,
         0,
-        true,
+        0,
+        0,
       );
 
       await tokenVaultCaller
@@ -835,9 +846,10 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
+        0,
         debtAmount,
         0,
-        true,
       );
 
       const nonCollateralCurrency = ethers.utils.formatBytes32String(
@@ -898,7 +910,8 @@ describe('TokenVault', () => {
         0,
         0,
         0,
-        true,
+        0,
+        0,
       );
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
@@ -952,9 +965,10 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
+        0,
         debtAmount,
         0,
-        true,
       );
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
@@ -1000,9 +1014,10 @@ describe('TokenVault', () => {
         0,
         0,
         0,
+        0,
+        0,
         debtAmount,
         0,
-        true,
       );
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
