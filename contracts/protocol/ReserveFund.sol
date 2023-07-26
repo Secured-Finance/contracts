@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ReentrancyGuard} from "../dependencies/openzeppelin/contracts/security/ReentrancyGuard.sol";
 // interfaces
 import {IReserveFund} from "./interfaces/IReserveFund.sol";
 // libraries
@@ -12,13 +11,14 @@ import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
+import {Wallet} from "./utils/Wallet.sol";
 // storages
 import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
 
 /**
  * @notice Implements managing of the reserve fund.
  */
-contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, ReentrancyGuard {
+contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, Wallet {
     receive() external payable {}
 
     /**
@@ -77,12 +77,7 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, 
      * @param _ccy Currency name in bytes32
      */
     function deposit(bytes32 _ccy, uint256 _amount) external payable override onlyOwner {
-        address tokenAddress = tokenVault().getTokenAddress(_ccy);
-        if (ERC20Handler.baseCurrency() != tokenAddress) {
-            ERC20Handler.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
-            ERC20Handler.safeApprove(tokenAddress, address(tokenVault()), _amount);
-        }
-        tokenVault().deposit{value: msg.value}(_ccy, _amount);
+        _deposit(address(tokenVault()), _ccy, _amount);
     }
 
     /**
@@ -91,21 +86,14 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, 
      * @param _ccy Currency name in bytes32
      */
     function withdraw(bytes32 _ccy, uint256 _amount) external override onlyOwner {
-        tokenVault().withdraw(_ccy, _amount);
-
-        address tokenAddress = tokenVault().getTokenAddress(_ccy);
-        if (ERC20Handler.baseCurrency() == tokenAddress) {
-            ERC20Handler.safeTransferETH(msg.sender, _amount);
-        } else {
-            ERC20Handler.safeTransfer(tokenAddress, msg.sender, _amount);
-        }
+        _withdraw(address(tokenVault()), _ccy, _amount);
     }
 
     /**
      * @notice Force settlement of all lending and borrowing positions.
      */
     function executeEmergencySettlement() external override onlyOwner {
-        lendingMarketController().executeEmergencySettlement();
+        _executeEmergencySettlement(address(lendingMarketController()));
     }
 
     /**
@@ -117,12 +105,8 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, 
         external
         payable
         override
-        nonReentrant
         onlyOwner
     {
-        (bool success, ) = _to.call{value: msg.value}(_data);
-        require(success, "Transaction failed");
-
-        emit ExecuteTransaction(msg.sender, _to, msg.value, _data);
+        _executeTransaction(_to, _data);
     }
 }

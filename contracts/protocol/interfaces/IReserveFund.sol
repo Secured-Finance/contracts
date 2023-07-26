@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 interface IReserveFund {
     event Pause(address account);
     event Unpause(address account);
-    event ExecuteTransaction(address from, address to, uint256 value, bytes data);
 
     function isPaused() external view returns (bool);
 
