@@ -7,6 +7,7 @@ import moment from 'moment';
 
 import { Side } from '../../utils/constants';
 import { CIRCUIT_BREAKER_LIMIT_RANGE } from '../common/constants';
+import { calculateFutureValue } from '../common/orders';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
@@ -845,7 +846,7 @@ describe('LendingMarket', () => {
     });
 
     for (const side of [Side.BORROW, Side.LEND]) {
-      const title = side === Side.BORROW ? 'Borrow Orders' : 'Lend Orders';
+      const title = side === Side.BORROW ? 'Borrow orders' : 'Lend orders';
 
       describe(title, async () => {
         const isBorrow = side == Side.BORROW;
@@ -1635,7 +1636,7 @@ describe('LendingMarket', () => {
       });
     });
 
-    describe('Unwind', async () => {
+    describe('Unwind positions', async () => {
       it('Unwind a position partially until the circuit breaker threshold', async () => {
         await createInitialOrders(Side.LEND, 8000);
 
@@ -1663,18 +1664,83 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             ),
         )
-          .to.emit(lendingMarket, 'PositionUnwound')
+          .to.emit(lendingMarket, 'OrderExecuted')
           .withArgs(
             bob.address,
             Side.LEND,
             targetCurrency,
             maturity,
-            '125000000000000',
+            0,
+            0,
             '100000000000000',
             '8500',
-            () => true,
+            calculateFutureValue('100000000000000', 8500),
+            0,
+            0,
+            0,
             () => true,
           );
+      });
+
+      it('Unwind no position due to circuit breaker', async () => {
+        await createInitialOrders(Side.LEND, 8000);
+
+        await expect(
+          lendingMarketCaller
+            .connect(bob)
+            .executeOrder(
+              Side.BORROW,
+              '100000000000000',
+              0,
+              CIRCUIT_BREAKER_LIMIT_RANGE,
+              currentMarketIdx,
+            ),
+        ).to.emit(lendingMarket, 'OrderExecuted');
+
+        await createInitialOrders(Side.BORROW, 8500);
+
+        await ethers.provider.send('evm_setAutomine', [false]);
+
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            Side.LEND,
+            '100000000000000',
+            0,
+            CIRCUIT_BREAKER_LIMIT_RANGE,
+            currentMarketIdx,
+          );
+
+        const tx = await lendingMarketCaller
+          .connect(bob)
+          .unwindPosition(
+            Side.LEND,
+            '125000000000000',
+            CIRCUIT_BREAKER_LIMIT_RANGE,
+            currentMarketIdx,
+          );
+
+        await ethers.provider.send('evm_mine', []);
+
+        await expect(tx)
+          .to.emit(lendingMarket, 'OrderExecuted')
+          .withArgs(
+            bob.address,
+            Side.LEND,
+            targetCurrency,
+            maturity,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            CIRCUIT_BREAKER_LEND_THRESHOLD,
+          );
+
+        await ethers.provider.send('evm_setAutomine', [true]);
       });
     });
   });
