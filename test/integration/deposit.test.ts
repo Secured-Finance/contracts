@@ -605,8 +605,8 @@ describe('Integration Test: Deposit', async () => {
       .mul(BigNumber.from(10).pow(8))
       .div(btcToETHRate);
     const orderAmountInWBTC = orderAmountInBTC
-      .mul(BigNumber.from(10).pow(8).mul(5))
-      .div(wBtcToBTCRate.mul(3));
+      .mul(BigNumber.from(10).pow(8))
+      .div(wBtcToBTCRate);
 
     before(async () => {
       [alice, bob, carol] = await getUsers(3);
@@ -693,7 +693,7 @@ describe('Integration Test: Deposit', async () => {
         wBTCMaturities[0].sub(timestamp),
       );
 
-      expect(coverage.sub('4000').abs()).lte(1);
+      expect(coverage.sub('2857').abs()).lte(1);
       expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
     });
 
@@ -747,7 +747,7 @@ describe('Integration Test: Deposit', async () => {
         filMaturities[0].sub(timestamp),
       );
 
-      expect(coverage.sub('4000').abs()).lte(1);
+      expect(coverage.sub('3333').abs()).lte(1);
       expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
     });
 
