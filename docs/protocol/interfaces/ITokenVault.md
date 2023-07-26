@@ -35,12 +35,6 @@ event CurrencyUpdated(bytes32 ccy, bool isCollateral)
 ### isCovered
 
 ```solidity
-function isCovered(address user, bytes32 ccy, uint256 unsettledExp, enum ProtocolTypes.Side unsettledOrderSide) external view returns (bool)
-```
-
-### isCovered
-
-```solidity
 function isCovered(address user) external view returns (bool)
 ```
 
@@ -132,6 +126,12 @@ function getDepositAmount(address user, bytes32 ccy) external view returns (uint
 
 ```solidity
 function getUsedCurrencies(address user) external view returns (bytes32[])
+```
+
+### calculateCoverage
+
+```solidity
+function calculateCoverage(address user, bytes32 orderCcy, uint256 orderAmount, enum ProtocolTypes.Side orderSide) external view returns (uint256 coverage)
 ```
 
 ### calculateLiquidationFees

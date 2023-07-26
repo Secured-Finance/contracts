@@ -11,10 +11,10 @@ struct RemainingOrder {
 }
 ```
 
-## PartiallyFilledOrder
+## PartiallyRemovedOrder
 
 ```solidity
-struct PartiallyFilledOrder {
+struct PartiallyRemovedOrder {
   uint48 orderId;
   address maker;
   uint256 amount;
@@ -199,28 +199,28 @@ function replaceParent(struct OrderStatisticsTreeLib.Tree self, uint256 a, uint2
 function removeFixup(struct OrderStatisticsTreeLib.Tree self, uint256 value) private
 ```
 
-### estimateDroppedAmountFromLeft
+### calculateDroppedAmountFromLeft
 
 ```solidity
-function estimateDroppedAmountFromLeft(struct OrderStatisticsTreeLib.Tree self, uint256 targetFutureValue) internal view returns (uint256 droppedAmount)
+function calculateDroppedAmountFromLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue) internal view returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV)
 ```
 
-### estimateDroppedAmountFromRight
+### calculateDroppedAmountFromRight
 
 ```solidity
-function estimateDroppedAmountFromRight(struct OrderStatisticsTreeLib.Tree self, uint256 targetFutureValue) internal view returns (uint256 droppedAmount)
+function calculateDroppedAmountFromRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue) internal view returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV)
 ```
 
 ### dropLeft
 
 ```solidity
-function dropLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 value, uint256 filledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct PartiallyFilledOrder partiallyFilledOrder)
+function dropLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue) internal returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV, uint256 remainingAmount, struct PartiallyRemovedOrder partiallyRemovedOrder)
 ```
 
 ### dropRight
 
 ```solidity
-function dropRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 limitValue, uint256 limitFutureValue) internal returns (uint256 value, uint256 filledAmount, uint256 filledFutureValue, uint256 remainingAmount, struct PartiallyFilledOrder partiallyFilledOrder)
+function dropRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue) internal returns (uint256 droppedValue, uint256 droppedAmount, uint256 droppedAmountInFV, uint256 remainingAmount, struct PartiallyRemovedOrder partiallyRemovedOrder)
 ```
 
 ### rotateTreeToLeft
@@ -269,13 +269,11 @@ function insertOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, uin
 function removeOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal returns (uint256 amount)
 ```
 
-### fillOrders
+### removeOrders
 
 ```solidity
-function fillOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount) internal returns (struct PartiallyFilledOrder partiallyFilledOrder)
+function removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint256 _amount) internal returns (struct PartiallyRemovedOrder partiallyRemovedOrder)
 ```
-
-_Reduces order amount once market order taken._
 
 ### addHead
 
@@ -293,6 +291,18 @@ function addTail(struct OrderStatisticsTreeLib.Tree self, uint256 _value, uint48
 
 _Insert a new OrderItem as the new Tail with `_amount` in the amount field, and orderId._
 
+### _calculateDroppedAmountFromLeft
+
+```solidity
+function _calculateDroppedAmountFromLeft(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue, uint256 firstValue) private view returns (uint256 droppedValue, uint256 cursor, uint256 cursorNodeAmount, uint256 droppedAmount, uint256 droppedAmountInFV, uint256 exceededAmount, uint256 exceededAmountInFV)
+```
+
+### _calculateDroppedAmountFromRight
+
+```solidity
+function _calculateDroppedAmountFromRight(struct OrderStatisticsTreeLib.Tree self, uint256 amount, uint256 amountInFV, uint256 limitValue, uint256 lastValue) private view returns (uint256 droppedValue, uint256 cursor, uint256 cursorNodeAmount, uint256 droppedAmount, uint256 droppedAmountInFV, uint256 exceededAmount, uint256 exceededAmountInFV)
+```
+
 ### _createOrder
 
 ```solidity
@@ -309,13 +319,13 @@ function _removeOrder(struct OrderStatisticsTreeLib.Tree self, uint256 value, ui
 
 _Remove the OrderItem denoted by `_id` from the list._
 
-### _dropOrders
+### _removeOrders
 
 ```solidity
-function _dropOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal returns (uint256 amount)
+function _removeOrders(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal returns (uint256 amount)
 ```
 
-_Drop the OrderItems older than or equal `orderId` from the list_
+_Remove the OrderItems older than or equal `orderId` from the list_
 
 ### _setHead
 

@@ -68,10 +68,10 @@ function getLendOrderIds(address _user) public view returns (uint48[] activeOrde
 function getBorrowOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
-### estimateFilledAmount
+### calculateFilledAmount
 
 ```solidity
-function estimateFilledAmount(enum ProtocolTypes.Side _side, uint256 _futureValue) external view returns (uint256 amount)
+function calculateFilledAmount(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
 ```
 
 ### insertOrder
@@ -80,10 +80,10 @@ function estimateFilledAmount(enum ProtocolTypes.Side _side, uint256 _futureValu
 function insertOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external returns (uint48 orderId)
 ```
 
-### dropOrders
+### fillOrders
 
 ```solidity
-function dropOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _futureValue, uint256 _unitPrice) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, uint48 partiallyFilledOrderId, address partiallyFilledMaker, uint256 partiallyFilledAmount, uint256 partiallyFilledFutureValue, uint256 remainingAmount)
+function fillOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _amountInFV, uint256 _unitPrice) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, uint48 partiallyFilledOrderId, address partiallyFilledMaker, uint256 partiallyFilledAmount, uint256 partiallyFilledFutureValue, uint256 remainingAmount)
 ```
 
 ### cleanLendOrders

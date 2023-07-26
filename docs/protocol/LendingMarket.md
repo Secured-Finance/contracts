@@ -379,7 +379,7 @@ Calculates and gets the active and inactive amounts from the user orders of borr
 function getLendOrderIds(address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
-Gets active and inactive order IDs in the lending order book
+Gets active and inactive order IDs in the lending order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -391,29 +391,32 @@ Gets active and inactive order IDs in the lending order book
 function getBorrowOrderIds(address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
-Gets active and inactive order IDs in the borrowing order book
+Gets active and inactive order IDs in the borrowing order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
 
-### estimateFilledAmount
+### calculateFilledAmount
 
 ```solidity
-function estimateFilledAmount(enum ProtocolTypes.Side _side, uint256 _futureValue) external view returns (uint256 amount)
+function calculateFilledAmount(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
 ```
 
-Estimates the filled amount at the time of order creation on the order book
-using the future value amount.
+Calculates the amount to be filled when executing an order in the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
-| _futureValue | uint256 | Future value amount |
+| _amount | uint256 | Amount of funds the user wants to borrow/lend |
+| _unitPrice | uint256 | Unit price user want to borrow/lend |
+| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| amount | uint256 | The estimated amount in the present value that is filled on the order book |
+| lastUnitPrice | uint256 | The last unit price that is filled on the order book |
+| filledAmount | uint256 | The amount that is filled on the order book |
+| filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
 
 ### openMarket
 
@@ -484,8 +487,8 @@ and places new order if not match it.
 | ---- | ---- | ----------- |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
-| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+| _amount | uint256 | Amount of funds the user wants to borrow/lend |
+| _unitPrice | uint256 | Unit price user wish to borrow/lend |
 | _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
@@ -507,7 +510,7 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address |  |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+| _unitPrice | uint256 | Unit price taker wish to borrow/lend |
 
 ### unwindPosition
 
@@ -570,10 +573,10 @@ Unpauses the lending market.
 function _updateUserMaturity(address _user) private
 ```
 
-### _makeOrder
+### _placeOrder
 
 ```solidity
-function _makeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint48 orderId)
+function _placeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint48 orderId)
 ```
 
 Makes a new order in the order book.
@@ -585,10 +588,10 @@ Makes a new order in the order book.
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Preferable interest unit price |
 
-### _takeOrders
+### _fillOrders
 
 ```solidity
-function _takeOrders(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, struct ILendingMarket.PlacedOrder placedOrder)
+function _fillOrders(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, struct ILendingMarket.PlacedOrder placedOrder)
 ```
 
 Takes orders in the order book.
@@ -598,7 +601,7 @@ Takes orders in the order book.
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Amount of unit price taken |
+| _unitPrice | uint256 | Unit price taken |
 | _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after filling orders |
 
 ### _unwindPosition
