@@ -88,6 +88,7 @@ describe('Integration Test: Deposit', async () => {
 
     await tokenVault.updateCurrency(hexETH, true);
     await tokenVault.updateCurrency(hexUSDC, true);
+    await tokenVault.updateCurrency(hexWBTC, true);
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
@@ -155,6 +156,67 @@ describe('Integration Test: Deposit', async () => {
       expect(
         totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
       ).to.equal(initialETHBalance.div(5));
+    });
+  });
+
+  describe('Deposit WBTC, Withdraw all collateral', async () => {
+    before(async () => {
+      [alice] = await getUsers(1);
+    });
+
+    it('Deposit WBTC', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexWBTC);
+
+      await wBTCToken
+        .connect(alice)
+        .approve(tokenVault.address, initialWBTCBalance.div(5));
+      await tokenVault
+        .connect(alice)
+        .deposit(hexWBTC, initialWBTCBalance.div(5));
+
+      const tokenVaultBalance = await wBTCToken.balanceOf(tokenVault.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexWBTC,
+      );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexWBTC,
+      );
+
+      expect(tokenVaultBalance).to.equal(initialWBTCBalance.div(5));
+      expect(currencies.includes(hexWBTC)).to.equal(true);
+      expect(depositAmount).to.equal(initialWBTCBalance.div(5));
+      expect(
+        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
+      ).to.equal(initialWBTCBalance.div(5));
+    });
+
+    it('Withdraw all collateral', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexWBTC);
+
+      await tokenVault
+        .connect(alice)
+        .withdraw(hexWBTC, initialETHBalance.div(5));
+
+      const tokenVaultBalance = await wBTCToken.balanceOf(tokenVault.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexWBTC,
+      );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexWBTC,
+      );
+
+      expect(tokenVaultBalance).to.equal(0);
+      expect(currencies.includes(hexWBTC)).to.equal(false);
+      expect(depositAmount).to.equal(0);
+      expect(
+        totalCollateralAmountBefore.sub(totalCollateralAmountAfter),
+      ).to.equal(initialWBTCBalance.div(5));
     });
   });
 
@@ -389,6 +451,46 @@ describe('Integration Test: Deposit', async () => {
       ).to.equal(initialUSDCBalance.div(5));
     });
 
+    it('Deposit WBTC (ERC20 collateral currency)', async () => {
+      const totalCollateralAmountBefore =
+        await tokenVault.getTotalDepositAmount(hexWBTC);
+      const collateralAmountBefore = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+      await wBTCToken
+        .connect(alice)
+        .approve(tokenVault.address, initialWBTCBalance.div(5));
+      await tokenVault
+        .connect(alice)
+        .deposit(hexWBTC, initialWBTCBalance.div(5));
+
+      const collateralAmountAfter = await tokenVault
+        .connect(alice)
+        .getTotalCollateralAmount(alice.address);
+      const tokenVaultBalance = await wBTCToken.balanceOf(tokenVault.address);
+      const currencies = await tokenVault.getUsedCurrencies(alice.address);
+      const depositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexWBTC,
+      );
+      const totalCollateralAmountAfter = await tokenVault.getTotalDepositAmount(
+        hexWBTC,
+      );
+
+      const estimatedDepositAmountInETH = await currencyController[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ](hexWBTC, initialWBTCBalance.div(5));
+      expect(collateralAmountAfter.sub(collateralAmountBefore)).to.equal(
+        estimatedDepositAmountInETH,
+      );
+      expect(tokenVaultBalance).to.equal(initialWBTCBalance.div(5));
+      expect(currencies.includes(hexWBTC)).to.equal(true);
+      expect(depositAmount).to.equal(initialWBTCBalance.div(5));
+      expect(
+        totalCollateralAmountAfter.sub(totalCollateralAmountBefore),
+      ).to.equal(initialWBTCBalance.div(5));
+    });
+
     it('Withdraw FIL (ERC20 non-collateral currency) with over amount input', async () => {
       const totalCollateralAmountBefore =
         await tokenVault.getTotalDepositAmount(hexWFIL);
@@ -591,7 +693,7 @@ describe('Integration Test: Deposit', async () => {
         wBTCMaturities[0].sub(timestamp),
       );
 
-      expect(coverage.sub('4000').abs()).lte(1);
+      expect(coverage.sub('2857').abs()).lte(1);
       expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
     });
 
@@ -645,7 +747,7 @@ describe('Integration Test: Deposit', async () => {
         filMaturities[0].sub(timestamp),
       );
 
-      expect(coverage.sub('4000').abs()).lte(1);
+      expect(coverage.sub('3333').abs()).lte(1);
       expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
     });
 
