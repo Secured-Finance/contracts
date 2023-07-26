@@ -3,8 +3,9 @@ import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { BigNumber, Contract, Wallet } from 'ethers';
 import { deployments, ethers } from 'hardhat';
+import { LIQUIDATION_THRESHOLD_RATE } from '../test/common/constants';
 import { Side } from '../utils/constants';
-import { hexETH, toBytes32, hexWFIL } from '../utils/strings';
+import { hexETH, hexWFIL, toBytes32 } from '../utils/strings';
 
 describe('ZC e2e test', async () => {
   const targetCurrency = hexWFIL;
@@ -233,6 +234,7 @@ describe('ZC e2e test', async () => {
       await lendingMarketController.calculateFunds(
         targetCurrency,
         bobSigner.address,
+        LIQUIDATION_THRESHOLD_RATE,
       );
 
     // Make lend orders
@@ -297,6 +299,7 @@ describe('ZC e2e test', async () => {
       await lendingMarketController.calculateFunds(
         targetCurrency,
         bobSigner.address,
+        LIQUIDATION_THRESHOLD_RATE,
       );
 
     expect(workingOrdersAmountAfter).to.equal(workingOrdersAmountBefore);
