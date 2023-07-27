@@ -690,19 +690,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             );
         }
 
-        emit OrderExecuted(
+        emit PositionUnwound(
             _user,
             _side,
             Storage.slot().ccy,
             Storage.slot().maturity,
-            0,
-            0,
+            _futureValue,
             filledOrder.amount,
             filledOrder.unitPrice,
             filledOrder.futureValue,
-            0,
-            0,
-            0,
             conditions.cbThresholdUnitPrice
         );
     }

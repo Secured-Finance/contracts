@@ -1664,21 +1664,17 @@ describe('LendingMarket', () => {
               currentMarketIdx,
             ),
         )
-          .to.emit(lendingMarket, 'OrderExecuted')
+          .to.emit(lendingMarket, 'PositionUnwound')
           .withArgs(
             bob.address,
             Side.LEND,
             targetCurrency,
             maturity,
-            0,
-            0,
+            calculateFutureValue('100000000000000', 8000),
             '100000000000000',
             '8500',
             calculateFutureValue('100000000000000', 8500),
-            0,
-            0,
-            0,
-            () => true,
+            CIRCUIT_BREAKER_LEND_THRESHOLD,
           );
       });
 
@@ -1723,17 +1719,13 @@ describe('LendingMarket', () => {
         await ethers.provider.send('evm_mine', []);
 
         await expect(tx)
-          .to.emit(lendingMarket, 'OrderExecuted')
+          .to.emit(lendingMarket, 'PositionUnwound')
           .withArgs(
             bob.address,
             Side.LEND,
             targetCurrency,
             maturity,
-            0,
-            0,
-            0,
-            0,
-            0,
+            calculateFutureValue('100000000000000', 8000),
             0,
             0,
             0,

@@ -78,6 +78,18 @@ interface ILendingMarket {
         uint48 orderId
     );
 
+    event PositionUnwound(
+        address indexed user,
+        ProtocolTypes.Side side,
+        bytes32 indexed ccy,
+        uint256 indexed maturity,
+        uint256 inputFutureValue,
+        uint256 filledAmount,
+        uint256 filledUnitPrice,
+        uint256 filledFutureValue,
+        uint256 cbThresholdUnitPrice
+    );
+
     event MarketOpened(uint256 maturity, uint256 prevMaturity);
 
     event ItayoseExecuted(
