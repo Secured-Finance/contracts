@@ -145,22 +145,32 @@ describe('ReserveFund', () => {
     });
   });
 
-  describe('Emergency Settlement', async () => {
-    it('Execute emergency settlement', async () => {
-      await reserveFundProxy.executeEmergencySettlement();
-    });
-  });
-
   describe('Execute transaction', async () => {
-    it('Call TokenVault', async () => {
-      const payload = mockTokenVault.interface.encodeFunctionData('withdraw', [
-        ethers.utils.formatBytes32String('WETH'),
-        10000,
-      ]);
+    it('Execute emergency settlement', async () => {
+      const payload = mockLendingMarketController.interface.encodeFunctionData(
+        'executeEmergencySettlement',
+      );
       await reserveFundProxy.executeTransaction(
-        mockTokenVault.address,
+        mockLendingMarketController.address,
         payload,
       );
+    });
+
+    it('Execute a deposit transaction', async () => {
+      const approveData = mockWETH.interface.encodeFunctionData(
+        'approve(address,uint256)',
+        [mockWETH.address, 1000],
+      );
+      const depositData = mockTokenVault.interface.encodeFunctionData(
+        'deposit(bytes32,uint256)',
+        [targetCurrency, 1000],
+      );
+
+      const targets = [mockWETH.address, mockTokenVault.address];
+      const values = [0, 0];
+      const data = [approveData, depositData];
+
+      await reserveFundProxy.executeTransactions(targets, values, data);
     });
   });
 });

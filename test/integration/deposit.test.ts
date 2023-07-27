@@ -26,6 +26,7 @@ describe('Integration Test: Deposit', async () => {
 
   let currencyController: Contract;
   let tokenVault: Contract;
+  let reserveFund: Contract;
   let lendingMarketController: Contract;
   let lendingMarketsForWFIL: Contract[] = [];
   let lendingMarketsForWBTC: Contract[] = [];
@@ -69,6 +70,7 @@ describe('Integration Test: Deposit', async () => {
       genesisDate,
       currencyController,
       tokenVault,
+      reserveFund,
       lendingMarketController,
       wETHToken,
       usdcToken,
@@ -1037,6 +1039,80 @@ describe('Integration Test: Deposit', async () => {
         .reverted;
       await expect(tokenVault.getDepositAmount(bob.address, hexWFIL)).not.to.be
         .reverted;
+    });
+  });
+
+  describe('Deposit and withdraw wFIL on ReserveFund contract using MixinWallet transaction function', async () => {
+    let depositAmount: BigNumber;
+    before(async () => {
+      depositAmount = initialFILBalance.div(5);
+    });
+
+    it('Deposit wFIL using wallet transactions', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+
+      // Move some wFIL to ReserveFund address first
+      await wFILToken
+        .connect(owner)
+        .transfer(reserveFund.address, depositAmount);
+
+      const approveData = wFILToken.interface.encodeFunctionData(
+        'approve(address,uint256)',
+        [tokenVault.address, depositAmount],
+      );
+      const depositData = tokenVault.interface.encodeFunctionData(
+        'deposit(bytes32,uint256)',
+        [hexWFIL, depositAmount],
+      );
+      // the owner of ReserveFund execute the approve and deposit transactions on behalf of the ReserveFund
+      await expect(
+        reserveFund
+          .connect(owner)
+          .executeTransactions(
+            [wFILToken.address, tokenVault.address],
+            [0, 0],
+            [approveData, depositData],
+            {},
+          ),
+      ).to.emit(tokenVault, 'Deposit');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter.sub(depositAmountBefore)).to.equal(
+        depositAmount,
+      );
+    });
+
+    it('Withdraw all wFIL deposit using wallet transaction', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+
+      // Withdraw from the reserve funds
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmount],
+      );
+
+      await expect(
+        reserveFund
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountBefore.sub(depositAmountAfter)).to.equal(
+        depositAmount,
+      );
     });
   });
 });

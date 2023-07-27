@@ -40,6 +40,4 @@ interface ILiquidationReceiver {
     function withdraw(bytes32 ccy, uint256 amount) external;
 
     function executeTransaction(address payable to, bytes memory data) external payable;
-
-    function executeEmergencySettlement() external;
 }

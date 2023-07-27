@@ -13,9 +13,9 @@ import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketCon
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
 // utils
 import {Ownable} from "../protocol/utils/Ownable.sol";
-import {Wallet} from "../protocol/utils/Wallet.sol";
+import {MixinWallet} from "../protocol/mixins/MixinWallet.sol";
 
-contract Liquidator is ILiquidationReceiver, Ownable, Wallet {
+contract Liquidator is ILiquidationReceiver, Ownable, MixinWallet {
     bytes32 public immutable baseCurrency;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
@@ -201,8 +201,8 @@ contract Liquidator is ILiquidationReceiver, Ownable, Wallet {
      * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
      */
-    function deposit(bytes32 _ccy, uint256 _amount) external payable override onlyOwner {
-        _deposit(address(tokenVault), _ccy, _amount);
+    function deposit(bytes32 _ccy, uint256 _amount) external payable onlyOwner {
+        _deposit(tokenVault, _ccy, _amount);
     }
 
     /**
@@ -210,28 +210,34 @@ contract Liquidator is ILiquidationReceiver, Ownable, Wallet {
      * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
      */
-    function withdraw(bytes32 _ccy, uint256 _amount) external override onlyOwner {
-        _withdraw(address(tokenVault), _ccy, _amount);
+    function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
+        _withdraw(tokenVault, _ccy, _amount);
     }
 
     /**
-     * @notice Force settlement of all lending and borrowing positions.
+     * @dev Executes an arbitrary transaction by Secured Finance admin.
+     * @param _target Address to be called
+     * @param _data Encoded function data to be executed
      */
-    function executeEmergencySettlement() external override onlyOwner {
-        _executeEmergencySettlement(address(lendingMarketController));
-    }
-
-    /**
-     * @dev Execute an arbitrary transaction by Secured Finance team.
-     * @param _to Address to be called
-     * @param _data Encoded function to be called
-     */
-    function executeTransaction(address payable _to, bytes memory _data)
+    function executeTransaction(address payable _target, bytes calldata _data)
         external
         payable
-        override
         onlyOwner
     {
-        _executeTransaction(_to, _data);
+        _executeTransaction(_target, _data);
+    }
+
+    /**
+     * @dev Executes arbitrary transactions by Secured Finance admin.
+     * @param _targets Array of Addresses to be called
+     * @param _values Array of values to be sent to _targets addresses
+     * @param _data Encoded function data to be executed
+     */
+    function executeTransactions(
+        address[] calldata _targets,
+        uint256[] calldata _values,
+        bytes[] calldata _data
+    ) external payable onlyOwner {
+        _executeTransactions(_targets, _values, _data);
     }
 }
