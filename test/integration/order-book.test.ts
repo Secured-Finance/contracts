@@ -239,7 +239,7 @@ describe('Integration Test: Order Book', async () => {
         expect(bobDepositAmount).to.equal('0');
       });
 
-      it('Unwind all orders', async () => {
+      it('Unwind all positions', async () => {
         await lendingMarketController
           .connect(carol)
           .depositAndExecuteOrder(
@@ -366,7 +366,7 @@ describe('Integration Test: Order Book', async () => {
         expect(bobFILDepositAmount).to.equal('0');
       });
 
-      it('Unwind all orders', async () => {
+      it('Unwind all positions', async () => {
         await tokenVault.connect(dave).deposit(hexETH, depositAmount.mul(2), {
           value: depositAmount.mul(2),
         });
@@ -497,7 +497,7 @@ describe('Integration Test: Order Book', async () => {
         expect(bobFV).to.equal(calculateFutureValue(orderAmount, '8000'));
       });
 
-      it('Unwind a lending order', async () => {
+      it('Unwind a lending position', async () => {
         await wFILToken
           .connect(carol)
           .approve(tokenVault.address, orderAmount.mul(2));
@@ -704,7 +704,7 @@ describe('Integration Test: Order Book', async () => {
         );
       });
 
-      it('Unwind orders partially', async () => {
+      it('Unwind positions partially', async () => {
         const { futureValue: aliceFVBefore } =
           await lendingMarketController.getPosition(
             hexWFIL,
@@ -1074,6 +1074,150 @@ describe('Integration Test: Order Book', async () => {
               '0',
             ),
         ).to.emit(fundManagementLogic, 'OrderFilled');
+      });
+    });
+
+    describe('Unwind lending position used as collateral', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount
+        .mul(3)
+        .div(5)
+        .mul(BigNumber.from(10).pow(18))
+        .div(wFilToETHRate);
+
+      before(async () => {
+        [alice, bob, carol] = await getUsers(3);
+        filMaturities = await lendingMarketController.getMaturities(hexWFIL);
+      });
+
+      after(async () => {
+        const { activeOrders } = await lendingMarketController.getOrders(
+          [hexWFIL],
+          carol.address,
+        );
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(carol)
+            .cancelOrder(hexWFIL, order.maturity, order.orderId);
+        }
+      });
+
+      it('Deposit ETH ', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill an order on the FIL market(1)', async () => {
+        await wFILToken.connect(bob).approve(tokenVault.address, orderAmount);
+
+        await lendingMarketController
+          .connect(bob)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '8000',
+          );
+
+        const { blockHash } = await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '0',
+          );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount,
+          '8000',
+          filMaturities[0].sub(timestamp),
+        );
+
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController
+              .getPosition(hexWFIL, filMaturities[0], address)
+              .then(({ futureValue }) => futureValue),
+          ),
+        );
+
+        expect(bobFV.sub(orderAmount.mul(10).div(8))).lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
+      });
+
+      it('Fill an order on the FIL market(2)', async () => {
+        await wFILToken.connect(alice).approve(tokenVault.address, orderAmount);
+
+        await lendingMarketController
+          .connect(bob)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[1],
+            Side.BORROW,
+            orderAmount.div(2),
+            '8000',
+          );
+
+        const { blockHash } = await lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[1],
+            Side.LEND,
+            orderAmount.div(2),
+            '0',
+          );
+
+        const { timestamp } = await ethers.provider.getBlock(blockHash);
+        const fee = calculateOrderFee(
+          orderAmount.div(2),
+          '8000',
+          filMaturities[1].sub(timestamp),
+        );
+
+        const [aliceFV, bobFV] = await Promise.all(
+          [alice, bob].map(({ address }) =>
+            lendingMarketController
+              .getPosition(hexWFIL, filMaturities[1], address)
+              .then(({ futureValue }) => futureValue),
+          ),
+        );
+
+        expect(bobFV.sub(orderAmount.mul(10).div(16))).lte(1);
+        expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
+      });
+
+      it('Fail to unwind positions due to insufficient collateral', async () => {
+        await wFILToken.connect(carol).approve(tokenVault.address, orderAmount);
+
+        await lendingMarketController
+          .connect(carol)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '8000',
+          );
+
+        await expect(
+          lendingMarketController
+            .connect(bob)
+            .unwindPosition(hexWFIL, filMaturities[0]),
+        ).to.be.revertedWith('Not enough collateral');
       });
     });
   });

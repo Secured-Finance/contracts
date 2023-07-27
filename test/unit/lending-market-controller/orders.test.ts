@@ -2640,7 +2640,7 @@ describe('LendingMarketController - Orders', () => {
       });
     });
 
-    describe('Unwind', async () => {
+    describe('Unwinding', async () => {
       it('Unwind a lending order', async () => {
         await expect(
           lendingMarketControllerProxy
@@ -2914,6 +2914,52 @@ describe('LendingMarketController - Orders', () => {
           );
 
         expect(aliceFV).to.equal('-12500000000000000');
+      });
+
+      it('Fail to execute unwinding due to insufficient collateral', async () => {
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '10000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.LEND,
+              '40000000000000000',
+              '8000',
+            ),
+        ).to.not.emit(fundManagementLogic, 'OrderFilled');
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(carol)
+            .executeOrder(
+              targetCurrency,
+              maturities[0],
+              Side.BORROW,
+              '20000000000000000',
+              '8000',
+            ),
+        ).to.emit(fundManagementLogic, 'OrderFilled');
+
+        await mockTokenVault.mock.isCovered.returns(false);
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(alice)
+            .unwindPosition(targetCurrency, maturities[0]),
+        ).to.be.revertedWith('Not enough collateral');
       });
 
       it('Fail to execute unwinding due to no future values user has', async () => {
