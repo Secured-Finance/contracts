@@ -8,8 +8,8 @@ interface ILendingMarket {
     struct OrderExecutionConditions {
         bool isFilled;
         uint256 executedUnitPrice;
-        uint256 cbThresholdUnitPrice;
         bool ignoreRemainingAmount;
+        bool orderExists;
     }
 
     struct PlacedOrder {
@@ -65,7 +65,7 @@ interface ILendingMarket {
         uint48 placedOrderId,
         uint256 placedAmount,
         uint256 placedUnitPrice,
-        uint256 cbThresholdUnitPrice
+        bool isCircuitBreakerTriggered
     );
 
     event PreOrderExecuted(
@@ -87,7 +87,7 @@ interface ILendingMarket {
         uint256 filledAmount,
         uint256 filledUnitPrice,
         uint256 filledFutureValue,
-        uint256 cbThresholdUnitPrice
+        bool isCircuitBreakerTriggered
     );
 
     event MarketOpened(uint256 maturity, uint256 prevMaturity);

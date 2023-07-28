@@ -398,48 +398,46 @@ library OrderBookLogic {
     )
         external
         returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            uint48 partiallyFilledOrderId,
-            address partiallyFilledMaker,
-            uint256 partiallyFilledAmount,
-            uint256 partiallyFilledFutureValue,
-            uint256 remainingAmount
+            ILendingMarket.FilledOrder memory filledOrder,
+            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 remainingAmount,
+            bool orderExists
         )
     {
         PartiallyRemovedOrder memory partiallyRemovedOrder;
 
         if (_side == ProtocolTypes.Side.BORROW) {
+            OrderStatisticsTreeLib.Tree storage orders = Storage.slot().lendOrders[
+                Storage.slot().maturity
+            ];
             (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
+                filledOrder.unitPrice,
+                filledOrder.amount,
+                filledOrder.futureValue,
                 remainingAmount,
                 partiallyRemovedOrder
-            ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
-                _amount,
-                _amountInFV,
-                _unitPrice
-            );
+            ) = orders.dropRight(_amount, _amountInFV, _unitPrice);
+            orderExists = orders.hasOrders();
         } else if (_side == ProtocolTypes.Side.LEND) {
+            OrderStatisticsTreeLib.Tree storage orders = Storage.slot().borrowOrders[
+                Storage.slot().maturity
+            ];
             (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
+                filledOrder.unitPrice,
+                filledOrder.amount,
+                filledOrder.futureValue,
                 remainingAmount,
                 partiallyRemovedOrder
-            ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
-                _amount,
-                _amountInFV,
-                _unitPrice
-            );
+            ) = orders.dropLeft(_amount, _amountInFV, _unitPrice);
+            orderExists = orders.hasOrders();
         }
 
-        partiallyFilledOrderId = partiallyRemovedOrder.orderId;
-        partiallyFilledMaker = partiallyRemovedOrder.maker;
-        partiallyFilledAmount = partiallyRemovedOrder.amount;
-        partiallyFilledFutureValue = partiallyRemovedOrder.futureValue;
+        partiallyFilledOrder = ILendingMarket.PartiallyFilledOrder(
+            partiallyRemovedOrder.orderId,
+            partiallyRemovedOrder.maker,
+            partiallyRemovedOrder.amount,
+            partiallyRemovedOrder.futureValue
+        );
     }
 
     function cleanLendOrders(address _user)
@@ -598,16 +596,15 @@ library OrderBookLogic {
         returns (
             bool isFilled,
             uint256 executedUnitPrice,
-            uint256 cbThresholdUnitPrice,
-            bool ignoreRemainingAmount
+            bool ignoreRemainingAmount,
+            bool orderExists
         )
     {
         require(_circuitBreakerLimitRange < Constants.PCT_DIGIT, "CB limit can not be so high");
-        cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
-            _side
-        ];
+        uint256 cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[
+            block.number
+        ][_side];
         bool isLend = _side == ProtocolTypes.Side.LEND;
-        bool orderExists;
         uint256 bestUnitPrice;
 
         if (isLend) {
@@ -654,9 +651,11 @@ library OrderBookLogic {
             ignoreRemainingAmount = false;
         }
 
-        isFilled = isLend
-            ? (bestUnitPrice == 0 ? Constants.PRICE_DIGIT : bestUnitPrice) <= executedUnitPrice
-            : bestUnitPrice >= executedUnitPrice;
+        if (orderExists) {
+            isFilled = isLend
+                ? bestUnitPrice <= executedUnitPrice
+                : bestUnitPrice >= executedUnitPrice;
+        }
     }
 
     function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange)

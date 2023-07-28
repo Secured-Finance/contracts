@@ -566,12 +566,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
         OrderExecutionConditions memory conditions;
         PlacedOrder memory placedOrder;
+        bool isCircuitBreakerTriggered;
 
         (
             conditions.isFilled,
             conditions.executedUnitPrice,
-            conditions.cbThresholdUnitPrice,
-            conditions.ignoreRemainingAmount
+            conditions.ignoreRemainingAmount,
+            conditions.orderExists
         ) = OrderBookLogic.getOrderExecutionConditions(
             _side,
             _unitPrice,
@@ -579,19 +580,30 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         );
 
         if (conditions.isFilled) {
-            (filledOrder, partiallyFilledOrder, placedOrder) = _fillOrders(
+            (
+                filledOrder,
+                partiallyFilledOrder,
+                placedOrder,
+                isCircuitBreakerTriggered
+            ) = _fillOrders(
                 _side,
                 _user,
                 _amount,
                 conditions.executedUnitPrice,
                 conditions.ignoreRemainingAmount
             );
-        } else if (!conditions.ignoreRemainingAmount) {
-            placedOrder = PlacedOrder(
-                _placeOrder(_side, _user, _amount, conditions.executedUnitPrice),
-                _amount,
-                conditions.executedUnitPrice
-            );
+        } else {
+            if (!conditions.ignoreRemainingAmount) {
+                placedOrder = PlacedOrder(
+                    _placeOrder(_side, _user, _amount, conditions.executedUnitPrice),
+                    _amount,
+                    conditions.executedUnitPrice
+                );
+            }
+
+            isCircuitBreakerTriggered = _unitPrice == 0
+                ? conditions.orderExists
+                : _unitPrice != conditions.executedUnitPrice;
         }
 
         emit OrderExecuted(
@@ -607,7 +619,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             placedOrder.orderId,
             placedOrder.amount,
             placedOrder.unitPrice,
-            conditions.cbThresholdUnitPrice
+            isCircuitBreakerTriggered
         );
     }
 
@@ -675,19 +687,23 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         require(_futureValue > 0, "Can't place empty future value amount");
 
         OrderExecutionConditions memory conditions;
+        bool isCircuitBreakerTriggered;
+
         (
             conditions.isFilled,
             conditions.executedUnitPrice,
-            conditions.cbThresholdUnitPrice,
-            conditions.ignoreRemainingAmount
+            conditions.ignoreRemainingAmount,
+            conditions.orderExists
         ) = OrderBookLogic.getOrderExecutionConditions(_side, 0, _circuitBreakerLimitRange);
 
         if (conditions.isFilled) {
-            (filledOrder, partiallyFilledOrder) = _unwindPosition(
+            (filledOrder, partiallyFilledOrder, isCircuitBreakerTriggered) = _unwindPosition(
                 _side,
                 _futureValue,
                 conditions.executedUnitPrice
             );
+        } else {
+            isCircuitBreakerTriggered = conditions.orderExists;
         }
 
         emit PositionUnwound(
@@ -699,7 +715,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             filledOrder.amount,
             filledOrder.unitPrice,
             filledOrder.futureValue,
-            conditions.cbThresholdUnitPrice
+            isCircuitBreakerTriggered
         );
     }
 
@@ -745,30 +761,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
             for (uint256 i; i < sides.length; i++) {
                 ProtocolTypes.Side partiallyFilledOrderSide;
-                (
-                    ,
-                    ,
-                    ,
-                    uint48 partiallyFilledOrderId,
-                    address partiallyFilledMaker,
-                    uint256 partiallyFilledAmount,
-                    uint256 partiallyFilledFutureValue,
+                ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder;
+                (, partiallyFilledOrder, , ) = OrderBookLogic.fillOrders(
+                    sides[i],
+                    totalOffsetAmount,
+                    0,
+                    0
+                );
 
-                ) = OrderBookLogic.fillOrders(sides[i], totalOffsetAmount, 0, 0);
-
-                if (partiallyFilledFutureValue > 0) {
+                if (partiallyFilledOrder.futureValue > 0) {
                     if (sides[i] == ProtocolTypes.Side.LEND) {
                         partiallyFilledOrderSide = ProtocolTypes.Side.BORROW;
-                        partiallyFilledBorrowingOrder.orderId = partiallyFilledOrderId;
-                        partiallyFilledBorrowingOrder.maker = partiallyFilledMaker;
-                        partiallyFilledBorrowingOrder.amount = partiallyFilledAmount;
-                        partiallyFilledBorrowingOrder.futureValue = partiallyFilledFutureValue;
+                        partiallyFilledBorrowingOrder = partiallyFilledOrder;
                     } else {
                         partiallyFilledOrderSide = ProtocolTypes.Side.LEND;
-                        partiallyFilledLendingOrder.orderId = partiallyFilledOrderId;
-                        partiallyFilledLendingOrder.maker = partiallyFilledMaker;
-                        partiallyFilledLendingOrder.amount = partiallyFilledAmount;
-                        partiallyFilledLendingOrder.futureValue = partiallyFilledFutureValue;
+                        partiallyFilledLendingOrder = partiallyFilledOrder;
                     }
                 }
             }
@@ -856,21 +863,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (
             FilledOrder memory filledOrder,
             PartiallyFilledOrder memory partiallyFilledOrder,
-            PlacedOrder memory placedOrder
+            PlacedOrder memory placedOrder,
+            bool isCircuitBreakerTriggered
         )
     {
         uint256 remainingAmount;
+        bool orderExists;
 
-        (
-            filledOrder.unitPrice,
-            ,
-            filledOrder.futureValue,
-            partiallyFilledOrder.orderId,
-            partiallyFilledOrder.maker,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue,
-            remainingAmount
-        ) = OrderBookLogic.fillOrders(_side, _amount, 0, _unitPrice);
+        (filledOrder, partiallyFilledOrder, remainingAmount, orderExists) = OrderBookLogic
+            .fillOrders(_side, _amount, 0, _unitPrice);
 
         filledOrder.amount = _amount - remainingAmount;
 
@@ -886,6 +887,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
                 );
             }
         }
+
+        isCircuitBreakerTriggered =
+            orderExists &&
+            _ignoreRemainingAmount &&
+            _amount != filledOrder.amount;
     }
 
     function _unwindPosition(
@@ -894,17 +900,21 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _unitPrice
     )
         private
-        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
+        returns (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            bool isCircuitBreakerTriggered
+        )
     {
-        (
-            filledOrder.unitPrice,
-            filledOrder.amount,
-            filledOrder.futureValue,
-            partiallyFilledOrder.orderId,
-            partiallyFilledOrder.maker,
-            partiallyFilledOrder.amount,
-            partiallyFilledOrder.futureValue,
+        bool orderExists;
 
-        ) = OrderBookLogic.fillOrders(_side, 0, _futureValue, _unitPrice);
+        (filledOrder, partiallyFilledOrder, , orderExists) = OrderBookLogic.fillOrders(
+            _side,
+            0,
+            _futureValue,
+            _unitPrice
+        );
+
+        isCircuitBreakerTriggered = orderExists && _futureValue != filledOrder.futureValue;
     }
 }

@@ -803,6 +803,7 @@ describe('LendingMarket', () => {
 
       return offsetUnitPrice;
     };
+
     describe('Get circuit breaker thresholds', async () => {
       it('Get circuit breaker thresholds on the empty order book', async () => {
         const { maxLendUnitPrice, minBorrowUnitPrice } =
@@ -882,7 +883,7 @@ describe('LendingMarket', () => {
                 0,
                 0,
                 0,
-                () => true,
+                true,
               );
           });
         }
@@ -929,7 +930,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
 
           await expect(carolTx)
@@ -947,7 +948,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              true,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -998,8 +999,10 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
+
+          await ethers.provider.send('evm_mine', []);
 
           await expect(carolTx)
             .to.emit(lendingMarket, 'OrderExecuted')
@@ -1012,13 +1015,11 @@ describe('LendingMarket', () => {
               '0',
               0,
               0,
-              () => true,
               0,
               0,
               0,
-              side === Side.LEND
-                ? CIRCUIT_BREAKER_LEND_THRESHOLD
-                : CIRCUIT_BREAKER_BORROW_THRESHOLD,
+              0,
+              true,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -1048,7 +1049,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
         });
 
@@ -1112,13 +1113,11 @@ describe('LendingMarket', () => {
               '0',
               0,
               0,
-              () => true,
               0,
               0,
               0,
-              side === Side.LEND
-                ? CIRCUIT_BREAKER_LEND_THRESHOLD
-                : CIRCUIT_BREAKER_BORROW_THRESHOLD,
+              0,
+              true,
             );
 
           await expect(carolTx2)
@@ -1136,7 +1135,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -1184,7 +1183,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
 
           await expect(carolTx)
@@ -1198,13 +1197,11 @@ describe('LendingMarket', () => {
               '0',
               0,
               0,
-              () => true,
               0,
               0,
               0,
-              side === Side.LEND
-                ? CIRCUIT_BREAKER_LEND_THRESHOLD
-                : CIRCUIT_BREAKER_BORROW_THRESHOLD,
+              0,
+              true,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -1255,7 +1252,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
 
           await expect(carolTx)
@@ -1269,13 +1266,11 @@ describe('LendingMarket', () => {
               offsetUnitPrice,
               0,
               0,
-              () => true,
               0,
               0,
               0,
-              side === Side.LEND
-                ? CIRCUIT_BREAKER_LEND_THRESHOLD
-                : CIRCUIT_BREAKER_BORROW_THRESHOLD,
+              0,
+              true,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -1347,7 +1342,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
 
           await expect(carolTx)
@@ -1361,12 +1356,11 @@ describe('LendingMarket', () => {
               offsetUnitPrice,
               0,
               0,
-              () => true,
               0,
               0,
               0,
-              unitPrice +
-                (side === Side.LEND ? MAX_DIFFERENCE : -MAX_DIFFERENCE),
+              0,
+              true,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -1438,7 +1432,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
 
           await expect(carolTx)
@@ -1452,12 +1446,11 @@ describe('LendingMarket', () => {
               offsetUnitPrice,
               0,
               0,
-              () => true,
               0,
               0,
               0,
-              unitPrice +
-                (side === Side.LEND ? MIN_DIFFERENCE : -MIN_DIFFERENCE),
+              0,
+              true,
             );
 
           await ethers.provider.send('evm_setAutomine', [true]);
@@ -1528,7 +1521,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
 
           await expect(
@@ -1556,7 +1549,7 @@ describe('LendingMarket', () => {
               0,
               0,
               0,
-              () => true,
+              false,
             );
         });
       });
@@ -1674,7 +1667,7 @@ describe('LendingMarket', () => {
             '100000000000000',
             '8500',
             calculateFutureValue('100000000000000', 8500),
-            CIRCUIT_BREAKER_LEND_THRESHOLD,
+            true,
           );
       });
 
@@ -1729,7 +1722,7 @@ describe('LendingMarket', () => {
             0,
             0,
             0,
-            CIRCUIT_BREAKER_LEND_THRESHOLD,
+            true,
           );
 
         await ethers.provider.send('evm_setAutomine', [true]);
