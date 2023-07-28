@@ -192,6 +192,8 @@ library LendingMarketUserLogic {
         if (currentFutureValue != 0) {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
         }
+
+        require(AddressResolverLib.tokenVault().isCovered(_user), "Not enough collateral");
     }
 
     function updateFundsForTaker(
