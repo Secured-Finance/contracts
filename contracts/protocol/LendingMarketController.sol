@@ -290,18 +290,24 @@ contract LendingMarketController is
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
+     * @param _additionalDepositAmount Additional amount to be deposited with the lending order
+     * @param _ignoreBorrowedAmount The boolean if the borrowed amount is ignored and not used as collateral or not
      * @return lastUnitPrice The last unit price that is filled on the order book
      * @return filledAmount The amount that is filled on the order book
      * @return filledAmountInFV The amount in the future value that is filled on the order book
      * @return orderFeeInFV The order fee amount in the future value
      * @return coverage The rate of collateral used
+     * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
+     * for the deposit amount or not
      */
     function getOrderEstimation(
         bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        uint256 _additionalDepositAmount,
+        bool _ignoreBorrowedAmount
     )
         external
         view
@@ -311,7 +317,8 @@ contract LendingMarketController is
             uint256 filledAmount,
             uint256 filledAmountInFV,
             uint256 orderFeeInFV,
-            uint256 coverage
+            uint256 coverage,
+            bool isInsufficientDepositAmount
         )
     {
         return
@@ -321,7 +328,9 @@ contract LendingMarketController is
                 msg.sender,
                 _side,
                 _amount,
-                _unitPrice
+                _unitPrice,
+                _additionalDepositAmount,
+                _ignoreBorrowedAmount
             );
     }
 
@@ -534,7 +543,15 @@ contract LendingMarketController is
         )
     {
         if (Storage.slot().usedCurrencies[_user].contains(_ccy)) {
-            return FundManagementLogic.calculateFunds(_ccy, _user, _liquidationThresholdRate);
+            AdditionalFunds memory emptyAdditionalFunds;
+
+            return
+                FundManagementLogic.calculateFunds(
+                    _ccy,
+                    _user,
+                    emptyAdditionalFunds,
+                    _liquidationThresholdRate
+                );
         }
     }
 
@@ -542,34 +559,33 @@ contract LendingMarketController is
      * @notice Gets the funds that are calculated from the user's lending and borrowing order list
      * for all currencies in base currency.
      * @param _user User's address
-     * @param _depositCcy Currency name to be used as deposit
-     * @param _depositAmount Amount to deposit
+     * @param _additionalFunds The funds to be added for calculating the total funds
+     * @param _liquidationThresholdRate The liquidation threshold rate
      */
     function calculateTotalFundsInBaseCurrency(
         address _user,
-        bytes32 _depositCcy,
-        uint256 _depositAmount,
+        AdditionalFunds calldata _additionalFunds,
         uint256 _liquidationThresholdRate
     )
         external
         view
         override
         returns (
+            uint256 plusDepositAmountInAdditionalFundsCcy,
+            uint256 minusDepositAmountInAdditionalFundsCcy,
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
             uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount,
-            bool isEnoughDeposit
+            uint256 totalBorrowedAmount
         )
     {
         return
             FundManagementLogic.calculateTotalFundsInBaseCurrency(
                 _user,
-                _depositCcy,
-                _depositAmount,
+                _additionalFunds,
                 _liquidationThresholdRate
             );
     }

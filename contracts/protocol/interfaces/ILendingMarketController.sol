@@ -35,6 +35,14 @@ interface ILendingMarketController {
         bool isReady;
     }
 
+    struct AdditionalFunds {
+        bytes32 ccy;
+        uint256 claimableAmount;
+        uint256 debtAmount;
+        uint256 lentAmount;
+        uint256 borrowedAmount;
+    }
+
     function isTerminated() external view returns (bool);
 
     function isRedemptionRequired(address _user) external view returns (bool);
@@ -54,11 +62,13 @@ interface ILendingMarketController {
     function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
     function getOrderEstimation(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice
+        bytes32 ccy,
+        uint256 maturity,
+        ProtocolTypes.Side side,
+        uint256 amount,
+        uint256 unitPrice,
+        uint256 additionalDepositAmount,
+        bool ignoreBorrowedAmount
     )
         external
         view
@@ -66,8 +76,9 @@ interface ILendingMarketController {
             uint256 lastUnitPrice,
             uint256 filledAmount,
             uint256 filledAmountInFV,
+            uint256 orderFeeInFV,
             uint256 coverage,
-            uint256 orderFeeInFV
+            bool isInsufficientDepositAmount
         );
 
     function getBorrowOrderBook(
@@ -144,21 +155,21 @@ interface ILendingMarketController {
 
     function calculateTotalFundsInBaseCurrency(
         address user,
-        bytes32 depositCcy,
-        uint256 depositAmount,
+        AdditionalFunds calldata _additionalFunds,
         uint256 liquidationThresholdRate
     )
         external
         view
         returns (
+            uint256 plusDepositAmountInAdditionalFundsCcy,
+            uint256 minusDepositAmountInAdditionalFundsCcy,
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
             uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount,
-            bool isEnoughDeposit
+            uint256 totalBorrowedAmount
         );
 
     function isInitializedLendingMarket(bytes32 ccy) external view returns (bool);

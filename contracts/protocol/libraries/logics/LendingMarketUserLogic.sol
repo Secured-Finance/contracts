@@ -31,7 +31,9 @@ library LendingMarketUserLogic {
         address _user,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        uint256 _additionalDepositAmount,
+        bool _ignoreBorrowedAmount
     )
         external
         view
@@ -40,28 +42,27 @@ library LendingMarketUserLogic {
             uint256 filledAmount,
             uint256 filledAmountInFV,
             uint256 orderFeeInFV,
-            uint256 coverage
+            uint256 coverage,
+            bool isInsufficientDepositAmount
         )
     {
-        uint256 circuitBreakerLimitRange = LendingMarketConfigurationLogic
-            .getCircuitBreakerLimitRange(_ccy);
-        uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
-
-        (lastUnitPrice, filledAmount, filledAmountInFV) = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).calculateFilledAmount(_side, _amount, _unitPrice, circuitBreakerLimitRange);
-
-        orderFeeInFV = FundManagementLogic.calculateOrderFeeAmount(
-            _maturity,
-            filledAmountInFV,
-            orderFeeRate
-        );
-
-        coverage = AddressResolverLib.tokenVault().calculateCoverage(
-            _user,
-            _ccy,
+        (
+            lastUnitPrice,
             filledAmount,
-            _side
+            filledAmountInFV,
+            orderFeeInFV
+        ) = _calculateFilledAmountAndFee(_ccy, _maturity, _side, _amount, _unitPrice);
+
+        (coverage, isInsufficientDepositAmount) = _calculateCollateralCoverage(
+            _ccy,
+            _maturity,
+            _user,
+            _side,
+            filledAmount,
+            filledAmountInFV,
+            orderFeeInFV,
+            _additionalDepositAmount,
+            _ignoreBorrowedAmount
         );
     }
 
@@ -403,6 +404,86 @@ library LendingMarketUserLogic {
             amount,
             timestamp,
             isPreOrder
+        );
+    }
+
+    function _calculateFilledAmountAndFee(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    )
+        internal
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV
+        )
+    {
+        uint256 circuitBreakerLimitRange = LendingMarketConfigurationLogic
+            .getCircuitBreakerLimitRange(_ccy);
+        uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
+
+        (lastUnitPrice, filledAmount, filledAmountInFV) = ILendingMarket(
+            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+        ).calculateFilledAmount(_side, _amount, _unitPrice, circuitBreakerLimitRange);
+
+        orderFeeInFV = FundManagementLogic.calculateOrderFeeAmount(
+            _maturity,
+            filledAmountInFV,
+            orderFeeRate
+        );
+    }
+
+    function _calculateCollateralCoverage(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _filledAmount,
+        uint256 _filledAmountInFV,
+        uint256 _orderFeeInFV,
+        uint256 _additionalDepositAmount,
+        bool _ignoreBorrowedAmount
+    ) internal view returns (uint256 coverage, bool isInsufficientDepositAmount) {
+        uint256 filledAmountWithFeeInFV = _filledAmountInFV;
+
+        if (_side == ProtocolTypes.Side.LEND) {
+            filledAmountWithFeeInFV -= _orderFeeInFV;
+        } else {
+            filledAmountWithFeeInFV += _orderFeeInFV;
+        }
+
+        uint256 filledAmountWithFeeInPV = FundManagementLogic.calculatePVFromFV(
+            _ccy,
+            _maturity,
+            filledAmountWithFeeInFV
+        );
+
+        ILendingMarketController.AdditionalFunds memory funds;
+        funds.ccy = _ccy;
+        // Store the _additionalDepositAmount in the borrowedAmount,
+        // because the borrowedAmount is used as collateral.
+        funds.borrowedAmount = _additionalDepositAmount;
+
+        if (filledAmountWithFeeInPV > 0) {
+            if (_side == ProtocolTypes.Side.BORROW) {
+                if (!_ignoreBorrowedAmount) {
+                    funds.borrowedAmount += _filledAmount;
+                }
+                funds.debtAmount += filledAmountWithFeeInPV;
+            } else {
+                funds.lentAmount += _filledAmount;
+                funds.claimableAmount += filledAmountWithFeeInPV;
+            }
+        }
+
+        (coverage, isInsufficientDepositAmount) = AddressResolverLib.tokenVault().calculateCoverage(
+            _user,
+            funds
         );
     }
 
