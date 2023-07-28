@@ -10,13 +10,6 @@ interface ITokenVault {
     event CurrencyRegistered(bytes32 ccy, address tokenAddress, bool isCollateral);
     event CurrencyUpdated(bytes32 ccy, bool isCollateral);
 
-    function isCovered(
-        address user,
-        bytes32 orderCcy,
-        uint256 orderAmount,
-        ProtocolTypes.Side orderSide
-    ) external view returns (bool);
-
     function isCovered(address user) external view returns (bool);
 
     function isCollateral(bytes32 ccy) external view returns (bool);

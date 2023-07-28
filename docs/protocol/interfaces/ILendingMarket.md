@@ -228,10 +228,10 @@ function getLendOrderIds(address user) external view returns (uint48[] activeOrd
 function getBorrowOrderIds(address user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
-### estimateFilledAmount
+### calculateFilledAmount
 
 ```solidity
-function estimateFilledAmount(enum ProtocolTypes.Side side, uint256 futureValue) external view returns (uint256 amount)
+function calculateFilledAmount(enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
 ```
 
 ### openMarket

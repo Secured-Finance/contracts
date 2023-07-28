@@ -99,6 +99,12 @@ function getLendUnitPrices(bytes32 ccy) external view returns (uint256[] unitPri
 function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
 ```
 
+### getOrderEstimation
+
+```solidity
+function getOrderEstimation(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 coverage, uint256 orderFeeInFV)
+```
+
 ### getBorrowOrderBook
 
 ```solidity
@@ -162,13 +168,13 @@ function getPositions(bytes32[] ccys, address user) external view returns (struc
 ### calculateFunds
 
 ```solidity
-function calculateFunds(bytes32 ccy, address user) external view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+function calculateFunds(bytes32 ccy, address user, uint256 liquidationThresholdRate) external view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address user, bytes32 depositCcy, uint256 depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address user, bytes32 depositCcy, uint256 depositAmount, uint256 liquidationThresholdRate) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
 ```
 
 ### isInitializedLendingMarket

@@ -19,7 +19,7 @@ struct CalculatedFundVars {
 ### isCovered
 
 ```solidity
-function isCovered(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, bool _isUnsettledBorrowOrder) public view returns (bool)
+function isCovered(address _user) public view returns (bool)
 ```
 
 ### getUsedCurrencies
@@ -44,6 +44,12 @@ function getCollateralAmount(address _user) public view returns (uint256 totalCo
 
 ```solidity
 function getCollateralAmount(address _user, bytes32 _ccy) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+```
+
+### calculateCoverage
+
+```solidity
+function calculateCoverage(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, bool _isUnsettledBorrowOrder) external view returns (uint256 coverage)
 ```
 
 ### calculateCollateral

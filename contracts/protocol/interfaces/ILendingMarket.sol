@@ -83,7 +83,7 @@ interface ILendingMarket {
         ProtocolTypes.Side side,
         bytes32 indexed ccy,
         uint256 indexed maturity,
-        uint256 futureValue,
+        uint256 inputFutureValue,
         uint256 filledAmount,
         uint256 filledUnitPrice,
         uint256 filledFutureValue,

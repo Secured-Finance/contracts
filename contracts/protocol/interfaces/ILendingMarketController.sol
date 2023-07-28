@@ -125,7 +125,11 @@ interface ILendingMarketController {
         view
         returns (Position[] memory positions);
 
-    function calculateFunds(bytes32 ccy, address user)
+    function calculateFunds(
+        bytes32 ccy,
+        address user,
+        uint256 liquidationThresholdRate
+    )
         external
         view
         returns (
@@ -141,7 +145,8 @@ interface ILendingMarketController {
     function calculateTotalFundsInBaseCurrency(
         address user,
         bytes32 depositCcy,
-        uint256 depositAmount
+        uint256 depositAmount,
+        uint256 liquidationThresholdRate
     )
         external
         view

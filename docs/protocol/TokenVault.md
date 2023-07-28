@@ -74,25 +74,6 @@ receive() external payable
 ### isCovered
 
 ```solidity
-function isCovered(address _user, bytes32 _unsettledOrderCcy, uint256 _unsettledOrderAmount, enum ProtocolTypes.Side _unsettledOrderSide) external view returns (bool)
-```
-
-Gets if the collateral has enough coverage.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _user | address | User's address |
-| _unsettledOrderCcy | bytes32 | Additional unsettled order currency name in bytes32 |
-| _unsettledOrderAmount | uint256 | Additional unsettled order amount |
-| _unsettledOrderSide | enum ProtocolTypes.Side |  |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the collateral has sufficient coverage or not |
-
-### isCovered
-
-```solidity
 function isCovered(address _user) public view returns (bool)
 ```
 
@@ -348,6 +329,25 @@ Gets the currencies that the user used as collateral.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | bytes32[] | The currency names in bytes32 |
+
+### calculateCoverage
+
+```solidity
+function calculateCoverage(address _user, bytes32 _orderCcy, uint256 _orderAmount, enum ProtocolTypes.Side _orderSide) external view returns (uint256 coverage)
+```
+
+Calculates the rate of collateral used.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _orderCcy | bytes32 | Currency name in bytes32 of an order to be added |
+| _orderAmount | uint256 | Amount of an order to be added |
+| _orderSide | enum ProtocolTypes.Side | Order position type of an order to be added |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| coverage | uint256 | The rate of collateral used |
 
 ### calculateLiquidationFees
 

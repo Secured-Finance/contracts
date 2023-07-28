@@ -6,6 +6,8 @@
 
 ```solidity
 struct CalculatedTotalFundInBaseCurrencyVars {
+  address user;
+  uint256 liquidationThresholdRate;
   bool[] isCollateral;
   bytes32 ccy;
   uint256[] amounts;
@@ -176,13 +178,13 @@ function calculateActualFunds(bytes32 _ccy, uint256 _maturity, address _user) pu
 ### calculateFunds
 
 ```solidity
-function calculateFunds(bytes32 _ccy, address _user) public view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+function calculateFunds(bytes32 _ccy, address _user, uint256 _liquidationThresholdRate) public view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address _user, bytes32 _depositCcy, uint256 _depositAmount) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address _user, bytes32 _depositCcy, uint256 _depositAmount, uint256 _liquidationThresholdRate) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
 ```
 
 ### getUsedMaturities
@@ -269,6 +271,12 @@ function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue
 function calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) public pure returns (int256)
 ```
 
+### calculateOrderFeeAmount
+
+```solidity
+function calculateOrderFeeAmount(uint256 _maturity, uint256 _amount, uint256 _orderFeeRate) public view returns (uint256 orderFeeAmount)
+```
+
 ### _convertToBaseCurrencyAtMarketTerminationPrice
 
 ```solidity
@@ -279,12 +287,6 @@ function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _am
 
 ```solidity
 function _convertFromBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount) internal view returns (uint256)
-```
-
-### _calculateOrderFeeAmount
-
-```solidity
-function _calculateOrderFeeAmount(uint256 _maturity, uint256 _amount, uint256 _orderFeeRate) internal view returns (uint256 orderFeeAmount)
 ```
 
 ### _resetFundsPerCurrency

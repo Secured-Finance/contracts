@@ -57,7 +57,7 @@ const currencies: Currency[] = [
     haircut: 0,
     orderFeeRate: 100,
     circuitBreakerLimitRange: 1000,
-    isCollateral: false,
+    isCollateral: true,
     args: ['4000000000000'], // 40,000 BTC
   },
   {

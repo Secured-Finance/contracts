@@ -10,8 +10,11 @@ import { Side } from '../../../utils/constants';
 import { getGenesisDate } from '../../../utils/dates';
 import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
+  HAIRCUT,
   INITIAL_COMPOUND_FACTOR,
+  LIQUIDATION_THRESHOLD_RATE,
   ORDER_FEE_RATE,
+  PCT_DIGIT,
 } from '../../common/constants';
 import {
   calculateFutureValue,
@@ -1522,10 +1525,15 @@ describe('LendingMarketController - Orders', () => {
         .executeOrder(targetCurrency, maturities[1], Side.LEND, '100', '7999');
 
       await lendingMarketControllerProxy
-        .calculateFunds(targetCurrency, alice.address)
-        .then(({ claimableAmount, debtAmount }) => {
+        .calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        )
+        .then(({ collateralAmount, claimableAmount, debtAmount }) => {
           expect(claimableAmount).to.equal('100000000000000000');
           expect(debtAmount).to.equal('50000000000000000');
+          expect(collateralAmount).to.equal('92500000000000000');
         });
 
       const totalPresentValue =
@@ -1539,10 +1547,19 @@ describe('LendingMarketController - Orders', () => {
       await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
 
       await lendingMarketControllerProxy
-        .calculateFunds(targetCurrency, alice.address)
-        .then(({ claimableAmount, debtAmount }) => {
+        .calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        )
+        .then(({ collateralAmount, claimableAmount, debtAmount }) => {
           expect(claimableAmount).not.to.equal('0');
           expect(debtAmount).to.equal('0');
+          expect(
+            collateralAmount
+              .sub(claimableAmount.mul(HAIRCUT).div(PCT_DIGIT))
+              .abs(),
+          ).lte(1);
         });
     });
 
@@ -1621,10 +1638,15 @@ describe('LendingMarketController - Orders', () => {
         .executeOrder(targetCurrency, maturities[1], Side.LEND, '100', '7999');
 
       await lendingMarketControllerProxy
-        .calculateFunds(targetCurrency, alice.address)
-        .then(({ claimableAmount, debtAmount }) => {
+        .calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        )
+        .then(({ collateralAmount, claimableAmount, debtAmount }) => {
           expect(claimableAmount).to.equal('50000000000000000');
           expect(debtAmount).to.equal('100000000000000000');
+          expect(collateralAmount).to.equal('50000000000000000');
         });
 
       const totalPresentValue =
@@ -1638,10 +1660,15 @@ describe('LendingMarketController - Orders', () => {
       await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
 
       await lendingMarketControllerProxy
-        .calculateFunds(targetCurrency, alice.address)
-        .then(({ claimableAmount, debtAmount }) => {
+        .calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        )
+        .then(({ collateralAmount, claimableAmount, debtAmount }) => {
           expect(claimableAmount).to.equal('0');
           expect(debtAmount).not.to.equal('0');
+          expect(collateralAmount).to.equal('0');
         });
     });
 
