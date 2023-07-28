@@ -45,6 +45,18 @@ struct LendingMarketDetail {
 }
 ```
 
+### AdditionalFunds
+
+```solidity
+struct AdditionalFunds {
+  bytes32 ccy;
+  uint256 claimableAmount;
+  uint256 debtAmount;
+  uint256 lentAmount;
+  uint256 borrowedAmount;
+}
+```
+
 ### isTerminated
 
 ```solidity
@@ -102,7 +114,7 @@ function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] unitPric
 ### getOrderEstimation
 
 ```solidity
-function getOrderEstimation(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 coverage, uint256 orderFeeInFV)
+function getOrderEstimation(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice, uint256 additionalDepositAmount, bool ignoreBorrowedAmount) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### getBorrowOrderBook
@@ -174,7 +186,7 @@ function calculateFunds(bytes32 ccy, address user, uint256 liquidationThresholdR
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address user, bytes32 depositCcy, uint256 depositAmount, uint256 liquidationThresholdRate) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 liquidationThresholdRate) external view returns (uint256 plusDepositAmountInAdditionalFundsCcy, uint256 minusDepositAmountInAdditionalFundsCcy, uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
 ```
 
 ### isInitializedLendingMarket

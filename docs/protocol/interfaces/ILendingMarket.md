@@ -8,8 +8,8 @@
 struct OrderExecutionConditions {
   bool isFilled;
   uint256 executedUnitPrice;
-  uint256 cbThresholdUnitPrice;
   bool ignoreRemainingAmount;
+  bool orderExists;
 }
 ```
 
@@ -60,7 +60,7 @@ event OrdersCleaned(uint48[] orderIds, address maker, enum ProtocolTypes.Side si
 ### OrderExecuted
 
 ```solidity
-event OrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 inputUnitPrice, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, uint48 placedOrderId, uint256 placedAmount, uint256 placedUnitPrice, uint256 cbThresholdUnitPrice)
+event OrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 inputUnitPrice, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, uint48 placedOrderId, uint256 placedAmount, uint256 placedUnitPrice, bool isCircuitBreakerTriggered)
 ```
 
 ### PreOrderExecuted
@@ -72,7 +72,7 @@ event PreOrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, 
 ### PositionUnwound
 
 ```solidity
-event PositionUnwound(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 futureValue, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, uint256 cbThresholdUnitPrice)
+event PositionUnwound(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputFutureValue, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, bool isCircuitBreakerTriggered)
 ```
 
 ### MarketOpened

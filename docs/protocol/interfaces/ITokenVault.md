@@ -131,13 +131,13 @@ function getUsedCurrencies(address user) external view returns (bytes32[])
 ### calculateCoverage
 
 ```solidity
-function calculateCoverage(address user, bytes32 orderCcy, uint256 orderAmount, enum ProtocolTypes.Side orderSide) external view returns (uint256 coverage)
+function calculateCoverage(address user, struct ILendingMarketController.AdditionalFunds funds) external view returns (uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### calculateLiquidationFees
 
 ```solidity
-function calculateLiquidationFees(uint256 _liquidationAmount) external view returns (uint256 protocolFee, uint256 liquidatorFee)
+function calculateLiquidationFees(uint256 liquidationAmount) external view returns (uint256 protocolFee, uint256 liquidatorFee)
 ```
 
 ### getCollateralParameters

@@ -83,7 +83,7 @@ function insertOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amou
 ### fillOrders
 
 ```solidity
-function fillOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _amountInFV, uint256 _unitPrice) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, uint48 partiallyFilledOrderId, address partiallyFilledMaker, uint256 partiallyFilledAmount, uint256 partiallyFilledFutureValue, uint256 remainingAmount)
+function fillOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _amountInFV, uint256 _unitPrice) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, uint256 remainingAmount, bool orderExists)
 ```
 
 ### cleanLendOrders
@@ -113,7 +113,7 @@ function getOpeningUnitPrice() external view returns (uint256 openingUnitPrice, 
 ### getOrderExecutionConditions
 
 ```solidity
-function getOrderExecutionConditions(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, uint256 cbThresholdUnitPrice, bool ignoreRemainingAmount)
+function getOrderExecutionConditions(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
 ```
 
 ### getCircuitBreakerThresholds

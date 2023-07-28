@@ -591,7 +591,7 @@ Makes a new order in the order book.
 ### _fillOrders
 
 ```solidity
-function _fillOrders(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, struct ILendingMarket.PlacedOrder placedOrder)
+function _fillOrders(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, struct ILendingMarket.PlacedOrder placedOrder, bool isCircuitBreakerTriggered)
 ```
 
 Takes orders in the order book.
@@ -607,6 +607,6 @@ Takes orders in the order book.
 ### _unwindPosition
 
 ```solidity
-function _unwindPosition(enum ProtocolTypes.Side _side, uint256 _futureValue, uint256 _unitPrice) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function _unwindPosition(enum ProtocolTypes.Side _side, uint256 _futureValue, uint256 _unitPrice) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, bool isCircuitBreakerTriggered)
 ```
 

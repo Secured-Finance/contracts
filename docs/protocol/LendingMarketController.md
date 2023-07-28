@@ -279,7 +279,7 @@ Gets mid prices per future value for the selected currency.
 ### getOrderEstimation
 
 ```solidity
-function getOrderEstimation(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage)
+function getOrderEstimation(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _additionalDepositAmount, bool _ignoreBorrowedAmount) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
@@ -291,6 +291,8 @@ Gets the estimated order result by the calculation of the amount to be filled wh
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
+| _additionalDepositAmount | uint256 | Additional amount to be deposited with the lending order |
+| _ignoreBorrowedAmount | bool | The boolean if the borrowed amount is ignored and not used as collateral or not |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -299,6 +301,7 @@ Gets the estimated order result by the calculation of the amount to be filled wh
 | filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
 | orderFeeInFV | uint256 | The order fee amount in the future value |
 | coverage | uint256 | The rate of collateral used |
+| isInsufficientDepositAmount | bool | The boolean if the order amount for lending in the selected currency is insufficient for the deposit amount or not |
 
 ### getBorrowOrderBook
 
@@ -504,7 +507,7 @@ for the selected currency.
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address _user, bytes32 _depositCcy, uint256 _depositAmount, uint256 _liquidationThresholdRate) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (uint256 plusDepositAmountInAdditionalFundsCcy, uint256 minusDepositAmountInAdditionalFundsCcy, uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
 ```
 
 Gets the funds that are calculated from the user's lending and borrowing order list
@@ -513,9 +516,8 @@ for all currencies in base currency.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
-| _depositCcy | bytes32 | Currency name to be used as deposit |
-| _depositAmount | uint256 | Amount to deposit |
-| _liquidationThresholdRate | uint256 |  |
+| _additionalFunds | struct ILendingMarketController.AdditionalFunds | The funds to be added for calculating the total funds |
+| _liquidationThresholdRate | uint256 | The liquidation threshold rate |
 
 ### isInitializedLendingMarket
 

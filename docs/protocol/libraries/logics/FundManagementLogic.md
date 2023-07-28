@@ -7,13 +7,10 @@
 ```solidity
 struct CalculatedTotalFundInBaseCurrencyVars {
   address user;
+  struct ILendingMarketController.AdditionalFunds additionalFunds;
   uint256 liquidationThresholdRate;
   bool[] isCollateral;
-  bytes32 ccy;
-  uint256[] amounts;
-  uint256[] amountsInBaseCurrency;
-  uint256 plusDepositAmount;
-  uint256 minusDepositAmount;
+  bytes32[] ccys;
 }
 ```
 
@@ -178,13 +175,13 @@ function calculateActualFunds(bytes32 _ccy, uint256 _maturity, address _user) pu
 ### calculateFunds
 
 ```solidity
-function calculateFunds(bytes32 _ccy, address _user, uint256 _liquidationThresholdRate) public view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+function calculateFunds(bytes32 _ccy, address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) public view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
 ```
 
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address _user, bytes32 _depositCcy, uint256 _depositAmount, uint256 _liquidationThresholdRate) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (uint256 plusDepositAmountInAdditionalFundsCcy, uint256 minusDepositAmountInAdditionalFundsCcy, uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
 ```
 
 ### getUsedMaturities
@@ -257,6 +254,12 @@ function _calculatePVandFVInDefaultMarket(bytes32 _ccy, uint256 _maturity, int25
 
 ```solidity
 function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue) public view returns (int256 presentValue)
+```
+
+### calculatePVFromFV
+
+```solidity
+function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, uint256 _futureValue) public view returns (uint256 presentValue)
 ```
 
 ### calculateFVFromPV
