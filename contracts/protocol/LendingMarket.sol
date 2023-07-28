@@ -602,7 +602,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             }
 
             isCircuitBreakerTriggered = _unitPrice == 0
-                ? isCircuitBreakerTriggered = conditions.orderExists
+                ? conditions.orderExists
                 : _unitPrice != conditions.executedUnitPrice;
         }
 
