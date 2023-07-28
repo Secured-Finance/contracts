@@ -223,7 +223,7 @@ describe('Performance Test: Order Book', async () => {
                 0,
                 0,
                 0,
-                () => true,
+                false,
               );
 
             const receipt = await tx.wait();

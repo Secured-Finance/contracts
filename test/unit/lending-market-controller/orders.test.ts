@@ -417,7 +417,7 @@ describe('LendingMarketController - Orders', () => {
               1,
               '100000000000000000',
               '8720',
-              () => true,
+              false,
             );
         });
 
@@ -1996,7 +1996,7 @@ describe('LendingMarketController - Orders', () => {
             0,
             0,
             0,
-            () => true,
+            false,
           );
       });
 
@@ -2049,7 +2049,7 @@ describe('LendingMarketController - Orders', () => {
             0,
             0,
             0,
-            () => true,
+            false,
           );
       });
 
@@ -2122,7 +2122,7 @@ describe('LendingMarketController - Orders', () => {
             0,
             0,
             0,
-            () => true,
+            false,
           );
       });
 
@@ -2184,7 +2184,7 @@ describe('LendingMarketController - Orders', () => {
             0,
             0,
             0,
-            () => true,
+            false,
           );
       });
 
@@ -2235,7 +2235,7 @@ describe('LendingMarketController - Orders', () => {
             3,
             '20000000000000000',
             '8800',
-            () => true,
+            false,
           );
       });
 
