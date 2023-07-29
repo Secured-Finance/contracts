@@ -35,6 +35,11 @@ describe('Integration Test: Deposit', async () => {
 
   let fundManagementLogic: Contract;
 
+  let addressResolver: Contract;
+  let mockUniswapRouter: Contract;
+  let mockUniswapQuoter: Contract;
+  let liquidator: Contract;
+
   let genesisDate: number;
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
@@ -66,6 +71,7 @@ describe('Integration Test: Deposit', async () => {
 
     ({
       genesisDate,
+      addressResolver,
       currencyController,
       tokenVault,
       reserveFund,
@@ -1122,18 +1128,76 @@ describe('Integration Test: Deposit', async () => {
     });
   });
 
-  describe('Deposit and withdraw wFIL on ReserveFund contract using MixinWallet transaction function', async () => {
-    let depositAmount: BigNumber;
+  describe('Deposit and withdraw wFIL using MixinWallet', async () => {
     before(async () => {
-      depositAmount = initialFILBalance.div(5);
+      mockUniswapRouter = await ethers
+        .getContractFactory('MockUniswapRouter')
+        .then((factory) =>
+          factory.deploy(addressResolver.address, wETHToken.address),
+        );
+      mockUniswapQuoter = await ethers
+        .getContractFactory('MockUniswapQuoter')
+        .then((factory) =>
+          factory.deploy(addressResolver.address, wETHToken.address),
+        );
+
+      liquidator = await ethers
+        .getContractFactory('Liquidator')
+        .then((factory) =>
+          factory.deploy(
+            hexETH,
+            lendingMarketController.address,
+            tokenVault.address,
+            mockUniswapRouter.address,
+            mockUniswapQuoter.address,
+          ),
+        );
+    });
+    it('Deposit wFIL on ReserveFund contract', async () => {
+      const depositAmount = initialFILBalance.div(5);
+      await wFILToken
+        .connect(owner)
+        .approve(reserveFund.address, depositAmount);
+
+      // the owner of ReserveFund execute the approve and deposit transactions on behalf of the ReserveFund
+      await expect(
+        reserveFund.connect(owner).deposit(hexWFIL, depositAmount),
+      ).to.emit(tokenVault, 'Deposit');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
     });
 
-    it('Deposit wFIL using wallet transactions', async () => {
+    it('Withdraw all wFIL deposit on ReserveFund contract', async () => {
       const depositAmountBefore = await tokenVault.getDepositAmount(
         reserveFund.address,
         hexWFIL,
       );
+      expect(depositAmountBefore).not.equal(0);
 
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmountBefore],
+      );
+
+      await expect(
+        reserveFund
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter).to.equal(0);
+    });
+
+    it('Deposit wFIL on ReserveFund contract using wallet transactions', async () => {
+      const depositAmount = initialFILBalance.div(5);
       // Move some wFIL to ReserveFund address first
       await wFILToken
         .connect(owner)
@@ -1163,21 +1227,20 @@ describe('Integration Test: Deposit', async () => {
         reserveFund.address,
         hexWFIL,
       );
-      expect(depositAmountAfter.sub(depositAmountBefore)).to.equal(
-        depositAmount,
-      );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
     });
 
-    it('Withdraw all wFIL deposit using wallet transaction', async () => {
+    it('Withdraw all wFIL deposit on ReserveFund contract using wallet transaction', async () => {
       const depositAmountBefore = await tokenVault.getDepositAmount(
         reserveFund.address,
         hexWFIL,
       );
+      expect(depositAmountBefore).not.equal(0);
 
       // Withdraw from the reserve funds
       const withdrawPayload = tokenVault.interface.encodeFunctionData(
         'withdraw(bytes32,uint256)',
-        [hexWFIL, depositAmount],
+        [hexWFIL, depositAmountBefore],
       );
 
       await expect(
@@ -1190,9 +1253,109 @@ describe('Integration Test: Deposit', async () => {
         reserveFund.address,
         hexWFIL,
       );
-      expect(depositAmountBefore.sub(depositAmountAfter)).to.equal(
-        depositAmount,
+      expect(depositAmountAfter).to.equal(0);
+    });
+
+    it('Deposit wFIL on Liquidator contract', async () => {
+      const depositAmount = initialFILBalance.div(5);
+      // Move some wFIL to Liquidator address first
+      await wFILToken.connect(owner).approve(liquidator.address, depositAmount);
+
+      // the owner of Liquidator contract execute the approve and deposit transactions on behalf of the ReserveFund
+      await expect(
+        liquidator.connect(owner).deposit(hexWFIL, depositAmount),
+      ).to.emit(tokenVault, 'Deposit');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
       );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
+    });
+
+    it('Withdraw all wFIL deposit on Liquidator contract', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountBefore).not.equal(0);
+
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmountBefore],
+      );
+
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter).to.equal(0);
+    });
+
+    it('Deposit wFIL on Liquidator contract using wallet transactions', async () => {
+      const depositAmount = initialFILBalance.div(5);
+      // Move some wFIL to Liquidator address first
+      await wFILToken
+        .connect(owner)
+        .transfer(liquidator.address, depositAmount);
+
+      const approveData = wFILToken.interface.encodeFunctionData(
+        'approve(address,uint256)',
+        [tokenVault.address, depositAmount],
+      );
+      const depositData = tokenVault.interface.encodeFunctionData(
+        'deposit(bytes32,uint256)',
+        [hexWFIL, depositAmount],
+      );
+      // the owner of ReserveFund execute the approve and deposit transactions on behalf of the ReserveFund
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeTransactions(
+            [wFILToken.address, tokenVault.address],
+            [0, 0],
+            [approveData, depositData],
+            {},
+          ),
+      ).to.emit(tokenVault, 'Deposit');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
+    });
+
+    it('Withdraw all wFIL deposit on liquidator contract using wallet transaction', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountBefore).not.equal(0);
+
+      // Withdraw from the reserve funds
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmountBefore],
+      );
+
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter).to.equal(0);
     });
   });
 });

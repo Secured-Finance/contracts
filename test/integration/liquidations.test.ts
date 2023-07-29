@@ -965,6 +965,25 @@ describe('Integration Test: Liquidations', async () => {
         expect(receivedDebtAmount).lt(filledOrderAmount.div(2));
         expect(receivedCollateralAmount).gt(depositAmount);
       });
+
+      it('Withdraw funds on Liquidator contract', async () => {
+        const beforeWithdrawal = await tokenVault.getDepositAmount(
+          liquidator.address,
+          hexWFIL,
+        );
+        expect(beforeWithdrawal).not.equal(0);
+
+        // owner withdraws fund on Liquidator contract
+        await expect(
+          liquidator.connect(owner).withdraw(hexWFIL, beforeWithdrawal),
+        ).to.emit(tokenVault, 'Withdraw');
+
+        const afterWithdrawal = await tokenVault.getDepositAmount(
+          liquidator.address,
+          hexWFIL,
+        );
+        expect(afterWithdrawal).equal(0);
+      });
     });
 
     describe('Liquidate partially due to insufficient collateral without the reserve fund after auto-roll', async () => {

@@ -12,10 +12,9 @@ import {ERC20Handler} from "../protocol/libraries/ERC20Handler.sol";
 import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketController.sol";
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
 // utils
-import {Ownable} from "../protocol/utils/Ownable.sol";
 import {MixinWallet} from "../protocol/mixins/MixinWallet.sol";
 
-contract Liquidator is ILiquidationReceiver, Ownable, MixinWallet {
+contract Liquidator is ILiquidationReceiver, MixinWallet {
     bytes32 public immutable baseCurrency;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
@@ -167,6 +166,24 @@ contract Liquidator is ILiquidationReceiver, Ownable, MixinWallet {
         return true;
     }
 
+    /**
+     * @dev Deposits funds by the caller into the token vault.
+     * @param _amount Amount of funds to deposit
+     * @param _ccy Currency name in bytes32
+     */
+    function deposit(bytes32 _ccy, uint256 _amount) external payable onlyOwner {
+        _deposit(tokenVault, _ccy, _amount);
+    }
+
+    /**
+     * @dev Withdraws funds by the caller from the token vault.
+     * @param _amount Amount of funds to deposit
+     * @param _ccy Currency name in bytes32
+     */
+    function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
+        _withdraw(tokenVault, _ccy, _amount);
+    }
+
     function _executeSwap(
         address _ccyFrom,
         address _ccyTo,
@@ -194,50 +211,5 @@ contract Liquidator is ILiquidationReceiver, Ownable, MixinWallet {
         });
 
         return uniswapRouter.exactInputSingle{value: ethAmount}(params);
-    }
-
-    /**
-     * @dev Deposits funds by the caller into the token vault as reserve fund.
-     * @param _amount Amount of funds to deposit
-     * @param _ccy Currency name in bytes32
-     */
-    function deposit(bytes32 _ccy, uint256 _amount) external payable onlyOwner {
-        _deposit(tokenVault, _ccy, _amount);
-    }
-
-    /**
-     * @dev Withdraw funds by the caller from the token vault.
-     * @param _amount Amount of funds to deposit
-     * @param _ccy Currency name in bytes32
-     */
-    function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
-        _withdraw(tokenVault, _ccy, _amount);
-    }
-
-    /**
-     * @dev Executes an arbitrary transaction by Secured Finance admin.
-     * @param _target Address to be called
-     * @param _data Encoded function data to be executed
-     */
-    function executeTransaction(address payable _target, bytes calldata _data)
-        external
-        payable
-        onlyOwner
-    {
-        _executeTransaction(_target, _data);
-    }
-
-    /**
-     * @dev Executes arbitrary transactions by Secured Finance admin.
-     * @param _targets Array of Addresses to be called
-     * @param _values Array of values to be sent to _targets addresses
-     * @param _data Encoded function data to be executed
-     */
-    function executeTransactions(
-        address[] calldata _targets,
-        uint256[] calldata _values,
-        bytes[] calldata _data
-    ) external payable onlyOwner {
-        _executeTransactions(_targets, _values, _data);
     }
 }

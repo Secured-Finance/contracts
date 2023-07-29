@@ -9,7 +9,6 @@ import {ERC20Handler} from "./libraries/ERC20Handler.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
-import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 import {MixinWallet} from "./mixins/MixinWallet.sol";
 // storages
@@ -18,7 +17,7 @@ import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
 /**
  * @notice Implements managing of the reserve fund.
  */
-contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, MixinWallet {
+contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyable {
     receive() external payable {}
 
     /**
@@ -87,32 +86,5 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable, 
      */
     function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
         _withdraw(tokenVault(), _ccy, _amount);
-    }
-
-    /**
-     * @dev Executes an arbitrary transaction by Secured Finance admin.
-     * @param _target Address to be called
-     * @param _data Encoded function data to be executed
-     */
-    function executeTransaction(address payable _target, bytes calldata _data)
-        external
-        payable
-        onlyOwner
-    {
-        _executeTransaction(_target, _data);
-    }
-
-    /**
-     * @dev Executes arbitrary transactions by Secured Finance admin.
-     * @param _targets Array of Addresses to be called
-     * @param _values Array of values to be sent to _targets addresses
-     * @param _data Encoded function data to be executed
-     */
-    function executeTransactions(
-        address[] calldata _targets,
-        uint256[] calldata _values,
-        bytes[] calldata _data
-    ) external payable onlyOwner {
-        _executeTransactions(_targets, _values, _data);
     }
 }
