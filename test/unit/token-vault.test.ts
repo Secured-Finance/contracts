@@ -18,7 +18,7 @@ const ReserveFund = artifacts.require('ReserveFund');
 const ProxyController = artifacts.require('ProxyController');
 const WETH9 = artifacts.require('MockWETH9');
 const MockERC20 = artifacts.require('MockERC20');
-const TokenVaultCallerMock = artifacts.require('TokenVaultCallerMock');
+const TokenVaultCaller = artifacts.require('TokenVaultCaller');
 
 // libraries
 const DepositManagementLogic = artifacts.require('DepositManagementLogic');
@@ -155,7 +155,7 @@ describe('TokenVault', () => {
     );
 
     // Deploy TokenVaultCaller
-    tokenVaultCaller = await deployContract(owner, TokenVaultCallerMock, [
+    tokenVaultCaller = await deployContract(owner, TokenVaultCaller, [
       tokenVaultProxy.address,
       mockLendingMarketController.address,
     ]);

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../../dependencies/chainlink/contracts/AggregatorV3Interface.sol";
-import "../../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "../../dependencies/chainlink/AggregatorV3Interface.sol";
+import "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 
 struct Currency {
     bool isSupported;

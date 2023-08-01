@@ -6,7 +6,7 @@ import {LendingMarketConfigurationLogic} from "../libraries/logics/LendingMarket
 // utils
 import {Ownable} from "../utils/Ownable.sol";
 // storages
-import {LendingMarketConfigurationStorage as Storage} from "../storages/LendingMarketConfigurationStorage.sol";
+import {LendingMarketConfigurationStorage as Storage} from "../storages/mixins/LendingMarketConfigurationStorage.sol";
 
 contract MixinLendingMarketConfiguration is Ownable {
     function _initialize(address _owner, uint256 _observationPeriod) internal {

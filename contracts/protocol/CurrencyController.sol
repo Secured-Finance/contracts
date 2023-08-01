@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {AggregatorV3Interface} from "../dependencies/chainlink/contracts/AggregatorV3Interface.sol";
-import {EnumerableSet} from "../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {SafeCast} from "../dependencies/openzeppelin/contracts/utils/math/SafeCast.sol";
+// dependencies
+import {AggregatorV3Interface} from "../dependencies/chainlink/AggregatorV3Interface.sol";
+import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
+import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {ICurrencyController} from "./interfaces/ICurrencyController.sol";
 // libraries

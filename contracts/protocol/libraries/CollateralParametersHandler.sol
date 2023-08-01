@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {CollateralParametersStorage as Storage} from "../storages/CollateralParametersStorage.sol";
+import {CollateralParametersStorage as Storage} from "../storages/libraries/CollateralParametersStorage.sol";
 import {Constants} from "../libraries/Constants.sol";
 
 /**

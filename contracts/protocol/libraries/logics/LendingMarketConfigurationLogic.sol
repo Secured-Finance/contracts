@@ -5,7 +5,7 @@ pragma solidity ^0.8.9;
 import {Constants} from "../../libraries/Constants.sol";
 import {RoundingUint256} from "../../libraries/math/RoundingUint256.sol";
 // storages
-import {LendingMarketConfigurationStorage as Storage} from "../../storages/LendingMarketConfigurationStorage.sol";
+import {LendingMarketConfigurationStorage as Storage} from "../../storages/mixins/LendingMarketConfigurationStorage.sol";
 
 library LendingMarketConfigurationLogic {
     using RoundingUint256 for uint256;
