@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ReentrancyGuard} from "../dependencies/openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {EnumerableSet} from "../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// dependencies
+import {ReentrancyGuard} from "../dependencies/openzeppelin/security/ReentrancyGuard.sol";
+import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 // interfaces
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";

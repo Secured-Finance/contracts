@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 
 struct ObservationPeriodLog {
     uint256 totalAmount;

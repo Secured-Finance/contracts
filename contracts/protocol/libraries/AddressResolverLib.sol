@@ -8,7 +8,7 @@ import {IGenesisValueVault} from "../interfaces/IGenesisValueVault.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
 import {IReserveFund} from "../interfaces/IReserveFund.sol";
 import {ITokenVault} from "../interfaces/ITokenVault.sol";
-import {MixinAddressResolverStorage as Storage} from "../storages/MixinAddressResolverStorage.sol";
+import {MixinAddressResolverStorage as Storage} from "../storages/mixins/MixinAddressResolverStorage.sol";
 
 library AddressResolverLib {
     function getAddress(bytes32 name) internal view returns (address) {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../protocol/libraries/OrderStatisticsTreeLib.sol";
+import "../../protocol/libraries/OrderStatisticsTreeLib.sol";
 
 contract OrderStatisticsTreeContract {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;

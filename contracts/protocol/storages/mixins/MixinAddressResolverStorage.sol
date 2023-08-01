@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
+import {IAddressResolver} from "../../interfaces/IAddressResolver.sol";
 
 library MixinAddressResolverStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.mixinAddressResolver");

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IERC20} from "../../../dependencies/openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "../../../dependencies/openzeppelin/contracts/utils/math/SafeCast.sol";
+// dependencies
+import {IERC20} from "../../../dependencies/openzeppelin/token/ERC20/IERC20.sol";
+import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";

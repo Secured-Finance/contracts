@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {UpgradeableBeacon} from "./utils/UpgradeableBeacon.sol";
 // interfaces
 import {IBeaconProxyController} from "./interfaces/IBeaconProxyController.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
@@ -11,6 +10,7 @@ import {BeaconContracts, Contracts} from "./libraries/Contracts.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
+import {UpgradeableBeacon} from "./utils/UpgradeableBeacon.sol";
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 import {UpgradeabilityBeaconProxy} from "./utils/UpgradeabilityBeaconProxy.sol";

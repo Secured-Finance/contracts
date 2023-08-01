@@ -4,8 +4,8 @@
 pragma solidity ^0.8.0;
 
 import "./Ownable.sol";
-import "../../dependencies/openzeppelin/contracts/proxy/beacon/IBeacon.sol";
-import "../../dependencies/openzeppelin/contracts/utils/Address.sol";
+import "../../dependencies/openzeppelin/proxy/beacon/IBeacon.sol";
+import "../../dependencies/openzeppelin/utils/Address.sol";
 
 /**
  * @dev This contract is used in conjunction with one or more instances of {BeaconProxy} to determine their

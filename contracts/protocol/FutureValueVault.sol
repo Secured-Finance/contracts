@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {SafeCast} from "../dependencies/openzeppelin/contracts/utils/math/SafeCast.sol";
-import {FutureValueVaultStorage as Storage} from "./storages/FutureValueVaultStorage.sol";
+// dependencies
+import {SafeCast} from "../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {IFutureValueVault} from "./interfaces/IFutureValueVault.sol";
 // libraries
@@ -13,6 +13,8 @@ import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
 import {Proxyable} from "./utils/Proxyable.sol";
+// storages
+import {FutureValueVaultStorage as Storage} from "./storages/FutureValueVaultStorage.sol";
 
 /**
  * @notice Implements the management of the future value as an amount for Lending deals in each currency.

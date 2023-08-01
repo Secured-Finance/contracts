@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {IWETH9} from "../interfaces/IWETH9.sol";
-import {ERC20HandlerStorage as Storage} from "../storages/ERC20HandlerStorage.sol";
+import {ERC20HandlerStorage as Storage} from "../storages/libraries/ERC20HandlerStorage.sol";
 
 library ERC20Handler {
     function initialize(address _baseCurrency) internal {

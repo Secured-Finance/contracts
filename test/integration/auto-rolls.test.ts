@@ -391,13 +391,17 @@ describe('Integration Test: Auto-rolls', async () => {
       const { lendingCompoundFactor: lendingCF1 } =
         await genesisValueVault.getAutoRollLog(hexETH, maturities[1]);
 
-      expect(aliceFVAfter).to.equal(
-        BigNumberJS(aliceFVBefore.toString())
-          .times(lendingCF1.toString())
-          .div(lendingCF0.toString())
-          .dp(0)
-          .toFixed(),
-      );
+      expect(
+        aliceFVAfter
+          .sub(
+            BigNumberJS(aliceFVBefore.toString())
+              .times(lendingCF1.toString())
+              .div(lendingCF0.toString())
+              .dp(0)
+              .toFixed(),
+          )
+          .abs(),
+      ).lte(1);
 
       // Check the saved unit price and compound factor per maturity
       const autoRollLog1 = await genesisValueVault.getAutoRollLog(

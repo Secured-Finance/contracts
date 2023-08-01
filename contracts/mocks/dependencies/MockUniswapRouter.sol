@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {ISwapRouter} from "../dependencies/uniswap/contracts/ISwapRouter.sol";
+import {ISwapRouter} from "../../dependencies/uniswap/ISwapRouter.sol";
 // libraries
-import {Contracts} from "../protocol/libraries/Contracts.sol";
-import {ERC20Handler} from "../protocol/libraries/ERC20Handler.sol";
+import {Contracts} from "../../protocol/libraries/Contracts.sol";
+import {ERC20Handler} from "../../protocol/libraries/ERC20Handler.sol";
 // mixins
-import {MixinAddressResolver} from "../protocol/mixins/MixinAddressResolver.sol";
+import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.sol";
 
 contract MockUniswapRouter is MixinAddressResolver {
     mapping(address => bytes32) private currencies;
