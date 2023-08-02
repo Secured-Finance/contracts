@@ -1146,6 +1146,7 @@ describe('Integration Test: Deposit', async () => {
         .then((factory) =>
           factory.deploy(
             hexETH,
+            wETHToken.address,
             lendingMarketController.address,
             tokenVault.address,
             mockUniswapRouter.address,

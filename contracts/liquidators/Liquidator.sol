@@ -25,6 +25,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
 
     constructor(
         bytes32 _baseCurrency,
+        address _baseCurrencyAddr,
         address _lendingMarketController,
         address _tokenVault,
         address _uniswapRouter,
@@ -32,6 +33,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
     ) {
         _transferOwnership(msg.sender);
         baseCurrency = _baseCurrency;
+        ERC20Handler.initialize(_baseCurrencyAddr);
         lendingMarketController = ILendingMarketController(_lendingMarketController);
         tokenVault = ITokenVault(_tokenVault);
         uniswapRouter = ISwapRouter(_uniswapRouter);

@@ -9,7 +9,7 @@ import {ERC20Handler} from "../libraries/ERC20Handler.sol";
 // utils
 import {Ownable} from "../utils/Ownable.sol";
 
-contract MixinWallet is Ownable {
+abstract contract MixinWallet is Ownable {
     event TransactionExecuted(address from, address target, uint256 value, bytes data);
     event TransactionsExecuted(address from, address[] targets, uint256[] values, bytes[] data);
 
