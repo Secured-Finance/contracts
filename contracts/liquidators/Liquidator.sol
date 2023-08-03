@@ -170,8 +170,8 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
 
     /**
      * @dev Deposits funds by the caller into the token vault.
-     * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
     function deposit(bytes32 _ccy, uint256 _amount) external payable onlyOwner {
         _deposit(tokenVault, _ccy, _amount);
@@ -179,8 +179,8 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
 
     /**
      * @dev Withdraws funds by the caller from the token vault.
-     * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
     function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
         _withdraw(tokenVault, _ccy, _amount);

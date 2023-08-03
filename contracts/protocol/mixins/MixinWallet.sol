@@ -51,8 +51,8 @@ abstract contract MixinWallet is Ownable {
     /**
      * @dev Deposits funds by the caller into the token vault.
      * @param _tokenvault TokenVault address
-     * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
     function _deposit(
         ITokenVault _tokenvault,
@@ -70,8 +70,8 @@ abstract contract MixinWallet is Ownable {
     /**
      * @dev Withdraws funds by the caller from the token vault.
      * @param _tokenvault TokenVault address
-     * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
     function _withdraw(
         ITokenVault _tokenvault,

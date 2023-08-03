@@ -1238,7 +1238,7 @@ describe('Integration Test: Deposit', async () => {
       );
       expect(depositAmountBefore).not.equal(0);
 
-      // Withdraw from the reserve funds
+      // Withdraw from the reservefund's fund
       const withdrawPayload = tokenVault.interface.encodeFunctionData(
         'withdraw(bytes32,uint256)',
         [hexWFIL, depositAmountBefore],
@@ -1262,7 +1262,7 @@ describe('Integration Test: Deposit', async () => {
       // Move some wFIL to Liquidator address first
       await wFILToken.connect(owner).approve(liquidator.address, depositAmount);
 
-      // the owner of Liquidator contract execute the approve and deposit transactions on behalf of the ReserveFund
+      // the owner of Liquidator contract execute the approve and deposit transactions on behalf of the Liquidator
       await expect(
         liquidator.connect(owner).deposit(hexWFIL, depositAmount),
       ).to.emit(tokenVault, 'Deposit');
@@ -1314,7 +1314,7 @@ describe('Integration Test: Deposit', async () => {
         'deposit(bytes32,uint256)',
         [hexWFIL, depositAmount],
       );
-      // the owner of ReserveFund execute the approve and deposit transactions on behalf of the ReserveFund
+      // the owner of Liquidator execute the approve and deposit transactions on behalf of the Liquidator
       await expect(
         liquidator
           .connect(owner)
@@ -1340,7 +1340,7 @@ describe('Integration Test: Deposit', async () => {
       );
       expect(depositAmountBefore).not.equal(0);
 
-      // Withdraw from the reserve funds
+      // Withdraw from the liquidator's fund
       const withdrawPayload = tokenVault.interface.encodeFunctionData(
         'withdraw(bytes32,uint256)',
         [hexWFIL, depositAmountBefore],
