@@ -6,6 +6,7 @@ import { deployments, ethers } from 'hardhat';
 import { LIQUIDATION_THRESHOLD_RATE } from '../test/common/constants';
 import { Side } from '../utils/constants';
 import { hexETH, hexWFIL, toBytes32 } from '../utils/strings';
+import { time } from '@openzeppelin/test-helpers';
 
 describe('ZC e2e test', async () => {
   const targetCurrency = hexWFIL;
@@ -112,7 +113,7 @@ describe('ZC e2e test', async () => {
       hexETH,
     );
 
-    // Deposit ETH by Alice
+    // Deposit wFIL by Alice
     if (aliceDepositAmountBefore.lt(orderAmountInFIL)) {
       const depositAmountInFIL = ethers.BigNumber.from(orderAmountInFIL).sub(
         aliceDepositAmountBefore,
@@ -154,6 +155,92 @@ describe('ZC e2e test', async () => {
         bobDepositAmountAfter.sub(bobDepositAmountBefore).toString(),
       ).to.equal(depositAmountInETH);
     }
+  });
+
+  it('unwind order', async function () {
+    await tokenVault
+      .connect(aliceSigner)
+      .deposit(hexETH, depositAmountInETH, {
+        value: depositAmountInETH,
+      })
+      .then((tx) => tx.wait());
+
+    await tokenVault
+      .connect(carolSigner)
+      .deposit(hexETH, depositAmountInETH, {
+        value: depositAmountInETH,
+      })
+      .then((tx) => tx.wait());
+
+    const marketAddress = await lendingMarketController.getLendingMarket(
+      targetCurrency,
+      maturities[0],
+    );
+
+    const lendingMarket = await ethers.getContractAt(
+      'LendingMarket',
+      marketAddress,
+    );
+
+    const isMarketOpened = await lendingMarket.isOpened();
+    if (!isMarketOpened) {
+      console.log('Skip the order step since the market not open');
+      this.skip();
+    }
+
+    await lendingMarketController
+      .connect(aliceSigner)
+      .executeOrder(
+        hexETH,
+        maturities[0],
+        Side.LEND,
+        depositAmountInETH,
+        orderUnitPrice,
+      )
+      .then((tx) => tx.wait());
+
+    await lendingMarketController
+      .connect(bobSigner)
+      .executeOrder(
+        hexETH,
+        maturities[0],
+        Side.BORROW,
+        depositAmountInETH,
+        orderUnitPrice,
+      )
+      .then((tx) => tx.wait());
+
+    // Create one more LEND order since orderbook is empty and maker can't unwind
+    await lendingMarketController
+      .connect(carolSigner)
+      .executeOrder(
+        hexETH,
+        maturities[0],
+        Side.LEND,
+        depositAmountInETH,
+        '8000',
+      );
+
+    const { futureValue: aliceFVBefore } =
+      await lendingMarketController.getPosition(
+        hexETH,
+        maturities[0],
+        aliceSigner.address,
+      );
+
+    expect(aliceFVBefore).not.to.equal(0);
+
+    await lendingMarketController
+      .connect(aliceSigner)
+      .unwindPosition(hexETH, maturities[0]);
+
+    const { futureValue: aliceFV } = await lendingMarketController.getPosition(
+      hexETH,
+      maturities[0],
+      aliceSigner.address,
+    );
+
+    expect(aliceFV).to.equal(0);
   });
 
   it('Cancel order', async function () {
@@ -325,5 +412,49 @@ describe('ZC e2e test', async () => {
     expect(
       bobDepositAmountBefore.sub(bobDepositAmountAfter).toString(),
     ).to.equal(withdrawAmount);
+  });
+
+  it('auto-roll', async () => {
+    await lendingMarketController
+      .connect(aliceSigner)
+      .executeOrder(
+        targetCurrency,
+        maturities[0],
+        Side.LEND,
+        '100000000000000000',
+        '8000',
+      );
+    await lendingMarketController
+      .connect(bobSigner)
+      .executeOrder(
+        targetCurrency,
+        maturities[0],
+        Side.BORROW,
+        '100000000000000000',
+        '8000',
+      );
+
+    const { futureValue: aliceFVBefore } =
+      await lendingMarketController.getPosition(
+        targetCurrency,
+        maturities[0],
+        aliceSigner.address,
+      );
+
+    await time.increaseTo(maturities[0].toString());
+    await lendingMarketController.rotateLendingMarkets(targetCurrency);
+
+    const positions = await lendingMarketController.getPositions(
+      [targetCurrency],
+      aliceSigner.address,
+    );
+
+    expect(positions.length).to.equal(1);
+
+    expect(positions[0].ccy).to.equal(targetCurrency);
+    expect(positions[0].maturity).to.equal(maturities[1]);
+    expect(positions[0].futureValue).not.to.equal('0');
+    expect(positions[0].presentValue).not.to.equal('0');
+    expect(aliceFVBefore.gte(positions[0].futureValue));
   });
 });
