@@ -24,7 +24,6 @@ describe('LendingMarketController - Terminations', () => {
   let mockTokenVault: MockContract;
   let mockERC20: MockContract;
   let lendingMarketControllerProxy: Contract;
-  let lendingMarketProxies: Contract[];
 
   let lendingMarketOperationLogic: Contract;
   let fundManagementLogic: Contract;
@@ -49,25 +48,12 @@ describe('LendingMarketController - Terminations', () => {
       ORDER_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
+
     for (let i = 0; i < 5; i++) {
-      await lendingMarketControllerProxy.createLendingMarket(
-        currency,
-        openingDate,
-      );
+      await lendingMarketControllerProxy.createOrderBook(currency, openingDate);
     }
 
-    const marketAddresses =
-      await lendingMarketControllerProxy.getLendingMarkets(currency);
-
-    const lendingMarketProxies: Contract[] = await Promise.all(
-      marketAddresses.map((address) =>
-        ethers.getContractAt('LendingMarket', address),
-      ),
-    );
-
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
-
-    return lendingMarketProxies;
   };
 
   before(async () => {
@@ -115,7 +101,7 @@ describe('LendingMarketController - Terminations', () => {
     await mockTokenVault.mock.depositFrom.returns();
     await mockERC20.mock.balanceOf.returns(1000000000);
 
-    lendingMarketProxies = await initialize(targetCurrency);
+    await initialize(targetCurrency);
   });
 
   describe('Terminations', async () => {
@@ -128,7 +114,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       await expect(
-        lendingMarketControllerProxy.createLendingMarket(targetCurrency, '1'),
+        lendingMarketControllerProxy.createOrderBook(targetCurrency, '1'),
       ).to.revertedWith('Already terminated');
 
       await expect(
@@ -223,8 +209,6 @@ describe('LendingMarketController - Terminations', () => {
       await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
-      const lendingMarket1 = lendingMarketProxies[0];
-
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -293,8 +277,6 @@ describe('LendingMarketController - Terminations', () => {
       );
       await mockTokenVault.mock.isCollateral.returns(true);
 
-      const lendingMarket1 = lendingMarketProxies[0];
-
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -328,8 +310,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       const targetCurrency2 = ethers.utils.formatBytes32String(`TestCurrency2`);
-      const lendingMarket2Proxies = await initialize(targetCurrency2);
-      const lendingMarket2 = lendingMarket2Proxies[0];
+      await initialize(targetCurrency2);
       await mockCurrencyController.mock.getCurrencies.returns([
         targetCurrency,
         targetCurrency2,
@@ -428,8 +409,6 @@ describe('LendingMarketController - Terminations', () => {
       await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
-      const lendingMarket1 = lendingMarketProxies[0];
-
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -510,8 +489,6 @@ describe('LendingMarketController - Terminations', () => {
       await mockTokenVault.mock.executeForcedReset.returns('40000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
 
-      const lendingMarket1 = lendingMarketProxies[0];
-
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -558,8 +535,6 @@ describe('LendingMarketController - Terminations', () => {
     it('Fail to redeem due to 2nd execution', async () => {
       await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
-
-      const lendingMarket1 = lendingMarketProxies[0];
 
       await lendingMarketControllerProxy
         .connect(alice)

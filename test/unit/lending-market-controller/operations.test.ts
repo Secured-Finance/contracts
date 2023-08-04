@@ -17,7 +17,10 @@ import {
 import { deployContracts } from './utils';
 
 // libraries
-const OrderBookLogic = artifacts.require('OrderBookLogic');
+const OrderBookOperationLogic = artifacts.require('OrderBookOperationLogic');
+const OrderBookCalculationLogic = artifacts.require(
+  'OrderBookCalculationLogic',
+);
 
 const { deployContract } = waffle;
 
@@ -95,10 +98,7 @@ describe('LendingMarketController - Operations', () => {
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
     for (let i = 0; i < 5; i++) {
-      await lendingMarketControllerProxy.createLendingMarket(
-        currency,
-        genesisDate,
-      );
+      await lendingMarketControllerProxy.createOrderBook(currency, genesisDate);
     }
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
@@ -114,7 +114,7 @@ describe('LendingMarketController - Operations', () => {
 
   describe('Operations', async () => {
     it('Get the lending market detail with empty order book', async () => {
-      const detail = await lendingMarketControllerProxy.getLendingMarketDetail(
+      const detail = await lendingMarketControllerProxy.getOrderBookDetail(
         targetCurrency,
         maturities[0],
       );
@@ -149,7 +149,7 @@ describe('LendingMarketController - Operations', () => {
           '9950',
         );
 
-      const detail = await lendingMarketControllerProxy.getLendingMarketDetail(
+      const detail = await lendingMarketControllerProxy.getOrderBookDetail(
         targetCurrency,
         maturities[0],
       );
@@ -184,10 +184,9 @@ describe('LendingMarketController - Operations', () => {
           '9950',
         );
 
-      const details =
-        await lendingMarketControllerProxy.getLendingMarketDetails([
-          targetCurrency,
-        ]);
+      const details = await lendingMarketControllerProxy.getOrderBookDetails([
+        targetCurrency,
+      ]);
 
       expect(details.length).to.equal(5);
       expect(details[0].bestLendUnitPrice).to.equal('9950');
@@ -401,11 +400,30 @@ describe('LendingMarketController - Operations', () => {
       );
 
       // Update implementations
-      const orderBookLogic = await deployContract(owner, OrderBookLogic);
+      const orderBookCalculationLogic = await deployContract(
+        owner,
+        OrderBookCalculationLogic,
+      );
+
+      const orderBookOperationLogic = await deployContract(
+        owner,
+        OrderBookOperationLogic,
+      );
+
+      const orderBookUserLogic = await ethers
+        .getContractFactory('OrderBookUserLogic', {
+          libraries: {
+            OrderBookCalculationLogic: orderBookCalculationLogic.address,
+          },
+        })
+        .then((factory) => factory.deploy());
+
       const lendingMarket = await ethers
         .getContractFactory('LendingMarket', {
           libraries: {
-            OrderBookLogic: orderBookLogic.address,
+            OrderBookUserLogic: orderBookUserLogic.address,
+            OrderBookOperationLogic: orderBookOperationLogic.address,
+            OrderBookCalculationLogic: orderBookCalculationLogic.address,
           },
         })
         .then((factory) => factory.deploy());

@@ -22,25 +22,17 @@ task(
     ),
   );
 
-  const getLendingMarkets = (currency: string): Promise<Contract[]> =>
-    lendingMarketController
-      .getLendingMarkets(currency)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
-
   for (const currency of currencies) {
-    const lendingMarkets = await getLendingMarkets(currency.key);
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(currency.key)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+    const orderBookIds = await lendingMarket.getOrderBookIds();
 
-    for (const lendingMarket of lendingMarkets) {
+    for (const orderBookId of orderBookIds) {
       const [isItayosePeriod, isMatured, maturity] = await Promise.all([
-        lendingMarket.isItayosePeriod(),
-        lendingMarket.isMatured(),
-        lendingMarket.getMaturity(),
+        lendingMarket.isItayosePeriod(orderBookId),
+        lendingMarket.isMatured(orderBookId),
+        lendingMarket.getMaturity(orderBookId),
       ]);
 
       if (isItayosePeriod) {
@@ -66,11 +58,15 @@ task(
 
   for (const currency of currencies) {
     const marketLog: Record<string, string | undefined>[] = [];
-    const lendingMarkets = await getLendingMarkets(currency.key);
-    for (const lendingMarket of lendingMarkets) {
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(currency.key)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+    const orderBookIds = await lendingMarket.getOrderBookIds();
+
+    for (const orderBookId of orderBookIds) {
       const [maturity, openingDate] = await Promise.all([
-        lendingMarket.getMaturity(),
-        lendingMarket.getOpeningDate(),
+        lendingMarket.getMaturity(orderBookId),
+        lendingMarket.getOpeningDate(orderBookId),
       ]);
 
       marketLog.push({

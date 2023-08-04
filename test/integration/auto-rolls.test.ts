@@ -35,7 +35,7 @@ describe('Integration Test: Auto-rolls', async () => {
   let reserveFund: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
-  let lendingMarkets: Contract[] = [];
+  let lendingMarket: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
 
@@ -43,6 +43,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
   let genesisDate: number;
   let maturities: BigNumber[];
+  let orderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -90,26 +91,20 @@ describe('Integration Test: Auto-rolls', async () => {
 
   const resetContractInstances = async () => {
     maturities = await lendingMarketController.getMaturities(hexETH);
-    [lendingMarkets, futureValueVaults] = await Promise.all([
-      lendingMarketController
-        .getLendingMarkets(hexETH)
-        .then((addresses) =>
-          Promise.all(
-            addresses.map((address) =>
-              ethers.getContractAt('LendingMarket', address),
-            ),
-          ),
-        ),
-      Promise.all(
-        maturities.map((maturity) =>
-          lendingMarketController
-            .getFutureValueVault(hexETH, maturity)
-            .then((address) =>
-              ethers.getContractAt('FutureValueVault', address),
-            ),
-        ),
+
+    lendingMarket = await lendingMarketController
+      .getLendingMarket(hexETH)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+
+    orderBookIds = await lendingMarket.getOrderBookIds();
+
+    futureValueVaults = await Promise.all(
+      maturities.map((maturity) =>
+        lendingMarketController
+          .getFutureValueVault(hexETH, maturity)
+          .then((address) => ethers.getContractAt('FutureValueVault', address)),
       ),
-    ]);
+    );
   };
 
   before('Deploy Contracts', async () => {
@@ -140,15 +135,15 @@ describe('Integration Test: Auto-rolls', async () => {
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexWFIL, genesisDate);
-      await lendingMarketController.createLendingMarket(hexETH, genesisDate);
+      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
+      await lendingMarketController.createOrderBook(hexETH, genesisDate);
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createLendingMarket(hexWFIL, maturities[0]);
-    await lendingMarketController.createLendingMarket(hexETH, maturities[0]);
+    await lendingMarketController.createOrderBook(hexWFIL, maturities[0]);
+    await lendingMarketController.createOrderBook(hexETH, maturities[0]);
   });
 
   beforeEach('Reset contract instances', async () => {
@@ -233,7 +228,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(aliceFVAfter).to.equal(aliceActualFV.abs());
 
       // Check present value
-      const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
+      const midUnitPrice = await lendingMarket.getMidUnitPrice(orderBookIds[0]);
       const alicePV = await lendingMarketController.getTotalPresentValue(
         hexETH,
         alice.address,
@@ -822,7 +817,7 @@ describe('Integration Test: Auto-rolls', async () => {
           dave.address,
         );
 
-      const midUnitPrice = await lendingMarkets[0].getMidUnitPrice();
+      const midUnitPrice = await lendingMarket.getMidUnitPrice(orderBookIds[0]);
       const davePV = await lendingMarketController.getTotalPresentValue(
         hexETH,
         dave.address,

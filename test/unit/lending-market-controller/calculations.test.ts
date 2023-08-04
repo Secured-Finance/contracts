@@ -80,10 +80,7 @@ describe('LendingMarketController - Calculations', () => {
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
     for (let i = 0; i < 5; i++) {
-      await lendingMarketControllerProxy.createLendingMarket(
-        currency,
-        genesisDate,
-      );
+      await lendingMarketControllerProxy.createOrderBook(currency, genesisDate);
     }
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);

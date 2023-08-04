@@ -10,8 +10,8 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  wFilToETHRate,
   usdcToETHRate,
+  wFilToETHRate,
 } from '../common/constants';
 import { deployContracts } from '../common/deployment';
 import { calculateFutureValue, getAmountWithOrderFee } from '../common/orders';
@@ -286,13 +286,13 @@ describe('Integration Test: Liquidations', async () => {
     // Deploy Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexWFIL, genesisDate)
+        .createOrderBook(hexWFIL, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexUSDC, genesisDate)
+        .createOrderBook(hexUSDC, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexETH, genesisDate)
+        .createOrderBook(hexETH, genesisDate)
         .then((tx) => tx.wait());
     }
 

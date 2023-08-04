@@ -15,7 +15,8 @@ const func: DeployFunction = async function ({
     'QuickSort',
     'DepositManagementLogic',
     'LendingMarketConfigurationLogic',
-    'OrderBookLogic',
+    'OrderBookCalculationLogic',
+    'OrderBookOperationLogic',
   ]) {
     const deployResult = await deploy(libName, {
       from: deployer,
@@ -68,6 +69,16 @@ const func: DeployFunction = async function ({
         deployResults['LendingMarketConfigurationLogic'].address,
       LendingMarketOperationLogic:
         deployResults['LendingMarketOperationLogic'].address,
+    },
+  }).then((result) =>
+    executeIfNewlyDeployment('LendingMarketUserLogic', result),
+  );
+
+  await deploy('OrderBookUserLogic', {
+    from: deployer,
+    libraries: {
+      OrderBookCalculationLogic:
+        deployResults['OrderBookCalculationLogic'].address,
     },
   }).then((result) =>
     executeIfNewlyDeployment('LendingMarketUserLogic', result),

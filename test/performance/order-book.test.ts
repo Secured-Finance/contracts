@@ -20,6 +20,8 @@ describe('Performance Test: Order Book', async () => {
   let wETHToken: Contract;
   let usdcToken: Contract;
 
+  let orderBookUserLogic: Contract;
+
   let genesisDate: number;
   let maturities: BigNumber[];
 
@@ -32,6 +34,7 @@ describe('Performance Test: Order Book', async () => {
       lendingMarketController,
       wETHToken,
       usdcToken,
+      orderBookUserLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -49,13 +52,13 @@ describe('Performance Test: Order Book', async () => {
     // Deploy Lending Markets
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexWFIL, genesisDate)
+        .createOrderBook(hexWFIL, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexETH, genesisDate)
+        .createOrderBook(hexETH, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexUSDC, genesisDate)
+        .createOrderBook(hexUSDC, genesisDate)
         .then((tx) => tx.wait());
     }
   });
@@ -82,19 +85,15 @@ describe('Performance Test: Order Book', async () => {
 
     for (const { key: currencyKey, name, orderAmount } of currencies) {
       let contract: Contract;
-      let lendingMarkets: Contract[] = [];
+      let lendingMarket: Contract;
 
       describe(`Take orders on the ${name} market`, async () => {
         before('Set lending markets', async () => {
-          lendingMarkets = await lendingMarketController
-            .getLendingMarkets(currencyKey)
-            .then((addresses) =>
-              Promise.all(
-                addresses.map((address) =>
-                  ethers.getContractAt('LendingMarket', address),
-                ),
-              ),
-            );
+          lendingMarket = await lendingMarketController
+            .getLendingMarket(currencyKey)
+            .then((address) => ethers.getContractAt('LendingMarket', address));
+
+          orderBookUserLogic = orderBookUserLogic.attach(lendingMarket.address);
         });
 
         for (const test of tests) {
@@ -209,7 +208,7 @@ describe('Performance Test: Order Book', async () => {
               );
 
             await expect(tx)
-              .to.emit(lendingMarkets[0], 'OrderExecuted')
+              .to.emit(orderBookUserLogic, 'OrderExecuted')
               .withArgs(
                 signers[0].address,
                 Side.BORROW,

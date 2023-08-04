@@ -24,11 +24,20 @@ const func: DeployFunction = async function ({
       ? process.env.INITIAL_MARKET_OPENING_DATE || moment().unix()
       : getGenesisDate().toString();
 
-  const orderBookLogic = await deployments.get('OrderBookLogic');
+  const orderBookUserLogic = await deployments.get('OrderBookUserLogic');
+  const orderBookOperationLogic = await deployments.get(
+    'OrderBookOperationLogic',
+  );
+  const orderBookCalculationLogic = await deployments.get(
+    'OrderBookCalculationLogic',
+  );
+
   const deployResult = await deploy('LendingMarket', {
     from: deployer,
     libraries: {
-      OrderBookLogic: orderBookLogic.address,
+      OrderBookUserLogic: orderBookUserLogic.address,
+      OrderBookOperationLogic: orderBookOperationLogic.address,
+      OrderBookCalculationLogic: orderBookCalculationLogic.address,
     },
   });
 
@@ -74,28 +83,34 @@ const func: DeployFunction = async function ({
         .then((tx) => tx.wait());
     }
 
-    const lendingMarkets: Contract[] = await lendingMarketController
-      .getLendingMarkets(currency.key)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
+    // const lendingMarkets: Contract[] = await lendingMarketController
+    //   .getLendingMarkets(currency.key)
+    //   .then((addresses) =>
+    //     Promise.all(
+    //       addresses.map((address) =>
+    //         ethers.getContractAt('LendingMarket', address),
+    //       ),
+    //     ),
+    //   );
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(currency.key)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+    const orderBookIds = await lendingMarket.getOrderBookIds();
 
     const marketLog: Record<string, string | undefined>[] = [];
 
-    if (lendingMarkets.length > 0) {
+    if (orderBookIds.length > 0) {
       console.log(
-        `Skipped deploying ${lendingMarkets.length} ${currency.symbol} lending markets`,
+        `Skipped deploying ${orderBookIds.length} ${currency.symbol} lending markets`,
       );
     }
 
-    for (let i = 0; i < lendingMarkets.length; i++) {
-      const { maturity, openingDate } = await lendingMarkets[i].getMarket();
+    for (let i = 0; i < orderBookIds.length; i++) {
+      const { maturity, openingDate } = await lendingMarket.getOrderBookDetail(
+        orderBookIds[i],
+      );
       marketLog.push({
-        [`MarketAddress(${currency.symbol})`]: lendingMarkets[i].address,
+        [`OrderBookID(${currency.symbol})`]: orderBookIds[i],
         OpeningDate: moment
           .unix(openingDate.toString())
           .format('LLL')
@@ -104,18 +119,20 @@ const func: DeployFunction = async function ({
       });
     }
 
-    if (lendingMarkets.length < MARKET_COUNT) {
-      const count = MARKET_COUNT - lendingMarkets.length;
-      let nearestMaturity = await lendingMarkets[0]?.getMaturity();
+    if (orderBookIds.length < MARKET_COUNT) {
+      const count = MARKET_COUNT - orderBookIds.length;
+      let nearestMaturity = orderBookIds[0]
+        ? await lendingMarket.getMaturity(orderBookIds[0])
+        : undefined;
 
       for (let i = 0; i < count; i++) {
         let openingDate =
           i === count - 1
-            ? nearestMaturity.toString()
+            ? nearestMaturity?.toString()
             : process.env.INITIAL_MARKET_OPENING_DATE || genesisDate;
 
         const receipt = await lendingMarketController
-          .createLendingMarket(currency.key, openingDate)
+          .createOrderBook(currency.key, openingDate)
           .then((tx) => tx.wait());
 
         const events = await lendingMarketOperationLogic.queryFilter(
@@ -127,7 +144,7 @@ const func: DeployFunction = async function ({
           ({ event }) => event === 'LendingMarketCreated',
         )?.args;
 
-        const marketAddr = args?.marketAddr;
+        const orderBookId = args?.orderBookId;
         const futureValueVault = args?.futureValueVault;
         const maturity = args?.maturity;
 
@@ -136,7 +153,7 @@ const func: DeployFunction = async function ({
         }
 
         marketLog.push({
-          [`MarketAddress(${currency.symbol})`]: marketAddr,
+          [`OrderBookID(${currency.symbol})`]: orderBookId,
           FutureValueVaultAddress: futureValueVault,
           OpeningDate: moment
             .unix(Number(openingDate))
@@ -145,7 +162,9 @@ const func: DeployFunction = async function ({
           Maturity: moment.unix(maturity.toString()).format('LLL').toString(),
         });
       }
-      console.log(`Deployed ${count} ${currency.symbol} lending markets.`);
+      console.log(
+        `Deployed ${count} ${currency.symbol} lending markets at ${lendingMarket.address}`,
+      );
     }
     console.table(marketLog);
   }

@@ -91,14 +91,8 @@ describe('LendingMarketController - Rotations', () => {
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
     for (let i = 0; i < 5; i++) {
-      await lendingMarketControllerProxy.createLendingMarket(
-        currency,
-        genesisDate,
-      );
+      await lendingMarketControllerProxy.createOrderBook(currency, genesisDate);
     }
-
-    const marketAddresses =
-      await lendingMarketControllerProxy.getLendingMarkets(currency);
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
   };
