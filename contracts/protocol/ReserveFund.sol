@@ -34,9 +34,8 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
     ) public initializer onlyProxy {
         Storage.slot().paused = false;
 
-        _transferOwnership(_owner);
         registerAddressResolver(_resolver);
-        ERC20Handler.initialize(_WETH9);
+        MixinWallet._initialize(_owner, _WETH9);
     }
 
     // @inheritdoc MixinAddressResolver

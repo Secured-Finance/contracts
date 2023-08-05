@@ -9,9 +9,20 @@ import {ERC20Handler} from "../libraries/ERC20Handler.sol";
 // utils
 import {Ownable} from "../utils/Ownable.sol";
 
+/**
+ * @notice Implements functions to make a contract a wallet, i.e. withdraw and deposit funds.
+ *
+ * The _initialize function of this contract is expected to be called in an inheriting contract's intializer or constructor.
+ *
+ */
 abstract contract MixinWallet is Ownable {
     event TransactionExecuted(address from, address target, uint256 value, bytes data);
     event TransactionsExecuted(address from, address[] targets, uint256[] values, bytes[] data);
+
+    function _initialize(address _owner, address _baseCurrencyAddr) internal {
+        _transferOwnership(_owner);
+        ERC20Handler.initialize(_baseCurrencyAddr);
+    }
 
     /**
      * @dev Executes an arbitrary transaction by Secured Finance admin.
@@ -50,7 +61,7 @@ abstract contract MixinWallet is Ownable {
 
     /**
      * @dev Deposits funds by the caller into the token vault.
-     * @param _tokenvault TokenVault address
+     * @param _tokenvault TokenVault contract instance
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit
      */
@@ -69,7 +80,7 @@ abstract contract MixinWallet is Ownable {
 
     /**
      * @dev Withdraws funds by the caller from the token vault.
-     * @param _tokenvault TokenVault address
+     * @param _tokenvault TokenVault contract instance
      * @param _ccy Currency name in bytes32
      * @param _amount Amount of funds to deposit
      */

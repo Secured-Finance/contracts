@@ -150,10 +150,12 @@ describe('ReserveFund', () => {
       const payload = mockLendingMarketController.interface.encodeFunctionData(
         'executeEmergencySettlement',
       );
-      await reserveFundProxy.executeTransaction(
-        mockLendingMarketController.address,
-        payload,
-      );
+      await expect(
+        reserveFundProxy.executeTransaction(
+          mockLendingMarketController.address,
+          payload,
+        ),
+      ).to.emit(reserveFundProxy, 'TransactionExecuted');
     });
 
     it('Execute a deposit transaction', async () => {
@@ -170,7 +172,9 @@ describe('ReserveFund', () => {
       const values = [0, 0];
       const data = [approveData, depositData];
 
-      await reserveFundProxy.executeTransactions(targets, values, data);
+      await expect(
+        reserveFundProxy.executeTransactions(targets, values, data),
+      ).to.emit(reserveFundProxy, 'TransactionsExecuted');
     });
   });
 });
