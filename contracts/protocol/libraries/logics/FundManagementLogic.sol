@@ -51,7 +51,7 @@ library FundManagementLogic {
 
     struct CalculateActualFundsVars {
         bool isTotal;
-        address market;
+        ILendingMarket market;
         uint8 orderBookId;
         bool isDefaultMarket;
         uint8 defaultOrderBookId;
@@ -345,7 +345,7 @@ library FundManagementLogic {
         address _user
     ) public view returns (ActualFunds memory actualFunds) {
         CalculateActualFundsVars memory vars;
-        vars.market = Storage.slot().lendingMarkets[_ccy];
+        vars.market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         vars.defaultOrderBookId = Storage.slot().orderBookIdLists[_ccy][0];
 
         if (_maturity == 0) {
@@ -368,7 +368,7 @@ library FundManagementLogic {
             uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][
                 vars.maturities[i]
             ];
-            uint256 currentMaturity = ILendingMarket(vars.market).getMaturity(currentOrderBookId);
+            uint256 currentMaturity = vars.market.getMaturity(currentOrderBookId);
             bool isDefaultMarket = currentOrderBookId == vars.defaultOrderBookId;
 
             if (vars.isDefaultMarket || currentOrderBookId == vars.orderBookId) {
@@ -377,6 +377,7 @@ library FundManagementLogic {
                     _ccy,
                     _user,
                     vars,
+                    currentOrderBookId,
                     currentMaturity,
                     isDefaultMarket
                 );
@@ -386,6 +387,7 @@ library FundManagementLogic {
                         _ccy,
                         _user,
                         vars,
+                        currentOrderBookId,
                         currentMaturity,
                         isDefaultMarket
                     );
@@ -394,6 +396,7 @@ library FundManagementLogic {
                     _ccy,
                     _user,
                     vars,
+                    currentOrderBookId,
                     currentMaturity,
                     isDefaultMarket
                 );
@@ -461,7 +464,7 @@ library FundManagementLogic {
 
             int256 presentValue = calculatePVFromFV(
                 futureValue,
-                ILendingMarket(vars.market).getMidUnitPrice(vars.defaultOrderBookId)
+                vars.market.getMidUnitPrice(vars.defaultOrderBookId)
             );
 
             actualFunds.presentValue += presentValue;
@@ -855,13 +858,12 @@ library FundManagementLogic {
         bytes32 _ccy,
         address _user,
         CalculateActualFundsVars memory vars,
+        uint8 currentOrderBookId,
         uint256 currentMaturity,
         bool isDefaultMarket
     ) internal view returns (FutureValueVaultFunds memory funds) {
         (int256 futureValueInMaturity, uint256 fvMaturity) = IFutureValueVault(
-            Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityOrderBookIds[_ccy][currentMaturity]
-            ]
+            Storage.slot().futureValueVaults[_ccy][currentOrderBookId]
         ).getFutureValue(_user);
 
         if (futureValueInMaturity != 0) {
@@ -892,20 +894,15 @@ library FundManagementLogic {
         bytes32 _ccy,
         address _user,
         CalculateActualFundsVars memory vars,
+        uint8 currentOrderBookId,
         uint256 currentMaturity,
         bool isDefaultMarket
     ) internal view returns (InactiveBorrowOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
-        (
-            funds.workingOrdersAmount,
-            funds.borrowedAmount,
-            filledFutureValue,
-            orderMaturity
-        ) = ILendingMarket(vars.market).getTotalAmountFromBorrowOrders(
-            Storage.slot().maturityOrderBookIds[_ccy][currentMaturity],
-            _user
-        );
+        (funds.workingOrdersAmount, funds.borrowedAmount, filledFutureValue, orderMaturity) = vars
+            .market
+            .getTotalAmountFromBorrowOrders(currentOrderBookId, _user);
 
         if (filledFutureValue != 0) {
             if (currentMaturity != orderMaturity) {
@@ -935,20 +932,15 @@ library FundManagementLogic {
         bytes32 _ccy,
         address _user,
         CalculateActualFundsVars memory vars,
+        uint8 currentOrderBookId,
         uint256 currentMaturity,
         bool isDefaultMarket
     ) internal view returns (InactiveLendOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
-        (
-            funds.workingOrdersAmount,
-            funds.lentAmount,
-            filledFutureValue,
-            orderMaturity
-        ) = ILendingMarket(vars.market).getTotalAmountFromLendOrders(
-            Storage.slot().maturityOrderBookIds[_ccy][currentMaturity],
-            _user
-        );
+        (funds.workingOrdersAmount, funds.lentAmount, filledFutureValue, orderMaturity) = vars
+            .market
+            .getTotalAmountFromLendOrders(currentOrderBookId, _user);
 
         if (filledFutureValue != 0) {
             if (currentMaturity != orderMaturity) {

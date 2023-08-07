@@ -68,7 +68,7 @@ describe('Performance Test: Order Book', async () => {
     maturities = await lendingMarketController.getMaturities(hexWFIL);
   });
 
-  describe('Take orders without the order cleaning', async () => {
+  describe('Fill orders without the order cleaning', async () => {
     const currencies = [
       {
         key: hexETH,
@@ -88,7 +88,7 @@ describe('Performance Test: Order Book', async () => {
       let contract: Contract;
       let lendingMarket: Contract;
 
-      describe(`Take orders on the ${name} market`, async () => {
+      describe(`${name} market`, async () => {
         before('Set lending markets', async () => {
           lendingMarket = await lendingMarketController
             .getLendingMarket(currencyKey)
@@ -244,13 +244,13 @@ describe('Performance Test: Order Book', async () => {
     });
   });
 
-  describe('Clean up funds', async () => {
+  describe('Fill orders with the order cleaning', async () => {
     const tests = [1, 2, 8];
     const log = {};
     const currencyKey = hexUSDC;
     const orderAmount = BigNumber.from('500000');
 
-    describe(`Clean up funds on the USDC market`, async () => {
+    describe(`USDC market`, async () => {
       before('Set lending markets', async () => {
         signerIdx++;
       });
@@ -315,9 +315,20 @@ describe('Performance Test: Order Book', async () => {
           }
           process.stdout.write('\r\x1b[K');
 
+          // Test for cleaning up funds
+          // const tx = await lendingMarketController
+          //   .connect(signers[0])
+          //   .cleanUpFunds(currencyKey, signers[signerIdx].address);
+
           const tx = await lendingMarketController
             .connect(signers[0])
-            .cleanUpFunds(currencyKey, signers[signerIdx].address);
+            .executeOrder(
+              currencyKey,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              unitPrice,
+            );
 
           const receipt = await tx.wait();
 
