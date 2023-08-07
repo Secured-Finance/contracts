@@ -4,9 +4,9 @@ pragma solidity ^0.8.9;
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage} from "../../storages/LendingMarketStorage.sol";
-import {OrderBookCalculationLogic} from "./OrderBookCalculationLogic.sol";
+import {OrderReaderLogic} from "./OrderReaderLogic.sol";
 
-library OrderBookUserLogic {
+library OrderActionLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
 
     struct OrderExecutionConditions {
@@ -353,8 +353,10 @@ library OrderBookUserLogic {
         orderIds = new uint48[](inactiveOrderCount);
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
-            (uint256 presentValue, uint256 futureValue) = OrderBookCalculationLogic
-                .getLendOrderAmounts(orderBook, inActiveLendOrderIds[i]);
+            (uint256 presentValue, uint256 futureValue) = OrderReaderLogic.getLendOrderAmounts(
+                orderBook,
+                inActiveLendOrderIds[i]
+            );
 
             removedOrderAmount += presentValue;
             removedFutureValue += futureValue;
@@ -382,8 +384,10 @@ library OrderBookUserLogic {
         orderIds = new uint48[](inactiveOrderCount);
 
         for (uint256 i = 0; i < inactiveOrderCount; i++) {
-            (uint256 presentValue, uint256 futureValue) = OrderBookCalculationLogic
-                .getBorrowOrderAmounts(orderBook, inActiveBorrowOrderIds[i]);
+            (uint256 presentValue, uint256 futureValue) = OrderReaderLogic.getBorrowOrderAmounts(
+                orderBook,
+                inActiveBorrowOrderIds[i]
+            );
 
             removedOrderAmount += presentValue;
             removedFutureValue += futureValue;

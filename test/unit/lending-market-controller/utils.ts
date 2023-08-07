@@ -20,10 +20,8 @@ const ProxyController = artifacts.require('ProxyController');
 const ReserveFund = artifacts.require('ReserveFund');
 
 // libraries
-const OrderBookOperationLogic = artifacts.require('OrderBookOperationLogic');
-const OrderBookCalculationLogic = artifacts.require(
-  'OrderBookCalculationLogic',
-);
+const OrderBookLogic = artifacts.require('OrderBookLogic');
+const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 const LendingMarketConfigurationLogic = artifacts.require(
   'LendingMarketConfigurationLogic',
 );
@@ -189,20 +187,13 @@ const deployContracts = async (owner: SignerWithAddress) => {
   ]);
 
   // Set up for LendingMarketController
-  const orderBookCalculationLogic = await deployContract(
-    owner,
-    OrderBookCalculationLogic,
-  );
+  const orderReaderLogic = await deployContract(owner, OrderReaderLogic);
+  const orderBookLogic = await deployContract(owner, OrderBookLogic);
 
-  const orderBookOperationLogic = await deployContract(
-    owner,
-    OrderBookOperationLogic,
-  );
-
-  const orderBookUserLogic = await ethers
-    .getContractFactory('OrderBookUserLogic', {
+  const orderActionLogic = await ethers
+    .getContractFactory('OrderActionLogic', {
       libraries: {
-        OrderBookCalculationLogic: orderBookCalculationLogic.address,
+        OrderReaderLogic: orderReaderLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -210,9 +201,9 @@ const deployContracts = async (owner: SignerWithAddress) => {
   const lendingMarket = await ethers
     .getContractFactory('LendingMarket', {
       libraries: {
-        OrderBookUserLogic: orderBookUserLogic.address,
-        OrderBookOperationLogic: orderBookOperationLogic.address,
-        OrderBookCalculationLogic: orderBookCalculationLogic.address,
+        OrderActionLogic: orderActionLogic.address,
+        OrderReaderLogic: orderReaderLogic.address,
+        OrderBookLogic: orderBookLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -236,9 +227,9 @@ const deployContracts = async (owner: SignerWithAddress) => {
     fundManagementLogic,
     lendingMarketOperationLogic,
     liquidationLogic,
-    orderBookUserLogic,
-    orderBookOperationLogic,
-    orderBookCalculationLogic,
+    orderActionLogic,
+    orderBookLogic,
+    orderReaderLogic,
   };
 };
 

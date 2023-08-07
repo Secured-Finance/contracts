@@ -17,10 +17,8 @@ const ProxyController = artifacts.require('ProxyController');
 const LendingMarketCaller = artifacts.require('LendingMarketCaller');
 
 // libraries
-const OrderBookOperationLogic = artifacts.require('OrderBookOperationLogic');
-const OrderBookCalculationLogic = artifacts.require(
-  'OrderBookCalculationLogic',
-);
+const OrderBookLogic = artifacts.require('OrderBookLogic');
+const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 
 const { deployContract } = waffle;
 
@@ -38,8 +36,8 @@ describe('LendingMarket', () => {
   let signers: SignerWithAddress[];
 
   let lendingMarket: Contract;
-  let orderBookUserLogic: Contract;
-  let orderBookOperationLogic: Contract;
+  let orderActionLogic: Contract;
+  let orderBookLogic: Contract;
   let currentOrderBookId: BigNumber;
 
   const initialize = async (maturity: number, openingDate: number) => {
@@ -57,10 +55,8 @@ describe('LendingMarket', () => {
       .getLendingMarket(targetCurrency)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    orderBookUserLogic = orderBookUserLogic.attach(lendingMarket.address);
-    orderBookOperationLogic = orderBookOperationLogic.attach(
-      lendingMarket.address,
-    );
+    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
+    orderBookLogic = orderBookLogic.attach(lendingMarket.address);
 
     currentOrderBookId = await lendingMarketCaller.getOrderBookId(
       targetCurrency,
@@ -136,20 +132,14 @@ describe('LendingMarket', () => {
     ]);
 
     // Set up for LendingMarketController
-    const orderBookCalculationLogic = await deployContract(
-      owner,
-      OrderBookCalculationLogic,
-    );
+    const orderReaderLogic = await deployContract(owner, OrderReaderLogic);
 
-    orderBookOperationLogic = await deployContract(
-      owner,
-      OrderBookOperationLogic,
-    );
+    orderBookLogic = await deployContract(owner, OrderBookLogic);
 
-    orderBookUserLogic = await ethers
-      .getContractFactory('OrderBookUserLogic', {
+    orderActionLogic = await ethers
+      .getContractFactory('OrderActionLogic', {
         libraries: {
-          OrderBookCalculationLogic: orderBookCalculationLogic.address,
+          OrderReaderLogic: orderReaderLogic.address,
         },
       })
       .then((factory) => factory.deploy());
@@ -157,9 +147,9 @@ describe('LendingMarket', () => {
     const lendingMarket = await ethers
       .getContractFactory('LendingMarket', {
         libraries: {
-          OrderBookUserLogic: orderBookUserLogic.address,
-          OrderBookOperationLogic: orderBookOperationLogic.address,
-          OrderBookCalculationLogic: orderBookCalculationLogic.address,
+          OrderActionLogic: orderActionLogic.address,
+          OrderReaderLogic: orderReaderLogic.address,
+          OrderBookLogic: orderBookLogic.address,
         },
       })
       .then((factory) => factory.deploy());
@@ -642,7 +632,7 @@ describe('LendingMarket', () => {
                 order.unitPrice,
               ),
           )
-            .to.emit(orderBookUserLogic, 'PreOrderExecuted')
+            .to.emit(orderActionLogic, 'PreOrderExecuted')
             .withArgs(
               user.address,
               order.side,
@@ -661,15 +651,9 @@ describe('LendingMarket', () => {
           .executeItayoseCall(targetCurrency, currentOrderBookId)
           .then(async (tx) => {
             if (test.shouldItayoseExecuted) {
-              await expect(tx).to.emit(
-                orderBookOperationLogic,
-                'ItayoseExecuted',
-              );
+              await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
             } else {
-              await expect(tx).not.to.emit(
-                orderBookOperationLogic,
-                'ItayoseExecuted',
-              );
+              await expect(tx).not.to.emit(orderBookLogic, 'ItayoseExecuted');
             }
           });
 
@@ -697,7 +681,7 @@ describe('LendingMarket', () => {
           targetCurrency,
           currentOrderBookId,
         ),
-      ).to.not.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      ).to.not.emit(orderBookLogic, 'ItayoseExecuted');
     });
 
     it('Fail to create a pre-order due to an existing order with a past maturity', async () => {
@@ -741,7 +725,7 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .executeItayoseCall(targetCurrency, currentOrderBookId)
         .then(async (tx) => {
-          await expect(tx).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+          await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
         });
 
       // Move to 48 hours before maturity of 2nd order book.
@@ -937,7 +921,7 @@ describe('LendingMarket', () => {
                   CIRCUIT_BREAKER_LIMIT_RANGE,
                 ),
             )
-              .to.emit(orderBookUserLogic, 'OrderExecuted')
+              .to.emit(orderActionLogic, 'OrderExecuted')
               .withArgs(
                 bob.address,
                 side,
@@ -986,7 +970,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1004,7 +988,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1057,7 +1041,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1077,7 +1061,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(carolTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1108,7 +1092,7 @@ describe('LendingMarket', () => {
                 CIRCUIT_BREAKER_LIMIT_RANGE,
               ),
           )
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1180,7 +1164,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(carolTx1)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1198,7 +1182,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx2)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1248,7 +1232,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1266,7 +1250,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1319,7 +1303,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1337,7 +1321,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1413,7 +1397,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1431,7 +1415,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1507,7 +1491,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1525,7 +1509,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1600,7 +1584,7 @@ describe('LendingMarket', () => {
                 CIRCUIT_BREAKER_LIMIT_RANGE,
               ),
           )
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1629,7 +1613,7 @@ describe('LendingMarket', () => {
                 CIRCUIT_BREAKER_LIMIT_RANGE,
               ),
           )
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1680,7 +1664,7 @@ describe('LendingMarket', () => {
             alice.address,
           ),
         )
-          .to.emit(orderBookUserLogic, 'OrdersCleaned')
+          .to.emit(orderActionLogic, 'OrdersCleaned')
           .withArgs(
             [1],
             alice.address,
@@ -1722,7 +1706,7 @@ describe('LendingMarket', () => {
             bob.address,
           ),
         )
-          .to.emit(orderBookUserLogic, 'OrdersCleaned')
+          .to.emit(orderActionLogic, 'OrdersCleaned')
           .withArgs(
             [1],
             bob.address,
@@ -1750,7 +1734,7 @@ describe('LendingMarket', () => {
               0,
               CIRCUIT_BREAKER_LIMIT_RANGE,
             ),
-        ).to.emit(orderBookUserLogic, 'OrderExecuted');
+        ).to.emit(orderActionLogic, 'OrderExecuted');
 
         await createInitialOrders(Side.BORROW, 8500);
 
@@ -1765,7 +1749,7 @@ describe('LendingMarket', () => {
               CIRCUIT_BREAKER_LIMIT_RANGE,
             ),
         )
-          .to.emit(orderBookUserLogic, 'PositionUnwound')
+          .to.emit(orderActionLogic, 'PositionUnwound')
           .withArgs(
             bob.address,
             Side.LEND,
@@ -1793,7 +1777,7 @@ describe('LendingMarket', () => {
               0,
               CIRCUIT_BREAKER_LIMIT_RANGE,
             ),
-        ).to.emit(orderBookUserLogic, 'OrderExecuted');
+        ).to.emit(orderActionLogic, 'OrderExecuted');
 
         await createInitialOrders(Side.BORROW, 8500);
 
@@ -1823,7 +1807,7 @@ describe('LendingMarket', () => {
         await ethers.provider.send('evm_mine', []);
 
         await expect(tx)
-          .to.emit(orderBookUserLogic, 'PositionUnwound')
+          .to.emit(orderActionLogic, 'PositionUnwound')
           .withArgs(
             bob.address,
             Side.LEND,

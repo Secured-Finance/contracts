@@ -32,7 +32,7 @@ describe('LendingMarketController - Orders', () => {
 
   let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
-  let orderBookUserLogic: Contract;
+  let orderActionLogic: Contract;
   let futureValueVaults: Contract[];
 
   let targetCurrency: string;
@@ -67,7 +67,7 @@ describe('LendingMarketController - Orders', () => {
       lendingMarketControllerProxy,
       fundManagementLogic,
       lendingMarketOperationLogic,
-      orderBookUserLogic,
+      orderActionLogic,
     } = await deployContracts(owner));
 
     fundManagementLogic = fundManagementLogic.attach(
@@ -231,7 +231,7 @@ describe('LendingMarketController - Orders', () => {
         .getLendingMarket(targetCurrency)
         .then((address) => ethers.getContractAt('LendingMarket', address));
 
-      orderBookUserLogic = orderBookUserLogic.attach(lendingMarket.address);
+      orderActionLogic = orderActionLogic.attach(lendingMarket.address);
 
       maturities = await lendingMarketControllerProxy.getMaturities(currency);
       orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
@@ -404,7 +404,7 @@ describe('LendingMarketController - Orders', () => {
         .then(async (tx) => {
           await expect(tx).to.not.emit(fundManagementLogic, 'OrderFilled');
           await expect(tx)
-            .to.emit(orderBookUserLogic, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               alice.address,
               Side.LEND,
@@ -790,7 +790,7 @@ describe('LendingMarketController - Orders', () => {
         lendingMarketControllerProxy
           .connect(alice)
           .cancelOrder(targetCurrency, maturities[0], '1'),
-      ).to.emit(orderBookUserLogic, 'OrderCanceled');
+      ).to.emit(orderActionLogic, 'OrderCanceled');
     });
 
     it('Get an active order from one market', async () => {
@@ -1990,7 +1990,7 @@ describe('LendingMarketController - Orders', () => {
 
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
-          .to.emit(orderBookUserLogic, 'OrderExecuted')
+          .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             carol.address,
             Side.BORROW,
@@ -2041,7 +2041,7 @@ describe('LendingMarketController - Orders', () => {
 
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
-          .to.emit(orderBookUserLogic, 'OrderExecuted')
+          .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             carol.address,
             Side.LEND,
@@ -2110,7 +2110,7 @@ describe('LendingMarketController - Orders', () => {
 
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
-          .to.emit(orderBookUserLogic, 'OrderExecuted')
+          .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             ellen.address,
             Side.BORROW,
@@ -2173,7 +2173,7 @@ describe('LendingMarketController - Orders', () => {
             '37500000000000000',
           );
         await expect(tx)
-          .to.emit(orderBookUserLogic, 'OrderExecuted')
+          .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             carol.address,
             Side.BORROW,
@@ -2223,7 +2223,7 @@ describe('LendingMarketController - Orders', () => {
           );
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
-          .to.emit(orderBookUserLogic, 'OrderExecuted')
+          .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             carol.address,
             Side.BORROW,

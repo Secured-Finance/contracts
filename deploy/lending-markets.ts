@@ -24,20 +24,16 @@ const func: DeployFunction = async function ({
       ? process.env.INITIAL_MARKET_OPENING_DATE || moment().unix()
       : getGenesisDate().toString();
 
-  const orderBookUserLogic = await deployments.get('OrderBookUserLogic');
-  const orderBookOperationLogic = await deployments.get(
-    'OrderBookOperationLogic',
-  );
-  const orderBookCalculationLogic = await deployments.get(
-    'OrderBookCalculationLogic',
-  );
+  const orderActionLogic = await deployments.get('OrderActionLogic');
+  const orderReaderLogic = await deployments.get('OrderReaderLogic');
+  const orderBookLogic = await deployments.get('OrderBookLogic');
 
   const deployResult = await deploy('LendingMarket', {
     from: deployer,
     libraries: {
-      OrderBookUserLogic: orderBookUserLogic.address,
-      OrderBookOperationLogic: orderBookOperationLogic.address,
-      OrderBookCalculationLogic: orderBookCalculationLogic.address,
+      OrderActionLogic: orderActionLogic.address,
+      OrderReaderLogic: orderReaderLogic.address,
+      OrderBookLogic: orderBookLogic.address,
     },
   });
 

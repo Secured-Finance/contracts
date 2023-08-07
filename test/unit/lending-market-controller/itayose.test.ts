@@ -24,7 +24,7 @@ describe('LendingMarketController - Itayose', () => {
   let lendingMarketProxy: Contract;
 
   let fundManagementLogic: Contract;
-  let orderBookOperationLogic: Contract;
+  let orderBookLogic: Contract;
 
   let maturities: BigNumber[];
   let targetCurrency: string;
@@ -57,7 +57,7 @@ describe('LendingMarketController - Itayose', () => {
       lendingMarketControllerProxy,
       genesisValueVaultProxy,
       fundManagementLogic,
-      orderBookOperationLogic,
+      orderBookLogic,
     } = await deployContracts(owner));
 
     fundManagementLogic = fundManagementLogic.attach(
@@ -92,9 +92,7 @@ describe('LendingMarketController - Itayose', () => {
 
       maturities = await lendingMarketControllerProxy.getMaturities(currency);
 
-      orderBookOperationLogic = orderBookOperationLogic.attach(
-        lendingMarketProxy.address,
-      );
+      orderBookLogic = orderBookLogic.attach(lendingMarketProxy.address);
     };
 
     it('Execute Itayose call on the initial markets, the opening price become the same as the lending order', async () => {
@@ -181,7 +179,7 @@ describe('LendingMarketController - Itayose', () => {
         [targetCurrency],
         maturities[0],
       );
-      await expect(tx).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
       await expect(tx)
         .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
         .withArgs(
@@ -342,7 +340,7 @@ describe('LendingMarketController - Itayose', () => {
         [targetCurrency],
         maturities[0],
       );
-      await expect(tx).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
       await expect(tx)
         .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
         .withArgs(
@@ -436,7 +434,7 @@ describe('LendingMarketController - Itayose', () => {
           [targetCurrency],
           maturities[0],
         ),
-      ).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
       const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
         maturities[0],
@@ -542,7 +540,7 @@ describe('LendingMarketController - Itayose', () => {
           [targetCurrency],
           maturities[0],
         ),
-      ).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
       const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
         maturities[0],
@@ -664,7 +662,7 @@ describe('LendingMarketController - Itayose', () => {
           [targetCurrency],
           maturities[maturities.length - 1],
         ),
-      ).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
       const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
         maturities[maturities.length - 1],
@@ -766,7 +764,7 @@ describe('LendingMarketController - Itayose', () => {
           [targetCurrency],
           maturity,
         ),
-      ).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
       const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
         maturity,
@@ -856,7 +854,7 @@ describe('LendingMarketController - Itayose', () => {
           [targetCurrency],
           maturity,
         ),
-      ).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
       const { openingUnitPrice } = await lendingMarketProxy.getItayoseLog(
         maturity,
@@ -957,7 +955,7 @@ describe('LendingMarketController - Itayose', () => {
           [targetCurrency],
           maturities[0],
         ),
-      ).to.emit(orderBookOperationLogic, 'ItayoseExecuted');
+      ).to.emit(orderBookLogic, 'ItayoseExecuted');
 
       const { openingUnitPrice, lastLendUnitPrice, lastBorrowUnitPrice } =
         await lendingMarketProxy.getItayoseLog(maturities[0]);

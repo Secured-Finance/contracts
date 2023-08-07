@@ -17,10 +17,8 @@ import {
 import { deployContracts } from './utils';
 
 // libraries
-const OrderBookOperationLogic = artifacts.require('OrderBookOperationLogic');
-const OrderBookCalculationLogic = artifacts.require(
-  'OrderBookCalculationLogic',
-);
+const OrderBookLogic = artifacts.require('OrderBookLogic');
+const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 
 const { deployContract } = waffle;
 
@@ -400,20 +398,13 @@ describe('LendingMarketController - Operations', () => {
       );
 
       // Update implementations
-      const orderBookCalculationLogic = await deployContract(
-        owner,
-        OrderBookCalculationLogic,
-      );
+      const orderReaderLogic = await deployContract(owner, OrderReaderLogic);
+      const orderBookLogic = await deployContract(owner, OrderBookLogic);
 
-      const orderBookOperationLogic = await deployContract(
-        owner,
-        OrderBookOperationLogic,
-      );
-
-      const orderBookUserLogic = await ethers
-        .getContractFactory('OrderBookUserLogic', {
+      const orderActionLogic = await ethers
+        .getContractFactory('OrderActionLogic', {
           libraries: {
-            OrderBookCalculationLogic: orderBookCalculationLogic.address,
+            OrderReaderLogic: orderReaderLogic.address,
           },
         })
         .then((factory) => factory.deploy());
@@ -421,9 +412,9 @@ describe('LendingMarketController - Operations', () => {
       const lendingMarket = await ethers
         .getContractFactory('LendingMarket', {
           libraries: {
-            OrderBookUserLogic: orderBookUserLogic.address,
-            OrderBookOperationLogic: orderBookOperationLogic.address,
-            OrderBookCalculationLogic: orderBookCalculationLogic.address,
+            OrderActionLogic: orderActionLogic.address,
+            OrderReaderLogic: orderReaderLogic.address,
+            OrderBookLogic: orderBookLogic.address,
           },
         })
         .then((factory) => factory.deploy());

@@ -7,7 +7,7 @@ import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 
-library OrderBookOperationLogic {
+library OrderBookLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
     using RoundingUint256 for uint256;
 

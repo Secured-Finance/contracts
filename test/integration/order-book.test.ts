@@ -34,7 +34,7 @@ describe('Integration Test: Order Book', async () => {
   let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
-  let orderBookUserLogic: Contract;
+  let orderActionLogic: Contract;
 
   let genesisDate: number;
   let filLendingMarket: Contract;
@@ -113,7 +113,7 @@ describe('Integration Test: Order Book', async () => {
       lendingMarketController,
       wETHToken,
       wFILToken,
-      orderBookUserLogic,
+      orderActionLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -139,7 +139,7 @@ describe('Integration Test: Order Book', async () => {
 
     filOrderBookIds = await lendingMarketController.getOrderBookIds(hexWFIL);
 
-    orderBookUserLogic = orderBookUserLogic.attach(filLendingMarket.address);
+    orderActionLogic = orderActionLogic.attach(filLendingMarket.address);
   });
 
   describe('Market orders', async () => {
@@ -1031,7 +1031,7 @@ describe('Integration Test: Order Book', async () => {
         await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(tx)
-          .to.emit(orderBookUserLogic, 'OrderExecuted')
+          .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             carol.address,
             Side.LEND,

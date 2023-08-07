@@ -21,7 +21,7 @@ describe('Performance Test: Order Book', async () => {
   let wETHToken: Contract;
   let usdcToken: Contract;
 
-  let orderBookUserLogic: Contract;
+  let orderActionLogic: Contract;
 
   let genesisDate: number;
   let maturities: BigNumber[];
@@ -35,7 +35,7 @@ describe('Performance Test: Order Book', async () => {
       lendingMarketController,
       wETHToken,
       usdcToken,
-      orderBookUserLogic,
+      orderActionLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -94,7 +94,7 @@ describe('Performance Test: Order Book', async () => {
             .getLendingMarket(currencyKey)
             .then((address) => ethers.getContractAt('LendingMarket', address));
 
-          orderBookUserLogic = orderBookUserLogic.attach(lendingMarket.address);
+          orderActionLogic = orderActionLogic.attach(lendingMarket.address);
         });
 
         for (const test of tests) {
@@ -208,7 +208,7 @@ describe('Performance Test: Order Book', async () => {
               );
 
             await expect(tx)
-              .to.emit(orderBookUserLogic, 'OrderExecuted')
+              .to.emit(orderActionLogic, 'OrderExecuted')
               .withArgs(
                 signers[0].address,
                 Side.BORROW,

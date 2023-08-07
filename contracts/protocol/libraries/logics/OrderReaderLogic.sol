@@ -8,7 +8,7 @@ import {LendingMarketStorage as Storage, ItayoseLog} from "../../storages/Lendin
 import {OrderStatisticsTreeLib, OrderItem} from "../OrderStatisticsTreeLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 
-library OrderBookCalculationLogic {
+library OrderReaderLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;

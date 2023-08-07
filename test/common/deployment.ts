@@ -28,15 +28,15 @@ const deployContracts = async () => {
   const [
     depositManagementLogic,
     lendingMarketConfigurationLogic,
-    orderBookCalculationLogic,
-    orderBookOperationLogic,
+    orderReaderLogic,
+    orderBookLogic,
     quickSort,
   ] = await Promise.all(
     [
       'DepositManagementLogic',
       'LendingMarketConfigurationLogic',
-      'OrderBookCalculationLogic',
-      'OrderBookOperationLogic',
+      'OrderReaderLogic',
+      'OrderBookLogic',
       'QuickSort',
     ].map((library) =>
       ethers.getContractFactory(library).then((factory) => factory.deploy()),
@@ -79,10 +79,10 @@ const deployContracts = async () => {
     })
     .then((factory) => factory.deploy());
 
-  const orderBookUserLogic = await ethers
-    .getContractFactory('OrderBookUserLogic', {
+  const orderActionLogic = await ethers
+    .getContractFactory('OrderActionLogic', {
       libraries: {
-        OrderBookCalculationLogic: orderBookCalculationLogic.address,
+        OrderReaderLogic: orderReaderLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -291,9 +291,9 @@ const deployContracts = async () => {
   const lendingMarket = await ethers
     .getContractFactory('LendingMarket', {
       libraries: {
-        OrderBookUserLogic: orderBookUserLogic.address,
-        OrderBookOperationLogic: orderBookOperationLogic.address,
-        OrderBookCalculationLogic: orderBookCalculationLogic.address,
+        OrderActionLogic: orderActionLogic.address,
+        OrderReaderLogic: orderReaderLogic.address,
+        OrderBookLogic: orderBookLogic.address,
       },
     })
     .then((factory) => factory.deploy());
@@ -349,7 +349,7 @@ const deployContracts = async () => {
     liquidationLogic: liquidationLogic.attach(
       lendingMarketControllerProxy.address,
     ),
-    orderBookUserLogic: orderBookUserLogic,
+    orderActionLogic,
   };
 };
 

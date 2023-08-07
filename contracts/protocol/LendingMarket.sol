@@ -5,9 +5,9 @@ pragma solidity ^0.8.9;
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {OrderBookUserLogic} from "./libraries/logics/OrderBookUserLogic.sol";
-import {OrderBookOperationLogic} from "./libraries/logics/OrderBookOperationLogic.sol";
-import {OrderBookCalculationLogic} from "./libraries/logics/OrderBookCalculationLogic.sol";
+import {OrderActionLogic} from "./libraries/logics/OrderActionLogic.sol";
+import {OrderBookLogic} from "./libraries/logics/OrderBookLogic.sol";
+import {OrderReaderLogic} from "./libraries/logics/OrderReaderLogic.sol";
 import {RoundingUint256} from "./libraries/math/RoundingUint256.sol";
 import {FilledOrder, PartiallyFilledOrder} from "./libraries/OrderBookLib.sol";
 // mixins
@@ -124,7 +124,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             market.midUnitPrice,
             market.openingUnitPrice,
             market.isReady
-        ) = OrderBookOperationLogic.getOrderBookDetail(_orderBookId);
+        ) = OrderBookLogic.getOrderBookDetail(_orderBookId);
     }
 
     /**
@@ -140,11 +140,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
-        return
-            OrderBookOperationLogic.getCircuitBreakerThresholds(
-                _orderBookId,
-                _circuitBreakerLimitRange
-            );
+        return OrderBookLogic.getCircuitBreakerThresholds(_orderBookId, _circuitBreakerLimitRange);
     }
 
     /**
@@ -153,7 +149,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The best price for lending
      */
     function getBestLendUnitPrice(uint8 _orderBookId) public view override returns (uint256) {
-        return OrderBookOperationLogic.getBestLendUnitPrice(_orderBookId);
+        return OrderBookLogic.getBestLendUnitPrice(_orderBookId);
     }
 
     /**
@@ -166,7 +162,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint256[] memory)
     {
-        return OrderBookOperationLogic.getBestLendUnitPrices(_orderBookIds);
+        return OrderBookLogic.getBestLendUnitPrices(_orderBookIds);
     }
 
     /**
@@ -175,7 +171,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The best price for borrowing
      */
     function getBestBorrowUnitPrice(uint8 _orderBookId) public view override returns (uint256) {
-        return OrderBookOperationLogic.getBestBorrowUnitPrice(_orderBookId);
+        return OrderBookLogic.getBestBorrowUnitPrice(_orderBookId);
     }
 
     /**
@@ -188,7 +184,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint256[] memory)
     {
-        return OrderBookOperationLogic.getBestBorrowUnitPrices(_orderBookIds);
+        return OrderBookLogic.getBestBorrowUnitPrices(_orderBookIds);
     }
 
     /**
@@ -197,7 +193,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The mid price per future value
      */
     function getMidUnitPrice(uint8 _orderBookId) public view override returns (uint256) {
-        return OrderBookOperationLogic.getMidUnitPrice(_orderBookId);
+        return OrderBookLogic.getMidUnitPrice(_orderBookId);
     }
 
     /**
@@ -210,7 +206,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint256[] memory)
     {
-        return OrderBookOperationLogic.getMidUnitPrices(_orderBookIds);
+        return OrderBookLogic.getMidUnitPrices(_orderBookIds);
     }
 
     /**
@@ -229,7 +225,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256[] memory quantities
         )
     {
-        return OrderBookOperationLogic.getBorrowOrderBook(_orderBookId, _limit);
+        return OrderBookLogic.getBorrowOrderBook(_orderBookId, _limit);
     }
 
     /**
@@ -248,7 +244,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256[] memory quantities
         )
     {
-        return OrderBookOperationLogic.getLendOrderBook(_orderBookId, _limit);
+        return OrderBookLogic.getLendOrderBook(_orderBookId, _limit);
     }
 
     /**
@@ -270,7 +266,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint256[] memory maturities)
     {
-        return OrderBookOperationLogic.getMaturities(_orderBookIds);
+        return OrderBookLogic.getMaturities(_orderBookIds);
     }
 
     /**
@@ -305,7 +301,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return The boolean if the market is matured or not
      */
     function isMatured(uint8 _orderBookId) public view override returns (bool) {
-        return OrderBookCalculationLogic.isMatured(_orderBookId);
+        return OrderReaderLogic.isMatured(_orderBookId);
     }
 
     /**
@@ -378,7 +374,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             bool isPreOrder
         )
     {
-        return OrderBookCalculationLogic.getOrder(_orderBookId, _orderId);
+        return OrderReaderLogic.getOrder(_orderBookId, _orderId);
     }
 
     /**
@@ -401,7 +397,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 maturity
         )
     {
-        return OrderBookCalculationLogic.getTotalAmountFromLendOrders(_orderBookId, _user);
+        return OrderReaderLogic.getTotalAmountFromLendOrders(_orderBookId, _user);
     }
 
     /**
@@ -424,7 +420,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 maturity
         )
     {
-        return OrderBookCalculationLogic.getTotalAmountFromBorrowOrders(_orderBookId, _user);
+        return OrderReaderLogic.getTotalAmountFromBorrowOrders(_orderBookId, _user);
     }
 
     /**
@@ -438,7 +434,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
     {
-        return OrderBookCalculationLogic.getLendOrderIds(_orderBookId, _user);
+        return OrderReaderLogic.getLendOrderIds(_orderBookId, _user);
     }
 
     /**
@@ -452,7 +448,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
     {
-        return OrderBookCalculationLogic.getBorrowOrderIds(_orderBookId, _user);
+        return OrderReaderLogic.getBorrowOrderIds(_orderBookId, _user);
     }
 
     /**
@@ -483,7 +479,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         )
     {
         return
-            OrderBookCalculationLogic.calculateFilledAmount(
+            OrderReaderLogic.calculateFilledAmount(
                 _orderBookId,
                 _side,
                 _amount,
@@ -503,7 +499,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         onlyAcceptedContracts
         returns (uint8 orderBookId)
     {
-        return OrderBookOperationLogic.createOrderBook(_maturity, _openingDate);
+        return OrderBookLogic.createOrderBook(_maturity, _openingDate);
     }
 
     function reopenOrderBook(
@@ -511,7 +507,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _newMaturity,
         uint256 _openingDate
     ) external override onlyAcceptedContracts {
-        OrderBookOperationLogic.reopenOrderBook(_orderBookId, _newMaturity, _openingDate);
+        OrderBookLogic.reopenOrderBook(_orderBookId, _newMaturity, _openingDate);
     }
 
     /**
@@ -531,7 +527,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         whenNotPaused
         onlyAcceptedContracts
     {
-        OrderBookUserLogic.cancelOrder(_orderBookId, _user, _orderId);
+        OrderActionLogic.cancelOrder(_orderBookId, _user, _orderId);
     }
 
     /**
@@ -562,7 +558,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 maturity
         )
     {
-        return OrderBookUserLogic.cleanUpOrders(_orderBookId, _user);
+        return OrderActionLogic.cleanUpOrders(_orderBookId, _user);
     }
 
     /**
@@ -593,7 +589,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
         return
-            OrderBookUserLogic.executeOrder(
+            OrderActionLogic.executeOrder(
                 _orderBookId,
                 _side,
                 _user,
@@ -619,7 +615,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _amount,
         uint256 _unitPrice
     ) external override whenNotPaused onlyAcceptedContracts ifPreOrderPeriod(_orderBookId) {
-        OrderBookUserLogic.executePreOrder(_orderBookId, _side, _user, _amount, _unitPrice);
+        OrderActionLogic.executePreOrder(_orderBookId, _side, _user, _amount, _unitPrice);
     }
 
     /**
@@ -647,7 +643,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
     {
         return
-            OrderBookUserLogic.unwindPosition(
+            OrderActionLogic.unwindPosition(
                 _orderBookId,
                 _side,
                 _user,
@@ -681,7 +677,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         )
     {
-        return OrderBookOperationLogic.executeItayoseCall(_orderBookId);
+        return OrderBookLogic.executeItayoseCall(_orderBookId);
     }
 
     /**
