@@ -230,7 +230,10 @@ contract LendingMarketController is
      * @return Array with the best prices for lending
      */
     function getBestLendUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
-        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestLendUnitPrices();
+        return
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestLendUnitPrices(
+                Storage.slot().orderBookIds[_ccy]
+            );
     }
 
     /**
@@ -244,7 +247,10 @@ contract LendingMarketController is
         override
         returns (uint256[] memory)
     {
-        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestBorrowUnitPrices();
+        return
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestBorrowUnitPrices(
+                Storage.slot().orderBookIds[_ccy]
+            );
     }
 
     /**
@@ -253,7 +259,10 @@ contract LendingMarketController is
      * @return Array with the mid prices per future value of the lending market
      */
     function getMidUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
-        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMidUnitPrices();
+        return
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMidUnitPrices(
+                Storage.slot().orderBookIds[_ccy]
+            );
     }
 
     /**
@@ -373,7 +382,19 @@ contract LendingMarketController is
      * @return Array with the lending market maturity
      */
     function getMaturities(bytes32 _ccy) public view override returns (uint256[] memory) {
-        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMaturities();
+        return
+            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMaturities(
+                Storage.slot().orderBookIds[_ccy]
+            );
+    }
+
+    /**
+     * @notice Gets the order book ids.
+     * @param _ccy Currency name in bytes32
+     * @return The array of order book id
+     */
+    function getOrderBookIds(bytes32 _ccy) external view override returns (uint8[] memory) {
+        return Storage.slot().orderBookIds[_ccy];
     }
 
     /**

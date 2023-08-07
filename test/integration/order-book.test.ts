@@ -137,7 +137,7 @@ describe('Integration Test: Order Book', async () => {
       .getLendingMarket(hexWFIL)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    filOrderBookIds = await filLendingMarket.getOrderBookIds();
+    filOrderBookIds = await lendingMarketController.getOrderBookIds(hexWFIL);
 
     orderBookUserLogic = orderBookUserLogic.attach(filLendingMarket.address);
   });

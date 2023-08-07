@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {OrderBookLib, MarketOrder, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
+import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage} from "../../storages/LendingMarketStorage.sol";
 import {OrderBookCalculationLogic} from "./OrderBookCalculationLogic.sol";

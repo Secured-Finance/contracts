@@ -80,14 +80,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Modifier to check if there is an order book.
-     */
-    modifier hasOrderBook() {
-        require(Storage.slot().orderBookIds.length > 0, "No order book exist");
-        _;
-    }
-
-    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _resolver The address of the Address Resolver contract
@@ -168,8 +160,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the best prices for lending.
      * @return The array of the best price for lending
      */
-    function getBestLendUnitPrices() external view override returns (uint256[] memory) {
-        return OrderBookOperationLogic.getBestLendUnitPrices();
+    function getBestLendUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
+        return OrderBookOperationLogic.getBestLendUnitPrices(_orderBookIds);
     }
 
     /**
@@ -185,8 +182,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the best prices for borrowing.
      * @return The array of the best price for borrowing
      */
-    function getBestBorrowUnitPrices() external view override returns (uint256[] memory) {
-        return OrderBookOperationLogic.getBestBorrowUnitPrices();
+    function getBestBorrowUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
+        return OrderBookOperationLogic.getBestBorrowUnitPrices(_orderBookIds);
     }
 
     /**
@@ -202,8 +204,13 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the the prices per future value.
      * @return The array of the the price per future value
      */
-    function getMidUnitPrices() public view override returns (uint256[] memory) {
-        return OrderBookOperationLogic.getMidUnitPrices();
+    function getMidUnitPrices(uint8[] memory _orderBookIds)
+        public
+        view
+        override
+        returns (uint256[] memory)
+    {
+        return OrderBookOperationLogic.getMidUnitPrices(_orderBookIds);
     }
 
     /**
@@ -254,19 +261,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the order book ids.
-     * @return orderBookIds The array of order book id
-     */
-    function getOrderBookIds() external view override returns (uint8[] memory orderBookIds) {
-        return Storage.slot().orderBookIds;
-    }
-
-    /**
      * @notice Gets the order book maturities.
      * @return maturities The array of maturity
      */
-    function getMaturities() external view override returns (uint256[] memory maturities) {
-        return OrderBookOperationLogic.getMaturities();
+    function getMaturities(uint8[] memory _orderBookIds)
+        external
+        view
+        override
+        returns (uint256[] memory maturities)
+    {
+        return OrderBookOperationLogic.getMaturities(_orderBookIds);
     }
 
     /**
@@ -502,14 +506,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return OrderBookOperationLogic.createOrderBook(_maturity, _openingDate);
     }
 
-    function rotateOrderBooks(uint256 _newMaturity)
-        external
-        override
-        hasOrderBook
-        onlyAcceptedContracts
-        returns (uint8 defaultOrderBookId, uint8 autoRollReferenceOrderBookId)
-    {
-        return OrderBookOperationLogic.rotateOrderBooks(_newMaturity);
+    function reopenOrderBook(
+        uint8 _orderBookId,
+        uint256 _newMaturity,
+        uint256 _openingDate
+    ) external override onlyAcceptedContracts {
+        OrderBookOperationLogic.reopenOrderBook(_orderBookId, _newMaturity, _openingDate);
     }
 
     /**

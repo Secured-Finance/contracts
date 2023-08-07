@@ -38,8 +38,17 @@ contract LendingMarketCaller {
         );
     }
 
-    function rotateOrderBooks(bytes32 _ccy, uint256 _newMaturity) external {
-        ILendingMarket(lendingMarkets[_ccy]).rotateOrderBooks(_newMaturity);
+    function reopenOrderBook(
+        bytes32 _ccy,
+        uint8 _orderBookId,
+        uint256 _newMaturity,
+        uint256 _openingDate
+    ) external {
+        ILendingMarket(lendingMarkets[_ccy]).reopenOrderBook(
+            _orderBookId,
+            _newMaturity,
+            _openingDate
+        );
     }
 
     function executeOrder(

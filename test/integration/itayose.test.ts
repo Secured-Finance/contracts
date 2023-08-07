@@ -79,7 +79,7 @@ describe('Integration Test: Itayose', async () => {
       .getLendingMarket(hexETH)
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    orderBookIds = await lendingMarket.getOrderBookIds();
+    orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
 
     futureValueVaults = await Promise.all(
       maturities.map((maturity) =>

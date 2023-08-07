@@ -6,7 +6,7 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {OrderStatisticsTreeLib, PartiallyRemovedOrder, OrderItem} from "./OrderStatisticsTreeLib.sol";
 import {RoundingUint256} from "./math/RoundingUint256.sol";
 
-struct MarketOrder {
+struct PlacedOrder {
     ProtocolTypes.Side side;
     uint256 unitPrice; // in basis points
     uint256 maturity;
@@ -45,7 +45,7 @@ library OrderBookLib {
         // Mapping from user to current maturity
         mapping(address => uint256) userCurrentMaturities;
         // Mapping from orderId to order
-        mapping(uint256 => MarketOrder) orders;
+        mapping(uint256 => PlacedOrder) orders;
         // Mapping from orderId to boolean for pre-order or not
         mapping(uint256 => bool) isPreOrder;
         // Mapping from maturity to lending orders
@@ -164,11 +164,11 @@ library OrderBookLib {
 
         for (uint256 i = 0; i < self.activeLendOrderIds[_user].length; i++) {
             uint48 orderId = self.activeLendOrderIds[_user][i];
-            MarketOrder memory marketOrder = self.orders[orderId];
+            PlacedOrder memory order = self.orders[orderId];
 
             if (
                 !self.lendOrders[self.userCurrentMaturities[_user]].isActiveOrderId(
-                    marketOrder.unitPrice,
+                    order.unitPrice,
                     orderId
                 )
             ) {
@@ -205,11 +205,11 @@ library OrderBookLib {
 
         for (uint256 i = 0; i < self.activeBorrowOrderIds[_user].length; i++) {
             uint48 orderId = self.activeBorrowOrderIds[_user][i];
-            MarketOrder memory marketOrder = self.orders[orderId];
+            PlacedOrder memory order = self.orders[orderId];
 
             if (
                 !self.borrowOrders[self.userCurrentMaturities[_user]].isActiveOrderId(
-                    marketOrder.unitPrice,
+                    order.unitPrice,
                     orderId
                 )
             ) {
@@ -250,7 +250,7 @@ library OrderBookLib {
         if (_amount == 0) return (0, 0, 0);
 
         if (_side == ProtocolTypes.Side.LEND) {
-            uint256 cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
+            uint256 cbThresholdUnitPrice = _getLendCircuitBreakerThreshold(
                 _circuitBreakerLimitRange,
                 getBestLendUnitPrice(self)
             );
@@ -266,7 +266,7 @@ library OrderBookLib {
                     executedUnitPrice
                 );
         } else {
-            uint256 cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
+            uint256 cbThresholdUnitPrice = _getBorrowCircuitBreakerThreshold(
                 _circuitBreakerLimitRange,
                 getBestBorrowUnitPrice(self)
             );
@@ -292,7 +292,7 @@ library OrderBookLib {
         uint256 _unitPrice
     ) internal returns (uint48 orderId) {
         orderId = _nextOrderId(self);
-        self.orders[orderId] = MarketOrder(_side, _unitPrice, self.maturity, block.timestamp);
+        self.orders[orderId] = PlacedOrder(_side, _unitPrice, self.maturity, block.timestamp);
 
         if (_side == ProtocolTypes.Side.LEND) {
             self.lendOrders[self.maturity].insertOrder(_unitPrice, orderId, _user, _amount);
@@ -362,23 +362,17 @@ library OrderBookLib {
             uint256
         )
     {
-        MarketOrder memory marketOrder = self.orders[_orderId];
+        PlacedOrder memory order = self.orders[_orderId];
         uint256 removedAmount;
-        if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            removedAmount = self.lendOrders[self.maturity].removeOrder(
-                marketOrder.unitPrice,
-                _orderId
-            );
+        if (order.side == ProtocolTypes.Side.LEND) {
+            removedAmount = self.lendOrders[self.maturity].removeOrder(order.unitPrice, _orderId);
             _removeOrderIdFromOrders(self.activeLendOrderIds[_user], _orderId);
-        } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
-            removedAmount = self.borrowOrders[self.maturity].removeOrder(
-                marketOrder.unitPrice,
-                _orderId
-            );
+        } else if (order.side == ProtocolTypes.Side.BORROW) {
+            removedAmount = self.borrowOrders[self.maturity].removeOrder(order.unitPrice, _orderId);
             _removeOrderIdFromOrders(self.activeBorrowOrderIds[_user], _orderId);
         }
 
-        return (marketOrder.side, removedAmount, marketOrder.unitPrice);
+        return (order.side, removedAmount, order.unitPrice);
     }
 
     function getOpeningUnitPrice(OrderBook storage self)
@@ -456,7 +450,7 @@ library OrderBookLib {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
+                cbThresholdUnitPrice = _getLendCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -467,7 +461,7 @@ library OrderBookLib {
             orderExists = bestUnitPrice != 0;
 
             if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
+                cbThresholdUnitPrice = _getBorrowCircuitBreakerThreshold(
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
@@ -503,21 +497,20 @@ library OrderBookLib {
         view
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
-        maxLendUnitPrice = getLendCircuitBreakerThreshold(
+        maxLendUnitPrice = _getLendCircuitBreakerThreshold(
             _circuitBreakerLimitRange,
             getBestLendUnitPrice(self)
         );
-        minBorrowUnitPrice = getBorrowCircuitBreakerThreshold(
+        minBorrowUnitPrice = _getBorrowCircuitBreakerThreshold(
             _circuitBreakerLimitRange,
             getBestBorrowUnitPrice(self)
         );
     }
 
-    function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        public
-        pure
-        returns (uint256 cbThresholdUnitPrice)
-    {
+    function _getBorrowCircuitBreakerThreshold(
+        uint256 _circuitBreakerLimitRange,
+        uint256 _unitPrice
+    ) private pure returns (uint256 cbThresholdUnitPrice) {
         // NOTE: Formula of circuit breaker threshold for borrow orders:
         // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
         uint256 numerator = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
@@ -538,8 +531,8 @@ library OrderBookLib {
         }
     }
 
-    function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        public
+    function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
+        private
         pure
         returns (uint256 cbThresholdUnitPrice)
     {

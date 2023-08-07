@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "../types/ProtocolTypes.sol";
 import {ItayoseLog} from "../storages/LendingMarketStorage.sol";
-import {OrderBookLib, MarketOrder, FilledOrder, PartiallyFilledOrder} from "../libraries/OrderBookLib.sol";
+import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../libraries/OrderBookLib.sol";
 
 interface ILendingMarket {
     struct OrderBook {
@@ -26,15 +26,24 @@ interface ILendingMarket {
 
     function getBestLendUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestLendUnitPrices() external view returns (uint256[] memory);
+    function getBestLendUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory);
 
     function getBestBorrowUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestBorrowUnitPrices() external view returns (uint256[] memory);
+    function getBestBorrowUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory);
 
     function getMidUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getMidUnitPrices() external view returns (uint256[] memory);
+    function getMidUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory);
 
     function getBorrowOrderBook(uint8 orderBookId, uint256 limit)
         external
@@ -56,9 +65,10 @@ interface ILendingMarket {
 
     function getMaturity(uint8 orderBookId) external view returns (uint256);
 
-    function getOrderBookIds() external view returns (uint8[] memory orderBookIds);
-
-    function getMaturities() external view returns (uint256[] memory maturities);
+    function getMaturities(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory maturities);
 
     function getCurrency() external view returns (bytes32);
 
@@ -138,9 +148,11 @@ interface ILendingMarket {
         external
         returns (uint8 orderBookId);
 
-    function rotateOrderBooks(uint256 newMaturity)
-        external
-        returns (uint8 defaultOrderBookId, uint8 autoRollReferenceOrderBookId);
+    function reopenOrderBook(
+        uint8 _orderBookId,
+        uint256 _newMaturity,
+        uint256 _openingDate
+    ) external;
 
     function cancelOrder(
         uint8 orderBookId,

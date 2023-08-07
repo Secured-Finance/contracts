@@ -753,8 +753,16 @@ describe('LendingMarket', () => {
       const newMaturity = moment(newTimestamp * 1000)
         .add(1, 'M')
         .unix();
+      const newOpeningDate = moment(newTimestamp * 1000)
+        .add(48, 'h')
+        .unix();
 
-      await lendingMarketCaller.rotateOrderBooks(targetCurrency, newMaturity);
+      await lendingMarketCaller.reopenOrderBook(
+        targetCurrency,
+        currentOrderBookId,
+        newMaturity,
+        newOpeningDate,
+      );
 
       await expect(
         lendingMarketCaller

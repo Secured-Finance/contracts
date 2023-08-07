@@ -12,7 +12,6 @@ library OrderBookOperationLogic {
     using RoundingUint256 for uint256;
 
     event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate);
-    event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
 
     event ItayoseExecuted(
         bytes32 ccy,
@@ -61,12 +60,15 @@ library OrderBookOperationLogic {
         return _getOrderBook(_orderBookId).getBestLendUnitPrice();
     }
 
-    function getBestLendUnitPrices() external view returns (uint256[] memory unitPrices) {
-        uint8[] memory orderBookIds = Storage.slot().orderBookIds;
-        unitPrices = new uint256[](orderBookIds.length);
+    function getBestLendUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory unitPrices)
+    {
+        unitPrices = new uint256[](_orderBookIds.length);
 
-        for (uint256 i; i < orderBookIds.length; i++) {
-            unitPrices[i] = _getOrderBook(orderBookIds[i]).getBestLendUnitPrice();
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestLendUnitPrice();
         }
     }
 
@@ -74,12 +76,15 @@ library OrderBookOperationLogic {
         return _getOrderBook(_orderBookId).getBestBorrowUnitPrice();
     }
 
-    function getBestBorrowUnitPrices() external view returns (uint256[] memory unitPrices) {
-        uint8[] memory orderBookIds = Storage.slot().orderBookIds;
-        unitPrices = new uint256[](orderBookIds.length);
+    function getBestBorrowUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory unitPrices)
+    {
+        unitPrices = new uint256[](_orderBookIds.length);
 
-        for (uint256 i; i < orderBookIds.length; i++) {
-            unitPrices[i] = _getOrderBook(orderBookIds[i]).getBestBorrowUnitPrice();
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestBorrowUnitPrice();
         }
     }
 
@@ -90,12 +95,15 @@ library OrderBookOperationLogic {
         return (borrowUnitPrice + lendUnitPrice).div(2);
     }
 
-    function getMidUnitPrices() external view returns (uint256[] memory unitPrices) {
-        uint8[] memory orderBookIds = Storage.slot().orderBookIds;
-        unitPrices = new uint256[](orderBookIds.length);
+    function getMidUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory unitPrices)
+    {
+        unitPrices = new uint256[](_orderBookIds.length);
 
-        for (uint256 i; i < orderBookIds.length; i++) {
-            unitPrices[i] = getMidUnitPrice(orderBookIds[i]);
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            unitPrices[i] = getMidUnitPrice(_orderBookIds[i]);
         }
     }
 
@@ -123,12 +131,15 @@ library OrderBookOperationLogic {
         return _getOrderBook(_orderBookId).getLendOrderBook(_limit);
     }
 
-    function getMaturities() public view returns (uint256[] memory maturities) {
-        uint8[] memory orderBookIds = Storage.slot().orderBookIds;
-        maturities = new uint256[](orderBookIds.length);
+    function getMaturities(uint8[] memory _orderBookIds)
+        public
+        view
+        returns (uint256[] memory maturities)
+    {
+        maturities = new uint256[](_orderBookIds.length);
 
-        for (uint256 i; i < orderBookIds.length; i++) {
-            maturities[i] = _getOrderBook(orderBookIds[i]).maturity;
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            maturities[i] = _getOrderBook(_orderBookIds[i]).maturity;
         }
     }
 
@@ -137,7 +148,6 @@ library OrderBookOperationLogic {
         returns (uint8 orderBookId)
     {
         orderBookId = _nextOrderBookId();
-        Storage.slot().orderBookIds.push(orderBookId);
 
         Storage.slot().isReady[_maturity] = _getOrderBook(orderBookId).initialize(
             _maturity,
@@ -147,35 +157,14 @@ library OrderBookOperationLogic {
         emit OrderBookCreated(orderBookId, _maturity, _openingDate);
     }
 
-    function rotateOrderBooks(uint256 _newMaturity) external returns (uint8, uint8) {
-        uint8[] storage orderBookIds = Storage.slot().orderBookIds;
-
-        require(orderBookIds.length >= 2, "Not enough order books");
-
-        uint8 currentOrderBookId = orderBookIds[0];
-
-        // The market that is moved to the last of the list opens again when the next market is matured.
-        // Just before the opening, the moved market needs the Itayose execution.
-        uint256 nearestMaturity = Storage.slot().orderBooks[orderBookIds[1]].maturity;
-
-        OrderBookLib.OrderBook storage orderBook = Storage.slot().orderBooks[currentOrderBookId];
-        uint256 maturedMaturity = orderBook.maturity;
-
+    function reopenOrderBook(
+        uint8 _orderBookId,
+        uint256 _newMaturity,
+        uint256 _openingDate
+    ) external {
+        OrderBookLib.OrderBook storage orderBook = Storage.slot().orderBooks[_orderBookId];
         require(orderBook.isMatured(), "Market is not matured");
-
-        Storage.slot().isReady[_newMaturity] = orderBook.initialize(_newMaturity, nearestMaturity);
-
-        // Rotate the order of the market
-        for (uint256 i = 0; i < orderBookIds.length; i++) {
-            uint8 orderBookId = (orderBookIds.length - 1) == i
-                ? currentOrderBookId
-                : orderBookIds[i + 1];
-            orderBookIds[i] = orderBookId;
-        }
-
-        emit OrderBooksRotated(Storage.slot().ccy, maturedMaturity, _newMaturity);
-
-        return (orderBookIds[0], orderBookIds[1]);
+        Storage.slot().isReady[_newMaturity] = orderBook.initialize(_newMaturity, _openingDate);
     }
 
     function executeItayoseCall(uint8 _orderBookId)

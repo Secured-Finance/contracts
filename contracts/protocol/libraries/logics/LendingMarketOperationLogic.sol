@@ -91,7 +91,7 @@ library LendingMarketOperationLogic {
         returns (ILendingMarketController.OrderBookDetail[] memory orderBookDetail)
     {
         uint256[] memory maturities = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getMaturities();
+            .getMaturities(Storage.slot().orderBookIds[_ccy]);
         orderBookDetail = new ILendingMarketController.OrderBookDetail[](maturities.length);
 
         for (uint256 i; i < maturities.length; i++) {
@@ -167,7 +167,7 @@ library LendingMarketOperationLogic {
 
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
 
-        uint256[] memory maturities = market.getMaturities();
+        uint256[] memory maturities = market.getMaturities(Storage.slot().orderBookIds[_ccy]);
         uint256 newMaturity;
 
         if (maturities.length == 0) {
@@ -181,11 +181,7 @@ library LendingMarketOperationLogic {
 
         uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate);
 
-        if (maturities.length == 0) {
-            Storage.slot().defaultOrderBookIds[_ccy] = orderBookId;
-        } else if (maturities.length == 1) {
-            Storage.slot().autoRollReferenceOrderBookIds[_ccy] = orderBookId;
-        }
+        Storage.slot().orderBookIds[_ccy].push(orderBookId);
 
         address futureValueVault = AddressResolverLib
             .beaconProxyController()
@@ -230,7 +226,7 @@ library LendingMarketOperationLogic {
 
             // Save the openingUnitPrice as first compound factor
             // if it is a first Itayose call at the nearest market.
-            if (openingUnitPrice > 0 && Storage.slot().defaultOrderBookIds[_ccy] == orderBookId) {
+            if (openingUnitPrice > 0 && Storage.slot().orderBookIds[_ccy][0] == orderBookId) {
                 // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
                 uint256 convertedUnitPrice = _convertUnitPrice(
                     openingUnitPrice,
@@ -252,18 +248,28 @@ library LendingMarketOperationLogic {
         returns (uint256 newMaturity)
     {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        uint256[] memory maturities = market.getMaturities();
+        uint8[] storage orderBookIds = Storage.slot().orderBookIds[_ccy];
 
-        // Reopen the market matured with new maturity
+        require(orderBookIds.length >= 2, "Not enough order books");
+
+        uint256[] memory maturities = market.getMaturities(orderBookIds);
+        uint8 maturedOrderBookId = orderBookIds[0];
+        uint256 newOpeningDate = maturities[1];
         newMaturity = calculateNextMaturity(
             maturities[maturities.length - 1],
             Storage.slot().marketBasePeriod
         );
 
-        (
-            Storage.slot().defaultOrderBookIds[_ccy],
-            Storage.slot().autoRollReferenceOrderBookIds[_ccy]
-        ) = market.rotateOrderBooks(newMaturity);
+        // Reopen the market matured with new maturity
+        market.reopenOrderBook(maturedOrderBookId, newMaturity, newOpeningDate);
+
+        // Rotate the order of the market
+        for (uint256 i = 0; i < orderBookIds.length; i++) {
+            uint8 orderBookId = (orderBookIds.length - 1) == i
+                ? maturedOrderBookId
+                : orderBookIds[i + 1];
+            orderBookIds[i] = orderBookId;
+        }
 
         AddressResolverLib.genesisValueVault().executeAutoRoll(
             _ccy,
@@ -278,6 +284,7 @@ library LendingMarketOperationLogic {
             .slot()
             .maturityOrderBookIds[_ccy][maturedMaturity];
 
+        // emit OrderBooksRotated(_ccy, maturedMaturity, newMaturity);
         emit LendingMarketsRotated(_ccy, maturedMaturity, newMaturity);
     }
 
@@ -333,9 +340,9 @@ library LendingMarketOperationLogic {
     ) external {
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
-        if (Storage.slot().autoRollReferenceOrderBookIds[_ccy] == orderBookId) {
+        if (Storage.slot().orderBookIds[_ccy][1] == orderBookId) {
             uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-                .getMaturity(Storage.slot().defaultOrderBookIds[_ccy]);
+                .getMaturity(Storage.slot().orderBookIds[_ccy][0]);
 
             if (Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount == 0) {
                 Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _convertUnitPrice(

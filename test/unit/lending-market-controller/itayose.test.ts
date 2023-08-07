@@ -233,7 +233,9 @@ describe('LendingMarketController - Itayose', () => {
         );
 
       // Execute Itayose calls on all markets except the first and last.
-      const orderBookIds = await lendingMarketProxy.getOrderBookIds();
+      const orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
+        targetCurrency,
+      );
       for (let i = 1; i < orderBookIds.length - 1; i++) {
         const isOpenedBefore = await lendingMarketProxy.isOpened(
           orderBookIds[i],

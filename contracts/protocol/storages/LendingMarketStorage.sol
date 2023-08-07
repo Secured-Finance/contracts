@@ -19,7 +19,6 @@ library LendingMarketStorage {
     struct Storage {
         bytes32 ccy;
         uint8 lastOrderBookId;
-        uint8[] orderBookIds;
         // Mapping from order book id to order book
         mapping(uint8 => OrderBookLib.OrderBook) orderBooks;
         // Mapping from maturity to boolean if the market is ready or not per maturity

@@ -20,10 +20,8 @@ library LendingMarketControllerStorage {
         uint256 marketTerminationDate;
         mapping(bytes32 => int256) marketTerminationPrices;
         mapping(bytes32 => uint256) marketTerminationRatios;
-        // Mapping from currency to default order book id
-        mapping(bytes32 => uint8) defaultOrderBookIds;
-        // Mapping from currency to auto roll reference order book id
-        mapping(bytes32 => uint8) autoRollReferenceOrderBookIds;
+        // Mapping from currency to order book id list
+        mapping(bytes32 => uint8[]) orderBookIds;
         // Mapping from currency to lending market contract address
         mapping(bytes32 => address) lendingMarkets;
         // Mapping from order book id to future value vault contract address per currency

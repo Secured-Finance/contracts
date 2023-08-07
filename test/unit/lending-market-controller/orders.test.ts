@@ -143,10 +143,9 @@ describe('LendingMarketController - Orders', () => {
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
-      const market = await lendingMarketControllerProxy
-        .getLendingMarket(targetCurrency)
-        .then((address) => ethers.getContractAt('LendingMarket', address));
-      const orderBookIds = await market.getOrderBookIds();
+      const orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
+        targetCurrency,
+      );
 
       expect(orderBookIds.length).to.equal(1);
       expect(maturities.length).to.equal(1);
@@ -177,10 +176,9 @@ describe('LendingMarketController - Orders', () => {
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
-      const market = await lendingMarketControllerProxy
-        .getLendingMarket(targetCurrency)
-        .then((address) => ethers.getContractAt('LendingMarket', address));
-      const orderBookIds = await market.getOrderBookIds();
+      const orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
+        targetCurrency,
+      );
 
       expect(orderBookIds.length).to.equal(9);
       expect(maturities.length).to.equal(9);
@@ -236,7 +234,9 @@ describe('LendingMarketController - Orders', () => {
       orderBookUserLogic = orderBookUserLogic.attach(lendingMarket.address);
 
       maturities = await lendingMarketControllerProxy.getMaturities(currency);
-      orderBookIds = await lendingMarket.getOrderBookIds();
+      orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
+        targetCurrency,
+      );
 
       futureValueVaults = await Promise.all(
         maturities.map((maturity) =>

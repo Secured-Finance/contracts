@@ -131,6 +131,8 @@ interface ILendingMarketController {
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
 
+    function getOrderBookIds(bytes32 ccy) external view returns (uint8[] memory);
+
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
     function getTotalPresentValue(bytes32 ccy, address user) external view returns (int256);

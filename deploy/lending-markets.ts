@@ -83,19 +83,12 @@ const func: DeployFunction = async function ({
         .then((tx) => tx.wait());
     }
 
-    // const lendingMarkets: Contract[] = await lendingMarketController
-    //   .getLendingMarkets(currency.key)
-    //   .then((addresses) =>
-    //     Promise.all(
-    //       addresses.map((address) =>
-    //         ethers.getContractAt('LendingMarket', address),
-    //       ),
-    //     ),
-    //   );
     const lendingMarket = await lendingMarketController
       .getLendingMarket(currency.key)
       .then((address) => ethers.getContractAt('LendingMarket', address));
-    const orderBookIds = await lendingMarket.getOrderBookIds();
+    const orderBookIds = await lendingMarketController.getOrderBookIds(
+      currency.key,
+    );
 
     const marketLog: Record<string, string | undefined>[] = [];
 
