@@ -174,8 +174,8 @@ describe('Integration Test: Liquidations', async () => {
       await time.increaseTo(usdcMaturities[0].toString());
     }
 
-    await lendingMarketController.connect(owner).rotateLendingMarkets(hexWFIL);
-    await lendingMarketController.connect(owner).rotateLendingMarkets(hexUSDC);
+    await lendingMarketController.connect(owner).rotateOrderBooks(hexWFIL);
+    await lendingMarketController.connect(owner).rotateOrderBooks(hexUSDC);
 
     await lendingMarketController
       .connect(owner)

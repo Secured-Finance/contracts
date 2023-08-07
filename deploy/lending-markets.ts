@@ -129,12 +129,12 @@ const func: DeployFunction = async function ({
           .then((tx) => tx.wait());
 
         const events = await lendingMarketOperationLogic.queryFilter(
-          lendingMarketOperationLogic.filters.LendingMarketCreated(),
+          lendingMarketOperationLogic.filters.OrderBookCreated(),
           receipt.blockNumber,
         );
 
         const args = events.find(
-          ({ event }) => event === 'LendingMarketCreated',
+          ({ event }) => event === 'OrderBookCreated',
         )?.args;
 
         const orderBookId = args?.orderBookId;

@@ -486,7 +486,7 @@ describe('LendingMarketController - Liquidations', () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       await expect(
         lendingMarketControllerProxy
@@ -685,7 +685,7 @@ describe('LendingMarketController - Liquidations', () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       await time.increaseTo(maturities[1].toString());
 
@@ -943,7 +943,7 @@ describe('LendingMarketController - Liquidations', () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
       await mockCurrencyController.mock.currencyExists.returns(false);
 
       // Move to 1 weeks after maturity.

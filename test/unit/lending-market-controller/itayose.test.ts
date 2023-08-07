@@ -610,7 +610,7 @@ describe('LendingMarketController - Itayose', () => {
         );
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
       maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );

@@ -616,15 +616,15 @@ describe('LendingMarketController - Orders', () => {
       const market = await lendingMarket.getOrderBookDetail(orderBookIds[0]);
 
       const { blockNumber } =
-        await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+        await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       const events = await lendingMarketOperationLogic.queryFilter(
-        lendingMarketOperationLogic.filters.LendingMarketsRotated(),
+        lendingMarketOperationLogic.filters.OrderBooksRotated(),
         blockNumber,
       );
 
       const newMaturity = events.find(
-        ({ event }) => event === 'LendingMarketsRotated',
+        ({ event }) => event === 'OrderBooksRotated',
       )?.args?.newMaturity;
 
       await showLendingInfo();
@@ -1285,7 +1285,7 @@ describe('LendingMarketController - Orders', () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       const positions = await lendingMarketControllerProxy.getPositions(
         [targetCurrency],
@@ -1554,7 +1554,7 @@ describe('LendingMarketController - Orders', () => {
       expect(totalPresentValue).to.equal('50000000000000000');
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       await lendingMarketControllerProxy
         .calculateFunds(
@@ -1667,7 +1667,7 @@ describe('LendingMarketController - Orders', () => {
       expect(totalPresentValue).to.equal('-50000000000000000');
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       await lendingMarketControllerProxy
         .calculateFunds(
@@ -3012,7 +3012,7 @@ describe('LendingMarketController - Orders', () => {
 
       it('Fail to rotate lending markets due to pre-maturity', async () => {
         await expect(
-          lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
+          lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
         ).to.be.revertedWith('Market is not matured');
       });
 

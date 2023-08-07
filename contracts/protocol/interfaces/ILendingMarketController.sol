@@ -272,7 +272,7 @@ interface ILendingMarketController {
         uint48 orderId
     ) external returns (bool);
 
-    function rotateLendingMarkets(bytes32 ccy) external;
+    function rotateOrderBooks(bytes32 ccy) external;
 
     function executeEmergencyTermination() external;
 

@@ -189,7 +189,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.revertedWith('Already terminated');
 
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
       ).to.revertedWith('Already terminated');
 
       await expect(
@@ -455,8 +455,8 @@ describe('LendingMarketController - Terminations', () => {
 
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       expect(
         await lendingMarketControllerProxy.getGenesisValue(

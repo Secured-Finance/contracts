@@ -193,8 +193,8 @@ describe('Integration Test: Itayose', async () => {
       await createSampleETHOrders(owner, maturities[1], '8000');
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
     });
 
     it('Execute Itayose without pre-order', async () => {
@@ -335,8 +335,8 @@ describe('Integration Test: Itayose', async () => {
       await createSampleETHOrders(owner, maturities[1], '8000');
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
     });
 
     it('Execute Itayose with pre-order', async () => {
@@ -399,8 +399,8 @@ describe('Integration Test: Itayose', async () => {
       // Auto-roll
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       await lendingMarketController.executeItayoseCalls(
         [hexETH],
@@ -495,8 +495,8 @@ describe('Integration Test: Itayose', async () => {
       // Auto-roll
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketController.connect(owner).rotateLendingMarkets(hexETH),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       await lendingMarketController.executeItayoseCalls(
         [hexETH],

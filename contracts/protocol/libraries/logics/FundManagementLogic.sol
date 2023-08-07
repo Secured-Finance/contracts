@@ -346,7 +346,7 @@ library FundManagementLogic {
     ) public view returns (ActualFunds memory actualFunds) {
         CalculateActualFundsVars memory vars;
         vars.market = Storage.slot().lendingMarkets[_ccy];
-        vars.defaultOrderBookId = Storage.slot().orderBookIds[_ccy][0];
+        vars.defaultOrderBookId = Storage.slot().orderBookIdLists[_ccy][0];
 
         if (_maturity == 0) {
             vars.isTotal = true;
@@ -685,7 +685,7 @@ library FundManagementLogic {
     {
         ILendingMarket lendingMarket = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         uint256[] memory maturities = lendingMarket.getMaturities(
-            Storage.slot().orderBookIds[_ccy]
+            Storage.slot().orderBookIdLists[_ccy]
         );
         positions = new ILendingMarketController.Position[](maturities.length);
         uint256 positionIdx;
@@ -980,7 +980,7 @@ library FundManagementLogic {
         int256 _futureValueInMaturity
     ) internal view returns (int256 presentValue, int256 futureValue) {
         uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMidUnitPrice(
-            Storage.slot().orderBookIds[_ccy][0]
+            Storage.slot().orderBookIdLists[_ccy][0]
         );
 
         if (
@@ -1128,7 +1128,7 @@ library FundManagementLogic {
         int256 remainingAmount = _amount - totalRemovedAmount;
 
         bool isDefaultMarket = Storage.slot().maturityOrderBookIds[_ccy][_maturity] ==
-            Storage.slot().orderBookIds[_ccy][0];
+            Storage.slot().orderBookIdLists[_ccy][0];
 
         if (isDefaultMarket && remainingAmount != 0) {
             int256 removedAmount;

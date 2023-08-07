@@ -232,7 +232,7 @@ contract LendingMarketController is
     function getBestLendUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
         return
             ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestLendUnitPrices(
-                Storage.slot().orderBookIds[_ccy]
+                Storage.slot().orderBookIdLists[_ccy]
             );
     }
 
@@ -249,7 +249,7 @@ contract LendingMarketController is
     {
         return
             ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestBorrowUnitPrices(
-                Storage.slot().orderBookIds[_ccy]
+                Storage.slot().orderBookIdLists[_ccy]
             );
     }
 
@@ -261,7 +261,7 @@ contract LendingMarketController is
     function getMidUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
         return
             ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMidUnitPrices(
-                Storage.slot().orderBookIds[_ccy]
+                Storage.slot().orderBookIdLists[_ccy]
             );
     }
 
@@ -384,7 +384,7 @@ contract LendingMarketController is
     function getMaturities(bytes32 _ccy) public view override returns (uint256[] memory) {
         return
             ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMaturities(
-                Storage.slot().orderBookIds[_ccy]
+                Storage.slot().orderBookIdLists[_ccy]
             );
     }
 
@@ -394,7 +394,7 @@ contract LendingMarketController is
      * @return The array of order book id
      */
     function getOrderBookIds(bytes32 _ccy) external view override returns (uint8[] memory) {
-        return Storage.slot().orderBookIds[_ccy];
+        return Storage.slot().orderBookIdLists[_ccy];
     }
 
     /**
@@ -962,10 +962,10 @@ contract LendingMarketController is
      *
      * @param _ccy Currency name in bytes32 of the selected market
      */
-    function rotateLendingMarkets(bytes32 _ccy) external override nonReentrant ifActive {
+    function rotateOrderBooks(bytes32 _ccy) external override nonReentrant ifActive {
         require(currencyController().currencyExists(_ccy), "Invalid currency");
 
-        uint256 newMaturity = LendingMarketOperationLogic.rotateLendingMarkets(
+        uint256 newMaturity = LendingMarketOperationLogic.rotateOrderBooks(
             _ccy,
             getOrderFeeRate(_ccy)
         );

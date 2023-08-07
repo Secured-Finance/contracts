@@ -420,9 +420,7 @@ describe('Integration Test: Emergency terminations', async () => {
         await createSampleETHOrders(carol, maturities[1], '8000', '0');
 
         await time.increaseTo(maturities[0].toString());
-        await lendingMarketController
-          .connect(owner)
-          .rotateLendingMarkets(hexETH);
+        await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
         await lendingMarketController.cleanUpAllFunds(alice.address);
         await lendingMarketController.cleanUpAllFunds(bob.address);

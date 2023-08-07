@@ -55,7 +55,7 @@ library LiquidationLogic {
 
         vars.isDefaultMarket =
             Storage.slot().maturityOrderBookIds[_debtCcy][_debtMaturity] ==
-            Storage.slot().orderBookIds[_debtCcy][0];
+            Storage.slot().orderBookIdLists[_debtCcy][0];
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.

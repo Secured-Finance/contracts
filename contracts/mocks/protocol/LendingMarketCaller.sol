@@ -9,7 +9,7 @@ import {ProtocolTypes} from "../../protocol/types/ProtocolTypes.sol";
 contract LendingMarketCaller {
     IBeaconProxyController public beaconProxyController;
     mapping(bytes32 => address) public lendingMarkets;
-    mapping(bytes32 => uint8) public orderBookIds;
+    mapping(bytes32 => uint8) public orderBookIdLists;
 
     constructor(address _beaconProxyController) {
         beaconProxyController = IBeaconProxyController(_beaconProxyController);
@@ -20,7 +20,7 @@ contract LendingMarketCaller {
     }
 
     function getOrderBookId(bytes32 _ccy) external view returns (uint8) {
-        return orderBookIds[_ccy];
+        return orderBookIdLists[_ccy];
     }
 
     function deployLendingMarket(bytes32 _ccy) external {
@@ -32,7 +32,7 @@ contract LendingMarketCaller {
         uint256 _maturity,
         uint256 _openingDate
     ) external {
-        orderBookIds[_ccy] = ILendingMarket(lendingMarkets[_ccy]).createOrderBook(
+        orderBookIdLists[_ccy] = ILendingMarket(lendingMarkets[_ccy]).createOrderBook(
             _maturity,
             _openingDate
         );

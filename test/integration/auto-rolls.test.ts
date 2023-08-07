@@ -82,7 +82,7 @@ describe('Integration Test: Auto-rolls', async () => {
       await createSampleETHOrders(owner, maturities[1], unitPrice);
     }
     await time.increaseTo(maturities[0].toString());
-    await lendingMarketController.connect(owner).rotateLendingMarkets(hexETH);
+    await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
     await lendingMarketController
       .connect(owner)
@@ -859,7 +859,7 @@ describe('Integration Test: Auto-rolls', async () => {
 
       // Auto-roll
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketController.connect(owner).rotateLendingMarkets(hexETH);
+      await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
       await lendingMarketController.executeItayoseCalls(
         [hexETH],
@@ -1004,7 +1004,7 @@ describe('Integration Test: Auto-rolls', async () => {
       // Auto-roll
       await createSampleETHOrders(carol, maturities[1], '8000');
       await time.increaseTo(maturities[1].toString());
-      await lendingMarketController.connect(owner).rotateLendingMarkets(hexETH);
+      await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
       await lendingMarketController.executeItayoseCalls(
         [hexETH],

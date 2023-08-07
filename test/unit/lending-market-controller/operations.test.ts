@@ -341,7 +341,7 @@ describe('LendingMarketController - Operations', () => {
         .dp(0);
 
       await time.increaseTo(maturities[0].toString());
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
       const newMaturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
       );
@@ -456,11 +456,11 @@ describe('LendingMarketController - Operations', () => {
         targetCurrency,
       );
 
-      const rotateLendingMarkets = async () => {
+      const rotateOrderBooks = async () => {
         await time.increaseTo(maturities[0].toString());
         await expect(
-          lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-        ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+          lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+        ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
         maturities = await lendingMarketControllerProxy.getMaturities(
           targetCurrency,
@@ -561,7 +561,7 @@ describe('LendingMarketController - Operations', () => {
 
       await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await rotateLendingMarkets();
+      await rotateOrderBooks();
       await checkGenesisValue();
       await cleanUpAllFunds();
       await checkGenesisValue();
@@ -605,7 +605,7 @@ describe('LendingMarketController - Operations', () => {
           '8000',
         );
 
-      await rotateLendingMarkets();
+      await rotateOrderBooks();
       await cleanUpAllFunds();
       await checkGenesisValue();
 
@@ -647,7 +647,7 @@ describe('LendingMarketController - Operations', () => {
           '8000',
         );
 
-      await rotateLendingMarkets();
+      await rotateOrderBooks();
       await cleanUpAllFunds();
       await checkGenesisValue();
 

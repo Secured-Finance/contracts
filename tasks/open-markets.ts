@@ -49,7 +49,7 @@ task(
 
       if (isMatured) {
         await lendingMarketController
-          .rotateLendingMarkets(currency.key)
+          .rotateOrderBooks(currency.key)
           .then((tx) => tx.wait());
         console.log(
           `Successfully executed ${currency.symbol} market auto-roll with maturity ${maturity}`,
