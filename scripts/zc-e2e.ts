@@ -52,7 +52,6 @@ describe('ZC e2e test', async () => {
     if (unitPrice) {
       // Move to 6 hours (21600 sec) before maturity.
       await time.increaseTo(maturities[0].sub('21600').toString());
-      // await createSampleETHOrders(carol, maturities[1], unitPrice);
       await createSampleETHOrders(ownerSigner, maturities[1], unitPrice);
     }
     await time.increaseTo(maturities[0].toString());
@@ -491,7 +490,7 @@ describe('ZC e2e test', async () => {
         aliceSigner.address,
       );
 
-    await executeAutoRoll('8500');
+    await executeAutoRoll(marketDetail.midUnitPrice);
 
     const positions = await lendingMarketController.getPositions(
       [hexETH],
