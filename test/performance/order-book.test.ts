@@ -14,6 +14,7 @@ import { deployContracts } from '../common/deployment';
 
 describe('Performance Test: Order Book', async () => {
   let signers: SignerWithAddress[];
+  let signerIdx = 1;
 
   let tokenVault: Contract;
   let lendingMarketController: Contract;
@@ -108,7 +109,6 @@ describe('Performance Test: Order Book', async () => {
             }
 
             let totalAmount = BigNumber.from(0);
-            let signerIdx = 1;
             let user: Wallet = Wallet.createRandom();
             let unitPrice = '0';
 
@@ -236,6 +236,99 @@ describe('Performance Test: Order Book', async () => {
         }
       });
     }
+
+    describe('Show results', async () => {
+      it('Gas Costs', () => {
+        console.table(log);
+      });
+    });
+  });
+
+  describe('Clean up funds', async () => {
+    const tests = [1, 2, 8];
+    const log = {};
+    const currencyKey = hexUSDC;
+    const orderAmount = BigNumber.from('500000');
+
+    describe(`Clean up funds on the USDC market`, async () => {
+      before('Set lending markets', async () => {
+        signerIdx++;
+      });
+
+      for (const test of tests) {
+        it(`${test} markets`, async () => {
+          let unitPrice = '0';
+
+          process.stdout.write('        Ordered: 0');
+
+          await usdcToken
+            .connect(signers[0])
+            .approve(tokenVault.address, ethers.constants.MaxUint256)
+            .then((tx) => tx.wait());
+
+          await tokenVault
+            .connect(signers[0])
+            .deposit(currencyKey, orderAmount.mul(test).mul(3).div(2))
+            .then((tx) => tx.wait());
+
+          await usdcToken
+            .connect(signers[0])
+            .transfer(signers[signerIdx].address, orderAmount.mul(test))
+            .then((tx) => tx.wait());
+
+          await usdcToken
+            .connect(signers[signerIdx])
+            .approve(tokenVault.address, ethers.constants.MaxUint256)
+            .then((tx) => tx.wait());
+
+          await tokenVault
+            .connect(signers[signerIdx])
+            .deposit(currencyKey, orderAmount.mul(test))
+            .then((tx) => tx.wait());
+
+          for (let i = 0; i < test; i++) {
+            process.stdout.write('\r\x1b[K');
+            process.stdout.write(`        Ordered: ${i}/${test}`);
+
+            unitPrice = String(8000 - i);
+
+            await lendingMarketController
+              .connect(signers[signerIdx])
+              .executeOrder(
+                currencyKey,
+                maturities[test - 1],
+                Side.LEND,
+                orderAmount,
+                unitPrice,
+              )
+              .then((tx) => tx.wait());
+
+            await lendingMarketController
+              .connect(signers[0])
+              .executeOrder(
+                currencyKey,
+                maturities[test - 1],
+                Side.BORROW,
+                orderAmount,
+                '0',
+              );
+          }
+          process.stdout.write('\r\x1b[K');
+
+          const tx = await lendingMarketController
+            .connect(signers[0])
+            .cleanUpFunds(currencyKey, signers[signerIdx].address);
+
+          const receipt = await tx.wait();
+
+          const headerName = `GasConst`;
+          if (!log[headerName]) {
+            log[headerName] = {};
+          }
+          log[headerName][test] = receipt.gasUsed.toString();
+        });
+      }
+    });
 
     describe('Show results', async () => {
       it('Gas Costs', () => {
