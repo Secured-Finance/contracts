@@ -19,7 +19,6 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   MARKET_BASE_PERIOD,
-  MARKET_OBSERVATION_PERIOD,
   ORDER_FEE_RATE,
 } from './constants';
 
@@ -179,7 +178,6 @@ const deployContracts = async () => {
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
       MARKET_BASE_PERIOD,
-      MARKET_OBSERVATION_PERIOD,
     ),
     proxyController.setReserveFundImpl(reserveFund.address, wETHToken.address),
     proxyController.setTokenVaultImpl(

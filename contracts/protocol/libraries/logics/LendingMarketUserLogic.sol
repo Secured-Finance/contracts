@@ -224,7 +224,6 @@ library LendingMarketUserLogic {
             LendingMarketOperationLogic.updateOrderLogs(
                 _ccy,
                 _maturity,
-                LendingMarketConfigurationLogic.getObservationPeriod(),
                 _filledUnitPrice,
                 _filledAmount,
                 _filledAmountInFV

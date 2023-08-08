@@ -26,7 +26,7 @@ describe('Performance Test: Order Book', async () => {
   let genesisDate: number;
   let maturities: BigNumber[];
 
-  before('Deploy Contracts', async () => {
+  const initializeContracts = async () => {
     signers = await ethers.getSigners();
 
     ({
@@ -62,7 +62,7 @@ describe('Performance Test: Order Book', async () => {
         .createOrderBook(hexUSDC, genesisDate)
         .then((tx) => tx.wait());
     }
-  });
+  };
 
   beforeEach('Set maturities', async () => {
     maturities = await lendingMarketController.getMaturities(hexWFIL);
@@ -83,6 +83,10 @@ describe('Performance Test: Order Book', async () => {
     ];
     const tests = [1, 10, 100];
     const log = {};
+
+    before(async () => {
+      await initializeContracts();
+    });
 
     for (const { key: currencyKey, name, orderAmount } of currencies) {
       let contract: Contract;
@@ -227,7 +231,7 @@ describe('Performance Test: Order Book', async () => {
 
             const receipt = await tx.wait();
 
-            const headerName = `GasConst(${name})`;
+            const headerName = `GasCosts(${name})`;
             if (!log[headerName]) {
               log[headerName] = {};
             }
@@ -249,6 +253,10 @@ describe('Performance Test: Order Book', async () => {
     const log = {};
     const currencyKey = hexUSDC;
     const orderAmount = BigNumber.from('500000');
+
+    before(async () => {
+      await initializeContracts();
+    });
 
     describe(`USDC market`, async () => {
       before('Set lending markets', async () => {
@@ -332,7 +340,7 @@ describe('Performance Test: Order Book', async () => {
 
           const receipt = await tx.wait();
 
-          const headerName = `GasConst`;
+          const headerName = `GasCosts`;
           if (!log[headerName]) {
             log[headerName] = {};
           }

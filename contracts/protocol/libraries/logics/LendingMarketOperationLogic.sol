@@ -28,6 +28,8 @@ library LendingMarketOperationLogic {
     using SafeCast for uint256;
     using RoundingInt256 for int256;
 
+    uint256 private constant OBSERVATION_PERIOD = 6 hours;
+
     event OrderBookCreated(
         bytes32 indexed ccy,
         uint8 indexed orderBookId,
@@ -329,7 +331,6 @@ library LendingMarketOperationLogic {
     function updateOrderLogs(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _observationPeriod,
         uint256 _filledUnitPrice,
         uint256 _filledAmount,
         uint256 _filledFutureValue
@@ -351,7 +352,7 @@ library LendingMarketOperationLogic {
 
             if (
                 (block.timestamp < nearestMaturity) &&
-                (block.timestamp >= (nearestMaturity - _observationPeriod))
+                (block.timestamp >= (nearestMaturity - OBSERVATION_PERIOD))
             ) {
                 Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount += _filledAmount;
                 Storage

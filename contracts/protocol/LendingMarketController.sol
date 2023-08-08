@@ -78,16 +78,14 @@ contract LendingMarketController is
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
      * @param _marketBasePeriod The base period for market maturity
-     * @param _observationPeriod The observation period to calculate the volume-weighted average price of transactions
      */
     function initialize(
         address _owner,
         address _resolver,
-        uint256 _marketBasePeriod,
-        uint256 _observationPeriod
+        uint256 _marketBasePeriod
     ) public initializer onlyProxy {
         Storage.slot().marketBasePeriod = _marketBasePeriod;
-        MixinLendingMarketConfiguration._initialize(_owner, _observationPeriod);
+        MixinLendingMarketConfiguration._initialize(_owner);
         registerAddressResolver(_resolver);
     }
 

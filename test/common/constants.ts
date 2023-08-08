@@ -7,7 +7,6 @@ export const LIQUIDATION_PROTOCOL_FEE_RATE = 200;
 export const LIQUIDATOR_FEE_RATE = 500;
 export const INITIAL_COMPOUND_FACTOR = '1000000000000000000';
 export const MARKET_BASE_PERIOD = 3;
-export const MARKET_OBSERVATION_PERIOD = 21600;
 export const HAIRCUT = 8000;
 
 export const wFilToETHRate = BigNumber.from('3803677700000000');

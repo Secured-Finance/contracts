@@ -47,7 +47,6 @@ const func: DeployFunction = async function ({
         .setLendingMarketControllerImpl(
           deployResult.address,
           process.env.MARKET_BASE_PERIOD,
-          process.env.MARKET_OBSERVATION_PERIOD,
         )
         .then((tx) => tx.wait());
     },
