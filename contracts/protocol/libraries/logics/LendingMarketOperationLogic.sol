@@ -31,7 +31,6 @@ library LendingMarketOperationLogic {
     event OrderBookCreated(
         bytes32 indexed ccy,
         uint8 indexed orderBookId,
-        address futureValueVault,
         uint256 openingDate,
         uint256 maturity
     );
@@ -54,10 +53,14 @@ library LendingMarketOperationLogic {
         Storage.slot().genesisDates[_ccy] = _genesisDate;
     }
 
-    function deployLendingMarket(bytes32 _ccy) external {
+    function deployContracts(bytes32 _ccy) external {
         Storage.slot().lendingMarkets[_ccy] = AddressResolverLib
             .beaconProxyController()
             .deployLendingMarket(_ccy);
+
+        Storage.slot().futureValueVaults[_ccy] = AddressResolverLib
+            .beaconProxyController()
+            .deployFutureValueVault();
     }
 
     function getOrderBookDetails(bytes32[] memory _ccys)
@@ -182,15 +185,9 @@ library LendingMarketOperationLogic {
         uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate);
 
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
-
-        address futureValueVault = AddressResolverLib
-            .beaconProxyController()
-            .deployFutureValueVault();
-
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
-        Storage.slot().futureValueVaults[_ccy][orderBookId] = futureValueVault;
 
-        emit OrderBookCreated(_ccy, orderBookId, futureValueVault, _openingDate, newMaturity);
+        emit OrderBookCreated(_ccy, orderBookId, _openingDate, newMaturity);
     }
 
     function executeItayoseCall(bytes32 _ccy, uint256 _maturity)
@@ -217,8 +214,8 @@ library LendingMarketOperationLogic {
             ) = market.executeItayoseCall(orderBookId);
 
             if (totalOffsetAmount > 0) {
-                address futureValueVault = Storage.slot().futureValueVaults[_ccy][orderBookId];
-                IFutureValueVault(futureValueVault).addInitialTotalSupply(
+                address futureValueVault = Storage.slot().futureValueVaults[_ccy];
+                IFutureValueVault(futureValueVault).setInitialTotalSupply(
                     _maturity,
                     (totalOffsetAmount * Constants.PRICE_DIGIT).div(openingUnitPrice).toInt256()
                 );

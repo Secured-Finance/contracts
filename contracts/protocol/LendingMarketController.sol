@@ -209,19 +209,10 @@ contract LendingMarketController is
     /**
      * @notice Gets the future value contract address for the selected currency and maturity.
      * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the order book
      * @return The future value vault address
      */
-    function getFutureValueVault(bytes32 _ccy, uint256 _maturity)
-        public
-        view
-        override
-        returns (address)
-    {
-        return
-            Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
-            ];
+    function getFutureValueVault(bytes32 _ccy) public view override returns (address) {
+        return Storage.slot().futureValueVaults[_ccy];
     }
 
     /**
@@ -611,7 +602,7 @@ contract LendingMarketController is
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
         LendingMarketOperationLogic.initializeCurrencySetting(_ccy, _genesisDate, _compoundFactor);
-        LendingMarketOperationLogic.deployLendingMarket(_ccy);
+        LendingMarketOperationLogic.deployContracts(_ccy);
 
         updateOrderFeeRate(_ccy, _orderFeeRate);
         updateCircuitBreakerLimitRange(_ccy, _circuitBreakerLimitRange);

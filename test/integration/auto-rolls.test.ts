@@ -30,7 +30,7 @@ describe('Integration Test: Auto-rolls', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  let futureValueVaults: Contract[];
+  let futureValueVault: Contract;
   let genesisValueVault: Contract;
   let reserveFund: Contract;
   let tokenVault: Contract;
@@ -98,13 +98,9 @@ describe('Integration Test: Auto-rolls', async () => {
 
     orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
 
-    futureValueVaults = await Promise.all(
-      maturities.map((maturity) =>
-        lendingMarketController
-          .getFutureValueVault(hexETH, maturity)
-          .then((address) => ethers.getContractAt('FutureValueVault', address)),
-      ),
-    );
+    futureValueVault = await lendingMarketController
+      .getFutureValueVault(hexETH)
+      .then((address) => ethers.getContractAt('FutureValueVault', address));
   };
 
   before('Deploy Contracts', async () => {
@@ -206,9 +202,12 @@ describe('Integration Test: Auto-rolls', async () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
-      const { futureValue: aliceFVBefore } =
-        await futureValueVaults[0].getFutureValue(alice.address);
-      const { futureValue: bobFV } = await futureValueVaults[0].getFutureValue(
+      const { balance: aliceFVBefore } = await futureValueVault.getBalance(
+        orderBookIds[0],
+        alice.address,
+      );
+      const { balance: bobFV } = await futureValueVault.getBalance(
+        orderBookIds[0],
         bob.address,
       );
       const { futureValue: aliceActualFV } =
@@ -222,8 +221,10 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(bobFV).not.to.equal('0');
 
       await lendingMarketController.cleanUpFunds(hexETH, alice.address);
-      const { futureValue: aliceFVAfter } =
-        await futureValueVaults[0].getFutureValue(alice.address);
+      const { balance: aliceFVAfter } = await futureValueVault.getBalance(
+        orderBookIds[0],
+        alice.address,
+      );
 
       expect(aliceFVAfter).to.equal(aliceActualFV.abs());
 
@@ -832,14 +833,14 @@ describe('Integration Test: Auto-rolls', async () => {
           await lendingMarketController.cleanUpFunds(hexETH, address);
         }
 
-        const gvAmounts = await Promise.all(
+        const fvAmounts = await Promise.all(
           [owner, alice, bob, carol, dave, reserveFund].map(({ address }) =>
-            futureValueVaults[0].getFutureValue(address),
+            futureValueVault.getBalance(orderBookIds[0], address),
           ),
-        ).then((results) => results.map(({ futureValue }) => futureValue));
+        ).then((results) => results.map(({ balance }) => balance));
 
         expect(
-          gvAmounts.reduce(
+          fvAmounts.reduce(
             (total, current) => total.add(current),
             BigNumber.from(0),
           ),
@@ -852,7 +853,7 @@ describe('Integration Test: Auto-rolls', async () => {
     it('Execute auto-roll, Check genesis values', async () => {
       const users = [alice, bob, carol, dave, reserveFund];
 
-      const reserveFundGVAmountBefore = await genesisValueVault.getGenesisValue(
+      const reserveFundGVAmountBefore = await genesisValueVault.getBalance(
         hexETH,
         reserveFund.address,
       );

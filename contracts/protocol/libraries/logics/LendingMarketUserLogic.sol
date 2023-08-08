@@ -188,11 +188,8 @@ library LendingMarketUserLogic {
 
         // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
         // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
-        (int256 currentFutureValue, ) = IFutureValueVault(
-            Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
-            ]
-        ).getFutureValue(_user);
+        (int256 currentFutureValue, ) = IFutureValueVault(Storage.slot().futureValueVaults[_ccy])
+            .getBalance(Storage.slot().maturityOrderBookIds[_ccy][_maturity], _user);
 
         if (currentFutureValue != 0) {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);

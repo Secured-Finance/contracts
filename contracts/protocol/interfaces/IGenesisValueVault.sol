@@ -22,7 +22,9 @@ interface IGenesisValueVault {
 
     function getTotalBorrowingSupply(bytes32 ccy) external view returns (uint256);
 
-    function getGenesisValue(bytes32 ccy, address user) external view returns (int256);
+    function getBalance(bytes32 ccy, address user) external view returns (int256);
+
+    function getBalanceInFutureValue(bytes32 ccy, address user) external view returns (int256);
 
     function getMaturityGenesisValue(bytes32 ccy, uint256 maturity) external view returns (int256);
 
@@ -38,8 +40,6 @@ interface IGenesisValueVault {
         returns (AutoRollLog memory);
 
     function getLatestAutoRollLog(bytes32 ccy) external view returns (AutoRollLog memory);
-
-    function getGenesisValueInFutureValue(bytes32 ccy, address user) external view returns (int256);
 
     function calculateFVFromFV(
         bytes32 ccy,
@@ -110,7 +110,7 @@ interface IGenesisValueVault {
         int256 amount
     ) external;
 
-    function cleanUpGenesisValue(
+    function cleanUpBalance(
         bytes32 ccy,
         address user,
         uint256 maturity

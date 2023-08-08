@@ -29,12 +29,13 @@ describe('LendingMarketController - Operations', () => {
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
-  let futureValueVaultProxies: Contract[];
+  let futureValueVaultProxy: Contract;
 
   let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
 
   let maturities: BigNumber[];
+  let orderBookIds: BigNumber[];
   let targetCurrency: string;
   let currencyIdx = 0;
   let genesisDate: number;
@@ -100,14 +101,13 @@ describe('LendingMarketController - Operations', () => {
     }
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
-
-    futureValueVaultProxies = await Promise.all(
-      maturities.map((maturity) =>
-        lendingMarketControllerProxy
-          .getFutureValueVault(currency, maturity)
-          .then((address) => ethers.getContractAt('FutureValueVault', address)),
-      ),
+    orderBookIds = await lendingMarketControllerProxy.getOrderBookIds(
+      targetCurrency,
     );
+
+    futureValueVaultProxy = await lendingMarketControllerProxy
+      .getFutureValueVault(targetCurrency)
+      .then((address) => ethers.getContractAt('FutureValueVault', address));
   };
 
   describe('Operations', async () => {
@@ -249,8 +249,6 @@ describe('LendingMarketController - Operations', () => {
     });
 
     it('Update beacon proxy implementations and calculate Genesis value', async () => {
-      const futureValueVault1 = futureValueVaultProxies[0];
-
       await lendingMarketControllerProxy
         .connect(alice)
         .executeOrder(
@@ -329,7 +327,8 @@ describe('LendingMarketController - Operations', () => {
         targetCurrency,
       );
       const gvDecimals = await genesisValueVaultProxy.decimals(targetCurrency);
-      const [aliceInitialFV] = await futureValueVault1.getFutureValue(
+      const [aliceInitialFV] = await futureValueVaultProxy.getBalance(
+        orderBookIds[0],
         alice.address,
       );
       // Use bignumber.js to round off the result
@@ -392,7 +391,7 @@ describe('LendingMarketController - Operations', () => {
         targetCurrency,
       );
 
-      const aliceGVBefore = await genesisValueVaultProxy.getGenesisValue(
+      const aliceGVBefore = await genesisValueVaultProxy.getBalance(
         targetCurrency,
         alice.address,
       );
@@ -426,7 +425,7 @@ describe('LendingMarketController - Operations', () => {
         targetCurrency,
       );
 
-      const aliceGVAfter = await genesisValueVaultProxy.getGenesisValue(
+      const aliceGVAfter = await genesisValueVaultProxy.getBalance(
         targetCurrency,
         alice.address,
       );

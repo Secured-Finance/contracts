@@ -33,7 +33,7 @@ describe('LendingMarketController - Orders', () => {
   let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
   let orderActionLogic: Contract;
-  let futureValueVaults: Contract[];
+  let futureValueVault: Contract;
 
   let targetCurrency: string;
   let currencyIdx = 0;
@@ -238,15 +238,9 @@ describe('LendingMarketController - Orders', () => {
         targetCurrency,
       );
 
-      futureValueVaults = await Promise.all(
-        maturities.map((maturity) =>
-          lendingMarketControllerProxy
-            .getFutureValueVault(currency, maturity)
-            .then((address) =>
-              ethers.getContractAt('FutureValueVault', address),
-            ),
-        ),
-      );
+      futureValueVault = await lendingMarketControllerProxy
+        .getFutureValueVault(targetCurrency)
+        .then((address) => ethers.getContractAt('FutureValueVault', address));
     };
 
     beforeEach(async () => {
@@ -1727,7 +1721,7 @@ describe('LendingMarketController - Orders', () => {
           alice.address,
         );
 
-      const totalFV = await futureValueVaults[0].getTotalSupply(maturities[0]);
+      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
 
       expect(aliceFV.abs()).to.equal(totalFV);
 
@@ -1760,7 +1754,7 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           carol.address,
         );
-      const totalFV2 = await futureValueVaults[0].getTotalSupply(maturities[0]);
+      const totalFV2 = await futureValueVault.getTotalSupply(maturities[0]);
 
       expect(aliceFV2.add(carolFV).abs()).to.equal(totalFV2);
     });
@@ -1809,7 +1803,7 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           alice.address,
         );
-      const totalFV = await futureValueVaults[0].getTotalSupply(maturities[0]);
+      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
 
       expect(aliceFV.abs()).to.equal(totalFV);
     });
@@ -1871,7 +1865,7 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           mockReserveFund.address,
         );
-      const totalFV = await futureValueVaults[0].getTotalSupply(maturities[0]);
+      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
 
       expect(
         aliceFV.abs().add(reserveFundFVAfter).sub(reserveFundFVBefore),
@@ -1950,7 +1944,7 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           carol.address,
         );
-      const totalFV = await futureValueVaults[0].getTotalSupply(maturities[0]);
+      const totalFV = await futureValueVault.getTotalSupply(maturities[0]);
 
       expect(aliceFV.abs()).to.equal(0);
       expect(carolFV.abs()).to.equal(totalFV);

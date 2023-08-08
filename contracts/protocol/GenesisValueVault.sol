@@ -65,13 +65,27 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return Storage.slot().totalBorrowingSupplies[_ccy];
     }
 
-    function getGenesisValue(bytes32 _ccy, address _user) public view override returns (int256) {
+    function getBalance(bytes32 _ccy, address _user) public view override returns (int256) {
         (int256 balance, int256 fluctuation) = _getActualBalance(
             _ccy,
             _user,
             getCurrentMaturity(_ccy)
         );
         return balance + fluctuation;
+    }
+
+    function getBalanceInFutureValue(bytes32 _ccy, address _user)
+        external
+        view
+        override
+        returns (int256)
+    {
+        // NOTE: The formula is:
+        // futureValue = genesisValue * currentCompoundFactor.
+        return
+            (getBalance(_ccy, _user) * getLendingCompoundFactor(_ccy).toInt256()).div(
+                (10**decimals(_ccy)).toInt256()
+            );
     }
 
     function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity)
@@ -111,20 +125,6 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         returns (AutoRollLog memory)
     {
         return Storage.slot().autoRollLogs[_ccy][Storage.slot().currentMaturity[_ccy]];
-    }
-
-    function getGenesisValueInFutureValue(bytes32 _ccy, address _user)
-        external
-        view
-        override
-        returns (int256)
-    {
-        // NOTE: The formula is:
-        // futureValue = genesisValue * currentCompoundFactor.
-        return
-            (getGenesisValue(_ccy, _user) * getLendingCompoundFactor(_ccy).toInt256()).div(
-                (10**decimals(_ccy)).toInt256()
-            );
     }
 
     function calculateFVFromFV(
@@ -328,7 +328,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         emit Transfer(_ccy, _sender, _receiver, _amount);
     }
 
-    function cleanUpGenesisValue(
+    function cleanUpBalance(
         bytes32 _ccy,
         address _user,
         uint256 _maturity

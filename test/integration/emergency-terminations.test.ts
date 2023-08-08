@@ -17,7 +17,7 @@ describe('Integration Test: Emergency terminations', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  let futureValueVaults: Contract[];
+  let futureValueVault: Contract;
   let reserveFund: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
@@ -32,6 +32,7 @@ describe('Integration Test: Emergency terminations', async () => {
 
   let genesisDate: number;
   let maturities: BigNumber[];
+  let orderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -118,13 +119,10 @@ describe('Integration Test: Emergency terminations', async () => {
 
   const resetContractInstances = async () => {
     maturities = await lendingMarketController.getMaturities(hexETH);
-    futureValueVaults = await Promise.all(
-      maturities.map((maturity) =>
-        lendingMarketController
-          .getFutureValueVault(hexETH, maturity)
-          .then((address) => ethers.getContractAt('FutureValueVault', address)),
-      ),
-    );
+    orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
+    futureValueVault = await lendingMarketController
+      .getFutureValueVault(hexETH)
+      .then((address) => ethers.getContractAt('FutureValueVault', address));
   };
 
   const initializeContracts = async () => {
@@ -196,10 +194,14 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
-        const { futureValue: aliceFV } =
-          await futureValueVaults[0].getFutureValue(alice.address);
-        const { futureValue: bobFV } =
-          await futureValueVaults[0].getFutureValue(bob.address);
+        const { balance: aliceFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          alice.address,
+        );
+        const { balance: bobFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          bob.address,
+        );
 
         expect(aliceFV).not.to.equal('0');
         expect(bobFV).to.equal('0');
@@ -242,10 +244,14 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
-        const { futureValue: aliceFV } =
-          await futureValueVaults[0].getFutureValue(alice.address);
-        const { futureValue: bobFV } =
-          await futureValueVaults[0].getFutureValue(bob.address);
+        const { balance: aliceFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          alice.address,
+        );
+        const { balance: bobFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          bob.address,
+        );
 
         expect(aliceFV).not.to.equal('0');
         expect(bobFV).to.equal('0');

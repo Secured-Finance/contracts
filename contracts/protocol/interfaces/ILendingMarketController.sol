@@ -51,6 +51,8 @@ interface ILendingMarketController {
 
     function getLendingMarket(bytes32 ccy) external view returns (address);
 
+    function getFutureValueVault(bytes32 ccy) external view returns (address);
+
     function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8);
 
     function getOrderBookDetail(bytes32 _ccy, uint256 _maturity)
@@ -71,8 +73,6 @@ interface ILendingMarketController {
         external
         view
         returns (OrderBookDetail[] memory orderBookDetails);
-
-    function getFutureValueVault(bytes32 ccy, uint256 maturity) external view returns (address);
 
     function getBestLendUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
