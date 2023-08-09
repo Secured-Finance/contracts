@@ -2,95 +2,10 @@
 
 ## ILendingMarket
 
-### OrderExecutionConditions
+### OrderBook
 
 ```solidity
-struct OrderExecutionConditions {
-  bool isFilled;
-  uint256 executedUnitPrice;
-  bool ignoreRemainingAmount;
-  bool orderExists;
-}
-```
-
-### PlacedOrder
-
-```solidity
-struct PlacedOrder {
-  uint48 orderId;
-  uint256 amount;
-  uint256 unitPrice;
-}
-```
-
-### FilledOrder
-
-```solidity
-struct FilledOrder {
-  uint256 amount;
-  uint256 unitPrice;
-  uint256 futureValue;
-  uint256 ignoredAmount;
-}
-```
-
-### PartiallyFilledOrder
-
-```solidity
-struct PartiallyFilledOrder {
-  uint48 orderId;
-  address maker;
-  uint256 amount;
-  uint256 futureValue;
-}
-```
-
-### OrderCanceled
-
-```solidity
-event OrderCanceled(uint48 orderId, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice)
-```
-
-### OrdersCleaned
-
-```solidity
-event OrdersCleaned(uint48[] orderIds, address maker, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 futureValue)
-```
-
-### OrderExecuted
-
-```solidity
-event OrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 inputUnitPrice, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, uint48 placedOrderId, uint256 placedAmount, uint256 placedUnitPrice, bool isCircuitBreakerTriggered)
-```
-
-### PreOrderExecuted
-
-```solidity
-event PreOrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 amount, uint256 unitPrice, uint48 orderId)
-```
-
-### PositionUnwound
-
-```solidity
-event PositionUnwound(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputFutureValue, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, bool isCircuitBreakerTriggered)
-```
-
-### MarketOpened
-
-```solidity
-event MarketOpened(uint256 maturity, uint256 prevMaturity)
-```
-
-### ItayoseExecuted
-
-```solidity
-event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 offsetAmount)
-```
-
-### Market
-
-```solidity
-struct Market {
+struct OrderBook {
   bytes32 ccy;
   uint256 maturity;
   uint256 openingDate;
@@ -102,52 +17,76 @@ struct Market {
 }
 ```
 
-### getMarket
+### getOrderBookDetail
 
 ```solidity
-function getMarket() external view returns (struct ILendingMarket.Market)
+function getOrderBookDetail(uint8 orderBookId) external view returns (struct ILendingMarket.OrderBook)
 ```
 
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange) external view returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold)
+function getCircuitBreakerThresholds(uint8 orderBookId, uint256 _circuitBreakerLimitRange) external view returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold)
 ```
 
-### getBorrowUnitPrice
+### getBestLendUnitPrice
 
 ```solidity
-function getBorrowUnitPrice() external view returns (uint256 unitPrice)
+function getBestLendUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice)
 ```
 
-### getLendUnitPrice
+### getBestLendUnitPrices
 
 ```solidity
-function getLendUnitPrice() external view returns (uint256 unitPrice)
+function getBestLendUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
+```
+
+### getBestBorrowUnitPrice
+
+```solidity
+function getBestBorrowUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice)
+```
+
+### getBestBorrowUnitPrices
+
+```solidity
+function getBestBorrowUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
 ```
 
 ### getMidUnitPrice
 
 ```solidity
-function getMidUnitPrice() external view returns (uint256 unitPrice)
+function getMidUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice)
+```
+
+### getMidUnitPrices
+
+```solidity
+function getMidUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
 ```
 
 ### getBorrowOrderBook
 
 ```solidity
-function getBorrowOrderBook(uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getBorrowOrderBook(uint8 orderBookId, uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
 ```
 
 ### getLendOrderBook
 
 ```solidity
-function getLendOrderBook(uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLendOrderBook(uint8 orderBookId, uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
 ```
 
 ### getMaturity
 
 ```solidity
-function getMaturity() external view returns (uint256)
+function getMaturity(uint8 orderBookId) external view returns (uint256)
+```
+
+### getMaturities
+
+```solidity
+function getMaturities(uint8[] _orderBookIds) external view returns (uint256[] maturities)
 ```
 
 ### getCurrency
@@ -159,37 +98,37 @@ function getCurrency() external view returns (bytes32)
 ### getOpeningDate
 
 ```solidity
-function getOpeningDate() external view returns (uint256)
+function getOpeningDate(uint8 orderBookId) external view returns (uint256)
 ```
 
 ### isReady
 
 ```solidity
-function isReady() external view returns (bool)
+function isReady(uint8 orderBookId) external view returns (bool)
 ```
 
 ### isMatured
 
 ```solidity
-function isMatured() external view returns (bool)
+function isMatured(uint8 orderBookId) external view returns (bool)
 ```
 
 ### isOpened
 
 ```solidity
-function isOpened() external view returns (bool)
+function isOpened(uint8 orderBookId) external view returns (bool)
 ```
 
 ### isItayosePeriod
 
 ```solidity
-function isItayosePeriod() external view returns (bool)
+function isItayosePeriod(uint8 orderBookId) external view returns (bool)
 ```
 
 ### isPreOrderPeriod
 
 ```solidity
-function isPreOrderPeriod() external returns (bool)
+function isPreOrderPeriod(uint8 orderBookId) external returns (bool)
 ```
 
 ### getItayoseLog
@@ -201,79 +140,85 @@ function getItayoseLog(uint256 maturity) external view returns (struct ItayoseLo
 ### getOrder
 
 ```solidity
-function getOrder(uint48 orderId) external view returns (enum ProtocolTypes.Side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
+function getOrder(uint8 orderBookId, uint48 orderId) external view returns (enum ProtocolTypes.Side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
 ```
 
 ### getTotalAmountFromLendOrders
 
 ```solidity
-function getTotalAmountFromLendOrders(address user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
+function getTotalAmountFromLendOrders(uint8 orderBookId, address user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
 ### getTotalAmountFromBorrowOrders
 
 ```solidity
-function getTotalAmountFromBorrowOrders(address user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
+function getTotalAmountFromBorrowOrders(uint8 orderBookId, address user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
 ### getLendOrderIds
 
 ```solidity
-function getLendOrderIds(address user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
+function getLendOrderIds(uint8 orderBookId, address user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
 ### getBorrowOrderIds
 
 ```solidity
-function getBorrowOrderIds(address user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
+function getBorrowOrderIds(uint8 orderBookId, address user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
 ### calculateFilledAmount
 
 ```solidity
-function calculateFilledAmount(enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
+function calculateFilledAmount(uint8 orderBookId, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
 ```
 
-### openMarket
+### createOrderBook
 
 ```solidity
-function openMarket(uint256 maturity, uint256 openingDate) external returns (uint256)
+function createOrderBook(uint256 maturity, uint256 _openingDate) external returns (uint8 orderBookId)
+```
+
+### reopenOrderBook
+
+```solidity
+function reopenOrderBook(uint8 _orderBookId, uint256 _newMaturity, uint256 _openingDate) external
 ```
 
 ### cancelOrder
 
 ```solidity
-function cancelOrder(address user, uint48 orderId) external
+function cancelOrder(uint8 orderBookId, address user, uint48 orderId) external
 ```
 
 ### executeOrder
 
 ```solidity
-function executeOrder(enum ProtocolTypes.Side side, address account, uint256 amount, uint256 unitPrice, uint256 circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function executeOrder(uint8 orderBookId, enum ProtocolTypes.Side side, address account, uint256 amount, uint256 unitPrice, uint256 circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 ### executePreOrder
 
 ```solidity
-function executePreOrder(enum ProtocolTypes.Side side, address user, uint256 amount, uint256 unitPrice) external
+function executePreOrder(uint8 orderBookId, enum ProtocolTypes.Side side, address user, uint256 amount, uint256 unitPrice) external
 ```
 
 ### unwindPosition
 
 ```solidity
-function unwindPosition(enum ProtocolTypes.Side side, address user, uint256 futureValue, uint256 circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwindPosition(uint8 orderBookId, enum ProtocolTypes.Side side, address user, uint256 futureValue, uint256 circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 ### executeItayoseCall
 
 ```solidity
-function executeItayoseCall() external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct ILendingMarket.PartiallyFilledOrder partiallyFilledLendingOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function executeItayoseCall(uint8 orderBookId) external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
 ```
 
 ### cleanUpOrders
 
 ```solidity
-function cleanUpOrders(address user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
+function cleanUpOrders(uint8 orderBookId, address user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
 ```
 
 ### pauseMarket

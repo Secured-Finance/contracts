@@ -2,16 +2,16 @@
 
 ## LendingMarketOperationLogic
 
-### LendingMarketCreated
+### OrderBookCreated
 
 ```solidity
-event LendingMarketCreated(bytes32 ccy, address marketAddr, address futureValueVault, uint256 index, uint256 openingDate, uint256 maturity)
+event OrderBookCreated(bytes32 ccy, uint8 orderBookId, address futureValueVault, uint256 openingDate, uint256 maturity)
 ```
 
-### LendingMarketsRotated
+### OrderBooksRotated
 
 ```solidity
-event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
+event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
 ```
 
 ### EmergencyTerminationExecuted
@@ -26,40 +26,46 @@ event EmergencyTerminationExecuted(uint256 timestamp)
 function initializeCurrencySetting(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor) external
 ```
 
-### getLendingMarketDetails
+### deployLendingMarket
 
 ```solidity
-function getLendingMarketDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+function deployLendingMarket(bytes32 _ccy) external
 ```
 
-### getLendingMarketDetailsPerCurrency
+### getOrderBookDetails
 
 ```solidity
-function getLendingMarketDetailsPerCurrency(bytes32 _ccy) public view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
 ```
 
-### getLendingMarketDetail
+### getOrderBookDetailsPerCurrency
 
 ```solidity
-function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity) public view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+function getOrderBookDetailsPerCurrency(bytes32 _ccy) public view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetail)
 ```
 
-### createLendingMarket
+### getOrderBookDetail
 
 ```solidity
-function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external
+function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) public view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+```
+
+### createOrderBook
+
+```solidity
+function createOrderBook(bytes32 _ccy, uint256 _openingDate) external
 ```
 
 ### executeItayoseCall
 
 ```solidity
-function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (struct ILendingMarket.PartiallyFilledOrder partiallyFilledLendingOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
 ```
 
-### rotateLendingMarkets
+### rotateOrderBooks
 
 ```solidity
-function rotateLendingMarkets(bytes32 _ccy, uint256 _orderFeeRate) external returns (uint256 toMaturity)
+function rotateOrderBooks(bytes32 _ccy, uint256 _orderFeeRate) external returns (uint256 newMaturity)
 ```
 
 ### executeEmergencyTermination

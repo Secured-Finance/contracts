@@ -12,18 +12,6 @@ a new maturity date is set and the compound factor is updated.
 
 The users mainly call this contract to execute orders to lend or borrow funds.
 
-### hasLendingMarket
-
-```solidity
-modifier hasLendingMarket(bytes32 _ccy)
-```
-
-Modifier to check if the currency has a lending market.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
 ### ifValidMaturity
 
 ```solidity
@@ -138,13 +126,13 @@ Gets the genesis date when the first market opens for the selected currency.
 | ---- | ---- | ----------- |
 | [0] | uint256 | The genesis date |
 
-### getLendingMarkets
+### getLendingMarket
 
 ```solidity
-function getLendingMarkets(bytes32 _ccy) external view returns (address[])
+function getLendingMarket(bytes32 _ccy) external view returns (address)
 ```
 
-Gets the lending market contract addresses for the selected currency.
+Gets the lending market contract address for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -152,12 +140,12 @@ Gets the lending market contract addresses for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | address[] | Array with the lending market address |
+| [0] | address | Array with the lending market address |
 
-### getLendingMarket
+### getOrderBookId
 
 ```solidity
-function getLendingMarket(bytes32 _ccy, uint256 _maturity) external view returns (address)
+function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8)
 ```
 
 Gets the lending market contract address for the selected currency and maturity.
@@ -169,15 +157,15 @@ Gets the lending market contract address for the selected currency and maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | address | The lending market address |
+| [0] | uint8 | The lending market address |
 
-### getLendingMarketDetail
+### getOrderBookDetail
 
 ```solidity
-function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
 ```
 
-Gets detailed information on the lending market.
+Gets detailed information on the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -195,13 +183,13 @@ Gets detailed information on the lending market.
 | openingDate | uint256 | The timestamp when the market opens |
 | isReady | bool | The boolean if the market is ready or not |
 
-### getLendingMarketDetails
+### getOrderBookDetails
 
 ```solidity
-function getLendingMarketDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
 ```
 
-Gets the array of detailed information on the lending market.
+Gets the array of detailed information on the order book
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -209,7 +197,7 @@ Gets the array of detailed information on the lending market.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| lendingMarketDetails | struct ILendingMarketController.LendingMarketDetail[] | The array of Detailed information on the lending market. |
+| orderBookDetails | struct ILendingMarketController.OrderBookDetail[] | The array of Detailed information on the order book. |
 
 ### getFutureValueVault
 
@@ -217,24 +205,24 @@ Gets the array of detailed information on the lending market.
 function getFutureValueVault(bytes32 _ccy, uint256 _maturity) public view returns (address)
 ```
 
-Gets the feture value contract address for the selected currency and maturity.
+Gets the future value contract address for the selected currency and maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the market |
+| _maturity | uint256 | The maturity of the order book |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | address | The lending market address |
+| [0] | address | The future value vault address |
 
-### getBorrowUnitPrices
+### getBestLendUnitPrices
 
 ```solidity
-function getBorrowUnitPrices(bytes32 _ccy) external view returns (uint256[])
+function getBestLendUnitPrices(bytes32 _ccy) external view returns (uint256[])
 ```
 
-Gets borrow prices per future value for the selected currency.
+Gets the best prices for lending in the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -242,15 +230,15 @@ Gets borrow prices per future value for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256[] | Array with the borrowing prices per future value of the lending market |
+| [0] | uint256[] | Array with the best prices for lending |
 
-### getLendUnitPrices
+### getBestBorrowUnitPrices
 
 ```solidity
-function getLendUnitPrices(bytes32 _ccy) external view returns (uint256[])
+function getBestBorrowUnitPrices(bytes32 _ccy) external view returns (uint256[])
 ```
 
-Gets lend prices per future value for the selected currency.
+Gets the best prices for borrowing in the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -258,7 +246,7 @@ Gets lend prices per future value for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256[] | Array with the lending prices per future value of the lending market |
+| [0] | uint256[] | Array with the best prices for borrowing |
 
 ### getMidUnitPrices
 
@@ -358,6 +346,22 @@ Gets maturities for the selected currency.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256[] | Array with the lending market maturity |
+
+### getOrderBookIds
+
+```solidity
+function getOrderBookIds(bytes32 _ccy) external view returns (uint8[])
+```
+
+Gets the order book ids.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint8[] | The array of order book id |
 
 ### getUsedCurrencies
 
@@ -551,14 +555,13 @@ Initialize the lending market to set a genesis date and compound factor
 | _orderFeeRate | uint256 | The order fee rate received by protocol |
 | _circuitBreakerLimitRange | uint256 | The circuit breaker limit range |
 
-### createLendingMarket
+### createOrderBook
 
 ```solidity
-function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external
+function createOrderBook(bytes32 _ccy, uint256 _openingDate) external
 ```
 
-Deploys new Lending Market and save address at lendingMarkets mapping.
-Reverts on deployment market with existing currency and term
+Creates new order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -769,10 +772,10 @@ Execute forced repayment for a borrowing position if repayment date is over.
 | ---- | ---- | ----------- |
 | [0] | bool | True if the execution of the operation succeeds |
 
-### rotateLendingMarkets
+### rotateOrderBooks
 
 ```solidity
-function rotateLendingMarkets(bytes32 _ccy) external
+function rotateOrderBooks(bytes32 _ccy) external
 ```
 
 Rotates the lending markets. In this rotation, the following actions are happened.

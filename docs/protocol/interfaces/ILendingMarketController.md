@@ -28,10 +28,10 @@ struct Position {
 }
 ```
 
-### LendingMarketDetail
+### OrderBookDetail
 
 ```solidity
-struct LendingMarketDetail {
+struct OrderBookDetail {
   bytes32 ccy;
   uint256 maturity;
   uint256 bestLendUnitPrice;
@@ -75,16 +75,28 @@ function isRedemptionRequired(address _user) external view returns (bool)
 function getGenesisDate(bytes32 ccy) external view returns (uint256)
 ```
 
-### getLendingMarkets
-
-```solidity
-function getLendingMarkets(bytes32 ccy) external view returns (address[])
-```
-
 ### getLendingMarket
 
 ```solidity
-function getLendingMarket(bytes32 ccy, uint256 maturity) external view returns (address)
+function getLendingMarket(bytes32 ccy) external view returns (address)
+```
+
+### getOrderBookId
+
+```solidity
+function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8)
+```
+
+### getOrderBookDetail
+
+```solidity
+function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+```
+
+### getOrderBookDetails
+
+```solidity
+function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
 ```
 
 ### getFutureValueVault
@@ -93,16 +105,16 @@ function getLendingMarket(bytes32 ccy, uint256 maturity) external view returns (
 function getFutureValueVault(bytes32 ccy, uint256 maturity) external view returns (address)
 ```
 
-### getBorrowUnitPrices
+### getBestLendUnitPrices
 
 ```solidity
-function getBorrowUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
+function getBestLendUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
 ```
 
-### getLendUnitPrices
+### getBestBorrowUnitPrices
 
 ```solidity
-function getLendUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
+function getBestBorrowUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
 ```
 
 ### getMidUnitPrices
@@ -133,6 +145,12 @@ function getLendOrderBook(bytes32 ccy, uint256 maturity, uint256 limit) external
 
 ```solidity
 function getMaturities(bytes32 ccy) external view returns (uint256[])
+```
+
+### getOrderBookIds
+
+```solidity
+function getOrderBookIds(bytes32 ccy) external view returns (uint8[])
 ```
 
 ### getUsedCurrencies
@@ -201,10 +219,10 @@ function isInitializedLendingMarket(bytes32 ccy) external view returns (bool)
 function initializeLendingMarket(bytes32 ccy, uint256 genesisDate, uint256 compoundFactor, uint256 orderFeeRate, uint256 circuitBreakerLimitRange) external
 ```
 
-### createLendingMarket
+### createOrderBook
 
 ```solidity
-function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external
+function createOrderBook(bytes32 ccy, uint256 marketOpeningDate) external
 ```
 
 ### executeOrder
@@ -279,10 +297,10 @@ function executeForcedRepayment(bytes32 _collateralCcy, bytes32 _debtCcy, uint25
 function cancelOrder(bytes32 ccy, uint256 maturity, uint48 orderId) external returns (bool)
 ```
 
-### rotateLendingMarkets
+### rotateOrderBooks
 
 ```solidity
-function rotateLendingMarkets(bytes32 ccy) external
+function rotateOrderBooks(bytes32 ccy) external
 ```
 
 ### executeEmergencyTermination
