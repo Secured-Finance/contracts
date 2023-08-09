@@ -1212,16 +1212,16 @@ describe('Integration Test: Deposit', async () => {
         [hexWFIL, depositAmount],
       );
       // the owner of ReserveFund execute the approve and deposit transactions on behalf of the ReserveFund
+      const targets = [wFILToken.address, tokenVault.address];
+      const values = [0, 0];
+      const data = [approveData, depositData];
       await expect(
         reserveFund
           .connect(owner)
-          .executeTransactions(
-            [wFILToken.address, tokenVault.address],
-            [0, 0],
-            [approveData, depositData],
-            {},
-          ),
-      ).to.emit(tokenVault, 'Deposit');
+          .executeTransactions(targets, values, data, {}),
+      )
+        .to.emit(reserveFund, 'TransactionsExecuted')
+        .withArgs(owner.address, targets, values, data);
 
       const depositAmountAfter = await tokenVault.getDepositAmount(
         reserveFund.address,
@@ -1314,6 +1314,9 @@ describe('Integration Test: Deposit', async () => {
         [hexWFIL, depositAmount],
       );
       // the owner of Liquidator execute the approve and deposit transactions on behalf of the Liquidator
+      const targets = [wFILToken.address, tokenVault.address];
+      const values = [0, 0];
+      const data = [approveData, depositData];
       await expect(
         liquidator
           .connect(owner)
@@ -1323,7 +1326,9 @@ describe('Integration Test: Deposit', async () => {
             [approveData, depositData],
             {},
           ),
-      ).to.emit(tokenVault, 'Deposit');
+      )
+        .to.emit(liquidator, 'TransactionsExecuted')
+        .withArgs(owner.address, targets, values, data);
 
       const depositAmountAfter = await tokenVault.getDepositAmount(
         liquidator.address,

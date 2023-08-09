@@ -318,10 +318,12 @@ describe('Integration Test: Emergency terminations', async () => {
           'executeEmergencySettlement',
         );
         await expect(
-          reserveFund.executeTransaction(lendingMarketController.address, data),
+          reserveFund
+            .connect(owner)
+            .executeTransaction(lendingMarketController.address, data),
         )
-          .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
-          .withArgs(reserveFund.address, reserveFundPV);
+          .to.emit(reserveFund, 'TransactionExecuted')
+          .withArgs(owner.address, lendingMarketController.address, 0, data);
 
         // Check future value
         for (const { address } of [alice, bob, carol, reserveFund]) {
