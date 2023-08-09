@@ -596,14 +596,15 @@ contract LendingMarketController is
         uint256 _orderFeeRate,
         uint256 _circuitBreakerLimitRange
     ) external override onlyOwner {
-        require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        LendingMarketOperationLogic.initializeCurrencySetting(_ccy, _genesisDate, _compoundFactor);
-        LendingMarketOperationLogic.deployContracts(_ccy);
-
-        updateOrderFeeRate(_ccy, _orderFeeRate);
-        updateCircuitBreakerLimitRange(_ccy, _circuitBreakerLimitRange);
+        LendingMarketOperationLogic.initializeLendingMarket(
+            _ccy,
+            _genesisDate,
+            _compoundFactor,
+            _orderFeeRate,
+            _circuitBreakerLimitRange
+        );
     }
 
     /**

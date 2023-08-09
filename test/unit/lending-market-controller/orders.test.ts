@@ -85,6 +85,28 @@ describe('LendingMarketController - Orders', () => {
   });
 
   describe('Initialization', async () => {
+    it('Initialize the lending market', async () => {
+      await expect(
+        lendingMarketControllerProxy.initializeLendingMarket(
+          targetCurrency,
+          genesisDate,
+          INITIAL_COMPOUND_FACTOR,
+          ORDER_FEE_RATE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+        ),
+      )
+        .to.emit(lendingMarketOperationLogic, 'LendingMarketInitialized')
+        .withArgs(
+          targetCurrency,
+          genesisDate,
+          INITIAL_COMPOUND_FACTOR,
+          ORDER_FEE_RATE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+          () => true,
+          () => true,
+        );
+    });
+
     it('Get genesisDate', async () => {
       expect(
         await lendingMarketControllerProxy.isInitializedLendingMarket(
@@ -128,7 +150,7 @@ describe('LendingMarketController - Orders', () => {
       ).to.be.revertedWith('Beacon proxy address not found');
     });
 
-    it('Create a lending market', async () => {
+    it('Create a order book', async () => {
       await lendingMarketControllerProxy.initializeLendingMarket(
         targetCurrency,
         genesisDate,

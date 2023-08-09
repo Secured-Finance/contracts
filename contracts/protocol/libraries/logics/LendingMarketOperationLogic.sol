@@ -30,6 +30,16 @@ library LendingMarketOperationLogic {
 
     uint256 private constant OBSERVATION_PERIOD = 6 hours;
 
+    event LendingMarketInitialized(
+        bytes32 indexed ccy,
+        uint256 genesisDate,
+        uint256 compoundFactor,
+        uint256 orderFeeRate,
+        uint256 circuitBreakerLimitRange,
+        address lendingMarket,
+        address futureValueVault
+    );
+
     event OrderBookCreated(
         bytes32 indexed ccy,
         uint8 indexed orderBookId,
@@ -39,31 +49,6 @@ library LendingMarketOperationLogic {
 
     event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event EmergencyTerminationExecuted(uint256 timestamp);
-
-    function initializeCurrencySetting(
-        bytes32 _ccy,
-        uint256 _genesisDate,
-        uint256 _compoundFactor
-    ) external {
-        AddressResolverLib.genesisValueVault().initializeCurrencySetting(
-            _ccy,
-            36,
-            _compoundFactor,
-            calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
-        );
-
-        Storage.slot().genesisDates[_ccy] = _genesisDate;
-    }
-
-    function deployContracts(bytes32 _ccy) external {
-        Storage.slot().lendingMarkets[_ccy] = AddressResolverLib
-            .beaconProxyController()
-            .deployLendingMarket(_ccy);
-
-        Storage.slot().futureValueVaults[_ccy] = AddressResolverLib
-            .beaconProxyController()
-            .deployFutureValueVault();
-    }
 
     function getOrderBookDetails(bytes32[] memory _ccys)
         external
@@ -158,6 +143,50 @@ library LendingMarketOperationLogic {
                 Storage.slot().maturityOrderBookIds[_ccy][_maturity],
                 LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy)
             );
+    }
+
+    function initializeLendingMarket(
+        bytes32 _ccy,
+        uint256 _genesisDate,
+        uint256 _compoundFactor,
+        uint256 _orderFeeRate,
+        uint256 _circuitBreakerLimitRange
+    ) external {
+        require(_compoundFactor > 0, "Invalid compound factor");
+
+        AddressResolverLib.genesisValueVault().initializeCurrencySetting(
+            _ccy,
+            36,
+            _compoundFactor,
+            calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
+        );
+
+        address lendingMarket = AddressResolverLib.beaconProxyController().deployLendingMarket(
+            _ccy
+        );
+        address futureValueVault = AddressResolverLib
+            .beaconProxyController()
+            .deployFutureValueVault();
+
+        LendingMarketConfigurationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
+        LendingMarketConfigurationLogic.updateCircuitBreakerLimitRange(
+            _ccy,
+            _circuitBreakerLimitRange
+        );
+
+        Storage.slot().genesisDates[_ccy] = _genesisDate;
+        Storage.slot().lendingMarkets[_ccy] = lendingMarket;
+        Storage.slot().futureValueVaults[_ccy] = futureValueVault;
+
+        emit LendingMarketInitialized(
+            _ccy,
+            _genesisDate,
+            _compoundFactor,
+            _orderFeeRate,
+            _circuitBreakerLimitRange,
+            lendingMarket,
+            futureValueVault
+        );
     }
 
     function createOrderBook(bytes32 _ccy, uint256 _openingDate) external {
