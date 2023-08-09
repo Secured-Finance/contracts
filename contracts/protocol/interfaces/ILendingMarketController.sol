@@ -22,7 +22,7 @@ interface ILendingMarketController {
         int256 futureValue;
     }
 
-    struct LendingMarketDetail {
+    struct OrderBookDetail {
         bytes32 ccy;
         uint256 maturity;
         uint256 bestLendUnitPrice;
@@ -49,15 +49,37 @@ interface ILendingMarketController {
 
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
-    function getLendingMarkets(bytes32 ccy) external view returns (address[] memory);
+    function getLendingMarket(bytes32 ccy) external view returns (address);
 
-    function getLendingMarket(bytes32 ccy, uint256 maturity) external view returns (address);
+    function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8);
+
+    function getOrderBookDetail(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        returns (
+            uint256 bestLendUnitPrice,
+            uint256 bestBorrowUnitPrice,
+            uint256 midUnitPrice,
+            uint256 maxLendUnitPrice,
+            uint256 minBorrowUnitPrice,
+            uint256 openingUnitPrice,
+            uint256 openingDate,
+            bool isReady
+        );
+
+    function getOrderBookDetails(bytes32[] memory _ccys)
+        external
+        view
+        returns (OrderBookDetail[] memory orderBookDetails);
 
     function getFutureValueVault(bytes32 ccy, uint256 maturity) external view returns (address);
 
-    function getBorrowUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
+    function getBestLendUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
-    function getLendUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
+    function getBestBorrowUnitPrices(bytes32 ccy)
+        external
+        view
+        returns (uint256[] memory unitPrices);
 
     function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
@@ -108,6 +130,8 @@ interface ILendingMarketController {
         );
 
     function getMaturities(bytes32 ccy) external view returns (uint256[] memory);
+
+    function getOrderBookIds(bytes32 ccy) external view returns (uint8[] memory);
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
@@ -182,7 +206,7 @@ interface ILendingMarketController {
         uint256 circuitBreakerLimitRange
     ) external;
 
-    function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external;
+    function createOrderBook(bytes32 ccy, uint256 marketOpeningDate) external;
 
     function executeOrder(
         bytes32 ccy,
@@ -248,7 +272,7 @@ interface ILendingMarketController {
         uint48 orderId
     ) external returns (bool);
 
-    function rotateLendingMarkets(bytes32 ccy) external;
+    function rotateOrderBooks(bytes32 ccy) external;
 
     function executeEmergencyTermination() external;
 

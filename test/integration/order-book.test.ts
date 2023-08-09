@@ -34,11 +34,13 @@ describe('Integration Test: Order Book', async () => {
   let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
+  let orderActionLogic: Contract;
 
   let genesisDate: number;
-  let filLendingMarkets: Contract[] = [];
+  let filLendingMarket: Contract;
   let filMaturities: BigNumber[];
   let ethMaturities: BigNumber[];
+  let filOrderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -111,6 +113,7 @@ describe('Integration Test: Order Book', async () => {
       lendingMarketController,
       wETHToken,
       wFILToken,
+      orderActionLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -126,19 +129,17 @@ describe('Integration Test: Order Book', async () => {
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexWFIL, genesisDate);
-      await lendingMarketController.createLendingMarket(hexETH, genesisDate);
+      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
+      await lendingMarketController.createOrderBook(hexETH, genesisDate);
     }
 
-    filLendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexWFIL)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
+    filLendingMarket = await lendingMarketController
+      .getLendingMarket(hexWFIL)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+
+    filOrderBookIds = await lendingMarketController.getOrderBookIds(hexWFIL);
+
+    orderActionLogic = orderActionLogic.attach(filLendingMarket.address);
   });
 
   describe('Market orders', async () => {
@@ -1030,7 +1031,7 @@ describe('Integration Test: Order Book', async () => {
         await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(tx)
-          .to.emit(filLendingMarkets[0], 'OrderExecuted')
+          .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             carol.address,
             Side.LEND,
@@ -1308,9 +1309,15 @@ describe('Integration Test: Order Book', async () => {
             ),
           );
           const { activeOrderIds: borrowOrderIds } =
-            await filLendingMarkets[1].getBorrowOrderIds(bob.address);
+            await filLendingMarket.getBorrowOrderIds(
+              filOrderBookIds[1],
+              bob.address,
+            );
           const { activeOrderIds: lendOrderIds } =
-            await filLendingMarkets[1].getLendOrderIds(alice.address);
+            await filLendingMarket.getLendOrderIds(
+              filOrderBookIds[1],
+              alice.address,
+            );
 
           expect(bobFV.add(aliceFV).add(fee)).to.lte(1);
           expect(borrowOrderIds.length).to.equal(0);
@@ -1383,11 +1390,17 @@ describe('Integration Test: Order Book', async () => {
 
           if (input.label === 'lending') {
             ({ activeOrderIds: orderIds } =
-              await filLendingMarkets[1].getLendOrderIds(alice.address));
+              await filLendingMarket.getLendOrderIds(
+                filOrderBookIds[1],
+                alice.address,
+              ));
             orderMaker = alice;
           } else {
             ({ activeOrderIds: orderIds } =
-              await filLendingMarkets[1].getBorrowOrderIds(bob.address));
+              await filLendingMarket.getBorrowOrderIds(
+                filOrderBookIds[1],
+                bob.address,
+              ));
             orderMaker = bob;
           }
 
@@ -1474,11 +1487,17 @@ describe('Integration Test: Order Book', async () => {
 
           if (input.label === 'borrowing') {
             ({ activeOrderIds: orderIds } =
-              await filLendingMarkets[1].getLendOrderIds(alice.address));
+              await filLendingMarket.getLendOrderIds(
+                filOrderBookIds[1],
+                alice.address,
+              ));
             orderMaker = alice;
           } else {
             ({ activeOrderIds: orderIds } =
-              await filLendingMarkets[1].getBorrowOrderIds(bob.address));
+              await filLendingMarket.getBorrowOrderIds(
+                filOrderBookIds[1],
+                bob.address,
+              ));
             orderMaker = bob;
           }
 
@@ -1548,7 +1567,10 @@ describe('Integration Test: Order Book', async () => {
       it('Cancel an order', async () => {
         const {
           activeOrderIds: [orderId],
-        } = await filLendingMarkets[0].getBorrowOrderIds(alice.address);
+        } = await filLendingMarket.getBorrowOrderIds(
+          filOrderBookIds[0],
+          alice.address,
+        );
 
         await lendingMarketController
           .connect(alice)
@@ -1643,7 +1665,10 @@ describe('Integration Test: Order Book', async () => {
       it('Cancel an order', async () => {
         const {
           activeOrderIds: [orderId],
-        } = await filLendingMarkets[0].getLendOrderIds(alice.address);
+        } = await filLendingMarket.getLendOrderIds(
+          filOrderBookIds[0],
+          alice.address,
+        );
 
         await lendingMarketController
           .connect(alice)

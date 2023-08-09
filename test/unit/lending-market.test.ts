@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
-import { Contract } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 import moment from 'moment';
 
@@ -18,6 +18,7 @@ const LendingMarketCaller = artifacts.require('LendingMarketCaller');
 
 // libraries
 const OrderBookLogic = artifacts.require('OrderBookLogic');
+const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 
 const { deployContract } = waffle;
 
@@ -35,27 +36,31 @@ describe('LendingMarket', () => {
   let signers: SignerWithAddress[];
 
   let lendingMarket: Contract;
-  let currentMarketIdx: number;
+  let orderActionLogic: Contract;
+  let orderBookLogic: Contract;
+  let currentOrderBookId: BigNumber;
 
   const initialize = async (maturity: number, openingDate: number) => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
-    await lendingMarketCaller.deployLendingMarket(
+    await lendingMarketCaller.deployLendingMarket(targetCurrency);
+    await lendingMarketCaller.createOrderBook(
       targetCurrency,
       maturity,
       openingDate,
     );
 
     lendingMarket = await lendingMarketCaller
-      .getLendingMarkets()
-      .then((addresses) => {
-        currentMarketIdx = addresses.length - 1;
-        return ethers.getContractAt(
-          'LendingMarket',
-          addresses[currentMarketIdx],
-        );
-      });
+      .getLendingMarket(targetCurrency)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+
+    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
+    orderBookLogic = orderBookLogic.attach(lendingMarket.address);
+
+    currentOrderBookId = await lendingMarketCaller.getOrderBookId(
+      targetCurrency,
+    );
   };
 
   before(async () => {
@@ -127,10 +132,23 @@ describe('LendingMarket', () => {
     ]);
 
     // Set up for LendingMarketController
-    const orderBookLogic = await deployContract(owner, OrderBookLogic);
+    const orderReaderLogic = await deployContract(owner, OrderReaderLogic);
+
+    orderBookLogic = await deployContract(owner, OrderBookLogic);
+
+    orderActionLogic = await ethers
+      .getContractFactory('OrderActionLogic', {
+        libraries: {
+          OrderReaderLogic: orderReaderLogic.address,
+        },
+      })
+      .then((factory) => factory.deploy());
+
     const lendingMarket = await ethers
       .getContractFactory('LendingMarket', {
         libraries: {
+          OrderActionLogic: orderActionLogic.address,
+          OrderReaderLogic: orderReaderLogic.address,
           OrderBookLogic: orderBookLogic.address,
         },
       })
@@ -155,14 +173,16 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.LEND,
           '100000000000000',
           '8000',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       const zeroOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         0,
         0,
@@ -174,6 +194,7 @@ describe('LendingMarket', () => {
       expect(zeroOrderResult.filledAmountInFV).to.equal('0');
 
       const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         '100000000000000',
         0,
@@ -185,6 +206,7 @@ describe('LendingMarket', () => {
       expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
 
       const limitOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         '100000000000000',
         '8000',
@@ -200,14 +222,16 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.BORROW,
           '200000000000000',
           '8000',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.LEND,
         '200000000000000',
         0,
@@ -215,6 +239,7 @@ describe('LendingMarket', () => {
       );
 
       const zeroOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.LEND,
         0,
         0,
@@ -230,6 +255,7 @@ describe('LendingMarket', () => {
       expect(marketOrderResult.filledAmountInFV).to.equal('250000000000000');
 
       const limitOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.LEND,
         '200000000000000',
         '8000',
@@ -245,24 +271,27 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.LEND,
           '100000000000000',
           '8000',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.LEND,
           '100000000000000',
           '7900',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         '150000000000000',
         0,
@@ -274,6 +303,7 @@ describe('LendingMarket', () => {
       expect(marketOrderResult.filledAmountInFV).to.equal('188291139240507');
 
       const limitOrderResult1 = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         '150000000000000',
         '8000',
@@ -285,6 +315,7 @@ describe('LendingMarket', () => {
       expect(limitOrderResult1.filledAmountInFV).to.equal('125000000000000');
 
       const limitOrderResult2 = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         '150000000000000',
         '7900',
@@ -300,24 +331,27 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.BORROW,
           '200000000000000',
           '8000',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.BORROW,
           '100000000000000',
           '8100',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.LEND,
         '250000000000000',
         0,
@@ -329,6 +363,7 @@ describe('LendingMarket', () => {
       expect(marketOrderResult.filledAmountInFV).to.equal('311728395061729');
 
       const limitOrderResult1 = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.LEND,
         '250000000000000',
         '8000',
@@ -340,6 +375,7 @@ describe('LendingMarket', () => {
       expect(limitOrderResult1.filledAmountInFV).to.equal('250000000000000');
 
       const limitOrderResult2 = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.LEND,
         '250000000000000',
         '8100',
@@ -355,24 +391,27 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.LEND,
           '100000000000000',
           '8000',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.LEND,
           '100000000000000',
           '7000',
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       const marketOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         '200000000000000',
         0,
@@ -384,6 +423,7 @@ describe('LendingMarket', () => {
       expect(marketOrderResult.filledAmountInFV).to.equal('125000000000000');
 
       const limitOrderResult = await lendingMarket.calculateFilledAmount(
+        currentOrderBookId,
         Side.BORROW,
         '200000000000000',
         '7000',
@@ -413,20 +453,22 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(bob)
         .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.BORROW,
           '1000000000000000',
           '8000',
-          currentMarketIdx,
         );
 
       await expect(
         lendingMarketCaller
           .connect(bob)
           .executePreOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.LEND,
             '1000000000000000',
             '8000',
-            currentMarketIdx,
           ),
       ).to.be.revertedWith('Opposite side order exists');
     });
@@ -435,27 +477,30 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(bob)
         .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.LEND,
           '1000000000000000',
           '8000',
-          currentMarketIdx,
         );
 
       await expect(
         lendingMarketCaller
           .connect(bob)
           .executePreOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.BORROW,
             '1000000000000000',
             '8000',
-            currentMarketIdx,
           ),
       ).to.be.revertedWith('Opposite side order exists');
     });
   });
 
   describe('Itayose', async () => {
-    let maturity;
+    let maturity: number;
+
     beforeEach(async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
       maturity = moment(timestamp * 1000)
@@ -580,13 +625,14 @@ describe('LendingMarket', () => {
             lendingMarketCaller
               .connect(user)
               .executePreOrder(
+                targetCurrency,
+                currentOrderBookId,
                 order.side,
                 order.amount,
                 order.unitPrice,
-                currentMarketIdx,
               ),
           )
-            .to.emit(lendingMarket, 'PreOrderExecuted')
+            .to.emit(orderActionLogic, 'PreOrderExecuted')
             .withArgs(
               user.address,
               order.side,
@@ -602,12 +648,12 @@ describe('LendingMarket', () => {
         await time.increase(169200);
 
         await lendingMarketCaller
-          .executeItayoseCall(currentMarketIdx)
+          .executeItayoseCall(targetCurrency, currentOrderBookId)
           .then(async (tx) => {
             if (test.shouldItayoseExecuted) {
-              await expect(tx).to.emit(lendingMarket, 'ItayoseExecuted');
+              await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
             } else {
-              await expect(tx).not.to.emit(lendingMarket, 'ItayoseExecuted');
+              await expect(tx).not.to.emit(orderBookLogic, 'ItayoseExecuted');
             }
           });
 
@@ -631,21 +677,24 @@ describe('LendingMarket', () => {
       await time.increase(169200);
 
       await expect(
-        lendingMarketCaller.executeItayoseCall(currentMarketIdx),
-      ).to.not.emit(lendingMarket, 'ItayoseExecuted');
+        lendingMarketCaller.executeItayoseCall(
+          targetCurrency,
+          currentOrderBookId,
+        ),
+      ).to.not.emit(orderBookLogic, 'ItayoseExecuted');
     });
 
     it('Fail to create a pre-order due to an existing order with a past maturity', async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
       const maturity = moment(timestamp * 1000)
-        .add(1, 'M')
+        .add(2, 'M')
         .unix();
 
       const openingDate = moment(timestamp * 1000)
         .add(48, 'h')
         .unix();
 
-      await lendingMarketCaller.deployLendingMarket(
+      await lendingMarketCaller.createOrderBook(
         targetCurrency,
         maturity,
         openingDate,
@@ -654,30 +703,33 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(alice)
         .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.BORROW,
           '100000000000000000',
           '8000',
-          currentMarketIdx,
         );
       await lendingMarketCaller
         .connect(bob)
         .executePreOrder(
+          targetCurrency,
+          currentOrderBookId,
           Side.LEND,
           '100000000000000000',
           '8000',
-          currentMarketIdx,
         );
 
       // Increase 48 hours
       await time.increase(172800);
 
       await lendingMarketCaller
-        .executeItayoseCall(currentMarketIdx)
+        .executeItayoseCall(targetCurrency, currentOrderBookId)
         .then(async (tx) => {
-          await expect(tx).to.emit(lendingMarket, 'ItayoseExecuted');
+          await expect(tx).to.emit(orderBookLogic, 'ItayoseExecuted');
         });
 
-      await time.increaseTo(maturity.toString());
+      // Move to 48 hours before maturity of 2nd order book.
+      await time.increaseTo(maturity - 172800);
 
       const { timestamp: newTimestamp } = await ethers.provider.getBlock(
         'latest',
@@ -689,67 +741,60 @@ describe('LendingMarket', () => {
         .add(48, 'h')
         .unix();
 
-      await lendingMarketCaller.openMarket(
+      await lendingMarketCaller.reopenOrderBook(
+        targetCurrency,
+        currentOrderBookId,
         newMaturity,
         newOpeningDate,
-        currentMarketIdx,
       );
 
       await expect(
         lendingMarketCaller
           .connect(alice)
           .executePreOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.LEND,
             '100000000000000000',
             '8000',
-            currentMarketIdx,
           ),
       ).to.be.revertedWith('Order found in past maturity');
+
       await expect(
         lendingMarketCaller
           .connect(bob)
           .executePreOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.BORROW,
             '100000000000000000',
             '8000',
-            currentMarketIdx,
           ),
       ).to.be.revertedWith('Order found in past maturity');
     });
 
     it('Fail to create a pre-order due to not in the pre-order period', async () => {
-      const { timestamp } = await ethers.provider.getBlock('latest');
-      const maturity = moment(timestamp * 1000)
-        .add(1, 'M')
-        .unix();
-      const openingDate = moment(timestamp * 1000)
-        .add(169, 'h')
-        .unix();
-
-      await lendingMarketCaller.deployLendingMarket(
-        targetCurrency,
-        maturity,
-        openingDate,
-      );
-
-      const addresses = await lendingMarketCaller.getLendingMarkets();
-      const marketIdx = addresses.length - 1;
+      time.increaseTo(maturity);
 
       await expect(
         lendingMarketCaller
           .connect(alice)
           .executePreOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.BORROW,
             '100000000000000000',
             '8720',
-            marketIdx,
           ),
       ).to.be.revertedWith('Not in the pre-order period');
     });
 
     it('Fail to execute the Itayose call due to not in the Itayose period', async () => {
       await expect(
-        lendingMarketCaller.executeItayoseCall(currentMarketIdx),
+        lendingMarketCaller.executeItayoseCall(
+          targetCurrency,
+          currentOrderBookId,
+        ),
       ).to.be.revertedWith('Not in the Itayose period');
     });
   });
@@ -784,21 +829,23 @@ describe('LendingMarket', () => {
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           side,
           '100000000000000',
           unitPrice,
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       await lendingMarketCaller
         .connect(alice)
         .executeOrder(
+          targetCurrency,
+          currentOrderBookId,
           side,
           '100000000000000',
           offsetUnitPrice,
           CIRCUIT_BREAKER_LIMIT_RANGE,
-          currentMarketIdx,
         );
 
       return offsetUnitPrice;
@@ -808,6 +855,7 @@ describe('LendingMarket', () => {
       it('Get circuit breaker thresholds on the empty order book', async () => {
         const { maxLendUnitPrice, minBorrowUnitPrice } =
           await lendingMarket.getCircuitBreakerThresholds(
+            currentOrderBookId,
             CIRCUIT_BREAKER_LIMIT_RANGE,
           );
 
@@ -819,25 +867,28 @@ describe('LendingMarket', () => {
         await lendingMarketCaller
           .connect(alice)
           .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.LEND,
             '100000000000000',
             '5000',
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         await lendingMarketCaller
           .connect(alice)
           .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.BORROW,
             '100000000000000',
             '9950',
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         const { maxLendUnitPrice, minBorrowUnitPrice } =
           await lendingMarket.getCircuitBreakerThresholds(
+            currentOrderBookId,
             CIRCUIT_BREAKER_LIMIT_RANGE,
           );
 
@@ -862,14 +913,15 @@ describe('LendingMarket', () => {
               lendingMarketCaller
                 .connect(bob)
                 .executeOrder(
+                  targetCurrency,
+                  currentOrderBookId,
                   side,
                   '200000000000000',
                   unitPrice,
                   CIRCUIT_BREAKER_LIMIT_RANGE,
-                  currentMarketIdx,
                 ),
             )
-              .to.emit(lendingMarket, 'OrderExecuted')
+              .to.emit(orderActionLogic, 'OrderExecuted')
               .withArgs(
                 bob.address,
                 side,
@@ -896,27 +948,29 @@ describe('LendingMarket', () => {
           const bobTx = await lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               0,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '150000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -934,7 +988,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -965,27 +1019,29 @@ describe('LendingMarket', () => {
           const bobTx = await lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '100000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1005,7 +1061,7 @@ describe('LendingMarket', () => {
           await ethers.provider.send('evm_mine', []);
 
           await expect(carolTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1028,14 +1084,15 @@ describe('LendingMarket', () => {
             lendingMarketCaller
               .connect(carol)
               .executeOrder(
+                targetCurrency,
+                currentOrderBookId,
                 side,
                 '50000000000000',
                 '0',
                 CIRCUIT_BREAKER_LIMIT_RANGE,
-                currentMarketIdx,
               ),
           )
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1063,47 +1120,51 @@ describe('LendingMarket', () => {
           await lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '100000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx1 = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               0,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await lendingMarketCaller
             .connect(alice)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               oppositeOrderSide,
               '100000000000000',
               lendingOrderAmount,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx2 = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               0,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_mine', []);
 
           await expect(carolTx1)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1121,7 +1182,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx2)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1149,27 +1210,29 @@ describe('LendingMarket', () => {
           const bobTx = await lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '100000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1187,7 +1250,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1218,27 +1281,29 @@ describe('LendingMarket', () => {
           const bobTx = await lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '100000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               offsetUnitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1256,7 +1321,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1286,21 +1351,23 @@ describe('LendingMarket', () => {
           await lendingMarketCaller
             .connect(alice)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await lendingMarketCaller
             .connect(alice)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               offsetUnitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_setAutomine', [false]);
@@ -1308,27 +1375,29 @@ describe('LendingMarket', () => {
           const bobTx = await lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '100000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               offsetUnitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1346,7 +1415,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1376,21 +1445,23 @@ describe('LendingMarket', () => {
           await lendingMarketCaller
             .connect(alice)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await lendingMarketCaller
             .connect(alice)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               offsetUnitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_setAutomine', [false]);
@@ -1398,27 +1469,29 @@ describe('LendingMarket', () => {
           const bobTx = await lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '100000000000000',
               '0',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           const carolTx = await lendingMarketCaller
             .connect(carol)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               side,
               '50000000000000',
               offsetUnitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await ethers.provider.send('evm_mine', []);
 
           await expect(bobTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1436,7 +1509,7 @@ describe('LendingMarket', () => {
             );
 
           await expect(carolTx)
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               carol.address,
               side,
@@ -1463,11 +1536,12 @@ describe('LendingMarket', () => {
             lendingMarketCaller
               .connect(alice)
               .executeOrder(
+                targetCurrency,
+                currentOrderBookId,
                 side,
                 '100000000000000',
                 unitPrice,
                 10000,
-                currentMarketIdx,
               ),
           ).to.revertedWith('CB limit can not be so high');
         });
@@ -1479,35 +1553,38 @@ describe('LendingMarket', () => {
           await lendingMarketCaller
             .connect(alice)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await lendingMarketCaller
             .connect(alice)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               isBorrow ? Side.LEND : Side.BORROW,
               '100000000000000',
               unitPrice2,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             );
 
           await expect(
             lendingMarketCaller
               .connect(bob)
               .executeOrder(
+                targetCurrency,
+                currentOrderBookId,
                 side,
                 '100000000000000',
                 '0',
                 CIRCUIT_BREAKER_LIMIT_RANGE,
-                currentMarketIdx,
               ),
           )
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1528,14 +1605,15 @@ describe('LendingMarket', () => {
             lendingMarketCaller
               .connect(bob)
               .executeOrder(
+                targetCurrency,
+                currentOrderBookId,
                 side,
                 '100000000000000',
                 isBorrow ? 1 : 10000,
                 CIRCUIT_BREAKER_LIMIT_RANGE,
-                currentMarketIdx,
               ),
           )
-            .to.emit(lendingMarket, 'OrderExecuted')
+            .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
               bob.address,
               side,
@@ -1560,27 +1638,33 @@ describe('LendingMarket', () => {
         await lendingMarketCaller
           .connect(alice)
           .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.LEND,
             '100000000000000',
             '8000',
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         await lendingMarketCaller
           .connect(bob)
           .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.BORROW,
             '100000000000000',
             '8000',
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         await expect(
-          lendingMarketCaller.cleanUpOrders(alice.address, currentMarketIdx),
+          lendingMarketCaller.cleanUpOrders(
+            targetCurrency,
+            currentOrderBookId,
+            alice.address,
+          ),
         )
-          .to.emit(lendingMarket, 'OrdersCleaned')
+          .to.emit(orderActionLogic, 'OrdersCleaned')
           .withArgs(
             [1],
             alice.address,
@@ -1596,27 +1680,33 @@ describe('LendingMarket', () => {
         await lendingMarketCaller
           .connect(bob)
           .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.BORROW,
             '100000000000000',
             '8000',
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         await lendingMarketCaller
           .connect(alice)
           .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.LEND,
             '100000000000000',
             '8000',
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         await expect(
-          lendingMarketCaller.cleanUpOrders(bob.address, currentMarketIdx),
+          lendingMarketCaller.cleanUpOrders(
+            targetCurrency,
+            currentOrderBookId,
+            bob.address,
+          ),
         )
-          .to.emit(lendingMarket, 'OrdersCleaned')
+          .to.emit(orderActionLogic, 'OrdersCleaned')
           .withArgs(
             [1],
             bob.address,
@@ -1637,13 +1727,14 @@ describe('LendingMarket', () => {
           lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               Side.BORROW,
               '100000000000000',
               0,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             ),
-        ).to.emit(lendingMarket, 'OrderExecuted');
+        ).to.emit(orderActionLogic, 'OrderExecuted');
 
         await createInitialOrders(Side.BORROW, 8500);
 
@@ -1651,13 +1742,14 @@ describe('LendingMarket', () => {
           lendingMarketCaller
             .connect(bob)
             .unwindPosition(
+              targetCurrency,
+              currentOrderBookId,
               Side.LEND,
               '125000000000000',
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             ),
         )
-          .to.emit(lendingMarket, 'PositionUnwound')
+          .to.emit(orderActionLogic, 'PositionUnwound')
           .withArgs(
             bob.address,
             Side.LEND,
@@ -1678,13 +1770,14 @@ describe('LendingMarket', () => {
           lendingMarketCaller
             .connect(bob)
             .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
               Side.BORROW,
               '100000000000000',
               0,
               CIRCUIT_BREAKER_LIMIT_RANGE,
-              currentMarketIdx,
             ),
-        ).to.emit(lendingMarket, 'OrderExecuted');
+        ).to.emit(orderActionLogic, 'OrderExecuted');
 
         await createInitialOrders(Side.BORROW, 8500);
 
@@ -1693,26 +1786,28 @@ describe('LendingMarket', () => {
         await lendingMarketCaller
           .connect(alice)
           .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
             Side.LEND,
             '100000000000000',
             0,
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         const tx = await lendingMarketCaller
           .connect(bob)
           .unwindPosition(
+            targetCurrency,
+            currentOrderBookId,
             Side.LEND,
             '125000000000000',
             CIRCUIT_BREAKER_LIMIT_RANGE,
-            currentMarketIdx,
           );
 
         await ethers.provider.send('evm_mine', []);
 
         await expect(tx)
-          .to.emit(lendingMarket, 'PositionUnwound')
+          .to.emit(orderActionLogic, 'PositionUnwound')
           .withArgs(
             bob.address,
             Side.LEND,

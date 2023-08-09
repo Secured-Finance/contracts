@@ -27,7 +27,6 @@ describe('Performance Test: Auto-rolls', async () => {
   let genesisValueVault: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
-  let lendingMarkets: Contract[] = [];
   let wFILToken: Contract;
 
   let fundManagementLogic: Contract;
@@ -100,25 +99,16 @@ describe('Performance Test: Auto-rolls', async () => {
 
     // Deploy active Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexWFIL, genesisDate);
+      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
     }
     maturities = await lendingMarketController.getMaturities(hexWFIL);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createLendingMarket(hexWFIL, maturities[0]);
+    await lendingMarketController.createOrderBook(hexWFIL, maturities[0]);
   });
 
   beforeEach('Reset contract instances', async () => {
     maturities = await lendingMarketController.getMaturities(hexWFIL);
-    lendingMarkets = await lendingMarketController
-      .getLendingMarkets(hexWFIL)
-      .then((addresses) =>
-        Promise.all(
-          addresses.map((address) =>
-            ethers.getContractAt('LendingMarket', address),
-          ),
-        ),
-      );
   });
 
   /**
@@ -204,9 +194,7 @@ describe('Performance Test: Auto-rolls', async () => {
         // Auto-roll
         await createSampleFILOrders(carol, maturities[1], '9523');
         await time.increaseTo(maturities[0].toString());
-        await lendingMarketController
-          .connect(owner)
-          .rotateLendingMarkets(hexWFIL);
+        await lendingMarketController.connect(owner).rotateOrderBooks(hexWFIL);
         await lendingMarketController.executeItayoseCalls(
           [hexWFIL],
           maturities[maturities.length - 1],

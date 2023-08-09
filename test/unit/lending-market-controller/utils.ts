@@ -21,6 +21,7 @@ const ReserveFund = artifacts.require('ReserveFund');
 
 // libraries
 const OrderBookLogic = artifacts.require('OrderBookLogic');
+const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 const LendingMarketConfigurationLogic = artifacts.require(
   'LendingMarketConfigurationLogic',
 );
@@ -186,10 +187,22 @@ const deployContracts = async (owner: SignerWithAddress) => {
   ]);
 
   // Set up for LendingMarketController
+  const orderReaderLogic = await deployContract(owner, OrderReaderLogic);
   const orderBookLogic = await deployContract(owner, OrderBookLogic);
+
+  const orderActionLogic = await ethers
+    .getContractFactory('OrderActionLogic', {
+      libraries: {
+        OrderReaderLogic: orderReaderLogic.address,
+      },
+    })
+    .then((factory) => factory.deploy());
+
   const lendingMarket = await ethers
     .getContractFactory('LendingMarket', {
       libraries: {
+        OrderActionLogic: orderActionLogic.address,
+        OrderReaderLogic: orderReaderLogic.address,
         OrderBookLogic: orderBookLogic.address,
       },
     })
@@ -214,6 +227,9 @@ const deployContracts = async (owner: SignerWithAddress) => {
     fundManagementLogic,
     lendingMarketOperationLogic,
     liquidationLogic,
+    orderActionLogic,
+    orderBookLogic,
+    orderReaderLogic,
   };
 };
 

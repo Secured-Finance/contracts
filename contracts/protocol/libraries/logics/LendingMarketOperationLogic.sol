@@ -12,6 +12,7 @@ import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {BokkyPooBahsDateTimeLibrary as TimeLibrary} from "../BokkyPooBahsDateTimeLibrary.sol";
 import {Constants} from "../Constants.sol";
+import {FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
 import {FundManagementLogic} from "./FundManagementLogic.sol";
@@ -27,16 +28,15 @@ library LendingMarketOperationLogic {
     using SafeCast for uint256;
     using RoundingInt256 for int256;
 
-    event LendingMarketCreated(
+    event OrderBookCreated(
         bytes32 indexed ccy,
-        address indexed marketAddr,
+        uint8 indexed orderBookId,
         address futureValueVault,
-        uint256 index,
         uint256 openingDate,
         uint256 maturity
     );
 
-    event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
+    event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event EmergencyTerminationExecuted(uint256 timestamp);
 
     function initializeCurrencySetting(
@@ -54,43 +54,48 @@ library LendingMarketOperationLogic {
         Storage.slot().genesisDates[_ccy] = _genesisDate;
     }
 
-    function getLendingMarketDetails(bytes32[] memory _ccys)
+    function deployLendingMarket(bytes32 _ccy) external {
+        Storage.slot().lendingMarkets[_ccy] = AddressResolverLib
+            .beaconProxyController()
+            .deployLendingMarket(_ccy);
+    }
+
+    function getOrderBookDetails(bytes32[] memory _ccys)
         external
         view
-        returns (ILendingMarketController.LendingMarketDetail[] memory lendingMarketDetails)
+        returns (ILendingMarketController.OrderBookDetail[] memory orderBookDetails)
     {
         uint256 totalCount;
 
-        ILendingMarketController.LendingMarketDetail[][]
-            memory detailLists = new ILendingMarketController.LendingMarketDetail[][](_ccys.length);
+        ILendingMarketController.OrderBookDetail[][]
+            memory detailLists = new ILendingMarketController.OrderBookDetail[][](_ccys.length);
 
         for (uint256 i; i < _ccys.length; i++) {
-            detailLists[i] = getLendingMarketDetailsPerCurrency(_ccys[i]);
+            detailLists[i] = getOrderBookDetailsPerCurrency(_ccys[i]);
             totalCount += detailLists[i].length;
         }
 
-        lendingMarketDetails = new ILendingMarketController.LendingMarketDetail[](totalCount);
+        orderBookDetails = new ILendingMarketController.OrderBookDetail[](totalCount);
         uint256 index;
         for (uint256 i; i < detailLists.length; i++) {
             for (uint256 j; j < detailLists[i].length; j++) {
-                lendingMarketDetails[index] = detailLists[i][j];
+                orderBookDetails[index] = detailLists[i][j];
                 index++;
             }
         }
     }
 
-    function getLendingMarketDetailsPerCurrency(bytes32 _ccy)
+    function getOrderBookDetailsPerCurrency(bytes32 _ccy)
         public
         view
-        returns (ILendingMarketController.LendingMarketDetail[] memory lendingMarketDetails)
+        returns (ILendingMarketController.OrderBookDetail[] memory orderBookDetail)
     {
-        lendingMarketDetails = new ILendingMarketController.LendingMarketDetail[](
-            Storage.slot().lendingMarkets[_ccy].length
-        );
+        uint256[] memory maturities = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
+            .getMaturities(Storage.slot().orderBookIdLists[_ccy]);
+        orderBookDetail = new ILendingMarketController.OrderBookDetail[](maturities.length);
 
-        for (uint256 i; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            uint256 maturity = market.getMaturity();
+        for (uint256 i; i < maturities.length; i++) {
+            uint256 maturity = maturities[i];
 
             (
                 uint256 bestLendUnitPrice,
@@ -101,9 +106,9 @@ library LendingMarketOperationLogic {
                 uint256 openingUnitPrice,
                 uint256 openingDate,
                 bool isReady
-            ) = getLendingMarketDetail(_ccy, maturity);
+            ) = getOrderBookDetail(_ccy, maturity);
 
-            lendingMarketDetails[i] = ILendingMarketController.LendingMarketDetail(
+            orderBookDetail[i] = ILendingMarketController.OrderBookDetail(
                 _ccy,
                 maturity,
                 bestLendUnitPrice,
@@ -118,7 +123,7 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity)
+    function getOrderBookDetail(bytes32 _ccy, uint256 _maturity)
         public
         view
         returns (
@@ -132,24 +137,25 @@ library LendingMarketOperationLogic {
             bool isReady
         )
     {
-        ILendingMarket market = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        );
+        ILendingMarket.OrderBook memory orderBook = ILendingMarket(
+            Storage.slot().lendingMarkets[_ccy]
+        ).getOrderBookDetail(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
 
-        ILendingMarket.Market memory marketData = market.getMarket();
-        bestLendUnitPrice = marketData.borrowUnitPrice;
-        bestBorrowUnitPrice = marketData.lendUnitPrice;
-        midUnitPrice = marketData.midUnitPrice;
-        openingUnitPrice = marketData.openingUnitPrice;
-        openingDate = marketData.openingDate;
-        isReady = marketData.isReady;
+        bestLendUnitPrice = orderBook.borrowUnitPrice;
+        bestBorrowUnitPrice = orderBook.lendUnitPrice;
+        midUnitPrice = orderBook.midUnitPrice;
+        openingUnitPrice = orderBook.openingUnitPrice;
+        openingDate = orderBook.openingDate;
+        isReady = orderBook.isReady;
 
-        (maxLendUnitPrice, minBorrowUnitPrice) = market.getCircuitBreakerThresholds(
-            LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy)
-        );
+        (maxLendUnitPrice, minBorrowUnitPrice) = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
+            .getCircuitBreakerThresholds(
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+                LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy)
+            );
     }
 
-    function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external {
+    function createOrderBook(bytes32 _ccy, uint256 _openingDate) external {
         require(
             AddressResolverLib.genesisValueVault().isInitialized(_ccy),
             "Lending market hasn't been initialized in the currency"
@@ -159,52 +165,45 @@ library LendingMarketOperationLogic {
             "Non supported currency"
         );
 
-        uint256 maturity;
-        if (Storage.slot().lendingMarkets[_ccy].length == 0) {
-            maturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy);
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+
+        uint256[] memory maturities = market.getMaturities(Storage.slot().orderBookIdLists[_ccy]);
+        uint256 newMaturity;
+
+        if (maturities.length == 0) {
+            newMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(_ccy);
         } else {
-            uint256 lastMaturity = ILendingMarket(
-                Storage.slot().lendingMarkets[_ccy][Storage.slot().lendingMarkets[_ccy].length - 1]
-            ).getMaturity();
-            maturity = calculateNextMaturity(lastMaturity, Storage.slot().marketBasePeriod);
+            uint256 lastMaturity = maturities[maturities.length - 1];
+            newMaturity = calculateNextMaturity(lastMaturity, Storage.slot().marketBasePeriod);
         }
 
-        require(_openingDate < maturity, "Market opening date must be before maturity date");
+        require(_openingDate < newMaturity, "Market opening date must be before maturity date");
 
-        address market = AddressResolverLib.beaconProxyController().deployLendingMarket(
-            _ccy,
-            maturity,
-            _openingDate
-        );
+        uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate);
+
+        Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
+
         address futureValueVault = AddressResolverLib
             .beaconProxyController()
             .deployFutureValueVault();
 
-        Storage.slot().lendingMarkets[_ccy].push(market);
-        Storage.slot().maturityLendingMarkets[_ccy][maturity] = market;
-        Storage.slot().futureValueVaults[_ccy][market] = futureValueVault;
+        Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
+        Storage.slot().futureValueVaults[_ccy][orderBookId] = futureValueVault;
 
-        emit LendingMarketCreated(
-            _ccy,
-            market,
-            futureValueVault,
-            Storage.slot().lendingMarkets[_ccy].length,
-            _openingDate,
-            maturity
-        );
+        emit OrderBookCreated(_ccy, orderBookId, futureValueVault, _openingDate, newMaturity);
     }
 
     function executeItayoseCall(bytes32 _ccy, uint256 _maturity)
         external
         returns (
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledLendingOrder,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledBorrowingOrder
+            PartiallyFilledOrder memory partiallyFilledLendingOrder,
+            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         )
     {
-        address marketAddr = Storage.slot().maturityLendingMarkets[_ccy][_maturity];
-        ILendingMarket market = ILendingMarket(marketAddr);
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
-        if (market.isItayosePeriod()) {
+        if (market.isItayosePeriod(orderBookId)) {
             uint256 openingUnitPrice;
             uint256 openingDate;
             uint256 totalOffsetAmount;
@@ -215,10 +214,10 @@ library LendingMarketOperationLogic {
                 openingDate,
                 partiallyFilledLendingOrder,
                 partiallyFilledBorrowingOrder
-            ) = market.executeItayoseCall();
+            ) = market.executeItayoseCall(orderBookId);
 
             if (totalOffsetAmount > 0) {
-                address futureValueVault = Storage.slot().futureValueVaults[_ccy][marketAddr];
+                address futureValueVault = Storage.slot().futureValueVaults[_ccy][orderBookId];
                 IFutureValueVault(futureValueVault).addInitialTotalSupply(
                     _maturity,
                     (totalOffsetAmount * Constants.PRICE_DIGIT).div(openingUnitPrice).toInt256()
@@ -227,7 +226,7 @@ library LendingMarketOperationLogic {
 
             // Save the openingUnitPrice as first compound factor
             // if it is a first Itayose call at the nearest market.
-            if (openingUnitPrice > 0 && Storage.slot().lendingMarkets[_ccy][0] == address(market)) {
+            if (openingUnitPrice > 0 && Storage.slot().orderBookIdLists[_ccy][0] == orderBookId) {
                 // Convert the openingUnitPrice determined by Itayose to the unit price on the Genesis Date.
                 uint256 convertedUnitPrice = _convertUnitPrice(
                     openingUnitPrice,
@@ -244,45 +243,48 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function rotateLendingMarkets(bytes32 _ccy, uint256 _orderFeeRate)
+    function rotateOrderBooks(bytes32 _ccy, uint256 _orderFeeRate)
         external
-        returns (uint256 toMaturity)
+        returns (uint256 newMaturity)
     {
-        address[] storage markets = Storage.slot().lendingMarkets[_ccy];
-        address currentMarketAddr = markets[0];
-        address nextMarketAddr = markets[1];
-        uint256 nextMaturity = ILendingMarket(nextMarketAddr).getMaturity();
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[_ccy];
 
-        // Reopen the market matured with new maturity
-        toMaturity = calculateNextMaturity(
-            ILendingMarket(markets[markets.length - 1]).getMaturity(),
+        require(orderBookIds.length >= 2, "Not enough order books");
+
+        uint256[] memory maturities = market.getMaturities(orderBookIds);
+        uint8 maturedOrderBookId = orderBookIds[0];
+        uint256 newOpeningDate = maturities[1];
+        newMaturity = calculateNextMaturity(
+            maturities[maturities.length - 1],
             Storage.slot().marketBasePeriod
         );
 
-        // The market that is moved to the last of the list opens again when the next market is matured.
-        // Just before the opening, the moved market needs the Itayose execution.
-        uint256 fromMaturity = ILendingMarket(currentMarketAddr).openMarket(
-            toMaturity,
-            nextMaturity
-        );
+        // Reopen the market matured with new maturity
+        market.reopenOrderBook(maturedOrderBookId, newMaturity, newOpeningDate);
 
         // Rotate the order of the market
-        for (uint256 i = 0; i < markets.length; i++) {
-            address marketAddr = (markets.length - 1) == i ? currentMarketAddr : markets[i + 1];
-            markets[i] = marketAddr;
+        for (uint256 i = 0; i < orderBookIds.length; i++) {
+            uint8 orderBookId = (orderBookIds.length - 1) == i
+                ? maturedOrderBookId
+                : orderBookIds[i + 1];
+            orderBookIds[i] = orderBookId;
         }
 
         AddressResolverLib.genesisValueVault().executeAutoRoll(
             _ccy,
-            fromMaturity,
-            nextMaturity,
-            _calculateAutoRollUnitPrice(_ccy, nextMaturity),
+            maturities[0],
+            maturities[1],
+            _calculateAutoRollUnitPrice(_ccy, maturities[1]),
             _orderFeeRate
         );
 
-        Storage.slot().maturityLendingMarkets[_ccy][toMaturity] = currentMarketAddr;
+        uint256 maturedMaturity = maturities[0];
+        Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = Storage
+            .slot()
+            .maturityOrderBookIds[_ccy][maturedMaturity];
 
-        emit LendingMarketsRotated(_ccy, fromMaturity, toMaturity);
+        emit OrderBooksRotated(_ccy, maturedMaturity, newMaturity);
     }
 
     function executeEmergencyTermination() external {
@@ -318,17 +320,13 @@ library LendingMarketOperationLogic {
     }
 
     function pauseLendingMarkets(bytes32 _ccy) public {
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            market.pauseMarket();
-        }
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        market.pauseMarket();
     }
 
     function unpauseLendingMarkets(bytes32 _ccy) public {
-        for (uint256 i = 0; i < Storage.slot().lendingMarkets[_ccy].length; i++) {
-            ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy][i]);
-            market.unpauseMarket();
-        }
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        market.unpauseMarket();
     }
 
     function updateOrderLogs(
@@ -339,12 +337,11 @@ library LendingMarketOperationLogic {
         uint256 _filledAmount,
         uint256 _filledFutureValue
     ) external {
-        if (
-            Storage.slot().lendingMarkets[_ccy][1] ==
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ) {
-            uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy][0])
-                .getMaturity();
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
+
+        if (Storage.slot().orderBookIdLists[_ccy][1] == orderBookId) {
+            uint256 nearestMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
+                .getMaturity(Storage.slot().orderBookIdLists[_ccy][0]);
 
             if (Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount == 0) {
                 Storage.slot().estimatedAutoRollUnitPrice[_ccy][_maturity] = _convertUnitPrice(

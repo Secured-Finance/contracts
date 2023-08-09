@@ -54,8 +54,8 @@ library LiquidationLogic {
         ExecuteLiquidationVars memory vars;
 
         vars.isDefaultMarket =
-            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
-            Storage.slot().lendingMarkets[_debtCcy][0];
+            Storage.slot().maturityOrderBookIds[_debtCcy][_debtMaturity] ==
+            Storage.slot().orderBookIdLists[_debtCcy][0];
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
@@ -441,7 +441,7 @@ library LiquidationLogic {
 
         IFutureValueVault futureValueVault = IFutureValueVault(
             Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
             ]
         );
 

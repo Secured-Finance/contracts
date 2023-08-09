@@ -14,11 +14,14 @@ import { deployContracts } from '../common/deployment';
 
 describe('Performance Test: Order Book', async () => {
   let signers: SignerWithAddress[];
+  let signerIdx = 1;
 
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let usdcToken: Contract;
+
+  let orderActionLogic: Contract;
 
   let genesisDate: number;
   let maturities: BigNumber[];
@@ -32,6 +35,7 @@ describe('Performance Test: Order Book', async () => {
       lendingMarketController,
       wETHToken,
       usdcToken,
+      orderActionLogic,
     } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
@@ -49,13 +53,13 @@ describe('Performance Test: Order Book', async () => {
     // Deploy Lending Markets
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createLendingMarket(hexWFIL, genesisDate)
+        .createOrderBook(hexWFIL, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexETH, genesisDate)
+        .createOrderBook(hexETH, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createLendingMarket(hexUSDC, genesisDate)
+        .createOrderBook(hexUSDC, genesisDate)
         .then((tx) => tx.wait());
     }
   });
@@ -64,7 +68,7 @@ describe('Performance Test: Order Book', async () => {
     maturities = await lendingMarketController.getMaturities(hexWFIL);
   });
 
-  describe('Take orders without the order cleaning', async () => {
+  describe('Fill orders without the order cleaning', async () => {
     const currencies = [
       {
         key: hexETH,
@@ -82,19 +86,15 @@ describe('Performance Test: Order Book', async () => {
 
     for (const { key: currencyKey, name, orderAmount } of currencies) {
       let contract: Contract;
-      let lendingMarkets: Contract[] = [];
+      let lendingMarket: Contract;
 
-      describe(`Take orders on the ${name} market`, async () => {
+      describe(`${name} market`, async () => {
         before('Set lending markets', async () => {
-          lendingMarkets = await lendingMarketController
-            .getLendingMarkets(currencyKey)
-            .then((addresses) =>
-              Promise.all(
-                addresses.map((address) =>
-                  ethers.getContractAt('LendingMarket', address),
-                ),
-              ),
-            );
+          lendingMarket = await lendingMarketController
+            .getLendingMarket(currencyKey)
+            .then((address) => ethers.getContractAt('LendingMarket', address));
+
+          orderActionLogic = orderActionLogic.attach(lendingMarket.address);
         });
 
         for (const test of tests) {
@@ -109,7 +109,6 @@ describe('Performance Test: Order Book', async () => {
             }
 
             let totalAmount = BigNumber.from(0);
-            let signerIdx = 1;
             let user: Wallet = Wallet.createRandom();
             let unitPrice = '0';
 
@@ -209,7 +208,7 @@ describe('Performance Test: Order Book', async () => {
               );
 
             await expect(tx)
-              .to.emit(lendingMarkets[0], 'OrderExecuted')
+              .to.emit(orderActionLogic, 'OrderExecuted')
               .withArgs(
                 signers[0].address,
                 Side.BORROW,
@@ -237,6 +236,110 @@ describe('Performance Test: Order Book', async () => {
         }
       });
     }
+
+    describe('Show results', async () => {
+      it('Gas Costs', () => {
+        console.table(log);
+      });
+    });
+  });
+
+  describe('Fill orders with the order cleaning', async () => {
+    const tests = [1, 2, 8];
+    const log = {};
+    const currencyKey = hexUSDC;
+    const orderAmount = BigNumber.from('500000');
+
+    describe(`USDC market`, async () => {
+      before('Set lending markets', async () => {
+        signerIdx++;
+      });
+
+      for (const test of tests) {
+        it(`${test} markets`, async () => {
+          let unitPrice = '0';
+
+          process.stdout.write('        Ordered: 0');
+
+          await usdcToken
+            .connect(signers[0])
+            .approve(tokenVault.address, ethers.constants.MaxUint256)
+            .then((tx) => tx.wait());
+
+          await tokenVault
+            .connect(signers[0])
+            .deposit(currencyKey, orderAmount.mul(test).mul(3).div(2))
+            .then((tx) => tx.wait());
+
+          await usdcToken
+            .connect(signers[0])
+            .transfer(signers[signerIdx].address, orderAmount.mul(test))
+            .then((tx) => tx.wait());
+
+          await usdcToken
+            .connect(signers[signerIdx])
+            .approve(tokenVault.address, ethers.constants.MaxUint256)
+            .then((tx) => tx.wait());
+
+          await tokenVault
+            .connect(signers[signerIdx])
+            .deposit(currencyKey, orderAmount.mul(test))
+            .then((tx) => tx.wait());
+
+          for (let i = 0; i < test; i++) {
+            process.stdout.write('\r\x1b[K');
+            process.stdout.write(`        Ordered: ${i}/${test}`);
+
+            unitPrice = String(8000 - i);
+
+            await lendingMarketController
+              .connect(signers[signerIdx])
+              .executeOrder(
+                currencyKey,
+                maturities[test - 1],
+                Side.LEND,
+                orderAmount,
+                unitPrice,
+              )
+              .then((tx) => tx.wait());
+
+            await lendingMarketController
+              .connect(signers[0])
+              .executeOrder(
+                currencyKey,
+                maturities[test - 1],
+                Side.BORROW,
+                orderAmount,
+                '0',
+              );
+          }
+          process.stdout.write('\r\x1b[K');
+
+          // Test for cleaning up funds
+          // const tx = await lendingMarketController
+          //   .connect(signers[0])
+          //   .cleanUpFunds(currencyKey, signers[signerIdx].address);
+
+          const tx = await lendingMarketController
+            .connect(signers[0])
+            .executeOrder(
+              currencyKey,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              unitPrice,
+            );
+
+          const receipt = await tx.wait();
+
+          const headerName = `GasConst`;
+          if (!log[headerName]) {
+            log[headerName] = {};
+          }
+          log[headerName][test] = receipt.gasUsed.toString();
+        });
+      }
+    });
 
     describe('Show results', async () => {
       it('Gas Costs', () => {

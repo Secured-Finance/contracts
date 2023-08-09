@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { time } from '@openzeppelin/test-helpers';
 import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { BigNumber, Contract, Wallet } from 'ethers';
@@ -6,7 +7,6 @@ import { deployments, ethers } from 'hardhat';
 import { LIQUIDATION_THRESHOLD_RATE } from '../test/common/constants';
 import { Side } from '../utils/constants';
 import { hexETH, hexWFIL, toBytes32 } from '../utils/strings';
-import { time } from '@openzeppelin/test-helpers';
 
 describe('ZC e2e test', async () => {
   const targetCurrency = hexWFIL;
@@ -27,8 +27,10 @@ describe('ZC e2e test', async () => {
   let lendingMarketController: Contract;
   let reserveFund: Contract;
   let wFILToken: Contract;
+  let orderActionLogic: Contract;
 
   let maturities: BigNumber[];
+  let orderBookIds: BigNumber[];
 
   const createSampleETHOrders = async (
     user: SignerWithAddress | Wallet,
@@ -55,9 +57,7 @@ describe('ZC e2e test', async () => {
       await createSampleETHOrders(ownerSigner, maturities[1], unitPrice);
     }
     await time.increaseTo(maturities[0].toString());
-    await lendingMarketController
-      .connect(ownerSigner)
-      .rotateLendingMarkets(hexETH);
+    await lendingMarketController.connect(ownerSigner).rotateOrderBooks(hexETH);
 
     await lendingMarketController
       .connect(ownerSigner)
@@ -113,6 +113,10 @@ describe('ZC e2e test', async () => {
       process.env.TOKEN_WFIL || (await deployments.get('MockWFIL')).address;
     wFILToken = await ethers.getContractAt('MockWFIL', wFILTokenAddress);
 
+    orderActionLogic = await deployments
+      .get('OrderActionLogic')
+      .then(({ address }) => ethers.getContractAt('OrderActionLogic', address));
+
     // Get proxy contracts
     tokenVault = await getProxy('TokenVault');
     lendingMarketController = await getProxy('LendingMarketController');
@@ -135,6 +139,9 @@ describe('ZC e2e test', async () => {
       .then((tx) => tx.wait());
 
     maturities = await lendingMarketController.getMaturities(targetCurrency);
+    orderBookIds = await lendingMarketController.getOrderBookIds(
+      targetCurrency,
+    );
   });
 
   it('Deposit ETH', async () => {
@@ -206,22 +213,17 @@ describe('ZC e2e test', async () => {
       })
       .then((tx) => tx.wait());
 
-    const marketDetail = await lendingMarketController.getLendingMarketDetail(
+    const marketDetail = await lendingMarketController.getOrderBookDetail(
       hexETH,
       maturities[0],
     );
 
-    const marketAddress = await lendingMarketController.getLendingMarket(
-      hexETH,
-      maturities[0],
-    );
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(hexETH)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    const lendingMarket = await ethers.getContractAt(
-      'LendingMarket',
-      marketAddress,
-    );
+    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
 
-    const isMarketOpened = await lendingMarket.isOpened();
     if (!isMarketOpened) {
       console.log('Skip the order step since the market not open');
       this.skip();
@@ -283,17 +285,11 @@ describe('ZC e2e test', async () => {
   });
 
   it('Cancel order', async function () {
-    const marketAddress = await lendingMarketController.getLendingMarket(
-      targetCurrency,
-      maturities[0],
-    );
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(targetCurrency)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
 
-    const lendingMarket = await ethers.getContractAt(
-      'LendingMarket',
-      marketAddress,
-    );
-
-    const isMarketOpened = await lendingMarket.isOpened();
+    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
     if (!isMarketOpened) {
       console.log('Skip the order step since the market not open');
       this.skip();
@@ -319,35 +315,31 @@ describe('ZC e2e test', async () => {
       lendingMarketController
         .connect(aliceSigner)
         .cancelOrder(targetCurrency, maturities[0], activeOrders[0].orderId),
-    ).to.emit(lendingMarket, 'OrderCanceled');
+    ).to.emit(orderActionLogic.attach(lendingMarket.address), 'OrderCanceled');
   });
 
   it('Take order', async function () {
-    const marketAddress = await lendingMarketController.getLendingMarket(
-      targetCurrency,
-      maturities[0],
-    );
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(targetCurrency)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+
     const futureValueVaultAddresses =
       await lendingMarketController.getFutureValueVault(
         targetCurrency,
         maturities[0],
       );
 
-    const lendingMarket = await ethers.getContractAt(
-      'LendingMarket',
-      marketAddress,
-    );
     const futureValueVault = await ethers.getContractAt(
       'FutureValueVault',
       futureValueVaultAddresses,
     );
 
-    const marketDetail = await lendingMarketController.getLendingMarketDetail(
+    const marketDetail = await lendingMarketController.getOrderBookDetail(
       targetCurrency,
       maturities[0],
     );
 
-    const isMarketOpened = await lendingMarket.isOpened();
+    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
     if (!isMarketOpened) {
       console.log('Skip the order step since the market not open');
       this.skip();
@@ -459,7 +451,7 @@ describe('ZC e2e test', async () => {
   });
 
   it('Execute auto-roll', async () => {
-    const marketDetail = await lendingMarketController.getLendingMarketDetail(
+    const marketDetail = await lendingMarketController.getOrderBookDetail(
       hexETH,
       maturities[0],
     );
