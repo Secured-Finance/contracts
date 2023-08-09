@@ -19,7 +19,7 @@ describe('Integration Test: Itayose', async () => {
 
   let lendingMarketOperationLogic: Contract;
 
-  let futureValueVaults: Contract[];
+  let futureValueVault: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarket: Contract;
@@ -81,13 +81,9 @@ describe('Integration Test: Itayose', async () => {
 
     orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
 
-    futureValueVaults = await Promise.all(
-      maturities.map((maturity) =>
-        lendingMarketController
-          .getFutureValueVault(hexETH, maturity)
-          .then((address) => ethers.getContractAt('FutureValueVault', address)),
-      ),
-    );
+    futureValueVault = await lendingMarketController
+      .getFutureValueVault(hexETH)
+      .then((address) => ethers.getContractAt('FutureValueVault', address));
   };
 
   before('Deploy Contracts', async () => {
@@ -156,9 +152,12 @@ describe('Integration Test: Itayose', async () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
-      const { futureValue: aliceFVBefore } =
-        await futureValueVaults[0].getFutureValue(alice.address);
-      const { futureValue: bobFV } = await futureValueVaults[0].getFutureValue(
+      const { balance: aliceFVBefore } = await futureValueVault.getBalance(
+        orderBookIds[0],
+        alice.address,
+      );
+      const { balance: bobFV } = await futureValueVault.getBalance(
+        orderBookIds[0],
         bob.address,
       );
 
@@ -257,9 +256,12 @@ describe('Integration Test: Itayose', async () => {
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
       // Check future value
-      const { futureValue: aliceFVBefore } =
-        await futureValueVaults[0].getFutureValue(alice.address);
-      const { futureValue: bobFV } = await futureValueVaults[0].getFutureValue(
+      const { balance: aliceFVBefore } = await futureValueVault.getBalance(
+        orderBookIds[0],
+        alice.address,
+      );
+      const { balance: bobFV } = await futureValueVault.getBalance(
+        orderBookIds[0],
         bob.address,
       );
 

@@ -134,7 +134,6 @@ const func: DeployFunction = async function ({
         )?.args;
 
         const orderBookId = args?.orderBookId;
-        const futureValueVault = args?.futureValueVault;
         const maturity = args?.maturity;
 
         if (!nearestMaturity && i === 0) {
@@ -142,8 +141,7 @@ const func: DeployFunction = async function ({
         }
 
         marketLog.push({
-          [`OrderBookID(${currency.symbol})`]: orderBookId,
-          FutureValueVaultAddress: futureValueVault,
+          [`OrderBookID`]: orderBookId,
           OpeningDate: moment
             .unix(Number(openingDate))
             .format('LLL')
@@ -152,7 +150,7 @@ const func: DeployFunction = async function ({
         });
       }
       console.log(
-        `Deployed ${count} ${currency.symbol} lending markets at ${lendingMarket.address}`,
+        `Deployed ${currency.symbol} Lending markets at ${lendingMarket.address}`,
       );
     }
     console.table(marketLog);

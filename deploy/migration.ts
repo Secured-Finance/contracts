@@ -126,12 +126,12 @@ const func: DeployFunction = async function ({
     await addressResolver
       .importAddresses(contractNames.map(toBytes32), contractAddresses)
       .then((tx) => tx.wait());
-    console.log('Successfully imported Addresses into AddressResolver');
+    console.log('Imported Addresses into AddressResolver');
 
     await migrationAddressResolver
       .buildCaches(buildCachesAddresses)
       .then((tx) => tx.wait());
-    console.log('Successfully built address caches');
+    console.log('Built address caches of AddressResolver');
   }
 
   // Set up for TokenVault
@@ -139,7 +139,7 @@ const func: DeployFunction = async function ({
     const isRegistered = await tokenVault.isRegisteredCurrency(currency.key);
     if (isRegistered) {
       console.log(
-        `Skipped registering ${currency.symbol} as supported collateral`,
+        `Skipped registering ${currency.symbol} as supported currency`,
       );
     } else {
       const address =
@@ -147,9 +147,7 @@ const func: DeployFunction = async function ({
       await tokenVault
         .registerCurrency(currency.key, address, currency.isCollateral)
         .then((tx) => tx.wait());
-      console.log(
-        `Successfully registered ${currency.symbol} as supported collateral`,
-      );
+      console.log(`Registered ${currency.symbol} as supported currency`);
     }
   }
 };

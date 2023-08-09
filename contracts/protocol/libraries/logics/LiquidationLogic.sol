@@ -399,7 +399,7 @@ library LiquidationLogic {
         untransferredAmount = _amount;
         bool isDebt = _amount < 0;
 
-        int256 userGVAmount = AddressResolverLib.genesisValueVault().getGenesisValue(_ccy, _from);
+        int256 userGVAmount = AddressResolverLib.genesisValueVault().getBalance(_ccy, _from);
 
         if ((isDebt && userGVAmount < 0) || (!isDebt && userGVAmount > 0)) {
             uint256 currentMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(
@@ -440,12 +440,11 @@ library LiquidationLogic {
         bool isDebt = _amount < 0;
 
         IFutureValueVault futureValueVault = IFutureValueVault(
-            Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
-            ]
+            Storage.slot().futureValueVaults[_ccy]
         );
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
-        (int256 userFVAmount, ) = futureValueVault.getFutureValue(_from);
+        (int256 userFVAmount, ) = futureValueVault.getBalance(orderBookId, _from);
 
         if ((isDebt && userFVAmount < 0) || (!isDebt && userFVAmount > 0)) {
             int256 fvAmount = FundManagementLogic.calculateFVFromPV(
@@ -458,7 +457,7 @@ library LiquidationLogic {
                 fvAmount = userFVAmount;
             }
 
-            futureValueVault.transferFrom(_from, _to, fvAmount, _maturity);
+            futureValueVault.transferFrom(orderBookId, _from, _to, fvAmount, _maturity);
             untransferredAmount -= FundManagementLogic.calculatePVFromFV(_ccy, _maturity, fvAmount);
 
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);

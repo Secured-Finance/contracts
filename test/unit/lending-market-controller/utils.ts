@@ -3,10 +3,7 @@ import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
 import { hexETH } from '../../../utils/strings';
-import {
-  MARKET_BASE_PERIOD,
-  MARKET_OBSERVATION_PERIOD,
-} from '../../common/constants';
+import { MARKET_BASE_PERIOD } from '../../common/constants';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
@@ -113,7 +110,6 @@ const deployContracts = async (owner: SignerWithAddress) => {
     .setLendingMarketControllerImpl(
       lendingMarketController.address,
       MARKET_BASE_PERIOD,
-      MARKET_OBSERVATION_PERIOD,
     )
     .then((tx) => tx.wait())
     .then(

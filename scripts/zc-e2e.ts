@@ -411,11 +411,11 @@ describe('ZC e2e test', async () => {
       targetCurrency,
       aliceSigner.address,
     );
-    const [aliceFVInFutureValueVault] = await futureValueVault.getFutureValue(
+    const [aliceFVInFutureValue] = await futureValueVault.getBalance(
       aliceSigner.address,
     );
 
-    expect(aliceFVAfter).to.equal(aliceFVInFutureValueVault);
+    expect(aliceFVAfter).to.equal(aliceFVInFutureValue);
 
     // Check the future value and working amount of Bob
     const { workingBorrowOrdersAmount: workingOrdersAmountAfter } =

@@ -199,7 +199,7 @@ describe('LendingMarketController - Itayose', () => {
       expect(openingUnitPrice).to.equal(expectedOpeningPrice);
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
-        .getFutureValueVault(targetCurrency, maturities[0])
+        .getFutureValueVault(targetCurrency)
         .then((address) => ethers.getContractAt('FutureValueVault', address));
 
       const totalSupplyAfterItayoseExecuted =
@@ -360,7 +360,7 @@ describe('LendingMarketController - Itayose', () => {
       expect(openingUnitPrice).to.equal(expectedOpeningPrice);
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
-        .getFutureValueVault(targetCurrency, maturities[0])
+        .getFutureValueVault(targetCurrency)
         .then((address) => ethers.getContractAt('FutureValueVault', address));
 
       const totalSupplyAfterItayoseExecuted =
@@ -443,7 +443,7 @@ describe('LendingMarketController - Itayose', () => {
       expect(openingUnitPrice).to.equal(expectedOpeningPrice);
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
-        .getFutureValueVault(targetCurrency, maturities[0])
+        .getFutureValueVault(targetCurrency)
         .then((address) => ethers.getContractAt('FutureValueVault', address));
 
       const totalSupplyAfterItayoseExecuted =
@@ -549,7 +549,7 @@ describe('LendingMarketController - Itayose', () => {
       expect(openingUnitPrice).to.equal(expectedOpeningPrice);
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
-        .getFutureValueVault(targetCurrency, maturities[0])
+        .getFutureValueVault(targetCurrency)
         .then((address) => ethers.getContractAt('FutureValueVault', address));
 
       const totalSupplyAfterItayoseExecuted =
@@ -671,7 +671,7 @@ describe('LendingMarketController - Itayose', () => {
       expect(openingUnitPrice).to.equal(expectedOpeningPrice);
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
-        .getFutureValueVault(targetCurrency, maturities[maturities.length - 1])
+        .getFutureValueVault(targetCurrency)
         .then((address) => ethers.getContractAt('FutureValueVault', address));
 
       const totalSupplyAfterItayoseExecuted =

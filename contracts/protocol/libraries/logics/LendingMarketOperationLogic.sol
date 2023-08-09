@@ -28,37 +28,27 @@ library LendingMarketOperationLogic {
     using SafeCast for uint256;
     using RoundingInt256 for int256;
 
+    uint256 private constant OBSERVATION_PERIOD = 6 hours;
+
+    event LendingMarketInitialized(
+        bytes32 indexed ccy,
+        uint256 genesisDate,
+        uint256 compoundFactor,
+        uint256 orderFeeRate,
+        uint256 circuitBreakerLimitRange,
+        address lendingMarket,
+        address futureValueVault
+    );
+
     event OrderBookCreated(
         bytes32 indexed ccy,
         uint8 indexed orderBookId,
-        address futureValueVault,
         uint256 openingDate,
         uint256 maturity
     );
 
     event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event EmergencyTerminationExecuted(uint256 timestamp);
-
-    function initializeCurrencySetting(
-        bytes32 _ccy,
-        uint256 _genesisDate,
-        uint256 _compoundFactor
-    ) external {
-        AddressResolverLib.genesisValueVault().initializeCurrencySetting(
-            _ccy,
-            36,
-            _compoundFactor,
-            calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
-        );
-
-        Storage.slot().genesisDates[_ccy] = _genesisDate;
-    }
-
-    function deployLendingMarket(bytes32 _ccy) external {
-        Storage.slot().lendingMarkets[_ccy] = AddressResolverLib
-            .beaconProxyController()
-            .deployLendingMarket(_ccy);
-    }
 
     function getOrderBookDetails(bytes32[] memory _ccys)
         external
@@ -155,6 +145,50 @@ library LendingMarketOperationLogic {
             );
     }
 
+    function initializeLendingMarket(
+        bytes32 _ccy,
+        uint256 _genesisDate,
+        uint256 _compoundFactor,
+        uint256 _orderFeeRate,
+        uint256 _circuitBreakerLimitRange
+    ) external {
+        require(_compoundFactor > 0, "Invalid compound factor");
+
+        AddressResolverLib.genesisValueVault().initializeCurrencySetting(
+            _ccy,
+            36,
+            _compoundFactor,
+            calculateNextMaturity(_genesisDate, Storage.slot().marketBasePeriod)
+        );
+
+        address lendingMarket = AddressResolverLib.beaconProxyController().deployLendingMarket(
+            _ccy
+        );
+        address futureValueVault = AddressResolverLib
+            .beaconProxyController()
+            .deployFutureValueVault();
+
+        LendingMarketConfigurationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
+        LendingMarketConfigurationLogic.updateCircuitBreakerLimitRange(
+            _ccy,
+            _circuitBreakerLimitRange
+        );
+
+        Storage.slot().genesisDates[_ccy] = _genesisDate;
+        Storage.slot().lendingMarkets[_ccy] = lendingMarket;
+        Storage.slot().futureValueVaults[_ccy] = futureValueVault;
+
+        emit LendingMarketInitialized(
+            _ccy,
+            _genesisDate,
+            _compoundFactor,
+            _orderFeeRate,
+            _circuitBreakerLimitRange,
+            lendingMarket,
+            futureValueVault
+        );
+    }
+
     function createOrderBook(bytes32 _ccy, uint256 _openingDate) external {
         require(
             AddressResolverLib.genesisValueVault().isInitialized(_ccy),
@@ -182,15 +216,9 @@ library LendingMarketOperationLogic {
         uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate);
 
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
-
-        address futureValueVault = AddressResolverLib
-            .beaconProxyController()
-            .deployFutureValueVault();
-
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;
-        Storage.slot().futureValueVaults[_ccy][orderBookId] = futureValueVault;
 
-        emit OrderBookCreated(_ccy, orderBookId, futureValueVault, _openingDate, newMaturity);
+        emit OrderBookCreated(_ccy, orderBookId, _openingDate, newMaturity);
     }
 
     function executeItayoseCall(bytes32 _ccy, uint256 _maturity)
@@ -217,8 +245,8 @@ library LendingMarketOperationLogic {
             ) = market.executeItayoseCall(orderBookId);
 
             if (totalOffsetAmount > 0) {
-                address futureValueVault = Storage.slot().futureValueVaults[_ccy][orderBookId];
-                IFutureValueVault(futureValueVault).addInitialTotalSupply(
+                address futureValueVault = Storage.slot().futureValueVaults[_ccy];
+                IFutureValueVault(futureValueVault).setInitialTotalSupply(
                     _maturity,
                     (totalOffsetAmount * Constants.PRICE_DIGIT).div(openingUnitPrice).toInt256()
                 );
@@ -332,7 +360,6 @@ library LendingMarketOperationLogic {
     function updateOrderLogs(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _observationPeriod,
         uint256 _filledUnitPrice,
         uint256 _filledAmount,
         uint256 _filledFutureValue
@@ -354,7 +381,7 @@ library LendingMarketOperationLogic {
 
             if (
                 (block.timestamp < nearestMaturity) &&
-                (block.timestamp >= (nearestMaturity - _observationPeriod))
+                (block.timestamp >= (nearestMaturity - OBSERVATION_PERIOD))
             ) {
                 Storage.slot().observationPeriodLogs[_ccy][_maturity].totalAmount += _filledAmount;
                 Storage

@@ -78,16 +78,14 @@ contract LendingMarketController is
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
      * @param _marketBasePeriod The base period for market maturity
-     * @param _observationPeriod The observation period to calculate the volume-weighted average price of transactions
      */
     function initialize(
         address _owner,
         address _resolver,
-        uint256 _marketBasePeriod,
-        uint256 _observationPeriod
+        uint256 _marketBasePeriod
     ) public initializer onlyProxy {
         Storage.slot().marketBasePeriod = _marketBasePeriod;
-        MixinLendingMarketConfiguration._initialize(_owner, _observationPeriod);
+        MixinLendingMarketConfiguration._initialize(_owner);
         registerAddressResolver(_resolver);
     }
 
@@ -209,19 +207,10 @@ contract LendingMarketController is
     /**
      * @notice Gets the future value contract address for the selected currency and maturity.
      * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the order book
      * @return The future value vault address
      */
-    function getFutureValueVault(bytes32 _ccy, uint256 _maturity)
-        public
-        view
-        override
-        returns (address)
-    {
-        return
-            Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity]
-            ];
+    function getFutureValueVault(bytes32 _ccy) public view override returns (address) {
+        return Storage.slot().futureValueVaults[_ccy];
     }
 
     /**
@@ -607,14 +596,15 @@ contract LendingMarketController is
         uint256 _orderFeeRate,
         uint256 _circuitBreakerLimitRange
     ) external override onlyOwner {
-        require(_compoundFactor > 0, "Invalid compound factor");
         require(!isInitializedLendingMarket(_ccy), "Already initialized");
 
-        LendingMarketOperationLogic.initializeCurrencySetting(_ccy, _genesisDate, _compoundFactor);
-        LendingMarketOperationLogic.deployLendingMarket(_ccy);
-
-        updateOrderFeeRate(_ccy, _orderFeeRate);
-        updateCircuitBreakerLimitRange(_ccy, _circuitBreakerLimitRange);
+        LendingMarketOperationLogic.initializeLendingMarket(
+            _ccy,
+            _genesisDate,
+            _compoundFactor,
+            _orderFeeRate,
+            _circuitBreakerLimitRange
+        );
     }
 
     /**
