@@ -11,7 +11,7 @@ import {ERC20Handler} from "../protocol/libraries/ERC20Handler.sol";
 // interfaces
 import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketController.sol";
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
-// utils
+// mixins
 import {MixinWallet} from "../protocol/mixins/MixinWallet.sol";
 
 contract Liquidator is ILiquidationReceiver, MixinWallet {
@@ -25,18 +25,17 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
 
     constructor(
         bytes32 _baseCurrency,
-        address _baseCurrencyAddr,
         address _lendingMarketController,
         address _tokenVault,
         address _uniswapRouter,
         address _uniswapQuoter
     ) {
-        MixinWallet._initialize(msg.sender, _baseCurrencyAddr);
         baseCurrency = _baseCurrency;
         lendingMarketController = ILendingMarketController(_lendingMarketController);
         tokenVault = ITokenVault(_tokenVault);
         uniswapRouter = ISwapRouter(_uniswapRouter);
         uniswapQuoter = IQuoter(_uniswapQuoter);
+        MixinWallet._initialize(msg.sender, tokenVault.getTokenAddress(_baseCurrency));
     }
 
     receive() external payable {}

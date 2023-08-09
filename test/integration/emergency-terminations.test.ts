@@ -328,12 +328,19 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController.connect(carol).executeEmergencySettlement(),
         ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
 
+        // Execute forced redemption for reserve fund
+        const reserveFundPV =
+          await lendingMarketController.getTotalPresentValueInBaseCurrency(
+            reserveFund.address,
+          );
         const data = lendingMarketController.interface.encodeFunctionData(
           'executeEmergencySettlement',
         );
         await expect(
           reserveFund.executeTransaction(lendingMarketController.address, data),
-        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
+        )
+          .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
+          .withArgs(reserveFund.address, reserveFundPV);
 
         // Check future value
         for (const { address } of [alice, bob, carol, reserveFund]) {
