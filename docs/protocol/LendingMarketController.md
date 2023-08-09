@@ -44,7 +44,7 @@ Modifier to check if the protocol is inactive.
 ### initialize
 
 ```solidity
-function initialize(address _owner, address _resolver, uint256 _marketBasePeriod, uint256 _observationPeriod) public
+function initialize(address _owner, address _resolver, uint256 _marketBasePeriod) public
 ```
 
 Initializes the contract.
@@ -56,7 +56,6 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _owner | address | The address of the contract owner |
 | _resolver | address | The address of the Address Resolver contract |
 | _marketBasePeriod | uint256 | The base period for market maturity |
-| _observationPeriod | uint256 | The observation period to calculate the volume-weighted average price of transactions |
 
 ### afterBuildCache
 
@@ -202,7 +201,7 @@ Gets the array of detailed information on the order book
 ### getFutureValueVault
 
 ```solidity
-function getFutureValueVault(bytes32 _ccy, uint256 _maturity) public view returns (address)
+function getFutureValueVault(bytes32 _ccy) public view returns (address)
 ```
 
 Gets the future value contract address for the selected currency and maturity.
@@ -210,7 +209,6 @@ Gets the future value contract address for the selected currency and maturity.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the order book |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

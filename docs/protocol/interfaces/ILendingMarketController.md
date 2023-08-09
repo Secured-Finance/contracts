@@ -81,6 +81,12 @@ function getGenesisDate(bytes32 ccy) external view returns (uint256)
 function getLendingMarket(bytes32 ccy) external view returns (address)
 ```
 
+### getFutureValueVault
+
+```solidity
+function getFutureValueVault(bytes32 ccy) external view returns (address)
+```
+
 ### getOrderBookId
 
 ```solidity
@@ -97,12 +103,6 @@ function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view retur
 
 ```solidity
 function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
-```
-
-### getFutureValueVault
-
-```solidity
-function getFutureValueVault(bytes32 ccy, uint256 maturity) external view returns (address)
 ```
 
 ### getBestLendUnitPrices

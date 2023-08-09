@@ -35,12 +35,13 @@ struct ActualFunds {
 ```solidity
 struct CalculateActualFundsVars {
   bool isTotal;
-  contract ILendingMarket market;
-  uint8 orderBookId;
   bool isDefaultMarket;
+  uint8 orderBookId;
   uint8 defaultOrderBookId;
   uint256[] maturities;
   int256 presentValueOfDefaultMarket;
+  contract ILendingMarket market;
+  contract IFutureValueVault futureValueVault;
 }
 ```
 

@@ -28,7 +28,7 @@ struct Storage {
   mapping(bytes32 => uint256) marketTerminationRatios;
   mapping(bytes32 => uint8[]) orderBookIdLists;
   mapping(bytes32 => address) lendingMarkets;
-  mapping(bytes32 => mapping(uint8 => address)) futureValueVaults;
+  mapping(bytes32 => address) futureValueVaults;
   mapping(bytes32 => mapping(uint256 => uint8)) maturityOrderBookIds;
   mapping(bytes32 => uint256) genesisDates;
   mapping(address => struct EnumerableSet.Bytes32Set) usedCurrencies;

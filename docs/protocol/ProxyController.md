@@ -131,7 +131,7 @@ Sets the implementation contract of GenesisValueVault
 ### setLendingMarketControllerImpl
 
 ```solidity
-function setLendingMarketControllerImpl(address newImpl, uint256 marketBasePeriod, uint256 observationPeriod) external
+function setLendingMarketControllerImpl(address newImpl, uint256 marketBasePeriod) external
 ```
 
 Sets the implementation contract of LendingMarketController
@@ -139,8 +139,7 @@ Sets the implementation contract of LendingMarketController
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
-| marketBasePeriod | uint256 |  |
-| observationPeriod | uint256 | The observation period to calculate the volume-weighted average price of transactions |
+| marketBasePeriod | uint256 | The base period for market maturity |
 
 ### setReserveFundImpl
 

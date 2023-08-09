@@ -2,10 +2,22 @@
 
 ## LendingMarketOperationLogic
 
+### OBSERVATION_PERIOD
+
+```solidity
+uint256 OBSERVATION_PERIOD
+```
+
+### LendingMarketInitialized
+
+```solidity
+event LendingMarketInitialized(bytes32 ccy, uint256 genesisDate, uint256 compoundFactor, uint256 orderFeeRate, uint256 circuitBreakerLimitRange, address lendingMarket, address futureValueVault)
+```
+
 ### OrderBookCreated
 
 ```solidity
-event OrderBookCreated(bytes32 ccy, uint8 orderBookId, address futureValueVault, uint256 openingDate, uint256 maturity)
+event OrderBookCreated(bytes32 ccy, uint8 orderBookId, uint256 openingDate, uint256 maturity)
 ```
 
 ### OrderBooksRotated
@@ -18,18 +30,6 @@ event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
 
 ```solidity
 event EmergencyTerminationExecuted(uint256 timestamp)
-```
-
-### initializeCurrencySetting
-
-```solidity
-function initializeCurrencySetting(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor) external
-```
-
-### deployLendingMarket
-
-```solidity
-function deployLendingMarket(bytes32 _ccy) external
 ```
 
 ### getOrderBookDetails
@@ -48,6 +48,12 @@ function getOrderBookDetailsPerCurrency(bytes32 _ccy) public view returns (struc
 
 ```solidity
 function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) public view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+```
+
+### initializeLendingMarket
+
+```solidity
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _circuitBreakerLimitRange) external
 ```
 
 ### createOrderBook
@@ -89,7 +95,7 @@ function unpauseLendingMarkets(bytes32 _ccy) public
 ### updateOrderLogs
 
 ```solidity
-function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _observationPeriod, uint256 _filledUnitPrice, uint256 _filledAmount, uint256 _filledFutureValue) external
+function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _filledUnitPrice, uint256 _filledAmount, uint256 _filledFutureValue) external
 ```
 
 ### calculateNextMaturity

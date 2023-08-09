@@ -5,7 +5,7 @@
 ### _initialize
 
 ```solidity
-function _initialize(address _owner, uint256 _observationPeriod) internal
+function _initialize(address _owner) internal
 ```
 
 ### getOrderFeeRate
@@ -40,18 +40,6 @@ Gets the limit range in unit price for the circuit breaker
 | ---- | ---- | ----------- |
 | [0] | uint256 | The auto-roll fee rate received by protocol |
 
-### getObservationPeriod
-
-```solidity
-function getObservationPeriod() public view returns (uint256)
-```
-
-Gets the observation period
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | The observation period to calculate the volume-weighted average price of transactions |
-
 ### updateOrderFeeRate
 
 ```solidity
@@ -77,16 +65,4 @@ Updates the auto-roll fee rate
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _limitRange | uint256 | The circuit breaker limit range |
-
-### updateObservationPeriod
-
-```solidity
-function updateObservationPeriod(uint256 _observationPeriod) public
-```
-
-Updates the observation period
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _observationPeriod | uint256 | The observation period to calculate the volume-weighted average price of transactions |
 
