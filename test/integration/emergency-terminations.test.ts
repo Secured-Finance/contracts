@@ -17,7 +17,7 @@ describe('Integration Test: Emergency terminations', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
-  let futureValueVaults: Contract[];
+  let futureValueVault: Contract;
   let reserveFund: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
@@ -25,8 +25,6 @@ describe('Integration Test: Emergency terminations', async () => {
   let lendingMarketOperationLogic: Contract;
   let fundManagementLogic: Contract;
 
-  let ethLendingMarkets: Contract[] = [];
-  let filLendingMarkets: Contract[] = [];
   let wETHToken: Contract;
   let usdcToken: Contract;
   let wFILToken: Contract;
@@ -34,6 +32,7 @@ describe('Integration Test: Emergency terminations', async () => {
 
   let genesisDate: number;
   let maturities: BigNumber[];
+  let orderBookIds: BigNumber[];
 
   let signers: Signers;
 
@@ -120,36 +119,10 @@ describe('Integration Test: Emergency terminations', async () => {
 
   const resetContractInstances = async () => {
     maturities = await lendingMarketController.getMaturities(hexETH);
-    [ethLendingMarkets, filLendingMarkets, futureValueVaults] =
-      await Promise.all([
-        lendingMarketController
-          .getLendingMarkets(hexETH)
-          .then((addresses) =>
-            Promise.all(
-              addresses.map((address) =>
-                ethers.getContractAt('LendingMarket', address),
-              ),
-            ),
-          ),
-        lendingMarketController
-          .getLendingMarkets(hexWFIL)
-          .then((addresses) =>
-            Promise.all(
-              addresses.map((address) =>
-                ethers.getContractAt('LendingMarket', address),
-              ),
-            ),
-          ),
-        Promise.all(
-          maturities.map((maturity) =>
-            lendingMarketController
-              .getFutureValueVault(hexETH, maturity)
-              .then((address) =>
-                ethers.getContractAt('FutureValueVault', address),
-              ),
-          ),
-        ),
-      ]);
+    orderBookIds = await lendingMarketController.getOrderBookIds(hexETH);
+    futureValueVault = await lendingMarketController
+      .getFutureValueVault(hexETH)
+      .then((address) => ethers.getContractAt('FutureValueVault', address));
   };
 
   const initializeContracts = async () => {
@@ -175,8 +148,8 @@ describe('Integration Test: Emergency terminations', async () => {
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createLendingMarket(hexETH, genesisDate);
-      await lendingMarketController.createLendingMarket(hexWFIL, genesisDate);
+      await lendingMarketController.createOrderBook(hexETH, genesisDate);
+      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);
@@ -221,10 +194,14 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
-        const { futureValue: aliceFV } =
-          await futureValueVaults[0].getFutureValue(alice.address);
-        const { futureValue: bobFV } =
-          await futureValueVaults[0].getFutureValue(bob.address);
+        const { balance: aliceFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          alice.address,
+        );
+        const { balance: bobFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          bob.address,
+        );
 
         expect(aliceFV).not.to.equal('0');
         expect(bobFV).to.equal('0');
@@ -267,10 +244,14 @@ describe('Integration Test: Emergency terminations', async () => {
         ).to.emit(fundManagementLogic, 'OrderFilled');
 
         // Check future value
-        const { futureValue: aliceFV } =
-          await futureValueVaults[0].getFutureValue(alice.address);
-        const { futureValue: bobFV } =
-          await futureValueVaults[0].getFutureValue(bob.address);
+        const { balance: aliceFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          alice.address,
+        );
+        const { balance: bobFV } = await futureValueVault.getBalance(
+          orderBookIds[0],
+          bob.address,
+        );
 
         expect(aliceFV).not.to.equal('0');
         expect(bobFV).to.equal('0');
@@ -455,9 +436,7 @@ describe('Integration Test: Emergency terminations', async () => {
         await createSampleETHOrders(carol, maturities[1], '8000', '0');
 
         await time.increaseTo(maturities[0].toString());
-        await lendingMarketController
-          .connect(owner)
-          .rotateLendingMarkets(hexETH);
+        await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 
         await lendingMarketController.cleanUpAllFunds(alice.address);
         await lendingMarketController.cleanUpAllFunds(bob.address);

@@ -5,7 +5,7 @@
 ### getOrderEstimation
 
 ```solidity
-function getOrderEstimation(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage)
+function getOrderEstimation(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _additionalDepositAmount, bool _ignoreBorrowedAmount) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### executeOrder
@@ -35,7 +35,7 @@ function updateFundsForTaker(bytes32 _ccy, uint256 _maturity, address _user, enu
 ### updateFundsForMaker
 
 ```solidity
-function updateFundsForMaker(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder) public
+function updateFundsForMaker(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, struct PartiallyFilledOrder partiallyFilledOrder) public
 ```
 
 ### getOrders
@@ -59,7 +59,19 @@ function _getOrdersPerMarket(bytes32 _ccy, uint256 _maturity, address _user) int
 ### _getOrder
 
 ```solidity
-function _getOrder(bytes32 _ccy, contract ILendingMarket _market, uint48 _orderId) internal view returns (struct ILendingMarketController.Order order)
+function _getOrder(bytes32 _ccy, contract ILendingMarket _market, uint8 _orderBookId, uint48 _orderId) internal view returns (struct ILendingMarketController.Order order)
+```
+
+### _calculateFilledAmountAndFee
+
+```solidity
+function _calculateFilledAmountAndFee(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV)
+```
+
+### _calculateCollateralCoverage
+
+```solidity
+function _calculateCollateralCoverage(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _orderFeeInFV, uint256 _additionalDepositAmount, bool _ignoreBorrowedAmount) internal view returns (uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### _flattenOrders
@@ -71,6 +83,6 @@ function _flattenOrders(struct ILendingMarketController.Order[][] orders, uint25
 ### _unwindPosition
 
 ```solidity
-function _unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue) internal returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, enum ProtocolTypes.Side side)
+function _unwindPosition(bytes32 _ccy, uint256 _maturity, address _user, int256 _futureValue) internal returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, enum ProtocolTypes.Side side)
 ```
 

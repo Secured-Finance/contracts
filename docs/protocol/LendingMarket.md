@@ -25,48 +25,57 @@ uint256 ITAYOSE_PERIOD
 ### onlyMaker
 
 ```solidity
-modifier onlyMaker(address user, uint48 _orderId)
+modifier onlyMaker(uint8 _orderBookId, address _user, uint48 _orderId)
 ```
 
 Modifier to make a function callable only by order maker.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| user | address |  |
+| _orderBookId | uint8 | The order book id |
+| _user | address | User's address |
 | _orderId | uint48 | Market order id |
 
 ### ifOpened
 
 ```solidity
-modifier ifOpened()
+modifier ifOpened(uint8 _orderBookId)
 ```
 
 Modifier to check if the market is opened.
 
-### ifMatured
-
-```solidity
-modifier ifMatured()
-```
-
-Modifier to check if the market is matured.
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 ### ifItayosePeriod
 
 ```solidity
-modifier ifItayosePeriod()
+modifier ifItayosePeriod(uint8 _orderBookId)
 ```
+
+Modifier to check if the market is under the Itayose period.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 ### ifPreOrderPeriod
 
 ```solidity
-modifier ifPreOrderPeriod()
+modifier ifPreOrderPeriod(uint8 _orderBookId)
 ```
+
+Modifier to check if the market is under the pre-order period.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 ### initialize
 
 ```solidity
-function initialize(address _resolver, bytes32 _ccy, uint256 _maturity, uint256 _openingDate) public
+function initialize(address _resolver, bytes32 _ccy) public
 ```
 
 Initializes the contract.
@@ -77,8 +86,6 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | ---- | ---- | ----------- |
 | _resolver | address | The address of the Address Resolver contract |
 | _ccy | bytes32 | The main currency for the order book |
-| _maturity | uint256 | The initial maturity of the market |
-| _openingDate | uint256 | The timestamp when the market opens |
 
 ### requiredContracts
 
@@ -100,28 +107,33 @@ Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
-### getMarket
+### getOrderBookDetail
 
 ```solidity
-function getMarket() external view returns (struct ILendingMarket.Market market)
+function getOrderBookDetail(uint8 _orderBookId) public view returns (struct ILendingMarket.OrderBook market)
 ```
 
-Gets the market data.
+Gets the order book data.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| market | struct ILendingMarket.Market | The market data |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| market | struct ILendingMarket.OrderBook | The market data |
 
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+function getCircuitBreakerThresholds(uint8 _orderBookId, uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
 ```
 
 Gets unit price Thresholds by CircuitBreaker.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
@@ -129,52 +141,101 @@ Gets unit price Thresholds by CircuitBreaker.
 | maxLendUnitPrice | uint256 | The maximum unit price for lending |
 | minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
 
-### getBorrowUnitPrice
+### getBestLendUnitPrice
 
 ```solidity
-function getBorrowUnitPrice() external view returns (uint256)
+function getBestLendUnitPrice(uint8 _orderBookId) public view returns (uint256)
 ```
 
-Gets the lowest borrow price per future value.
+Gets the best price for lending.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The lowest borrow price per future value |
-
-### getLendUnitPrice
-
-```solidity
-function getLendUnitPrice() external view returns (uint256)
-```
-
-Gets the highest lend price per future value.
+| _orderBookId | uint8 | The order book id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The highest lend price per future value |
+| [0] | uint256 | The best price for lending |
+
+### getBestLendUnitPrices
+
+```solidity
+function getBestLendUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
+```
+
+Gets the best prices for lending.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256[] | The array of the best price for lending |
+
+### getBestBorrowUnitPrice
+
+```solidity
+function getBestBorrowUnitPrice(uint8 _orderBookId) public view returns (uint256)
+```
+
+Gets the best price for borrowing.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The best price for borrowing |
+
+### getBestBorrowUnitPrices
+
+```solidity
+function getBestBorrowUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
+```
+
+Gets the best prices for borrowing.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256[] | The array of the best price for borrowing |
 
 ### getMidUnitPrice
 
 ```solidity
-function getMidUnitPrice() public view returns (uint256)
+function getMidUnitPrice(uint8 _orderBookId) public view returns (uint256)
 ```
 
 Gets the mid price per future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
 | [0] | uint256 | The mid price per future value |
+
+### getMidUnitPrices
+
+```solidity
+function getMidUnitPrices(uint8[] _orderBookIds) public view returns (uint256[])
+```
+
+Gets the the prices per future value.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256[] | The array of the the price per future value |
 
 ### getBorrowOrderBook
 
 ```solidity
-function getBorrowOrderBook(uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
 ```
 
 Gets the order book of borrow.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _limit | uint256 | Max limit to get unit prices |
 
 | Name | Type | Description |
@@ -186,13 +247,14 @@ Gets the order book of borrow.
 ### getLendOrderBook
 
 ```solidity
-function getLendOrderBook(uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+function getLendOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
 ```
 
 Gets the order book of lend.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _limit | uint256 | Max limit to get unit prices |
 
 | Name | Type | Description |
@@ -204,14 +266,30 @@ Gets the order book of lend.
 ### getMaturity
 
 ```solidity
-function getMaturity() external view returns (uint256 maturity)
+function getMaturity(uint8 _orderBookId) public view returns (uint256 maturity)
 ```
 
 Gets the current market maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
 | maturity | uint256 | The market maturity |
+
+### getMaturities
+
+```solidity
+function getMaturities(uint8[] _orderBookIds) external view returns (uint256[] maturities)
+```
+
+Gets the order book maturities.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| maturities | uint256[] | The array of maturity |
 
 ### getCurrency
 
@@ -228,10 +306,14 @@ Gets the market currency.
 ### getOpeningDate
 
 ```solidity
-function getOpeningDate() external view returns (uint256 openingDate)
+function getOpeningDate(uint8 _orderBookId) public view returns (uint256 openingDate)
 ```
 
 Gets the market opening date.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -240,10 +322,14 @@ Gets the market opening date.
 ### isReady
 
 ```solidity
-function isReady() public view returns (bool)
+function isReady(uint8 _orderBookId) public view returns (bool)
 ```
 
 Gets if the market is ready.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -252,10 +338,14 @@ Gets if the market is ready.
 ### isMatured
 
 ```solidity
-function isMatured() public view returns (bool)
+function isMatured(uint8 _orderBookId) public view returns (bool)
 ```
 
 Gets if the market is matured.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -264,10 +354,14 @@ Gets if the market is matured.
 ### isOpened
 
 ```solidity
-function isOpened() public view returns (bool)
+function isOpened(uint8 _orderBookId) public view returns (bool)
 ```
 
 Gets if the market is opened.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -276,10 +370,14 @@ Gets if the market is opened.
 ### isItayosePeriod
 
 ```solidity
-function isItayosePeriod() public view returns (bool)
+function isItayosePeriod(uint8 _orderBookId) public view returns (bool)
 ```
 
 Gets if the market is under the Itayose period.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -288,10 +386,14 @@ Gets if the market is under the Itayose period.
 ### isPreOrderPeriod
 
 ```solidity
-function isPreOrderPeriod() public view returns (bool)
+function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool)
 ```
 
 Gets if the market is under the pre-order period.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -316,13 +418,14 @@ Gets the market itayose logs.
 ### getOrder
 
 ```solidity
-function getOrder(uint48 _orderId) public view returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
+function getOrder(uint8 _orderBookId, uint48 _orderId) public view returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
 ```
 
 Gets the market order from the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _orderId | uint48 | The market order id |
 
 | Name | Type | Description |
@@ -338,13 +441,14 @@ Gets the market order from the order book.
 ### getTotalAmountFromLendOrders
 
 ```solidity
-function getTotalAmountFromLendOrders(address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
+function getTotalAmountFromLendOrders(uint8 _orderBookId, address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
 Calculates and gets the active and inactive amounts from the user orders of lending deals.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _user | address | User's address |
 
 | Name | Type | Description |
@@ -357,13 +461,14 @@ Calculates and gets the active and inactive amounts from the user orders of lend
 ### getTotalAmountFromBorrowOrders
 
 ```solidity
-function getTotalAmountFromBorrowOrders(address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
+function getTotalAmountFromBorrowOrders(uint8 _orderBookId, address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
 Calculates and gets the active and inactive amounts from the user orders of borrowing deals.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _user | address | User's address |
 
 | Name | Type | Description |
@@ -376,37 +481,40 @@ Calculates and gets the active and inactive amounts from the user orders of borr
 ### getLendOrderIds
 
 ```solidity
-function getLendOrderIds(address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
+function getLendOrderIds(uint8 _orderBookId, address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
 Gets active and inactive order IDs in the lending order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _user | address | User's address |
 
 ### getBorrowOrderIds
 
 ```solidity
-function getBorrowOrderIds(address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
+function getBorrowOrderIds(uint8 _orderBookId, address _user) external view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
 ```
 
 Gets active and inactive order IDs in the borrowing order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _user | address | User's address |
 
 ### calculateFilledAmount
 
 ```solidity
-function calculateFilledAmount(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
+function calculateFilledAmount(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
 ```
 
 Calculates the amount to be filled when executing an order in the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the user wants to borrow/lend |
 | _unitPrice | uint256 | Unit price user want to borrow/lend |
@@ -418,40 +526,43 @@ Calculates the amount to be filled when executing an order in the order book.
 | filledAmount | uint256 | The amount that is filled on the order book |
 | filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
 
-### openMarket
+### createOrderBook
 
 ```solidity
-function openMarket(uint256 _maturity, uint256 _openingDate) external returns (uint256 prevMaturity)
+function createOrderBook(uint256 _maturity, uint256 _openingDate) external returns (uint8 orderBookId)
 ```
 
-Opens market
+Creates a new order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _maturity | uint256 | The new maturity |
+| _maturity | uint256 | The initial maturity of the market |
 | _openingDate | uint256 | The timestamp when the market opens |
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| prevMaturity | uint256 | The previous maturity updated |
+### reopenOrderBook
+
+```solidity
+function reopenOrderBook(uint8 _orderBookId, uint256 _newMaturity, uint256 _openingDate) external
+```
 
 ### cancelOrder
 
 ```solidity
-function cancelOrder(address _user, uint48 _orderId) external
+function cancelOrder(uint8 _orderBookId, address _user, uint48 _orderId) external
 ```
 
 Cancels the order.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _user | address | User address |
 | _orderId | uint48 | Market order id |
 
 ### cleanUpOrders
 
 ```solidity
-function cleanUpOrders(address _user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
+function cleanUpOrders(uint8 _orderBookId, address _user) external returns (uint256 activeLendOrderCount, uint256 activeBorrowOrderCount, uint256 removedLendOrderFutureValue, uint256 removedBorrowOrderFutureValue, uint256 removedLendOrderAmount, uint256 removedBorrowOrderAmount, uint256 maturity)
 ```
 
 Cleans up own orders to remove order ids that are already filled on the order book.
@@ -462,6 +573,7 @@ for lazy evaluation if the collateral is enough or not._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User address |
 
 | Name | Type | Description |
@@ -477,7 +589,7 @@ for lazy evaluation if the collateral is enough or not._
 ### executeOrder
 
 ```solidity
-function executeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function executeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 Executes an order. Takes orders if the order is matched,
@@ -485,6 +597,7 @@ and places new order if not match it.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the user wants to borrow/lend |
@@ -493,13 +606,13 @@ and places new order if not match it.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| filledOrder | struct ILendingMarket.FilledOrder | User's Filled order of the user |
-| partiallyFilledOrder | struct ILendingMarket.PartiallyFilledOrder | Partially filled order on the order book |
+| filledOrder | struct FilledOrder | User's Filled order of the user |
+| partiallyFilledOrder | struct PartiallyFilledOrder | Partially filled order on the order book |
 
 ### executePreOrder
 
 ```solidity
-function executePreOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external
+function executePreOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external
 ```
 
 Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
@@ -507,6 +620,7 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address |  |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
@@ -515,13 +629,14 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 ### unwindPosition
 
 ```solidity
-function unwindPosition(enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
+function unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
 ```
 
 Unwinds lending or borrowing positions by a specified future value amount.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
 | _futureValue | uint256 | Amount of future value unwound |
@@ -529,13 +644,13 @@ Unwinds lending or borrowing positions by a specified future value amount.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| filledOrder | struct ILendingMarket.FilledOrder | User's Filled order of the user |
-| partiallyFilledOrder | struct ILendingMarket.PartiallyFilledOrder | Partially filled order |
+| filledOrder | struct FilledOrder | User's Filled order of the user |
+| partiallyFilledOrder | struct PartiallyFilledOrder | Partially filled order |
 
 ### executeItayoseCall
 
 ```solidity
-function executeItayoseCall() external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct ILendingMarket.PartiallyFilledOrder partiallyFilledLendingOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function executeItayoseCall(uint8 _orderBookId) external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
 ```
 
 Executes Itayose to aggregate pre-orders and determine the opening unit price.
@@ -545,11 +660,15 @@ _If the opening date had already passed when this contract was created, this Ita
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
 | openingUnitPrice | uint256 | The opening price when Itayose is executed |
 | totalOffsetAmount | uint256 | The total filled amount when Itayose is executed |
 | openingDate | uint256 | The timestamp when the market opens |
-| partiallyFilledLendingOrder | struct ILendingMarket.PartiallyFilledOrder | Partially filled lending order on the order book |
-| partiallyFilledBorrowingOrder | struct ILendingMarket.PartiallyFilledOrder | Partially filled borrowing order on the order book |
+| partiallyFilledLendingOrder | struct PartiallyFilledOrder | Partially filled lending order on the order book |
+| partiallyFilledBorrowingOrder | struct PartiallyFilledOrder | Partially filled borrowing order on the order book |
 
 ### pauseMarket
 
@@ -566,47 +685,4 @@ function unpauseMarket() external
 ```
 
 Unpauses the lending market.
-
-### _updateUserMaturity
-
-```solidity
-function _updateUserMaturity(address _user) private
-```
-
-### _placeOrder
-
-```solidity
-function _placeOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint48 orderId)
-```
-
-Makes a new order in the order book.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
-| _user | address | User's address |
-| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Preferable interest unit price |
-
-### _fillOrders
-
-```solidity
-function _fillOrders(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder, struct ILendingMarket.PlacedOrder placedOrder)
-```
-
-Takes orders in the order book.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
-| _user | address | User's address |
-| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Unit price taken |
-| _ignoreRemainingAmount | bool | Boolean for whether to ignore the remaining amount after filling orders |
-
-### _unwindPosition
-
-```solidity
-function _unwindPosition(enum ProtocolTypes.Side _side, uint256 _futureValue, uint256 _unitPrice) private returns (struct ILendingMarket.FilledOrder filledOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledOrder)
-```
 

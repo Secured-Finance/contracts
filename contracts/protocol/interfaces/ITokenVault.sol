@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
+import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
 
 interface ITokenVault {
     event Deposit(address indexed user, bytes32 ccy, uint256 amount);
@@ -56,14 +57,12 @@ interface ITokenVault {
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
-    function calculateCoverage(
-        address user,
-        bytes32 orderCcy,
-        uint256 orderAmount,
-        ProtocolTypes.Side orderSide
-    ) external view returns (uint256 coverage);
+    function calculateCoverage(address user, ILendingMarketController.AdditionalFunds memory funds)
+        external
+        view
+        returns (uint256 coverage, bool isInsufficientDepositAmount);
 
-    function calculateLiquidationFees(uint256 _liquidationAmount)
+    function calculateLiquidationFees(uint256 liquidationAmount)
         external
         view
         returns (uint256 protocolFee, uint256 liquidatorFee);

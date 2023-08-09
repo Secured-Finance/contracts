@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.9;
 
-import "../../dependencies/openzeppelin/contracts/utils/Context.sol";
-import "../storages/OwnableStorage.sol";
+import "../../dependencies/openzeppelin/utils/Context.sol";
+import "../storages/utils/OwnableStorage.sol";
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where

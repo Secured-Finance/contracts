@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../protocol/interfaces/ITokenVault.sol";
-import "../protocol/interfaces/ILendingMarketController.sol";
+import "../../protocol/interfaces/ITokenVault.sol";
+import "../../protocol/interfaces/ILendingMarketController.sol";
 
-contract TokenVaultCallerMock {
+contract TokenVaultCaller {
     ITokenVault public tokenVault;
     ILendingMarketController public lendingMarketController;
 
@@ -56,28 +56,27 @@ contract TokenVaultCallerMock {
 
     function calculateTotalFundsInBaseCurrency(
         address _user,
-        bytes32 _depositCcy,
-        uint256 _depositAmount,
+        ILendingMarketController.AdditionalFunds calldata _additionalFunds,
         uint256 _liquidationThresholdRate
     )
         public
         view
         returns (
+            uint256 plusDepositAmountInAdditionalFundsCcy,
+            uint256 minusDepositAmountInAdditionalFundsCcy,
             uint256 totalWorkingLendOrdersAmount,
             uint256 totalClaimableAmount,
             uint256 totalCollateralAmount,
             uint256 totalLentAmount,
             uint256 totalWorkingBorrowOrdersAmount,
             uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount,
-            bool isEnoughDeposit
+            uint256 totalBorrowedAmount
         )
     {
         return
             lendingMarketController.calculateTotalFundsInBaseCurrency(
                 _user,
-                _depositCcy,
-                _depositAmount,
+                _additionalFunds,
                 _liquidationThresholdRate
             );
     }

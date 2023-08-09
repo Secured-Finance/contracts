@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import "../../dependencies/openzeppelin/contracts/utils/Context.sol";
-import "../storages/PausableStorage.sol";
+import "../../dependencies/openzeppelin/utils/Context.sol";
+import "../storages/utils/PausableStorage.sol";
 
 /**
  * @dev Contract module which allows children to implement an emergency stop

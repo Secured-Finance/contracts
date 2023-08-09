@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../../dependencies/openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "../../dependencies/openzeppelin/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract UpgradeabilityProxy is ERC1967Proxy {
     constructor(address _logic, bytes memory _data) payable ERC1967Proxy(_logic, _data) {

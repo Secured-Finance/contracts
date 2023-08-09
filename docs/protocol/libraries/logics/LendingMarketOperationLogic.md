@@ -2,16 +2,28 @@
 
 ## LendingMarketOperationLogic
 
-### LendingMarketCreated
+### OBSERVATION_PERIOD
 
 ```solidity
-event LendingMarketCreated(bytes32 ccy, address marketAddr, address futureValueVault, uint256 index, uint256 openingDate, uint256 maturity)
+uint256 OBSERVATION_PERIOD
 ```
 
-### LendingMarketsRotated
+### LendingMarketInitialized
 
 ```solidity
-event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
+event LendingMarketInitialized(bytes32 ccy, uint256 genesisDate, uint256 compoundFactor, uint256 orderFeeRate, uint256 circuitBreakerLimitRange, address lendingMarket, address futureValueVault)
+```
+
+### OrderBookCreated
+
+```solidity
+event OrderBookCreated(bytes32 ccy, uint8 orderBookId, uint256 openingDate, uint256 maturity)
+```
+
+### OrderBooksRotated
+
+```solidity
+event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
 ```
 
 ### EmergencyTerminationExecuted
@@ -20,46 +32,46 @@ event LendingMarketsRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturit
 event EmergencyTerminationExecuted(uint256 timestamp)
 ```
 
-### initializeCurrencySetting
+### getOrderBookDetails
 
 ```solidity
-function initializeCurrencySetting(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor) external
+function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
 ```
 
-### getLendingMarketDetails
+### getOrderBookDetailsPerCurrency
 
 ```solidity
-function getLendingMarketDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+function getOrderBookDetailsPerCurrency(bytes32 _ccy) public view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetail)
 ```
 
-### getLendingMarketDetailsPerCurrency
+### getOrderBookDetail
 
 ```solidity
-function getLendingMarketDetailsPerCurrency(bytes32 _ccy) public view returns (struct ILendingMarketController.LendingMarketDetail[] lendingMarketDetails)
+function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) public view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
 ```
 
-### getLendingMarketDetail
+### initializeLendingMarket
 
 ```solidity
-function getLendingMarketDetail(bytes32 _ccy, uint256 _maturity) public view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _circuitBreakerLimitRange) external
 ```
 
-### createLendingMarket
+### createOrderBook
 
 ```solidity
-function createLendingMarket(bytes32 _ccy, uint256 _openingDate) external
+function createOrderBook(bytes32 _ccy, uint256 _openingDate) external
 ```
 
 ### executeItayoseCall
 
 ```solidity
-function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (struct ILendingMarket.PartiallyFilledOrder partiallyFilledLendingOrder, struct ILendingMarket.PartiallyFilledOrder partiallyFilledBorrowingOrder)
+function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
 ```
 
-### rotateLendingMarkets
+### rotateOrderBooks
 
 ```solidity
-function rotateLendingMarkets(bytes32 _ccy, uint256 _orderFeeRate) external returns (uint256 toMaturity)
+function rotateOrderBooks(bytes32 _ccy, uint256 _orderFeeRate) external returns (uint256 newMaturity)
 ```
 
 ### executeEmergencyTermination
@@ -83,7 +95,7 @@ function unpauseLendingMarkets(bytes32 _ccy) public
 ### updateOrderLogs
 
 ```solidity
-function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _observationPeriod, uint256 _filledUnitPrice, uint256 _filledAmount, uint256 _filledFutureValue) external
+function updateOrderLogs(bytes32 _ccy, uint256 _maturity, uint256 _filledUnitPrice, uint256 _filledAmount, uint256 _filledFutureValue) external
 ```
 
 ### calculateNextMaturity

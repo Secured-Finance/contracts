@@ -2,171 +2,111 @@
 
 ## OrderBookLogic
 
-### getHighestLendingUnitPrice
+### OrderBookCreated
 
 ```solidity
-function getHighestLendingUnitPrice() public view returns (uint256)
+event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate)
 ```
 
-### getLowestBorrowingUnitPrice
+### ItayoseExecuted
 
 ```solidity
-function getLowestBorrowingUnitPrice() public view returns (uint256)
+event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 offsetAmount)
 ```
 
-### hasBorrowOrder
+### getOrderBookDetail
 
 ```solidity
-function hasBorrowOrder(address _user) external view returns (bool)
-```
-
-### hasLendOrder
-
-```solidity
-function hasLendOrder(address _user) external view returns (bool)
-```
-
-### getLendOrderBook
-
-```solidity
-function getLendOrderBook(uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
-```
-
-### getBorrowOrderBook
-
-```solidity
-function getBorrowOrderBook(uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
-```
-
-### getOrder
-
-```solidity
-function getOrder(uint48 _orderId) external view returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, address maker, uint256 amount, uint256 timestamp, bool isPreOrder)
-```
-
-### getTotalAmountFromLendOrders
-
-```solidity
-function getTotalAmountFromLendOrders(address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
-```
-
-### getTotalAmountFromBorrowOrders
-
-```solidity
-function getTotalAmountFromBorrowOrders(address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
-```
-
-### getLendOrderIds
-
-```solidity
-function getLendOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
-```
-
-### getBorrowOrderIds
-
-```solidity
-function getBorrowOrderIds(address _user) public view returns (uint48[] activeOrderIds, uint48[] inActiveOrderIds)
-```
-
-### calculateFilledAmount
-
-```solidity
-function calculateFilledAmount(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
-```
-
-### insertOrder
-
-```solidity
-function insertOrder(enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external returns (uint48 orderId)
-```
-
-### fillOrders
-
-```solidity
-function fillOrders(enum ProtocolTypes.Side _side, uint256 _amount, uint256 _amountInFV, uint256 _unitPrice) external returns (uint256 filledUnitPrice, uint256 filledAmount, uint256 filledFutureValue, uint48 partiallyFilledOrderId, address partiallyFilledMaker, uint256 partiallyFilledAmount, uint256 partiallyFilledFutureValue, uint256 remainingAmount)
-```
-
-### cleanLendOrders
-
-```solidity
-function cleanLendOrders(address _user) external returns (uint48[] orderIds, uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
-```
-
-### cleanBorrowOrders
-
-```solidity
-function cleanBorrowOrders(address _user) external returns (uint48[] orderIds, uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
-```
-
-### removeOrder
-
-```solidity
-function removeOrder(address _user, uint48 _orderId) external returns (enum ProtocolTypes.Side, uint256, uint256)
-```
-
-### getOpeningUnitPrice
-
-```solidity
-function getOpeningUnitPrice() external view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
-```
-
-### getOrderExecutionConditions
-
-```solidity
-function getOrderExecutionConditions(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (bool isFilled, uint256 executedUnitPrice, uint256 cbThresholdUnitPrice, bool ignoreRemainingAmount)
+function getOrderBookDetail(uint8 _orderBookId) public view returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 borrowUnitPrice, uint256 lendUnitPrice, uint256 midUnitPrice, uint256 openingUnitPrice, bool isReady)
 ```
 
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+function getCircuitBreakerThresholds(uint8 _orderBookId, uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
 ```
 
-### getBorrowCircuitBreakerThreshold
+### getBestLendUnitPrice
 
 ```solidity
-function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) public pure returns (uint256 cbThresholdUnitPrice)
+function getBestLendUnitPrice(uint8 _orderBookId) public view returns (uint256)
 ```
 
-### getLendCircuitBreakerThreshold
+### getBestLendUnitPrices
 
 ```solidity
-function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) public pure returns (uint256 cbThresholdUnitPrice)
+function getBestLendUnitPrices(uint8[] _orderBookIds) external view returns (uint256[] unitPrices)
 ```
 
-### _nextOrderId
+### getBestBorrowUnitPrice
 
 ```solidity
-function _nextOrderId() internal returns (uint48)
+function getBestBorrowUnitPrice(uint8 _orderBookId) public view returns (uint256)
 ```
 
-Increases and returns id of last order in order book.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint48 | The new order id |
-
-### _removeOrderIdFromOrders
+### getBestBorrowUnitPrices
 
 ```solidity
-function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) internal
+function getBestBorrowUnitPrices(uint8[] _orderBookIds) external view returns (uint256[] unitPrices)
 ```
 
-### _getLendOrderAmounts
+### getMidUnitPrice
 
 ```solidity
-function _getLendOrderAmounts(uint48 _orderId) internal view returns (uint256 presentValue, uint256 futureValue)
+function getMidUnitPrice(uint8 _orderBookId) public view returns (uint256)
 ```
 
-### _getBorrowOrderAmounts
+### getMidUnitPrices
 
 ```solidity
-function _getBorrowOrderAmounts(uint48 _orderId) internal view returns (uint256 presentValue, uint256 futureValue)
+function getMidUnitPrices(uint8[] _orderBookIds) external view returns (uint256[] unitPrices)
 ```
 
-### _getOrderUnitPrice
+### getBorrowOrderBook
 
 ```solidity
-function _getOrderUnitPrice(enum ProtocolTypes.Side _side, uint256 _maturity, uint256 _unitPrice, bool _isPreOrder) internal view returns (uint256)
+function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+```
+
+### getLendOrderBook
+
+```solidity
+function getLendOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+```
+
+### getMaturities
+
+```solidity
+function getMaturities(uint8[] _orderBookIds) public view returns (uint256[] maturities)
+```
+
+### createOrderBook
+
+```solidity
+function createOrderBook(uint256 _maturity, uint256 _openingDate) public returns (uint8 orderBookId)
+```
+
+### reopenOrderBook
+
+```solidity
+function reopenOrderBook(uint8 _orderBookId, uint256 _newMaturity, uint256 _openingDate) external
+```
+
+### executeItayoseCall
+
+```solidity
+function executeItayoseCall(uint8 _orderBookId) external returns (uint256 openingUnitPrice, uint256 totalOffsetAmount, uint256 openingDate, struct PartiallyFilledOrder partiallyFilledLendingOrder, struct PartiallyFilledOrder partiallyFilledBorrowingOrder)
+```
+
+### _nextOrderBookId
+
+```solidity
+function _nextOrderBookId() internal returns (uint8)
+```
+
+### _getOrderBook
+
+```solidity
+function _getOrderBook(uint8 _orderBookId) private view returns (struct OrderBookLib.OrderBook)
 ```
 

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.9;
 
 // libraries
-import {Contracts} from "../protocol/libraries/Contracts.sol";
-import {ERC20Handler} from "../protocol/libraries/ERC20Handler.sol";
+import {Contracts} from "../../protocol/libraries/Contracts.sol";
+import {ERC20Handler} from "../../protocol/libraries/ERC20Handler.sol";
 // mixins
-import {MixinAddressResolver} from "../protocol/mixins/MixinAddressResolver.sol";
+import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.sol";
 
 contract MockUniswapQuoter is MixinAddressResolver {
     mapping(address => bytes32) private currencies;

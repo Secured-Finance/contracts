@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {SafeCast} from "../../../dependencies/openzeppelin/contracts/utils/math/SafeCast.sol";
+// dependencies
+import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
@@ -53,8 +54,8 @@ library LiquidationLogic {
         ExecuteLiquidationVars memory vars;
 
         vars.isDefaultMarket =
-            Storage.slot().maturityLendingMarkets[_debtCcy][_debtMaturity] ==
-            Storage.slot().lendingMarkets[_debtCcy][0];
+            Storage.slot().maturityOrderBookIds[_debtCcy][_debtMaturity] ==
+            Storage.slot().orderBookIdLists[_debtCcy][0];
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
@@ -398,7 +399,7 @@ library LiquidationLogic {
         untransferredAmount = _amount;
         bool isDebt = _amount < 0;
 
-        int256 userGVAmount = AddressResolverLib.genesisValueVault().getGenesisValue(_ccy, _from);
+        int256 userGVAmount = AddressResolverLib.genesisValueVault().getBalance(_ccy, _from);
 
         if ((isDebt && userGVAmount < 0) || (!isDebt && userGVAmount > 0)) {
             uint256 currentMaturity = AddressResolverLib.genesisValueVault().getCurrentMaturity(
@@ -439,12 +440,11 @@ library LiquidationLogic {
         bool isDebt = _amount < 0;
 
         IFutureValueVault futureValueVault = IFutureValueVault(
-            Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ]
+            Storage.slot().futureValueVaults[_ccy]
         );
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
-        (int256 userFVAmount, ) = futureValueVault.getFutureValue(_from);
+        (int256 userFVAmount, ) = futureValueVault.getBalance(orderBookId, _from);
 
         if ((isDebt && userFVAmount < 0) || (!isDebt && userFVAmount > 0)) {
             int256 fvAmount = FundManagementLogic.calculateFVFromPV(
@@ -457,7 +457,7 @@ library LiquidationLogic {
                 fvAmount = userFVAmount;
             }
 
-            futureValueVault.transferFrom(_from, _to, fvAmount, _maturity);
+            futureValueVault.transferFrom(orderBookId, _from, _to, fvAmount, _maturity);
             untransferredAmount -= FundManagementLogic.calculatePVFromFV(_ccy, _maturity, fvAmount);
 
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _to);

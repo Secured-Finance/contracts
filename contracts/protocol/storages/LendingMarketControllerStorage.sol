@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 
 struct ObservationPeriodLog {
     uint256 totalAmount;
@@ -20,12 +20,14 @@ library LendingMarketControllerStorage {
         uint256 marketTerminationDate;
         mapping(bytes32 => int256) marketTerminationPrices;
         mapping(bytes32 => uint256) marketTerminationRatios;
-        // Mapping from currency to lending market contract addresses
-        mapping(bytes32 => address[]) lendingMarkets;
-        // Mapping from lending market contract address to future value vault contract address per currency
-        mapping(bytes32 => mapping(address => address)) futureValueVaults;
-        // Mapping from maturity to lending market contract address per currency
-        mapping(bytes32 => mapping(uint256 => address)) maturityLendingMarkets;
+        // Mapping from currency to order book id list
+        mapping(bytes32 => uint8[]) orderBookIdLists;
+        // Mapping from currency to lending market contract address
+        mapping(bytes32 => address) lendingMarkets;
+        // Mapping from currency to future value vault contract address
+        mapping(bytes32 => address) futureValueVaults;
+        // Mapping from maturity to order book id per currency
+        mapping(bytes32 => mapping(uint256 => uint8)) maturityOrderBookIds;
         // Mapping from currency to genesis date in the lending market
         mapping(bytes32 => uint256) genesisDates;
         // Mapping from user to used currency

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {UpgradeableBeacon} from "./utils/UpgradeableBeacon.sol";
 // interfaces
 import {IBeaconProxyController} from "./interfaces/IBeaconProxyController.sol";
 import {IProxyController} from "./interfaces/IProxyController.sol";
@@ -11,6 +10,7 @@ import {BeaconContracts, Contracts} from "./libraries/Contracts.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
+import {UpgradeableBeacon} from "./utils/UpgradeableBeacon.sol";
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 import {UpgradeabilityBeaconProxy} from "./utils/UpgradeabilityBeaconProxy.sol";
@@ -104,21 +104,18 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
     /**
      * @notice Deploys new LendingMarket
      * @param _ccy Main currency for new lending market
-     * @param _maturity The initial maturity of the market
-     * @param _openingDate The timestamp when the market opens
      * @return market The proxy contract address of created lending market
      */
-    function deployLendingMarket(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _openingDate
-    ) external override onlyLendingMarketController returns (address market) {
+    function deployLendingMarket(bytes32 _ccy)
+        external
+        override
+        onlyLendingMarketController
+        returns (address market)
+    {
         bytes memory data = abi.encodeWithSignature(
-            "initialize(address,bytes32,uint256,uint256)",
+            "initialize(address,bytes32)",
             address(resolver()),
-            _ccy,
-            _maturity,
-            _openingDate
+            _ccy
         );
         market = _createProxy(BeaconContracts.LENDING_MARKET, data);
     }

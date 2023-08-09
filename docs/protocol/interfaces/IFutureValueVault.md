@@ -5,7 +5,7 @@
 ### Transfer
 
 ```solidity
-event Transfer(address from, address to, int256 value)
+event Transfer(address from, address to, uint8 orderBookId, uint256 maturity, int256 value)
 ```
 
 ### getTotalSupply
@@ -14,57 +14,57 @@ event Transfer(address from, address to, int256 value)
 function getTotalSupply(uint256 maturity) external view returns (uint256)
 ```
 
-### getFutureValue
+### getBalance
 
 ```solidity
-function getFutureValue(address user) external view returns (int256 futureValue, uint256 maturity)
+function getBalance(uint8 orderBookId, address user) external view returns (int256 futureValue, uint256 maturity)
 ```
 
-### hasFutureValueInPastMaturity
+### hasBalanceAtPastMaturity
 
 ```solidity
-function hasFutureValueInPastMaturity(address user, uint256 maturity) external view returns (bool)
+function hasBalanceAtPastMaturity(uint8 orderBookId, address user, uint256 maturity) external view returns (bool)
 ```
 
-### addLendFutureValue
+### increase
 
 ```solidity
-function addLendFutureValue(address user, uint256 amount, uint256 maturity, bool isTaker) external
+function increase(uint8 orderBookId, address user, uint256 amount, uint256 maturity, bool isTaker) external
 ```
 
-### addBorrowFutureValue
+### decrease
 
 ```solidity
-function addBorrowFutureValue(address user, uint256 amount, uint256 maturity, bool isTaker) external
+function decrease(uint8 orderBookId, address user, uint256 amount, uint256 maturity, bool isTaker) external
 ```
 
 ### transferFrom
 
 ```solidity
-function transferFrom(address sender, address receiver, int256 amount, uint256 maturity) external
+function transferFrom(uint8 orderBookId, address sender, address receiver, int256 amount, uint256 maturity) external
 ```
 
-### removeFutureValue
+### reset
 
 ```solidity
-function removeFutureValue(address user, uint256 activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool removeFutureValue)
+function reset(uint8 orderBookId, address user, uint256 activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
 ```
 
-### addInitialTotalSupply
+### setInitialTotalSupply
 
 ```solidity
-function addInitialTotalSupply(uint256 maturity, int256 amount) external
-```
-
-### executeForcedReset
-
-```solidity
-function executeForcedReset(address user) external
+function setInitialTotalSupply(uint256 maturity, int256 amount) external
 ```
 
 ### executeForcedReset
 
 ```solidity
-function executeForcedReset(address user, int256 amount) external returns (int256 removedAmount, int256 balance)
+function executeForcedReset(uint8 orderBookId, address user) external
+```
+
+### executeForcedReset
+
+```solidity
+function executeForcedReset(uint8 orderBookId, address user, int256 amount) external returns (int256 removedAmount, int256 balance)
 ```
 

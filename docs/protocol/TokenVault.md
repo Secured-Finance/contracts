@@ -333,21 +333,20 @@ Gets the currencies that the user used as collateral.
 ### calculateCoverage
 
 ```solidity
-function calculateCoverage(address _user, bytes32 _orderCcy, uint256 _orderAmount, enum ProtocolTypes.Side _orderSide) external view returns (uint256 coverage)
+function calculateCoverage(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds) external view returns (uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
-Calculates the rate of collateral used.
+Calculates the collateral rate used when additional funds are had by the user.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _user | address | User's address |
-| _orderCcy | bytes32 | Currency name in bytes32 of an order to be added |
-| _orderAmount | uint256 | Amount of an order to be added |
-| _orderSide | enum ProtocolTypes.Side | Order position type of an order to be added |
+| _additionalFunds | struct ILendingMarketController.AdditionalFunds | Additional funds for calculating the coverage |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | coverage | uint256 | The rate of collateral used |
+| isInsufficientDepositAmount | bool | The boolean if the lent amount in the selected currency is insufficient for the deposit amount or not |
 
 ### calculateLiquidationFees
 

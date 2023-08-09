@@ -1,813 +1,245 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {OrderStatisticsTreeLib, PartiallyRemovedOrder, OrderItem} from "../OrderStatisticsTreeLib.sol";
 import {Constants} from "../Constants.sol";
-import {RoundingUint256} from "../math/RoundingUint256.sol";
-import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
+import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
-import {LendingMarketStorage as Storage, MarketOrder, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
+import {LendingMarketStorage as Storage, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 
 library OrderBookLogic {
-    using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
+    using OrderBookLib for OrderBookLib.OrderBook;
     using RoundingUint256 for uint256;
 
-    function getHighestLendingUnitPrice() public view returns (uint256) {
-        return Storage.slot().lendOrders[Storage.slot().maturity].last();
-    }
+    event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate);
 
-    function getLowestBorrowingUnitPrice() public view returns (uint256) {
-        uint256 unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].first();
-        return unitPrice == 0 ? Constants.PRICE_DIGIT : unitPrice;
-    }
+    event ItayoseExecuted(
+        bytes32 ccy,
+        uint256 maturity,
+        uint256 openingUnitPrice,
+        uint256 lastLendUnitPrice,
+        uint256 lastBorrowUnitPrice,
+        uint256 offsetAmount
+    );
 
-    function hasBorrowOrder(address _user) external view returns (bool) {
-        return Storage.slot().activeBorrowOrderIds[_user].length != 0;
-    }
-
-    function hasLendOrder(address _user) external view returns (bool) {
-        return Storage.slot().activeLendOrderIds[_user].length != 0;
-    }
-
-    function getLendOrderBook(uint256 _limit)
-        external
+    function getOrderBookDetail(uint8 _orderBookId)
+        public
         view
         returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
-    {
-        unitPrices = new uint256[](_limit);
-        amounts = new uint256[](_limit);
-        quantities = new uint256[](_limit);
-
-        uint256 unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].last();
-        unitPrices[0] = unitPrice;
-        amounts[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
-            unitPrice
-        );
-        quantities[0] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(unitPrice);
-
-        for (uint256 i = 1; i < unitPrices.length; i++) {
-            if (unitPrice == 0) {
-                break;
-            }
-
-            unitPrice = Storage.slot().lendOrders[Storage.slot().maturity].prev(unitPrice);
-            unitPrices[i] = unitPrice;
-            amounts[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
-                unitPrice
-            );
-            quantities[i] = Storage.slot().lendOrders[Storage.slot().maturity].getNodeCount(
-                unitPrice
-            );
-        }
-    }
-
-    function getBorrowOrderBook(uint256 _limit)
-        external
-        view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
-    {
-        unitPrices = new uint256[](_limit);
-        amounts = new uint256[](_limit);
-        quantities = new uint256[](_limit);
-
-        uint256 unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].first();
-        unitPrices[0] = unitPrice;
-        amounts[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
-            unitPrice
-        );
-        quantities[0] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
-            unitPrice
-        );
-
-        for (uint256 i = 1; i < unitPrices.length; i++) {
-            if (unitPrice == 0) {
-                break;
-            }
-
-            unitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].next(unitPrice);
-            unitPrices[i] = unitPrice;
-            amounts[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeTotalAmount(
-                unitPrice
-            );
-            quantities[i] = Storage.slot().borrowOrders[Storage.slot().maturity].getNodeCount(
-                unitPrice
-            );
-        }
-    }
-
-    function getOrder(uint48 _orderId)
-        external
-        view
-        returns (
-            ProtocolTypes.Side side,
-            uint256 unitPrice,
+            bytes32 ccy,
             uint256 maturity,
-            address maker,
-            uint256 amount,
-            uint256 timestamp,
-            bool isPreOrder
-        )
-    {
-        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
-
-        OrderItem memory orderItem;
-        if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            orderItem = Storage.slot().lendOrders[marketOrder.maturity].getOrderById(
-                marketOrder.unitPrice,
-                _orderId
-            );
-        } else {
-            orderItem = Storage.slot().borrowOrders[marketOrder.maturity].getOrderById(
-                marketOrder.unitPrice,
-                _orderId
-            );
-        }
-
-        if (orderItem.maker != address(0)) {
-            side = marketOrder.side;
-            maturity = marketOrder.maturity;
-            maker = orderItem.maker;
-            amount = orderItem.amount;
-            timestamp = orderItem.timestamp;
-            isPreOrder = Storage.slot().isPreOrder[_orderId];
-            unitPrice = _getOrderUnitPrice(side, maturity, marketOrder.unitPrice, isPreOrder);
-        }
-    }
-
-    function getTotalAmountFromLendOrders(address _user)
-        external
-        view
-        returns (
-            uint256 activeAmount,
-            uint256 inactiveAmount,
-            uint256 inactiveFutureValue,
-            uint256 maturity
-        )
-    {
-        (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = getLendOrderIds(_user);
-        maturity = Storage.slot().userCurrentMaturities[_user];
-
-        for (uint256 i = 0; i < activeOrderIds.length; i++) {
-            MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
-            // Sum future values in the current maturity.
-            // If the market is rotated and maturity is updated, it will be 0 by treating it
-            // as an order canceled in the past market.
-            OrderItem memory orderItem = Storage
-                .slot()
-                .lendOrders[Storage.slot().maturity]
-                .getOrderById(marketOrder.unitPrice, activeOrderIds[i]);
-            activeAmount += orderItem.amount;
-        }
-
-        for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
-            // Sum future values in the maturity of orders.
-            // It will be the future value when the order is created, even if the market is rotated
-            // and maturity is updated.
-            (uint256 presentValue, uint256 futureValue) = _getLendOrderAmounts(inActiveOrderIds[i]);
-            inactiveAmount += presentValue;
-            inactiveFutureValue += futureValue;
-        }
-    }
-
-    function getTotalAmountFromBorrowOrders(address _user)
-        external
-        view
-        returns (
-            uint256 activeAmount,
-            uint256 inactiveAmount,
-            uint256 inactiveFutureValue,
-            uint256 maturity
-        )
-    {
-        (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds) = getBorrowOrderIds(
-            _user
-        );
-        maturity = Storage.slot().userCurrentMaturities[_user];
-
-        for (uint256 i = 0; i < activeOrderIds.length; i++) {
-            MarketOrder memory marketOrder = Storage.slot().orders[activeOrderIds[i]];
-            // Sum future values in the current maturity.
-            // If the market is rotated and maturity is updated, it will be 0 by treating it
-            // as an order canceled in the past market.
-            OrderItem memory orderItem = Storage
-                .slot()
-                .borrowOrders[Storage.slot().maturity]
-                .getOrderById(marketOrder.unitPrice, activeOrderIds[i]);
-            activeAmount += orderItem.amount;
-        }
-
-        maturity = Storage.slot().userCurrentMaturities[_user];
-
-        for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
-            // Sum future values in the maturity of orders
-            // It will be the future value when the order is created, even if the market is rotated
-            // and maturity is updated.
-            (uint256 presentValue, uint256 futureValue) = _getBorrowOrderAmounts(
-                inActiveOrderIds[i]
-            );
-            inactiveAmount += presentValue;
-            inactiveFutureValue += futureValue;
-        }
-    }
-
-    function getLendOrderIds(address _user)
-        public
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
-    {
-        uint256 activeOrderCount = 0;
-        uint256 inActiveOrderCount = 0;
-        bool isPastMaturity = Storage.slot().userCurrentMaturities[_user] !=
-            Storage.slot().maturity;
-
-        activeOrderIds = new uint48[](
-            isPastMaturity ? 0 : Storage.slot().activeLendOrderIds[_user].length
-        );
-        inActiveOrderIds = new uint48[](Storage.slot().activeLendOrderIds[_user].length);
-
-        for (uint256 i = 0; i < Storage.slot().activeLendOrderIds[_user].length; i++) {
-            uint48 orderId = Storage.slot().activeLendOrderIds[_user][i];
-            MarketOrder memory marketOrder = Storage.slot().orders[orderId];
-
-            if (
-                !Storage
-                    .slot()
-                    .lendOrders[Storage.slot().userCurrentMaturities[_user]]
-                    .isActiveOrderId(marketOrder.unitPrice, orderId)
-            ) {
-                inActiveOrderCount += 1;
-                inActiveOrderIds[i - activeOrderCount] = orderId;
-                if (!isPastMaturity) {
-                    assembly {
-                        mstore(activeOrderIds, sub(mload(activeOrderIds), 1))
-                    }
-                }
-            } else {
-                if (!isPastMaturity) {
-                    activeOrderCount += 1;
-                    activeOrderIds[i - inActiveOrderCount] = orderId;
-                }
-                assembly {
-                    mstore(inActiveOrderIds, sub(mload(inActiveOrderIds), 1))
-                }
-            }
-        }
-    }
-
-    function getBorrowOrderIds(address _user)
-        public
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds)
-    {
-        uint256 activeOrderCount = 0;
-        uint256 inActiveOrderCount = 0;
-        bool isPastMaturity = Storage.slot().userCurrentMaturities[_user] !=
-            Storage.slot().maturity;
-
-        activeOrderIds = new uint48[](
-            isPastMaturity ? 0 : Storage.slot().activeBorrowOrderIds[_user].length
-        );
-        inActiveOrderIds = new uint48[](Storage.slot().activeBorrowOrderIds[_user].length);
-
-        for (uint256 i = 0; i < Storage.slot().activeBorrowOrderIds[_user].length; i++) {
-            uint48 orderId = Storage.slot().activeBorrowOrderIds[_user][i];
-            MarketOrder memory marketOrder = Storage.slot().orders[orderId];
-
-            if (
-                !Storage
-                    .slot()
-                    .borrowOrders[Storage.slot().userCurrentMaturities[_user]]
-                    .isActiveOrderId(marketOrder.unitPrice, orderId)
-            ) {
-                inActiveOrderCount += 1;
-                inActiveOrderIds[i - activeOrderCount] = orderId;
-                if (!isPastMaturity) {
-                    assembly {
-                        mstore(activeOrderIds, sub(mload(activeOrderIds), 1))
-                    }
-                }
-            } else {
-                activeOrderCount += 1;
-                if (!isPastMaturity) {
-                    activeOrderIds[i - inActiveOrderCount] = orderId;
-                }
-                assembly {
-                    mstore(inActiveOrderIds, sub(mload(inActiveOrderIds), 1))
-                }
-            }
-        }
-    }
-
-    function calculateFilledAmount(
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
-    )
-        external
-        view
-        returns (
-            uint256 lastUnitPrice,
-            uint256 filledAmount,
-            uint256 filledAmountInFV
-        )
-    {
-        if (_amount == 0) return (0, 0, 0);
-
-        if (_side == ProtocolTypes.Side.LEND) {
-            uint256 cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
-                _circuitBreakerLimitRange,
-                getLowestBorrowingUnitPrice()
-            );
-
-            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice > cbThresholdUnitPrice)
-                ? cbThresholdUnitPrice
-                : _unitPrice;
-
-            return
-                Storage.slot().borrowOrders[Storage.slot().maturity].calculateDroppedAmountFromLeft(
-                    _amount,
-                    0,
-                    executedUnitPrice
-                );
-        } else {
-            uint256 cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
-                _circuitBreakerLimitRange,
-                getHighestLendingUnitPrice()
-            );
-
-            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice < cbThresholdUnitPrice)
-                ? cbThresholdUnitPrice
-                : _unitPrice;
-
-            return
-                Storage.slot().lendOrders[Storage.slot().maturity].calculateDroppedAmountFromRight(
-                    _amount,
-                    0,
-                    executedUnitPrice
-                );
-        }
-    }
-
-    function insertOrder(
-        ProtocolTypes.Side _side,
-        address _user,
-        uint256 _amount,
-        uint256 _unitPrice
-    ) external returns (uint48 orderId) {
-        orderId = _nextOrderId();
-        Storage.slot().orders[orderId] = MarketOrder(
-            _side,
-            _unitPrice,
-            Storage.slot().maturity,
-            block.timestamp
-        );
-
-        if (_side == ProtocolTypes.Side.LEND) {
-            Storage.slot().lendOrders[Storage.slot().maturity].insertOrder(
-                _unitPrice,
-                orderId,
-                _user,
-                _amount
-            );
-            Storage.slot().activeLendOrderIds[_user].push(orderId);
-        } else if (_side == ProtocolTypes.Side.BORROW) {
-            Storage.slot().borrowOrders[Storage.slot().maturity].insertOrder(
-                _unitPrice,
-                orderId,
-                _user,
-                _amount
-            );
-            Storage.slot().activeBorrowOrderIds[_user].push(orderId);
-        }
-    }
-
-    function fillOrders(
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _amountInFV,
-        uint256 _unitPrice
-    )
-        external
-        returns (
-            uint256 filledUnitPrice,
-            uint256 filledAmount,
-            uint256 filledFutureValue,
-            uint48 partiallyFilledOrderId,
-            address partiallyFilledMaker,
-            uint256 partiallyFilledAmount,
-            uint256 partiallyFilledFutureValue,
-            uint256 remainingAmount
-        )
-    {
-        PartiallyRemovedOrder memory partiallyRemovedOrder;
-
-        if (_side == ProtocolTypes.Side.BORROW) {
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                remainingAmount,
-                partiallyRemovedOrder
-            ) = Storage.slot().lendOrders[Storage.slot().maturity].dropRight(
-                _amount,
-                _amountInFV,
-                _unitPrice
-            );
-        } else if (_side == ProtocolTypes.Side.LEND) {
-            (
-                filledUnitPrice,
-                filledAmount,
-                filledFutureValue,
-                remainingAmount,
-                partiallyRemovedOrder
-            ) = Storage.slot().borrowOrders[Storage.slot().maturity].dropLeft(
-                _amount,
-                _amountInFV,
-                _unitPrice
-            );
-        }
-
-        partiallyFilledOrderId = partiallyRemovedOrder.orderId;
-        partiallyFilledMaker = partiallyRemovedOrder.maker;
-        partiallyFilledAmount = partiallyRemovedOrder.amount;
-        partiallyFilledFutureValue = partiallyRemovedOrder.futureValue;
-    }
-
-    function cleanLendOrders(address _user)
-        external
-        returns (
-            uint48[] memory orderIds,
-            uint256 activeOrderCount,
-            uint256 removedFutureValue,
-            uint256 removedOrderAmount
-        )
-    {
-        (
-            uint48[] memory activeLendOrderIds,
-            uint48[] memory inActiveLendOrderIds
-        ) = getLendOrderIds(_user);
-
-        Storage.slot().activeLendOrderIds[_user] = activeLendOrderIds;
-        activeOrderCount = activeLendOrderIds.length;
-        uint256 inactiveOrderCount = inActiveLendOrderIds.length;
-        orderIds = new uint48[](inactiveOrderCount);
-
-        for (uint256 i = 0; i < inactiveOrderCount; i++) {
-            (uint256 presentValue, uint256 futureValue) = _getLendOrderAmounts(
-                inActiveLendOrderIds[i]
-            );
-
-            removedOrderAmount += presentValue;
-            removedFutureValue += futureValue;
-            orderIds[i] = inActiveLendOrderIds[i];
-        }
-    }
-
-    function cleanBorrowOrders(address _user)
-        external
-        returns (
-            uint48[] memory orderIds,
-            uint256 activeOrderCount,
-            uint256 removedFutureValue,
-            uint256 removedOrderAmount
-        )
-    {
-        (
-            uint48[] memory activeBorrowOrderIds,
-            uint48[] memory inActiveBorrowOrderIds
-        ) = getBorrowOrderIds(_user);
-
-        Storage.slot().activeBorrowOrderIds[_user] = activeBorrowOrderIds;
-        activeOrderCount = activeBorrowOrderIds.length;
-        uint256 inactiveOrderCount = inActiveBorrowOrderIds.length;
-        orderIds = new uint48[](inactiveOrderCount);
-
-        for (uint256 i = 0; i < inactiveOrderCount; i++) {
-            (uint256 presentValue, uint256 futureValue) = _getBorrowOrderAmounts(
-                inActiveBorrowOrderIds[i]
-            );
-
-            removedOrderAmount += presentValue;
-            removedFutureValue += futureValue;
-            orderIds[i] = inActiveBorrowOrderIds[i];
-        }
-    }
-
-    function removeOrder(address _user, uint48 _orderId)
-        external
-        returns (
-            ProtocolTypes.Side,
-            uint256,
-            uint256
-        )
-    {
-        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
-        uint256 removedAmount;
-        if (marketOrder.side == ProtocolTypes.Side.LEND) {
-            removedAmount = Storage.slot().lendOrders[Storage.slot().maturity].removeOrder(
-                marketOrder.unitPrice,
-                _orderId
-            );
-            _removeOrderIdFromOrders(Storage.slot().activeLendOrderIds[_user], _orderId);
-        } else if (marketOrder.side == ProtocolTypes.Side.BORROW) {
-            removedAmount = Storage.slot().borrowOrders[Storage.slot().maturity].removeOrder(
-                marketOrder.unitPrice,
-                _orderId
-            );
-            _removeOrderIdFromOrders(Storage.slot().activeBorrowOrderIds[_user], _orderId);
-        }
-
-        return (marketOrder.side, removedAmount, marketOrder.unitPrice);
-    }
-
-    function getOpeningUnitPrice()
-        external
-        view
-        returns (
+            uint256 openingDate,
+            uint256 borrowUnitPrice,
+            uint256 lendUnitPrice,
+            uint256 midUnitPrice,
             uint256 openingUnitPrice,
-            uint256 lastLendUnitPrice,
-            uint256 lastBorrowUnitPrice,
-            uint256 totalOffsetAmount
+            bool isReady
         )
     {
-        uint256 lendUnitPrice = getHighestLendingUnitPrice();
-        uint256 borrowUnitPrice = getLowestBorrowingUnitPrice();
-        uint256 lendAmount = Storage.slot().lendOrders[Storage.slot().maturity].getNodeTotalAmount(
-            lendUnitPrice
-        );
-        uint256 borrowAmount = Storage
-            .slot()
-            .borrowOrders[Storage.slot().maturity]
-            .getNodeTotalAmount(borrowUnitPrice);
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
-        OrderStatisticsTreeLib.Tree storage borrowOrders = Storage.slot().borrowOrders[
-            Storage.slot().maturity
-        ];
-        OrderStatisticsTreeLib.Tree storage lendOrders = Storage.slot().lendOrders[
-            Storage.slot().maturity
-        ];
-
-        // return mid price when no lending and borrowing orders overwrap
-        if (borrowUnitPrice > lendUnitPrice) {
-            openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
-            return (openingUnitPrice, 0, 0, 0);
-        }
-
-        while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {
-            lastLendUnitPrice = lendUnitPrice;
-            lastBorrowUnitPrice = borrowUnitPrice;
-
-            if (lendAmount > borrowAmount) {
-                openingUnitPrice = lendUnitPrice;
-                totalOffsetAmount += borrowAmount;
-                lendAmount -= borrowAmount;
-                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
-                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
-            } else if (lendAmount < borrowAmount) {
-                openingUnitPrice = borrowUnitPrice;
-                totalOffsetAmount += lendAmount;
-                borrowAmount -= lendAmount;
-                lendUnitPrice = lendOrders.prev(lendUnitPrice);
-                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
-            } else {
-                openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
-                totalOffsetAmount += lendAmount;
-                lendUnitPrice = lendOrders.prev(lendUnitPrice);
-                borrowUnitPrice = borrowOrders.next(borrowUnitPrice);
-                lendAmount = lendOrders.getNodeTotalAmount(lendUnitPrice);
-                borrowAmount = borrowOrders.getNodeTotalAmount(borrowUnitPrice);
-            }
-        }
+        ccy = Storage.slot().ccy;
+        maturity = orderBook.maturity;
+        openingDate = orderBook.openingDate;
+        borrowUnitPrice = orderBook.getBestLendUnitPrice();
+        lendUnitPrice = orderBook.getBestBorrowUnitPrice();
+        midUnitPrice = getMidUnitPrice(_orderBookId);
+        openingUnitPrice = Storage.slot().itayoseLogs[orderBook.maturity].openingUnitPrice;
+        isReady = Storage.slot().isReady[maturity];
     }
 
-    function getOrderExecutionConditions(
-        ProtocolTypes.Side _side,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
-    )
-        external
-        returns (
-            bool isFilled,
-            uint256 executedUnitPrice,
-            uint256 cbThresholdUnitPrice,
-            bool ignoreRemainingAmount
-        )
-    {
-        require(_circuitBreakerLimitRange < Constants.PCT_DIGIT, "CB limit can not be so high");
-        cbThresholdUnitPrice = Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
-            _side
-        ];
-        bool isLend = _side == ProtocolTypes.Side.LEND;
-        bool orderExists;
-        uint256 bestUnitPrice;
-
-        if (isLend) {
-            bestUnitPrice = Storage.slot().borrowOrders[Storage.slot().maturity].first();
-            orderExists = bestUnitPrice != 0;
-
-            if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = getLendCircuitBreakerThreshold(
-                    _circuitBreakerLimitRange,
-                    bestUnitPrice
-                );
-                Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
-                        _side
-                    ] = cbThresholdUnitPrice;
-            }
-        } else {
-            bestUnitPrice = Storage.slot().lendOrders[Storage.slot().maturity].last();
-            orderExists = bestUnitPrice != 0;
-
-            if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
-                    _circuitBreakerLimitRange,
-                    bestUnitPrice
-                );
-
-                Storage.slot().circuitBreakerThresholdUnitPrices[block.number][
-                        _side
-                    ] = cbThresholdUnitPrice;
-            }
-        }
-
-        if (_unitPrice == 0 && !orderExists) revert("Order not found");
-
-        if (
-            _unitPrice == 0 ||
-            (orderExists &&
-                ((isLend && _unitPrice > cbThresholdUnitPrice) ||
-                    (!isLend && _unitPrice < cbThresholdUnitPrice)))
-        ) {
-            executedUnitPrice = cbThresholdUnitPrice;
-            ignoreRemainingAmount = true;
-        } else {
-            executedUnitPrice = _unitPrice;
-            ignoreRemainingAmount = false;
-        }
-
-        isFilled = isLend
-            ? (bestUnitPrice == 0 ? Constants.PRICE_DIGIT : bestUnitPrice) <= executedUnitPrice
-            : bestUnitPrice >= executedUnitPrice;
-    }
-
-    function getCircuitBreakerThresholds(uint256 _circuitBreakerLimitRange)
+    function getCircuitBreakerThresholds(uint8 _orderBookId, uint256 _circuitBreakerLimitRange)
         external
         view
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
-        maxLendUnitPrice = getLendCircuitBreakerThreshold(
-            _circuitBreakerLimitRange,
-            getLowestBorrowingUnitPrice()
-        );
-        minBorrowUnitPrice = getBorrowCircuitBreakerThreshold(
-            _circuitBreakerLimitRange,
-            getHighestLendingUnitPrice()
-        );
+        return _getOrderBook(_orderBookId).getCircuitBreakerThresholds(_circuitBreakerLimitRange);
     }
 
-    function getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        public
-        pure
-        returns (uint256 cbThresholdUnitPrice)
-    {
-        // NOTE: Formula of circuit breaker threshold for borrow orders:
-        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
-        uint256 numerator = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 denominator = _unitPrice *
-            Constants.PCT_DIGIT +
-            (Constants.PRICE_DIGIT - _unitPrice) *
-            (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = numerator.div(denominator);
+    function getBestLendUnitPrice(uint8 _orderBookId) public view returns (uint256) {
+        return _getOrderBook(_orderBookId).getBestLendUnitPrice();
+    }
 
-        if (_unitPrice > cbThresholdUnitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
-            cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
-        } else if (
-            _unitPrice < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-        ) {
-            cbThresholdUnitPrice = _unitPrice > Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                ? _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                : 1;
+    function getBestLendUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory unitPrices)
+    {
+        unitPrices = new uint256[](_orderBookIds.length);
+
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestLendUnitPrice();
         }
     }
 
-    function getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        public
-        pure
-        returns (uint256 cbThresholdUnitPrice)
-    {
-        // NOTE: Formula of circuit breaker threshold for lend orders:
-        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
-        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 den = _unitPrice *
-            Constants.PCT_DIGIT +
-            (Constants.PRICE_DIGIT - _unitPrice) *
-            (Constants.PCT_DIGIT - _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = num.div(den);
+    function getBestBorrowUnitPrice(uint8 _orderBookId) public view returns (uint256) {
+        return _getOrderBook(_orderBookId).getBestBorrowUnitPrice();
+    }
 
-        if (cbThresholdUnitPrice > _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
-            cbThresholdUnitPrice = _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
-        } else if (
-            cbThresholdUnitPrice < _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-        ) {
-            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD <=
-                Constants.PRICE_DIGIT
-                ? _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                : Constants.PRICE_DIGIT;
+    function getBestBorrowUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory unitPrices)
+    {
+        unitPrices = new uint256[](_orderBookIds.length);
+
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestBorrowUnitPrice();
         }
     }
 
-    /**
-     * @notice Increases and returns id of last order in order book.
-     * @return The new order id
-     */
-    function _nextOrderId() internal returns (uint48) {
-        Storage.slot().lastOrderId++;
-        return Storage.slot().lastOrderId;
+    function getMidUnitPrice(uint8 _orderBookId) public view returns (uint256) {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        uint256 borrowUnitPrice = orderBook.getBestLendUnitPrice();
+        uint256 lendUnitPrice = orderBook.getBestBorrowUnitPrice();
+        return (borrowUnitPrice + lendUnitPrice).div(2);
     }
 
-    function _removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) internal {
-        uint256 lastOrderIndex = orders.length - 1;
-        for (uint256 i = 0; i <= lastOrderIndex; i++) {
-            if (orders[i] == orderId) {
-                if (i != lastOrderIndex) {
-                    uint48 lastOrderId = orders[lastOrderIndex];
-                    orders[i] = lastOrderId;
+    function getMidUnitPrices(uint8[] memory _orderBookIds)
+        external
+        view
+        returns (uint256[] memory unitPrices)
+    {
+        unitPrices = new uint256[](_orderBookIds.length);
+
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            unitPrices[i] = getMidUnitPrice(_orderBookIds[i]);
+        }
+    }
+
+    function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit)
+        external
+        view
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        )
+    {
+        return _getOrderBook(_orderBookId).getBorrowOrderBook(_limit);
+    }
+
+    function getLendOrderBook(uint8 _orderBookId, uint256 _limit)
+        external
+        view
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        )
+    {
+        return _getOrderBook(_orderBookId).getLendOrderBook(_limit);
+    }
+
+    function getMaturities(uint8[] memory _orderBookIds)
+        public
+        view
+        returns (uint256[] memory maturities)
+    {
+        maturities = new uint256[](_orderBookIds.length);
+
+        for (uint256 i; i < _orderBookIds.length; i++) {
+            maturities[i] = _getOrderBook(_orderBookIds[i]).maturity;
+        }
+    }
+
+    function createOrderBook(uint256 _maturity, uint256 _openingDate)
+        public
+        returns (uint8 orderBookId)
+    {
+        orderBookId = _nextOrderBookId();
+
+        Storage.slot().isReady[_maturity] = _getOrderBook(orderBookId).initialize(
+            _maturity,
+            _openingDate
+        );
+
+        emit OrderBookCreated(orderBookId, _maturity, _openingDate);
+    }
+
+    function reopenOrderBook(
+        uint8 _orderBookId,
+        uint256 _newMaturity,
+        uint256 _openingDate
+    ) external {
+        OrderBookLib.OrderBook storage orderBook = Storage.slot().orderBooks[_orderBookId];
+        require(orderBook.isMatured(), "Market is not matured");
+        Storage.slot().isReady[_newMaturity] = orderBook.initialize(_newMaturity, _openingDate);
+    }
+
+    function executeItayoseCall(uint8 _orderBookId)
+        external
+        returns (
+            uint256 openingUnitPrice,
+            uint256 totalOffsetAmount,
+            uint256 openingDate,
+            PartiallyFilledOrder memory partiallyFilledLendingOrder,
+            PartiallyFilledOrder memory partiallyFilledBorrowingOrder
+        )
+    {
+        uint256 lastLendUnitPrice;
+        uint256 lastBorrowUnitPrice;
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+
+        (openingUnitPrice, lastLendUnitPrice, lastBorrowUnitPrice, totalOffsetAmount) = orderBook
+            .getOpeningUnitPrice();
+
+        if (totalOffsetAmount > 0) {
+            ProtocolTypes.Side[2] memory sides = [
+                ProtocolTypes.Side.LEND,
+                ProtocolTypes.Side.BORROW
+            ];
+
+            for (uint256 i; i < sides.length; i++) {
+                ProtocolTypes.Side partiallyFilledOrderSide;
+                PartiallyFilledOrder memory partiallyFilledOrder;
+                (, partiallyFilledOrder, , ) = orderBook.fillOrders(
+                    sides[i],
+                    totalOffsetAmount,
+                    0,
+                    0
+                );
+
+                if (partiallyFilledOrder.futureValue > 0) {
+                    if (sides[i] == ProtocolTypes.Side.LEND) {
+                        partiallyFilledOrderSide = ProtocolTypes.Side.BORROW;
+                        partiallyFilledBorrowingOrder = partiallyFilledOrder;
+                    } else {
+                        partiallyFilledOrderSide = ProtocolTypes.Side.LEND;
+                        partiallyFilledLendingOrder = partiallyFilledOrder;
+                    }
                 }
-
-                orders.pop();
-                break;
             }
+
+            emit ItayoseExecuted(
+                Storage.slot().ccy,
+                orderBook.maturity,
+                openingUnitPrice,
+                lastLendUnitPrice,
+                lastBorrowUnitPrice,
+                totalOffsetAmount
+            );
         }
+
+        Storage.slot().isReady[orderBook.maturity] = true;
+        Storage.slot().itayoseLogs[orderBook.maturity] = ItayoseLog(
+            openingUnitPrice,
+            lastLendUnitPrice,
+            lastBorrowUnitPrice
+        );
+        openingDate = orderBook.openingDate;
     }
 
-    function _getLendOrderAmounts(uint48 _orderId)
-        internal
+    function _nextOrderBookId() internal returns (uint8) {
+        Storage.slot().lastOrderBookId++;
+        return Storage.slot().lastOrderBookId;
+    }
+
+    function _getOrderBook(uint8 _orderBookId)
+        private
         view
-        returns (uint256 presentValue, uint256 futureValue)
+        returns (OrderBookLib.OrderBook storage)
     {
-        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
-        OrderItem memory orderItem = Storage.slot().lendOrders[marketOrder.maturity].getOrderById(
-            marketOrder.unitPrice,
-            _orderId
-        );
-
-        uint256 unitPrice = _getOrderUnitPrice(
-            marketOrder.side,
-            marketOrder.maturity,
-            marketOrder.unitPrice,
-            Storage.slot().isPreOrder[_orderId]
-        );
-
-        presentValue = orderItem.amount;
-        futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
-    }
-
-    function _getBorrowOrderAmounts(uint48 _orderId)
-        internal
-        view
-        returns (uint256 presentValue, uint256 futureValue)
-    {
-        MarketOrder memory marketOrder = Storage.slot().orders[_orderId];
-        OrderItem memory orderItem = Storage.slot().borrowOrders[marketOrder.maturity].getOrderById(
-            marketOrder.unitPrice,
-            _orderId
-        );
-        uint256 unitPrice = _getOrderUnitPrice(
-            marketOrder.side,
-            marketOrder.maturity,
-            marketOrder.unitPrice,
-            Storage.slot().isPreOrder[_orderId]
-        );
-
-        presentValue = orderItem.amount;
-        futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
-    }
-
-    function _getOrderUnitPrice(
-        ProtocolTypes.Side _side,
-        uint256 _maturity,
-        uint256 _unitPrice,
-        bool _isPreOrder
-    ) internal view returns (uint256) {
-        if (!_isPreOrder) return _unitPrice;
-        ItayoseLog memory itayoseLog = Storage.slot().itayoseLogs[_maturity];
-        if (
-            itayoseLog.openingUnitPrice != 0 &&
-            ((_side == ProtocolTypes.Side.BORROW && _unitPrice <= itayoseLog.lastBorrowUnitPrice) ||
-                (_side == ProtocolTypes.Side.LEND && _unitPrice >= itayoseLog.lastLendUnitPrice))
-        ) {
-            return itayoseLog.openingUnitPrice;
-        } else {
-            return _unitPrice;
-        }
+        return Storage.slot().orderBooks[_orderBookId];
     }
 }

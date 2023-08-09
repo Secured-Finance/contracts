@@ -28,10 +28,10 @@ struct Position {
 }
 ```
 
-### LendingMarketDetail
+### OrderBookDetail
 
 ```solidity
-struct LendingMarketDetail {
+struct OrderBookDetail {
   bytes32 ccy;
   uint256 maturity;
   uint256 bestLendUnitPrice;
@@ -42,6 +42,18 @@ struct LendingMarketDetail {
   uint256 openingUnitPrice;
   uint256 openingDate;
   bool isReady;
+}
+```
+
+### AdditionalFunds
+
+```solidity
+struct AdditionalFunds {
+  bytes32 ccy;
+  uint256 claimableAmount;
+  uint256 debtAmount;
+  uint256 lentAmount;
+  uint256 borrowedAmount;
 }
 ```
 
@@ -63,34 +75,46 @@ function isRedemptionRequired(address _user) external view returns (bool)
 function getGenesisDate(bytes32 ccy) external view returns (uint256)
 ```
 
-### getLendingMarkets
-
-```solidity
-function getLendingMarkets(bytes32 ccy) external view returns (address[])
-```
-
 ### getLendingMarket
 
 ```solidity
-function getLendingMarket(bytes32 ccy, uint256 maturity) external view returns (address)
+function getLendingMarket(bytes32 ccy) external view returns (address)
 ```
 
 ### getFutureValueVault
 
 ```solidity
-function getFutureValueVault(bytes32 ccy, uint256 maturity) external view returns (address)
+function getFutureValueVault(bytes32 ccy) external view returns (address)
 ```
 
-### getBorrowUnitPrices
+### getOrderBookId
 
 ```solidity
-function getBorrowUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
+function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8)
 ```
 
-### getLendUnitPrices
+### getOrderBookDetail
 
 ```solidity
-function getLendUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
+function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+```
+
+### getOrderBookDetails
+
+```solidity
+function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
+```
+
+### getBestLendUnitPrices
+
+```solidity
+function getBestLendUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
+```
+
+### getBestBorrowUnitPrices
+
+```solidity
+function getBestBorrowUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
 ```
 
 ### getMidUnitPrices
@@ -102,7 +126,7 @@ function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] unitPric
 ### getOrderEstimation
 
 ```solidity
-function getOrderEstimation(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 coverage, uint256 orderFeeInFV)
+function getOrderEstimation(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice, uint256 additionalDepositAmount, bool ignoreBorrowedAmount) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### getBorrowOrderBook
@@ -121,6 +145,12 @@ function getLendOrderBook(bytes32 ccy, uint256 maturity, uint256 limit) external
 
 ```solidity
 function getMaturities(bytes32 ccy) external view returns (uint256[])
+```
+
+### getOrderBookIds
+
+```solidity
+function getOrderBookIds(bytes32 ccy) external view returns (uint8[])
 ```
 
 ### getUsedCurrencies
@@ -174,7 +204,7 @@ function calculateFunds(bytes32 ccy, address user, uint256 liquidationThresholdR
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address user, bytes32 depositCcy, uint256 depositAmount, uint256 liquidationThresholdRate) external view returns (uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount, bool isEnoughDeposit)
+function calculateTotalFundsInBaseCurrency(address user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 liquidationThresholdRate) external view returns (uint256 plusDepositAmountInAdditionalFundsCcy, uint256 minusDepositAmountInAdditionalFundsCcy, uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
 ```
 
 ### isInitializedLendingMarket
@@ -189,10 +219,10 @@ function isInitializedLendingMarket(bytes32 ccy) external view returns (bool)
 function initializeLendingMarket(bytes32 ccy, uint256 genesisDate, uint256 compoundFactor, uint256 orderFeeRate, uint256 circuitBreakerLimitRange) external
 ```
 
-### createLendingMarket
+### createOrderBook
 
 ```solidity
-function createLendingMarket(bytes32 ccy, uint256 marketOpeningDate) external
+function createOrderBook(bytes32 ccy, uint256 marketOpeningDate) external
 ```
 
 ### executeOrder
@@ -267,10 +297,10 @@ function executeForcedRepayment(bytes32 _collateralCcy, bytes32 _debtCcy, uint25
 function cancelOrder(bytes32 ccy, uint256 maturity, uint48 orderId) external returns (bool)
 ```
 
-### rotateLendingMarkets
+### rotateOrderBooks
 
 ```solidity
-function rotateLendingMarkets(bytes32 ccy) external
+function rotateOrderBooks(bytes32 ccy) external
 ```
 
 ### executeEmergencyTermination

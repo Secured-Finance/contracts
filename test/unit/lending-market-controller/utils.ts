@@ -3,10 +3,7 @@ import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
 import { hexETH } from '../../../utils/strings';
-import {
-  MARKET_BASE_PERIOD,
-  MARKET_OBSERVATION_PERIOD,
-} from '../../common/constants';
+import { MARKET_BASE_PERIOD } from '../../common/constants';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
@@ -21,6 +18,7 @@ const ReserveFund = artifacts.require('ReserveFund');
 
 // libraries
 const OrderBookLogic = artifacts.require('OrderBookLogic');
+const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 const LendingMarketConfigurationLogic = artifacts.require(
   'LendingMarketConfigurationLogic',
 );
@@ -112,7 +110,6 @@ const deployContracts = async (owner: SignerWithAddress) => {
     .setLendingMarketControllerImpl(
       lendingMarketController.address,
       MARKET_BASE_PERIOD,
-      MARKET_OBSERVATION_PERIOD,
     )
     .then((tx) => tx.wait())
     .then(
@@ -186,10 +183,22 @@ const deployContracts = async (owner: SignerWithAddress) => {
   ]);
 
   // Set up for LendingMarketController
+  const orderReaderLogic = await deployContract(owner, OrderReaderLogic);
   const orderBookLogic = await deployContract(owner, OrderBookLogic);
+
+  const orderActionLogic = await ethers
+    .getContractFactory('OrderActionLogic', {
+      libraries: {
+        OrderReaderLogic: orderReaderLogic.address,
+      },
+    })
+    .then((factory) => factory.deploy());
+
   const lendingMarket = await ethers
     .getContractFactory('LendingMarket', {
       libraries: {
+        OrderActionLogic: orderActionLogic.address,
+        OrderReaderLogic: orderReaderLogic.address,
         OrderBookLogic: orderBookLogic.address,
       },
     })
@@ -214,6 +223,9 @@ const deployContracts = async (owner: SignerWithAddress) => {
     fundManagementLogic,
     lendingMarketOperationLogic,
     liquidationLogic,
+    orderActionLogic,
+    orderBookLogic,
+    orderReaderLogic,
   };
 };
 

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {EnumerableSet} from "../../../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {SafeCast} from "../../../dependencies/openzeppelin/contracts/utils/math/SafeCast.sol";
+// dependencies
+import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
+import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
@@ -10,6 +11,7 @@ import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {Constants} from "../Constants.sol";
+import {FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {LendingMarketConfigurationLogic} from "./LendingMarketConfigurationLogic.sol";
 import {LendingMarketOperationLogic} from "./LendingMarketOperationLogic.sol";
@@ -31,7 +33,9 @@ library LendingMarketUserLogic {
         address _user,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        uint256 _additionalDepositAmount,
+        bool _ignoreBorrowedAmount
     )
         external
         view
@@ -40,28 +44,27 @@ library LendingMarketUserLogic {
             uint256 filledAmount,
             uint256 filledAmountInFV,
             uint256 orderFeeInFV,
-            uint256 coverage
+            uint256 coverage,
+            bool isInsufficientDepositAmount
         )
     {
-        uint256 circuitBreakerLimitRange = LendingMarketConfigurationLogic
-            .getCircuitBreakerLimitRange(_ccy);
-        uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
-
-        (lastUnitPrice, filledAmount, filledAmountInFV) = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        ).calculateFilledAmount(_side, _amount, _unitPrice, circuitBreakerLimitRange);
-
-        orderFeeInFV = FundManagementLogic.calculateOrderFeeAmount(
-            _maturity,
-            filledAmountInFV,
-            orderFeeRate
-        );
-
-        coverage = AddressResolverLib.tokenVault().calculateCoverage(
-            _user,
-            _ccy,
+        (
+            lastUnitPrice,
             filledAmount,
-            _side
+            filledAmountInFV,
+            orderFeeInFV
+        ) = _calculateFilledAmountAndFee(_ccy, _maturity, _side, _amount, _unitPrice);
+
+        (coverage, isInsufficientDepositAmount) = _calculateCollateralCoverage(
+            _ccy,
+            _maturity,
+            _user,
+            _side,
+            filledAmount,
+            filledAmountInFV,
+            orderFeeInFV,
+            _additionalDepositAmount,
+            _ignoreBorrowedAmount
         );
     }
 
@@ -81,9 +84,10 @@ library LendingMarketUserLogic {
             .getCircuitBreakerLimitRange(_ccy);
 
         (
-            ILendingMarket.FilledOrder memory filledOrder,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
-        ) = ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).executeOrder(
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder
+        ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executeOrder(
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
                 _side,
                 _user,
                 _amount,
@@ -137,7 +141,8 @@ library LendingMarketUserLogic {
 
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
-        ILendingMarket(Storage.slot().maturityLendingMarkets[_ccy][_maturity]).executePreOrder(
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).executePreOrder(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
             _side,
             _user,
             _amount,
@@ -159,8 +164,8 @@ library LendingMarketUserLogic {
             .futureValue;
 
         (
-            ILendingMarket.FilledOrder memory filledOrder,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
             ProtocolTypes.Side side
         ) = _unwindPosition(_ccy, _maturity, _user, futureValue);
 
@@ -183,15 +188,14 @@ library LendingMarketUserLogic {
 
         // When the market is the nearest market and the user has only GV, a user still has future value after unwinding.
         // For that case, the `registerCurrencyAndMaturity` function needs to be called again.
-        (int256 currentFutureValue, ) = IFutureValueVault(
-            Storage.slot().futureValueVaults[_ccy][
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ]
-        ).getFutureValue(_user);
+        (int256 currentFutureValue, ) = IFutureValueVault(Storage.slot().futureValueVaults[_ccy])
+            .getBalance(Storage.slot().maturityOrderBookIds[_ccy][_maturity], _user);
 
         if (currentFutureValue != 0) {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
         }
+
+        require(AddressResolverLib.tokenVault().isCovered(_user), "Not enough collateral");
     }
 
     function updateFundsForTaker(
@@ -220,7 +224,6 @@ library LendingMarketUserLogic {
             LendingMarketOperationLogic.updateOrderLogs(
                 _ccy,
                 _maturity,
-                LendingMarketConfigurationLogic.getObservationPeriod(),
                 _filledUnitPrice,
                 _filledAmount,
                 _filledAmountInFV
@@ -241,7 +244,7 @@ library LendingMarketUserLogic {
         bytes32 _ccy,
         uint256 _maturity,
         ProtocolTypes.Side _side,
-        ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder
+        PartiallyFilledOrder memory partiallyFilledOrder
     ) public {
         if (partiallyFilledOrder.futureValue != 0) {
             FundManagementLogic.updateFunds(
@@ -336,14 +339,13 @@ library LendingMarketUserLogic {
             ILendingMarketController.Order[] memory inactiveOrders
         )
     {
-        ILendingMarket market = ILendingMarket(
-            Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-        );
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+        uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
 
         (uint48[] memory activeLendOrderIds, uint48[] memory inActiveLendOrderIds) = market
-            .getLendOrderIds(_user);
+            .getLendOrderIds(orderBookId, _user);
         (uint48[] memory activeBorrowOrderIds, uint48[] memory inActiveBorrowOrderIds) = market
-            .getBorrowOrderIds(_user);
+            .getBorrowOrderIds(orderBookId, _user);
 
         activeOrders = new ILendingMarketController.Order[](
             activeLendOrderIds.length + activeBorrowOrderIds.length
@@ -353,25 +355,27 @@ library LendingMarketUserLogic {
         );
 
         for (uint256 i; i < activeLendOrderIds.length; i++) {
-            activeOrders[i] = _getOrder(_ccy, market, activeLendOrderIds[i]);
+            activeOrders[i] = _getOrder(_ccy, market, orderBookId, activeLendOrderIds[i]);
         }
 
         for (uint256 i; i < activeBorrowOrderIds.length; i++) {
             activeOrders[activeLendOrderIds.length + i] = _getOrder(
                 _ccy,
                 market,
+                orderBookId,
                 activeBorrowOrderIds[i]
             );
         }
 
         for (uint256 i; i < inActiveLendOrderIds.length; i++) {
-            inactiveOrders[i] = _getOrder(_ccy, market, inActiveLendOrderIds[i]);
+            inactiveOrders[i] = _getOrder(_ccy, market, orderBookId, inActiveLendOrderIds[i]);
         }
 
         for (uint256 i; i < inActiveBorrowOrderIds.length; i++) {
             inactiveOrders[inActiveLendOrderIds.length + i] = _getOrder(
                 _ccy,
                 market,
+                orderBookId,
                 inActiveBorrowOrderIds[i]
             );
         }
@@ -380,6 +384,7 @@ library LendingMarketUserLogic {
     function _getOrder(
         bytes32 _ccy,
         ILendingMarket _market,
+        uint8 _orderBookId,
         uint48 _orderId
     ) internal view returns (ILendingMarketController.Order memory order) {
         (
@@ -390,7 +395,7 @@ library LendingMarketUserLogic {
             uint256 amount,
             uint256 timestamp,
             bool isPreOrder
-        ) = _market.getOrder(_orderId);
+        ) = _market.getOrder(_orderBookId, _orderId);
 
         order = ILendingMarketController.Order(
             _orderId,
@@ -401,6 +406,92 @@ library LendingMarketUserLogic {
             amount,
             timestamp,
             isPreOrder
+        );
+    }
+
+    function _calculateFilledAmountAndFee(
+        bytes32 _ccy,
+        uint256 _maturity,
+        ProtocolTypes.Side _side,
+        uint256 _amount,
+        uint256 _unitPrice
+    )
+        internal
+        view
+        returns (
+            uint256 lastUnitPrice,
+            uint256 filledAmount,
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV
+        )
+    {
+        uint256 circuitBreakerLimitRange = LendingMarketConfigurationLogic
+            .getCircuitBreakerLimitRange(_ccy);
+        uint256 orderFeeRate = LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
+
+        (lastUnitPrice, filledAmount, filledAmountInFV) = ILendingMarket(
+            Storage.slot().lendingMarkets[_ccy]
+        ).calculateFilledAmount(
+                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+                _side,
+                _amount,
+                _unitPrice,
+                circuitBreakerLimitRange
+            );
+
+        orderFeeInFV = FundManagementLogic.calculateOrderFeeAmount(
+            _maturity,
+            filledAmountInFV,
+            orderFeeRate
+        );
+    }
+
+    function _calculateCollateralCoverage(
+        bytes32 _ccy,
+        uint256 _maturity,
+        address _user,
+        ProtocolTypes.Side _side,
+        uint256 _filledAmount,
+        uint256 _filledAmountInFV,
+        uint256 _orderFeeInFV,
+        uint256 _additionalDepositAmount,
+        bool _ignoreBorrowedAmount
+    ) internal view returns (uint256 coverage, bool isInsufficientDepositAmount) {
+        uint256 filledAmountWithFeeInFV = _filledAmountInFV;
+
+        if (_side == ProtocolTypes.Side.LEND) {
+            filledAmountWithFeeInFV -= _orderFeeInFV;
+        } else {
+            filledAmountWithFeeInFV += _orderFeeInFV;
+        }
+
+        uint256 filledAmountWithFeeInPV = FundManagementLogic.calculatePVFromFV(
+            _ccy,
+            _maturity,
+            filledAmountWithFeeInFV
+        );
+
+        ILendingMarketController.AdditionalFunds memory funds;
+        funds.ccy = _ccy;
+        // Store the _additionalDepositAmount in the borrowedAmount,
+        // because the borrowedAmount is used as collateral.
+        funds.borrowedAmount = _additionalDepositAmount;
+
+        if (filledAmountWithFeeInPV > 0) {
+            if (_side == ProtocolTypes.Side.BORROW) {
+                if (!_ignoreBorrowedAmount) {
+                    funds.borrowedAmount += _filledAmount;
+                }
+                funds.debtAmount += filledAmountWithFeeInPV;
+            } else {
+                funds.lentAmount += _filledAmount;
+                funds.claimableAmount += filledAmountWithFeeInPV;
+            }
+        }
+
+        (coverage, isInsufficientDepositAmount) = AddressResolverLib.tokenVault().calculateCoverage(
+            _user,
+            funds
         );
     }
 
@@ -427,8 +518,8 @@ library LendingMarketUserLogic {
     )
         internal
         returns (
-            ILendingMarket.FilledOrder memory filledOrder,
-            ILendingMarket.PartiallyFilledOrder memory partiallyFilledOrder,
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
             ProtocolTypes.Side side
         )
     {
@@ -454,8 +545,14 @@ library LendingMarketUserLogic {
                 );
 
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwindPosition(side, _user, amountInFV, cbLimitRange);
+                Storage.slot().lendingMarkets[_ccy]
+            ).unwindPosition(
+                    Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+                    side,
+                    _user,
+                    amountInFV,
+                    cbLimitRange
+                );
         } else if (_futureValue < 0) {
             side = ProtocolTypes.Side.LEND;
             // To unwind all positions, calculate the future value taking into account
@@ -472,8 +569,14 @@ library LendingMarketUserLogic {
                 );
 
             (filledOrder, partiallyFilledOrder) = ILendingMarket(
-                Storage.slot().maturityLendingMarkets[_ccy][_maturity]
-            ).unwindPosition(side, _user, amountInFV, cbLimitRange);
+                Storage.slot().lendingMarkets[_ccy]
+            ).unwindPosition(
+                    Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+                    side,
+                    _user,
+                    amountInFV,
+                    cbLimitRange
+                );
         }
     }
 }

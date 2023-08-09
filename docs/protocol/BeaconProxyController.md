@@ -92,7 +92,7 @@ Reverts on deployment market with existing currency and term
 ### deployLendingMarket
 
 ```solidity
-function deployLendingMarket(bytes32 _ccy, uint256 _maturity, uint256 _openingDate) external returns (address market)
+function deployLendingMarket(bytes32 _ccy) external returns (address market)
 ```
 
 Deploys new LendingMarket
@@ -100,8 +100,6 @@ Deploys new LendingMarket
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Main currency for new lending market |
-| _maturity | uint256 | The initial maturity of the market |
-| _openingDate | uint256 | The timestamp when the market opens |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

@@ -91,14 +91,8 @@ describe('LendingMarketController - Rotations', () => {
       CIRCUIT_BREAKER_LIMIT_RANGE,
     );
     for (let i = 0; i < 5; i++) {
-      await lendingMarketControllerProxy.createLendingMarket(
-        currency,
-        genesisDate,
-      );
+      await lendingMarketControllerProxy.createOrderBook(currency, genesisDate);
     }
-
-    const marketAddresses =
-      await lendingMarketControllerProxy.getLendingMarkets(currency);
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
   };
@@ -149,8 +143,8 @@ describe('LendingMarketController - Rotations', () => {
 
       await time.increaseTo(maturities[0].toString());
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       await time.increaseTo(maturities[1].toString());
 
@@ -174,8 +168,8 @@ describe('LendingMarketController - Rotations', () => {
         );
 
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       const logs = await Promise.all([
         genesisValueVaultProxy.getAutoRollLog(targetCurrency, maturities[0]),
@@ -290,7 +284,7 @@ describe('LendingMarketController - Rotations', () => {
           );
 
         await time.increaseTo(maturities[0].toString());
-        await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+        await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
         maturities = await lendingMarketControllerProxy.getMaturities(
           targetCurrency,
@@ -394,8 +388,8 @@ describe('LendingMarketController - Rotations', () => {
       await time.increaseTo(maturities[0].toString());
 
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,
@@ -478,8 +472,8 @@ describe('LendingMarketController - Rotations', () => {
       );
 
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       const autoRollLogBefore = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,
@@ -579,8 +573,8 @@ describe('LendingMarketController - Rotations', () => {
       await time.increaseTo(maturities[0].toString());
 
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,
@@ -635,13 +629,13 @@ describe('LendingMarketController - Rotations', () => {
 
       await time.increaseTo(maturities[0].toString());
 
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       await time.increaseTo(maturities[1].toString());
 
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,
@@ -677,13 +671,13 @@ describe('LendingMarketController - Rotations', () => {
 
       await time.increaseTo(maturities[0].toString());
 
-      await lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency);
+      await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       await time.increaseTo(maturities[1].toString());
 
       await expect(
-        lendingMarketControllerProxy.rotateLendingMarkets(targetCurrency),
-      ).to.emit(lendingMarketOperationLogic, 'LendingMarketsRotated');
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
 
       const autoRollLog = await genesisValueVaultProxy.getAutoRollLog(
         targetCurrency,

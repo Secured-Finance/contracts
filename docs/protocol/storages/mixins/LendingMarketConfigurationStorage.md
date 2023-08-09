@@ -14,7 +14,6 @@ bytes32 STORAGE_SLOT
 struct Storage {
   mapping(bytes32 => uint256) orderFeeRates;
   mapping(bytes32 => uint256) circuitBreakerLimitRanges;
-  uint256 observationPeriod;
 }
 ```
 

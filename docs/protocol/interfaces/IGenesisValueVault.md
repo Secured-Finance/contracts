@@ -38,10 +38,16 @@ function getTotalLendingSupply(bytes32 ccy) external view returns (uint256)
 function getTotalBorrowingSupply(bytes32 ccy) external view returns (uint256)
 ```
 
-### getGenesisValue
+### getBalance
 
 ```solidity
-function getGenesisValue(bytes32 ccy, address user) external view returns (int256)
+function getBalance(bytes32 ccy, address user) external view returns (int256)
+```
+
+### getBalanceInFutureValue
+
+```solidity
+function getBalanceInFutureValue(bytes32 ccy, address user) external view returns (int256)
 ```
 
 ### getMaturityGenesisValue
@@ -78,12 +84,6 @@ function getAutoRollLog(bytes32 ccy, uint256 maturity) external view returns (st
 
 ```solidity
 function getLatestAutoRollLog(bytes32 ccy) external view returns (struct AutoRollLog)
-```
-
-### getGenesisValueInFutureValue
-
-```solidity
-function getGenesisValueInFutureValue(bytes32 ccy, address user) external view returns (int256)
 ```
 
 ### calculateFVFromFV
@@ -152,10 +152,10 @@ function updateGenesisValueWithResidualAmount(bytes32 ccy, address user, uint256
 function transferFrom(bytes32 ccy, address sender, address receiver, int256 amount) external
 ```
 
-### cleanUpGenesisValue
+### cleanUpBalance
 
 ```solidity
-function cleanUpGenesisValue(bytes32 ccy, address user, uint256 maturity) external
+function cleanUpBalance(bytes32 ccy, address user, uint256 maturity) external
 ```
 
 ### executeForcedReset

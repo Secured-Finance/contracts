@@ -50,33 +50,35 @@ Gets the total supply.
 | ---- | ---- | ----------- |
 | _maturity | uint256 | The maturity of the market |
 
-### getFutureValue
+### getBalance
 
 ```solidity
-function getFutureValue(address _user) public view returns (int256 futureValue, uint256 maturity)
+function getBalance(uint8 _orderBookId, address _user) public view returns (int256 balance, uint256 maturity)
 ```
 
-Gets the future value of the account.
+Gets the user balance.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User's address |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| futureValue | int256 | The future value |
+| balance | int256 | The user balance |
 | maturity | uint256 | The maturity of the market that the future value was added |
 
-### hasFutureValueInPastMaturity
+### hasBalanceAtPastMaturity
 
 ```solidity
-function hasFutureValueInPastMaturity(address _user, uint256 _maturity) public view returns (bool)
+function hasBalanceAtPastMaturity(uint8 _orderBookId, address _user, uint256 _maturity) public view returns (bool)
 ```
 
-Gets if the account has the future value amount in the selected maturity.
+Gets if the account has past maturity balance at the selected maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User's address |
 | _maturity | uint256 | The maturity of the market |
 
@@ -84,13 +86,13 @@ Gets if the account has the future value amount in the selected maturity.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the lending market is initialized or not |
 
-### addLendFutureValue
+### increase
 
 ```solidity
-function addLendFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
+function increase(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
 ```
 
-Adds the future value amount for lending deals.
+Increases amount for lending deals.
 
 _Since the total supply can be determined by totaling only the amounts on one side of the order
 when the order is fulfilled, the total supply is incremented only when the executor of the original order
@@ -98,18 +100,19 @@ is the taker._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User's address |
 | _amount | uint256 | The amount to add |
 | _maturity | uint256 | The maturity of the market |
 | _isTaker | bool | The boolean if the original order is created by a taker |
 
-### addBorrowFutureValue
+### decrease
 
 ```solidity
-function addBorrowFutureValue(address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
+function decrease(uint8 _orderBookId, address _user, uint256 _amount, uint256 _maturity, bool _isTaker) public
 ```
 
-Adds the future value amount for borrowing deals.
+Decreases amount for borrowing deals.
 
 _Since the total supply can be determined by totaling only the amounts on one side of the order
 when the order is fulfilled, the total supply is incremented only when the executor of the original order
@@ -117,6 +120,7 @@ is the taker._
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User's address |
 | _amount | uint256 | The amount to add |
 | _maturity | uint256 | The maturity of the market |
@@ -125,28 +129,30 @@ is the taker._
 ### transferFrom
 
 ```solidity
-function transferFrom(address _sender, address _receiver, int256 _amount, uint256 _maturity) external
+function transferFrom(uint8 _orderBookId, address _sender, address _receiver, int256 _amount, uint256 _maturity) external
 ```
 
 Transfers the future value from sender to receiver.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _sender | address | Sender's address |
 | _receiver | address | Receiver's address |
 | _amount | int256 | Amount of funds to sent |
 | _maturity | uint256 | The maturity of the market |
 
-### removeFutureValue
+### reset
 
 ```solidity
-function removeFutureValue(address _user, uint256 _activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
+function reset(uint8 _orderBookId, address _user, uint256 _activeMaturity) external returns (int256 removedAmount, int256 currentAmount, uint256 maturity, bool isAllRemoved)
 ```
 
-Removes all future values if there is an amount in the past maturity.
+Reset all amount if there is an amount in the past maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User's address |
 | _activeMaturity | uint256 |  |
 
@@ -157,13 +163,13 @@ Removes all future values if there is an amount in the past maturity.
 | maturity | uint256 | Maturity of future value |
 | isAllRemoved | bool | The boolean if the all future value amount in the selected maturity is removed |
 
-### addInitialTotalSupply
+### setInitialTotalSupply
 
 ```solidity
-function addInitialTotalSupply(uint256 _maturity, int256 _amount) external
+function setInitialTotalSupply(uint256 _maturity, int256 _amount) external
 ```
 
-Adds initial total supply at market opening
+Sets initial total supply at market opening
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -173,25 +179,27 @@ Adds initial total supply at market opening
 ### executeForcedReset
 
 ```solidity
-function executeForcedReset(address _user) external
+function executeForcedReset(uint8 _orderBookId, address _user) external
 ```
 
 Forces a reset of the user's future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User's address |
 
 ### executeForcedReset
 
 ```solidity
-function executeForcedReset(address _user, int256 _amount) external returns (int256 removedAmount, int256 balance)
+function executeForcedReset(uint8 _orderBookId, address _user, int256 _amount) external returns (int256 removedAmount, int256 balance)
 ```
 
 Forces a reset of the user's future value.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| _orderBookId | uint8 |  |
 | _user | address | User's address |
 | _amount | int256 | The amount to reset |
 

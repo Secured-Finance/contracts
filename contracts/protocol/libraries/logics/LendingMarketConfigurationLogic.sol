@@ -5,14 +5,13 @@ pragma solidity ^0.8.9;
 import {Constants} from "../../libraries/Constants.sol";
 import {RoundingUint256} from "../../libraries/math/RoundingUint256.sol";
 // storages
-import {LendingMarketConfigurationStorage as Storage} from "../../storages/LendingMarketConfigurationStorage.sol";
+import {LendingMarketConfigurationStorage as Storage} from "../../storages/mixins/LendingMarketConfigurationStorage.sol";
 
 library LendingMarketConfigurationLogic {
     using RoundingUint256 for uint256;
 
     event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
-    event ObservationPeriodUpdated(uint256 previousPeriod, uint256 period);
 
     function getCircuitBreakerLimitRange(bytes32 _ccy) public view returns (uint256) {
         return Storage.slot().circuitBreakerLimitRanges[_ccy];
@@ -20,10 +19,6 @@ library LendingMarketConfigurationLogic {
 
     function getOrderFeeRate(bytes32 _ccy) public view returns (uint256) {
         return Storage.slot().orderFeeRates[_ccy];
-    }
-
-    function getObservationPeriod() public view returns (uint256) {
-        return Storage.slot().observationPeriod;
     }
 
     function calculateOrderFeeAmount(
@@ -61,16 +56,6 @@ library LendingMarketConfigurationLogic {
             Storage.slot().circuitBreakerLimitRanges[_ccy] = _limitRange;
 
             emit CircuitBreakerLimitRangeUpdated(_ccy, previousRange, _limitRange);
-        }
-    }
-
-    function updateObservationPeriod(uint256 _observationPeriod) external {
-        uint256 previousPeriod = Storage.slot().observationPeriod;
-
-        if (_observationPeriod != previousPeriod) {
-            Storage.slot().observationPeriod = _observationPeriod;
-
-            emit ObservationPeriodUpdated(previousPeriod, _observationPeriod);
         }
     }
 }

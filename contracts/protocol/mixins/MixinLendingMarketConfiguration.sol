@@ -5,13 +5,10 @@ pragma solidity ^0.8.9;
 import {LendingMarketConfigurationLogic} from "../libraries/logics/LendingMarketConfigurationLogic.sol";
 // utils
 import {Ownable} from "../utils/Ownable.sol";
-// storages
-import {LendingMarketConfigurationStorage as Storage} from "../storages/LendingMarketConfigurationStorage.sol";
 
 contract MixinLendingMarketConfiguration is Ownable {
-    function _initialize(address _owner, uint256 _observationPeriod) internal {
+    function _initialize(address _owner) internal {
         _transferOwnership(_owner);
-        LendingMarketConfigurationLogic.updateObservationPeriod(_observationPeriod);
     }
 
     /**
@@ -20,7 +17,7 @@ contract MixinLendingMarketConfiguration is Ownable {
      * @return The order fee rate received by protocol
      */
     function getOrderFeeRate(bytes32 _ccy) public view returns (uint256) {
-        return Storage.slot().orderFeeRates[_ccy];
+        return LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
     }
 
     /**
@@ -29,15 +26,7 @@ contract MixinLendingMarketConfiguration is Ownable {
      * @return The auto-roll fee rate received by protocol
      */
     function getCircuitBreakerLimitRange(bytes32 _ccy) public view returns (uint256) {
-        return Storage.slot().circuitBreakerLimitRanges[_ccy];
-    }
-
-    /**
-     * @notice Gets the observation period
-     * @return The observation period to calculate the volume-weighted average price of transactions
-     */
-    function getObservationPeriod() public view returns (uint256) {
-        return Storage.slot().observationPeriod;
+        return LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy);
     }
 
     /**
@@ -56,13 +45,5 @@ contract MixinLendingMarketConfiguration is Ownable {
      */
     function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) public onlyOwner {
         LendingMarketConfigurationLogic.updateCircuitBreakerLimitRange(_ccy, _limitRange);
-    }
-
-    /**
-     * @notice Updates the observation period
-     * @param _observationPeriod The observation period to calculate the volume-weighted average price of transactions
-     */
-    function updateObservationPeriod(uint256 _observationPeriod) public onlyOwner {
-        LendingMarketConfigurationLogic.updateObservationPeriod(_observationPeriod);
     }
 }

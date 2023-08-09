@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {EnumerableSet} from "../../../dependencies/openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// dependencies
+import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
+// interfaces
+import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {CollateralParametersHandler as Params} from "../CollateralParametersHandler.sol";
@@ -16,22 +19,18 @@ library DepositManagementLogic {
     using RoundingUint256 for uint256;
 
     struct CalculatedFundVars {
+        uint256 plusDepositAmountInAdditionalFundsCcy;
+        uint256 minusDepositAmountInAdditionalFundsCcy;
         uint256 workingLendOrdersAmount;
         uint256 collateralAmount;
         uint256 lentAmount;
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
         uint256 borrowedAmount;
-        bool isEnoughDeposit;
     }
 
     function isCovered(address _user) public view returns (bool) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = calculateCollateral(
-            _user,
-            "",
-            0,
-            false
-        );
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = _getCollateral(_user);
 
         return
             totalUsedCollateral == 0 ||
@@ -84,7 +83,7 @@ library DepositManagementLogic {
             uint256 totalDeposit
         )
     {
-        return calculateCollateral(_user, "", 0, false);
+        return _getCollateral(_user);
     }
 
     function getCollateralAmount(address _user, bytes32 _ccy)
@@ -119,18 +118,24 @@ library DepositManagementLogic {
         totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
     }
 
+    function getCoverage(address _user) external view returns (uint256 coverage) {
+        ILendingMarketController.AdditionalFunds memory _emptyAdditionalFunds;
+        (coverage, ) = calculateCoverage(_user, _emptyAdditionalFunds);
+    }
+
     function calculateCoverage(
         address _user,
-        bytes32 _unsettledOrderCcy,
-        uint256 _unsettledOrderAmount,
-        bool _isUnsettledBorrowOrder
-    ) external view returns (uint256 coverage) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = calculateCollateral(
-            _user,
-            _unsettledOrderCcy,
-            _unsettledOrderAmount,
-            _isUnsettledBorrowOrder
-        );
+        ILendingMarketController.AdditionalFunds memory _additionalFunds
+    ) public view returns (uint256 coverage, bool isInsufficientDepositAmount) {
+        uint256 totalCollateral;
+        uint256 totalUsedCollateral;
+
+        (
+            totalCollateral,
+            totalUsedCollateral,
+            ,
+            isInsufficientDepositAmount
+        ) = _calculateCollateral(_user, _additionalFunds);
 
         if (totalCollateral == 0) {
             coverage = totalUsedCollateral == 0 ? 0 : type(uint256).max;
@@ -139,13 +144,8 @@ library DepositManagementLogic {
         }
     }
 
-    function calculateCollateral(
-        address _user,
-        bytes32 _unsettledOrderCcy,
-        uint256 _unsettledOrderAmount,
-        bool _isUnsettledBorrowOrder
-    )
-        public
+    function _getCollateral(address _user)
+        internal
         view
         returns (
             uint256 totalCollateral,
@@ -153,51 +153,53 @@ library DepositManagementLogic {
             uint256 totalDeposit
         )
     {
+        ILendingMarketController.AdditionalFunds memory _funds;
+        (totalCollateral, totalUsedCollateral, totalDeposit, ) = _calculateCollateral(
+            _user,
+            _funds
+        );
+    }
+
+    function _calculateCollateral(
+        address _user,
+        ILendingMarketController.AdditionalFunds memory _funds
+    )
+        internal
+        view
+        returns (
+            uint256 totalCollateral,
+            uint256 totalUsedCollateral,
+            uint256 totalDeposit,
+            bool isInsufficientDepositAmount
+        )
+    {
         CalculatedFundVars memory vars;
 
-        uint256 depositAmount = Storage.slot().depositAmounts[_user][_unsettledOrderCcy];
-        uint256 unsettledBorrowOrdersAmountInBaseCurrency;
-
-        if (_unsettledOrderAmount > 0) {
-            if (_isUnsettledBorrowOrder) {
-                unsettledBorrowOrdersAmountInBaseCurrency = AddressResolverLib
-                    .currencyController()
-                    .convertToBaseCurrency(_unsettledOrderCcy, _unsettledOrderAmount);
-            } else {
-                require(
-                    depositAmount >= _unsettledOrderAmount,
-                    "Not enough collateral in the selected currency"
-                );
-                depositAmount -= _unsettledOrderAmount;
-
-                if (Storage.slot().collateralCurrencies.contains(_unsettledOrderCcy)) {
-                    vars.workingLendOrdersAmount += AddressResolverLib
-                        .currencyController()
-                        .convertToBaseCurrency(_unsettledOrderCcy, _unsettledOrderAmount);
-                }
-            }
-        }
-
         (
+            vars.plusDepositAmountInAdditionalFundsCcy,
+            vars.minusDepositAmountInAdditionalFundsCcy,
             vars.workingLendOrdersAmount,
             ,
             vars.collateralAmount,
             vars.lentAmount,
             vars.workingBorrowOrdersAmount,
             vars.debtAmount,
-            vars.borrowedAmount,
-            vars.isEnoughDeposit
+            vars.borrowedAmount
         ) = AddressResolverLib.lendingMarketController().calculateTotalFundsInBaseCurrency(
             _user,
-            _unsettledOrderCcy,
-            depositAmount,
+            _funds,
             Params.liquidationThresholdRate()
         );
 
-        require(
-            vars.isEnoughDeposit || _isUnsettledBorrowOrder || _unsettledOrderAmount == 0,
-            "Not enough collateral in the selected currency"
-        );
+        // Check if the user has enough deposit amount for lending in the selected currency.
+        if (
+            _funds.lentAmount != 0 &&
+            (vars.plusDepositAmountInAdditionalFundsCcy +
+                Storage.slot().depositAmounts[_user][_funds.ccy] <
+                vars.minusDepositAmountInAdditionalFundsCcy)
+        ) {
+            isInsufficientDepositAmount = true;
+        }
 
         uint256 totalInternalDepositAmount = _getTotalInternalDepositAmountInBaseCurrency(_user);
 
@@ -206,10 +208,7 @@ library DepositManagementLogic {
         uint256 plusCollateral = plusDeposit + vars.collateralAmount;
 
         totalCollateral = plusCollateral >= minusDeposit ? plusCollateral - minusDeposit : 0;
-        totalUsedCollateral =
-            vars.workingBorrowOrdersAmount +
-            vars.debtAmount +
-            unsettledBorrowOrdersAmountInBaseCurrency;
+        totalUsedCollateral = vars.workingBorrowOrdersAmount + vars.debtAmount;
         totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
     }
 
@@ -273,7 +272,7 @@ library DepositManagementLogic {
     ) public {
         require(
             Storage.slot().depositAmounts[_user][_ccy] >= _amount,
-            "Not enough collateral in the selected currency"
+            "Not enough deposit in the selected currency"
         );
 
         Storage.slot().depositAmounts[_user][_ccy] -= _amount;
@@ -348,7 +347,7 @@ library DepositManagementLogic {
 
         (uint256 collateralAmount, , ) = getCollateralAmount(_user, _liquidationCcy);
 
-        require(collateralAmount != 0, "Not enough collateral in the selected currency");
+        require(collateralAmount != 0, "Zero collateral in the selected currency");
 
         uint256 liquidationAmountInBaseCcy = totalCollateralInBaseCcy * Constants.PCT_DIGIT >=
             totalUsedCollateralInBaseCcy * Params.liquidationThresholdRate()
