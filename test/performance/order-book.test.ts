@@ -223,6 +223,7 @@ describe('Performance Test: Order Book', async () => {
                 totalAmount,
                 unitPrice,
                 () => true,
+                () => true,
                 0,
                 0,
                 0,

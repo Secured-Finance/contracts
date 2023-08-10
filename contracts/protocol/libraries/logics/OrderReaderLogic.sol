@@ -161,24 +161,43 @@ library OrderReaderLogic {
         uint8 _orderBookId,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
+        uint256 _unitPrice
     )
         external
         view
         returns (
             uint256 lastUnitPrice,
             uint256 filledAmount,
-            uint256 filledAmountInFV
+            uint256 filledAmountInFV,
+            uint256 feeInFV
         )
     {
-        return
-            _getOrderBook(_orderBookId).calculateFilledAmount(
-                _side,
-                _amount,
-                _unitPrice,
-                _circuitBreakerLimitRange
-            );
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+
+        (lastUnitPrice, filledAmount, filledAmountInFV) = orderBook.calculateFilledAmount(
+            _side,
+            _amount,
+            _unitPrice,
+            Storage.slot().circuitBreakerLimitRange
+        );
+
+        feeInFV = calculateOrderFeeAmount(orderBook.maturity, filledAmountInFV);
+    }
+
+    function calculateOrderFeeAmount(uint256 _maturity, uint256 _amount)
+        public
+        view
+        returns (uint256 orderFeeAmount)
+    {
+        require(block.timestamp < _maturity, "Invalid maturity");
+        uint256 currentMaturity = _maturity - block.timestamp;
+
+        // NOTE: The formula is:
+        // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+        // orderFeeAmount = amount * actualRate
+        orderFeeAmount = (Storage.slot().orderFeeRate * currentMaturity * _amount).div(
+            Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT
+        );
     }
 
     function getLendOrderAmounts(OrderBookLib.OrderBook storage orderBook, uint48 _orderId)

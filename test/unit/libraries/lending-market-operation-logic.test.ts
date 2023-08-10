@@ -10,9 +10,6 @@ const { deployContract, loadFixture } = waffle;
 const LendingMarketOperationLogic = artifacts.require(
   'LendingMarketOperationLogic',
 );
-const LendingMarketConfigurationLogic = artifacts.require(
-  'LendingMarketConfigurationLogic',
-);
 
 describe('LendingMarketOperationLogic', function () {
   let owner: SignerWithAddress;
@@ -22,19 +19,7 @@ describe('LendingMarketOperationLogic', function () {
   });
 
   async function deployOnceFixture() {
-    const lendingMarketConfigurationLogic = await deployContract(
-      owner,
-      LendingMarketConfigurationLogic,
-    );
-
-    const lib = await ethers
-      .getContractFactory('LendingMarketOperationLogic', {
-        libraries: {
-          LendingMarketConfigurationLogic:
-            lendingMarketConfigurationLogic.address,
-        },
-      })
-      .then((factory) => factory.deploy());
+    const lib = await deployContract(owner, LendingMarketOperationLogic);
 
     return { lib, owner };
   }

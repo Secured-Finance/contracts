@@ -19,8 +19,8 @@ const ReserveFund = artifacts.require('ReserveFund');
 // libraries
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const OrderReaderLogic = artifacts.require('OrderReaderLogic');
-const LendingMarketConfigurationLogic = artifacts.require(
-  'LendingMarketConfigurationLogic',
+const LendingMarketOperationLogic = artifacts.require(
+  'LendingMarketOperationLogic',
 );
 const QuickSort = artifacts.require('QuickSort');
 
@@ -39,19 +39,10 @@ const deployContracts = async (owner: SignerWithAddress) => {
 
   // Deploy libraries
   const quickSort = await deployContract(owner, QuickSort);
-  const lendingMarketConfigurationLogic = await deployContract(
+  const lendingMarketOperationLogic = await deployContract(
     owner,
-    LendingMarketConfigurationLogic,
+    LendingMarketOperationLogic,
   );
-
-  const lendingMarketOperationLogic = await ethers
-    .getContractFactory('LendingMarketOperationLogic', {
-      libraries: {
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
-      },
-    })
-    .then((factory) => factory.deploy());
 
   const fundManagementLogic = await ethers
     .getContractFactory('FundManagementLogic', {
@@ -71,8 +62,6 @@ const deployContracts = async (owner: SignerWithAddress) => {
     .getContractFactory('LendingMarketUserLogic', {
       libraries: {
         FundManagementLogic: fundManagementLogic.address,
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
         LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       },
     })
@@ -93,8 +82,6 @@ const deployContracts = async (owner: SignerWithAddress) => {
         FundManagementLogic: fundManagementLogic.address,
         LendingMarketOperationLogic: lendingMarketOperationLogic.address,
         LendingMarketUserLogic: lendingMarketUserLogic.address,
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
         LiquidationLogic: liquidationLogic.address,
       },
     })

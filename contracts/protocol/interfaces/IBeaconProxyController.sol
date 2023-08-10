@@ -23,5 +23,9 @@ interface IBeaconProxyController {
 
     function deployFutureValueVault() external returns (address futureValueVault);
 
-    function deployLendingMarket(bytes32 ccy) external returns (address market);
+    function deployLendingMarket(
+        bytes32 ccy,
+        uint256 orderFeeRate,
+        uint256 limitRange
+    ) external returns (address market);
 }

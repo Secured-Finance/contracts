@@ -88,7 +88,8 @@ library FundManagementLogic {
         ProtocolTypes.Side side,
         uint256 indexed maturity,
         uint256 amount,
-        uint256 futureValue
+        uint256 amountInFV,
+        uint256 feeInFV
     );
 
     event OrdersFilledInAsync(
@@ -97,7 +98,7 @@ library FundManagementLogic {
         ProtocolTypes.Side side,
         uint256 indexed maturity,
         uint256 amount,
-        uint256 futureValue
+        uint256 amountInFV
     );
 
     event OrderPartiallyFilled(
@@ -107,7 +108,7 @@ library FundManagementLogic {
         ProtocolTypes.Side side,
         uint256 maturity,
         uint256 amount,
-        uint256 futureValue
+        uint256 amountInFV
     );
 
     event RedemptionExecuted(
@@ -175,22 +176,18 @@ library FundManagementLogic {
         ProtocolTypes.Side _side,
         uint256 _filledAmount,
         uint256 _filledAmountInFV,
-        uint256 _orderFeeRate,
+        uint256 _feeInFV,
         bool _isTaker
     ) external {
         address futureValueVault = Storage.slot().futureValueVaults[_ccy];
         uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][_maturity];
-
-        uint256 feeInFV = _isTaker
-            ? calculateOrderFeeAmount(_maturity, _filledAmountInFV, _orderFeeRate)
-            : 0;
 
         if (_side == ProtocolTypes.Side.BORROW) {
             AddressResolverLib.tokenVault().addDepositAmount(_user, _ccy, _filledAmount);
             IFutureValueVault(futureValueVault).decrease(
                 orderBookId,
                 _user,
-                _filledAmountInFV + feeInFV,
+                _filledAmountInFV + _feeInFV,
                 _maturity,
                 _isTaker
             );
@@ -199,18 +196,18 @@ library FundManagementLogic {
             IFutureValueVault(futureValueVault).increase(
                 orderBookId,
                 _user,
-                _filledAmountInFV - feeInFV,
+                _filledAmountInFV - _feeInFV,
                 _maturity,
                 _isTaker
             );
         }
 
-        if (feeInFV > 0) {
+        if (_feeInFV > 0) {
             address reserveFundAddr = address(AddressResolverLib.reserveFund());
             IFutureValueVault(futureValueVault).increase(
                 orderBookId,
                 reserveFundAddr,
-                feeInFV,
+                _feeInFV,
                 _maturity,
                 _side == ProtocolTypes.Side.LEND
             );

@@ -440,7 +440,6 @@ library OrderBookLib {
             bool orderExists
         )
     {
-        require(_circuitBreakerLimitRange < Constants.PCT_DIGIT, "CB limit can not be so high");
         uint256 cbThresholdUnitPrice = self.circuitBreakerThresholdUnitPrices[block.number][_side];
         bool isLend = _side == ProtocolTypes.Side.LEND;
         uint256 bestUnitPrice;

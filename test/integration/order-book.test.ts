@@ -1045,6 +1045,7 @@ describe('Integration Test: Order Book', async () => {
             0,
             0,
             0,
+            0,
             true,
           );
 
