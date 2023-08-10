@@ -145,9 +145,36 @@ describe('ReserveFund', () => {
     });
   });
 
-  describe('Emergency Settlement', async () => {
+  describe('Execute transaction', async () => {
     it('Execute emergency settlement', async () => {
-      await reserveFundProxy.executeEmergencySettlement();
+      const payload = mockLendingMarketController.interface.encodeFunctionData(
+        'executeEmergencySettlement',
+      );
+      await expect(
+        reserveFundProxy.executeTransaction(
+          mockLendingMarketController.address,
+          payload,
+        ),
+      ).to.emit(reserveFundProxy, 'TransactionExecuted');
+    });
+
+    it('Execute a deposit transaction', async () => {
+      const approveData = mockWETH.interface.encodeFunctionData(
+        'approve(address,uint256)',
+        [mockWETH.address, 1000],
+      );
+      const depositData = mockTokenVault.interface.encodeFunctionData(
+        'deposit(bytes32,uint256)',
+        [targetCurrency, 1000],
+      );
+
+      const targets = [mockWETH.address, mockTokenVault.address];
+      const values = [0, 0];
+      const data = [approveData, depositData];
+
+      await expect(
+        reserveFundProxy.executeTransactions(targets, values, data),
+      ).to.emit(reserveFundProxy, 'TransactionsExecuted');
     });
   });
 });

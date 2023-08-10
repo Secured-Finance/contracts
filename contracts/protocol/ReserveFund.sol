@@ -9,15 +9,15 @@ import {ERC20Handler} from "./libraries/ERC20Handler.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils
-import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
+import {MixinWallet} from "./mixins/MixinWallet.sol";
 // storages
 import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
 
 /**
  * @notice Implements managing of the reserve fund.
  */
-contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
+contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyable {
     receive() external payable {}
 
     /**
@@ -34,9 +34,8 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
     ) public initializer onlyProxy {
         Storage.slot().paused = false;
 
-        _transferOwnership(_owner);
         registerAddressResolver(_resolver);
-        ERC20Handler.initialize(_WETH9);
+        MixinWallet._initialize(_owner, _WETH9);
     }
 
     // @inheritdoc MixinAddressResolver
@@ -72,38 +71,19 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, Ownable, Proxyable {
 
     /**
      * @dev Deposits funds by the caller into the token vault as reserve fund.
-     * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
-    function deposit(bytes32 _ccy, uint256 _amount) external payable override onlyOwner {
-        address tokenAddress = tokenVault().getTokenAddress(_ccy);
-        if (ERC20Handler.baseCurrency() != tokenAddress) {
-            ERC20Handler.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
-            ERC20Handler.safeApprove(tokenAddress, address(tokenVault()), _amount);
-        }
-        tokenVault().deposit{value: msg.value}(_ccy, _amount);
+    function deposit(bytes32 _ccy, uint256 _amount) external payable onlyOwner {
+        _deposit(tokenVault(), _ccy, _amount);
     }
 
     /**
      * @dev Withdraw funds by the caller from the token vault.
-     * @param _amount Amount of funds to deposit
      * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
      */
-    function withdraw(bytes32 _ccy, uint256 _amount) external override onlyOwner {
-        tokenVault().withdraw(_ccy, _amount);
-
-        address tokenAddress = tokenVault().getTokenAddress(_ccy);
-        if (ERC20Handler.baseCurrency() == tokenAddress) {
-            ERC20Handler.safeTransferETH(msg.sender, _amount);
-        } else {
-            ERC20Handler.safeTransfer(tokenAddress, msg.sender, _amount);
-        }
-    }
-
-    /**
-     * @notice Force settlement of all lending and borrowing positions.
-     */
-    function executeEmergencySettlement() external override onlyOwner {
-        lendingMarketController().executeEmergencySettlement();
+    function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
+        _withdraw(tokenVault(), _ccy, _amount);
     }
 }

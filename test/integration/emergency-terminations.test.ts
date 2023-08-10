@@ -308,10 +308,22 @@ describe('Integration Test: Emergency terminations', async () => {
         await expect(
           lendingMarketController.connect(carol).executeEmergencySettlement(),
         ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
-        await expect(reserveFund.executeEmergencySettlement()).to.emit(
-          fundManagementLogic,
-          'EmergencySettlementExecuted',
+
+        // Execute forced redemption for reserve fund
+        const reserveFundPV =
+          await lendingMarketController.getTotalPresentValueInBaseCurrency(
+            reserveFund.address,
+          );
+        const data = lendingMarketController.interface.encodeFunctionData(
+          'executeEmergencySettlement',
         );
+        await expect(
+          reserveFund
+            .connect(owner)
+            .executeTransaction(lendingMarketController.address, data),
+        )
+          .to.emit(reserveFund, 'TransactionExecuted')
+          .withArgs(owner.address, lendingMarketController.address, 0, data);
 
         // Check future value
         for (const { address } of [alice, bob, carol, reserveFund]) {
@@ -722,10 +734,12 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController.connect(bob).executeEmergencySettlement(),
         ).to.revertedWith('Insufficient collateral');
 
-        await expect(reserveFund.executeEmergencySettlement()).to.emit(
-          fundManagementLogic,
-          'EmergencySettlementExecuted',
+        const data = lendingMarketController.interface.encodeFunctionData(
+          'executeEmergencySettlement',
         );
+        await expect(
+          reserveFund.executeTransaction(lendingMarketController.address, data),
+        ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
       });
 
       it('Withdraw all collateral', async () => {

@@ -11,8 +11,10 @@ import {ERC20Handler} from "../protocol/libraries/ERC20Handler.sol";
 // interfaces
 import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketController.sol";
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
+// mixins
+import {MixinWallet} from "../protocol/mixins/MixinWallet.sol";
 
-contract Liquidator is ILiquidationReceiver {
+contract Liquidator is ILiquidationReceiver, MixinWallet {
     bytes32 public immutable baseCurrency;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
@@ -33,6 +35,7 @@ contract Liquidator is ILiquidationReceiver {
         tokenVault = ITokenVault(_tokenVault);
         uniswapRouter = ISwapRouter(_uniswapRouter);
         uniswapQuoter = IQuoter(_uniswapQuoter);
+        MixinWallet._initialize(msg.sender, tokenVault.getTokenAddress(_baseCurrency));
     }
 
     receive() external payable {}
@@ -161,6 +164,24 @@ contract Liquidator is ILiquidationReceiver {
         );
 
         return true;
+    }
+
+    /**
+     * @dev Deposits funds by the caller into the token vault.
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
+     */
+    function deposit(bytes32 _ccy, uint256 _amount) external payable onlyOwner {
+        _deposit(tokenVault, _ccy, _amount);
+    }
+
+    /**
+     * @dev Withdraws funds by the caller from the token vault.
+     * @param _ccy Currency name in bytes32
+     * @param _amount Amount of funds to deposit
+     */
+    function withdraw(bytes32 _ccy, uint256 _amount) external onlyOwner {
+        _withdraw(tokenVault, _ccy, _amount);
     }
 
     function _executeSwap(

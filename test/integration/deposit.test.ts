@@ -26,6 +26,7 @@ describe('Integration Test: Deposit', async () => {
 
   let currencyController: Contract;
   let tokenVault: Contract;
+  let reserveFund: Contract;
   let lendingMarketController: Contract;
   let wETHToken: Contract;
   let usdcToken: Contract;
@@ -33,6 +34,11 @@ describe('Integration Test: Deposit', async () => {
   let wBTCToken: Contract;
 
   let fundManagementLogic: Contract;
+
+  let addressResolver: Contract;
+  let mockUniswapRouter: Contract;
+  let mockUniswapQuoter: Contract;
+  let liquidator: Contract;
 
   let genesisDate: number;
   let filMaturities: BigNumber[];
@@ -65,8 +71,10 @@ describe('Integration Test: Deposit', async () => {
 
     ({
       genesisDate,
+      addressResolver,
       currencyController,
       tokenVault,
+      reserveFund,
       lendingMarketController,
       wETHToken,
       usdcToken,
@@ -1117,6 +1125,242 @@ describe('Integration Test: Deposit', async () => {
         .reverted;
       await expect(tokenVault.getDepositAmount(bob.address, hexWFIL)).not.to.be
         .reverted;
+    });
+  });
+
+  describe('Deposit and withdraw wFIL using MixinWallet', async () => {
+    before(async () => {
+      mockUniswapRouter = await ethers
+        .getContractFactory('MockUniswapRouter')
+        .then((factory) =>
+          factory.deploy(addressResolver.address, wETHToken.address),
+        );
+      mockUniswapQuoter = await ethers
+        .getContractFactory('MockUniswapQuoter')
+        .then((factory) =>
+          factory.deploy(addressResolver.address, wETHToken.address),
+        );
+
+      liquidator = await ethers
+        .getContractFactory('Liquidator')
+        .then((factory) =>
+          factory.deploy(
+            hexETH,
+            lendingMarketController.address,
+            tokenVault.address,
+            mockUniswapRouter.address,
+            mockUniswapQuoter.address,
+          ),
+        );
+    });
+    it('Deposit wFIL on ReserveFund contract', async () => {
+      const depositAmount = initialFILBalance.div(5);
+      await wFILToken
+        .connect(owner)
+        .approve(reserveFund.address, depositAmount);
+
+      // the owner of ReserveFund execute the approve and deposit transactions on behalf of the ReserveFund
+      await expect(
+        reserveFund.connect(owner).deposit(hexWFIL, depositAmount),
+      ).to.emit(tokenVault, 'Deposit');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
+    });
+
+    it('Withdraw all wFIL deposit on ReserveFund contract', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountBefore).not.equal(0);
+
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmountBefore],
+      );
+
+      await expect(
+        reserveFund
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter).to.equal(0);
+    });
+
+    it('Deposit wFIL on ReserveFund contract using wallet transactions', async () => {
+      const depositAmount = initialFILBalance.div(5);
+      // Move some wFIL to ReserveFund address first
+      await wFILToken
+        .connect(owner)
+        .transfer(reserveFund.address, depositAmount);
+
+      const approveData = wFILToken.interface.encodeFunctionData(
+        'approve(address,uint256)',
+        [tokenVault.address, depositAmount],
+      );
+      const depositData = tokenVault.interface.encodeFunctionData(
+        'deposit(bytes32,uint256)',
+        [hexWFIL, depositAmount],
+      );
+      // the owner of ReserveFund execute the approve and deposit transactions on behalf of the ReserveFund
+      const targets = [wFILToken.address, tokenVault.address];
+      const values = [0, 0];
+      const data = [approveData, depositData];
+      await expect(
+        reserveFund
+          .connect(owner)
+          .executeTransactions(targets, values, data, {}),
+      )
+        .to.emit(reserveFund, 'TransactionsExecuted')
+        .withArgs(owner.address, targets, values, data);
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
+    });
+
+    it('Withdraw all wFIL deposit on ReserveFund contract using wallet transaction', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountBefore).not.equal(0);
+
+      // Withdraw from the reservefund's fund
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmountBefore],
+      );
+
+      await expect(
+        reserveFund
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        reserveFund.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter).to.equal(0);
+    });
+
+    it('Deposit wFIL on Liquidator contract', async () => {
+      const depositAmount = initialFILBalance.div(5);
+      // Move some wFIL to Liquidator address first
+      await wFILToken.connect(owner).approve(liquidator.address, depositAmount);
+
+      // the owner of Liquidator contract execute the approve and deposit transactions on behalf of the Liquidator
+      await expect(
+        liquidator.connect(owner).deposit(hexWFIL, depositAmount),
+      ).to.emit(tokenVault, 'Deposit');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
+    });
+
+    it('Withdraw all wFIL deposit on Liquidator contract', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountBefore).not.equal(0);
+
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmountBefore],
+      );
+
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter).to.equal(0);
+    });
+
+    it('Deposit wFIL on Liquidator contract using wallet transactions', async () => {
+      const depositAmount = initialFILBalance.div(5);
+      // Move some wFIL to Liquidator address first
+      await wFILToken
+        .connect(owner)
+        .transfer(liquidator.address, depositAmount);
+
+      const approveData = wFILToken.interface.encodeFunctionData(
+        'approve(address,uint256)',
+        [tokenVault.address, depositAmount],
+      );
+      const depositData = tokenVault.interface.encodeFunctionData(
+        'deposit(bytes32,uint256)',
+        [hexWFIL, depositAmount],
+      );
+      // the owner of Liquidator execute the approve and deposit transactions on behalf of the Liquidator
+      const targets = [wFILToken.address, tokenVault.address];
+      const values = [0, 0];
+      const data = [approveData, depositData];
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeTransactions(
+            [wFILToken.address, tokenVault.address],
+            [0, 0],
+            [approveData, depositData],
+            {},
+          ),
+      )
+        .to.emit(liquidator, 'TransactionsExecuted')
+        .withArgs(owner.address, targets, values, data);
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter.sub(depositAmount)).to.equal(0);
+    });
+
+    it('Withdraw all wFIL deposit on liquidator contract using wallet transaction', async () => {
+      const depositAmountBefore = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountBefore).not.equal(0);
+
+      // Withdraw from the liquidator's fund
+      const withdrawPayload = tokenVault.interface.encodeFunctionData(
+        'withdraw(bytes32,uint256)',
+        [hexWFIL, depositAmountBefore],
+      );
+
+      await expect(
+        liquidator
+          .connect(owner)
+          .executeTransaction(tokenVault.address, withdrawPayload, {}),
+      ).to.emit(tokenVault, 'Withdraw');
+
+      const depositAmountAfter = await tokenVault.getDepositAmount(
+        liquidator.address,
+        hexWFIL,
+      );
+      expect(depositAmountAfter).to.equal(0);
     });
   });
 });
