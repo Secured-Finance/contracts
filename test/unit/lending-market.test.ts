@@ -977,6 +977,9 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_mine', []);
 
+          await bobTx.wait();
+          await carolTx.wait();
+
           await expect(bobTx)
             .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
@@ -1048,6 +1051,9 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_mine', []);
 
+          await bobTx.wait();
+          await carolTx.wait();
+
           await expect(bobTx)
             .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
@@ -1066,8 +1072,6 @@ describe('LendingMarket', () => {
               0,
               false,
             );
-
-          await ethers.provider.send('evm_mine', []);
 
           await expect(carolTx)
             .to.emit(orderActionLogic, 'OrderExecuted')
@@ -1169,6 +1173,8 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_mine', []);
 
+          await carolTx2.wait();
+
           await expect(carolTx1)
             .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
@@ -1236,6 +1242,8 @@ describe('LendingMarket', () => {
             );
 
           await ethers.provider.send('evm_mine', []);
+
+          await carolTx.wait();
 
           await expect(bobTx)
             .to.emit(orderActionLogic, 'OrderExecuted')
@@ -1307,6 +1315,9 @@ describe('LendingMarket', () => {
             );
 
           await ethers.provider.send('evm_mine', []);
+
+          await bobTx.wait();
+          await carolTx.wait();
 
           await expect(bobTx)
             .to.emit(orderActionLogic, 'OrderExecuted')
@@ -1400,6 +1411,9 @@ describe('LendingMarket', () => {
 
           await ethers.provider.send('evm_mine', []);
 
+          await bobTx.wait();
+          await carolTx.wait();
+
           await expect(bobTx)
             .to.emit(orderActionLogic, 'OrderExecuted')
             .withArgs(
@@ -1491,6 +1505,9 @@ describe('LendingMarket', () => {
             );
 
           await ethers.provider.send('evm_mine', []);
+
+          await bobTx.wait();
+          await carolTx.wait();
 
           await expect(bobTx)
             .to.emit(orderActionLogic, 'OrderExecuted')
@@ -1788,6 +1805,8 @@ describe('LendingMarket', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+
+        await tx.wait();
 
         await expect(tx)
           .to.emit(orderActionLogic, 'PositionUnwound')
