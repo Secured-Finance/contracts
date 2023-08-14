@@ -15,16 +15,14 @@ describe('LendingMarket - Initialization', () => {
   let owner: SignerWithAddress;
   let signers: SignerWithAddress[];
 
-  const initialize = async () => {
+  before(async () => {
     [owner, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller } = await deployContracts(owner));
-
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-  };
+  });
 
   beforeEach(async () => {
-    await initialize();
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    currencyIdx++;
   });
 
   it('Deploy Lending Market', async () => {

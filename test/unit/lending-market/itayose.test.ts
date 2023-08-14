@@ -25,10 +25,21 @@ describe('LendingMarket - Itayose', () => {
   let orderBookLogic: Contract;
   let currentOrderBookId: BigNumber;
 
-  const initialize = async (maturity: number, openingDate: number) => {
+  before(async () => {
     [owner, alice, bob, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller, orderBookLogic, orderActionLogic } =
       await deployContracts(owner));
+  });
+
+  beforeEach(async () => {
+    const { timestamp } = await ethers.provider.getBlock('latest');
+    maturity = moment(timestamp * 1000)
+      .add(1, 'M')
+      .unix();
+
+    const openingDate = moment(timestamp * 1000)
+      .add(48, 'h')
+      .unix();
 
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
@@ -46,19 +57,6 @@ describe('LendingMarket - Itayose', () => {
     currentOrderBookId = await lendingMarketCaller.getOrderBookId(
       targetCurrency,
     );
-  };
-
-  beforeEach(async () => {
-    const { timestamp } = await ethers.provider.getBlock('latest');
-    maturity = moment(timestamp * 1000)
-      .add(1, 'M')
-      .unix();
-
-    const openingDate = moment(timestamp * 1000)
-      .add(48, 'h')
-      .unix();
-
-    await initialize(maturity, openingDate);
   });
 
   const tests = [

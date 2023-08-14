@@ -24,9 +24,6 @@ describe('LendingMarket - Orders', () => {
   let currentOrderBookId: BigNumber;
 
   const initialize = async (maturity: number, openingDate: number) => {
-    [owner, alice, bob, ...signers] = await ethers.getSigners();
-    ({ lendingMarketCaller, orderActionLogic } = await deployContracts(owner));
-
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
@@ -43,6 +40,11 @@ describe('LendingMarket - Orders', () => {
       targetCurrency,
     );
   };
+
+  before(async () => {
+    [owner, alice, bob, ...signers] = await ethers.getSigners();
+    ({ lendingMarketCaller, orderActionLogic } = await deployContracts(owner));
+  });
 
   describe('Clean up orders', async () => {
     let maturity: number;

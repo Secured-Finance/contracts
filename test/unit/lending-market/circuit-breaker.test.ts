@@ -30,27 +30,6 @@ describe('LendingMarket - Circuit Breaker', () => {
   let orderActionLogic: Contract;
   let currentOrderBookId: BigNumber;
 
-  const initialize = async (maturity: number, openingDate: number) => {
-    [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
-    ({ lendingMarketCaller, orderActionLogic } = await deployContracts(owner));
-
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-
-    ({ lendingMarket } = await deployOrderBooks(
-      targetCurrency,
-      maturity,
-      openingDate,
-      lendingMarketCaller,
-    ));
-
-    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
-
-    currentOrderBookId = await lendingMarketCaller.getOrderBookId(
-      targetCurrency,
-    );
-  };
-
   const createInitialOrders = async (
     side: number,
     unitPrice: number,
@@ -83,6 +62,11 @@ describe('LendingMarket - Circuit Breaker', () => {
     return offsetUnitPrice;
   };
 
+  before(async () => {
+    [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
+    ({ lendingMarketCaller, orderActionLogic } = await deployContracts(owner));
+  });
+
   beforeEach(async () => {
     await ethers.provider.send('evm_setAutomine', [true]);
     const { timestamp } = await ethers.provider.getBlock('latest');
@@ -92,7 +76,21 @@ describe('LendingMarket - Circuit Breaker', () => {
 
     const openingDate = moment(timestamp * 1000).unix();
 
-    await initialize(maturity, openingDate);
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    currencyIdx++;
+
+    ({ lendingMarket } = await deployOrderBooks(
+      targetCurrency,
+      maturity,
+      openingDate,
+      lendingMarketCaller,
+    ));
+
+    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
+
+    currentOrderBookId = await lendingMarketCaller.getOrderBookId(
+      targetCurrency,
+    );
   });
 
   describe('Get circuit breaker thresholds', async () => {

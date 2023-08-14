@@ -20,24 +20,10 @@ describe('LendingMarket - Calculations', () => {
   let lendingMarket: Contract;
   let currentOrderBookId: BigNumber;
 
-  const initialize = async (maturity: number, openingDate: number) => {
+  before(async () => {
     [owner, alice, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller } = await deployContracts(owner));
-
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-
-    ({ lendingMarket } = await deployOrderBooks(
-      targetCurrency,
-      maturity,
-      openingDate,
-      lendingMarketCaller,
-    ));
-
-    currentOrderBookId = await lendingMarketCaller.getOrderBookId(
-      targetCurrency,
-    );
-  };
+  });
 
   beforeEach(async () => {
     const { timestamp } = await ethers.provider.getBlock('latest');
@@ -45,7 +31,19 @@ describe('LendingMarket - Calculations', () => {
       .add(1, 'M')
       .unix();
 
-    await initialize(maturity, timestamp);
+    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
+    currencyIdx++;
+
+    ({ lendingMarket } = await deployOrderBooks(
+      targetCurrency,
+      maturity,
+      timestamp,
+      lendingMarketCaller,
+    ));
+
+    currentOrderBookId = await lendingMarketCaller.getOrderBookId(
+      targetCurrency,
+    );
   });
 
   it('Calculate the filled amount from one lending order', async () => {
