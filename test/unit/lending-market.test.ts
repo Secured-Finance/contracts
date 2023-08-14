@@ -43,7 +43,7 @@ describe('LendingMarket', () => {
   let orderBookLogic: Contract;
   let currentOrderBookId: BigNumber;
 
-  const initialize = async (maturity: number, openingDate: number) => {
+  const deployOrderBooks = async (maturity: number, openingDate: number) => {
     targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
     currencyIdx++;
 
@@ -70,7 +70,7 @@ describe('LendingMarket', () => {
     );
   };
 
-  before(async () => {
+  const initialize = async (maturity?: number, openingDate?: number) => {
     [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
 
     // Deploy contracts
@@ -164,9 +164,17 @@ describe('LendingMarket', () => {
     await beaconProxyControllerProxy.setLendingMarketImpl(
       lendingMarket.address,
     );
-  });
+
+    if (maturity && openingDate) {
+      await deployOrderBooks(maturity, openingDate);
+    }
+  };
 
   describe('Initialization', async () => {
+    beforeEach(async () => {
+      await initialize();
+    });
+
     it('Deploy Lending Market', async () => {
       await lendingMarketCaller.deployLendingMarket(
         ethers.utils.formatBytes32String('Test'),
