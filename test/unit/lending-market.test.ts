@@ -826,6 +826,7 @@ describe('LendingMarket', () => {
     let maturity: number;
 
     beforeEach(async () => {
+      await ethers.provider.send('evm_setAutomine', [true]);
       const { timestamp } = await ethers.provider.getBlock('latest');
       maturity = moment(timestamp * 1000)
         .add(1, 'M')
