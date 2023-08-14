@@ -26,16 +26,7 @@ library LendingMarketUserLogic {
     using SafeCast for int256;
     using RoundingUint256 for uint256;
 
-    function getOrderEstimation(
-        bytes32 _ccy,
-        uint256 _maturity,
-        address _user,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _additionalDepositAmount,
-        bool _ignoreBorrowedAmount
-    )
+    function getOrderEstimation(ILendingMarketController.GetOrderEstimationParams memory input)
         external
         view
         returns (
@@ -43,28 +34,36 @@ library LendingMarketUserLogic {
             uint256 filledAmount,
             uint256 filledAmountInFV,
             uint256 orderFeeInFV,
+            uint256 placedAmount,
             uint256 coverage,
             bool isInsufficientDepositAmount
         )
     {
-        (lastUnitPrice, filledAmount, filledAmountInFV, orderFeeInFV) = _calculateFilledAmount(
-            _ccy,
-            _maturity,
-            _side,
-            _amount,
-            _unitPrice
-        );
-
-        (coverage, isInsufficientDepositAmount) = _calculateCollateralCoverage(
-            _ccy,
-            _maturity,
-            _user,
-            _side,
+        (
+            lastUnitPrice,
             filledAmount,
             filledAmountInFV,
             orderFeeInFV,
-            _additionalDepositAmount,
-            _ignoreBorrowedAmount
+            placedAmount
+        ) = _calculateFilledAmount(
+            input.ccy,
+            input.maturity,
+            input.side,
+            input.amount,
+            input.unitPrice
+        );
+
+        (coverage, isInsufficientDepositAmount) = _calculateCollateralCoverage(
+            input.ccy,
+            input.maturity,
+            input.user,
+            input.side,
+            input.additionalDepositAmount,
+            input.ignoreBorrowedAmount,
+            filledAmount,
+            filledAmountInFV,
+            orderFeeInFV,
+            placedAmount
         );
     }
 
@@ -422,17 +421,22 @@ library LendingMarketUserLogic {
             uint256 lastUnitPrice,
             uint256 filledAmount,
             uint256 filledAmountInFV,
-            uint256 orderFeeInFV
+            uint256 orderFeeInFV,
+            uint256 placedAmount
         )
     {
-        (lastUnitPrice, filledAmount, filledAmountInFV, orderFeeInFV) = ILendingMarket(
-            Storage.slot().lendingMarkets[_ccy]
-        ).calculateFilledAmount(
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-                _side,
-                _amount,
-                _unitPrice
-            );
+        (
+            lastUnitPrice,
+            filledAmount,
+            filledAmountInFV,
+            orderFeeInFV,
+            placedAmount
+        ) = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).calculateFilledAmount(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity],
+            _side,
+            _amount,
+            _unitPrice
+        );
     }
 
     function _calculateCollateralCoverage(
@@ -440,11 +444,12 @@ library LendingMarketUserLogic {
         uint256 _maturity,
         address _user,
         ProtocolTypes.Side _side,
+        uint256 _additionalDepositAmount,
+        bool _ignoreBorrowedAmount,
         uint256 _filledAmount,
         uint256 _filledAmountInFV,
         uint256 _orderFeeInFV,
-        uint256 _additionalDepositAmount,
-        bool _ignoreBorrowedAmount
+        uint256 _placedAmount
     ) internal view returns (uint256 coverage, bool isInsufficientDepositAmount) {
         uint256 filledAmountWithFeeInFV = _filledAmountInFV;
 
@@ -465,6 +470,14 @@ library LendingMarketUserLogic {
         // Store the _additionalDepositAmount in the borrowedAmount,
         // because the borrowedAmount is used as collateral.
         funds.borrowedAmount = _additionalDepositAmount;
+
+        if (_placedAmount > 0) {
+            if (_side == ProtocolTypes.Side.BORROW) {
+                funds.workingBorrowOrdersAmount = _placedAmount;
+            } else {
+                funds.workingLendOrdersAmount = _placedAmount;
+            }
+        }
 
         if (filledAmountWithFeeInPV > 0) {
             if (_side == ProtocolTypes.Side.BORROW) {

@@ -205,7 +205,7 @@ library OrderActionLogic {
             vars.conditions.executedUnitPrice,
             vars.conditions.ignoreRemainingAmount,
             vars.conditions.orderExists
-        ) = orderBook.getOrderExecutionConditions(
+        ) = orderBook.getAndUpdateOrderExecutionConditions(
             _side,
             _unitPrice,
             Storage.slot().circuitBreakerLimitRange
@@ -325,7 +325,7 @@ library OrderActionLogic {
             conditions.executedUnitPrice,
             conditions.ignoreRemainingAmount,
             conditions.orderExists
-        ) = orderBook.getOrderExecutionConditions(
+        ) = orderBook.getAndUpdateOrderExecutionConditions(
             _side,
             0,
             Storage.slot().circuitBreakerLimitRange

@@ -169,19 +169,32 @@ library OrderReaderLogic {
             uint256 lastUnitPrice,
             uint256 filledAmount,
             uint256 filledAmountInFV,
-            uint256 feeInFV
+            uint256 orderFeeInFV,
+            uint256 placedAmount
         )
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
-        (lastUnitPrice, filledAmount, filledAmountInFV) = orderBook.calculateFilledAmount(
-            _side,
-            _amount,
-            _unitPrice,
-            Storage.slot().circuitBreakerLimitRange
-        );
+        (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, , , ) = orderBook
+            .getOrderExecutionConditions(
+                _side,
+                _unitPrice,
+                Storage.slot().circuitBreakerLimitRange
+            );
 
-        feeInFV = calculateOrderFeeAmount(orderBook.maturity, filledAmountInFV);
+        if (isFilled) {
+            (lastUnitPrice, filledAmount, filledAmountInFV) = orderBook.calculateFilledAmount(
+                _side,
+                _amount,
+                executedUnitPrice
+            );
+            placedAmount = _amount - filledAmount;
+            orderFeeInFV = calculateOrderFeeAmount(orderBook.maturity, filledAmountInFV);
+        } else {
+            if (!ignoreRemainingAmount) {
+                placedAmount = _amount;
+            }
+        }
     }
 
     function calculateOrderFeeAmount(uint256 _maturity, uint256 _amount)

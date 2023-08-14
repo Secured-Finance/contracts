@@ -518,10 +518,14 @@ library FundManagementLogic {
     {
         ActualFunds memory funds = calculateActualFunds(_ccy, 0, _user);
 
-        workingLendOrdersAmount = funds.workingLendOrdersAmount;
+        workingLendOrdersAmount =
+            funds.workingLendOrdersAmount +
+            _additionalFunds.workingLendOrdersAmount;
         claimableAmount = funds.claimableAmount + _additionalFunds.claimableAmount;
         lentAmount = funds.lentAmount + _additionalFunds.lentAmount;
-        workingBorrowOrdersAmount = funds.workingBorrowOrdersAmount;
+        workingBorrowOrdersAmount =
+            funds.workingBorrowOrdersAmount +
+            _additionalFunds.workingBorrowOrdersAmount;
         debtAmount = funds.debtAmount + _additionalFunds.debtAmount;
         borrowedAmount = funds.borrowedAmount + _additionalFunds.borrowedAmount;
 

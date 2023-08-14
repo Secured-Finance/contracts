@@ -37,10 +37,23 @@ interface ILendingMarketController {
 
     struct AdditionalFunds {
         bytes32 ccy;
+        uint256 workingLendOrdersAmount;
         uint256 claimableAmount;
+        uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
         uint256 lentAmount;
         uint256 borrowedAmount;
+    }
+
+    struct GetOrderEstimationParams {
+        bytes32 ccy;
+        uint256 maturity;
+        address user;
+        ProtocolTypes.Side side;
+        uint256 amount;
+        uint256 unitPrice;
+        uint256 additionalDepositAmount;
+        bool ignoreBorrowedAmount;
     }
 
     function isTerminated() external view returns (bool);
@@ -83,15 +96,7 @@ interface ILendingMarketController {
 
     function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
-    function getOrderEstimation(
-        bytes32 ccy,
-        uint256 maturity,
-        ProtocolTypes.Side side,
-        uint256 amount,
-        uint256 unitPrice,
-        uint256 additionalDepositAmount,
-        bool ignoreBorrowedAmount
-    )
+    function getOrderEstimation(GetOrderEstimationParams calldata params)
         external
         view
         returns (
@@ -99,6 +104,7 @@ interface ILendingMarketController {
             uint256 filledAmount,
             uint256 filledAmountInFV,
             uint256 orderFeeInFV,
+            uint256 placedAmount,
             uint256 coverage,
             bool isInsufficientDepositAmount
         );

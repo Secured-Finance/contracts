@@ -251,7 +251,9 @@ describe('TokenVault', () => {
     const value = BigNumber.from('20000000000000');
     const CALCULATE_COVERAGE_INPUTS = {
       ccy: '',
+      workingLendOrdersAmount: 0,
       claimableAmount: 0,
+      workingBorrowOrdersAmount: 0,
       debtAmount: 0,
       lentAmount: 0,
       borrowedAmount: 0,

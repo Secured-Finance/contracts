@@ -486,6 +486,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return lastUnitPrice The last unit price that is filled on the order book
      * @return filledAmount The amount that is filled on the order book
      * @return filledAmountInFV The amount in the future value that is filled on the order book
+     * @return orderFeeInFV The order fee amount in the future value
+     * @return placedAmount The amount that is placed to the order book
      */
     function calculateFilledAmount(
         uint8 _orderBookId,
@@ -500,7 +502,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 lastUnitPrice,
             uint256 filledAmount,
             uint256 filledAmountInFV,
-            uint256 feeInFV
+            uint256 orderFeeInFV,
+            uint256 placedAmount
         )
     {
         return OrderReaderLogic.calculateFilledAmount(_orderBookId, _side, _amount, _unitPrice);

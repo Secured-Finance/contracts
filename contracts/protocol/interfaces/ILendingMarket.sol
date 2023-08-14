@@ -145,7 +145,8 @@ interface ILendingMarket {
             uint256 lastUnitPrice,
             uint256 filledAmount,
             uint256 filledAmountInFV,
-            uint256 feeInFV
+            uint256 feeInFV,
+            uint256 placedAmount
         );
 
     function createOrderBook(uint256 maturity, uint256 _openingDate)
