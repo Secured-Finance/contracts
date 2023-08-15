@@ -68,7 +68,6 @@ describe('LendingMarket - Circuit Breaker', () => {
   });
 
   beforeEach(async () => {
-    await ethers.provider.send('evm_setAutomine', [true]);
     const { timestamp } = await ethers.provider.getBlock('latest');
     maturity = moment(timestamp * 1000)
       .add(1, 'M')
@@ -136,6 +135,10 @@ describe('LendingMarket - Circuit Breaker', () => {
 
     describe(title, async () => {
       const isBorrow = side == Side.BORROW;
+
+      afterEach(async () => {
+        await ethers.provider.send('evm_setAutomine', [true]);
+      });
 
       for (const orderType of ['market', 'limit']) {
         it(`Fill an order partially until the circuit breaker threshold using the ${orderType} order`, async () => {
@@ -241,8 +244,6 @@ describe('LendingMarket - Circuit Breaker', () => {
             0,
             true,
           );
-
-        await ethers.provider.send('evm_setAutomine', [true]);
       });
 
       it('Fill an order in different blocks after the circuit breaker has been triggered', async () => {
@@ -436,8 +437,6 @@ describe('LendingMarket - Circuit Breaker', () => {
             0,
             false,
           );
-
-        await ethers.provider.send('evm_setAutomine', [true]);
       });
 
       it('Fail to place a second market order in the same block due to no filled amount', async () => {
@@ -506,8 +505,6 @@ describe('LendingMarket - Circuit Breaker', () => {
             0,
             true,
           );
-
-        await ethers.provider.send('evm_setAutomine', [true]);
       });
 
       it('Fail to place a second limit order in the same block due to over the circuit breaker threshold', async () => {
@@ -580,8 +577,6 @@ describe('LendingMarket - Circuit Breaker', () => {
             0,
             true,
           );
-
-        await ethers.provider.send('evm_setAutomine', [true]);
       });
 
       it('Maximum difference between threshold and unitPrice can be max_difference', async () => {
@@ -675,8 +670,6 @@ describe('LendingMarket - Circuit Breaker', () => {
             0,
             true,
           );
-
-        await ethers.provider.send('evm_setAutomine', [true]);
       });
 
       it('Minimum difference between threshold and unitPrice should be min_difference', async () => {
@@ -770,8 +763,6 @@ describe('LendingMarket - Circuit Breaker', () => {
             0,
             true,
           );
-
-        await ethers.provider.send('evm_setAutomine', [true]);
       });
 
       it('Threshold should not cross the range', async () => {
