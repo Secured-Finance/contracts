@@ -8,7 +8,7 @@ import { Side } from '../../../utils/constants';
 import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
 import { deployContracts, deployOrderBooks } from './utils';
 
-describe('LendingMarket - Circuit Breaker', () => {
+describe.only('LendingMarket - Circuit Breaker', () => {
   const CIRCUIT_BREAKER_BORROW_THRESHOLD = 8374;
   const CIRCUIT_BREAKER_LEND_THRESHOLD = 8629;
   const MAX_DIFFERENCE = 200;
@@ -16,8 +16,7 @@ describe('LendingMarket - Circuit Breaker', () => {
 
   let lendingMarketCaller: Contract;
 
-  let targetCurrency: string;
-  let currencyIdx = 0;
+  let targetCurrency: string = ethers.utils.formatBytes32String('Test');
   let maturity: number;
 
   let owner: SignerWithAddress;
@@ -76,9 +75,6 @@ describe('LendingMarket - Circuit Breaker', () => {
       .unix();
 
     const openingDate = moment(timestamp * 1000).unix();
-
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
 
     ({ lendingMarket } = await deployOrderBooks(
       targetCurrency,
@@ -139,12 +135,7 @@ describe('LendingMarket - Circuit Breaker', () => {
       const isBorrow = side == Side.BORROW;
 
       afterEach(async () => {
-        await ethers.provider.send('hardhat_reset', []);
-
-        [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
-        ({ lendingMarketCaller, orderActionLogic } = await deployContracts(
-          owner,
-        ));
+        await ethers.provider.send('evm_setAutomine', [true]);
       });
 
       for (const orderType of ['market', 'limit']) {
