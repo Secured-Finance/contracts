@@ -47,7 +47,8 @@ describe('LendingMarket - Circuit Breaker', () => {
         side,
         '100000000000000',
         unitPrice,
-      );
+      )
+      .then((tx) => tx.wait());
 
     await lendingMarketCaller
       .connect(alice)
@@ -57,7 +58,8 @@ describe('LendingMarket - Circuit Breaker', () => {
         side,
         '100000000000000',
         offsetUnitPrice,
-      );
+      )
+      .then((tx) => tx.wait());
 
     return offsetUnitPrice;
   };
@@ -586,7 +588,8 @@ describe('LendingMarket - Circuit Breaker', () => {
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             unitPrice,
-          );
+          )
+          .then((tx) => tx.wait());
 
         await lendingMarketCaller
           .connect(alice)
@@ -596,7 +599,8 @@ describe('LendingMarket - Circuit Breaker', () => {
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             offsetUnitPrice,
-          );
+          )
+          .then((tx) => tx.wait());
 
         await ethers.provider.send('evm_setAutomine', [false]);
 
@@ -676,7 +680,8 @@ describe('LendingMarket - Circuit Breaker', () => {
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             unitPrice,
-          );
+          )
+          .then((tx) => tx.wait());
 
         await lendingMarketCaller
           .connect(alice)
@@ -686,7 +691,8 @@ describe('LendingMarket - Circuit Breaker', () => {
             isBorrow ? Side.LEND : Side.BORROW,
             '100000000000000',
             offsetUnitPrice,
-          );
+          )
+          .then((tx) => tx.wait());
 
         await ethers.provider.send('evm_setAutomine', [false]);
 
