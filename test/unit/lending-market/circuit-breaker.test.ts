@@ -210,6 +210,8 @@ describe('LendingMarket - Circuit Breaker', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+        await bobTx.wait();
+        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -279,6 +281,8 @@ describe('LendingMarket - Circuit Breaker', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+        await bobTx.wait();
+        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -357,7 +361,7 @@ describe('LendingMarket - Circuit Breaker', () => {
 
         await ethers.provider.send('evm_setAutomine', [false]);
 
-        await lendingMarketCaller
+        const bobTx = await lendingMarketCaller
           .connect(bob)
           .executeOrder(
             targetCurrency,
@@ -377,7 +381,7 @@ describe('LendingMarket - Circuit Breaker', () => {
             0,
           );
 
-        await lendingMarketCaller
+        const aliceTx = await lendingMarketCaller
           .connect(alice)
           .executeOrder(
             targetCurrency,
@@ -398,6 +402,11 @@ describe('LendingMarket - Circuit Breaker', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+
+        await bobTx.wait();
+        await carolTx1.wait();
+        await aliceTx.wait();
+        await carolTx2.wait();
 
         await expect(carolTx1)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -464,6 +473,8 @@ describe('LendingMarket - Circuit Breaker', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+        await bobTx.wait();
+        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -533,6 +544,8 @@ describe('LendingMarket - Circuit Breaker', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+        await bobTx.wait();
+        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -625,6 +638,8 @@ describe('LendingMarket - Circuit Breaker', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+        await bobTx.wait();
+        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -717,6 +732,8 @@ describe('LendingMarket - Circuit Breaker', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
+        await bobTx.wait();
+        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -910,7 +927,7 @@ describe('LendingMarket - Circuit Breaker', () => {
 
       await ethers.provider.send('evm_setAutomine', [false]);
 
-      await lendingMarketCaller
+      const aliceTx = await lendingMarketCaller
         .connect(alice)
         .executeOrder(
           targetCurrency,
@@ -920,7 +937,7 @@ describe('LendingMarket - Circuit Breaker', () => {
           0,
         );
 
-      const tx = await lendingMarketCaller
+      const bobTx = await lendingMarketCaller
         .connect(bob)
         .unwindPosition(
           targetCurrency,
@@ -930,8 +947,10 @@ describe('LendingMarket - Circuit Breaker', () => {
         );
 
       await ethers.provider.send('evm_mine', []);
+      await aliceTx.wait();
+      await bobTx.wait();
 
-      await expect(tx)
+      await expect(bobTx)
         .to.emit(orderActionLogic, 'PositionUnwound')
         .withArgs(
           bob.address,
