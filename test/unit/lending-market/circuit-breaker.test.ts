@@ -47,7 +47,8 @@ describe('LendingMarket - Circuit Breaker', () => {
         side,
         '100000000000000',
         unitPrice,
-      );
+      )
+      .then((tx) => tx.wait());
 
     await lendingMarketCaller
       .connect(alice)
@@ -57,7 +58,8 @@ describe('LendingMarket - Circuit Breaker', () => {
         side,
         '100000000000000',
         offsetUnitPrice,
-      );
+      )
+      .then((tx) => tx.wait());
 
     return offsetUnitPrice;
   };
