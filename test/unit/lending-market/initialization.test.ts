@@ -9,20 +9,12 @@ import { deployContracts } from './utils';
 describe('LendingMarket - Initialization', () => {
   let lendingMarketCaller: Contract;
 
-  let targetCurrency: string;
-  let currencyIdx = 0;
-
   let owner: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   before(async () => {
     [owner, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller } = await deployContracts(owner));
-  });
-
-  beforeEach(async () => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
   });
 
   it('Deploy Lending Market', async () => {

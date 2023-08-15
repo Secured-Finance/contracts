@@ -5,37 +5,28 @@ import { ethers } from 'hardhat';
 import moment from 'moment';
 
 import { Side } from '../../../utils/constants';
-import { deployContracts, deployOrderBooks } from './utils';
+import { deployContracts, deployLendingMarket } from './utils';
 
 describe('LendingMarket - Orders', () => {
-  let lendingMarketCaller: Contract;
-
-  let targetCurrency: string;
-  let currencyIdx = 0;
+  const targetCurrency: string = ethers.utils.formatBytes32String('Test');
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let signers: SignerWithAddress[];
 
+  let lendingMarketCaller: Contract;
   let lendingMarket: Contract;
   let orderActionLogic: Contract;
 
   let currentOrderBookId: BigNumber;
 
   const initialize = async (maturity: number, openingDate: number) => {
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-
-    ({ lendingMarket } = await deployOrderBooks(
+    await lendingMarketCaller.createOrderBook(
       targetCurrency,
       maturity,
       openingDate,
-      lendingMarketCaller,
-    ));
-
-    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
-
+    );
     currentOrderBookId = await lendingMarketCaller.getOrderBookId(
       targetCurrency,
     );
@@ -44,6 +35,13 @@ describe('LendingMarket - Orders', () => {
   before(async () => {
     [owner, alice, bob, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller, orderActionLogic } = await deployContracts(owner));
+
+    ({ lendingMarket } = await deployLendingMarket(
+      targetCurrency,
+      lendingMarketCaller,
+    ));
+
+    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
   });
 
   describe('Clean up orders', async () => {

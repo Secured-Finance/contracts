@@ -6,18 +6,14 @@ import moment from 'moment';
 
 import { Side } from '../../../utils/constants';
 import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
-import { deployContracts, deployOrderBooks } from './utils';
+import { deployContracts, deployLendingMarket } from './utils';
 
-describe.only('LendingMarket - Circuit Breaker', () => {
+describe('LendingMarket - Circuit Breaker', () => {
   const CIRCUIT_BREAKER_BORROW_THRESHOLD = 8374;
   const CIRCUIT_BREAKER_LEND_THRESHOLD = 8629;
   const MAX_DIFFERENCE = 200;
   const MIN_DIFFERENCE = 10;
-
-  let lendingMarketCaller: Contract;
-
-  let targetCurrency: string = ethers.utils.formatBytes32String('Test');
-  let maturity: number;
+  const targetCurrency: string = ethers.utils.formatBytes32String('Test');
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -25,8 +21,11 @@ describe.only('LendingMarket - Circuit Breaker', () => {
   let carol: SignerWithAddress;
   let signers: SignerWithAddress[];
 
+  let lendingMarketCaller: Contract;
   let lendingMarket: Contract;
   let orderActionLogic: Contract;
+
+  let maturity: number;
   let currentOrderBookId: BigNumber;
 
   const createInitialOrders = async (
@@ -66,6 +65,13 @@ describe.only('LendingMarket - Circuit Breaker', () => {
   before(async () => {
     [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller, orderActionLogic } = await deployContracts(owner));
+
+    ({ lendingMarket } = await deployLendingMarket(
+      targetCurrency,
+      lendingMarketCaller,
+    ));
+
+    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
   });
 
   beforeEach(async () => {
@@ -76,15 +82,11 @@ describe.only('LendingMarket - Circuit Breaker', () => {
 
     const openingDate = moment(timestamp * 1000).unix();
 
-    ({ lendingMarket } = await deployOrderBooks(
+    await lendingMarketCaller.createOrderBook(
       targetCurrency,
       maturity,
       openingDate,
-      lendingMarketCaller,
-    ));
-
-    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
-
+    );
     currentOrderBookId = await lendingMarketCaller.getOrderBookId(
       targetCurrency,
     );

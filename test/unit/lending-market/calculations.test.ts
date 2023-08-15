@@ -5,24 +5,27 @@ import { ethers } from 'hardhat';
 import moment from 'moment';
 
 import { Side } from '../../../utils/constants';
-import { deployContracts, deployOrderBooks } from './utils';
+import { deployContracts, deployLendingMarket } from './utils';
 
 describe('LendingMarket - Calculations', () => {
-  let lendingMarketCaller: Contract;
-
-  let targetCurrency: string;
-  let currencyIdx = 0;
+  const targetCurrency: string = ethers.utils.formatBytes32String('Test');
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let signers: SignerWithAddress[];
 
+  let lendingMarketCaller: Contract;
   let lendingMarket: Contract;
   let currentOrderBookId: BigNumber;
 
   before(async () => {
     [owner, alice, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller } = await deployContracts(owner));
+
+    ({ lendingMarket } = await deployLendingMarket(
+      targetCurrency,
+      lendingMarketCaller,
+    ));
   });
 
   beforeEach(async () => {
@@ -31,16 +34,11 @@ describe('LendingMarket - Calculations', () => {
       .add(1, 'M')
       .unix();
 
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-
-    ({ lendingMarket } = await deployOrderBooks(
+    await lendingMarketCaller.createOrderBook(
       targetCurrency,
       maturity,
       timestamp,
-      lendingMarketCaller,
-    ));
-
+    );
     currentOrderBookId = await lendingMarketCaller.getOrderBookId(
       targetCurrency,
     );

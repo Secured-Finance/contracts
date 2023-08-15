@@ -6,29 +6,36 @@ import { ethers } from 'hardhat';
 import moment from 'moment';
 
 import { Side } from '../../../utils/constants';
-import { deployContracts, deployOrderBooks } from './utils';
+import { deployContracts, deployLendingMarket } from './utils';
 
 describe('LendingMarket - Itayose', () => {
-  let lendingMarketCaller: Contract;
-
-  let targetCurrency: string;
-  let currencyIdx = 0;
-  let maturity: number;
+  const targetCurrency: string = ethers.utils.formatBytes32String('Test');
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let signers: SignerWithAddress[];
 
+  let lendingMarketCaller: Contract;
   let lendingMarket: Contract;
   let orderActionLogic: Contract;
   let orderBookLogic: Contract;
+
+  let maturity: number;
   let currentOrderBookId: BigNumber;
 
   before(async () => {
     [owner, alice, bob, ...signers] = await ethers.getSigners();
     ({ lendingMarketCaller, orderBookLogic, orderActionLogic } =
       await deployContracts(owner));
+
+    ({ lendingMarket } = await deployLendingMarket(
+      targetCurrency,
+      lendingMarketCaller,
+    ));
+
+    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
+    orderBookLogic = orderBookLogic.attach(lendingMarket.address);
   });
 
   beforeEach(async () => {
@@ -41,19 +48,11 @@ describe('LendingMarket - Itayose', () => {
       .add(48, 'h')
       .unix();
 
-    targetCurrency = ethers.utils.formatBytes32String(`Test${currencyIdx}`);
-    currencyIdx++;
-
-    ({ lendingMarket } = await deployOrderBooks(
+    await lendingMarketCaller.createOrderBook(
       targetCurrency,
       maturity,
       openingDate,
-      lendingMarketCaller,
-    ));
-
-    orderActionLogic = orderActionLogic.attach(lendingMarket.address);
-    orderBookLogic = orderBookLogic.attach(lendingMarket.address);
-
+    );
     currentOrderBookId = await lendingMarketCaller.getOrderBookId(
       targetCurrency,
     );

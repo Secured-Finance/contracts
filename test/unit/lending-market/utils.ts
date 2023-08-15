@@ -119,21 +119,14 @@ const deployContracts = async (owner: SignerWithAddress) => {
   };
 };
 
-const deployOrderBooks = async (
+const deployLendingMarket = async (
   targetCurrency: string,
-  maturity: number,
-  openingDate: number,
   lendingMarketCaller: Contract,
 ) => {
   await lendingMarketCaller.deployLendingMarket(
     targetCurrency,
     ORDER_FEE_RATE,
     CIRCUIT_BREAKER_LIMIT_RANGE,
-  );
-  await lendingMarketCaller.createOrderBook(
-    targetCurrency,
-    maturity,
-    openingDate,
   );
 
   const lendingMarket = await lendingMarketCaller
@@ -145,4 +138,4 @@ const deployOrderBooks = async (
   };
 };
 
-export { deployContracts, deployOrderBooks };
+export { deployContracts, deployLendingMarket };
