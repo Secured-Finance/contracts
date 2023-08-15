@@ -44,6 +44,8 @@ jobs:
       - name: Build Smart Contracts
         run: npm run compile
       - name: Run Unit Tests
+        env:
+          NODE_OPTIONS: '--max_old_space_size=4096'
         run: npm run test:cov
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v3
