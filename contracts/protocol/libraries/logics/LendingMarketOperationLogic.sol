@@ -283,7 +283,7 @@ library LendingMarketOperationLogic {
         market.reopenOrderBook(maturedOrderBookId, newMaturity, newOpeningDate);
 
         // Rotate the order of the market
-        for (uint256 i = 0; i < orderBookIds.length; i++) {
+        for (uint256 i; i < orderBookIds.length; i++) {
             uint8 orderBookId = (orderBookIds.length - 1) == i
                 ? maturedOrderBookId
                 : orderBookIds[i + 1];
@@ -314,7 +314,7 @@ library LendingMarketOperationLogic {
             .tokenVault()
             .getCollateralCurrencies();
 
-        for (uint256 i = 0; i < currencies.length; i++) {
+        for (uint256 i; i < currencies.length; i++) {
             bytes32 ccy = currencies[i];
 
             pauseLendingMarkets(ccy);
@@ -323,7 +323,7 @@ library LendingMarketOperationLogic {
                 .getLastPrice(ccy);
         }
 
-        for (uint256 i = 0; i < collateralCurrencies.length; i++) {
+        for (uint256 i; i < collateralCurrencies.length; i++) {
             bytes32 ccy = collateralCurrencies[i];
             address tokenAddress = AddressResolverLib.tokenVault().getTokenAddress(ccy);
             uint256 balance = IERC20(tokenAddress).balanceOf(

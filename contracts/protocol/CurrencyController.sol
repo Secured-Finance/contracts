@@ -230,16 +230,16 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
         int256 fromPrice = _getLastPrice(_fromCcy);
         int256 toPrice = _getLastPrice(_toCcy);
-
+        uint256 toDecimals = Storage.slot().decimalsCaches[_toCcy];
+        uint256 fromDecimals = Storage.slot().decimalsCaches[_fromCcy];
         amounts = new uint256[](_amounts.length);
-        for (uint256 i = 0; i < _amounts.length; i++) {
+
+        for (uint256 i; i < _amounts.length; i++) {
             if (_amounts[i] == 0) continue;
 
-            amounts[i] = (_amounts[i] *
-                uint256(fromPrice) *
-                10**Storage.slot().decimalsCaches[_toCcy]).div(
-                    10**Storage.slot().decimalsCaches[_fromCcy] * uint256(toPrice)
-                );
+            amounts[i] = (_amounts[i] * uint256(fromPrice) * 10**toDecimals).div(
+                10**fromDecimals * uint256(toPrice)
+            );
         }
     }
 
@@ -298,12 +298,12 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_isBaseCurrency(_ccy)) return _amounts;
 
         amounts = new uint256[](_amounts.length);
-        for (uint256 i = 0; i < _amounts.length; i++) {
-            if (_amounts[i] == 0) continue;
+        uint256 price = _getLastPrice(_ccy).toUint256();
+        uint256 decimals = Storage.slot().decimalsCaches[_ccy];
 
-            amounts[i] = (_amounts[i] * _getLastPrice(_ccy).toUint256()).div(
-                10**Storage.slot().decimalsCaches[_ccy]
-            );
+        for (uint256 i; i < _amounts.length; i++) {
+            if (_amounts[i] == 0) continue;
+            amounts[i] = (_amounts[i] * price).div(10**decimals);
         }
     }
 
@@ -341,12 +341,13 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_isBaseCurrency(_ccy)) return _amounts;
 
         amounts = new uint256[](_amounts.length);
-        for (uint256 i = 0; i < _amounts.length; i++) {
+        uint256 price = _getLastPrice(_ccy).toUint256();
+        uint256 decimals = Storage.slot().decimalsCaches[_ccy];
+
+        for (uint256 i; i < _amounts.length; i++) {
             if (_amounts[i] == 0) continue;
 
-            amounts[i] = (_amounts[i] * 10**Storage.slot().decimalsCaches[_ccy]).div(
-                _getLastPrice(_ccy).toUint256()
-            );
+            amounts[i] = (_amounts[i] * 10**decimals).div(price);
         }
     }
 

@@ -179,7 +179,7 @@ library OrderStatisticsTreeLib {
         OrderItem memory order = gn.orders[gn.head];
         orderIds = new uint48[](gn.orderCounter);
 
-        for (uint256 i = 0; i < gn.orderCounter; i++) {
+        for (uint256 i; i < gn.orderCounter; i++) {
             orderIds[i] = order.orderId;
             order = gn.orders[order.next];
         }

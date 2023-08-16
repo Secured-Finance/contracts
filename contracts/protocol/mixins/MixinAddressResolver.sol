@@ -34,7 +34,7 @@ contract MixinAddressResolver {
     function buildCache() public {
         // The resolver must call this function whenever it updates its state
         bytes32[] memory contractNames = requiredContracts();
-        for (uint256 i = 0; i < contractNames.length; i++) {
+        for (uint256 i; i < contractNames.length; i++) {
             bytes32 name = contractNames[i];
             // Note: can only be invoked once the resolver has all the targets needed added
             address destination = Storage.slot().resolver.getAddress(
@@ -55,7 +55,7 @@ contract MixinAddressResolver {
 
     function isResolverCached() external view returns (bool) {
         bytes32[] memory contractNames = requiredContracts();
-        for (uint256 i = 0; i < contractNames.length; i++) {
+        for (uint256 i; i < contractNames.length; i++) {
             bytes32 name = contractNames[i];
             // false if our cache is invalid or if the resolver doesn't have the required address
             if (
@@ -80,7 +80,7 @@ contract MixinAddressResolver {
 
     function isAcceptedContract(address account) internal view virtual returns (bool) {
         bytes32[] memory contractNames = acceptedContracts();
-        for (uint256 i = 0; i < contractNames.length; i++) {
+        for (uint256 i; i < contractNames.length; i++) {
             if (account == getAddress(contractNames[i])) {
                 return true;
             }

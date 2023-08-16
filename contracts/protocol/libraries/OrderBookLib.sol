@@ -162,7 +162,7 @@ library OrderBookLib {
         activeOrderIds = new uint48[](isPastMaturity ? 0 : self.activeLendOrderIds[_user].length);
         inActiveOrderIds = new uint48[](self.activeLendOrderIds[_user].length);
 
-        for (uint256 i = 0; i < self.activeLendOrderIds[_user].length; i++) {
+        for (uint256 i; i < self.activeLendOrderIds[_user].length; i++) {
             uint48 orderId = self.activeLendOrderIds[_user][i];
             PlacedOrder memory order = self.orders[orderId];
 
@@ -203,7 +203,7 @@ library OrderBookLib {
         activeOrderIds = new uint48[](isPastMaturity ? 0 : self.activeBorrowOrderIds[_user].length);
         inActiveOrderIds = new uint48[](self.activeBorrowOrderIds[_user].length);
 
-        for (uint256 i = 0; i < self.activeBorrowOrderIds[_user].length; i++) {
+        for (uint256 i; i < self.activeBorrowOrderIds[_user].length; i++) {
             uint48 orderId = self.activeBorrowOrderIds[_user][i];
             PlacedOrder memory order = self.orders[orderId];
 
@@ -262,6 +262,23 @@ library OrderBookLib {
                     0,
                     _unitPrice
                 );
+        }
+    }
+
+    function updateUserMaturity(OrderBook storage self, address _user) internal {
+        uint256 userMaturity = self.userCurrentMaturities[_user];
+        uint256 orderBookMaturity = self.maturity;
+
+        require(
+            userMaturity == orderBookMaturity ||
+                (userMaturity != orderBookMaturity &&
+                    self.activeLendOrderIds[_user].length == 0 &&
+                    self.activeBorrowOrderIds[_user].length == 0),
+            "Order found in past maturity"
+        );
+
+        if (userMaturity != orderBookMaturity) {
+            self.userCurrentMaturities[_user] = orderBookMaturity;
         }
     }
 
@@ -581,7 +598,7 @@ library OrderBookLib {
 
     function _removeOrderIdFromOrders(uint48[] storage orders, uint256 orderId) private {
         uint256 lastOrderIndex = orders.length - 1;
-        for (uint256 i = 0; i <= lastOrderIndex; i++) {
+        for (uint256 i; i <= lastOrderIndex; i++) {
             if (orders[i] == orderId) {
                 if (i != lastOrderIndex) {
                     uint48 lastOrderId = orders[lastOrderIndex];

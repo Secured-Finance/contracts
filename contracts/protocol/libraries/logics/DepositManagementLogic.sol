@@ -44,7 +44,7 @@ library DepositManagementLogic {
         uint256 numCurrencies = currencySet.length();
         bytes32[] memory currencies = new bytes32[](numCurrencies);
 
-        for (uint256 i = 0; i < numCurrencies; i++) {
+        for (uint256 i; i < numCurrencies; i++) {
             bytes32 currency = currencySet.at(i);
             currencies[i] = currency;
         }
@@ -430,7 +430,7 @@ library DepositManagementLogic {
         EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
         uint256 len = currencies.length();
 
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i; i < len; i++) {
             bytes32 ccy = currencies.at(i);
             if (Storage.slot().collateralCurrencies.contains(ccy)) {
                 uint256 depositAmount = Storage.slot().depositAmounts[_user][ccy];

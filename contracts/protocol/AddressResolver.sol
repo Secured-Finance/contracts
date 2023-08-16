@@ -39,7 +39,7 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
 
         Storage.slot().addressCaches = _addresses;
 
-        for (uint256 i = 0; i < _names.length; i++) {
+        for (uint256 i; i < _names.length; i++) {
             bytes32 name = _names[i];
             address destination = _addresses[i];
             Storage.slot().addresses[name] = destination;
@@ -56,7 +56,7 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
         view
         returns (bool)
     {
-        for (uint256 i = 0; i < _names.length; i++) {
+        for (uint256 i; i < _names.length; i++) {
             if (Storage.slot().addresses[_names[i]] != _addresses[i]) {
                 return false;
             }

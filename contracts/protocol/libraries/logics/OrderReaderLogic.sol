@@ -73,7 +73,7 @@ library OrderReaderLogic {
             .getLendOrderIds(_user);
         maturity = orderBook.userCurrentMaturities[_user];
 
-        for (uint256 i = 0; i < activeOrderIds.length; i++) {
+        for (uint256 i; i < activeOrderIds.length; i++) {
             PlacedOrder memory order = orderBook.orders[activeOrderIds[i]];
             // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
@@ -85,7 +85,7 @@ library OrderReaderLogic {
             activeAmount += orderItem.amount;
         }
 
-        for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
+        for (uint256 i; i < inActiveOrderIds.length; i++) {
             // Sum future values in the maturity of orders.
             // It will be the future value when the order is created, even if the market is rotated
             // and maturity is updated.
@@ -114,7 +114,7 @@ library OrderReaderLogic {
             .getBorrowOrderIds(_user);
         maturity = orderBook.userCurrentMaturities[_user];
 
-        for (uint256 i = 0; i < activeOrderIds.length; i++) {
+        for (uint256 i; i < activeOrderIds.length; i++) {
             PlacedOrder memory order = orderBook.orders[activeOrderIds[i]];
             // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
@@ -128,7 +128,7 @@ library OrderReaderLogic {
 
         maturity = orderBook.userCurrentMaturities[_user];
 
-        for (uint256 i = 0; i < inActiveOrderIds.length; i++) {
+        for (uint256 i; i < inActiveOrderIds.length; i++) {
             // Sum future values in the maturity of orders
             // It will be the future value when the order is created, even if the market is rotated
             // and maturity is updated.

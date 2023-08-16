@@ -408,7 +408,7 @@ contract LendingMarketController is
     {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
 
-        for (uint256 i = 0; i < currencySet.length(); i++) {
+        for (uint256 i; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
             int256 amount = FundManagementLogic.calculateActualFunds(ccy, 0, _user).presentValue;
             totalPresentValue += currencyController().convertToBaseCurrency(ccy, amount);

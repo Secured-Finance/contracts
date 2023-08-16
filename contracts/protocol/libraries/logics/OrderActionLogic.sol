@@ -193,11 +193,11 @@ library OrderActionLogic {
         )
     {
         require(_amount > 0, "Amount is zero");
-        _updateUserMaturity(_orderBookId, _user);
-
-        ExecuteOrderVars memory vars;
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        orderBook.updateUserMaturity(_user);
+
+        ExecuteOrderVars memory vars;
         vars.maturity = orderBook.maturity;
 
         (
@@ -276,8 +276,8 @@ library OrderActionLogic {
     ) external {
         require(_amount > 0, "Amount is zero");
 
-        _updateUserMaturity(_orderBookId, _user);
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        orderBook.updateUserMaturity(_user);
 
         if (
             (_side == ProtocolTypes.Side.LEND && orderBook.hasBorrowOrder(_user)) ||
@@ -357,22 +357,6 @@ library OrderActionLogic {
         );
     }
 
-    function _updateUserMaturity(uint8 _orderBookId, address _user) private {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        uint256 userMaturity = orderBook.userCurrentMaturities[_user];
-        require(
-            userMaturity == orderBook.maturity ||
-                (userMaturity != orderBook.maturity &&
-                    orderBook.activeLendOrderIds[_user].length == 0 &&
-                    orderBook.activeBorrowOrderIds[_user].length == 0),
-            "Order found in past maturity"
-        );
-
-        if (userMaturity != orderBook.maturity) {
-            orderBook.userCurrentMaturities[_user] = orderBook.maturity;
-        }
-    }
-
     function _cleanLendOrders(uint8 _orderBookId, address _user)
         internal
         returns (
@@ -392,7 +376,7 @@ library OrderActionLogic {
         uint256 inactiveOrderCount = inActiveLendOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
 
-        for (uint256 i = 0; i < inactiveOrderCount; i++) {
+        for (uint256 i; i < inactiveOrderCount; i++) {
             (uint256 presentValue, uint256 futureValue) = OrderReaderLogic.getLendOrderAmounts(
                 orderBook,
                 inActiveLendOrderIds[i]
@@ -423,7 +407,7 @@ library OrderActionLogic {
         uint256 inactiveOrderCount = inActiveBorrowOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
 
-        for (uint256 i = 0; i < inactiveOrderCount; i++) {
+        for (uint256 i; i < inactiveOrderCount; i++) {
             (uint256 presentValue, uint256 futureValue) = OrderReaderLogic.getBorrowOrderAmounts(
                 orderBook,
                 inActiveBorrowOrderIds[i]
