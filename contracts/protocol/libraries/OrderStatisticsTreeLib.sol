@@ -20,15 +20,6 @@ struct PartiallyRemovedOrder {
     uint256 futureValue;
 }
 
-struct OrderItem {
-    uint48 orderId;
-    uint48 next;
-    uint48 prev;
-    address maker;
-    uint256 timestamp;
-    uint256 amount;
-}
-
 /**
  * @notice OrderStatisticsTreeLib is a Red-Black Tree binary search library
  * based on the following library that is extended to manage order data.
@@ -55,6 +46,15 @@ library OrderStatisticsTreeLib {
     struct Tree {
         uint256 root;
         mapping(uint256 => Node) nodes;
+    }
+
+    struct OrderItem {
+        uint48 orderId;
+        uint48 next;
+        uint48 prev;
+        address maker;
+        uint256 timestamp;
+        uint256 amount;
     }
 
     function first(Tree storage self) internal view returns (uint256 _value) {
@@ -733,9 +733,21 @@ library OrderStatisticsTreeLib {
         Tree storage self,
         uint256 value,
         uint48 orderId
-    ) internal view returns (OrderItem memory) {
+    )
+        internal
+        view
+        returns (
+            address maker,
+            uint256 timestamp,
+            uint256 amount
+        )
+    {
         Node storage gn = self.nodes[value];
-        return gn.orders[orderId];
+        OrderItem memory order = gn.orders[orderId];
+
+        maker = order.maker;
+        timestamp = order.timestamp;
+        amount = order.amount;
     }
 
     /**

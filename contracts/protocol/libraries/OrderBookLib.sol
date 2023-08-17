@@ -3,12 +3,12 @@ pragma solidity ^0.8.9;
 
 import {Constants} from "./Constants.sol";
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
-import {OrderStatisticsTreeLib, PartiallyRemovedOrder, OrderItem} from "./OrderStatisticsTreeLib.sol";
+import {OrderStatisticsTreeLib, PartiallyRemovedOrder} from "./OrderStatisticsTreeLib.sol";
 import {RoundingUint256} from "./math/RoundingUint256.sol";
 
 struct PlacedOrder {
     ProtocolTypes.Side side;
-    uint256 unitPrice; // in basis points
+    uint256 unitPrice;
     uint256 maturity;
     uint256 timestamp;
 }
@@ -44,8 +44,8 @@ library OrderBookLib {
         mapping(address => uint48[]) activeBorrowOrderIds;
         // Mapping from user to current maturity
         mapping(address => uint256) userCurrentMaturities;
-        // Mapping from orderId to order
-        mapping(uint256 => PlacedOrder) orders;
+        // Mapping from orderId to order micro slots
+        mapping(uint256 => uint256) orders;
         // Mapping from orderId to boolean for pre-order or not
         mapping(uint256 => bool) isPreOrder;
         // Mapping from maturity to lending orders
@@ -88,6 +88,20 @@ library OrderBookLib {
 
     function hasLendOrder(OrderBook storage self, address _user) internal view returns (bool) {
         return self.activeLendOrderIds[_user].length != 0;
+    }
+
+    function getOrder(OrderBook storage self, uint256 _orderId)
+        internal
+        view
+        returns (PlacedOrder memory order)
+    {
+        (
+            ProtocolTypes.Side side,
+            uint256 unitPrice,
+            uint256 maturity,
+            uint256 timestamp
+        ) = _unpackOrder(self.orders[_orderId]);
+        order = PlacedOrder(side, unitPrice, maturity, timestamp);
     }
 
     function getLendOrderBook(OrderBook storage self, uint256 _limit)
@@ -167,9 +181,9 @@ library OrderBookLib {
 
         for (uint256 i; i < orderIdLength; i++) {
             uint48 orderId = orderIds[i];
-            PlacedOrder memory order = self.orders[orderId];
+            (, uint256 unitPrice, , ) = _unpackOrder(self.orders[orderId]);
 
-            if (!self.lendOrders[userMaturity].isActiveOrderId(order.unitPrice, orderId)) {
+            if (!self.lendOrders[userMaturity].isActiveOrderId(unitPrice, orderId)) {
                 unchecked {
                     inActiveOrderCount += 1;
                 }
@@ -210,9 +224,9 @@ library OrderBookLib {
 
         for (uint256 i; i < orderIdLength; i++) {
             uint48 orderId = orderIds[i];
-            PlacedOrder memory order = self.orders[orderId];
+            (, uint256 unitPrice, , ) = _unpackOrder(self.orders[orderId]);
 
-            if (!self.borrowOrders[userMaturity].isActiveOrderId(order.unitPrice, orderId)) {
+            if (!self.borrowOrders[userMaturity].isActiveOrderId(unitPrice, orderId)) {
                 unchecked {
                     inActiveOrderCount += 1;
                 }
@@ -294,7 +308,7 @@ library OrderBookLib {
         uint256 _unitPrice
     ) internal returns (uint48 orderId) {
         orderId = _nextOrderId(self);
-        self.orders[orderId] = PlacedOrder(_side, _unitPrice, self.maturity, block.timestamp);
+        self.orders[orderId] = _packOrder(_side, _unitPrice, self.maturity, block.timestamp);
 
         if (_side == ProtocolTypes.Side.LEND) {
             self.lendOrders[self.maturity].insertOrder(_unitPrice, orderId, _user, _amount);
@@ -364,17 +378,20 @@ library OrderBookLib {
             uint256
         )
     {
-        PlacedOrder memory order = self.orders[_orderId];
+        (ProtocolTypes.Side side, uint256 unitPrice, , ) = _unpackOrder(self.orders[_orderId]);
         uint256 removedAmount;
-        if (order.side == ProtocolTypes.Side.LEND) {
-            removedAmount = self.lendOrders[self.maturity].removeOrder(order.unitPrice, _orderId);
+
+        if (side == ProtocolTypes.Side.LEND) {
+            removedAmount = self.lendOrders[self.maturity].removeOrder(unitPrice, _orderId);
             _removeOrderIdFromOrders(self.activeLendOrderIds[_user], _orderId);
-        } else if (order.side == ProtocolTypes.Side.BORROW) {
-            removedAmount = self.borrowOrders[self.maturity].removeOrder(order.unitPrice, _orderId);
+        } else if (side == ProtocolTypes.Side.BORROW) {
+            removedAmount = self.borrowOrders[self.maturity].removeOrder(unitPrice, _orderId);
             _removeOrderIdFromOrders(self.activeBorrowOrderIds[_user], _orderId);
         }
 
-        return (order.side, removedAmount, order.unitPrice);
+        delete self.orders[_orderId];
+
+        return (side, removedAmount, unitPrice);
     }
 
     function getOpeningUnitPrice(OrderBook storage self)
@@ -613,5 +630,36 @@ library OrderBookLib {
                 break;
             }
         }
+    }
+
+    /**
+     * @notice Packs order parameters into uint256
+     */
+    function _packOrder(
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice,
+        uint256 _maturity,
+        uint256 _timestamp
+    ) private pure returns (uint256) {
+        return uint256(_side) | (_unitPrice << 8) | (_maturity << 24) | (_timestamp << 88);
+    }
+
+    /**
+     * @notice Unpacks order parameters from uint256
+     */
+    function _unpackOrder(uint256 _order)
+        private
+        pure
+        returns (
+            ProtocolTypes.Side side,
+            uint256 unitPrice,
+            uint256 maturity,
+            uint256 timestamp
+        )
+    {
+        side = ProtocolTypes.Side(uint8(_order));
+        unitPrice = uint16(_order >> 8);
+        maturity = uint64(_order >> 24);
+        timestamp = uint64(_order >> 88);
     }
 }

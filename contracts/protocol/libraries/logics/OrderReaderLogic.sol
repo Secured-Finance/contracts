@@ -5,7 +5,7 @@ import {Constants} from "../Constants.sol";
 import {OrderBookLib, PlacedOrder} from "../OrderBookLib.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
-import {OrderStatisticsTreeLib, OrderItem} from "../OrderStatisticsTreeLib.sol";
+import {OrderStatisticsTreeLib} from "../OrderStatisticsTreeLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 
 library OrderReaderLogic {
@@ -31,27 +31,23 @@ library OrderReaderLogic {
         )
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        PlacedOrder memory order = orderBook.orders[_orderId];
+        PlacedOrder memory order = orderBook.getOrder(_orderId);
 
-        OrderItem memory orderItem;
         if (order.side == ProtocolTypes.Side.LEND) {
-            orderItem = orderBook.lendOrders[order.maturity].getOrderById(
+            (maker, timestamp, amount) = orderBook.lendOrders[order.maturity].getOrderById(
                 order.unitPrice,
                 _orderId
             );
         } else {
-            orderItem = orderBook.borrowOrders[order.maturity].getOrderById(
+            (maker, timestamp, amount) = orderBook.borrowOrders[order.maturity].getOrderById(
                 order.unitPrice,
                 _orderId
             );
         }
 
-        if (orderItem.maker != address(0)) {
+        if (maker != address(0)) {
             side = order.side;
             maturity = order.maturity;
-            maker = orderItem.maker;
-            amount = orderItem.amount;
-            timestamp = orderItem.timestamp;
             isPreOrder = orderBook.isPreOrder[_orderId];
             unitPrice = _getOrderUnitPrice(side, maturity, order.unitPrice, isPreOrder);
         }
@@ -74,15 +70,15 @@ library OrderReaderLogic {
         maturity = orderBook.userCurrentMaturities[_user];
 
         for (uint256 i; i < activeOrderIds.length; ) {
-            PlacedOrder memory order = orderBook.orders[activeOrderIds[i]];
+            PlacedOrder memory order = orderBook.getOrder(activeOrderIds[i]);
             // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
             // as an order canceled in the past market.
-            OrderItem memory orderItem = orderBook.lendOrders[orderBook.maturity].getOrderById(
+            (, , uint256 orderAmount) = orderBook.lendOrders[orderBook.maturity].getOrderById(
                 order.unitPrice,
                 activeOrderIds[i]
             );
-            activeAmount += orderItem.amount;
+            activeAmount += orderAmount;
 
             unchecked {
                 i++;
@@ -123,15 +119,15 @@ library OrderReaderLogic {
         maturity = orderBook.userCurrentMaturities[_user];
 
         for (uint256 i; i < activeOrderIds.length; ) {
-            PlacedOrder memory order = orderBook.orders[activeOrderIds[i]];
+            PlacedOrder memory order = orderBook.getOrder(activeOrderIds[i]);
             // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
             // as an order canceled in the past market.
-            OrderItem memory orderItem = orderBook.borrowOrders[orderBook.maturity].getOrderById(
+            (, , uint256 orderAmount) = orderBook.borrowOrders[orderBook.maturity].getOrderById(
                 order.unitPrice,
                 activeOrderIds[i]
             );
-            activeAmount += orderItem.amount;
+            activeAmount += orderAmount;
 
             unchecked {
                 i++;
@@ -234,8 +230,8 @@ library OrderReaderLogic {
         view
         returns (uint256 presentValue, uint256 futureValue)
     {
-        PlacedOrder memory order = orderBook.orders[_orderId];
-        OrderItem memory orderItem = orderBook.lendOrders[order.maturity].getOrderById(
+        PlacedOrder memory order = orderBook.getOrder(_orderId);
+        (, , uint256 orderAmount) = orderBook.lendOrders[order.maturity].getOrderById(
             order.unitPrice,
             _orderId
         );
@@ -247,8 +243,8 @@ library OrderReaderLogic {
             orderBook.isPreOrder[_orderId]
         );
 
-        presentValue = orderItem.amount;
-        futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
+        presentValue = orderAmount;
+        futureValue = (orderAmount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 
     function getBorrowOrderAmounts(OrderBookLib.OrderBook storage orderBook, uint48 _orderId)
@@ -256,8 +252,8 @@ library OrderReaderLogic {
         view
         returns (uint256 presentValue, uint256 futureValue)
     {
-        PlacedOrder memory order = orderBook.orders[_orderId];
-        OrderItem memory orderItem = orderBook.borrowOrders[order.maturity].getOrderById(
+        PlacedOrder memory order = orderBook.getOrder(_orderId);
+        (, , uint256 orderAmount) = orderBook.borrowOrders[order.maturity].getOrderById(
             order.unitPrice,
             _orderId
         );
@@ -268,8 +264,8 @@ library OrderReaderLogic {
             orderBook.isPreOrder[_orderId]
         );
 
-        presentValue = orderItem.amount;
-        futureValue = (orderItem.amount * Constants.PRICE_DIGIT).div(unitPrice);
+        presentValue = orderAmount;
+        futureValue = (orderAmount * Constants.PRICE_DIGIT).div(unitPrice);
     }
 
     function _getOrderUnitPrice(
