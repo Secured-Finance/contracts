@@ -195,7 +195,7 @@ contract LendingMarketController is
      * @param _ccys Currency name list in bytes32
      * @return orderBookDetails The array of Detailed information on the order book.
      */
-    function getOrderBookDetails(bytes32[] memory _ccys)
+    function getOrderBookDetails(bytes32[] calldata _ccys)
         external
         view
         override
@@ -437,7 +437,7 @@ contract LendingMarketController is
      * @return activeOrders The array of active orders in the order book
      * @return inactiveOrders The array of inactive orders
      */
-    function getOrders(bytes32[] memory _ccys, address _user)
+    function getOrders(bytes32[] calldata _ccys, address _user)
         external
         view
         override
@@ -468,7 +468,7 @@ contract LendingMarketController is
      * @param _user User's address
      * @return positions The array of active positions
      */
-    function getPositions(bytes32[] memory _ccys, address _user)
+    function getPositions(bytes32[] calldata _ccys, address _user)
         external
         view
         override
@@ -812,7 +812,7 @@ contract LendingMarketController is
      * @param _currencies Currency name list in bytes32
      * @param _maturity The maturity of the selected market
      */
-    function executeItayoseCalls(bytes32[] memory _currencies, uint256 _maturity)
+    function executeItayoseCalls(bytes32[] calldata _currencies, uint256 _maturity)
         external
         override
         nonReentrant
