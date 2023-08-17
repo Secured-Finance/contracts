@@ -166,7 +166,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the best prices for lending.
      * @return The array of the best price for lending
      */
-    function getBestLendUnitPrices(uint8[] memory _orderBookIds)
+    function getBestLendUnitPrices(uint8[] calldata _orderBookIds)
         external
         view
         override
@@ -188,7 +188,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the best prices for borrowing.
      * @return The array of the best price for borrowing
      */
-    function getBestBorrowUnitPrices(uint8[] memory _orderBookIds)
+    function getBestBorrowUnitPrices(uint8[] calldata _orderBookIds)
         external
         view
         override
@@ -210,7 +210,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the the prices per future value.
      * @return The array of the the price per future value
      */
-    function getMidUnitPrices(uint8[] memory _orderBookIds)
+    function getMidUnitPrices(uint8[] calldata _orderBookIds)
         public
         view
         override
@@ -270,7 +270,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the order book maturities.
      * @return maturities The array of maturity
      */
-    function getMaturities(uint8[] memory _orderBookIds)
+    function getMaturities(uint8[] calldata _orderBookIds)
         external
         view
         override

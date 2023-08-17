@@ -26,21 +26,21 @@ interface ILendingMarket {
 
     function getBestLendUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestLendUnitPrices(uint8[] memory _orderBookIds)
+    function getBestLendUnitPrices(uint8[] calldata _orderBookIds)
         external
         view
         returns (uint256[] memory);
 
     function getBestBorrowUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestBorrowUnitPrices(uint8[] memory _orderBookIds)
+    function getBestBorrowUnitPrices(uint8[] calldata _orderBookIds)
         external
         view
         returns (uint256[] memory);
 
     function getMidUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getMidUnitPrices(uint8[] memory _orderBookIds)
+    function getMidUnitPrices(uint8[] calldata _orderBookIds)
         external
         view
         returns (uint256[] memory);
@@ -65,7 +65,7 @@ interface ILendingMarket {
 
     function getMaturity(uint8 orderBookId) external view returns (uint256);
 
-    function getMaturities(uint8[] memory _orderBookIds)
+    function getMaturities(uint8[] calldata _orderBookIds)
         external
         view
         returns (uint256[] memory maturities);

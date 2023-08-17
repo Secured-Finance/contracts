@@ -82,7 +82,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         bytes32 _collateralCcy,
         uint256 _receivedCollateralAmount
     ) external override returns (bool) {
-        for (uint256 i = 0; i < collateralMaturities.length; i++) {
+        for (uint256 i; i < collateralMaturities.length; i++) {
             (, int256 fvAmount) = lendingMarketController.getPosition(
                 _collateralCcy,
                 collateralMaturities[i],

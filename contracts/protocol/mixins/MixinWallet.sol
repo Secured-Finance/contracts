@@ -51,7 +51,7 @@ abstract contract MixinWallet is Ownable {
             _targets.length == _data.length && _targets.length == _values.length,
             "Wrong array lengths"
         );
-        for (uint256 i = 0; i < _targets.length; i++) {
+        for (uint256 i; i < _targets.length; i++) {
             (bool success, ) = _targets[i].call{value: _values[i]}(_data[i]);
             require(success, "Transaction failed");
         }

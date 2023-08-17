@@ -193,11 +193,11 @@ library OrderActionLogic {
         )
     {
         require(_amount > 0, "Amount is zero");
-        _updateUserMaturity(_orderBookId, _user);
-
-        ExecuteOrderVars memory vars;
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        orderBook.updateUserMaturity(_user);
+
+        ExecuteOrderVars memory vars;
         vars.maturity = orderBook.maturity;
 
         (
@@ -232,13 +232,7 @@ library OrderActionLogic {
         } else {
             if (!vars.conditions.ignoreRemainingAmount) {
                 vars.placedOrder = PlacedOrder(
-                    _placeOrder(
-                        _orderBookId,
-                        _side,
-                        _user,
-                        _amount,
-                        vars.conditions.executedUnitPrice
-                    ),
+                    orderBook.placeOrder(_side, _user, _amount, vars.conditions.executedUnitPrice),
                     _amount,
                     vars.conditions.executedUnitPrice
                 );
@@ -276,8 +270,8 @@ library OrderActionLogic {
     ) external {
         require(_amount > 0, "Amount is zero");
 
-        _updateUserMaturity(_orderBookId, _user);
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        orderBook.updateUserMaturity(_user);
 
         if (
             (_side == ProtocolTypes.Side.LEND && orderBook.hasBorrowOrder(_user)) ||
@@ -286,7 +280,7 @@ library OrderActionLogic {
             revert("Opposite side order exists");
         }
 
-        uint48 orderId = _placeOrder(_orderBookId, _side, _user, _amount, _unitPrice);
+        uint48 orderId = orderBook.placeOrder(_side, _user, _amount, _unitPrice);
         orderBook.isPreOrder[orderId] = true;
 
         emit PreOrderExecuted(
@@ -357,22 +351,6 @@ library OrderActionLogic {
         );
     }
 
-    function _updateUserMaturity(uint8 _orderBookId, address _user) private {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        uint256 userMaturity = orderBook.userCurrentMaturities[_user];
-        require(
-            userMaturity == orderBook.maturity ||
-                (userMaturity != orderBook.maturity &&
-                    orderBook.activeLendOrderIds[_user].length == 0 &&
-                    orderBook.activeBorrowOrderIds[_user].length == 0),
-            "Order found in past maturity"
-        );
-
-        if (userMaturity != orderBook.maturity) {
-            orderBook.userCurrentMaturities[_user] = orderBook.maturity;
-        }
-    }
-
     function _cleanLendOrders(uint8 _orderBookId, address _user)
         internal
         returns (
@@ -392,7 +370,7 @@ library OrderActionLogic {
         uint256 inactiveOrderCount = inActiveLendOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
 
-        for (uint256 i = 0; i < inactiveOrderCount; i++) {
+        for (uint256 i; i < inactiveOrderCount; i++) {
             (uint256 presentValue, uint256 futureValue) = OrderReaderLogic.getLendOrderAmounts(
                 orderBook,
                 inActiveLendOrderIds[i]
@@ -423,7 +401,7 @@ library OrderActionLogic {
         uint256 inactiveOrderCount = inActiveBorrowOrderIds.length;
         orderIds = new uint48[](inactiveOrderCount);
 
-        for (uint256 i = 0; i < inactiveOrderCount; i++) {
+        for (uint256 i; i < inactiveOrderCount; i++) {
             (uint256 presentValue, uint256 futureValue) = OrderReaderLogic.getBorrowOrderAmounts(
                 orderBook,
                 inActiveBorrowOrderIds[i]
@@ -436,24 +414,7 @@ library OrderActionLogic {
     }
 
     /**
-     * @notice Makes a new order in the order book.
-     * @param _side Order position type, Borrow or Lend
-     * @param _user User's address
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Preferable interest unit price
-     */
-    function _placeOrder(
-        uint8 _orderBookId,
-        ProtocolTypes.Side _side,
-        address _user,
-        uint256 _amount,
-        uint256 _unitPrice
-    ) private returns (uint48 orderId) {
-        orderId = _getOrderBook(_orderBookId).insertOrder(_side, _user, _amount, _unitPrice);
-    }
-
-    /**
-     * @notice Takes orders in the order book.
+     * @notice Fills orders in the order book.
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _amount Amount of funds the maker wants to borrow/lend
@@ -476,12 +437,12 @@ library OrderActionLogic {
             bool isCircuitBreakerTriggered
         )
     {
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
         FillOrdersVars memory vars;
         vars.orderBookId = _orderBookId;
 
-        (filledOrder, partiallyFilledOrder, vars.remainingAmount, vars.orderExists) = _getOrderBook(
-            vars.orderBookId
-        ).fillOrders(_side, _amount, 0, _unitPrice);
+        (filledOrder, partiallyFilledOrder, vars.remainingAmount, vars.orderExists) = orderBook
+            .fillOrders(_side, _amount, 0, _unitPrice);
 
         filledOrder.amount = _amount - vars.remainingAmount;
 
@@ -489,9 +450,9 @@ library OrderActionLogic {
             if (_ignoreRemainingAmount) {
                 filledOrder.ignoredAmount = vars.remainingAmount;
             } else {
-                // Make a new order for the remaining amount of input
+                // Place a new order with the remaining amount of the input amount
                 placedOrder = PlacedOrder(
-                    _placeOrder(vars.orderBookId, _side, _user, vars.remainingAmount, _unitPrice),
+                    orderBook.placeOrder(_side, _user, vars.remainingAmount, _unitPrice),
                     vars.remainingAmount,
                     _unitPrice
                 );

@@ -82,7 +82,7 @@ interface ILendingMarketController {
             bool isReady
         );
 
-    function getOrderBookDetails(bytes32[] memory _ccys)
+    function getOrderBookDetails(bytes32[] calldata _ccys)
         external
         view
         returns (OrderBookDetail[] memory orderBookDetails);
@@ -150,7 +150,7 @@ interface ILendingMarketController {
 
     function getGenesisValue(bytes32 ccy, address user) external view returns (int256 genesisValue);
 
-    function getOrders(bytes32[] memory ccys, address user)
+    function getOrders(bytes32[] calldata ccys, address user)
         external
         view
         returns (Order[] memory activeOrders, Order[] memory inactiveOrders);
@@ -161,7 +161,7 @@ interface ILendingMarketController {
         address _user
     ) external view returns (int256 presentValue, int256 futureValue);
 
-    function getPositions(bytes32[] memory ccys, address user)
+    function getPositions(bytes32[] calldata ccys, address user)
         external
         view
         returns (Position[] memory positions);
@@ -248,7 +248,7 @@ interface ILendingMarketController {
 
     function unwindPosition(bytes32 ccy, uint256 maturity) external returns (bool);
 
-    function executeItayoseCalls(bytes32[] memory currencies, uint256 maturity)
+    function executeItayoseCalls(bytes32[] calldata currencies, uint256 maturity)
         external
         returns (bool);
 

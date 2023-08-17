@@ -125,8 +125,9 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         override
         returns (bool[] memory isCollateralCurrencies)
     {
-        isCollateralCurrencies = new bool[](_ccys.length);
-        for (uint256 i = 0; i < _ccys.length; i++) {
+        uint256 length = _ccys.length;
+        isCollateralCurrencies = new bool[](length);
+        for (uint256 i; i < length; i++) {
             isCollateralCurrencies[i] = isCollateral(_ccys[i]);
         }
     }

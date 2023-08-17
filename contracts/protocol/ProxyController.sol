@@ -170,7 +170,7 @@ contract ProxyController is IProxyController, Ownable {
         external
         onlyOwner
     {
-        for (uint256 i = 0; i < destinations.length; i++) {
+        for (uint256 i; i < destinations.length; i++) {
             UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(destinations[i]));
             proxy.changeAdmin(newAdmin);
         }

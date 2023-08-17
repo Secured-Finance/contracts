@@ -362,7 +362,7 @@ library FundManagementLogic {
 
         vars.maturities = getUsedMaturities(_ccy, _user);
 
-        for (uint256 i = 0; i < vars.maturities.length; i++) {
+        for (uint256 i; i < vars.maturities.length; i++) {
             uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][
                 vars.maturities[i]
             ];
@@ -727,7 +727,8 @@ library FundManagementLogic {
 
     function cleanUpAllFunds(address _user) external {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
-        for (uint256 i = 0; i < ccySet.length(); i++) {
+        uint256 length = ccySet.length();
+        for (uint256 i; i < length; i++) {
             cleanUpFunds(ccySet.at(i), _user);
         }
     }
@@ -740,8 +741,8 @@ library FundManagementLogic {
         uint256[] memory maturities = getUsedMaturities(_ccy, _user);
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
 
-        for (uint256 j = 0; j < maturities.length; j++) {
-            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturities[j]];
+        for (uint256 i; i < maturities.length; i++) {
+            uint8 orderBookId = Storage.slot().maturityOrderBookIds[_ccy][maturities[i]];
             uint256 activeMaturity = market.getMaturity(orderBookId);
             int256 currentFutureValue = convertFutureValueToGenesisValue(
                 _ccy,
@@ -771,13 +772,13 @@ library FundManagementLogic {
             }
 
             if (currentFutureValue == 0 && activeOrderCount == 0) {
-                Storage.slot().usedMaturities[_ccy][_user].remove(maturities[j]);
+                Storage.slot().usedMaturities[_ccy][_user].remove(maturities[i]);
             }
 
             AddressResolverLib.genesisValueVault().cleanUpBalance(
                 _ccy,
                 _user,
-                j == maturities.length - 1 ? 0 : maturities[j + 1]
+                i == maturities.length - 1 ? 0 : maturities[i + 1]
             );
         }
 
