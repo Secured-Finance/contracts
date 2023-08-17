@@ -19,7 +19,7 @@ interface ILendingMarket {
 
     function getOrderBookDetail(uint8 orderBookId) external view returns (OrderBook memory);
 
-    function getCircuitBreakerThresholds(uint8 orderBookId, uint256 _circuitBreakerLimitRange)
+    function getCircuitBreakerThresholds(uint8 orderBookId)
         external
         view
         returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold);
@@ -71,6 +71,10 @@ interface ILendingMarket {
         returns (uint256[] memory maturities);
 
     function getCurrency() external view returns (bytes32);
+
+    function getOrderFeeRate() external view returns (uint256);
+
+    function getCircuitBreakerLimitRange() external view returns (uint256);
 
     function getOpeningDate(uint8 orderBookId) external view returns (uint256);
 
@@ -133,15 +137,16 @@ interface ILendingMarket {
         uint8 orderBookId,
         ProtocolTypes.Side side,
         uint256 amount,
-        uint256 unitPrice,
-        uint256 _circuitBreakerLimitRange
+        uint256 unitPrice
     )
         external
         view
         returns (
             uint256 lastUnitPrice,
             uint256 filledAmount,
-            uint256 filledAmountInFV
+            uint256 filledAmountInFV,
+            uint256 feeInFV,
+            uint256 placedAmount
         );
 
     function createOrderBook(uint256 maturity, uint256 _openingDate)
@@ -165,11 +170,14 @@ interface ILendingMarket {
         ProtocolTypes.Side side,
         address account,
         uint256 amount,
-        uint256 unitPrice,
-        uint256 circuitBreakerLimitRange
+        uint256 unitPrice
     )
         external
-        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder);
+        returns (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 feeInFV
+        );
 
     function executePreOrder(
         uint8 orderBookId,
@@ -183,11 +191,14 @@ interface ILendingMarket {
         uint8 orderBookId,
         ProtocolTypes.Side side,
         address user,
-        uint256 futureValue,
-        uint256 circuitBreakerLimitRange
+        uint256 futureValue
     )
         external
-        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder);
+        returns (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 feeInFV
+        );
 
     function executeItayoseCall(uint8 orderBookId)
         external
@@ -210,6 +221,10 @@ interface ILendingMarket {
             uint256 removedBorrowOrderAmount,
             uint256 maturity
         );
+
+    function updateOrderFeeRate(uint256 _orderFeeRate) external;
+
+    function updateCircuitBreakerLimitRange(uint256 _limitRange) external;
 
     function pauseMarket() external;
 

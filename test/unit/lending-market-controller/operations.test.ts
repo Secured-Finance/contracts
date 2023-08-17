@@ -248,6 +248,36 @@ describe('LendingMarketController - Operations', () => {
       ).to.equal(ORDER_FEE_RATE);
     });
 
+    it('Update the circuit breaker limit range', async () => {
+      expect(
+        await lendingMarketControllerProxy.getCircuitBreakerLimitRange(
+          targetCurrency,
+        ),
+      ).to.equal(CIRCUIT_BREAKER_LIMIT_RANGE);
+
+      await lendingMarketControllerProxy.updateCircuitBreakerLimitRange(
+        targetCurrency,
+        '500',
+      );
+
+      expect(
+        await lendingMarketControllerProxy.getCircuitBreakerLimitRange(
+          targetCurrency,
+        ),
+      ).to.equal('500');
+
+      await lendingMarketControllerProxy.updateCircuitBreakerLimitRange(
+        targetCurrency,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      expect(
+        await lendingMarketControllerProxy.getCircuitBreakerLimitRange(
+          targetCurrency,
+        ),
+      ).to.equal(CIRCUIT_BREAKER_LIMIT_RANGE);
+    });
+
     it('Update beacon proxy implementations and calculate Genesis value', async () => {
       await lendingMarketControllerProxy
         .connect(alice)

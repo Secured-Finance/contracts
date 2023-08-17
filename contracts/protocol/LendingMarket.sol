@@ -5,6 +5,7 @@ pragma solidity ^0.8.9;
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
+import {Constants} from "./libraries/Constants.sol";
 import {OrderActionLogic} from "./libraries/logics/OrderActionLogic.sol";
 import {OrderBookLogic} from "./libraries/logics/OrderBookLogic.sol";
 import {OrderReaderLogic} from "./libraries/logics/OrderReaderLogic.sol";
@@ -85,9 +86,19 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _resolver The address of the Address Resolver contract
      * @param _ccy The main currency for the order book
      */
-    function initialize(address _resolver, bytes32 _ccy) public initializer onlyBeacon {
+    function initialize(
+        address _resolver,
+        bytes32 _ccy,
+        uint256 _orderFeeRate,
+        uint256 _cbLimitRange
+    ) public initializer onlyBeacon {
+        require(_cbLimitRange < Constants.PCT_DIGIT, "CB limit is too high");
+
         registerAddressResolver(_resolver);
         Storage.slot().ccy = _ccy;
+
+        OrderBookLogic.updateOrderFeeRate(_orderFeeRate);
+        OrderBookLogic.updateCircuitBreakerLimitRange(_cbLimitRange);
 
         buildCache();
     }
@@ -130,17 +141,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     /**
      * @notice Gets unit price Thresholds by CircuitBreaker.
      * @param _orderBookId The order book id
-     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return maxLendUnitPrice The maximum unit price for lending
      * @return minBorrowUnitPrice The minimum unit price for borrowing
      */
-    function getCircuitBreakerThresholds(uint8 _orderBookId, uint256 _circuitBreakerLimitRange)
+    function getCircuitBreakerThresholds(uint8 _orderBookId)
         external
         view
         override
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
-        return OrderBookLogic.getCircuitBreakerThresholds(_orderBookId, _circuitBreakerLimitRange);
+        return OrderBookLogic.getCircuitBreakerThresholds(_orderBookId);
     }
 
     /**
@@ -275,6 +285,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      */
     function getCurrency() external view override returns (bytes32 currency) {
         return Storage.slot().ccy;
+    }
+
+    /**
+     * @notice Gets the order fee rate
+     * @return The order fee rate received by protocol
+     */
+    function getOrderFeeRate() external view returns (uint256) {
+        return Storage.slot().orderFeeRate;
+    }
+
+    /**
+     * @notice Gets the limit range in unit price for the circuit breaker
+     * @return The auto-roll fee rate received by protocol
+     */
+    function getCircuitBreakerLimitRange() external view returns (uint256) {
+        return Storage.slot().circuitBreakerLimitRange;
     }
 
     /**
@@ -457,17 +483,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the user wants to borrow/lend
      * @param _unitPrice Unit price user want to borrow/lend
-     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return lastUnitPrice The last unit price that is filled on the order book
      * @return filledAmount The amount that is filled on the order book
      * @return filledAmountInFV The amount in the future value that is filled on the order book
+     * @return orderFeeInFV The order fee amount in the future value
+     * @return placedAmount The amount that is placed to the order book
      */
     function calculateFilledAmount(
         uint8 _orderBookId,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
+        uint256 _unitPrice
     )
         external
         view
@@ -475,17 +501,12 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         returns (
             uint256 lastUnitPrice,
             uint256 filledAmount,
-            uint256 filledAmountInFV
+            uint256 filledAmountInFV,
+            uint256 orderFeeInFV,
+            uint256 placedAmount
         )
     {
-        return
-            OrderReaderLogic.calculateFilledAmount(
-                _orderBookId,
-                _side,
-                _amount,
-                _unitPrice,
-                _circuitBreakerLimitRange
-            );
+        return OrderReaderLogic.calculateFilledAmount(_orderBookId, _side, _amount, _unitPrice);
     }
 
     /**
@@ -569,7 +590,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _user User's address
      * @param _amount Amount of funds the user wants to borrow/lend
      * @param _unitPrice Unit price user wish to borrow/lend
-     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order on the order book
      */
@@ -578,25 +598,20 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
+        uint256 _unitPrice
     )
         external
         override
         whenNotPaused
         onlyAcceptedContracts
         ifOpened(_orderBookId)
-        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
+        returns (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 feeInFV
+        )
     {
-        return
-            OrderActionLogic.executeOrder(
-                _orderBookId,
-                _side,
-                _user,
-                _amount,
-                _unitPrice,
-                _circuitBreakerLimitRange
-            );
+        return OrderActionLogic.executeOrder(_orderBookId, _side, _user, _amount, _unitPrice);
     }
 
     /**
@@ -624,7 +639,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _side Order position type, Borrow or Lend
      * @param _user User's address
      * @param _futureValue Amount of future value unwound
-     * @param _circuitBreakerLimitRange Rate limit range for the circuit breaker
      * @return filledOrder User's Filled order of the user
      * @return partiallyFilledOrder Partially filled order
      */
@@ -632,24 +646,20 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint8 _orderBookId,
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _futureValue,
-        uint256 _circuitBreakerLimitRange
+        uint256 _futureValue
     )
         external
         override
         whenNotPaused
         onlyAcceptedContracts
         ifOpened(_orderBookId)
-        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
+        returns (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 feeInFV
+        )
     {
-        return
-            OrderActionLogic.unwindPosition(
-                _orderBookId,
-                _side,
-                _user,
-                _futureValue,
-                _circuitBreakerLimitRange
-            );
+        return OrderActionLogic.unwindPosition(_orderBookId, _side, _user, _futureValue);
     }
 
     /**
@@ -678,6 +688,26 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         )
     {
         return OrderBookLogic.executeItayoseCall(_orderBookId);
+    }
+
+    /**
+     * @notice Updates the order fee rate
+     * @param _orderFeeRate The order fee rate received by protocol
+     */
+    function updateOrderFeeRate(uint256 _orderFeeRate) external override onlyAcceptedContracts {
+        OrderBookLogic.updateOrderFeeRate(_orderFeeRate);
+    }
+
+    /**
+     * @notice Updates the auto-roll fee rate
+     * @param _cbLimitRange The circuit breaker limit range
+     */
+    function updateCircuitBreakerLimitRange(uint256 _cbLimitRange)
+        external
+        override
+        onlyAcceptedContracts
+    {
+        OrderBookLogic.updateCircuitBreakerLimitRange(_cbLimitRange);
     }
 
     /**

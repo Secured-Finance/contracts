@@ -256,30 +256,24 @@ contract LendingMarketController is
 
     /**
      * @notice Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the market
-     * @param _side Order position type, Borrow or Lend
-     * @param _amount Amount of funds the maker wants to borrow/lend
-     * @param _unitPrice Amount of unit price taker wish to borrow/lend
-     * @param _additionalDepositAmount Additional amount to be deposited with the lending order
-     * @param _ignoreBorrowedAmount The boolean if the borrowed amount is ignored and not used as collateral or not
+     * @param _params The parameters to calculate the order estimation <br>
+     * - ccy: Currency name in bytes32 of the selected market <br>
+     * - maturity: The maturity of the market <br>
+     * - side: Order position type, Borrow or Lend <br>
+     * - amount: Amount of funds the maker wants to borrow/lend <br>
+     * - unitPrice: Amount of unit price taker wish to borrow/lend <br>
+     * - additionalDepositAmount: Additional amount to be deposited with the lending order <br>
+     * - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not
      * @return lastUnitPrice The last unit price that is filled on the order book
      * @return filledAmount The amount that is filled on the order book
      * @return filledAmountInFV The amount in the future value that is filled on the order book
      * @return orderFeeInFV The order fee amount in the future value
+     * @return placedAmount The amount that is placed to the order book
      * @return coverage The rate of collateral used
      * @return isInsufficientDepositAmount The boolean if the order amount for lending in the selected currency is insufficient
      * for the deposit amount or not
      */
-    function getOrderEstimation(
-        bytes32 _ccy,
-        uint256 _maturity,
-        ProtocolTypes.Side _side,
-        uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _additionalDepositAmount,
-        bool _ignoreBorrowedAmount
-    )
+    function getOrderEstimation(GetOrderEstimationParams calldata _params)
         external
         view
         override
@@ -288,21 +282,12 @@ contract LendingMarketController is
             uint256 filledAmount,
             uint256 filledAmountInFV,
             uint256 orderFeeInFV,
+            uint256 placedAmount,
             uint256 coverage,
             bool isInsufficientDepositAmount
         )
     {
-        return
-            LendingMarketUserLogic.getOrderEstimation(
-                _ccy,
-                _maturity,
-                msg.sender,
-                _side,
-                _amount,
-                _unitPrice,
-                _additionalDepositAmount,
-                _ignoreBorrowedAmount
-            );
+        return LendingMarketUserLogic.getOrderEstimation(_params);
     }
 
     /**

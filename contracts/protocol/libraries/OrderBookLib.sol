@@ -236,8 +236,7 @@ library OrderBookLib {
         OrderBook storage self,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
+        uint256 _unitPrice
     )
         internal
         view
@@ -250,36 +249,18 @@ library OrderBookLib {
         if (_amount == 0) return (0, 0, 0);
 
         if (_side == ProtocolTypes.Side.LEND) {
-            uint256 cbThresholdUnitPrice = _getLendCircuitBreakerThreshold(
-                _circuitBreakerLimitRange,
-                getBestLendUnitPrice(self)
-            );
-
-            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice > cbThresholdUnitPrice)
-                ? cbThresholdUnitPrice
-                : _unitPrice;
-
             return
                 self.borrowOrders[self.maturity].calculateDroppedAmountFromLeft(
                     _amount,
                     0,
-                    executedUnitPrice
+                    _unitPrice
                 );
         } else {
-            uint256 cbThresholdUnitPrice = _getBorrowCircuitBreakerThreshold(
-                _circuitBreakerLimitRange,
-                getBestBorrowUnitPrice(self)
-            );
-
-            uint256 executedUnitPrice = (_unitPrice == 0 || _unitPrice < cbThresholdUnitPrice)
-                ? cbThresholdUnitPrice
-                : _unitPrice;
-
             return
                 self.lendOrders[self.maturity].calculateDroppedAmountFromRight(
                     _amount,
                     0,
-                    executedUnitPrice
+                    _unitPrice
                 );
         }
     }
@@ -426,7 +407,7 @@ library OrderBookLib {
         }
     }
 
-    function getOrderExecutionConditions(
+    function getAndUpdateOrderExecutionConditions(
         OrderBook storage self,
         ProtocolTypes.Side _side,
         uint256 _unitPrice,
@@ -440,8 +421,41 @@ library OrderBookLib {
             bool orderExists
         )
     {
-        require(_circuitBreakerLimitRange < Constants.PCT_DIGIT, "CB limit can not be so high");
-        uint256 cbThresholdUnitPrice = self.circuitBreakerThresholdUnitPrices[block.number][_side];
+        uint256 cbThresholdUnitPrice;
+        bool isFirstOrderInBlock;
+
+        (
+            isFilled,
+            executedUnitPrice,
+            ignoreRemainingAmount,
+            orderExists,
+            cbThresholdUnitPrice,
+            isFirstOrderInBlock
+        ) = getOrderExecutionConditions(self, _side, _unitPrice, _circuitBreakerLimitRange);
+
+        if (isFirstOrderInBlock) {
+            self.circuitBreakerThresholdUnitPrices[block.number][_side] = cbThresholdUnitPrice;
+        }
+    }
+
+    function getOrderExecutionConditions(
+        OrderBook storage self,
+        ProtocolTypes.Side _side,
+        uint256 _unitPrice,
+        uint256 _circuitBreakerLimitRange
+    )
+        internal
+        view
+        returns (
+            bool isFilled,
+            uint256 executedUnitPrice,
+            bool ignoreRemainingAmount,
+            bool orderExists,
+            uint256 cbThresholdUnitPrice,
+            bool isFirstOrderInBlock
+        )
+    {
+        cbThresholdUnitPrice = self.circuitBreakerThresholdUnitPrices[block.number][_side];
         bool isLend = _side == ProtocolTypes.Side.LEND;
         uint256 bestUnitPrice;
 
@@ -454,7 +468,7 @@ library OrderBookLib {
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
-                self.circuitBreakerThresholdUnitPrices[block.number][_side] = cbThresholdUnitPrice;
+                isFirstOrderInBlock = true;
             }
         } else {
             bestUnitPrice = self.lendOrders[self.maturity].last();
@@ -465,8 +479,7 @@ library OrderBookLib {
                     _circuitBreakerLimitRange,
                     bestUnitPrice
                 );
-
-                self.circuitBreakerThresholdUnitPrices[block.number][_side] = cbThresholdUnitPrice;
+                isFirstOrderInBlock = true;
             }
         }
 

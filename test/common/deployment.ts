@@ -26,14 +26,14 @@ const deployContracts = async () => {
   // Deploy libraries
   const [
     depositManagementLogic,
-    lendingMarketConfigurationLogic,
+    lendingMarketOperationLogic,
     orderReaderLogic,
     orderBookLogic,
     quickSort,
   ] = await Promise.all(
     [
       'DepositManagementLogic',
-      'LendingMarketConfigurationLogic',
+      'LendingMarketOperationLogic',
       'OrderReaderLogic',
       'OrderBookLogic',
       'QuickSort',
@@ -58,21 +58,10 @@ const deployContracts = async () => {
     })
     .then((factory) => factory.deploy());
 
-  const lendingMarketOperationLogic = await ethers
-    .getContractFactory('LendingMarketOperationLogic', {
-      libraries: {
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
-      },
-    })
-    .then((factory) => factory.deploy());
-
   const lendingMarketUserLogic = await ethers
     .getContractFactory('LendingMarketUserLogic', {
       libraries: {
         FundManagementLogic: fundManagementLogic.address,
-        LendingMarketConfigurationLogic:
-          lendingMarketConfigurationLogic.address,
         LendingMarketOperationLogic: lendingMarketOperationLogic.address,
       },
     })
@@ -118,8 +107,6 @@ const deployContracts = async () => {
           FundManagementLogic: fundManagementLogic.address,
           LendingMarketOperationLogic: lendingMarketOperationLogic.address,
           LendingMarketUserLogic: lendingMarketUserLogic.address,
-          LendingMarketConfigurationLogic:
-            lendingMarketConfigurationLogic.address,
           LiquidationLogic: liquidationLogic.address,
         },
       })

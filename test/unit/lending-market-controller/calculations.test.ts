@@ -125,7 +125,9 @@ describe('LendingMarketController - Calculations', () => {
           alice.address,
           {
             ccy: targetCurrency,
+            workingLendOrdersAmount: 0,
             claimableAmount: 0,
+            workingBorrowOrdersAmount: 0,
             debtAmount: 0,
             lentAmount: 0,
             borrowedAmount: 0,
@@ -200,7 +202,9 @@ describe('LendingMarketController - Calculations', () => {
           bob.address,
           {
             ccy: targetCurrency,
+            workingLendOrdersAmount: 0,
             claimableAmount: 0,
+            workingBorrowOrdersAmount: 0,
             debtAmount: 0,
             lentAmount: 0,
             borrowedAmount: 0,
@@ -237,7 +241,9 @@ describe('LendingMarketController - Calculations', () => {
           alice.address,
           {
             ccy: targetCurrency,
+            workingLendOrdersAmount: 0,
             claimableAmount: 0,
+            workingBorrowOrdersAmount: 0,
             debtAmount: 0,
             lentAmount: 3000000000,
             borrowedAmount: 0,
@@ -378,15 +384,16 @@ describe('LendingMarketController - Calculations', () => {
 
         const estimation = await lendingMarketControllerProxy
           .connect(alice)
-          .getOrderEstimation(
-            targetCurrency,
-            maturities[0],
-            condition.input.side,
-            condition.input.amount,
-            condition.input.unitPrice,
-            '0',
-            false,
-          );
+          .getOrderEstimation({
+            ccy: targetCurrency,
+            maturity: maturities[0],
+            user: alice.address,
+            side: condition.input.side,
+            amount: condition.input.amount,
+            unitPrice: condition.input.unitPrice,
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
 
         const { timestamp } = await ethers.provider.getBlock('latest');
 

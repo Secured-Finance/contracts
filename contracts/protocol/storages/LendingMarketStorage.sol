@@ -19,6 +19,10 @@ library LendingMarketStorage {
     struct Storage {
         bytes32 ccy;
         uint8 lastOrderBookId;
+        // Order fee rate received by protocol (in basis point)
+        uint256 orderFeeRate;
+        // Rate limit range of yield for the circuit breaker
+        uint256 circuitBreakerLimitRange;
         // Mapping from order book id to order book
         mapping(uint8 => OrderBookLib.OrderBook) orderBooks;
         // Mapping from maturity to boolean if the market is ready or not per maturity

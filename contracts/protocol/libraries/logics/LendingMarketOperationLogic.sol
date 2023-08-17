@@ -15,8 +15,6 @@ import {Constants} from "../Constants.sol";
 import {FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {RoundingInt256} from "../math/RoundingInt256.sol";
-import {FundManagementLogic} from "./FundManagementLogic.sol";
-import {LendingMarketConfigurationLogic} from "./LendingMarketConfigurationLogic.sol";
 // types
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
@@ -139,10 +137,7 @@ library LendingMarketOperationLogic {
         isReady = orderBook.isReady;
 
         (maxLendUnitPrice, minBorrowUnitPrice) = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getCircuitBreakerThresholds(
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-                LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy)
-            );
+            .getCircuitBreakerThresholds(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
     }
 
     function initializeLendingMarket(
@@ -162,17 +157,13 @@ library LendingMarketOperationLogic {
         );
 
         address lendingMarket = AddressResolverLib.beaconProxyController().deployLendingMarket(
-            _ccy
+            _ccy,
+            _orderFeeRate,
+            _circuitBreakerLimitRange
         );
         address futureValueVault = AddressResolverLib
             .beaconProxyController()
             .deployFutureValueVault();
-
-        LendingMarketConfigurationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
-        LendingMarketConfigurationLogic.updateCircuitBreakerLimitRange(
-            _ccy,
-            _circuitBreakerLimitRange
-        );
 
         Storage.slot().genesisDates[_ccy] = _genesisDate;
         Storage.slot().lendingMarkets[_ccy] = lendingMarket;

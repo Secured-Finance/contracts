@@ -2,12 +2,15 @@
 pragma solidity ^0.8.9;
 
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
+import {Constants} from "../Constants.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage} from "../../storages/LendingMarketStorage.sol";
 import {OrderReaderLogic} from "./OrderReaderLogic.sol";
 
 library OrderActionLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
+    using RoundingUint256 for uint256;
 
     struct OrderExecutionConditions {
         bool isFilled;
@@ -20,6 +23,13 @@ library OrderActionLogic {
         uint48 orderId;
         uint256 amount;
         uint256 unitPrice;
+    }
+
+    struct ExecuteOrderVars {
+        OrderExecutionConditions conditions;
+        PlacedOrder placedOrder;
+        bool isCircuitBreakerTriggered;
+        uint256 maturity;
     }
 
     struct FillOrdersVars {
@@ -57,7 +67,8 @@ library OrderActionLogic {
         uint256 inputUnitPrice,
         uint256 filledAmount,
         uint256 filledUnitPrice,
-        uint256 filledFutureValue,
+        uint256 filledAmountInFV,
+        uint256 feeInFV,
         uint48 placedOrderId,
         uint256 placedAmount,
         uint256 placedUnitPrice,
@@ -82,7 +93,8 @@ library OrderActionLogic {
         uint256 inputFutureValue,
         uint256 filledAmount,
         uint256 filledUnitPrice,
-        uint256 filledFutureValue,
+        uint256 filledAmountInFV,
+        uint256 feeInFV,
         bool isCircuitBreakerTriggered
     );
 
@@ -171,69 +183,87 @@ library OrderActionLogic {
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
+        uint256 _unitPrice
     )
         external
-        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
+        returns (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 feeInFV
+        )
     {
         require(_amount > 0, "Amount is zero");
         _updateUserMaturity(_orderBookId, _user);
 
-        OrderExecutionConditions memory conditions;
-        PlacedOrder memory placedOrder;
-        bool isCircuitBreakerTriggered;
+        ExecuteOrderVars memory vars;
+
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        vars.maturity = orderBook.maturity;
 
         (
-            conditions.isFilled,
-            conditions.executedUnitPrice,
-            conditions.ignoreRemainingAmount,
-            conditions.orderExists
-        ) = orderBook.getOrderExecutionConditions(_side, _unitPrice, _circuitBreakerLimitRange);
+            vars.conditions.isFilled,
+            vars.conditions.executedUnitPrice,
+            vars.conditions.ignoreRemainingAmount,
+            vars.conditions.orderExists
+        ) = orderBook.getAndUpdateOrderExecutionConditions(
+            _side,
+            _unitPrice,
+            Storage.slot().circuitBreakerLimitRange
+        );
 
-        if (conditions.isFilled) {
+        if (vars.conditions.isFilled) {
             (
                 filledOrder,
                 partiallyFilledOrder,
-                placedOrder,
-                isCircuitBreakerTriggered
+                vars.placedOrder,
+                vars.isCircuitBreakerTriggered
             ) = _fillOrders(
                 _orderBookId,
                 _side,
                 _user,
                 _amount,
-                conditions.executedUnitPrice,
-                conditions.ignoreRemainingAmount
+                vars.conditions.executedUnitPrice,
+                vars.conditions.ignoreRemainingAmount
+            );
+            feeInFV = OrderReaderLogic.calculateOrderFeeAmount(
+                vars.maturity,
+                filledOrder.futureValue
             );
         } else {
-            if (!conditions.ignoreRemainingAmount) {
-                placedOrder = PlacedOrder(
-                    _placeOrder(_orderBookId, _side, _user, _amount, conditions.executedUnitPrice),
+            if (!vars.conditions.ignoreRemainingAmount) {
+                vars.placedOrder = PlacedOrder(
+                    _placeOrder(
+                        _orderBookId,
+                        _side,
+                        _user,
+                        _amount,
+                        vars.conditions.executedUnitPrice
+                    ),
                     _amount,
-                    conditions.executedUnitPrice
+                    vars.conditions.executedUnitPrice
                 );
             }
 
-            isCircuitBreakerTriggered = _unitPrice == 0
-                ? conditions.orderExists
-                : _unitPrice != conditions.executedUnitPrice;
+            vars.isCircuitBreakerTriggered = _unitPrice == 0
+                ? vars.conditions.orderExists
+                : _unitPrice != vars.conditions.executedUnitPrice;
         }
 
         emit OrderExecuted(
             _user,
             _side,
             Storage.slot().ccy,
-            orderBook.maturity,
+            vars.maturity,
             _amount,
             _unitPrice,
             filledOrder.amount,
             filledOrder.unitPrice,
             filledOrder.futureValue,
-            placedOrder.orderId,
-            placedOrder.amount,
-            placedOrder.unitPrice,
-            isCircuitBreakerTriggered
+            feeInFV,
+            vars.placedOrder.orderId,
+            vars.placedOrder.amount,
+            vars.placedOrder.unitPrice,
+            vars.isCircuitBreakerTriggered
         );
     }
 
@@ -274,24 +304,32 @@ library OrderActionLogic {
         uint8 _orderBookId,
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _futureValue,
-        uint256 _circuitBreakerLimitRange
+        uint256 _futureValue
     )
         external
-        returns (FilledOrder memory filledOrder, PartiallyFilledOrder memory partiallyFilledOrder)
+        returns (
+            FilledOrder memory filledOrder,
+            PartiallyFilledOrder memory partiallyFilledOrder,
+            uint256 feeInFV
+        )
     {
         require(_futureValue > 0, "Can't place empty future value amount");
 
         OrderExecutionConditions memory conditions;
         bool isCircuitBreakerTriggered;
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        uint256 maturity = orderBook.maturity;
 
         (
             conditions.isFilled,
             conditions.executedUnitPrice,
             conditions.ignoreRemainingAmount,
             conditions.orderExists
-        ) = orderBook.getOrderExecutionConditions(_side, 0, _circuitBreakerLimitRange);
+        ) = orderBook.getAndUpdateOrderExecutionConditions(
+            _side,
+            0,
+            Storage.slot().circuitBreakerLimitRange
+        );
 
         if (conditions.isFilled) {
             (filledOrder, partiallyFilledOrder, isCircuitBreakerTriggered) = _unwindPosition(
@@ -300,6 +338,7 @@ library OrderActionLogic {
                 _futureValue,
                 conditions.executedUnitPrice
             );
+            feeInFV = OrderReaderLogic.calculateOrderFeeAmount(maturity, filledOrder.futureValue);
         } else {
             isCircuitBreakerTriggered = conditions.orderExists;
         }
@@ -308,11 +347,12 @@ library OrderActionLogic {
             _user,
             _side,
             Storage.slot().ccy,
-            orderBook.maturity,
+            maturity,
             _futureValue,
             filledOrder.amount,
             filledOrder.unitPrice,
             filledOrder.futureValue,
+            feeInFV,
             isCircuitBreakerTriggered
         );
     }
@@ -478,11 +518,41 @@ library OrderActionLogic {
         )
     {
         bool orderExists;
+        uint256 futureValueWithFee;
+        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        uint256 maturity = orderBook.maturity;
+        uint256 currentMaturity = maturity >= block.timestamp ? maturity - block.timestamp : 0;
 
-        (filledOrder, partiallyFilledOrder, , orderExists) = _getOrderBook(_orderBookId).fillOrders(
+        if (_side == ProtocolTypes.Side.BORROW) {
+            // To unwind all positions, calculate the future value taking into account
+            // the added portion of the fee.
+            // NOTE: The formula is:
+            // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+            // amount = totalAmountInFV / (1 + actualRate)
+            futureValueWithFee = (_futureValue * Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT)
+                .div(
+                    Constants.SECONDS_IN_YEAR *
+                        Constants.PCT_DIGIT +
+                        (Storage.slot().orderFeeRate * currentMaturity)
+                );
+        } else {
+            // To unwind all positions, calculate the future value taking into account
+            // the subtracted portion of the fee.
+            // NOTE: The formula is:
+            // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
+            // amount = totalAmountInFV / (1 - actualRate)
+            futureValueWithFee = (_futureValue * Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT)
+                .div(
+                    Constants.SECONDS_IN_YEAR *
+                        Constants.PCT_DIGIT -
+                        (Storage.slot().orderFeeRate * currentMaturity)
+                );
+        }
+
+        (filledOrder, partiallyFilledOrder, , orderExists) = orderBook.fillOrders(
             _side,
             0,
-            _futureValue,
+            futureValueWithFee,
             _unitPrice
         );
 

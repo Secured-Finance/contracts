@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-// libraries
-import {LendingMarketConfigurationLogic} from "../libraries/logics/LendingMarketConfigurationLogic.sol";
+// interfaces
+import {ILendingMarket} from "../interfaces/ILendingMarket.sol";
 // utils
 import {Ownable} from "../utils/Ownable.sol";
+// storages
+import {LendingMarketControllerStorage as Storage} from "../storages/LendingMarketControllerStorage.sol";
 
 contract MixinLendingMarketConfiguration is Ownable {
     function _initialize(address _owner) internal {
@@ -17,7 +19,7 @@ contract MixinLendingMarketConfiguration is Ownable {
      * @return The order fee rate received by protocol
      */
     function getOrderFeeRate(bytes32 _ccy) public view returns (uint256) {
-        return LendingMarketConfigurationLogic.getOrderFeeRate(_ccy);
+        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getOrderFeeRate();
     }
 
     /**
@@ -26,7 +28,7 @@ contract MixinLendingMarketConfiguration is Ownable {
      * @return The auto-roll fee rate received by protocol
      */
     function getCircuitBreakerLimitRange(bytes32 _ccy) public view returns (uint256) {
-        return LendingMarketConfigurationLogic.getCircuitBreakerLimitRange(_ccy);
+        return ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getCircuitBreakerLimitRange();
     }
 
     /**
@@ -35,15 +37,17 @@ contract MixinLendingMarketConfiguration is Ownable {
      * @param _orderFeeRate The order fee rate received by protocol
      */
     function updateOrderFeeRate(bytes32 _ccy, uint256 _orderFeeRate) public onlyOwner {
-        LendingMarketConfigurationLogic.updateOrderFeeRate(_ccy, _orderFeeRate);
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).updateOrderFeeRate(_orderFeeRate);
     }
 
     /**
      * @notice Updates the auto-roll fee rate
      * @param _ccy Currency name in bytes32
-     * @param _limitRange The circuit breaker limit range
+     * @param _cbLimitRange The circuit breaker limit range
      */
-    function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) public onlyOwner {
-        LendingMarketConfigurationLogic.updateCircuitBreakerLimitRange(_ccy, _limitRange);
+    function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _cbLimitRange) public onlyOwner {
+        ILendingMarket(Storage.slot().lendingMarkets[_ccy]).updateCircuitBreakerLimitRange(
+            _cbLimitRange
+        );
     }
 }

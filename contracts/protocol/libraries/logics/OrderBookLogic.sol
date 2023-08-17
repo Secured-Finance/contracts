@@ -11,6 +11,8 @@ library OrderBookLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
     using RoundingUint256 for uint256;
 
+    event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
+    event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate);
 
     event ItayoseExecuted(
@@ -48,12 +50,15 @@ library OrderBookLogic {
         isReady = Storage.slot().isReady[maturity];
     }
 
-    function getCircuitBreakerThresholds(uint8 _orderBookId, uint256 _circuitBreakerLimitRange)
+    function getCircuitBreakerThresholds(uint8 _orderBookId)
         external
         view
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
-        return _getOrderBook(_orderBookId).getCircuitBreakerThresholds(_circuitBreakerLimitRange);
+        return
+            _getOrderBook(_orderBookId).getCircuitBreakerThresholds(
+                Storage.slot().circuitBreakerLimitRange
+            );
     }
 
     function getBestLendUnitPrice(uint8 _orderBookId) public view returns (uint256) {
@@ -140,6 +145,28 @@ library OrderBookLogic {
 
         for (uint256 i; i < _orderBookIds.length; i++) {
             maturities[i] = _getOrderBook(_orderBookIds[i]).maturity;
+        }
+    }
+
+    function updateOrderFeeRate(uint256 _orderFeeRate) external {
+        require(_orderFeeRate <= Constants.PCT_DIGIT, "Invalid order fee rate");
+        uint256 previousRate = Storage.slot().orderFeeRate;
+
+        if (_orderFeeRate != previousRate) {
+            Storage.slot().orderFeeRate = _orderFeeRate;
+
+            emit OrderFeeRateUpdated(Storage.slot().ccy, previousRate, _orderFeeRate);
+        }
+    }
+
+    function updateCircuitBreakerLimitRange(uint256 _cbLimitRange) external {
+        require(_cbLimitRange <= Constants.PCT_DIGIT, "Invalid circuit breaker limit range");
+        uint256 previousRange = Storage.slot().circuitBreakerLimitRange;
+
+        if (_cbLimitRange != previousRange) {
+            Storage.slot().circuitBreakerLimitRange = _cbLimitRange;
+
+            emit CircuitBreakerLimitRangeUpdated(Storage.slot().ccy, previousRange, _cbLimitRange);
         }
     }
 

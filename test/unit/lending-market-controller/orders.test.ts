@@ -18,6 +18,7 @@ import {
 } from '../../common/constants';
 import {
   calculateFutureValue,
+  calculateOrderFee,
   calculatePresentValue,
   getAmountWithOrderFee,
 } from '../../common/orders';
@@ -428,6 +429,7 @@ describe('LendingMarketController - Orders', () => {
               maturities[0],
               '100000000000000000',
               '8720',
+              0,
               0,
               0,
               0,
@@ -2004,6 +2006,8 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
 
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -2017,6 +2021,11 @@ describe('LendingMarketController - Orders', () => {
             '100000000000000000',
             '8800',
             calculateFutureValue('100000000000000000', '8800'),
+            calculateOrderFee(
+              '100000000000000000',
+              '8800',
+              maturities[0].sub(timestamp),
+            ),
             0,
             0,
             0,
@@ -2055,6 +2064,8 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
 
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -2068,6 +2079,11 @@ describe('LendingMarketController - Orders', () => {
             '100000000000000000',
             '8800',
             calculateFutureValue('100000000000000000', '8800'),
+            calculateOrderFee(
+              '100000000000000000',
+              '8800',
+              maturities[0].sub(timestamp),
+            ),
             0,
             0,
             0,
@@ -2124,6 +2140,8 @@ describe('LendingMarketController - Orders', () => {
             '8800',
           );
 
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -2138,6 +2156,11 @@ describe('LendingMarketController - Orders', () => {
             '8800',
             calculateFutureValue('200000000000000000', '8800').sub(
               calculateFutureValue('100000000000000000', '8800'),
+            ),
+            calculateOrderFee(
+              '100000000000000000',
+              '8800',
+              maturities[0].sub(timestamp),
             ),
             0,
             0,
@@ -2176,6 +2199,9 @@ describe('LendingMarketController - Orders', () => {
             '80000000000000000',
             '8000',
           );
+
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
           .to.emit(fundManagementLogic, 'OrderPartiallyFilled')
@@ -2200,6 +2226,11 @@ describe('LendingMarketController - Orders', () => {
             '80000000000000000',
             '8000',
             calculateFutureValue('80000000000000000', '8000'),
+            calculateOrderFee(
+              '80000000000000000',
+              '8000',
+              maturities[0].sub(timestamp),
+            ),
             0,
             0,
             0,
@@ -2237,6 +2268,9 @@ describe('LendingMarketController - Orders', () => {
             '120000000000000000',
             '8800',
           );
+
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+
         await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
         await expect(tx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -2250,6 +2284,11 @@ describe('LendingMarketController - Orders', () => {
             '100000000000000000',
             '8800',
             calculateFutureValue('100000000000000000', '8800'),
+            calculateOrderFee(
+              '100000000000000000',
+              '8800',
+              maturities[0].sub(timestamp),
+            ),
             3,
             '20000000000000000',
             '8800',
@@ -2583,6 +2622,7 @@ describe('LendingMarketController - Orders', () => {
             maturities[0],
             totalAmount,
             () => true, // any value
+            () => true, // any value
           );
       });
 
@@ -2622,6 +2662,7 @@ describe('LendingMarketController - Orders', () => {
             Side.LEND,
             maturities[0],
             totalAmount,
+            () => true, // any value
             () => true, // any value
           );
       });
@@ -2714,6 +2755,7 @@ describe('LendingMarketController - Orders', () => {
               BigNumber.from('12500000000000000'),
               maturities[0].sub(timestamp),
             ),
+            () => true, // any value
           );
 
         const partiallyFilledAmount = calculatePresentValue(
@@ -2814,6 +2856,7 @@ describe('LendingMarketController - Orders', () => {
               BigNumber.from('12500000000000000'),
               maturities[0].sub(timestamp),
             ),
+            () => true, // any value
           );
 
         const { futureValue: aliceFV } =
@@ -2881,6 +2924,7 @@ describe('LendingMarketController - Orders', () => {
               BigNumber.from('11250000000000000'),
               maturities[0].sub(timestamp),
             ),
+            () => true, // any value
           );
 
         const { futureValue: aliceFV } =

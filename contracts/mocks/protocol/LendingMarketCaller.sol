@@ -23,8 +23,16 @@ contract LendingMarketCaller {
         return orderBookIdLists[_ccy];
     }
 
-    function deployLendingMarket(bytes32 _ccy) external {
-        lendingMarkets[_ccy] = beaconProxyController.deployLendingMarket(_ccy);
+    function deployLendingMarket(
+        bytes32 _ccy,
+        uint256 _orderFeeRate,
+        uint256 _limitRange
+    ) external {
+        lendingMarkets[_ccy] = beaconProxyController.deployLendingMarket(
+            _ccy,
+            _orderFeeRate,
+            _limitRange
+        );
     }
 
     function createOrderBook(
@@ -56,16 +64,14 @@ contract LendingMarketCaller {
         uint8 _orderBookId,
         ProtocolTypes.Side _side,
         uint256 _amount,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
+        uint256 _unitPrice
     ) external {
         ILendingMarket(lendingMarkets[_ccy]).executeOrder(
             _orderBookId,
             _side,
             msg.sender,
             _amount,
-            _unitPrice,
-            _circuitBreakerLimitRange
+            _unitPrice
         );
     }
 
@@ -89,15 +95,13 @@ contract LendingMarketCaller {
         bytes32 _ccy,
         uint8 _orderBookId,
         ProtocolTypes.Side _side,
-        uint256 _futureValue,
-        uint256 _circuitBreakerLimitRange
+        uint256 _futureValue
     ) external {
         ILendingMarket(lendingMarkets[_ccy]).unwindPosition(
             _orderBookId,
             _side,
             msg.sender,
-            _futureValue,
-            _circuitBreakerLimitRange
+            _futureValue
         );
     }
 
