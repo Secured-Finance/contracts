@@ -282,7 +282,7 @@ library OrderBookLib {
         }
     }
 
-    function insertOrder(
+    function placeOrder(
         OrderBook storage self,
         ProtocolTypes.Side _side,
         address _user,

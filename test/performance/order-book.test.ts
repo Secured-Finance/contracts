@@ -249,7 +249,7 @@ describe('Performance Test: Order Book', async () => {
     });
   });
 
-  describe('Fill orders with the order cleaning', async () => {
+  describe('Place an order with the order cleaning', async () => {
     const tests = [1, 2, 8];
     const log = {};
     const currencyKey = hexUSDC;
