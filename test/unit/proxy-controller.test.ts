@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
+import { expect } from 'chai';
 import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
 import { hexETH, hexWBTC, toBytes32 } from '../../utils/strings';
@@ -43,9 +44,9 @@ describe('ProxyController', () => {
 
       const currencyControllerProxyAddress = getNewProxyAddress(tx);
 
-      currencyControllerProxyAddress
-        .toString()
-        .should.be.not.equal(currencyController.address);
+      expect(currencyControllerProxyAddress).not.to.equal(
+        currencyController.address,
+      );
       expectEvent(tx, 'ProxyCreated');
     });
 
@@ -90,9 +91,9 @@ describe('ProxyController', () => {
       );
       const currencyControllerProxyAddress2 = getUpdatedProxyAddress(tx2);
 
-      currencyControllerProxyAddress1
-        .toString()
-        .should.be.equal(currencyControllerProxyAddress2);
+      expect(currencyControllerProxyAddress1).to.equal(
+        currencyControllerProxyAddress2,
+      );
       expectEvent(tx2, 'ProxyUpdated');
     });
   });
@@ -115,7 +116,9 @@ describe('ProxyController', () => {
       const registeredProxyAddress = await proxyController.getAddress(
         contractName,
       );
-      registeredProxyAddress.should.be.equal(currencyControllerProxyAddress);
+      expect(registeredProxyAddress).to.be.equal(
+        currencyControllerProxyAddress,
+      );
     });
 
     it('Fail to get a proxy address due to empty data', async () => {
@@ -163,7 +166,7 @@ describe('ProxyController', () => {
       ]);
 
       const haircut1 = await currencyControllerProxy1.getHaircut(hexWBTC);
-      haircut1.toString().should.be.equal(HAIRCUT.toString());
+      expect(haircut1.toString()).to.equal(HAIRCUT.toString());
 
       // update (second time)
       const currencyController2 = await CurrencyController.new(
@@ -177,7 +180,7 @@ describe('ProxyController', () => {
       );
 
       const haircut2 = await currencyControllerProxy2.getHaircut(hexWBTC);
-      haircut2.toString().should.be.equal(HAIRCUT.toString());
+      expect(haircut2.toString()).to.equal(HAIRCUT.toString());
     });
 
     it('Fail to call a CurrencyController contract due to direct access', async () => {
@@ -217,7 +220,7 @@ describe('ProxyController', () => {
 
       const currencyControllerAdmin = await currencyControllerProxy.admin();
 
-      currencyControllerAdmin.toString().should.be.equal(aliceSigner.address);
+      expect(currencyControllerAdmin).to.equal(aliceSigner.address);
     });
   });
 });
