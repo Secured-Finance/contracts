@@ -727,7 +727,8 @@ library FundManagementLogic {
 
     function cleanUpAllFunds(address _user) external {
         EnumerableSet.Bytes32Set storage ccySet = Storage.slot().usedCurrencies[_user];
-        for (uint256 i; i < ccySet.length(); i++) {
+        uint256 length = ccySet.length();
+        for (uint256 i; i < length; i++) {
             cleanUpFunds(ccySet.at(i), _user);
         }
     }

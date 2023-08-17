@@ -95,7 +95,9 @@ library LendingMarketUserLogic {
 
         // The case that an order is placed in the order book
         if ((filledAmount + filledOrder.ignoredAmount) != _amount) {
-            activeOrderCount += 1;
+            unchecked {
+                activeOrderCount += 1;
+            }
         }
 
         require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");

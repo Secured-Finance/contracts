@@ -157,22 +157,22 @@ library OrderBookLib {
     {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
-        bool isPastMaturity = self.userCurrentMaturities[_user] != self.maturity;
+        uint256 userMaturity = self.userCurrentMaturities[_user];
+        bool isPastMaturity = userMaturity != self.maturity;
 
-        activeOrderIds = new uint48[](isPastMaturity ? 0 : self.activeLendOrderIds[_user].length);
-        inActiveOrderIds = new uint48[](self.activeLendOrderIds[_user].length);
+        uint48[] memory orderIds = self.activeLendOrderIds[_user];
+        uint256 orderIdLength = orderIds.length;
+        activeOrderIds = new uint48[](isPastMaturity ? 0 : orderIdLength);
+        inActiveOrderIds = new uint48[](orderIdLength);
 
-        for (uint256 i; i < self.activeLendOrderIds[_user].length; i++) {
-            uint48 orderId = self.activeLendOrderIds[_user][i];
+        for (uint256 i; i < orderIdLength; i++) {
+            uint48 orderId = orderIds[i];
             PlacedOrder memory order = self.orders[orderId];
 
-            if (
-                !self.lendOrders[self.userCurrentMaturities[_user]].isActiveOrderId(
-                    order.unitPrice,
-                    orderId
-                )
-            ) {
-                inActiveOrderCount += 1;
+            if (!self.lendOrders[userMaturity].isActiveOrderId(order.unitPrice, orderId)) {
+                unchecked {
+                    inActiveOrderCount += 1;
+                }
                 inActiveOrderIds[i - activeOrderCount] = orderId;
                 if (!isPastMaturity) {
                     assembly {
@@ -181,7 +181,9 @@ library OrderBookLib {
                 }
             } else {
                 if (!isPastMaturity) {
-                    activeOrderCount += 1;
+                    unchecked {
+                        activeOrderCount += 1;
+                    }
                     activeOrderIds[i - inActiveOrderCount] = orderId;
                 }
                 assembly {
@@ -198,22 +200,22 @@ library OrderBookLib {
     {
         uint256 activeOrderCount = 0;
         uint256 inActiveOrderCount = 0;
-        bool isPastMaturity = self.userCurrentMaturities[_user] != self.maturity;
+        uint256 userMaturity = self.userCurrentMaturities[_user];
+        bool isPastMaturity = userMaturity != self.maturity;
 
-        activeOrderIds = new uint48[](isPastMaturity ? 0 : self.activeBorrowOrderIds[_user].length);
-        inActiveOrderIds = new uint48[](self.activeBorrowOrderIds[_user].length);
+        uint48[] memory orderIds = self.activeBorrowOrderIds[_user];
+        uint256 orderIdLength = orderIds.length;
+        activeOrderIds = new uint48[](isPastMaturity ? 0 : orderIdLength);
+        inActiveOrderIds = new uint48[](orderIdLength);
 
-        for (uint256 i; i < self.activeBorrowOrderIds[_user].length; i++) {
-            uint48 orderId = self.activeBorrowOrderIds[_user][i];
+        for (uint256 i; i < orderIdLength; i++) {
+            uint48 orderId = orderIds[i];
             PlacedOrder memory order = self.orders[orderId];
 
-            if (
-                !self.borrowOrders[self.userCurrentMaturities[_user]].isActiveOrderId(
-                    order.unitPrice,
-                    orderId
-                )
-            ) {
-                inActiveOrderCount += 1;
+            if (!self.borrowOrders[userMaturity].isActiveOrderId(order.unitPrice, orderId)) {
+                unchecked {
+                    inActiveOrderCount += 1;
+                }
                 inActiveOrderIds[i - activeOrderCount] = orderId;
                 if (!isPastMaturity) {
                     assembly {
@@ -221,7 +223,9 @@ library OrderBookLib {
                     }
                 }
             } else {
-                activeOrderCount += 1;
+                unchecked {
+                    activeOrderCount += 1;
+                }
                 if (!isPastMaturity) {
                     activeOrderIds[i - inActiveOrderCount] = orderId;
                 }

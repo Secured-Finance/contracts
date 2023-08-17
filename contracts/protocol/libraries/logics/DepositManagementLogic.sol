@@ -41,10 +41,10 @@ library DepositManagementLogic {
     function getUsedCurrencies(address _user) public view returns (bytes32[] memory) {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
 
-        uint256 numCurrencies = currencySet.length();
-        bytes32[] memory currencies = new bytes32[](numCurrencies);
+        uint256 length = currencySet.length();
+        bytes32[] memory currencies = new bytes32[](length);
 
-        for (uint256 i; i < numCurrencies; i++) {
+        for (uint256 i; i < length; i++) {
             bytes32 currency = currencySet.at(i);
             currencies[i] = currency;
         }
@@ -428,9 +428,9 @@ library DepositManagementLogic {
         returns (uint256 totalDepositAmount)
     {
         EnumerableSet.Bytes32Set storage currencies = Storage.slot().usedCurrencies[_user];
-        uint256 len = currencies.length();
+        uint256 length = currencies.length();
 
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < length; i++) {
             bytes32 ccy = currencies.at(i);
             if (Storage.slot().collateralCurrencies.contains(ccy)) {
                 uint256 depositAmount = Storage.slot().depositAmounts[_user][ccy];
