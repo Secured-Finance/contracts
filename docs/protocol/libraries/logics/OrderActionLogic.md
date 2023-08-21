@@ -23,6 +23,17 @@ struct PlacedOrder {
 }
 ```
 
+### ExecuteOrderVars
+
+```solidity
+struct ExecuteOrderVars {
+  struct OrderActionLogic.OrderExecutionConditions conditions;
+  struct OrderActionLogic.PlacedOrder placedOrder;
+  bool isCircuitBreakerTriggered;
+  uint256 maturity;
+}
+```
+
 ### FillOrdersVars
 
 ```solidity
@@ -48,7 +59,7 @@ event OrdersCleaned(uint48[] orderIds, address maker, enum ProtocolTypes.Side si
 ### OrderExecuted
 
 ```solidity
-event OrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 inputUnitPrice, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, uint48 placedOrderId, uint256 placedAmount, uint256 placedUnitPrice, bool isCircuitBreakerTriggered)
+event OrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputAmount, uint256 inputUnitPrice, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledAmountInFV, uint256 feeInFV, uint48 placedOrderId, uint256 placedAmount, uint256 placedUnitPrice, bool isCircuitBreakerTriggered)
 ```
 
 ### PreOrderExecuted
@@ -60,7 +71,7 @@ event PreOrderExecuted(address user, enum ProtocolTypes.Side side, bytes32 ccy, 
 ### PositionUnwound
 
 ```solidity
-event PositionUnwound(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputFutureValue, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledFutureValue, bool isCircuitBreakerTriggered)
+event PositionUnwound(address user, enum ProtocolTypes.Side side, bytes32 ccy, uint256 maturity, uint256 inputFutureValue, uint256 filledAmount, uint256 filledUnitPrice, uint256 filledAmountInFV, uint256 feeInFV, bool isCircuitBreakerTriggered)
 ```
 
 ### cancelOrder
@@ -78,7 +89,7 @@ function cleanUpOrders(uint8 _orderBookId, address _user) external returns (uint
 ### executeOrder
 
 ```solidity
-function executeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
+function executeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
 ```
 
 ### executePreOrder
@@ -90,13 +101,7 @@ function executePreOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, addr
 ### unwindPosition
 
 ```solidity
-function unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
-```
-
-### _updateUserMaturity
-
-```solidity
-function _updateUserMaturity(uint8 _orderBookId, address _user) private
+function unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
 ```
 
 ### _cleanLendOrders
@@ -111,29 +116,13 @@ function _cleanLendOrders(uint8 _orderBookId, address _user) internal returns (u
 function _cleanBorrowOrders(uint8 _orderBookId, address _user) internal returns (uint48[] orderIds, uint256 activeOrderCount, uint256 removedFutureValue, uint256 removedOrderAmount)
 ```
 
-### _placeOrder
-
-```solidity
-function _placeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) private returns (uint48 orderId)
-```
-
-Makes a new order in the order book.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 |  |
-| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
-| _user | address | User's address |
-| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Preferable interest unit price |
-
 ### _fillOrders
 
 ```solidity
 function _fillOrders(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, bool _ignoreRemainingAmount) private returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, struct OrderActionLogic.PlacedOrder placedOrder, bool isCircuitBreakerTriggered)
 ```
 
-Takes orders in the order book.
+Fills orders in the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

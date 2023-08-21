@@ -22,19 +22,6 @@ struct PartiallyRemovedOrder {
 }
 ```
 
-## OrderItem
-
-```solidity
-struct OrderItem {
-  uint48 orderId;
-  uint48 next;
-  uint48 prev;
-  address maker;
-  uint256 timestamp;
-  uint256 amount;
-}
-```
-
 ## OrderStatisticsTreeLib
 
 OrderStatisticsTreeLib is a Red-Black Tree binary search library
@@ -60,7 +47,7 @@ struct Node {
   uint48 tail;
   uint256 orderCounter;
   uint256 orderTotalAmount;
-  mapping(uint256 => struct OrderItem) orders;
+  mapping(uint256 => struct OrderStatisticsTreeLib.OrderItem) orders;
 }
 ```
 
@@ -70,6 +57,19 @@ struct Node {
 struct Tree {
   uint256 root;
   mapping(uint256 => struct OrderStatisticsTreeLib.Node) nodes;
+}
+```
+
+### OrderItem
+
+```solidity
+struct OrderItem {
+  uint48 orderId;
+  uint48 next;
+  uint48 prev;
+  address maker;
+  uint256 timestamp;
+  uint256 amount;
 }
 ```
 
@@ -244,7 +244,7 @@ function getFutureValue(struct OrderStatisticsTreeLib.Tree self, uint256 value, 
 ### getOrderById
 
 ```solidity
-function getOrderById(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (struct OrderItem)
+function getOrderById(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (address maker, uint256 timestamp, uint256 amount)
 ```
 
 _Retrieves the Object denoted by `_id`._

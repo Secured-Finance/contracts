@@ -75,7 +75,7 @@ Modifier to check if the market is under the pre-order period.
 ### initialize
 
 ```solidity
-function initialize(address _resolver, bytes32 _ccy) public
+function initialize(address _resolver, bytes32 _ccy, uint256 _orderFeeRate, uint256 _cbLimitRange) public
 ```
 
 Initializes the contract.
@@ -86,6 +86,8 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | ---- | ---- | ----------- |
 | _resolver | address | The address of the Address Resolver contract |
 | _ccy | bytes32 | The main currency for the order book |
+| _orderFeeRate | uint256 |  |
+| _cbLimitRange | uint256 |  |
 
 ### requiredContracts
 
@@ -126,7 +128,7 @@ Gets the order book data.
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint8 _orderBookId, uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+function getCircuitBreakerThresholds(uint8 _orderBookId) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
 ```
 
 Gets unit price Thresholds by CircuitBreaker.
@@ -134,7 +136,6 @@ Gets unit price Thresholds by CircuitBreaker.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _orderBookId | uint8 | The order book id |
-| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -302,6 +303,30 @@ Gets the market currency.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | currency | bytes32 | The market currency |
+
+### getOrderFeeRate
+
+```solidity
+function getOrderFeeRate() external view returns (uint256)
+```
+
+Gets the order fee rate
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The order fee rate received by protocol |
+
+### getCircuitBreakerLimitRange
+
+```solidity
+function getCircuitBreakerLimitRange() external view returns (uint256)
+```
+
+Gets the limit range in unit price for the circuit breaker
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The auto-roll fee rate received by protocol |
 
 ### getOpeningDate
 
@@ -507,7 +532,7 @@ Gets active and inactive order IDs in the borrowing order book.
 ### calculateFilledAmount
 
 ```solidity
-function calculateFilledAmount(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
+function calculateFilledAmount(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount)
 ```
 
 Calculates the amount to be filled when executing an order in the order book.
@@ -518,13 +543,14 @@ Calculates the amount to be filled when executing an order in the order book.
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the user wants to borrow/lend |
 | _unitPrice | uint256 | Unit price user want to borrow/lend |
-| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | lastUnitPrice | uint256 | The last unit price that is filled on the order book |
 | filledAmount | uint256 | The amount that is filled on the order book |
 | filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
+| orderFeeInFV | uint256 | The order fee amount in the future value |
+| placedAmount | uint256 | The amount that is placed to the order book |
 
 ### createOrderBook
 
@@ -589,7 +615,7 @@ for lazy evaluation if the collateral is enough or not._
 ### executeOrder
 
 ```solidity
-function executeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
+function executeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
 ```
 
 Executes an order. Takes orders if the order is matched,
@@ -602,12 +628,12 @@ and places new order if not match it.
 | _user | address | User's address |
 | _amount | uint256 | Amount of funds the user wants to borrow/lend |
 | _unitPrice | uint256 | Unit price user wish to borrow/lend |
-| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | filledOrder | struct FilledOrder | User's Filled order of the user |
 | partiallyFilledOrder | struct PartiallyFilledOrder | Partially filled order on the order book |
+| feeInFV | uint256 |  |
 
 ### executePreOrder
 
@@ -629,7 +655,7 @@ before the market opens (Pre-order period). At the end of this period, Itayose w
 ### unwindPosition
 
 ```solidity
-function unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _circuitBreakerLimitRange) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder)
+function unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
 ```
 
 Unwinds lending or borrowing positions by a specified future value amount.
@@ -640,12 +666,12 @@ Unwinds lending or borrowing positions by a specified future value amount.
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _user | address | User's address |
 | _futureValue | uint256 | Amount of future value unwound |
-| _circuitBreakerLimitRange | uint256 | Rate limit range for the circuit breaker |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | filledOrder | struct FilledOrder | User's Filled order of the user |
 | partiallyFilledOrder | struct PartiallyFilledOrder | Partially filled order |
+| feeInFV | uint256 |  |
 
 ### executeItayoseCall
 
@@ -669,6 +695,30 @@ _If the opening date had already passed when this contract was created, this Ita
 | openingDate | uint256 | The timestamp when the market opens |
 | partiallyFilledLendingOrder | struct PartiallyFilledOrder | Partially filled lending order on the order book |
 | partiallyFilledBorrowingOrder | struct PartiallyFilledOrder | Partially filled borrowing order on the order book |
+
+### updateOrderFeeRate
+
+```solidity
+function updateOrderFeeRate(uint256 _orderFeeRate) external
+```
+
+Updates the order fee rate
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderFeeRate | uint256 | The order fee rate received by protocol |
+
+### updateCircuitBreakerLimitRange
+
+```solidity
+function updateCircuitBreakerLimitRange(uint256 _cbLimitRange) external
+```
+
+Updates the auto-roll fee rate
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _cbLimitRange | uint256 | The circuit breaker limit range |
 
 ### pauseMarket
 

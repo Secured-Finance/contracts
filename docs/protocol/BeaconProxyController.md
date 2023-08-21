@@ -92,7 +92,7 @@ Reverts on deployment market with existing currency and term
 ### deployLendingMarket
 
 ```solidity
-function deployLendingMarket(bytes32 _ccy) external returns (address market)
+function deployLendingMarket(bytes32 _ccy, uint256 _orderFeeRate, uint256 _cbLimitRange) external returns (address market)
 ```
 
 Deploys new LendingMarket
@@ -100,6 +100,8 @@ Deploys new LendingMarket
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Main currency for new lending market |
+| _orderFeeRate | uint256 | The order fee rate received by protocol |
+| _cbLimitRange | uint256 | The circuit breaker limit range |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |

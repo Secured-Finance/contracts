@@ -2,6 +2,18 @@
 
 ## OrderBookLogic
 
+### OrderFeeRateUpdated
+
+```solidity
+event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
+```
+
+### CircuitBreakerLimitRangeUpdated
+
+```solidity
+event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate)
+```
+
 ### OrderBookCreated
 
 ```solidity
@@ -23,7 +35,7 @@ function getOrderBookDetail(uint8 _orderBookId) public view returns (bytes32 ccy
 ### getCircuitBreakerThresholds
 
 ```solidity
-function getCircuitBreakerThresholds(uint8 _orderBookId, uint256 _circuitBreakerLimitRange) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+function getCircuitBreakerThresholds(uint8 _orderBookId) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
 ```
 
 ### getBestLendUnitPrice
@@ -78,6 +90,18 @@ function getLendOrderBook(uint8 _orderBookId, uint256 _limit) external view retu
 
 ```solidity
 function getMaturities(uint8[] _orderBookIds) public view returns (uint256[] maturities)
+```
+
+### updateOrderFeeRate
+
+```solidity
+function updateOrderFeeRate(uint256 _orderFeeRate) external
+```
+
+### updateCircuitBreakerLimitRange
+
+```solidity
+function updateCircuitBreakerLimitRange(uint256 _cbLimitRange) external
 ```
 
 ### createOrderBook

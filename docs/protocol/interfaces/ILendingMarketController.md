@@ -50,10 +50,27 @@ struct OrderBookDetail {
 ```solidity
 struct AdditionalFunds {
   bytes32 ccy;
+  uint256 workingLendOrdersAmount;
   uint256 claimableAmount;
+  uint256 workingBorrowOrdersAmount;
   uint256 debtAmount;
   uint256 lentAmount;
   uint256 borrowedAmount;
+}
+```
+
+### GetOrderEstimationParams
+
+```solidity
+struct GetOrderEstimationParams {
+  bytes32 ccy;
+  uint256 maturity;
+  address user;
+  enum ProtocolTypes.Side side;
+  uint256 amount;
+  uint256 unitPrice;
+  uint256 additionalDepositAmount;
+  bool ignoreBorrowedAmount;
 }
 ```
 
@@ -126,7 +143,7 @@ function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] unitPric
 ### getOrderEstimation
 
 ```solidity
-function getOrderEstimation(bytes32 ccy, uint256 maturity, enum ProtocolTypes.Side side, uint256 amount, uint256 unitPrice, uint256 additionalDepositAmount, bool ignoreBorrowedAmount) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
+function getOrderEstimation(struct ILendingMarketController.GetOrderEstimationParams params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 ### getBorrowOrderBook

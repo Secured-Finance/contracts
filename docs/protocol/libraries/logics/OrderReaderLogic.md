@@ -41,7 +41,13 @@ function getBorrowOrderIds(uint8 _orderBookId, address _user) external view retu
 ### calculateFilledAmount
 
 ```solidity
-function calculateFilledAmount(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
+function calculateFilledAmount(uint8 _orderBookId, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount)
+```
+
+### calculateOrderFeeAmount
+
+```solidity
+function calculateOrderFeeAmount(uint256 _maturity, uint256 _amount) public view returns (uint256 orderFeeAmount)
 ```
 
 ### getLendOrderAmounts

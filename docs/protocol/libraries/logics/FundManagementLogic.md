@@ -82,19 +82,19 @@ struct InactiveLendOrdersFunds {
 ### OrderFilled
 
 ```solidity
-event OrderFilled(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
+event OrderFilled(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 amountInFV, uint256 feeInFV)
 ```
 
 ### OrdersFilledInAsync
 
 ```solidity
-event OrdersFilledInAsync(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
+event OrdersFilledInAsync(address taker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 amountInFV)
 ```
 
 ### OrderPartiallyFilled
 
 ```solidity
-event OrderPartiallyFilled(uint48 orderId, address maker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 futureValue)
+event OrderPartiallyFilled(uint48 orderId, address maker, bytes32 ccy, enum ProtocolTypes.Side side, uint256 maturity, uint256 amount, uint256 amountInFV)
 ```
 
 ### RedemptionExecuted
@@ -137,7 +137,7 @@ Converts the future value to the genesis value if there is balance in the past m
 ### updateFunds
 
 ```solidity
-function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _orderFeeRate, bool _isTaker) external
+function updateFunds(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _feeInFV, bool _isTaker) external
 ```
 
 ### registerCurrencyAndMaturity

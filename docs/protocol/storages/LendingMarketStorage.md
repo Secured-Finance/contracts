@@ -24,6 +24,8 @@ bytes32 STORAGE_SLOT
 struct Storage {
   bytes32 ccy;
   uint8 lastOrderBookId;
+  uint256 orderFeeRate;
+  uint256 circuitBreakerLimitRange;
   mapping(uint8 => struct OrderBookLib.OrderBook) orderBooks;
   mapping(uint256 => bool) isReady;
   mapping(uint256 => struct ItayoseLog) itayoseLogs;

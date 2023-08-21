@@ -57,7 +57,7 @@ struct OrderBook {
   mapping(address => uint48[]) activeLendOrderIds;
   mapping(address => uint48[]) activeBorrowOrderIds;
   mapping(address => uint256) userCurrentMaturities;
-  mapping(uint256 => struct PlacedOrder) orders;
+  mapping(uint256 => uint256) orders;
   mapping(uint256 => bool) isPreOrder;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) lendOrders;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) borrowOrders;
@@ -101,6 +101,12 @@ function hasBorrowOrder(struct OrderBookLib.OrderBook self, address _user) inter
 function hasLendOrder(struct OrderBookLib.OrderBook self, address _user) internal view returns (bool)
 ```
 
+### getOrder
+
+```solidity
+function getOrder(struct OrderBookLib.OrderBook self, uint256 _orderId) internal view returns (struct PlacedOrder order)
+```
+
 ### getLendOrderBook
 
 ```solidity
@@ -128,13 +134,19 @@ function getBorrowOrderIds(struct OrderBookLib.OrderBook self, address _user) in
 ### calculateFilledAmount
 
 ```solidity
-function calculateFilledAmount(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
+function calculateFilledAmount(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV)
 ```
 
-### insertOrder
+### updateUserMaturity
 
 ```solidity
-function insertOrder(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) internal returns (uint48 orderId)
+function updateUserMaturity(struct OrderBookLib.OrderBook self, address _user) internal
+```
+
+### placeOrder
+
+```solidity
+function placeOrder(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) internal returns (uint48 orderId)
 ```
 
 ### fillOrders
@@ -155,10 +167,16 @@ function removeOrder(struct OrderBookLib.OrderBook self, address _user, uint48 _
 function getOpeningUnitPrice(struct OrderBookLib.OrderBook self) internal view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
+### getAndUpdateOrderExecutionConditions
+
+```solidity
+function getAndUpdateOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
+```
+
 ### getOrderExecutionConditions
 
 ```solidity
-function getOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
+function getOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal view returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists, uint256 cbThresholdUnitPrice, bool isFirstOrderInBlock)
 ```
 
 ### getCircuitBreakerThresholds
@@ -196,4 +214,20 @@ Increases and returns id of last order in order book.
 ```solidity
 function _removeOrderIdFromOrders(uint48[] orders, uint256 orderId) private
 ```
+
+### _packOrder
+
+```solidity
+function _packOrder(enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _maturity, uint256 _timestamp) private pure returns (uint256)
+```
+
+Packs order parameters into uint256
+
+### _unpackOrder
+
+```solidity
+function _unpackOrder(uint256 _order) private pure returns (enum ProtocolTypes.Side side, uint256 unitPrice, uint256 maturity, uint256 timestamp)
+```
+
+Unpacks order parameters from uint256
 

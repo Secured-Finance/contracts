@@ -80,6 +80,32 @@ function executeOperationForCollateral(address _liquidator, address _user, bytes
 function executeOperationForDebt(address _liquidator, address _user, bytes32 _collateralCcy, uint256 _receivedCollateralAmount, bytes32 _debtCcy, uint256 _debtMaturity, uint256 _receivedDebtAmount) external returns (bool)
 ```
 
+### deposit
+
+```solidity
+function deposit(bytes32 _ccy, uint256 _amount) external payable
+```
+
+_Deposits funds by the caller into the token vault._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to deposit |
+
+### withdraw
+
+```solidity
+function withdraw(bytes32 _ccy, uint256 _amount) external
+```
+
+_Withdraws funds by the caller from the token vault._
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _amount | uint256 | Amount of funds to deposit |
+
 ### _executeSwap
 
 ```solidity

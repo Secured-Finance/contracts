@@ -265,20 +265,14 @@ Gets mid prices per future value for the selected currency.
 ### getOrderEstimation
 
 ```solidity
-function getOrderEstimation(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice, uint256 _additionalDepositAmount, bool _ignoreBorrowedAmount) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 coverage, bool isInsufficientDepositAmount)
+function getOrderEstimation(struct ILendingMarketController.GetOrderEstimationParams _params) external view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount, uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
 Gets the estimated order result by the calculation of the amount to be filled when executing an order in the order books.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the market |
-| _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
-| _amount | uint256 | Amount of funds the maker wants to borrow/lend |
-| _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
-| _additionalDepositAmount | uint256 | Additional amount to be deposited with the lending order |
-| _ignoreBorrowedAmount | bool | The boolean if the borrowed amount is ignored and not used as collateral or not |
+| _params | struct ILendingMarketController.GetOrderEstimationParams | The parameters to calculate the order estimation <br> - ccy: Currency name in bytes32 of the selected market <br> - maturity: The maturity of the market <br> - side: Order position type, Borrow or Lend <br> - amount: Amount of funds the maker wants to borrow/lend <br> - unitPrice: Amount of unit price taker wish to borrow/lend <br> - additionalDepositAmount: Additional amount to be deposited with the lending order <br> - ignoreBorrowedAmount: The boolean if the borrowed amount is ignored and not used as collateral or not |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -286,6 +280,7 @@ Gets the estimated order result by the calculation of the amount to be filled wh
 | filledAmount | uint256 | The amount that is filled on the order book |
 | filledAmountInFV | uint256 | The amount in the future value that is filled on the order book |
 | orderFeeInFV | uint256 | The order fee amount in the future value |
+| placedAmount | uint256 | The amount that is placed to the order book |
 | coverage | uint256 | The rate of collateral used |
 | isInsufficientDepositAmount | bool | The boolean if the order amount for lending in the selected currency is insufficient for the deposit amount or not |
 

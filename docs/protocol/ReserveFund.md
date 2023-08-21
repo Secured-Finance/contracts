@@ -90,11 +90,3 @@ _Withdraw funds by the caller from the token vault._
 | _ccy | bytes32 | Currency name in bytes32 |
 | _amount | uint256 | Amount of funds to deposit |
 
-### executeEmergencySettlement
-
-```solidity
-function executeEmergencySettlement() external
-```
-
-Force settlement of all lending and borrowing positions.
-

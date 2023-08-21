@@ -56,7 +56,7 @@ Updates the order fee rate
 ### updateCircuitBreakerLimitRange
 
 ```solidity
-function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _limitRange) public
+function updateCircuitBreakerLimitRange(bytes32 _ccy, uint256 _cbLimitRange) public
 ```
 
 Updates the auto-roll fee rate
@@ -64,5 +64,5 @@ Updates the auto-roll fee rate
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _limitRange | uint256 | The circuit breaker limit range |
+| _cbLimitRange | uint256 | The circuit breaker limit range |
 
