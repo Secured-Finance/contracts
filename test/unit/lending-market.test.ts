@@ -190,13 +190,16 @@ describe('LendingMarket', () => {
     });
 
     it('Fail to deploy Lending Market with circuit breaker range more than equal to 10000', async () => {
+      // NOTE: Need to update ethers & related modules version for checking Custom Error message of external contracts
+      // using `revertedWithCustomError`.
+      // Custom Error: InvalidCircuitBreakerLimitRange
       await expect(
         lendingMarketCaller.deployLendingMarket(
           ethers.utils.formatBytes32String('Test'),
           ORDER_FEE_RATE,
           10000,
         ),
-      ).to.revertedWith('CB limit is too high');
+      ).to.reverted;
     });
   });
 
@@ -489,7 +492,7 @@ describe('LendingMarket', () => {
             '1000000000000000',
             '8000',
           ),
-      ).to.be.revertedWith('Opposite side order exists');
+      ).to.be.revertedWith('OppositeSideOrderExists');
     });
 
     it('Fail to crete a borrowing pre-order due to opposite order existing', async () => {
@@ -513,7 +516,7 @@ describe('LendingMarket', () => {
             '1000000000000000',
             '8000',
           ),
-      ).to.be.revertedWith('Opposite side order exists');
+      ).to.be.revertedWith('OppositeSideOrderExists');
     });
   });
 
@@ -777,7 +780,7 @@ describe('LendingMarket', () => {
             '100000000000000000',
             '8000',
           ),
-      ).to.be.revertedWith('Order found in past maturity');
+      ).to.be.revertedWith('PastMaturityOrderExists');
 
       await expect(
         lendingMarketCaller
@@ -789,7 +792,7 @@ describe('LendingMarket', () => {
             '100000000000000000',
             '8000',
           ),
-      ).to.be.revertedWith('Order found in past maturity');
+      ).to.be.revertedWith('PastMaturityOrderExists');
     });
 
     it('Fail to create a pre-order due to not in the pre-order period', async () => {
@@ -805,7 +808,7 @@ describe('LendingMarket', () => {
             '100000000000000000',
             '8720',
           ),
-      ).to.be.revertedWith('Not in the pre-order period');
+      ).to.be.revertedWith('NotPreOrderPeriod');
     });
 
     it('Fail to execute the Itayose call due to not in the Itayose period', async () => {
@@ -814,7 +817,7 @@ describe('LendingMarket', () => {
           targetCurrency,
           currentOrderBookId,
         ),
-      ).to.be.revertedWith('Not in the Itayose period');
+      ).to.be.revertedWith('NotItayosePeriod');
     });
   });
 

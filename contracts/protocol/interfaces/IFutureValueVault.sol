@@ -2,6 +2,11 @@
 pragma solidity ^0.8.9;
 
 interface IFutureValueVault {
+    error UserIsZero();
+    error PastMaturityBalanceExists(address user);
+    error TotalSupplyNotZero();
+    error InvalidResetAmount();
+
     event Transfer(
         address indexed from,
         address indexed to,

@@ -78,7 +78,7 @@ library OrderStatisticsTreeLib {
     }
 
     function next(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
-        require(value != EMPTY, "OrderStatisticsTree(401) - Starting value cannot be zero");
+        require(value != EMPTY, "OrderStatisticsTreeLib: Starting value cannot be zero");
         if (self.nodes[value].right != EMPTY) {
             _cursor = treeMinimum(self, self.nodes[value].right);
         } else {
@@ -91,7 +91,7 @@ library OrderStatisticsTreeLib {
     }
 
     function prev(Tree storage self, uint256 value) internal view returns (uint256 _cursor) {
-        require(value != EMPTY, "OrderStatisticsTree(402) - Starting value cannot be zero");
+        require(value != EMPTY, "OrderStatisticsTreeLib: Starting value cannot be zero");
         if (self.nodes[value].left != EMPTY) {
             _cursor = treeMaximum(self, self.nodes[value].left);
         } else {
@@ -143,7 +143,7 @@ library OrderStatisticsTreeLib {
             uint256
         )
     {
-        require(exists(self, value), "OrderStatisticsTree(403) - Value does not exist.");
+        require(exists(self, value), "OrderStatisticsTreeLib: Value does not exist");
         Node storage gn = self.nodes[value];
         return (
             gn.parent,
@@ -190,7 +190,7 @@ library OrderStatisticsTreeLib {
     }
 
     function insert(Tree storage self, uint256 value) internal {
-        require(value != EMPTY, "OrderStatisticsTree(405) - Value to insert cannot be zero");
+        require(value != EMPTY, "OrderStatisticsTreeLib: Value to insert cannot be zero");
         uint256 cursor;
         uint256 probe = self.root;
         while (probe != EMPTY) {
@@ -231,7 +231,7 @@ library OrderStatisticsTreeLib {
     }
 
     function remove(Tree storage self, uint256 value) internal {
-        require(value != EMPTY, "OrderStatisticsTree(407) - Value to delete cannot be zero");
+        require(value != EMPTY, "OrderStatisticsTreeLib: Value to remove cannot be zero");
         Node storage nValue = self.nodes[value];
         uint256 probe;
         uint256 cursor;
@@ -806,7 +806,7 @@ library OrderStatisticsTreeLib {
 
         require(
             gn.orderTotalAmount >= _amount,
-            "OrderStatisticsTree(410) - Amount to fill is insufficient"
+            "OrderStatisticsTreeLib: Amount to remove is insufficient"
         );
 
         uint256 remainingAmount = _amount;
@@ -997,7 +997,7 @@ library OrderStatisticsTreeLib {
         Node storage gn = self.nodes[value];
         require(
             gn.orders[orderId].timestamp == 0,
-            "OrderStatisticsTree(409) - Order id already exist."
+            "OrderStatisticsTreeLib: Order id already exists"
         );
 
         gn.orderCounter += 1;
@@ -1017,7 +1017,7 @@ library OrderStatisticsTreeLib {
     ) internal returns (uint256 amount) {
         require(
             isActiveOrderId(self, value, orderId),
-            "OrderStatisticsTree(410) - Order does not exist."
+            "OrderStatisticsTreeLib: Order does not exist"
         );
         Node storage gn = self.nodes[value];
 
@@ -1051,7 +1051,7 @@ library OrderStatisticsTreeLib {
     ) internal returns (uint256 amount) {
         require(
             isActiveOrderId(self, value, orderId),
-            "OrderStatisticsTree(410) - Order does not exist."
+            "OrderStatisticsTreeLib: Order does not exist"
         );
         Node storage gn = self.nodes[value];
 

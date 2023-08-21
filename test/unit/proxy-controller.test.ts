@@ -8,6 +8,7 @@ import { btcToETHRate, wBtcToBTCRate } from '../common/constants';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
+const GenesisValueVault = artifacts.require('GenesisValueVault');
 const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
 const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');
@@ -96,6 +97,16 @@ describe('ProxyController', () => {
       );
       expectEvent(tx2, 'ProxyUpdated');
     });
+
+    it('Fail to set a contract due to invalid input', async () => {
+      await expectRevert(
+        addressResolver.importAddresses(
+          [toBytes32('Test1'), toBytes32('Test2')],
+          [ethers.constants.AddressZero],
+        ),
+        'UnmatchedInputs',
+      );
+    });
   });
 
   describe('Get contract address', async () => {
@@ -125,6 +136,24 @@ describe('ProxyController', () => {
       await expectRevert(
         proxyController.getAddress(toBytes32('Test')),
         'Address not found',
+      );
+    });
+
+    it('Fail to call a contract due to missing address', async () => {
+      const genesisValueVault = await GenesisValueVault.new(
+        addressResolver.address,
+      );
+
+      const genesisValueVaultProxyAddress = await proxyController
+        .setGenesisValueVaultImpl(genesisValueVault.address)
+        .then(getNewProxyAddress);
+
+      const genesisValueVaultProxy = await GenesisValueVault.at(
+        genesisValueVaultProxyAddress,
+      );
+      await expectRevert(
+        genesisValueVaultProxy.updateInitialCompoundFactor(hexETH, '8000'),
+        'MissingAddress',
       );
     });
   });

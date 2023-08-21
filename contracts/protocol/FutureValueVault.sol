@@ -106,11 +106,9 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         uint256 _maturity,
         bool _isTaker
     ) public override onlyAcceptedContracts {
-        require(_user != address(0), "Add to the zero address of lender");
-        require(
-            !hasBalanceAtPastMaturity(_orderBookId, _user, _maturity),
-            "User has past maturity balance"
-        );
+        if (_user == address(0)) revert UserIsZero();
+        if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
+            revert PastMaturityBalanceExists({user: _user});
 
         int256 previousBalance = Storage.slot().balances[_orderBookId][_user];
         Storage.slot().balanceMaturities[_orderBookId][_user] = _maturity;
@@ -138,11 +136,9 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         uint256 _maturity,
         bool _isTaker
     ) public override onlyAcceptedContracts {
-        require(_user != address(0), "Add to the zero address of borrower");
-        require(
-            !hasBalanceAtPastMaturity(_orderBookId, _user, _maturity),
-            "User has past maturity balance"
-        );
+        if (_user == address(0)) revert UserIsZero();
+        if (hasBalanceAtPastMaturity(_orderBookId, _user, _maturity))
+            revert PastMaturityBalanceExists({user: _user});
 
         int256 previousBalance = Storage.slot().balances[_orderBookId][_user];
         Storage.slot().balanceMaturities[_orderBookId][_user] = _maturity;
@@ -167,14 +163,10 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         int256 _amount,
         uint256 _maturity
     ) external override onlyAcceptedContracts {
-        require(
-            !hasBalanceAtPastMaturity(_orderBookId, _sender, _maturity),
-            "Sender has past maturity balance"
-        );
-        require(
-            !hasBalanceAtPastMaturity(_orderBookId, _receiver, _maturity),
-            "Receiver has past maturity balance"
-        );
+        if (hasBalanceAtPastMaturity(_orderBookId, _sender, _maturity))
+            revert PastMaturityBalanceExists({user: _sender});
+        if (hasBalanceAtPastMaturity(_orderBookId, _receiver, _maturity))
+            revert PastMaturityBalanceExists({user: _receiver});
 
         Storage.slot().balanceMaturities[_orderBookId][_receiver] = _maturity;
         Storage.slot().balances[_orderBookId][_sender] -= _amount;
@@ -243,7 +235,7 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
         override
         onlyAcceptedContracts
     {
-        require(Storage.slot().totalSupply[_maturity] == 0, "Initial total supply is not 0");
+        if (Storage.slot().totalSupply[_maturity] != 0) revert TotalSupplyNotZero();
         _updateTotalSupply(_maturity, 0, _amount, true);
     }
 
@@ -278,10 +270,9 @@ contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable 
     ) external override onlyAcceptedContracts returns (int256 removedAmount, int256 balance) {
         removedAmount = Storage.slot().balances[_orderBookId][_user];
 
-        require(
-            (_amount > 0 && removedAmount >= 0) || (_amount < 0 && removedAmount <= 0),
-            "Invalid amount"
-        );
+        if ((_amount > 0 && removedAmount < 0) || (_amount < 0 && removedAmount > 0)) {
+            revert InvalidResetAmount();
+        }
 
         if ((_amount > 0 && _amount < removedAmount) || (_amount < 0 && _amount > removedAmount)) {
             removedAmount = _amount;

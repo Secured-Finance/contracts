@@ -148,7 +148,7 @@ describe('LendingMarketController - Orders', () => {
         beaconProxyControllerProxy.getBeaconProxyAddress(
           ethers.utils.formatBytes32String('Test'),
         ),
-      ).to.be.revertedWith('Beacon proxy address not found');
+      ).to.be.revertedWith('InvalidProxyContract');
     });
 
     it('Create a order book', async () => {
@@ -2680,7 +2680,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '0',
             ),
-        ).to.be.revertedWith('Order not found');
+        ).to.be.revertedWith('NoOrdersExist');
       });
 
       it('Fail to place a lend market order', async () => {
@@ -2695,7 +2695,7 @@ describe('LendingMarketController - Orders', () => {
               '0',
               { value: '1000000000000000' },
             ),
-        ).to.be.revertedWith('Order not found');
+        ).to.be.revertedWith('NoOrdersExist');
       });
     });
 
@@ -2966,7 +2966,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .unwindPosition(targetCurrency, maturities[0]),
-        ).to.be.revertedWith('Order not found');
+        ).to.be.revertedWith('NoOrdersExist');
 
         const { futureValue: aliceFV } =
           await lendingMarketControllerProxy.getPosition(
@@ -3021,7 +3021,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .unwindPosition(targetCurrency, maturities[0]),
-        ).to.be.revertedWith('Not enough collateral');
+        ).to.be.revertedWith('NotEnoughCollateral');
       });
 
       it('Fail to execute unwinding due to no future values user has', async () => {
@@ -3029,7 +3029,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .unwindPosition(targetCurrency, maturities[0]),
-        ).to.be.revertedWith('Future Value is zero');
+        ).to.be.revertedWith('FutureValueIsZero');
       });
 
       it('Fail to execute unwinding due to invalid maturity', async () => {
@@ -3037,7 +3037,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .unwindPosition(targetCurrency, '1'),
-        ).to.be.revertedWith('Invalid maturity');
+        ).to.be.revertedWith('InvalidMaturity');
       });
     });
 
@@ -3055,7 +3055,7 @@ describe('LendingMarketController - Orders', () => {
               '100000000000000000',
               '8000',
             ),
-        ).not.to.be.revertedWith('Not enough deposit in the selected currency');
+        ).not.to.be.revertedWith(`NotEnoughDeposit${targetCurrency}`);
 
         await expect(
           lendingMarketControllerProxy
@@ -3067,13 +3067,31 @@ describe('LendingMarketController - Orders', () => {
               '100000000000000000',
               '8000',
             ),
-        ).to.be.revertedWith('Not enough collateral');
+        ).to.be.revertedWith('NotEnoughCollateral');
       });
 
       it('Fail to rotate lending markets due to pre-maturity', async () => {
         await expect(
           lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
-        ).to.be.revertedWith('Market is not matured');
+        ).to.be.revertedWith('OrderBookNotMatured');
+      });
+
+      it('Fail to cancel an order due to invalid user', async () => {
+        await lendingMarketControllerProxy
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            maturities[0],
+            Side.LEND,
+            '100000000000000000',
+            '8000',
+          );
+
+        await expect(
+          lendingMarketControllerProxy
+            .connect(bob)
+            .cancelOrder(targetCurrency, maturities[0], '1'),
+        ).to.be.revertedWith('CallerNotMaker');
       });
 
       it('Fail to cancel an order due to invalid order', async () => {
@@ -3081,7 +3099,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .cancelOrder(targetCurrency, maturities[0], '10'),
-        ).to.be.revertedWith('Order not found');
+        ).to.be.revertedWith('NoOrderExists');
       });
     });
   });

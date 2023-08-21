@@ -11,9 +11,11 @@ import {ITokenVault} from "../interfaces/ITokenVault.sol";
 import {MixinAddressResolverStorage as Storage} from "../storages/mixins/MixinAddressResolverStorage.sol";
 
 library AddressResolverLib {
+    error MissingAddress(string name);
+
     function getAddress(bytes32 name) internal view returns (address) {
         address _foundAddress = Storage.slot().addressCache[name];
-        require(_foundAddress != address(0), string(abi.encodePacked("Missing address: ", name)));
+        if (_foundAddress == address(0)) revert MissingAddress(string(abi.encodePacked(name)));
         return _foundAddress;
     }
 

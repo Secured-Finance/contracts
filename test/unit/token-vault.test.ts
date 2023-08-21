@@ -237,13 +237,13 @@ describe('TokenVault', () => {
     it('Fail to call setCollateralParameters due to invalid rate', async () => {
       await expect(
         tokenVaultProxy.setCollateralParameters('0', '1', '1'),
-      ).to.be.revertedWith('Invalid liquidation threshold rate');
+      ).to.be.revertedWith('InvalidLiquidationThresholdRate');
       await expect(
         tokenVaultProxy.setCollateralParameters('1', '10001', '1'),
-      ).to.be.revertedWith('Invalid liquidation protocol fee rate');
+      ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
       await expect(
         tokenVaultProxy.setCollateralParameters('1', '1', '10001'),
-      ).to.be.revertedWith('Invalid liquidator fee rate');
+      ).to.be.revertedWith('InvalidLiquidatorFeeRate');
     });
   });
 
@@ -1046,19 +1046,19 @@ describe('TokenVault', () => {
     it('Fail to call addDepositAmount due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.addDepositAmount(alice.address, targetCurrency, '1'),
-      ).to.be.revertedWith('Only Accepted Contracts');
+      ).to.be.revertedWith('OnlyAcceptedContracts');
     });
 
     it('Fail to call removeDepositAmount due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.removeDepositAmount(alice.address, targetCurrency, '1'),
-      ).to.be.revertedWith('Only Accepted Contracts');
+      ).to.be.revertedWith('OnlyAcceptedContracts');
     });
 
     it('Fail to call executeForcedReset due to invalid caller', async () => {
       await expect(
         tokenVaultProxy.executeForcedReset(alice.address, targetCurrency),
-      ).to.be.revertedWith('Only Accepted Contracts');
+      ).to.be.revertedWith('OnlyAcceptedContracts');
     });
 
     it('Fail to call addDepositAmount due to invalid amount', async () => {
@@ -1075,12 +1075,12 @@ describe('TokenVault', () => {
           targetCurrency,
           amount.add('1'),
         ),
-      ).to.be.revertedWith('Not enough deposit in the selected currency');
+      ).to.be.revertedWith('NotEnoughDeposit');
     });
 
     it('Fail to call deposit due to invalid amount', async () => {
       await expect(tokenVaultProxy.deposit(ETH, '100')).to.be.revertedWith(
-        'Invalid amount',
+        'InvalidAmount',
       );
     });
 
@@ -1089,7 +1089,7 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultProxy.deposit(targetCurrency, '100'),
-      ).to.be.revertedWith('Market terminated');
+      ).to.be.revertedWith('MarketTerminated');
     });
 
     it('Fail to withdraw due to redemption required', async () => {
@@ -1097,7 +1097,7 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultProxy.withdraw(targetCurrency, '10000000000000'),
-      ).to.be.revertedWith('Redemption is required');
+      ).to.be.revertedWith('RedemptionIsRequired');
     });
 
     it('Fail to withdraw due to insolvency', async () => {
@@ -1116,13 +1116,13 @@ describe('TokenVault', () => {
 
       await expect(
         tokenVaultProxy.withdraw(targetCurrency, '10000000000000'),
-      ).to.be.revertedWith('Protocol is insolvent');
+      ).to.be.revertedWith(`ProtocolIsInsolvent("${targetCurrency}")`);
     });
 
     it('Fail to get liquidation amount due to no collateral', async () => {
       await expect(
         tokenVaultProxy.getLiquidationAmount(owner.address, targetCurrency, 1),
-      ).to.be.revertedWith('Zero collateral in the selected currency');
+      ).to.be.revertedWith('CollateralIsZero');
     });
 
     it('Deposit funds from Alice', async () => {
@@ -1240,7 +1240,7 @@ describe('TokenVault', () => {
           bob.address,
           1,
         ),
-      ).to.be.revertedWith('Only Accepted Contracts');
+      ).to.be.revertedWith('OnlyAcceptedContracts');
     });
   });
 

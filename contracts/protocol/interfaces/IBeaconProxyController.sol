@@ -2,6 +2,9 @@
 pragma solidity ^0.8.9;
 
 interface IBeaconProxyController {
+    error NoBeaconProxyContract();
+    error InvalidProxyContract();
+
     event BeaconProxyCreated(
         bytes32 indexed id,
         address indexed proxyAddress,

@@ -2,6 +2,8 @@
 pragma solidity ^0.8.9;
 
 interface IProxyController {
+    error InvalidProxyContract();
+
     event ProxyCreated(
         bytes32 indexed id,
         address indexed proxyAddress,

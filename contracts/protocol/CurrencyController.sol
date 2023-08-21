@@ -34,7 +34,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      */
     modifier onlySupportedCurrency(bytes32 _ccy) {
-        require(currencyExists(_ccy), "Unsupported asset");
+        if (!currencyExists(_ccy)) revert InvalidCurrency();
         _;
     }
 
@@ -158,7 +158,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     function removePriceFeed(bytes32 _ccy) external override onlyOwner onlySupportedCurrency(_ccy) {
         AggregatorV3Interface[] memory priceFeeds = Storage.slot().priceFeeds[_ccy];
 
-        require(priceFeeds.length != 0, "Invalid PriceFeeds");
+        if (priceFeeds.length == 0) revert NoPriceFeedExists();
         delete Storage.slot().priceFeeds[_ccy];
         delete Storage.slot().decimalsCaches[_ccy];
 
@@ -366,7 +366,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal {
-        require(_haircut <= 10000, "Haircut ratio overflow");
+        if (_haircut > 10000) revert InvalidHaircut();
 
         Storage.slot().haircuts[_ccy] = _haircut;
 
@@ -384,10 +384,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         for (uint256 i; i < _priceFeeds.length; i++) {
             priceFeeds[i] = AggregatorV3Interface(_priceFeeds[i]);
             (, int256 price, , , ) = priceFeeds[i].latestRoundData();
-            require(price >= 0, "Invalid PriceFeed");
+            if (price < 0) revert InvalidPriceFeed();
 
             uint8 decimals = priceFeeds[i].decimals();
-            require(decimals <= 18, "Invalid decimals");
+            if (decimals > 18) revert InvalidDecimals();
 
             // Add the decimal point of the source currency of the price feed.
             // The previous price feed decimals are used as source data if there are multiple price feeds.

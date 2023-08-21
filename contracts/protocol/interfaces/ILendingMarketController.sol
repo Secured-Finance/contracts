@@ -4,6 +4,12 @@ pragma solidity ^0.8.9;
 import "../types/ProtocolTypes.sol";
 
 interface ILendingMarketController {
+    error InvalidMaturity();
+    error InvalidCurrency();
+    error AlreadyTerminated();
+    error NotTerminated();
+    error AlreadyInitialized();
+
     struct Order {
         uint48 orderId;
         bytes32 ccy;

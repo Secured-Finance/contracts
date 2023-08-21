@@ -6,7 +6,7 @@ import {ERC20HandlerStorage as Storage} from "../storages/libraries/ERC20Handler
 
 library ERC20Handler {
     function initialize(address _baseCurrency) internal {
-        require(Storage.slot().baseCurrency == address(0), "Already initialized");
+        require(Storage.slot().baseCurrency == address(0), "TransferHelper: Already initialized");
         Storage.slot().baseCurrency = _baseCurrency;
     }
 
@@ -40,7 +40,7 @@ library ERC20Handler {
     }
 
     function convertToWrappedToken(address _receiver, uint256 _amount) internal {
-        require(address(this).balance >= _amount, "Insufficient balance");
+        require(address(this).balance >= _amount, "TransferHelper: Insufficient balance");
 
         IWETH9(Storage.slot().baseCurrency).deposit{value: _amount}();
         IWETH9(Storage.slot().baseCurrency).transfer(_receiver, _amount);
@@ -48,7 +48,7 @@ library ERC20Handler {
 
     function convertFromWrappedToken(address _receiver, uint256 _amount) internal {
         uint256 balance = IWETH9(Storage.slot().baseCurrency).balanceOf(address(this));
-        require(balance >= _amount, "Insufficient balance");
+        require(balance >= _amount, "TransferHelper: Insufficient balance");
 
         if (balance > 0) {
             IWETH9(Storage.slot().baseCurrency).withdraw(_amount);

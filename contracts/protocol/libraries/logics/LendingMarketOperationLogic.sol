@@ -28,6 +28,13 @@ library LendingMarketOperationLogic {
 
     uint256 private constant OBSERVATION_PERIOD = 6 hours;
 
+    error InvalidCompoundFactor();
+    error InvalidCurrency();
+    error InvalidOpeningDate();
+    error InvalidTimestamp();
+    error LendingMarketNotInitialized();
+    error NotEnoughOrderBooks();
+
     event LendingMarketInitialized(
         bytes32 indexed ccy,
         uint256 genesisDate,
@@ -147,7 +154,7 @@ library LendingMarketOperationLogic {
         uint256 _orderFeeRate,
         uint256 _circuitBreakerLimitRange
     ) external {
-        require(_compoundFactor > 0, "Invalid compound factor");
+        if (_compoundFactor == 0) revert InvalidCompoundFactor();
 
         AddressResolverLib.genesisValueVault().initializeCurrencySetting(
             _ccy,
@@ -181,14 +188,12 @@ library LendingMarketOperationLogic {
     }
 
     function createOrderBook(bytes32 _ccy, uint256 _openingDate) external {
-        require(
-            AddressResolverLib.genesisValueVault().isInitialized(_ccy),
-            "Lending market hasn't been initialized in the currency"
-        );
-        require(
-            AddressResolverLib.currencyController().currencyExists(_ccy),
-            "Non supported currency"
-        );
+        if (!AddressResolverLib.genesisValueVault().isInitialized(_ccy)) {
+            revert LendingMarketNotInitialized();
+        }
+        if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
+            revert InvalidCurrency();
+        }
 
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
 
@@ -202,7 +207,7 @@ library LendingMarketOperationLogic {
             newMaturity = calculateNextMaturity(lastMaturity, Storage.slot().marketBasePeriod);
         }
 
-        require(_openingDate < newMaturity, "Market opening date must be before maturity date");
+        if (_openingDate >= newMaturity) revert InvalidOpeningDate();
 
         uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate);
 
@@ -269,7 +274,7 @@ library LendingMarketOperationLogic {
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[_ccy];
 
-        require(orderBookIds.length >= 2, "Not enough order books");
+        if (orderBookIds.length < 2) revert NotEnoughOrderBooks();
 
         uint256[] memory maturities = market.getMaturities(orderBookIds);
         uint8 maturedOrderBookId = orderBookIds[0];
@@ -407,7 +412,7 @@ library LendingMarketOperationLogic {
         uint256 diff = (dayOfWeek < TimeLibrary.DOW_FRI ? 7 : 0) + dayOfWeek - TimeLibrary.DOW_FRI;
         lastFridayTimestamp = TimeLibrary.subDays(thirdMonthEndTimestamp, diff);
 
-        require(lastFridayTimestamp > 0, "Invalid Timestamp");
+        if (lastFridayTimestamp == 0) revert InvalidTimestamp();
 
         return lastFridayTimestamp;
     }

@@ -18,6 +18,10 @@ library DepositManagementLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using RoundingUint256 for uint256;
 
+    error NotEnoughDeposit(bytes32 ccy);
+    error CollateralIsZero(bytes32 ccy);
+    error ProtocolIsInsolvent(bytes32 ccy);
+
     struct CalculatedFundVars {
         uint256 plusDepositAmountInAdditionalFundsCcy;
         uint256 minusDepositAmountInAdditionalFundsCcy;
@@ -270,10 +274,9 @@ library DepositManagementLogic {
         bytes32 _ccy,
         uint256 _amount
     ) public {
-        require(
-            Storage.slot().depositAmounts[_user][_ccy] >= _amount,
-            "Not enough deposit in the selected currency"
-        );
+        if (Storage.slot().depositAmounts[_user][_ccy] < _amount) {
+            revert NotEnoughDeposit({ccy: _ccy});
+        }
 
         Storage.slot().depositAmounts[_user][_ccy] -= _amount;
         _updateUsedCurrencies(_user, _ccy);
@@ -313,10 +316,9 @@ library DepositManagementLogic {
         withdrawableAmount = getWithdrawableCollateral(_ccy, _user);
         withdrawableAmount = _amount > withdrawableAmount ? withdrawableAmount : _amount;
 
-        require(
-            Storage.slot().totalDepositAmount[_ccy] >= withdrawableAmount,
-            "Protocol is insolvent"
-        );
+        if (Storage.slot().totalDepositAmount[_ccy] < withdrawableAmount) {
+            revert ProtocolIsInsolvent({ccy: _ccy});
+        }
 
         Storage.slot().totalDepositAmount[_ccy] -= withdrawableAmount;
         removeDepositAmount(_user, _ccy, withdrawableAmount);
@@ -347,7 +349,7 @@ library DepositManagementLogic {
 
         (uint256 collateralAmount, , ) = getCollateralAmount(_user, _liquidationCcy);
 
-        require(collateralAmount != 0, "Zero collateral in the selected currency");
+        if (collateralAmount == 0) revert CollateralIsZero({ccy: _liquidationCcy});
 
         uint256 liquidationAmountInBaseCcy = totalCollateralInBaseCcy * Constants.PCT_DIGIT >=
             totalUsedCollateralInBaseCcy * Params.liquidationThresholdRate()

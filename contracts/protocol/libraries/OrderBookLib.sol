@@ -34,6 +34,9 @@ library OrderBookLib {
     uint256 private constant PRE_ORDER_PERIOD = 7 days;
     uint256 private constant ITAYOSE_PERIOD = 1 hours;
 
+    error NoOrdersExist();
+    error PastMaturityOrderExists();
+
     struct OrderBook {
         uint48 lastOrderId;
         uint256 openingDate;
@@ -287,15 +290,14 @@ library OrderBookLib {
         uint256 userMaturity = self.userCurrentMaturities[_user];
         uint256 orderBookMaturity = self.maturity;
 
-        require(
-            userMaturity == orderBookMaturity ||
-                (userMaturity != orderBookMaturity &&
-                    self.activeLendOrderIds[_user].length == 0 &&
-                    self.activeBorrowOrderIds[_user].length == 0),
-            "Order found in past maturity"
-        );
-
         if (userMaturity != orderBookMaturity) {
+            if (
+                self.activeLendOrderIds[_user].length > 0 ||
+                self.activeBorrowOrderIds[_user].length > 0
+            ) {
+                revert PastMaturityOrderExists();
+            }
+
             self.userCurrentMaturities[_user] = orderBookMaturity;
         }
     }
@@ -521,7 +523,7 @@ library OrderBookLib {
             }
         }
 
-        if (_unitPrice == 0 && !orderExists) revert("Order not found");
+        if (_unitPrice == 0 && !orderExists) revert NoOrdersExist();
 
         if (
             _unitPrice == 0 ||

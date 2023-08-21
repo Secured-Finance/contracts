@@ -4,6 +4,17 @@ pragma solidity ^0.8.9;
 import {AutoRollLog} from "../storages/GenesisValueVaultStorage.sol";
 
 interface IGenesisValueVault {
+    error NoCompoundFactorExists(uint256 maturity);
+    error CompoundFactorIsZero();
+    error ResidualAmountIsNotZero();
+    error UnitPriceIsZero();
+    error InvalidMaturity();
+    error InvalidAmount();
+    error InvalidOrderFeeRate();
+    error CurrencyAlreadyInitialized();
+    error InitialCompoundFactorAlreadyFinalized();
+    error AutoRollLogAlreadyUpdated(uint256 currentMaturity, uint256 nextMaturity);
+
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, int256 value);
     event AutoRollExecuted(
         bytes32 indexed ccy,

@@ -13,6 +13,8 @@ library OrderReaderLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
+    error InvalidMaturity();
+
     function isMatured(uint8 _orderBookId) external view returns (bool) {
         return _getOrderBook(_orderBookId).isMatured();
     }
@@ -214,7 +216,7 @@ library OrderReaderLogic {
         view
         returns (uint256 orderFeeAmount)
     {
-        require(block.timestamp < _maturity, "Invalid maturity");
+        if (block.timestamp >= _maturity) revert InvalidMaturity();
         uint256 currentMaturity = _maturity - block.timestamp;
 
         // NOTE: The formula is:

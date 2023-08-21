@@ -14,8 +14,11 @@ import {MixinAddressResolverStorage as Storage} from "../storages/mixins/MixinAd
 contract MixinAddressResolver {
     event CacheUpdated(bytes32 name, address destination);
 
+    error OnlyAcceptedContracts();
+    error ResolverAlreadyRegistered();
+
     modifier onlyAcceptedContracts() {
-        require(isAcceptedContract(msg.sender), "Only Accepted Contracts");
+        if (!isAcceptedContract(msg.sender)) revert OnlyAcceptedContracts();
         _;
     }
 
@@ -74,7 +77,7 @@ contract MixinAddressResolver {
      * @param _resolver The address of the Address Resolver contract
      */
     function registerAddressResolver(address _resolver) internal {
-        require(address(Storage.slot().resolver) == address(0), "Resolver registered already");
+        if (address(Storage.slot().resolver) != address(0)) revert ResolverAlreadyRegistered();
         Storage.slot().resolver = IAddressResolver(_resolver);
     }
 

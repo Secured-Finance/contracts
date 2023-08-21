@@ -115,7 +115,7 @@ describe('LendingMarketController - Terminations', () => {
 
       await expect(
         lendingMarketControllerProxy.createOrderBook(targetCurrency, '1'),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeOrder(
@@ -125,7 +125,7 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.depositAndExecuteOrder(
@@ -135,7 +135,7 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.executePreOrder(
@@ -145,7 +145,7 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.depositAndExecutesPreOrder(
@@ -155,14 +155,14 @@ describe('LendingMarketController - Terminations', () => {
           '1',
           '0',
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.unwindPosition(
           targetCurrency,
           maturities[0],
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.cancelOrder(
@@ -170,14 +170,14 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           '1',
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeItayoseCalls(
           [targetCurrency],
           maturities[0],
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeLiquidationCall(
@@ -186,23 +186,23 @@ describe('LendingMarketController - Terminations', () => {
           maturities[0],
           alice.address,
         ),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.pauseLendingMarkets(targetCurrency),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
 
       await expect(
         lendingMarketControllerProxy.unpauseLendingMarkets(targetCurrency),
-      ).to.revertedWith('Already terminated');
+      ).to.revertedWith('AlreadyTerminated');
     });
 
     it('Execute an emergency termination with orders of single market', async () => {
@@ -529,7 +529,7 @@ describe('LendingMarketController - Terminations', () => {
         lendingMarketControllerProxy
           .connect(alice)
           .executeEmergencySettlement(),
-      ).to.revertedWith('Insufficient collateral');
+      ).to.revertedWith('InsufficientCollateral');
     });
 
     it('Fail to redeem due to 2nd execution', async () => {
@@ -582,7 +582,25 @@ describe('LendingMarketController - Terminations', () => {
         lendingMarketControllerProxy
           .connect(alice)
           .executeEmergencySettlement(),
-      ).to.revertedWith('Already redeemed');
+      ).to.revertedWith('AlreadyRedeemed');
+    });
+
+    it('Fail to initialize the lending market due to the market being already initialized', async () => {
+      await expect(
+        lendingMarketControllerProxy.initializeLendingMarket(
+          targetCurrency,
+          genesisDate,
+          INITIAL_COMPOUND_FACTOR,
+          ORDER_FEE_RATE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+        ),
+      ).to.revertedWith('AlreadyInitialized');
+    });
+
+    it('Fail to execute an emergency termination due to no markets terminated', async () => {
+      await expect(
+        lendingMarketControllerProxy.connect(bob).executeEmergencySettlement(),
+      ).to.revertedWith('NotTerminated');
     });
   });
 });

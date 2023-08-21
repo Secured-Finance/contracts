@@ -26,6 +26,11 @@ library LendingMarketUserLogic {
     using SafeCast for int256;
     using RoundingUint256 for uint256;
 
+    error InvalidAmount();
+    error FutureValueIsZero();
+    error TooManyActiveOrders();
+    error NotEnoughCollateral();
+
     function getOrderEstimation(ILendingMarketController.GetOrderEstimationParams memory input)
         external
         view
@@ -75,7 +80,8 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
-        require(_amount > 0, "Invalid amount");
+        if (_amount == 0) revert InvalidAmount();
+
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
@@ -100,7 +106,7 @@ library LendingMarketUserLogic {
             }
         }
 
-        require(activeOrderCount <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
+        if (activeOrderCount > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
 
         updateFundsForTaker(
             _ccy,
@@ -122,7 +128,7 @@ library LendingMarketUserLogic {
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
 
-        require(AddressResolverLib.tokenVault().isCovered(_user), "Not enough collateral");
+        if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
     }
 
     function executePreOrder(
@@ -133,10 +139,11 @@ library LendingMarketUserLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
-        require(_amount > 0, "Invalid amount");
+        if (_amount == 0) revert InvalidAmount();
+
         uint256 activeOrderCount = FundManagementLogic.cleanUpFunds(_ccy, _user);
 
-        require(activeOrderCount + 1 <= Constants.MAXIMUM_ORDER_COUNT, "Too many active orders");
+        if (activeOrderCount + 1 > Constants.MAXIMUM_ORDER_COUNT) revert TooManyActiveOrders();
 
         FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
 
@@ -150,7 +157,7 @@ library LendingMarketUserLogic {
 
         Storage.slot().usedCurrencies[_user].add(_ccy);
 
-        require(AddressResolverLib.tokenVault().isCovered(_user), "Not enough collateral");
+        if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
     }
 
     function unwindPosition(
@@ -196,7 +203,7 @@ library LendingMarketUserLogic {
             FundManagementLogic.registerCurrencyAndMaturity(_ccy, _maturity, _user);
         }
 
-        require(AddressResolverLib.tokenVault().isCovered(_user), "Not enough collateral");
+        if (!AddressResolverLib.tokenVault().isCovered(_user)) revert NotEnoughCollateral();
     }
 
     function updateFundsForTaker(
@@ -528,7 +535,7 @@ library LendingMarketUserLogic {
             ProtocolTypes.Side side
         )
     {
-        require(_futureValue != 0, "Future Value is zero");
+        if (_futureValue == 0) revert FutureValueIsZero();
 
         if (_futureValue > 0) {
             side = ProtocolTypes.Side.BORROW;

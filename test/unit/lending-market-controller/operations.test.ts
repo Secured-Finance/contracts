@@ -383,7 +383,7 @@ describe('LendingMarketController - Operations', () => {
             '100000000000000000',
             '8000',
           ),
-      ).to.be.revertedWith('Market is not opened');
+      ).to.be.revertedWith('MarketNotOpened');
 
       await expect(
         lendingMarketControllerProxy
@@ -395,7 +395,7 @@ describe('LendingMarketController - Operations', () => {
             '100000000000000000',
             '8000',
           ),
-      ).to.be.revertedWith('Market is not opened');
+      ).to.be.revertedWith('MarketNotOpened');
 
       await lendingMarketControllerProxy
         .connect(alice)

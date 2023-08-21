@@ -732,7 +732,7 @@ describe('Integration Test: Emergency terminations', async () => {
 
         await expect(
           lendingMarketController.connect(bob).executeEmergencySettlement(),
-        ).to.revertedWith('Insufficient collateral');
+        ).to.revertedWith('InsufficientCollateral');
 
         const data = lendingMarketController.interface.encodeFunctionData(
           'executeEmergencySettlement',
@@ -775,10 +775,10 @@ describe('Integration Test: Emergency terminations', async () => {
 
         await expect(
           reserveFund.withdraw(hexETH, rfETHDepositAmount),
-        ).to.revertedWith('Protocol is insolvent');
+        ).to.revertedWith('ProtocolIsInsolvent');
         await expect(
           reserveFund.withdraw(hexUSDC, rfUSDCDepositAmount),
-        ).to.revertedWith('Protocol is insolvent');
+        ).to.revertedWith('ProtocolIsInsolvent');
       });
     });
   });

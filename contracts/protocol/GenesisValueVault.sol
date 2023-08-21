@@ -158,7 +158,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             ? getLendingCompoundFactor(_ccy)
             : Storage.slot().autoRollLogs[_ccy][_basisMaturity].lendingCompoundFactor;
 
-        require(compoundFactor > 0, "Compound factor is not fixed yet");
+        if (compoundFactor == 0) revert NoCompoundFactorExists({maturity: _basisMaturity});
 
         // NOTE: The formula is: genesisValue = featureValue / compoundFactor.
         bool isPlus = _futureValue > 0;
@@ -177,7 +177,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             ? getLendingCompoundFactor(_ccy)
             : Storage.slot().autoRollLogs[_ccy][_basisMaturity].lendingCompoundFactor;
 
-        require(compoundFactor > 0, "Compound factor is not fixed yet");
+        if (compoundFactor == 0) revert NoCompoundFactorExists({maturity: _basisMaturity});
+
         bool isPlus = _genesisValue > 0;
         uint256 absGv = (isPlus ? _genesisValue : -_genesisValue).toUint256();
         uint256 absFv = (absGv * compoundFactor).div(10**decimals(_ccy));
@@ -191,8 +192,8 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _compoundFactor,
         uint256 _maturity
     ) external override onlyAcceptedContracts {
-        require(_compoundFactor != 0, "Compound factor is zero");
-        require(!isInitialized(_ccy), "Already initialized currency");
+        if (_compoundFactor == 0) revert CompoundFactorIsZero();
+        if (isInitialized(_ccy)) revert CurrencyAlreadyInitialized();
 
         Storage.slot().isInitialized[_ccy] = true;
         Storage.slot().decimals[_ccy] = _decimals;
@@ -220,10 +221,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
     {
         uint256 maturity = Storage.slot().currentMaturity[_ccy];
 
-        require(
-            Storage.slot().autoRollLogs[_ccy][maturity].prev == 0,
-            "First autoRollLog already finalized"
-        );
+        if (Storage.slot().autoRollLogs[_ccy][maturity].prev != 0) {
+            revert InitialCompoundFactorAlreadyFinalized();
+        }
 
         _updateCompoundFactor(_ccy, _unitPrice, 0, 0);
         Storage.slot().autoRollLogs[_ccy][maturity] = AutoRollLog({
@@ -261,25 +261,25 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _nextMaturity,
         uint256 _unitPrice
     ) private {
-        require(_unitPrice != 0, "Unit price is zero");
-        require(Storage.slot().autoRollLogs[_ccy][_maturity].next == 0, "Already updated maturity");
-        require(_nextMaturity > _maturity, "Invalid maturity");
-        require(
-            Storage.slot().autoRollLogs[_ccy][_nextMaturity].lendingCompoundFactor == 0,
-            "Existed maturity"
-        );
+        if (_unitPrice == 0) revert UnitPriceIsZero();
+        if (_nextMaturity <= _maturity) revert InvalidMaturity();
 
-        require(
-            Storage.slot().autoRollLogs[_ccy][_maturity].lendingCompoundFactor != 0,
-            "Invalid lending compound factor"
-        );
-        require(
-            Storage.slot().autoRollLogs[_ccy][_maturity].borrowingCompoundFactor != 0,
-            "Invalid borrowing compound factor"
-        );
+        AutoRollLog memory currentLog = Storage.slot().autoRollLogs[_ccy][_maturity];
+        AutoRollLog memory nextLog = Storage.slot().autoRollLogs[_ccy][_nextMaturity];
+
+        if (
+            currentLog.next != 0 ||
+            currentLog.lendingCompoundFactor == 0 ||
+            currentLog.borrowingCompoundFactor == 0 ||
+            nextLog.lendingCompoundFactor != 0
+        ) {
+            revert AutoRollLogAlreadyUpdated({
+                currentMaturity: _maturity,
+                nextMaturity: _nextMaturity
+            });
+        }
 
         Storage.slot().currentMaturity[_ccy] = _nextMaturity;
-
         Storage.slot().autoRollLogs[_ccy][_maturity].next = _nextMaturity;
         Storage.slot().autoRollLogs[_ccy][_nextMaturity] = AutoRollLog({
             unitPrice: _unitPrice,
@@ -310,10 +310,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
 
         _updateBalance(_ccy, _user, _basisMaturity, -residualGVAmount);
 
-        require(
-            Storage.slot().maturityBalances[_ccy][_basisMaturity] == 0,
-            "Residual amount exists"
-        );
+        if (Storage.slot().maturityBalances[_ccy][_basisMaturity] != 0) {
+            revert ResidualAmountIsNotZero();
+        }
     }
 
     function transferFrom(
@@ -387,10 +386,9 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         int256 _amount = calculateGVFromFV(_ccy, _maturity, _amountInFV);
         int256 removedAmount = Storage.slot().balances[_ccy][_user];
 
-        require(
-            (_amount > 0 && removedAmount >= 0) || (_amount < 0 && removedAmount <= 0),
-            "Invalid amount"
-        );
+        if ((_amount > 0 && removedAmount < 0) || (_amount < 0 && removedAmount > 0)) {
+            revert InvalidAmount();
+        }
 
         if ((_amount > 0 && _amount < removedAmount) || (_amount < 0 && _amount > removedAmount)) {
             removedAmount = _amount;
@@ -584,7 +582,7 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         uint256 _orderFeeRate,
         uint256 _currentMaturity
     ) private {
-        require(_orderFeeRate <= Constants.PCT_DIGIT, "Invalid fee rate");
+        if (_orderFeeRate > Constants.PCT_DIGIT) revert InvalidOrderFeeRate();
 
         // Save actual compound factor here due to calculating the genesis value from future value.
         // NOTE: The formula is:

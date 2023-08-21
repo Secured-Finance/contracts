@@ -29,6 +29,14 @@ library FundManagementLogic {
     using RoundingUint256 for uint256;
     using RoundingInt256 for int256;
 
+    error NotRedemptionPeriod();
+    error NoRedemptionAmount();
+    error MarketNotMatured();
+    error NoRepaymentAmount();
+    error AlreadyRedeemed();
+    error InsufficientCollateral();
+    error InvalidMaturity();
+
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
         ILendingMarketController.AdditionalFunds additionalFunds;
@@ -239,12 +247,12 @@ library FundManagementLogic {
         uint256 _maturity,
         address _user
     ) external {
-        require(block.timestamp >= _maturity + 1 weeks, "Not in the redemption period");
+        if (block.timestamp < _maturity + 1 weeks) revert NotRedemptionPeriod();
 
         cleanUpFunds(_ccy, _user);
 
         int256 amount = calculateActualFunds(_ccy, _maturity, _user).futureValue;
-        require(amount > 0, "No redemption amount");
+        if (amount <= 0) revert NoRedemptionAmount();
 
         uint256 redemptionAmount = _resetFundsPerMaturity(_ccy, _maturity, _user, amount)
             .toUint256();
@@ -259,7 +267,7 @@ library FundManagementLogic {
         address _user,
         uint256 _amount
     ) public returns (uint256 repaymentAmount) {
-        require(block.timestamp >= _maturity, "Market is not matured");
+        if (block.timestamp < _maturity) revert MarketNotMatured();
 
         cleanUpFunds(_ccy, _user);
 
@@ -267,7 +275,7 @@ library FundManagementLogic {
             ? calculateActualFunds(_ccy, _maturity, _user).futureValue
             : -_amount.toInt256();
 
-        require(resetAmount < 0, "No repayment amount");
+        if (resetAmount >= 0) revert NoRepaymentAmount();
 
         repaymentAmount = (-_resetFundsPerMaturity(_ccy, _maturity, _user, resetAmount)).toUint256();
         AddressResolverLib.tokenVault().removeDepositAmount(_user, _ccy, repaymentAmount);
@@ -276,7 +284,7 @@ library FundManagementLogic {
     }
 
     function executeEmergencySettlement(address _user) external {
-        require(!Storage.slot().isRedeemed[_user], "Already redeemed");
+        if (Storage.slot().isRedeemed[_user]) revert AlreadyRedeemed();
 
         int256 redemptionAmountInBaseCurrency;
 
@@ -332,7 +340,7 @@ library FundManagementLogic {
                 AddressResolverLib.tokenVault().addDepositAmount(_user, ccy, addedAmount);
             }
         } else if (redemptionAmountInBaseCurrency < 0) {
-            revert("Insufficient collateral");
+            revert InsufficientCollateral();
         }
 
         Storage.slot().isRedeemed[_user] = true;
@@ -1050,7 +1058,8 @@ library FundManagementLogic {
         uint256 _amount,
         uint256 _orderFeeRate
     ) public view returns (uint256 orderFeeAmount) {
-        require(block.timestamp < _maturity, "Invalid maturity");
+        if (block.timestamp >= _maturity) revert InvalidMaturity();
+
         uint256 currentMaturity = _maturity - block.timestamp;
 
         // NOTE: The formula is:
