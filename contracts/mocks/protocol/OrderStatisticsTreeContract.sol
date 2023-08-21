@@ -65,11 +65,7 @@ contract OrderStatisticsTreeContract {
     function getOrderById(uint256 value, uint48 orderId)
         public
         view
-        returns (
-            address maker,
-            uint256 timestamp,
-            uint256 amount
-        )
+        returns (address maker, uint256 amount)
     {
         return tree.getOrderById(value, orderId);
     }

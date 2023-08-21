@@ -53,7 +53,6 @@ library OrderStatisticsTreeLib {
         uint48 next;
         uint48 prev;
         address maker;
-        uint256 timestamp;
         uint256 amount;
     }
 
@@ -733,20 +732,11 @@ library OrderStatisticsTreeLib {
         Tree storage self,
         uint256 value,
         uint48 orderId
-    )
-        internal
-        view
-        returns (
-            address maker,
-            uint256 timestamp,
-            uint256 amount
-        )
-    {
+    ) internal view returns (address maker, uint256 amount) {
         Node storage gn = self.nodes[value];
         OrderItem memory order = gn.orders[orderId];
 
         maker = order.maker;
-        timestamp = order.timestamp;
         amount = order.amount;
     }
 
@@ -996,13 +986,13 @@ library OrderStatisticsTreeLib {
     ) internal returns (uint48) {
         Node storage gn = self.nodes[value];
         require(
-            gn.orders[orderId].timestamp == 0,
+            gn.orders[orderId].maker == address(0),
             "OrderStatisticsTreeLib: Order id already exists"
         );
 
         gn.orderCounter += 1;
         gn.orderTotalAmount += amount;
-        OrderItem memory order = OrderItem(orderId, 0, 0, user, block.timestamp, amount);
+        OrderItem memory order = OrderItem(orderId, 0, 0, user, amount);
         gn.orders[orderId] = order;
         return order.orderId;
     }
