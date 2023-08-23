@@ -19,6 +19,12 @@ library LiquidationLogic {
     using SafeCast for uint256;
     using SafeCast for int256;
 
+    error NoDebt(address user, bytes32 ccy, uint256 maturity);
+    error NoLiquidationAmount(address user, bytes32 ccy);
+    error InvalidLiquidation();
+    error InvalidRepaymentAmount();
+    error NotRepaymentPeriod();
+
     struct ExecuteLiquidationVars {
         uint256 liquidationAmountInCollateralCcy;
         uint256 liquidationAmountInDebtCcy;
@@ -66,7 +72,7 @@ library LiquidationLogic {
             .calculateActualFunds(_debtCcy, _debtMaturity, _user)
             .debtAmount;
 
-        require(debtAmount != 0, "No debt in the selected maturity");
+        if (debtAmount == 0) revert NoDebt(_user, _debtCcy, _debtMaturity);
 
         (
             vars.liquidationAmountInCollateralCcy,
@@ -78,7 +84,9 @@ library LiquidationLogic {
             AddressResolverLib.currencyController().convert(_debtCcy, _collateralCcy, debtAmount)
         );
 
-        require(vars.liquidationAmountInCollateralCcy != 0, "User has enough collateral");
+        if (vars.liquidationAmountInCollateralCcy == 0) {
+            revert NoLiquidationAmount(_user, _collateralCcy);
+        }
 
         vars.liquidationAmountInDebtCcy = AddressResolverLib.currencyController().convert(
             _collateralCcy,
@@ -142,15 +150,14 @@ library LiquidationLogic {
         }
 
         if (_liquidator.code.length > 0) {
-            require(
+            if (
                 ILiquidationReceiver(_liquidator).executeOperationForCollateral(
                     _liquidator,
                     _user,
                     _collateralCcy,
                     vars.receivedCollateralAmount
-                ),
-                "Invalid operation execution"
-            );
+                ) == false
+            ) revert ILiquidationReceiver.InvalidOperationExecution();
         }
 
         // Transfer the debt from users to liquidators
@@ -165,7 +172,7 @@ library LiquidationLogic {
             );
 
             if (_liquidator.code.length > 0) {
-                require(
+                if (
                     ILiquidationReceiver(_liquidator).executeOperationForDebt(
                         _liquidator,
                         _user,
@@ -174,13 +181,12 @@ library LiquidationLogic {
                         _debtCcy,
                         _debtMaturity,
                         vars.liquidationAmountInDebtCcy
-                    ),
-                    "Invalid operation execution"
-                );
+                    ) == false
+                ) revert ILiquidationReceiver.InvalidOperationExecution();
             }
         }
 
-        require(AddressResolverLib.tokenVault().isCovered(msg.sender), "Invalid liquidation");
+        if (!AddressResolverLib.tokenVault().isCovered(_liquidator)) revert InvalidLiquidation();
 
         emit LiquidationExecuted(
             _user,
@@ -198,11 +204,12 @@ library LiquidationLogic {
         bytes32 _debtCcy,
         uint256 _debtMaturity
     ) external {
-        require(
-            !AddressResolverLib.currencyController().currencyExists(_debtCcy),
-            "Currency is active"
-        );
-        require(block.timestamp >= _debtMaturity + 1 weeks, "Invalid repayment");
+        if (
+            AddressResolverLib.currencyController().currencyExists(_debtCcy) ||
+            block.timestamp < _debtMaturity + 1 weeks
+        ) {
+            revert NotRepaymentPeriod();
+        }
 
         // In order to liquidate using user collateral, inactive order IDs must be cleaned
         // and converted to actual funds first.
@@ -215,7 +222,7 @@ library LiquidationLogic {
             _user
         );
 
-        require(funds.futureValue < 0, "No debt in the selected maturity");
+        if (funds.futureValue >= 0) revert NoDebt(_user, _debtCcy, _debtMaturity);
 
         uint256 liquidationAmountInDebtCcy = (-funds.futureValue).toUint256();
         uint256 liquidationAmountInCollateralCcy = AddressResolverLib.currencyController().convert(
@@ -270,17 +277,16 @@ library LiquidationLogic {
         }
 
         if (_executor.code.length > 0) {
-            require(
+            if (
                 ILiquidationReceiver(_executor).executeOperationForCollateral(
                     _executor,
                     _user,
                     _collateralCcy,
                     receivedCollateralAmount
-                ),
-                "Invalid operation execution"
-            );
+                ) == false
+            ) revert ILiquidationReceiver.InvalidOperationExecution();
 
-            require(
+            if (
                 ILiquidationReceiver(_executor).executeOperationForDebt(
                     _executor,
                     _user,
@@ -289,9 +295,8 @@ library LiquidationLogic {
                     _debtCcy,
                     _debtMaturity,
                     liquidationAmountInDebtCcy
-                ),
-                "Invalid operation execution"
-            );
+                ) == false
+            ) revert ILiquidationReceiver.InvalidOperationExecution();
         }
 
         AddressResolverLib.tokenVault().transferFrom(
@@ -308,7 +313,7 @@ library LiquidationLogic {
             liquidationAmountInDebtCcy
         );
 
-        require(repaymentAmount == liquidationAmountInDebtCcy, "Invalid repayment amount");
+        if (repaymentAmount != liquidationAmountInDebtCcy) revert InvalidRepaymentAmount();
 
         emit ForcedRepaymentExecuted(
             _user,

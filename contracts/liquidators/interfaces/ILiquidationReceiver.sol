@@ -2,6 +2,8 @@
 pragma solidity ^0.8.9;
 
 interface ILiquidationReceiver {
+    error InvalidOperationExecution();
+
     event OperationExecuteForCollateral(
         address liquidator,
         address user,

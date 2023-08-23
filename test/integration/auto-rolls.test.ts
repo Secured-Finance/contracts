@@ -985,7 +985,7 @@ describe('Integration Test: Auto-rolls', async () => {
               value: orderAmount,
             },
           ),
-      ).to.be.revertedWith('Market is not opened');
+      ).to.be.revertedWith('MarketNotOpened');
     });
 
     it(`Execute auto-roll`, async () => {

@@ -11,6 +11,12 @@ import {Currency} from "../storages/CurrencyControllerStorage.sol";
  * contract owner is not able to add a new currency into the protocol
  */
 interface ICurrencyController {
+    error InvalidCurrency();
+    error InvalidHaircut();
+    error InvalidPriceFeed();
+    error InvalidDecimals();
+    error NoPriceFeedExists();
+
     event CurrencyAdded(bytes32 indexed ccy, uint256 haircut);
     event CurrencyRemoved(bytes32 indexed ccy);
 

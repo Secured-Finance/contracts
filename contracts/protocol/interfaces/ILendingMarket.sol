@@ -6,6 +6,12 @@ import {ItayoseLog} from "../storages/LendingMarketStorage.sol";
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../libraries/OrderBookLib.sol";
 
 interface ILendingMarket {
+    error NoOrderExists();
+    error CallerNotMaker();
+    error MarketNotOpened();
+    error NotItayosePeriod();
+    error NotPreOrderPeriod();
+
     struct OrderBook {
         bytes32 ccy;
         uint256 maturity;

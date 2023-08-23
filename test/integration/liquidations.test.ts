@@ -444,7 +444,9 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               10,
             ),
-        ).to.be.revertedWith('User has enough collateral');
+        ).to.be.revertedWith(
+          `NoLiquidationAmount("${alice.address}", "${hexETH}")`,
+        );
 
         const [
           liquidatorBalanceETH,
@@ -680,7 +682,9 @@ describe('Integration Test: Liquidations', async () => {
             alice.address,
             10,
           ),
-        ).to.be.revertedWith('User has enough collateral');
+        ).to.be.revertedWith(
+          `NoLiquidationAmount("${alice.address}", "${hexETH}")`,
+        );
       });
     });
 
@@ -2194,7 +2198,7 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               0,
             ),
-        ).to.be.revertedWith('Currency is active');
+        ).to.be.revertedWith('NotRepaymentPeriod');
 
         await currencyController.removeCurrency(hexWFIL);
 
@@ -2336,7 +2340,7 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               0,
             ),
-        ).to.be.revertedWith('Currency is active');
+        ).to.be.revertedWith('NotRepaymentPeriod');
 
         await currencyController.removeCurrency(hexWFIL);
 
@@ -2626,7 +2630,7 @@ describe('Integration Test: Liquidations', async () => {
               alice.address,
               0,
             ),
-        ).to.be.revertedWith('Currency is active');
+        ).to.be.revertedWith('NotRepaymentPeriod');
 
         await currencyController.removeCurrency(hexWFIL);
 

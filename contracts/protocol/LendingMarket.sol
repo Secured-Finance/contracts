@@ -48,8 +48,8 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint48 _orderId
     ) {
         (, , , address maker, , , ) = getOrder(_orderBookId, _orderId);
-        require(maker != address(0), "Order not found");
-        require(_user == maker, "Caller is not the maker");
+        if (maker == address(0)) revert NoOrderExists();
+        if (_user != maker) revert CallerNotMaker();
         _;
     }
 
@@ -58,7 +58,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderBookId The order book id
      */
     modifier ifOpened(uint8 _orderBookId) {
-        require(isOpened(_orderBookId), "Market is not opened");
+        if (!isOpened(_orderBookId)) revert MarketNotOpened();
         _;
     }
 
@@ -67,7 +67,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderBookId The order book id
      */
     modifier ifItayosePeriod(uint8 _orderBookId) {
-        require(isItayosePeriod(_orderBookId), "Not in the Itayose period");
+        if (!isItayosePeriod(_orderBookId)) revert NotItayosePeriod();
         _;
     }
 
@@ -76,7 +76,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @param _orderBookId The order book id
      */
     modifier ifPreOrderPeriod(uint8 _orderBookId) {
-        require(isPreOrderPeriod(_orderBookId), "Not in the pre-order period");
+        if (!isPreOrderPeriod(_orderBookId)) revert NotPreOrderPeriod();
         _;
     }
 
@@ -92,8 +92,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _orderFeeRate,
         uint256 _cbLimitRange
     ) public initializer onlyBeacon {
-        require(_cbLimitRange < Constants.PCT_DIGIT, "CB limit is too high");
-
         registerAddressResolver(_resolver);
         Storage.slot().ccy = _ccy;
 

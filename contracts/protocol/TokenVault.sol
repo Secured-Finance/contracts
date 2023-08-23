@@ -44,7 +44,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
      * @param _ccy Currency name in bytes32
      */
     modifier onlyRegisteredCurrency(bytes32 _ccy) {
-        require(isRegisteredCurrency(_ccy), "Currency not registered");
+        if (!isRegisteredCurrency(_ccy)) revert UnregisteredCurrency();
         _;
     }
 
@@ -93,7 +93,9 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     receive() external payable {
-        require(msg.sender == ERC20Handler.baseCurrency(), "Not base currency");
+        if (msg.sender != ERC20Handler.baseCurrency()) {
+            revert CallerNotBaseCurrency({caller: msg.sender});
+        }
     }
 
     /**
@@ -353,7 +355,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         address _tokenAddress,
         bool _isCollateral
     ) external onlyOwner {
-        require(currencyController().currencyExists(_ccy), "Invalid currency");
+        if (!currencyController().currencyExists(_ccy)) revert InvalidCurrency();
 
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
         if (_isCollateral) {
@@ -532,13 +534,14 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         bytes32 _ccy,
         uint256 _amount
     ) internal {
-        require(_amount > 0, "Invalid amount");
-        require(
-            Storage.slot().tokenAddresses[_ccy] != ERC20Handler.baseCurrency() ||
-                _amount == msg.value,
-            "Invalid amount"
-        );
-        require(!lendingMarketController().isTerminated(), "Market terminated");
+        if (
+            _amount == 0 ||
+            (Storage.slot().tokenAddresses[_ccy] == ERC20Handler.baseCurrency() &&
+                _amount != msg.value)
+        ) {
+            revert InvalidAmount();
+        }
+        if (lendingMarketController().isTerminated()) revert MarketTerminated();
 
         DepositManagementLogic.deposit(_user, _ccy, _amount);
 
@@ -550,8 +553,8 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         bytes32 _ccy,
         uint256 _amount
     ) internal {
-        require(_amount > 0, "Invalid amount");
-        require(!lendingMarketController().isRedemptionRequired(_user), "Redemption is required");
+        if (_amount == 0) revert InvalidAmount();
+        if (lendingMarketController().isRedemptionRequired(_user)) revert RedemptionIsRequired();
 
         lendingMarketController().cleanUpFunds(_ccy, _user);
         uint256 withdrawableAmount = DepositManagementLogic.withdraw(_user, _ccy, _amount);

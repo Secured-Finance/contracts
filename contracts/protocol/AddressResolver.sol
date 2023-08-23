@@ -35,7 +35,7 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
         public
         onlyOwner
     {
-        require(_names.length == _addresses.length, "Input lengths must match");
+        if (_names.length != _addresses.length) revert UnmatchedInputs();
 
         Storage.slot().addressCaches = _addresses;
 
@@ -77,7 +77,7 @@ contract AddressResolver is IAddressResolver, Ownable, Proxyable {
         returns (address)
     {
         address _foundAddress = Storage.slot().addresses[_name];
-        require(_foundAddress != address(0), _reason);
+        if (_foundAddress == address(0)) revert(_reason);
         return _foundAddress;
     }
 

@@ -367,7 +367,7 @@ describe('Integration Test: Order Book', async () => {
           lendingMarketController
             .connect(alice)
             .unwindPosition(hexWFIL, filMaturities[0]),
-        ).to.be.revertedWith('Not enough deposit in the selected currency');
+        ).to.be.revertedWith('NotEnoughDeposit');
 
         // Deposit the amount that is not enough due to fees being deducted.
         await wFILToken
@@ -1203,7 +1203,7 @@ describe('Integration Test: Order Book', async () => {
           lendingMarketController
             .connect(bob)
             .unwindPosition(hexWFIL, filMaturities[0]),
-        ).to.be.revertedWith('Not enough collateral');
+        ).to.be.revertedWith('NotEnoughCollateral');
       });
     });
   });

@@ -12,6 +12,10 @@ library OrderActionLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
     using RoundingUint256 for uint256;
 
+    error InvalidAmount();
+    error InvalidFutureValue();
+    error OppositeSideOrderExists();
+
     struct OrderExecutionConditions {
         bool isFilled;
         uint256 executedUnitPrice;
@@ -192,7 +196,7 @@ library OrderActionLogic {
             uint256 feeInFV
         )
     {
-        require(_amount > 0, "Amount is zero");
+        if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
         orderBook.updateUserMaturity(_user);
@@ -268,7 +272,7 @@ library OrderActionLogic {
         uint256 _amount,
         uint256 _unitPrice
     ) external {
-        require(_amount > 0, "Amount is zero");
+        if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
         orderBook.updateUserMaturity(_user);
@@ -277,7 +281,7 @@ library OrderActionLogic {
             (_side == ProtocolTypes.Side.LEND && orderBook.hasBorrowOrder(_user)) ||
             (_side == ProtocolTypes.Side.BORROW && orderBook.hasLendOrder(_user))
         ) {
-            revert("Opposite side order exists");
+            revert OppositeSideOrderExists();
         }
 
         uint48 orderId = orderBook.placeOrder(_side, _user, _amount, _unitPrice);
@@ -307,7 +311,7 @@ library OrderActionLogic {
             uint256 feeInFV
         )
     {
-        require(_futureValue > 0, "Can't place empty future value amount");
+        if (_futureValue == 0) revert InvalidFutureValue();
 
         OrderExecutionConditions memory conditions;
         bool isCircuitBreakerTriggered;

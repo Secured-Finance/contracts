@@ -520,7 +520,9 @@ describe('LendingMarketController - Liquidations', () => {
             maturities[0],
             alice.address,
           ),
-      ).to.be.revertedWith('No debt in the selected maturity');
+      ).to.be.revertedWith(
+        `NoDebt("${alice.address}", "${targetCurrency}", ${maturities[0]})`,
+      );
     });
 
     it('Fail to liquidate a borrowing position due to no liquidation amount', async () => {
@@ -558,7 +560,9 @@ describe('LendingMarketController - Liquidations', () => {
             maturities[0],
             alice.address,
           ),
-      ).to.be.revertedWith('User has enough collateral');
+      ).to.be.revertedWith(
+        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+      );
     });
 
     it('Fail to liquidate a borrowing position due to insufficient collateral', async () => {
@@ -596,7 +600,7 @@ describe('LendingMarketController - Liquidations', () => {
             maturities[0],
             alice.address,
           ),
-      ).to.be.revertedWith('Invalid liquidation');
+      ).to.be.revertedWith('InvalidLiquidation');
     });
   });
 
@@ -761,7 +765,9 @@ describe('LendingMarketController - Liquidations', () => {
             maturities[0],
             alice.address,
           ),
-      ).to.be.revertedWith('User has enough collateral');
+      ).to.be.revertedWith(
+        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+      );
 
       await time.increaseTo(maturities[0].toString());
 
@@ -774,7 +780,9 @@ describe('LendingMarketController - Liquidations', () => {
             maturities[0],
             alice.address,
           ),
-      ).to.be.revertedWith('User has enough collateral');
+      ).to.be.revertedWith(
+        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+      );
 
       // Move to 1 weeks after maturity.
       await time.increaseTo(maturities[0].add(604800).toString());
@@ -852,7 +860,9 @@ describe('LendingMarketController - Liquidations', () => {
             maturities[0],
             alice.address,
           ),
-      ).to.be.revertedWith('User has enough collateral');
+      ).to.be.revertedWith(
+        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+      );
 
       await time.increaseTo(maturities[0].toString());
 
@@ -865,7 +875,9 @@ describe('LendingMarketController - Liquidations', () => {
             maturities[0],
             alice.address,
           ),
-      ).to.be.revertedWith('User has enough collateral');
+      ).to.be.revertedWith(
+        `NoLiquidationAmount("${alice.address}", "${targetCurrency}")`,
+      );
 
       // Move to 1 weeks after maturity.
       await time.increaseTo(maturities[0].add(604800).toString());
@@ -992,7 +1004,7 @@ describe('LendingMarketController - Liquidations', () => {
           targetCurrency,
           maturities[0],
         ),
-      ).revertedWith('Market is not matured');
+      ).revertedWith('MarketNotMatured');
     });
 
     it('Fail to redeem due to under repayment period', async () => {
@@ -1003,7 +1015,7 @@ describe('LendingMarketController - Liquidations', () => {
           targetCurrency,
           maturities[0],
         ),
-      ).revertedWith('Not in the redemption period');
+      ).revertedWith('NotRedemptionPeriod');
     });
   });
 });

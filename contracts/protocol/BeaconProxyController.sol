@@ -25,17 +25,6 @@ import {BeaconProxyControllerStorage as Storage} from "./storages/BeaconProxyCon
  */
 contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, Ownable, Proxyable {
     /**
-     * @notice Modifier to make a function callable only by LendingMarketController contract.
-     */
-    modifier onlyLendingMarketController() {
-        require(
-            getAddress(Contracts.LENDING_MARKET_CONTROLLER) == msg.sender,
-            "Caller is not the LendingMarketController"
-        );
-        _;
-    }
-
-    /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
@@ -48,6 +37,12 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
+        contracts = new bytes32[](1);
+        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
+    // @inheritdoc MixinAddressResolver
+    function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
@@ -68,7 +63,7 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
             payable(beaconProxyAddress)
         );
 
-        require(beaconProxy.implementation() != address(0), "Beacon proxy address not found");
+        if (beaconProxy.implementation() == address(0)) revert InvalidProxyContract();
     }
 
     /**
@@ -94,7 +89,7 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
     function deployFutureValueVault()
         external
         override
-        onlyLendingMarketController
+        onlyAcceptedContracts
         returns (address futureValue)
     {
         bytes memory data = abi.encodeWithSignature("initialize(address)", address(resolver()));
@@ -112,7 +107,7 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
         bytes32 _ccy,
         uint256 _orderFeeRate,
         uint256 _cbLimitRange
-    ) external override onlyLendingMarketController returns (address market) {
+    ) external override onlyAcceptedContracts returns (address market) {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,bytes32,uint256,uint256)",
             address(resolver()),
@@ -125,7 +120,7 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
 
     function _createProxy(bytes32 beaconName, bytes memory data) internal returns (address) {
         address beaconProxyAddress = Storage.slot().registeredBeaconProxies[beaconName];
-        require(beaconProxyAddress != address(0), "Beacon proxy is empty");
+        if (beaconProxyAddress == address(0)) revert NoBeaconProxyContract();
 
         return address(new UpgradeabilityBeaconProxy(beaconProxyAddress, data));
     }

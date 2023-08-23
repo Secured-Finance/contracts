@@ -118,7 +118,7 @@ describe('CurrencyController', () => {
         currencyControllerProxy.addCurrency(currency, 18, 8000, [
           mockPriceFeed.address,
         ]),
-      ).to.be.revertedWith('Invalid PriceFeed');
+      ).to.be.revertedWith('InvalidPriceFeed');
     });
 
     it('Fail to add ETH as a supported currency due to the invalid decimals', async () => {
@@ -132,7 +132,7 @@ describe('CurrencyController', () => {
         currencyControllerProxy.addCurrency(currency, 18, 8000, [
           mockPriceFeed.address,
         ]),
-      ).to.be.revertedWith('Invalid decimals');
+      ).to.be.revertedWith('InvalidDecimals');
     });
   });
 
@@ -243,7 +243,16 @@ describe('CurrencyController', () => {
     it('Fail to update a haircut due to overflow', async () => {
       await expect(
         currencyControllerProxy.updateHaircut(currency, 10001),
-      ).to.be.revertedWith('Haircut ratio overflow');
+      ).to.be.revertedWith('InvalidHaircut');
+    });
+
+    it('Fail to update a haircut due to invalid currency', async () => {
+      await expect(
+        currencyControllerProxy.updateHaircut(
+          ethers.utils.formatBytes32String('TEST'),
+          10001,
+        ),
+      ).to.be.revertedWith('InvalidCurrency');
     });
 
     it('Fail to remove a price feed due to invalid PriceFeed', async () => {
@@ -257,7 +266,7 @@ describe('CurrencyController', () => {
 
       await expect(
         currencyControllerProxy.removePriceFeed(dummyCurrency),
-      ).to.be.revertedWith('Invalid PriceFeed');
+      ).to.be.revertedWith('NoPriceFeedExists');
     });
   });
 

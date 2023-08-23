@@ -11,6 +11,10 @@ library OrderBookLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
     using RoundingUint256 for uint256;
 
+    error InvalidOrderFeeRate();
+    error InvalidCircuitBreakerLimitRange();
+    error OrderBookNotMatured();
+
     event OrderFeeRateUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event CircuitBreakerLimitRangeUpdated(bytes32 ccy, uint256 previousRate, uint256 rate);
     event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate);
@@ -149,7 +153,8 @@ library OrderBookLogic {
     }
 
     function updateOrderFeeRate(uint256 _orderFeeRate) external {
-        require(_orderFeeRate <= Constants.PCT_DIGIT, "Invalid order fee rate");
+        if (_orderFeeRate >= Constants.PCT_DIGIT) revert InvalidOrderFeeRate();
+
         uint256 previousRate = Storage.slot().orderFeeRate;
 
         if (_orderFeeRate != previousRate) {
@@ -160,7 +165,8 @@ library OrderBookLogic {
     }
 
     function updateCircuitBreakerLimitRange(uint256 _cbLimitRange) external {
-        require(_cbLimitRange <= Constants.PCT_DIGIT, "Invalid circuit breaker limit range");
+        if (_cbLimitRange >= Constants.PCT_DIGIT) revert InvalidCircuitBreakerLimitRange();
+
         uint256 previousRange = Storage.slot().circuitBreakerLimitRange;
 
         if (_cbLimitRange != previousRange) {
@@ -190,7 +196,7 @@ library OrderBookLogic {
         uint256 _openingDate
     ) external {
         OrderBookLib.OrderBook storage orderBook = Storage.slot().orderBooks[_orderBookId];
-        require(orderBook.isMatured(), "Market is not matured");
+        if (!orderBook.isMatured()) revert OrderBookNotMatured();
         Storage.slot().isReady[_newMaturity] = orderBook.initialize(_newMaturity, _openingDate);
     }
 

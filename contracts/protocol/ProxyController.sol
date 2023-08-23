@@ -30,7 +30,7 @@ contract ProxyController is IProxyController, Ownable {
         _transferOwnership(msg.sender);
         if (_resolver != address(0)) {
             UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(_resolver));
-            require(proxy.implementation() != address(0), "Proxy address not found");
+            if (proxy.implementation() == address(0)) revert InvalidProxyContract();
             resolver = IAddressResolver(_resolver);
         }
     }
@@ -52,7 +52,7 @@ contract ProxyController is IProxyController, Ownable {
         proxyAddress = resolver.getAddress(name, "Address not found");
         UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(proxyAddress));
 
-        require(proxy.implementation() != address(0), "Proxy address not found");
+        if (proxy.implementation() == address(0)) revert InvalidProxyContract();
     }
 
     /**

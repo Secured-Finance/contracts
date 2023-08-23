@@ -8,6 +8,10 @@ import {Constants} from "../libraries/Constants.sol";
  * @notice CollateralParametersHandler is an library to handle the main collateral parameters.
  */
 library CollateralParametersHandler {
+    error InvalidLiquidationThresholdRate();
+    error InvalidLiquidationProtocolFeeRate();
+    error InvalidLiquidatorFeeRate();
+
     event AutoLiquidationThresholdRateUpdated(uint256 previousRate, uint256 ratio);
     event LiquidationProtocolFeeRateUpdated(uint256 previousRate, uint256 ratio);
     event LiquidatorFeeRateUpdated(uint256 previousRate, uint256 ratio);
@@ -49,12 +53,10 @@ library CollateralParametersHandler {
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate
     ) internal {
-        require(_liquidationThresholdRate > 0, "Invalid liquidation threshold rate");
-        require(
-            _liquidationProtocolFeeRate <= Constants.PCT_DIGIT,
-            "Invalid liquidation protocol fee rate"
-        );
-        require(_liquidatorFeeRate <= Constants.PCT_DIGIT, "Invalid liquidator fee rate");
+        if (_liquidationThresholdRate == 0) revert InvalidLiquidationThresholdRate();
+        if (_liquidationProtocolFeeRate > Constants.PCT_DIGIT)
+            revert InvalidLiquidationProtocolFeeRate();
+        if (_liquidatorFeeRate > Constants.PCT_DIGIT) revert InvalidLiquidatorFeeRate();
 
         if (_liquidationThresholdRate != Storage.slot().liquidationThresholdRate) {
             emit AutoLiquidationThresholdRateUpdated(

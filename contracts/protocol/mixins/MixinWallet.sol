@@ -16,6 +16,9 @@ import {Ownable} from "../utils/Ownable.sol";
  *
  */
 abstract contract MixinWallet is Ownable {
+    error TransactionFailed(uint256 index);
+    error WrongArrayLengths();
+
     event TransactionExecuted(address from, address target, uint256 value, bytes data);
     event TransactionsExecuted(address from, address[] targets, uint256[] values, bytes[] data);
 
@@ -31,7 +34,7 @@ abstract contract MixinWallet is Ownable {
      */
     function executeTransaction(address _target, bytes calldata _data) external payable onlyOwner {
         (bool success, ) = _target.call{value: msg.value}(_data);
-        require(success, "Transaction failed");
+        if (!success) revert TransactionFailed(0);
 
         emit TransactionExecuted(msg.sender, _target, msg.value, _data);
     }
@@ -47,13 +50,13 @@ abstract contract MixinWallet is Ownable {
         uint256[] calldata _values,
         bytes[] calldata _data
     ) external onlyOwner {
-        require(
-            _targets.length == _data.length && _targets.length == _values.length,
-            "Wrong array lengths"
-        );
+        if (_targets.length != _data.length || _targets.length != _values.length) {
+            revert WrongArrayLengths();
+        }
+
         for (uint256 i; i < _targets.length; i++) {
             (bool success, ) = _targets[i].call{value: _values[i]}(_data[i]);
-            require(success, "Transaction failed");
+            if (!success) revert TransactionFailed(i);
         }
 
         emit TransactionsExecuted(msg.sender, _targets, _values, _data);

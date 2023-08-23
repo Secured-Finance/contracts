@@ -5,6 +5,13 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
 
 interface ITokenVault {
+    error UnregisteredCurrency();
+    error InvalidCurrency();
+    error InvalidAmount();
+    error CallerNotBaseCurrency(address caller);
+    error MarketTerminated();
+    error RedemptionIsRequired();
+
     event Deposit(address indexed user, bytes32 ccy, uint256 amount);
     event Withdraw(address indexed user, bytes32 ccy, uint256 amount);
     event Transfer(bytes32 indexed ccy, address indexed from, address indexed to, uint256 amount);

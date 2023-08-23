@@ -13,6 +13,8 @@ library OrderReaderLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
+    error InvalidMaturity();
+
     function isMatured(uint8 _orderBookId) external view returns (bool) {
         return _getOrderBook(_orderBookId).isMatured();
     }
@@ -34,12 +36,12 @@ library OrderReaderLogic {
         PlacedOrder memory order = orderBook.getOrder(_orderId);
 
         if (order.side == ProtocolTypes.Side.LEND) {
-            (maker, timestamp, amount) = orderBook.lendOrders[order.maturity].getOrderById(
+            (maker, amount) = orderBook.lendOrders[order.maturity].getOrderById(
                 order.unitPrice,
                 _orderId
             );
         } else {
-            (maker, timestamp, amount) = orderBook.borrowOrders[order.maturity].getOrderById(
+            (maker, amount) = orderBook.borrowOrders[order.maturity].getOrderById(
                 order.unitPrice,
                 _orderId
             );
@@ -48,6 +50,7 @@ library OrderReaderLogic {
         if (maker != address(0)) {
             side = order.side;
             maturity = order.maturity;
+            timestamp = order.timestamp;
             isPreOrder = orderBook.isPreOrder[_orderId];
             unitPrice = _getOrderUnitPrice(side, maturity, order.unitPrice, isPreOrder);
         }
@@ -74,7 +77,7 @@ library OrderReaderLogic {
             // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
             // as an order canceled in the past market.
-            (, , uint256 orderAmount) = orderBook.lendOrders[orderBook.maturity].getOrderById(
+            (, uint256 orderAmount) = orderBook.lendOrders[orderBook.maturity].getOrderById(
                 order.unitPrice,
                 activeOrderIds[i]
             );
@@ -123,7 +126,7 @@ library OrderReaderLogic {
             // Sum future values in the current maturity.
             // If the market is rotated and maturity is updated, it will be 0 by treating it
             // as an order canceled in the past market.
-            (, , uint256 orderAmount) = orderBook.borrowOrders[orderBook.maturity].getOrderById(
+            (, uint256 orderAmount) = orderBook.borrowOrders[orderBook.maturity].getOrderById(
                 order.unitPrice,
                 activeOrderIds[i]
             );
@@ -214,7 +217,7 @@ library OrderReaderLogic {
         view
         returns (uint256 orderFeeAmount)
     {
-        require(block.timestamp < _maturity, "Invalid maturity");
+        if (block.timestamp >= _maturity) revert InvalidMaturity();
         uint256 currentMaturity = _maturity - block.timestamp;
 
         // NOTE: The formula is:
@@ -231,7 +234,7 @@ library OrderReaderLogic {
         returns (uint256 presentValue, uint256 futureValue)
     {
         PlacedOrder memory order = orderBook.getOrder(_orderId);
-        (, , uint256 orderAmount) = orderBook.lendOrders[order.maturity].getOrderById(
+        (, uint256 orderAmount) = orderBook.lendOrders[order.maturity].getOrderById(
             order.unitPrice,
             _orderId
         );
@@ -253,7 +256,7 @@ library OrderReaderLogic {
         returns (uint256 presentValue, uint256 futureValue)
     {
         PlacedOrder memory order = orderBook.getOrder(_orderId);
-        (, , uint256 orderAmount) = orderBook.borrowOrders[order.maturity].getOrderById(
+        (, uint256 orderAmount) = orderBook.borrowOrders[order.maturity].getOrderById(
             order.unitPrice,
             _orderId
         );
