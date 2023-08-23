@@ -54,6 +54,8 @@ describe('LendingMarketController - Orders', () => {
 
     const { timestamp } = await ethers.provider.getBlock('latest');
     genesisDate = getGenesisDate(timestamp * 1000);
+
+    await mockCurrencyController.mock.currencyExists.returns(true);
   });
 
   before(async () => {
@@ -78,7 +80,6 @@ describe('LendingMarketController - Orders', () => {
       lendingMarketControllerProxy.address,
     );
 
-    await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getHaircut.returns(8000);
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
@@ -106,6 +107,20 @@ describe('LendingMarketController - Orders', () => {
           () => true,
           () => true,
         );
+    });
+
+    it('Fail to initialize the lending market due to invalid currency', async () => {
+      await mockCurrencyController.mock.currencyExists.returns(false);
+
+      await expect(
+        lendingMarketControllerProxy.initializeLendingMarket(
+          targetCurrency,
+          genesisDate,
+          INITIAL_COMPOUND_FACTOR,
+          ORDER_FEE_RATE,
+          CIRCUIT_BREAKER_LIMIT_RANGE,
+        ),
+      ).to.be.revertedWith('InvalidCurrency');
     });
 
     it('Get genesisDate', async () => {
@@ -226,6 +241,34 @@ describe('LendingMarketController - Orders', () => {
             .month(),
         );
       });
+    });
+
+    it('Fail to create a order book because market is not initialized', async () => {
+      await expect(
+        lendingMarketControllerProxy.createOrderBook(
+          targetCurrency,
+          genesisDate,
+        ),
+      ).revertedWith('LendingMarketNotInitialized');
+    });
+
+    it('Fail to create a order book because currency does not exist', async () => {
+      await lendingMarketControllerProxy.initializeLendingMarket(
+        targetCurrency,
+        genesisDate,
+        INITIAL_COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      await mockCurrencyController.mock.currencyExists.returns(false);
+
+      await expect(
+        lendingMarketControllerProxy.createOrderBook(
+          targetCurrency,
+          genesisDate,
+        ),
+      ).revertedWith('InvalidCurrency');
     });
   });
 

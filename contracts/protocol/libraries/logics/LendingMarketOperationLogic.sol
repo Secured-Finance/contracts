@@ -154,6 +154,10 @@ library LendingMarketOperationLogic {
         uint256 _orderFeeRate,
         uint256 _circuitBreakerLimitRange
     ) external {
+        if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
+            revert InvalidCurrency();
+        }
+
         if (_compoundFactor == 0) revert InvalidCompoundFactor();
 
         AddressResolverLib.genesisValueVault().initializeCurrencySetting(
@@ -267,15 +271,12 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function rotateOrderBooks(bytes32 _ccy, uint256 _orderFeeRate)
-        external
-        returns (uint256 newMaturity)
-    {
-        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
+    function rotateOrderBooks(bytes32 _ccy) external returns (uint256 newMaturity) {
         uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[_ccy];
 
         if (orderBookIds.length < 2) revert NotEnoughOrderBooks();
 
+        ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         uint256[] memory maturities = market.getMaturities(orderBookIds);
         uint8 maturedOrderBookId = orderBookIds[0];
         uint256 newOpeningDate = maturities[1];
@@ -300,7 +301,7 @@ library LendingMarketOperationLogic {
             maturities[0],
             maturities[1],
             _calculateAutoRollUnitPrice(_ccy, maturities[1]),
-            _orderFeeRate
+            market.getOrderFeeRate()
         );
 
         uint256 maturedMaturity = maturities[0];

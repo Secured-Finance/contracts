@@ -30,12 +30,11 @@ library FundManagementLogic {
     using RoundingInt256 for int256;
 
     error NotRedemptionPeriod();
+    error NotRepaymentPeriod();
     error NoRedemptionAmount();
-    error MarketNotMatured();
     error NoRepaymentAmount();
     error AlreadyRedeemed();
     error InsufficientCollateral();
-    error InvalidMaturity();
 
     struct CalculatedTotalFundInBaseCurrencyVars {
         address user;
@@ -247,7 +246,10 @@ library FundManagementLogic {
         uint256 _maturity,
         address _user
     ) external {
-        if (block.timestamp < _maturity + 1 weeks) revert NotRedemptionPeriod();
+        if (
+            AddressResolverLib.currencyController().currencyExists(_ccy) ||
+            block.timestamp < _maturity + 1 weeks
+        ) revert NotRedemptionPeriod();
 
         cleanUpFunds(_ccy, _user);
 
@@ -267,7 +269,10 @@ library FundManagementLogic {
         address _user,
         uint256 _amount
     ) public returns (uint256 repaymentAmount) {
-        if (block.timestamp < _maturity) revert MarketNotMatured();
+        if (
+            AddressResolverLib.currencyController().currencyExists(_ccy) ||
+            block.timestamp < _maturity
+        ) revert NotRepaymentPeriod();
 
         cleanUpFunds(_ccy, _user);
 
@@ -1051,23 +1056,6 @@ library FundManagementLogic {
     {
         // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * _unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
-    }
-
-    function calculateOrderFeeAmount(
-        uint256 _maturity,
-        uint256 _amount,
-        uint256 _orderFeeRate
-    ) public view returns (uint256 orderFeeAmount) {
-        if (block.timestamp >= _maturity) revert InvalidMaturity();
-
-        uint256 currentMaturity = _maturity - block.timestamp;
-
-        // NOTE: The formula is:
-        // actualRate = feeRate * (currentMaturity / SECONDS_IN_YEAR)
-        // orderFeeAmount = amount * actualRate
-        orderFeeAmount = (_orderFeeRate * currentMaturity * _amount).div(
-            Constants.SECONDS_IN_YEAR * Constants.PCT_DIGIT
-        );
     }
 
     function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _amount)

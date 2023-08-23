@@ -609,6 +609,8 @@ describe('LendingMarketController - Liquidations', () => {
       const orderAmount = ethers.BigNumber.from('100000000000000000');
       const orderRate = ethers.BigNumber.from('8000');
 
+      await mockCurrencyController.mock.currencyExists.returns(false);
+
       [alice, bob] = getUsers(2);
 
       await lendingMarketControllerProxy
@@ -692,6 +694,7 @@ describe('LendingMarketController - Liquidations', () => {
       await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
       await time.increaseTo(maturities[1].toString());
+      await mockCurrencyController.mock.currencyExists.returns(false);
 
       const { futureValue: aliceFV } =
         await lendingMarketControllerProxy.getPosition(
@@ -1004,7 +1007,27 @@ describe('LendingMarketController - Liquidations', () => {
           targetCurrency,
           maturities[0],
         ),
-      ).revertedWith('MarketNotMatured');
+      ).revertedWith('NotRepaymentPeriod');
+    });
+
+    it('Fail to repay due to active currency', async () => {
+      await time.increaseTo(maturities[0].toString());
+
+      await expect(
+        lendingMarketControllerProxy.executeRepayment(
+          targetCurrency,
+          maturities[0],
+        ),
+      ).revertedWith('NotRepaymentPeriod');
+    });
+
+    it('Fail to redeem due to active market', async () => {
+      await expect(
+        lendingMarketControllerProxy.executeRedemption(
+          targetCurrency,
+          maturities[0],
+        ),
+      ).revertedWith('NotRedemptionPeriod');
     });
 
     it('Fail to redeem due to under repayment period', async () => {
