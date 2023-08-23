@@ -161,6 +161,7 @@ describe('ProxyController', () => {
   describe('Use contracts through the Proxy', async () => {
     it('Successfully call a CurrencyController contract', async () => {
       const HAIRCUT = 7500;
+      const HEARTBEAT = 3600;
 
       // register (fist time)
       const currencyController1 = await CurrencyController.new(
@@ -189,10 +190,13 @@ describe('ProxyController', () => {
         hexWBTC,
         wBtcToBTCRate,
       );
-      await currencyControllerProxy1.addCurrency(hexWBTC, 6, HAIRCUT, [
-        wBtcToBTCPriceFeed.address,
-        btcToETHPriceFeed.address,
-      ]);
+      await currencyControllerProxy1.addCurrency(
+        hexWBTC,
+        6,
+        HAIRCUT,
+        [wBtcToBTCPriceFeed.address, btcToETHPriceFeed.address],
+        HEARTBEAT,
+      );
 
       const haircut1 = await currencyControllerProxy1.getHaircut(hexWBTC);
       expect(haircut1.toString()).to.equal(HAIRCUT.toString());

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Currency} from "../storages/CurrencyControllerStorage.sol";
+import {PriceFeed} from "../storages/CurrencyControllerStorage.sol";
 
 /**
  * @dev Currency Controller contract is responsible for managing supported
@@ -16,6 +16,12 @@ interface ICurrencyController {
     error InvalidPriceFeed();
     error InvalidDecimals();
     error NoPriceFeedExists();
+    error StalePriceFeed(
+        address priceFeed,
+        uint256 heartbeat,
+        uint256 updatedAt,
+        uint256 blockTimestamp
+    );
 
     event CurrencyAdded(bytes32 indexed ccy, uint256 haircut);
     event CurrencyRemoved(bytes32 indexed ccy);
@@ -70,6 +76,8 @@ interface ICurrencyController {
 
     function getHaircut(bytes32 _ccy) external view returns (uint256);
 
+    function getPriceFeed(bytes32 _ccy) external view returns (PriceFeed memory);
+
     function getLastPrice(bytes32 _ccy) external view returns (int256);
 
     function currencyExists(bytes32 _ccy) external view returns (bool);
@@ -77,7 +85,8 @@ interface ICurrencyController {
     function updatePriceFeed(
         bytes32 _ccy,
         uint8 _decimals,
-        address[] calldata _priceFeeds
+        address[] calldata _priceFeeds,
+        uint256 _heartbeat
     ) external;
 
     function removePriceFeed(bytes32 _ccy) external;
@@ -86,7 +95,8 @@ interface ICurrencyController {
         bytes32 _ccy,
         uint8 _decimals,
         uint256 _haircut,
-        address[] calldata _priceFeeds
+        address[] calldata _priceFeeds,
+        uint256 _heartbeat
     ) external;
 
     function updateHaircut(bytes32 _ccy, uint256 _haircut) external;

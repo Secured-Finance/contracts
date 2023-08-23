@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies, mockPriceFeeds, priceOracles } from '../utils/currencies';
+import { currencies, priceFeeds } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { hexETH } from '../utils/strings';
 
@@ -43,29 +43,26 @@ const func: DeployFunction = async function ({
       // Use MockV3Aggregator for a currency when a price feed is not set
       for (const currency of currencies) {
         const priceFeedAddresses: string[] = [];
+        let heartbeat = 0;
 
-        if (priceOracles[currency.key]) {
-          priceOracles[currency.key].forEach((priceOracle) => {
-            if (priceOracle) {
-              priceFeedAddresses.push(priceOracle);
-            }
-          });
-
-          if (priceFeedAddresses.length === 0) {
-            for (const priceFeed of mockPriceFeeds[currency.key]) {
+        if (priceFeeds[currency.key] && priceFeeds[currency.key].length !== 0) {
+          for (const priceFeed of priceFeeds[currency.key]) {
+            if (priceFeed.address) {
+              priceFeedAddresses.push(priceFeed.address);
+            } else {
               const priceFeedContract = await deploy('MockV3Aggregator', {
                 from: deployer,
-                args: [
-                  priceFeed.decimals,
-                  currency.key,
-                  priceFeed.rate.toString(),
-                ],
+                args: [priceFeed.decimals, currency.key, priceFeed.mockRate],
               });
               console.log(
                 `Deployed MockV3Aggregator ${priceFeed.name} price feed at`,
                 priceFeedContract.address,
               );
               priceFeedAddresses.push(priceFeedContract.address);
+            }
+
+            if (heartbeat < priceFeed.heartbeat) {
+              heartbeat = priceFeed.heartbeat;
             }
           }
         }
@@ -83,6 +80,7 @@ const func: DeployFunction = async function ({
             decimals,
             currency.haircut,
             priceFeedAddresses,
+            heartbeat,
           )
           .then((tx) => tx.wait());
       }

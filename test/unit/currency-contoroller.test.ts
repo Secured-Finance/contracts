@@ -64,6 +64,7 @@ describe('CurrencyController', () => {
         18,
         9000,
         [],
+        0,
       );
       await expect(tx).to.emit(currencyControllerProxy, 'CurrencyAdded');
       await expect(tx).to.not.emit(currencyControllerProxy, 'PriceFeedUpdated');
@@ -87,6 +88,13 @@ describe('CurrencyController', () => {
       await currencyControllerProxy
         .getHaircut(currency)
         .then((haircut) => expect(haircut).to.equal(9000));
+
+      await currencyControllerProxy
+        .getPriceFeed(currency)
+        .then(({ instances, heartbeat }) => {
+          expect(instances.length).to.equal(0);
+          expect(heartbeat).to.equal(0);
+        });
     });
 
     it('Add a currency except for ETH as a supported currency', async () => {
@@ -96,15 +104,27 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      const tx = await currencyControllerProxy.addCurrency(currency, 18, 9000, [
-        mockPriceFeed.address,
-      ]);
+      const tx = await currencyControllerProxy.addCurrency(
+        currency,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        86400,
+      );
       await expect(tx).to.emit(currencyControllerProxy, 'CurrencyAdded');
       await expect(tx).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
       await currencyControllerProxy
         .getDecimals(currency)
         .then((decimals) => expect(decimals).to.equal(18));
+
+      await currencyControllerProxy
+        .getPriceFeed(currency)
+        .then(({ instances, heartbeat }) => {
+          expect(instances.length).to.equal(1);
+          expect(instances[0]).to.equal(mockPriceFeed.address);
+          expect(heartbeat).to.equal(86400);
+        });
     });
 
     it('Fail to add ETH as a supported currency due to the invalid price feed', async () => {
@@ -115,9 +135,13 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.addCurrency(currency, 18, 8000, [
-          mockPriceFeed.address,
-        ]),
+        currencyControllerProxy.addCurrency(
+          currency,
+          18,
+          8000,
+          [mockPriceFeed.address],
+          86400,
+        ),
       ).to.be.revertedWith('InvalidPriceFeed');
     });
 
@@ -129,9 +153,13 @@ describe('CurrencyController', () => {
       await mockPriceFeed.mock.decimals.returns(19);
 
       await expect(
-        currencyControllerProxy.addCurrency(currency, 18, 8000, [
-          mockPriceFeed.address,
-        ]),
+        currencyControllerProxy.addCurrency(
+          currency,
+          18,
+          8000,
+          [mockPriceFeed.address],
+          86400,
+        ),
       ).to.be.revertedWith('InvalidDecimals');
     });
   });
@@ -140,16 +168,21 @@ describe('CurrencyController', () => {
     let currency: string;
 
     beforeEach(async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
       currency = ethers.utils.formatBytes32String(`Test${testIdx}`);
       testIdx++;
 
       // Set up for the mocks
-      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
+      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, now, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.addCurrency(currency, 18, 9000, [
-        mockPriceFeed.address,
-      ]);
+      await currencyControllerProxy.addCurrency(
+        currency,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        86400,
+      );
     });
 
     it('Update a currency support', async () => {
@@ -169,19 +202,24 @@ describe('CurrencyController', () => {
     });
 
     it('Update a price feed', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+
       // Set up for the mocks
       const newMockPriceFeed = await deployMockContract(
         owner,
         MockV3Aggregator.abi,
       );
-      await newMockPriceFeed.mock.latestRoundData.returns(0, 200, 0, 0, 0);
+      await newMockPriceFeed.mock.latestRoundData.returns(0, 200, 0, now, 0);
       await newMockPriceFeed.mock.getRoundData.returns(0, 300, 0, 1000, 0);
       await newMockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.updatePriceFeed(currency, 18, [
-          newMockPriceFeed.address,
-        ]),
+        currencyControllerProxy.updatePriceFeed(
+          currency,
+          18,
+          [newMockPriceFeed.address],
+          86400,
+        ),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
       expect(await currencyControllerProxy.getLastPrice(currency)).to.equal(
@@ -190,6 +228,8 @@ describe('CurrencyController', () => {
     });
 
     it('Update multiple price feeds', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+
       // Set up for the mocks
       const newMockPriceFeed1 = await deployMockContract(
         owner,
@@ -199,18 +239,20 @@ describe('CurrencyController', () => {
         owner,
         MockV3Aggregator.abi,
       );
-      await newMockPriceFeed1.mock.latestRoundData.returns(0, 200, 0, 0, 0);
+      await newMockPriceFeed1.mock.latestRoundData.returns(0, 200, 0, now, 0);
       await newMockPriceFeed1.mock.getRoundData.returns(0, 200, 0, 2000, 0);
       await newMockPriceFeed1.mock.decimals.returns(6);
-      await newMockPriceFeed2.mock.latestRoundData.returns(0, 400, 0, 0, 0);
+      await newMockPriceFeed2.mock.latestRoundData.returns(0, 400, 0, now, 0);
       await newMockPriceFeed2.mock.getRoundData.returns(0, 500, 0, 1000, 0);
       await newMockPriceFeed2.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.updatePriceFeed(currency, 18, [
-          newMockPriceFeed1.address,
-          newMockPriceFeed2.address,
-        ]),
+        currencyControllerProxy.updatePriceFeed(
+          currency,
+          18,
+          [newMockPriceFeed1.address, newMockPriceFeed2.address],
+          86400,
+        ),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
       expect(await currencyControllerProxy.getDecimals(currency)).to.equal(24);
@@ -220,19 +262,24 @@ describe('CurrencyController', () => {
     });
 
     it('Remove a  price feed', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+
       // Set up for the mocks
       const newMockPriceFeed = await deployMockContract(
         owner,
         MockV3Aggregator.abi,
       );
-      await newMockPriceFeed.mock.latestRoundData.returns(0, 200, 0, 0, 0);
+      await newMockPriceFeed.mock.latestRoundData.returns(0, 200, 0, now, 0);
       await newMockPriceFeed.mock.getRoundData.returns(0, 300, 0, 1000, 0);
       await newMockPriceFeed.mock.decimals.returns(18);
 
       await expect(
-        currencyControllerProxy.updatePriceFeed(currency, 18, [
-          newMockPriceFeed.address,
-        ]),
+        currencyControllerProxy.updatePriceFeed(
+          currency,
+          18,
+          [newMockPriceFeed.address],
+          86400,
+        ),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
       await expect(currencyControllerProxy.removePriceFeed(currency))
@@ -256,13 +303,14 @@ describe('CurrencyController', () => {
     });
 
     it('Fail to remove a price feed due to invalid PriceFeed', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
       const dummyCurrency = ethers.utils.formatBytes32String('Dummy1');
 
       // Set up for the mocks
-      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
+      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, now, 0);
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.addCurrency(dummyCurrency, 18, 9000, []);
+      await currencyControllerProxy.addCurrency(dummyCurrency, 18, 9000, [], 0);
 
       await expect(
         currencyControllerProxy.removePriceFeed(dummyCurrency),
@@ -274,16 +322,27 @@ describe('CurrencyController', () => {
     let currency: string;
 
     beforeEach(async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
       currency = ethers.utils.formatBytes32String(`Test${testIdx}`);
       testIdx++;
 
       // Set up for the mocks
-      await mockPriceFeed.mock.latestRoundData.returns(0, 10000000000, 0, 0, 0);
+      await mockPriceFeed.mock.latestRoundData.returns(
+        0,
+        10000000000,
+        0,
+        now,
+        0,
+      );
       await mockPriceFeed.mock.decimals.returns(18);
 
-      await currencyControllerProxy.addCurrency(currency, 18, 9000, [
-        mockPriceFeed.address,
-      ]);
+      await currencyControllerProxy.addCurrency(
+        currency,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        86400,
+      );
     });
 
     it('Get the converted amount(int256) in ETH', async () => {
@@ -330,9 +389,13 @@ describe('CurrencyController', () => {
 
     it('Get the converted amount in the selected currency from another selected currency', async () => {
       const currency2 = ethers.utils.formatBytes32String(`TestCcy1`);
-      await currencyControllerProxy.addCurrency(currency2, 18, 9000, [
-        mockPriceFeed.address,
-      ]);
+      await currencyControllerProxy.addCurrency(
+        currency2,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        86400,
+      );
 
       const amount = await currencyControllerProxy[
         'convert(bytes32,bytes32,uint256)'
@@ -343,9 +406,13 @@ describe('CurrencyController', () => {
 
     it('Get the converted amounts in the selected currency from another selected currency', async () => {
       const currency2 = ethers.utils.formatBytes32String(`TestCcy2`);
-      await currencyControllerProxy.addCurrency(currency2, 18, 9000, [
-        mockPriceFeed.address,
-      ]);
+      await currencyControllerProxy.addCurrency(
+        currency2,
+        18,
+        9000,
+        [mockPriceFeed.address],
+        86400,
+      );
 
       const amounts = await currencyControllerProxy[
         'convert(bytes32,bytes32,uint256[])'
@@ -353,6 +420,24 @@ describe('CurrencyController', () => {
 
       expect(amounts.length).to.equal(1);
       expect(amounts[0]).to.equal(10000000000);
+    });
+
+    it('Fail to get the converted amount due to stale price feed', async () => {
+      const { timestamp: now } = await ethers.provider.getBlock('latest');
+      await mockPriceFeed.mock.latestRoundData.returns(
+        0,
+        10000000000,
+        0,
+        now - 86401 + 60 * 60,
+        0,
+      );
+
+      await expect(
+        currencyControllerProxy['convertToBaseCurrency(bytes32,int256)'](
+          currency,
+          10000000000,
+        ),
+      ).to.be.revertedWith('StalePriceFeed');
     });
   });
 });

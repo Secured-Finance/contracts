@@ -2,7 +2,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencies, mockPriceFeeds } from '../../utils/currencies';
+import { currencies, priceFeeds } from '../../utils/currencies';
 import {
   hexEFIL,
   hexETH,
@@ -215,20 +215,24 @@ const deployContracts = async () => {
   );
 
   // Set up for CurrencyController
-  const priceFeeds: Record<string, Contract> = {};
+  const priceFeedContracts: Record<string, Contract> = {};
   const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
 
   for (const currency of currencies) {
     const priceFeedAddresses: string[] = [];
+    let heartbeat = 0;
 
-    if (mockPriceFeeds[currency.key]) {
-      for (const priceFeed of mockPriceFeeds[currency.key]) {
-        priceFeeds[currency.key] = await MockV3Aggregator.deploy(
+    if (priceFeeds[currency.key]) {
+      for (const priceFeed of priceFeeds[currency.key]) {
+        priceFeedContracts[currency.key] = await MockV3Aggregator.deploy(
           priceFeed.decimals,
           currency.key,
-          priceFeed.rate,
+          priceFeed.mockRate,
         );
-        priceFeedAddresses.push(priceFeeds[currency.key].address);
+        priceFeedAddresses.push(priceFeedContracts[currency.key].address);
+        if (heartbeat < priceFeed.heartbeat) {
+          heartbeat = priceFeed.heartbeat;
+        }
       }
     }
 
@@ -238,6 +242,7 @@ const deployContracts = async () => {
       decimals,
       HAIRCUT,
       priceFeedAddresses,
+      heartbeat,
     );
   }
 
@@ -320,10 +325,10 @@ const deployContracts = async () => {
     wETHToken,
     wBTCToken,
     usdcToken,
-    wFilToETHPriceFeed: priceFeeds[hexWFIL],
-    eFilToETHPriceFeed: priceFeeds[hexEFIL],
-    wBtcToETHPriceFeed: priceFeeds[hexWBTC],
-    usdcToUSDPriceFeed: priceFeeds[hexUSDC],
+    wFilToETHPriceFeed: priceFeedContracts[hexWFIL],
+    eFilToETHPriceFeed: priceFeedContracts[hexEFIL],
+    wBtcToETHPriceFeed: priceFeedContracts[hexWBTC],
+    usdcToUSDPriceFeed: priceFeedContracts[hexUSDC],
     // libraries
     fundManagementLogic: fundManagementLogic.attach(
       lendingMarketControllerProxy.address,

@@ -95,8 +95,8 @@ contract MockV3Aggregator is AggregatorV2V3Interface, Ownable {
         return (
             uint80(latestRound),
             getAnswer[latestRound],
-            getStartedAt[latestRound],
-            getTimestamp[latestRound],
+            block.timestamp,
+            block.timestamp,
             uint80(latestRound)
         );
     }

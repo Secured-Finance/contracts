@@ -14,7 +14,7 @@ import {RoundingInt256} from "./libraries/math/RoundingInt256.sol";
 import {Ownable} from "./utils/Ownable.sol";
 import {Proxyable} from "./utils/Proxyable.sol";
 // storages
-import {CurrencyControllerStorage as Storage, Currency} from "./storages/CurrencyControllerStorage.sol";
+import {CurrencyControllerStorage as Storage, PriceFeed} from "./storages/CurrencyControllerStorage.sol";
 
 /**
  * @notice Implements managing of the supported currencies in the protocol.
@@ -83,6 +83,14 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
+     * @notice Gets price feed for the selected currency.
+     * @param _ccy Currency name in bytes32
+     */
+    function getPriceFeed(bytes32 _ccy) external view override returns (PriceFeed memory) {
+        return Storage.slot().priceFeeds[_ccy];
+    }
+
+    /**
      * @notice Gets if the selected currency is supported.
      * @param _ccy Currency name in bytes32
      * @return The boolean if the selected currency is supported or not
@@ -102,13 +110,14 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         bytes32 _ccy,
         uint8 _decimals,
         uint256 _haircut,
-        address[] calldata _priceFeeds
+        address[] calldata _priceFeeds,
+        uint256 _heartbeat
     ) public override onlyOwner {
         Storage.slot().currencies.add(_ccy);
         _updateHaircut(_ccy, _haircut);
 
         if (_priceFeeds.length != 0) {
-            _updatePriceFeed(_ccy, _decimals, _priceFeeds);
+            _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeat);
         }
 
         emit CurrencyAdded(_ccy, _haircut);
@@ -146,9 +155,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     function updatePriceFeed(
         bytes32 _ccy,
         uint8 _decimals,
-        address[] calldata _priceFeeds
+        address[] calldata _priceFeeds,
+        uint256 _heartbeat
     ) public override onlyOwner onlySupportedCurrency(_ccy) {
-        _updatePriceFeed(_ccy, _decimals, _priceFeeds);
+        _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeat);
     }
 
     /**
@@ -156,9 +166,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      */
     function removePriceFeed(bytes32 _ccy) external override onlyOwner onlySupportedCurrency(_ccy) {
-        AggregatorV3Interface[] memory priceFeeds = Storage.slot().priceFeeds[_ccy];
+        PriceFeed memory priceFeed = Storage.slot().priceFeeds[_ccy];
 
-        if (priceFeeds.length == 0) revert NoPriceFeedExists();
+        if (priceFeed.instances.length == 0) revert NoPriceFeedExists();
         delete Storage.slot().priceFeeds[_ccy];
         delete Storage.slot().decimalsCaches[_ccy];
 
@@ -356,11 +366,20 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     function _getLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice) {
-        AggregatorV3Interface[] memory priceFeeds = Storage.slot().priceFeeds[_ccy];
+        PriceFeed memory priceFeeds = Storage.slot().priceFeeds[_ccy];
         totalPrice = 1;
 
-        for (uint256 i; i < priceFeeds.length; i++) {
-            (, int256 price, , , ) = priceFeeds[i].latestRoundData();
+        for (uint256 i; i < priceFeeds.instances.length; i++) {
+            (, int256 price, , uint256 updatedAt, ) = priceFeeds.instances[i].latestRoundData();
+
+            if (updatedAt < block.timestamp - priceFeeds.heartbeat + 1 hours) {
+                revert StalePriceFeed(
+                    address(priceFeeds.instances[i]),
+                    priceFeeds.heartbeat,
+                    updatedAt,
+                    block.timestamp
+                );
+            }
             totalPrice = totalPrice * price;
         }
     }
@@ -376,7 +395,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     function _updatePriceFeed(
         bytes32 _ccy,
         uint8 _decimals,
-        address[] calldata _priceFeeds
+        address[] calldata _priceFeeds,
+        uint256 _heartbeat
     ) internal {
         AggregatorV3Interface[] memory priceFeeds = new AggregatorV3Interface[](_priceFeeds.length);
         uint8 decimalsTotal;
@@ -396,7 +416,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
                 : AggregatorV3Interface(_priceFeeds[i - 1]).decimals();
         }
 
-        Storage.slot().priceFeeds[_ccy] = priceFeeds;
+        Storage.slot().priceFeeds[_ccy] = PriceFeed(priceFeeds, _heartbeat);
         Storage.slot().decimalsCaches[_ccy] = decimalsTotal;
 
         emit PriceFeedUpdated(_ccy, _decimals, _priceFeeds);
