@@ -687,5 +687,13 @@ describe('LendingMarketController - Rotations', () => {
       expect(autoRollLog.prev).to.equal(maturities[1]);
       expect(autoRollLog.unitPrice).to.equal('8500');
     });
+
+    it('Fail to rotate order books due to no order book', async () => {
+      await expect(
+        lendingMarketControllerProxy.rotateOrderBooks(
+          ethers.utils.formatBytes32String('Test'),
+        ),
+      ).revertedWith('NotEnoughOrderBooks');
+    });
   });
 });

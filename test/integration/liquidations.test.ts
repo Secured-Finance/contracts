@@ -2015,15 +2015,15 @@ describe('Integration Test: Liquidations', async () => {
     let decimals: BigNumber;
     let haircut: BigNumber;
 
+    const addCurrency = async (currency: string) => {
+      if (!(await currencyController.currencyExists(currency))) {
+        await currencyController.addCurrency(currency, decimals, haircut, []);
+      }
+    };
+
     before(async () => {
       decimals = await currencyController.getDecimals(hexWFIL);
       haircut = await currencyController.getHaircut(hexWFIL);
-    });
-
-    afterEach(async () => {
-      if (!(await currencyController.currencyExists(hexWFIL))) {
-        await currencyController.addCurrency(hexWFIL, decimals, haircut, []);
-      }
     });
 
     describe('Repay and redeem positions', async () => {
@@ -2038,6 +2038,10 @@ describe('Integration Test: Liquidations', async () => {
         await resetContractInstances();
 
         lendingInfo = new LendingInfo(alice.address);
+      });
+
+      after(async () => {
+        await addCurrency(hexWFIL);
       });
 
       it('Create orders', async () => {
@@ -2129,6 +2133,10 @@ describe('Integration Test: Liquidations', async () => {
         await resetContractInstances();
 
         lendingInfo = new LendingInfo(alice.address);
+      });
+
+      after(async () => {
+        await addCurrency(hexWFIL);
       });
 
       it('Create orders', async () => {
@@ -2271,6 +2279,10 @@ describe('Integration Test: Liquidations', async () => {
         lendingInfo = new LendingInfo(alice.address);
       });
 
+      after(async () => {
+        await addCurrency(hexWFIL);
+      });
+
       it('Create orders', async () => {
         lendingInfo = new LendingInfo(alice.address);
         aliceInitialBalance = await wFILToken.balanceOf(alice.address);
@@ -2407,6 +2419,10 @@ describe('Integration Test: Liquidations', async () => {
       before(async () => {
         [alice, bob] = await getUsers(2);
         await resetContractInstances();
+      });
+
+      after(async () => {
+        await addCurrency(hexWFIL);
       });
 
       it('Create orders', async () => {
@@ -2555,6 +2571,10 @@ describe('Integration Test: Liquidations', async () => {
         await resetContractInstances();
 
         lendingInfo = new LendingInfo(alice.address);
+      });
+
+      after(async () => {
+        await addCurrency(hexWFIL);
       });
 
       it('Create orders', async () => {

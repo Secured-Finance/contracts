@@ -53,7 +53,6 @@ contract LendingMarketController is
      */
     modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity) {
         if (Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0) revert InvalidMaturity();
-
         _;
     }
 
@@ -939,12 +938,7 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32 of the selected market
      */
     function rotateOrderBooks(bytes32 _ccy) external override nonReentrant ifActive {
-        if (!currencyController().currencyExists(_ccy)) revert InvalidCurrency();
-
-        uint256 newMaturity = LendingMarketOperationLogic.rotateOrderBooks(
-            _ccy,
-            getOrderFeeRate(_ccy)
-        );
+        uint256 newMaturity = LendingMarketOperationLogic.rotateOrderBooks(_ccy);
 
         FundManagementLogic.convertFutureValueToGenesisValue(
             _ccy,
