@@ -13,12 +13,12 @@ export interface Currency {
   args: string[];
 }
 
-export interface MockPriceFeeds {
-  [key: string]: {
-    name: string;
-    decimals: number;
-    rate: BigNumber;
-  }[];
+export interface PriceFeed {
+  name: string;
+  decimals: number;
+  heartbeat: number;
+  mockRate: BigNumber;
+  address: string | undefined;
 }
 
 const wFilToETHRate = BigNumber.from('3803677700000000');
@@ -73,39 +73,41 @@ const currencies: Currency[] = [
   },
 ];
 
-const mockPriceFeeds: MockPriceFeeds = {
+const priceFeeds: Record<string, PriceFeed[]> = {
   [hexWFIL]: [
     {
       name: 'WFIL/ETH',
       decimals: 18,
-      rate: wFilToETHRate,
+      heartbeat: 86400,
+      mockRate: wFilToETHRate,
+      address: process.env.WFIL_TO_ETH_RATE,
     },
   ],
   [hexWBTC]: [
     {
       name: 'WBTC/BTC',
       decimals: 8,
-      rate: wBtcToBTCRate,
+      heartbeat: 86400,
+      mockRate: wBtcToBTCRate,
+      address: process.env.WBTC_TO_BTC_RATE,
     },
     {
       name: 'BTC/ETH',
       decimals: 18,
-      rate: btcToETHRate,
+      heartbeat: 3600,
+      mockRate: btcToETHRate,
+      address: process.env.BTC_TO_ETH_RATE,
     },
   ],
   [hexUSDC]: [
     {
       name: 'USDC/ETH',
       decimals: 18,
-      rate: usdcToETHRate,
+      heartbeat: 86400,
+      mockRate: usdcToETHRate,
+      address: process.env.USDC_TO_ETH_RATE,
     },
   ],
 };
 
-const priceOracles = {
-  [hexWFIL]: [process.env.WFIL_TO_ETH_RATE],
-  [hexWBTC]: [process.env.WBTC_TO_BTC_RATE, process.env.BTC_TO_ETH_RATE],
-  [hexUSDC]: [process.env.USDC_TO_ETH_RATE],
-};
-
-export { currencies, mockPriceFeeds, priceOracles };
+export { currencies, priceFeeds };

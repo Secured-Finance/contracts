@@ -2014,16 +2014,26 @@ describe('Integration Test: Liquidations', async () => {
   describe('Delisting', async () => {
     let decimals: BigNumber;
     let haircut: BigNumber;
+    let priceFeeds: string[];
+    let heartbeat: BigNumber;
 
     const addCurrency = async (currency: string) => {
       if (!(await currencyController.currencyExists(currency))) {
-        await currencyController.addCurrency(currency, decimals, haircut, []);
+        await currencyController.addCurrency(
+          currency,
+          decimals,
+          haircut,
+          priceFeeds,
+          heartbeat,
+        );
       }
     };
 
     before(async () => {
       decimals = await currencyController.getDecimals(hexWFIL);
       haircut = await currencyController.getHaircut(hexWFIL);
+      ({ instances: priceFeeds, heartbeat } =
+        await currencyController.getPriceFeed(hexWFIL));
     });
 
     describe('Repay and redeem positions', async () => {
