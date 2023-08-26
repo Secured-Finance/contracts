@@ -8,7 +8,7 @@ import { LIQUIDATION_THRESHOLD_RATE } from '../test/common/constants';
 import { Side } from '../utils/constants';
 import { hexETH, hexWFIL, toBytes32 } from '../utils/strings';
 
-describe('ZC e2e test', async () => {
+describe('ZC e2e test', async function () {
   const targetCurrency = hexWFIL;
   const BP = 10000;
   const depositAmountInETH = '10000000000000000000';
@@ -32,11 +32,11 @@ describe('ZC e2e test', async () => {
   let maturities: BigNumber[];
   let orderBookIds: BigNumber[];
 
-  const createSampleETHOrders = async (
+  const createSampleETHOrders = async function (
     user: SignerWithAddress | Wallet,
     maturity: BigNumber,
     unitPrice: string,
-  ) => {
+  ) {
     await tokenVault.connect(user).deposit(hexETH, '3000000', {
       value: '3000000',
     });
@@ -50,7 +50,7 @@ describe('ZC e2e test', async () => {
       .executeOrder(hexETH, maturity, Side.LEND, '1000000', unitPrice);
   };
 
-  const executeAutoRoll = async (unitPrice?: string) => {
+  const executeAutoRoll = async function (unitPrice?: string) {
     if (unitPrice) {
       // Move to 6 hours (21600 sec) before maturity.
       await time.increaseTo(maturities[0].sub('21600').toString());
@@ -64,7 +64,7 @@ describe('ZC e2e test', async () => {
       .executeItayoseCalls([hexETH], maturities[maturities.length - 1]);
   };
 
-  before('Set up for testing', async () => {
+  before('Set up for testing', async function () {
     const blockNumber = await ethers.provider.getBlockNumber();
     const network = await ethers.provider.getNetwork();
 
@@ -138,13 +138,18 @@ describe('ZC e2e test', async () => {
       .transfer(aliceSigner.address, orderAmountInFIL)
       .then((tx) => tx.wait());
 
+    await wFILToken
+      .connect(ownerSigner)
+      .transfer(bobSigner.address, orderAmountInFIL)
+      .then((tx) => tx.wait());
+
     maturities = await lendingMarketController.getMaturities(targetCurrency);
     orderBookIds = await lendingMarketController.getOrderBookIds(
       targetCurrency,
     );
   });
 
-  it('Deposit ETH', async () => {
+  it('Deposit ETH', async function () {
     const aliceDepositAmountBefore = await tokenVault.getDepositAmount(
       aliceSigner.address,
       hexWFIL,
@@ -324,10 +329,7 @@ describe('ZC e2e test', async () => {
       .then((address) => ethers.getContractAt('LendingMarket', address));
 
     const futureValueVaultAddresses =
-      await lendingMarketController.getFutureValueVault(
-        targetCurrency,
-        maturities[0],
-      );
+      await lendingMarketController.getFutureValueVault(targetCurrency);
 
     const futureValueVault = await ethers.getContractAt(
       'FutureValueVault',
@@ -428,7 +430,17 @@ describe('ZC e2e test', async () => {
     expect(workingOrdersAmountAfter).to.equal(workingOrdersAmountBefore);
   });
 
-  it('Withdraw WFIL', async () => {
+  it('Withdraw WFIL', async function () {
+    await wFILToken
+      .connect(bobSigner)
+      .approve(tokenVault.address, orderAmountInFIL)
+      .then((tx) => tx.wait());
+
+    await tokenVault
+      .connect(bobSigner)
+      .deposit(hexWFIL, orderAmountInFIL)
+      .then((tx) => tx.wait());
+
     const bobDepositAmountBefore = await tokenVault.getDepositAmount(
       bobSigner.address,
       hexWFIL,
@@ -450,11 +462,22 @@ describe('ZC e2e test', async () => {
     ).to.equal(withdrawAmount);
   });
 
-  it('Execute auto-roll', async () => {
+  it('Execute auto-roll', async function () {
     const marketDetail = await lendingMarketController.getOrderBookDetail(
       hexETH,
       maturities[0],
     );
+
+    const lendingMarket = await lendingMarketController
+      .getLendingMarket(hexETH)
+      .then((address) => ethers.getContractAt('LendingMarket', address));
+
+    const isMarketOpened = await lendingMarket.isOpened(orderBookIds[0]);
+
+    if (!isMarketOpened) {
+      console.log('Skip the order step since the market not open');
+      this.skip();
+    }
 
     await lendingMarketController
       .connect(aliceSigner)
