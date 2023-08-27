@@ -17,10 +17,6 @@ const privateKey =
     ? undefined
     : [process.env.PRIVATE_KEY];
 
-const devChainId = parseInt(
-  process.env.DEV_CHAIN_ID ? process.env.DEV_CHAIN_ID : '1337',
-);
-
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   namedAccounts: {
@@ -31,7 +27,7 @@ const config: HardhatUserConfig = {
     hardhat: { accounts: { count: 50 } },
     localhost: {
       url: process.env.DEV_RPC_ENDPOINT || 'http://0.0.0.0:8545',
-      chainId: devChainId,
+      chainId: parseInt(process.env.DEV_CHAIN_ID || '1337'),
       accounts: privateKey,
     },
     development: {
