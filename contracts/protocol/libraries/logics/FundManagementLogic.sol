@@ -1063,16 +1063,9 @@ library FundManagementLogic {
         view
         returns (int256)
     {
-        if (_ccy == Storage.slot().baseCurrency) {
-            return _amount;
-        } else {
-            uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
-
-            return
-                (_amount * Storage.slot().marketTerminationPrices[_ccy]).div(
-                    (10**decimals).toInt256()
-                );
-        }
+        uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
+        return
+            (_amount * Storage.slot().marketTerminationPrices[_ccy]).div((10**decimals).toInt256());
     }
 
     function _convertFromBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, uint256 _amount)
@@ -1080,15 +1073,9 @@ library FundManagementLogic {
         view
         returns (uint256)
     {
-        if (_ccy == Storage.slot().baseCurrency) {
-            return _amount;
-        } else {
-            uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
-            return
-                (_amount * 10**decimals).div(
-                    Storage.slot().marketTerminationPrices[_ccy].toUint256()
-                );
-        }
+        uint8 decimals = AddressResolverLib.currencyController().getDecimals(_ccy);
+        return
+            (_amount * 10**decimals).div(Storage.slot().marketTerminationPrices[_ccy].toUint256());
     }
 
     function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {

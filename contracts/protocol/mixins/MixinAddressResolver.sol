@@ -47,14 +47,7 @@ contract MixinAddressResolver {
             Storage.slot().addressCache[name] = destination;
             emit CacheUpdated(name, destination);
         }
-
-        afterBuildCache();
     }
-
-    /**
-     * @notice Executes after the cache is built.
-     */
-    function afterBuildCache() internal virtual {}
 
     function isResolverCached() external view returns (bool) {
         bytes32[] memory contractNames = requiredContracts();

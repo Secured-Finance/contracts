@@ -2,7 +2,6 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
-import { hexETH } from '../../../utils/strings';
 import { MARKET_BASE_PERIOD } from '../../common/constants';
 
 // contracts
@@ -34,8 +33,6 @@ const deployContracts = async (owner: SignerWithAddress) => {
   );
   const mockReserveFund = await deployMockContract(owner, ReserveFund.abi);
   const mockTokenVault = await deployMockContract(owner, TokenVault.abi);
-
-  await mockCurrencyController.mock.getBaseCurrency.returns(hexETH);
 
   // Deploy libraries
   const quickSort = await deployContract(owner, QuickSort);

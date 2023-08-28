@@ -22,9 +22,9 @@ abstract contract MixinWallet is Ownable {
     event TransactionExecuted(address from, address target, uint256 value, bytes data);
     event TransactionsExecuted(address from, address[] targets, uint256[] values, bytes[] data);
 
-    function _initialize(address _owner, address _baseCurrencyAddr) internal {
+    function _initialize(address _owner, address _nativeTokenAddr) internal {
         _transferOwnership(_owner);
-        ERC20Handler.initialize(_baseCurrencyAddr);
+        ERC20Handler.initialize(_nativeTokenAddr);
     }
 
     /**
@@ -74,7 +74,7 @@ abstract contract MixinWallet is Ownable {
         uint256 _amount
     ) internal {
         address tokenAddress = _tokenvault.getTokenAddress(_ccy);
-        if (ERC20Handler.baseCurrency() != tokenAddress) {
+        if (!ERC20Handler.isNative(tokenAddress)) {
             ERC20Handler.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
             ERC20Handler.safeApprove(tokenAddress, address(_tokenvault), _amount);
         }
@@ -95,7 +95,7 @@ abstract contract MixinWallet is Ownable {
         _tokenvault.withdraw(_ccy, _amount);
 
         address tokenAddress = _tokenvault.getTokenAddress(_ccy);
-        if (ERC20Handler.baseCurrency() == tokenAddress) {
+        if (ERC20Handler.isNative(tokenAddress)) {
             ERC20Handler.safeTransferETH(msg.sender, _amount);
         } else {
             ERC20Handler.safeTransfer(tokenAddress, msg.sender, _amount);

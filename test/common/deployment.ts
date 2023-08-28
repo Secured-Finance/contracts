@@ -2,7 +2,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencies, priceFeeds } from '../../utils/currencies';
+import { currencies, mockPriceFeeds } from '../../utils/currencies';
 import {
   hexEFIL,
   hexETH,
@@ -21,6 +21,13 @@ import {
   MARKET_BASE_PERIOD,
   ORDER_FEE_RATE,
 } from './constants';
+import {
+  btcToUSDRate,
+  ethToUSDRate,
+  usdcToUSDRate,
+  wBtcToBTCRate,
+  wFilToETHRate,
+} from './currencies';
 
 const deployContracts = async () => {
   // Deploy libraries
@@ -157,10 +164,7 @@ const deployContracts = async () => {
     tokenVaultAddress,
   ] = await Promise.all([
     proxyController.setBeaconProxyControllerImpl(beaconProxyController.address),
-    proxyController.setCurrencyControllerImpl(
-      currencyController.address,
-      hexETH,
-    ),
+    proxyController.setCurrencyControllerImpl(currencyController.address),
     proxyController.setGenesisValueVaultImpl(genesisValueVault.address),
     proxyController.setLendingMarketControllerImpl(
       lendingMarketController.address,
@@ -218,25 +222,39 @@ const deployContracts = async () => {
   const priceFeedContracts: Record<string, Contract> = {};
   const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
 
+  const testRates = {
+    ['WFIL/ETH']: wFilToETHRate,
+    ['ETH/USD']: ethToUSDRate,
+    ['WBTC/BTC']: wBtcToBTCRate,
+    ['BTC/USD']: btcToUSDRate,
+    ['USDC/USD']: usdcToUSDRate,
+  };
+
   for (const currency of currencies) {
     const priceFeedAddresses: string[] = [];
     let heartbeat = 0;
+    let decimals = 0;
 
-    if (priceFeeds[currency.key]) {
-      for (const priceFeed of priceFeeds[currency.key]) {
-        priceFeedContracts[currency.key] = await MockV3Aggregator.deploy(
-          priceFeed.decimals,
-          currency.key,
-          priceFeed.mockRate,
-        );
-        priceFeedAddresses.push(priceFeedContracts[currency.key].address);
-        if (heartbeat < priceFeed.heartbeat) {
-          heartbeat = priceFeed.heartbeat;
-        }
+    for (const priceFeed of mockPriceFeeds[currency.key]) {
+      priceFeedContracts[priceFeed.name] = await MockV3Aggregator.deploy(
+        priceFeed.decimals,
+        currency.key,
+        testRates[priceFeed.name],
+      );
+
+      decimals +=
+        priceFeedAddresses.length === 0
+          ? await tokens[currency.symbol].decimals()
+          : mockPriceFeeds[currency.key][priceFeedAddresses.length - 1]
+              .decimals;
+
+      priceFeedAddresses.push(priceFeedContracts[priceFeed.name].address);
+
+      if (heartbeat < priceFeed.heartbeat) {
+        heartbeat = priceFeed.heartbeat;
       }
     }
 
-    const decimals = await tokens[currency.symbol].decimals();
     await currencyControllerProxy.addCurrency(
       currency.key,
       decimals,
@@ -325,10 +343,9 @@ const deployContracts = async () => {
     wETHToken,
     wBTCToken,
     usdcToken,
-    wFilToETHPriceFeed: priceFeedContracts[hexWFIL],
-    eFilToETHPriceFeed: priceFeedContracts[hexEFIL],
-    wBtcToETHPriceFeed: priceFeedContracts[hexWBTC],
-    usdcToUSDPriceFeed: priceFeedContracts[hexUSDC],
+    wFilToETHPriceFeed: priceFeedContracts['WFIL/ETH'],
+    btcToUSDPriceFeed: priceFeedContracts['BTC/USD'],
+    usdcToUSDPriceFeed: priceFeedContracts['USDC/USD'],
     // libraries
     fundManagementLogic: fundManagementLogic.attach(
       lendingMarketControllerProxy.address,

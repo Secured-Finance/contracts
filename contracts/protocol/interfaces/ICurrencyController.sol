@@ -14,6 +14,7 @@ interface ICurrencyController {
     error InvalidCurrency();
     error InvalidHaircut();
     error InvalidPriceFeed();
+    error InvalidPrice();
     error InvalidDecimals();
     error NoPriceFeedExists();
     error StalePriceFeed(
@@ -67,8 +68,6 @@ interface ICurrencyController {
         external
         view
         returns (uint256[] memory amounts);
-
-    function getBaseCurrency() external view returns (bytes32);
 
     function getDecimals(bytes32) external view returns (uint8);
 

@@ -93,7 +93,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     receive() external payable {
-        if (msg.sender != ERC20Handler.baseCurrency()) {
+        if (!ERC20Handler.isNative(msg.sender)) {
             revert CallerNotBaseCurrency({caller: msg.sender});
         }
     }
@@ -536,8 +536,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     ) internal {
         if (
             _amount == 0 ||
-            (Storage.slot().tokenAddresses[_ccy] == ERC20Handler.baseCurrency() &&
-                _amount != msg.value)
+            (ERC20Handler.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
         ) {
             revert InvalidAmount();
         }

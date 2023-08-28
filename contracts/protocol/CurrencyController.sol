@@ -42,19 +42,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
-     * @param _baseCcy The base currency name in bytes32
      */
-    function initialize(address _owner, bytes32 _baseCcy) public initializer onlyProxy {
+    function initialize(address _owner) public initializer onlyProxy {
         _transferOwnership(_owner);
-        Storage.slot().baseCurrency = _baseCcy;
-    }
-
-    /**
-     * @notice Gets the base currency name.
-     * @return Currency name in bytes32
-     */
-    function getBaseCurrency() external view override returns (bytes32) {
-        return Storage.slot().baseCurrency;
     }
 
     /**
@@ -114,11 +104,9 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         uint256 _heartbeat
     ) public override onlyOwner {
         Storage.slot().currencies.add(_ccy);
-        _updateHaircut(_ccy, _haircut);
 
-        if (_priceFeeds.length != 0) {
-            _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeat);
-        }
+        _updateHaircut(_ccy, _haircut);
+        _updatePriceFeed(_ccy, _decimals, _priceFeeds, _heartbeat);
 
         emit CurrencyAdded(_ccy, _haircut);
     }
@@ -181,7 +169,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @return price The last price
      */
     function getLastPrice(bytes32 _ccy) public view override returns (int256 price) {
-        if (_isBaseCurrency(_ccy)) return 1e18;
         price = _getLastPrice(_ccy);
     }
 
@@ -199,14 +186,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     ) external view override returns (uint256 amount) {
         if (_fromCcy == _toCcy) return _amount;
         if (_amount == 0) return 0;
-
-        if (_isBaseCurrency(_fromCcy)) {
-            return convertFromBaseCurrency(_toCcy, _amount);
-        }
-
-        if (_isBaseCurrency(_toCcy)) {
-            return convertToBaseCurrency(_fromCcy, _amount);
-        }
 
         int256 fromPrice = _getLastPrice(_fromCcy);
         int256 toPrice = _getLastPrice(_toCcy);
@@ -229,14 +208,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         uint256[] calldata _amounts
     ) external view override returns (uint256[] memory amounts) {
         if (_fromCcy == _toCcy) return _amounts;
-
-        if (_isBaseCurrency(_fromCcy)) {
-            return convertFromBaseCurrency(_toCcy, _amounts);
-        }
-
-        if (_isBaseCurrency(_toCcy)) {
-            return convertToBaseCurrency(_fromCcy, _amounts);
-        }
 
         int256 fromPrice = _getLastPrice(_fromCcy);
         int256 toPrice = _getLastPrice(_toCcy);
@@ -265,7 +236,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         override
         returns (uint256 amount)
     {
-        if (_isBaseCurrency(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
         amount = (_amount * _getLastPrice(_ccy).toUint256()).div(
@@ -285,7 +255,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         override
         returns (int256 amount)
     {
-        if (_isBaseCurrency(_ccy)) return _amount;
         if (_amount == 0) return 0;
 
         amount = (_amount * _getLastPrice(_ccy)).div(
@@ -305,8 +274,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         override
         returns (uint256[] memory amounts)
     {
-        if (_isBaseCurrency(_ccy)) return _amounts;
-
         amounts = new uint256[](_amounts.length);
         uint256 price = _getLastPrice(_ccy).toUint256();
         uint256 decimals = Storage.slot().decimalsCaches[_ccy];
@@ -329,8 +296,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         override
         returns (uint256 amount)
     {
-        if (_isBaseCurrency(_ccy)) return _amount;
-
         amount = (_amount * 10**Storage.slot().decimalsCaches[_ccy]).div(
             _getLastPrice(_ccy).toUint256()
         );
@@ -348,8 +313,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         override
         returns (uint256[] memory amounts)
     {
-        if (_isBaseCurrency(_ccy)) return _amounts;
-
         amounts = new uint256[](_amounts.length);
         uint256 price = _getLastPrice(_ccy).toUint256();
         uint256 decimals = Storage.slot().decimalsCaches[_ccy];
@@ -359,10 +322,6 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
             amounts[i] = (_amounts[i] * 10**decimals).div(price);
         }
-    }
-
-    function _isBaseCurrency(bytes32 _ccy) internal view returns (bool) {
-        return _ccy == Storage.slot().baseCurrency;
     }
 
     function _getLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice) {
@@ -399,25 +358,20 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         uint256 _heartbeat
     ) internal {
         AggregatorV3Interface[] memory priceFeeds = new AggregatorV3Interface[](_priceFeeds.length);
-        uint8 decimalsTotal;
+
+        if (_priceFeeds.length == 0) revert InvalidPriceFeed();
 
         for (uint256 i; i < _priceFeeds.length; i++) {
             priceFeeds[i] = AggregatorV3Interface(_priceFeeds[i]);
             (, int256 price, , , ) = priceFeeds[i].latestRoundData();
-            if (price < 0) revert InvalidPriceFeed();
+            if (price < 0) revert InvalidPrice();
 
             uint8 decimals = priceFeeds[i].decimals();
             if (decimals > 18) revert InvalidDecimals();
-
-            // Add the decimal point of the source currency of the price feed.
-            // The previous price feed decimals are used as source data if there are multiple price feeds.
-            decimalsTotal += i == 0
-                ? _decimals
-                : AggregatorV3Interface(_priceFeeds[i - 1]).decimals();
         }
 
         Storage.slot().priceFeeds[_ccy] = PriceFeed(priceFeeds, _heartbeat);
-        Storage.slot().decimalsCaches[_ccy] = decimalsTotal;
+        Storage.slot().decimalsCaches[_ccy] = _decimals;
 
         emit PriceFeedUpdated(_ccy, _decimals, _priceFeeds);
     }

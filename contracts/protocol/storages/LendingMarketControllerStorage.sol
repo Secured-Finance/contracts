@@ -15,7 +15,6 @@ library LendingMarketControllerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.lendingMarketController");
 
     struct Storage {
-        bytes32 baseCurrency;
         uint256 marketBasePeriod;
         uint256 marketTerminationDate;
         mapping(bytes32 => int256) marketTerminationPrices;
