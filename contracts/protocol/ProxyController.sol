@@ -84,14 +84,14 @@ contract ProxyController is IProxyController, Ownable {
      * @param liquidationThresholdRate  The rate used as the auto liquidation threshold
      * @param liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param liquidatorFeeRate The liquidation fee rate received by liquidators
-     * @param WETH9 The address of WETH
+     * @param nativeToken The address of wrapped token of native currency
      */
     function setTokenVaultImpl(
         address newImpl,
         uint256 liquidationThresholdRate,
         uint256 liquidationProtocolFeeRate,
         uint256 liquidatorFeeRate,
-        address WETH9
+        address nativeToken
     ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,uint256,uint256,uint256,address)",
@@ -100,7 +100,7 @@ contract ProxyController is IProxyController, Ownable {
             liquidationThresholdRate,
             liquidationProtocolFeeRate,
             liquidatorFeeRate,
-            WETH9
+            nativeToken
         );
         _updateImpl(Contracts.TOKEN_VAULT, newImpl, data);
     }
@@ -144,14 +144,14 @@ contract ProxyController is IProxyController, Ownable {
     /**
      * @notice Sets the implementation contract of ReserveFund
      * @param newImpl The address of implementation contract
-     * @param WETH9 The address of WETH
+     * @param nativeToken The address of wrapped token of native currency
      */
-    function setReserveFundImpl(address newImpl, address WETH9) external onlyOwner {
+    function setReserveFundImpl(address newImpl, address nativeToken) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,address)",
             msg.sender,
             resolver,
-            WETH9
+            nativeToken
         );
         _updateImpl(Contracts.RESERVE_FUND, newImpl, data);
     }

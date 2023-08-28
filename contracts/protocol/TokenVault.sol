@@ -56,7 +56,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
      * @param _liquidationThresholdRate The liquidation threshold rate
      * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
      * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
-     * @param _WETH9 The address of the wrapped token to use as base currency
+     * @param _nativeToken The address of wrapped token of native currency
      */
     function initialize(
         address _owner,
@@ -64,12 +64,12 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         uint256 _liquidationThresholdRate,
         uint256 _liquidationProtocolFeeRate,
         uint256 _liquidatorFeeRate,
-        address _WETH9
+        address _nativeToken
     ) public initializer onlyProxy {
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
 
-        ERC20Handler.initialize(_WETH9);
+        ERC20Handler.initialize(_nativeToken);
         Params.setCollateralParameters(
             _liquidationThresholdRate,
             _liquidationProtocolFeeRate,

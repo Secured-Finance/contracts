@@ -22,9 +22,9 @@ abstract contract MixinWallet is Ownable {
     event TransactionExecuted(address from, address target, uint256 value, bytes data);
     event TransactionsExecuted(address from, address[] targets, uint256[] values, bytes[] data);
 
-    function _initialize(address _owner, address _nativeTokenAddr) internal {
+    function _initialize(address _owner, address _nativeToken) internal {
         _transferOwnership(_owner);
-        ERC20Handler.initialize(_nativeTokenAddr);
+        ERC20Handler.initialize(_nativeToken);
     }
 
     /**
