@@ -34,7 +34,7 @@ library OrderBookLib {
     uint256 private constant PRE_ORDER_PERIOD = 7 days;
     uint256 private constant ITAYOSE_PERIOD = 1 hours;
 
-    error NoOrdersExist();
+    error EmptyOrderBook();
     error PastMaturityOrderExists();
 
     struct OrderBook {
@@ -473,6 +473,8 @@ library OrderBookLib {
             isFirstOrderInBlock
         ) = getOrderExecutionConditions(self, _side, _unitPrice, _circuitBreakerLimitRange);
 
+        if (_unitPrice == 0 && !orderExists) revert EmptyOrderBook();
+
         if (isFirstOrderInBlock) {
             self.circuitBreakerThresholdUnitPrices[block.number][_side] = cbThresholdUnitPrice;
         }
@@ -522,8 +524,6 @@ library OrderBookLib {
                 isFirstOrderInBlock = true;
             }
         }
-
-        if (_unitPrice == 0 && !orderExists) revert NoOrdersExist();
 
         if (
             _unitPrice == 0 ||

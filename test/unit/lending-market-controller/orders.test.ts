@@ -2723,7 +2723,7 @@ describe('LendingMarketController - Orders', () => {
               '10000000000000000',
               '0',
             ),
-        ).to.be.revertedWith('NoOrdersExist');
+        ).to.be.revertedWith('EmptyOrderBook');
       });
 
       it('Fail to place a lend market order', async () => {
@@ -2738,7 +2738,7 @@ describe('LendingMarketController - Orders', () => {
               '0',
               { value: '1000000000000000' },
             ),
-        ).to.be.revertedWith('NoOrdersExist');
+        ).to.be.revertedWith('EmptyOrderBook');
       });
     });
 
@@ -3009,7 +3009,7 @@ describe('LendingMarketController - Orders', () => {
           lendingMarketControllerProxy
             .connect(alice)
             .unwindPosition(targetCurrency, maturities[0]),
-        ).to.be.revertedWith('NoOrdersExist');
+        ).to.be.revertedWith('EmptyOrderBook');
 
         const { futureValue: aliceFV } =
           await lendingMarketControllerProxy.getPosition(
