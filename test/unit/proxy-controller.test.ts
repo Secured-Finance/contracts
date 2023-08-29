@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { Contract } from 'ethers';
 import { artifacts, ethers } from 'hardhat';
 import { hexETH, hexWBTC, toBytes32 } from '../../utils/strings';
-import { btcToETHRate, wBtcToBTCRate } from '../common/constants';
+import { btcToUSDRate, wBtcToBTCRate } from '../common/currencies';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -40,7 +40,6 @@ describe('ProxyController', () => {
       );
       const tx = await proxyController.setCurrencyControllerImpl(
         currencyController.address,
-        hexETH,
       );
 
       const currencyControllerProxyAddress = getNewProxyAddress(tx);
@@ -57,13 +56,9 @@ describe('ProxyController', () => {
       );
 
       await expectRevert(
-        proxyController.setCurrencyControllerImpl(
-          currencyController.address,
-          hexETH,
-          {
-            from: aliceSigner.address,
-          },
-        ),
+        proxyController.setCurrencyControllerImpl(currencyController.address, {
+          from: aliceSigner.address,
+        }),
         'Ownable: caller is not the owner',
       );
     });
@@ -74,7 +69,7 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
       const currencyControllerProxyAddress1 = await proxyController
-        .setCurrencyControllerImpl(currencyController1.address, hexETH)
+        .setCurrencyControllerImpl(currencyController1.address)
         .then(getNewProxyAddress);
 
       await addressResolver.importAddresses(
@@ -88,7 +83,6 @@ describe('ProxyController', () => {
       );
       const tx2 = await proxyController.setCurrencyControllerImpl(
         currencyController2.address,
-        hexETH,
       );
       const currencyControllerProxyAddress2 = getUpdatedProxyAddress(tx2);
 
@@ -115,7 +109,7 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
       const currencyControllerProxyAddress = await proxyController
-        .setCurrencyControllerImpl(currencyController.address, hexETH)
+        .setCurrencyControllerImpl(currencyController.address)
         .then(getNewProxyAddress);
 
       const contractName = toBytes32('CurrencyController');
@@ -168,7 +162,7 @@ describe('ProxyController', () => {
         addressResolver.address,
       );
       const currencyControllerProxyAddress1 = await proxyController
-        .setCurrencyControllerImpl(currencyController1.address, hexETH)
+        .setCurrencyControllerImpl(currencyController1.address)
         .then(getNewProxyAddress);
       const currencyControllerProxy1 = await CurrencyController.at(
         currencyControllerProxyAddress1,
@@ -183,7 +177,7 @@ describe('ProxyController', () => {
       const btcToETHPriceFeed = await MockV3Aggregator.new(
         18,
         hexWBTC,
-        btcToETHRate,
+        btcToUSDRate,
       );
       const wBtcToBTCPriceFeed = await MockV3Aggregator.new(
         6,
@@ -206,7 +200,7 @@ describe('ProxyController', () => {
         currencyController1.address,
       );
       const currencyControllerProxyAddress2 = await proxyController
-        .setCurrencyControllerImpl(currencyController2.address, hexETH)
+        .setCurrencyControllerImpl(currencyController2.address)
         .then(getUpdatedProxyAddress);
       const currencyControllerProxy2 = await CurrencyController.at(
         currencyControllerProxyAddress2,
@@ -222,7 +216,7 @@ describe('ProxyController', () => {
       );
 
       await expectRevert(
-        currencyController.initialize(ownerSinger.address, hexETH),
+        currencyController.initialize(ownerSinger.address),
         'Must be called from proxy contract',
       );
     });
@@ -235,7 +229,7 @@ describe('ProxyController', () => {
       );
 
       const currencyControllerProxyAddress = await proxyController
-        .setCurrencyControllerImpl(currencyController.address, hexETH)
+        .setCurrencyControllerImpl(currencyController.address)
         .then(getNewProxyAddress);
 
       await addressResolver.importAddresses(

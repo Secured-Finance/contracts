@@ -10,9 +10,9 @@ import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.s
 contract MockUniswapQuoter is MixinAddressResolver {
     mapping(address => bytes32) private currencies;
 
-    constructor(address _resolver, address _WETH9) {
+    constructor(address _resolver, address _nativeToken) {
         registerAddressResolver(_resolver);
-        ERC20Handler.initialize(_WETH9);
+        ERC20Handler.initialize(_nativeToken);
 
         buildCache();
     }

@@ -6,7 +6,7 @@ import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
 import { hexETH, hexUSDC, hexWFIL } from '../../utils/strings';
-import { usdcToETHRate, wFilToETHRate } from '../common/constants';
+import { usdcToETHRate, wFilToETHRate } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
@@ -17,6 +17,7 @@ describe('Integration Test: Emergency terminations', async () => {
   let carol: SignerWithAddress;
   let dave: SignerWithAddress;
 
+  let currencyController: Contract;
   let futureValueVault: Contract;
   let reserveFund: Contract;
   let tokenVault: Contract;
@@ -132,6 +133,7 @@ describe('Integration Test: Emergency terminations', async () => {
     ({
       genesisDate,
       tokenVault,
+      currencyController,
       lendingMarketController,
       reserveFund,
       wETHToken,
@@ -463,6 +465,10 @@ describe('Integration Test: Emergency terminations', async () => {
           hexETH,
         );
 
+        const expectedSettlementAmount = await currencyController[
+          'convertToBaseCurrency(bytes32,uint256)'
+        ](hexETH, bobDeposit.add(bobPV));
+
         await expect(
           lendingMarketController.connect(alice).executeEmergencySettlement(),
         ).to.emit(fundManagementLogic, 'EmergencySettlementExecuted');
@@ -471,7 +477,7 @@ describe('Integration Test: Emergency terminations', async () => {
           lendingMarketController.connect(bob).executeEmergencySettlement(),
         )
           .to.emit(fundManagementLogic, 'EmergencySettlementExecuted')
-          .withArgs(bob.address, bobDeposit.add(bobPV));
+          .withArgs(bob.address, expectedSettlementAmount);
 
         for (const user of [alice, bob]) {
           const fv =

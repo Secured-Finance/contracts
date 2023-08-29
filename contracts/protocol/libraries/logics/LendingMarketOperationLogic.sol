@@ -340,9 +340,9 @@ library LendingMarketOperationLogic {
                 address(AddressResolverLib.tokenVault())
             );
 
-            Storage.slot().marketTerminationRatios[ccy] = ccy == Storage.slot().baseCurrency
-                ? balance
-                : AddressResolverLib.currencyController().convertToBaseCurrency(ccy, balance);
+            Storage.slot().marketTerminationRatios[ccy] = AddressResolverLib
+                .currencyController()
+                .convertToBaseCurrency(ccy, balance);
         }
 
         emit EmergencyTerminationExecuted(block.timestamp);

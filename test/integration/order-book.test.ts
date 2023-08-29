@@ -10,8 +10,8 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   PCT_DIGIT,
-  wFilToETHRate,
 } from '../common/constants';
+import { wFilToETHRate } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import {
   calculateFutureValue,
@@ -661,10 +661,14 @@ describe('Integration Test: Order Book', async () => {
           bob.address,
           hexETH,
         );
-        const aliceTotalCollateralAmount =
-          await tokenVault.getTotalCollateralAmount(alice.address);
-        const bobTotalCollateralAmount =
-          await tokenVault.getTotalCollateralAmount(bob.address);
+        const aliceETHCollateralAmount = await tokenVault.getCollateralAmount(
+          alice.address,
+          hexETH,
+        );
+        const bobETHCollateralAmount = await tokenVault.getCollateralAmount(
+          bob.address,
+          hexETH,
+        );
 
         const filHaircut = await currencyController.getHaircut(hexWFIL);
         const ethHaircut = await currencyController.getHaircut(hexETH);
@@ -673,11 +677,11 @@ describe('Integration Test: Order Book', async () => {
         expect(aliceETHDepositAmount).to.equal(
           depositAmount.add(orderAmountInETH.div(2)),
         );
-        expect(aliceTotalCollateralAmount).to.equal(aliceETHDepositAmount);
+        expect(aliceETHCollateralAmount).to.equal(aliceETHDepositAmount);
         expect(bobFILDepositAmount).to.equal('0');
         expect(bobETHDepositAmount).to.equal('0');
         expect(
-          bobTotalCollateralAmount.sub(
+          bobETHCollateralAmount.sub(
             orderAmountInETH
               .mul(filHaircut)
               .add(orderAmountInETH.div(2).mul(ethHaircut))
@@ -1556,10 +1560,13 @@ describe('Integration Test: Order Book', async () => {
         const unusedCollateral = await tokenVault.getUnusedCollateral(
           alice.address,
         );
+        const unusedCollateralInETH = await currencyController[
+          'convertFromBaseCurrency(bytes32,uint256)'
+        ](hexETH, unusedCollateral);
         const coverage = await tokenVault.getCoverage(alice.address);
 
         expect(
-          unusedCollateral.sub(depositAmountInETH.sub(orderAmountInETH)),
+          unusedCollateralInETH.sub(depositAmountInETH.sub(orderAmountInETH)),
         ).lte(1);
         expect(aliceFV).to.equal('0');
         expect(coverage.sub('8000').abs()).lte(1);
@@ -1580,9 +1587,12 @@ describe('Integration Test: Order Book', async () => {
         const unusedCollateral = await tokenVault.getUnusedCollateral(
           alice.address,
         );
+        const unusedCollateralInETH = await currencyController[
+          'convertFromBaseCurrency(bytes32,uint256)'
+        ](hexETH, unusedCollateral);
         const coverage = await tokenVault.getCoverage(alice.address);
 
-        expect(unusedCollateral).to.equal(depositAmountInETH);
+        expect(unusedCollateralInETH).to.equal(depositAmountInETH);
         expect(coverage).to.equal('0');
       });
     });

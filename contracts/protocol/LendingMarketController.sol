@@ -90,11 +90,6 @@ contract LendingMarketController is
     }
 
     // @inheritdoc MixinAddressResolver
-    function afterBuildCache() internal override {
-        Storage.slot().baseCurrency = currencyController().getBaseCurrency();
-    }
-
-    // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](5);
         contracts[0] = Contracts.BEACON_PROXY_CONTROLLER;

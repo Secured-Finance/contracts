@@ -1,4 +1,3 @@
-import { BigNumber } from 'ethers';
 import { hexETH, hexUSDC, hexWBTC, hexWFIL } from './strings';
 
 export interface Currency {
@@ -11,20 +10,20 @@ export interface Currency {
   circuitBreakerLimitRange: number;
   isCollateral: boolean;
   args: string[];
+  priceFeed: PriceFeed;
 }
 
 export interface PriceFeed {
+  addresses: string[];
+  heartbeat: number;
+}
+
+export interface MockPriceFeed {
   name: string;
   decimals: number;
   heartbeat: number;
-  mockRate: BigNumber;
-  address: string | undefined;
+  mockRate?: string;
 }
-
-const wFilToETHRate = BigNumber.from('3803677700000000');
-const btcToETHRate = BigNumber.from('13087292239235700000');
-const usdcToETHRate = BigNumber.from('670403046311442');
-const wBtcToBTCRate = BigNumber.from('100100000');
 
 const currencies: Currency[] = [
   {
@@ -37,6 +36,10 @@ const currencies: Currency[] = [
     circuitBreakerLimitRange: 1000,
     isCollateral: false,
     args: ['250000000000000000000000000'], // 250,000,000 wFIL
+    priceFeed: {
+      addresses: process.env.PRICE_FEED_ADDRESSES_WFIL?.split(',') || [],
+      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WFIL),
+    },
   },
   {
     symbol: 'USDC',
@@ -47,7 +50,11 @@ const currencies: Currency[] = [
     orderFeeRate: 100,
     circuitBreakerLimitRange: 1000,
     isCollateral: true,
-    args: ['1000000000000000'], // 1,000,000,000 USDC
+    args: ['1000000000000000'], // 1,000,000,000 USDC,
+    priceFeed: {
+      addresses: process.env.PRICE_FEED_ADDRESSES_USDC?.split(',') || [],
+      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_USDC),
+    },
   },
   {
     symbol: 'WBTC',
@@ -58,7 +65,11 @@ const currencies: Currency[] = [
     orderFeeRate: 100,
     circuitBreakerLimitRange: 1000,
     isCollateral: true,
-    args: ['4000000000000'], // 40,000 BTC
+    args: ['4000000000000'], // 40,000 BTC,
+    priceFeed: {
+      addresses: process.env.PRICE_FEED_ADDRESSES_WBTC?.split(',') || [],
+      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WBTC),
+    },
   },
   {
     symbol: 'WETH',
@@ -70,17 +81,26 @@ const currencies: Currency[] = [
     circuitBreakerLimitRange: 1000,
     isCollateral: true,
     args: [],
+    priceFeed: {
+      addresses: process.env.PRICE_FEED_ADDRESSES_ETH?.split(',') || [],
+      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_ETH),
+    },
   },
 ];
 
-const priceFeeds: Record<string, PriceFeed[]> = {
+const mockPriceFeeds: Record<string, MockPriceFeed[]> = {
   [hexWFIL]: [
     {
       name: 'WFIL/ETH',
       decimals: 18,
       heartbeat: 86400,
-      mockRate: wFilToETHRate,
-      address: process.env.WFIL_TO_ETH_RATE,
+      mockRate: process.env.PRICE_FEED_MOCK_RATE_WFIL_TO_ETH,
+    },
+    {
+      name: 'ETH/USD',
+      decimals: 8,
+      heartbeat: 3600,
+      mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
     },
   ],
   [hexWBTC]: [
@@ -88,26 +108,31 @@ const priceFeeds: Record<string, PriceFeed[]> = {
       name: 'WBTC/BTC',
       decimals: 8,
       heartbeat: 86400,
-      mockRate: wBtcToBTCRate,
-      address: process.env.WBTC_TO_BTC_RATE,
+      mockRate: process.env.PRICE_FEED_MOCK_RATE_WBTC_TO_BTC,
     },
     {
-      name: 'BTC/ETH',
-      decimals: 18,
+      name: 'BTC/USD',
+      decimals: 8,
       heartbeat: 3600,
-      mockRate: btcToETHRate,
-      address: process.env.BTC_TO_ETH_RATE,
+      mockRate: process.env.PRICE_FEED_MOCK_RATE_BTC_TO_USD,
     },
   ],
   [hexUSDC]: [
     {
-      name: 'USDC/ETH',
-      decimals: 18,
+      name: 'USDC/USD',
+      decimals: 8,
       heartbeat: 86400,
-      mockRate: usdcToETHRate,
-      address: process.env.USDC_TO_ETH_RATE,
+      mockRate: process.env.PRICE_FEED_MOCK_RATE_USDC_TO_USD,
+    },
+  ],
+  [hexETH]: [
+    {
+      name: 'ETH/USD',
+      decimals: 8,
+      heartbeat: 3600,
+      mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
     },
   ],
 };
 
-export { currencies, priceFeeds };
+export { currencies, mockPriceFeeds };

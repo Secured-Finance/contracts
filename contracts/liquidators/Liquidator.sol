@@ -15,7 +15,7 @@ import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
 import {MixinWallet} from "../protocol/mixins/MixinWallet.sol";
 
 contract Liquidator is ILiquidationReceiver, MixinWallet {
-    bytes32 public immutable baseCurrency;
+    bytes32 public immutable nativeToken;
     ILendingMarketController public immutable lendingMarketController;
     ITokenVault public immutable tokenVault;
     ISwapRouter public immutable uniswapRouter;
@@ -24,18 +24,18 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
     uint256[] internal collateralMaturities;
 
     constructor(
-        bytes32 _baseCurrency,
+        bytes32 _nativeToken,
         address _lendingMarketController,
         address _tokenVault,
         address _uniswapRouter,
         address _uniswapQuoter
     ) {
-        baseCurrency = _baseCurrency;
+        nativeToken = _nativeToken;
         lendingMarketController = ILendingMarketController(_lendingMarketController);
         tokenVault = ITokenVault(_tokenVault);
         uniswapRouter = ISwapRouter(_uniswapRouter);
         uniswapQuoter = IQuoter(_uniswapQuoter);
-        MixinWallet._initialize(msg.sender, tokenVault.getTokenAddress(_baseCurrency));
+        MixinWallet._initialize(msg.sender, tokenVault.getTokenAddress(_nativeToken));
     }
 
     receive() external payable {}
@@ -117,9 +117,9 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
     ) external override returns (bool) {
         address collateralCcyAddr = tokenVault.getTokenAddress(_collateralCcy);
         address debtCcyAddr = tokenVault.getTokenAddress(_debtCcy);
-        bool isBaseCurrency = _collateralCcy == baseCurrency;
+        bool isNativeCurrency = _collateralCcy == nativeToken;
 
-        uint256 collateralTokenBalance = isBaseCurrency
+        uint256 collateralTokenBalance = isNativeCurrency
             ? address(this).balance
             : IERC20(collateralCcyAddr).balanceOf(address(this));
 
@@ -130,13 +130,13 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
                 collateralTokenBalance,
                 0,
                 poolFee,
-                isBaseCurrency
+                isNativeCurrency
             );
         }
 
         uint256 debtTokenBalance;
 
-        if (_debtCcy == baseCurrency) {
+        if (_debtCcy == nativeToken) {
             debtTokenBalance = address(this).balance;
         } else {
             debtTokenBalance = IERC20(debtCcyAddr).balanceOf(address(this));
@@ -190,10 +190,10 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         uint256 _amountIn,
         uint256 _amountOutMinimum,
         uint24 _poolFee,
-        bool _isBaseCurrency
+        bool _isNativeCurrency
     ) internal returns (uint256) {
         uint256 ethAmount;
-        if (_isBaseCurrency) {
+        if (_isNativeCurrency) {
             ethAmount = _amountIn;
         } else {
             ERC20Handler.safeApprove(_ccyFrom, address(uniswapRouter), _amountIn);

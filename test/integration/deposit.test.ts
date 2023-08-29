@@ -10,10 +10,8 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   PRICE_DIGIT,
-  btcToETHRate,
-  wBtcToBTCRate,
-  wFilToETHRate,
 } from '../common/constants';
+import { wFilToETHRate, wbtcToETHRate } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
@@ -325,7 +323,7 @@ describe('Integration Test: Deposit', async () => {
 
       const collateralAmountAfter = await tokenVault
         .connect(alice)
-        .getTotalCollateralAmount(alice.address);
+        .getDepositAmount(alice.address, hexETH);
       const tokenVaultBalance = await wETHToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
       const depositAmount = await tokenVault.getDepositAmount(
@@ -386,7 +384,7 @@ describe('Integration Test: Deposit', async () => {
     it('Withdraw ETH with over amount input', async () => {
       const collateralAmountBefore = await tokenVault
         .connect(alice)
-        .getTotalCollateralAmount(alice.address);
+        .getDepositAmount(alice.address, hexETH);
       const totalCollateralAmountBefore =
         await tokenVault.getTotalDepositAmount(hexETH);
 
@@ -394,7 +392,7 @@ describe('Integration Test: Deposit', async () => {
 
       const collateralAmountAfter = await tokenVault
         .connect(alice)
-        .getTotalCollateralAmount(alice.address);
+        .getDepositAmount(alice.address, hexETH);
 
       const tokenVaultBalance = await wETHToken.balanceOf(tokenVault.address);
       const currencies = await tokenVault.getUsedCurrencies(alice.address);
@@ -609,12 +607,9 @@ describe('Integration Test: Deposit', async () => {
     const orderAmountInFIL = orderAmountInETH
       .mul(BigNumber.from(10).pow(18))
       .div(wFilToETHRate);
-    const orderAmountInBTC = orderAmountInETH
+    const orderAmountInWBTC = orderAmountInETH
       .mul(BigNumber.from(10).pow(8))
-      .div(btcToETHRate);
-    const orderAmountInWBTC = orderAmountInBTC
-      .mul(BigNumber.from(10).pow(8))
-      .div(wBtcToBTCRate);
+      .div(wbtcToETHRate);
 
     before(async () => {
       [alice, bob, carol] = await getUsers(3);
