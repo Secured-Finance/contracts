@@ -101,6 +101,10 @@ describe('LendingMarketController - Rotations', () => {
     await initialize(targetCurrency);
   });
 
+  afterEach(async () => {
+    await mockCurrencyController.mock.currencyExists.returns(true);
+  });
+
   describe('Rotations', async () => {
     it('Rotate markets multiple times under condition without lending position', async () => {
       await lendingMarketControllerProxy
@@ -686,6 +690,14 @@ describe('LendingMarketController - Rotations', () => {
 
       expect(autoRollLog.prev).to.equal(maturities[1]);
       expect(autoRollLog.unitPrice).to.equal('8500');
+    });
+
+    it('Fail to rotate order books due to no currency', async () => {
+      await mockCurrencyController.mock.currencyExists.returns(false);
+
+      await expect(
+        lendingMarketControllerProxy.rotateOrderBooks(targetCurrency),
+      ).revertedWith('InvalidCurrency');
     });
 
     it('Fail to rotate order books due to no order book', async () => {

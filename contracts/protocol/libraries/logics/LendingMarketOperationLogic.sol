@@ -272,6 +272,10 @@ library LendingMarketOperationLogic {
     }
 
     function rotateOrderBooks(bytes32 _ccy) external returns (uint256 newMaturity) {
+        if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
+            revert InvalidCurrency();
+        }
+
         uint8[] storage orderBookIds = Storage.slot().orderBookIdLists[_ccy];
 
         if (orderBookIds.length < 2) revert NotEnoughOrderBooks();
