@@ -90,7 +90,7 @@ Sets the implementation contract of CurrencyController
 ### setTokenVaultImpl
 
 ```solidity
-function setTokenVaultImpl(address newImpl, uint256 liquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate, address WETH9) external
+function setTokenVaultImpl(address newImpl, uint256 liquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate, address nativeToken) external
 ```
 
 Sets the implementation contract of TokenVault
@@ -101,12 +101,12 @@ Sets the implementation contract of TokenVault
 | liquidationThresholdRate | uint256 | The rate used as the auto liquidation threshold |
 | liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
 | liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
-| WETH9 | address | The address of WETH |
+| nativeToken | address | The address of wrapped token of native currency |
 
 ### setCurrencyControllerImpl
 
 ```solidity
-function setCurrencyControllerImpl(address newImpl, bytes32 baseCcy) external
+function setCurrencyControllerImpl(address newImpl) external
 ```
 
 Sets the implementation contract of CurrencyController
@@ -114,7 +114,6 @@ Sets the implementation contract of CurrencyController
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
-| baseCcy | bytes32 | The base currency name in bytes32 |
 
 ### setGenesisValueVaultImpl
 
@@ -144,7 +143,7 @@ Sets the implementation contract of LendingMarketController
 ### setReserveFundImpl
 
 ```solidity
-function setReserveFundImpl(address newImpl, address WETH9) external
+function setReserveFundImpl(address newImpl, address nativeToken) external
 ```
 
 Sets the implementation contract of ReserveFund
@@ -152,7 +151,7 @@ Sets the implementation contract of ReserveFund
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newImpl | address | The address of implementation contract |
-| WETH9 | address | The address of WETH |
+| nativeToken | address | The address of wrapped token of native currency |
 
 ### changeProxyAdmins
 

@@ -2,6 +2,30 @@
 
 ## IFutureValueVault
 
+### UserIsZero
+
+```solidity
+error UserIsZero()
+```
+
+### PastMaturityBalanceExists
+
+```solidity
+error PastMaturityBalanceExists(address user)
+```
+
+### TotalSupplyNotZero
+
+```solidity
+error TotalSupplyNotZero()
+```
+
+### InvalidResetAmount
+
+```solidity
+error InvalidResetAmount()
+```
+
 ### Transfer
 
 ```solidity

@@ -2,6 +2,12 @@
 
 ## AddressResolverLib
 
+### MissingAddress
+
+```solidity
+error MissingAddress(string name)
+```
+
 ### getAddress
 
 ```solidity

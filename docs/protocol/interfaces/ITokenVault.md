@@ -2,6 +2,42 @@
 
 ## ITokenVault
 
+### UnregisteredCurrency
+
+```solidity
+error UnregisteredCurrency()
+```
+
+### InvalidCurrency
+
+```solidity
+error InvalidCurrency()
+```
+
+### InvalidAmount
+
+```solidity
+error InvalidAmount()
+```
+
+### CallerNotBaseCurrency
+
+```solidity
+error CallerNotBaseCurrency(address caller)
+```
+
+### MarketTerminated
+
+```solidity
+error MarketTerminated()
+```
+
+### RedemptionIsRequired
+
+```solidity
+error RedemptionIsRequired()
+```
+
 ### Deposit
 
 ```solidity

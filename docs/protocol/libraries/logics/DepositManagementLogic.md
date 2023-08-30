@@ -2,6 +2,24 @@
 
 ## DepositManagementLogic
 
+### NotEnoughDeposit
+
+```solidity
+error NotEnoughDeposit(bytes32 ccy)
+```
+
+### CollateralIsZero
+
+```solidity
+error CollateralIsZero(bytes32 ccy)
+```
+
+### ProtocolIsInsolvent
+
+```solidity
+error ProtocolIsInsolvent(bytes32 ccy)
+```
+
 ### CalculatedFundVars
 
 ```solidity

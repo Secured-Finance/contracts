@@ -2,6 +2,36 @@
 
 ## LiquidationLogic
 
+### NoDebt
+
+```solidity
+error NoDebt(address user, bytes32 ccy, uint256 maturity)
+```
+
+### NoLiquidationAmount
+
+```solidity
+error NoLiquidationAmount(address user, bytes32 ccy)
+```
+
+### InvalidLiquidation
+
+```solidity
+error InvalidLiquidation()
+```
+
+### InvalidRepaymentAmount
+
+```solidity
+error InvalidRepaymentAmount()
+```
+
+### NotRepaymentPeriod
+
+```solidity
+error NotRepaymentPeriod()
+```
+
 ### ExecuteLiquidationVars
 
 ```solidity

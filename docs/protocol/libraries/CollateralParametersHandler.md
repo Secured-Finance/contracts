@@ -4,6 +4,24 @@
 
 CollateralParametersHandler is an library to handle the main collateral parameters.
 
+### InvalidLiquidationThresholdRate
+
+```solidity
+error InvalidLiquidationThresholdRate()
+```
+
+### InvalidLiquidationProtocolFeeRate
+
+```solidity
+error InvalidLiquidationProtocolFeeRate()
+```
+
+### InvalidLiquidatorFeeRate
+
+```solidity
+error InvalidLiquidatorFeeRate()
+```
+
 ### AutoLiquidationThresholdRateUpdated
 
 ```solidity

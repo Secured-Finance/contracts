@@ -68,7 +68,6 @@ struct OrderItem {
   uint48 next;
   uint48 prev;
   address maker;
-  uint256 timestamp;
   uint256 amount;
 }
 ```
@@ -244,7 +243,7 @@ function getFutureValue(struct OrderStatisticsTreeLib.Tree self, uint256 value, 
 ### getOrderById
 
 ```solidity
-function getOrderById(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (address maker, uint256 timestamp, uint256 amount)
+function getOrderById(struct OrderStatisticsTreeLib.Tree self, uint256 value, uint48 orderId) internal view returns (address maker, uint256 amount)
 ```
 
 _Retrieves the Object denoted by `_id`._

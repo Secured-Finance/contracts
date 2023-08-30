@@ -2,6 +2,36 @@
 
 ## ILendingMarket
 
+### NoOrderExists
+
+```solidity
+error NoOrderExists()
+```
+
+### CallerNotMaker
+
+```solidity
+error CallerNotMaker()
+```
+
+### MarketNotOpened
+
+```solidity
+error MarketNotOpened()
+```
+
+### NotItayosePeriod
+
+```solidity
+error NotItayosePeriod()
+```
+
+### NotPreOrderPeriod
+
+```solidity
+error NotPreOrderPeriod()
+```
+
 ### OrderBook
 
 ```solidity

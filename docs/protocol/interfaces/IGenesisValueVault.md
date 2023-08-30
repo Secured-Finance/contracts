@@ -2,6 +2,66 @@
 
 ## IGenesisValueVault
 
+### NoCompoundFactorExists
+
+```solidity
+error NoCompoundFactorExists(uint256 maturity)
+```
+
+### CompoundFactorIsZero
+
+```solidity
+error CompoundFactorIsZero()
+```
+
+### ResidualAmountIsNotZero
+
+```solidity
+error ResidualAmountIsNotZero()
+```
+
+### UnitPriceIsZero
+
+```solidity
+error UnitPriceIsZero()
+```
+
+### InvalidMaturity
+
+```solidity
+error InvalidMaturity()
+```
+
+### InvalidAmount
+
+```solidity
+error InvalidAmount()
+```
+
+### InvalidOrderFeeRate
+
+```solidity
+error InvalidOrderFeeRate()
+```
+
+### CurrencyAlreadyInitialized
+
+```solidity
+error CurrencyAlreadyInitialized()
+```
+
+### InitialCompoundFactorAlreadyFinalized
+
+```solidity
+error InitialCompoundFactorAlreadyFinalized()
+```
+
+### AutoRollLogAlreadyUpdated
+
+```solidity
+error AutoRollLogAlreadyUpdated(uint256 currentMaturity, uint256 nextMaturity)
+```
+
 ### Transfer
 
 ```solidity

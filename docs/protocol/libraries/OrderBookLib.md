@@ -47,6 +47,18 @@ uint256 PRE_ORDER_PERIOD
 uint256 ITAYOSE_PERIOD
 ```
 
+### EmptyOrderBook
+
+```solidity
+error EmptyOrderBook()
+```
+
+### PastMaturityOrderExists
+
+```solidity
+error PastMaturityOrderExists()
+```
+
 ### OrderBook
 
 ```solidity

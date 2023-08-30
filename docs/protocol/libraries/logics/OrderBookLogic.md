@@ -2,6 +2,24 @@
 
 ## OrderBookLogic
 
+### InvalidOrderFeeRate
+
+```solidity
+error InvalidOrderFeeRate()
+```
+
+### InvalidCircuitBreakerLimitRange
+
+```solidity
+error InvalidCircuitBreakerLimitRange()
+```
+
+### OrderBookNotMatured
+
+```solidity
+error OrderBookNotMatured()
+```
+
 ### OrderFeeRateUpdated
 
 ```solidity

@@ -2,6 +2,24 @@
 
 ## OrderActionLogic
 
+### InvalidAmount
+
+```solidity
+error InvalidAmount()
+```
+
+### InvalidFutureValue
+
+```solidity
+error InvalidFutureValue()
+```
+
+### OppositeSideOrderExists
+
+```solidity
+error OppositeSideOrderExists()
+```
+
 ### OrderExecutionConditions
 
 ```solidity

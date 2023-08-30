@@ -2,6 +2,36 @@
 
 ## ILendingMarketController
 
+### InvalidMaturity
+
+```solidity
+error InvalidMaturity()
+```
+
+### InvalidCurrency
+
+```solidity
+error InvalidCurrency()
+```
+
+### AlreadyTerminated
+
+```solidity
+error AlreadyTerminated()
+```
+
+### NotTerminated
+
+```solidity
+error NotTerminated()
+```
+
+### AlreadyInitialized
+
+```solidity
+error AlreadyInitialized()
+```
+
 ### Order
 
 ```solidity

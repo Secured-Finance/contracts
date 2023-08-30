@@ -5,13 +5,19 @@
 ### initialize
 
 ```solidity
-function initialize(address _baseCurrency) internal
+function initialize(address _nativeToken) internal
 ```
 
-### baseCurrency
+### nativeToken
 
 ```solidity
-function baseCurrency() internal view returns (address)
+function nativeToken() internal view returns (address)
+```
+
+### isNative
+
+```solidity
+function isNative(address _token) internal view returns (bool)
 ```
 
 ### depositAssets

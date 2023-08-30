@@ -8,6 +8,48 @@ currencies in Secured Finance Protocol
 Contract links new currencies to ETH Chainlink price feeds, without existing price feed
 contract owner is not able to add a new currency into the protocol_
 
+### InvalidCurrency
+
+```solidity
+error InvalidCurrency()
+```
+
+### InvalidHaircut
+
+```solidity
+error InvalidHaircut()
+```
+
+### InvalidPriceFeed
+
+```solidity
+error InvalidPriceFeed()
+```
+
+### InvalidPrice
+
+```solidity
+error InvalidPrice()
+```
+
+### InvalidDecimals
+
+```solidity
+error InvalidDecimals()
+```
+
+### NoPriceFeedExists
+
+```solidity
+error NoPriceFeedExists()
+```
+
+### StalePriceFeed
+
+```solidity
+error StalePriceFeed(address priceFeed, uint256 heartbeat, uint256 updatedAt, uint256 blockTimestamp)
+```
+
 ### CurrencyAdded
 
 ```solidity
@@ -80,12 +122,6 @@ function convertFromBaseCurrency(bytes32 _ccy, uint256 _amountETH) external view
 function convertFromBaseCurrency(bytes32 _ccy, uint256[] _amounts) external view returns (uint256[] amounts)
 ```
 
-### getBaseCurrency
-
-```solidity
-function getBaseCurrency() external view returns (bytes32)
-```
-
 ### getDecimals
 
 ```solidity
@@ -104,6 +140,12 @@ function getCurrencies() external view returns (bytes32[])
 function getHaircut(bytes32 _ccy) external view returns (uint256)
 ```
 
+### getPriceFeed
+
+```solidity
+function getPriceFeed(bytes32 _ccy) external view returns (struct PriceFeed)
+```
+
 ### getLastPrice
 
 ```solidity
@@ -119,7 +161,7 @@ function currencyExists(bytes32 _ccy) external view returns (bool)
 ### updatePriceFeed
 
 ```solidity
-function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) external
+function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256 _heartbeat) external
 ```
 
 ### removePriceFeed
@@ -131,7 +173,7 @@ function removePriceFeed(bytes32 _ccy) external
 ### addCurrency
 
 ```solidity
-function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds) external
+function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds, uint256 _heartbeat) external
 ```
 
 ### updateHaircut

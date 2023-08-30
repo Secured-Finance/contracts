@@ -7,14 +7,6 @@ Implements the management of beacon proxy contracts.
 All beacon proxy contracts are deployed from this contract.
 This contract is also used to update the beacon proxy implementation.
 
-### onlyLendingMarketController
-
-```solidity
-modifier onlyLendingMarketController()
-```
-
-Modifier to make a function callable only by LendingMarketController contract.
-
 ### initialize
 
 ```solidity
@@ -39,6 +31,16 @@ function requiredContracts() public pure returns (bytes32[] contracts)
 Returns the contract names used in this contract.
 
 _The contract name list is in `./libraries/Contracts.sol`._
+
+### acceptedContracts
+
+```solidity
+function acceptedContracts() public pure returns (bytes32[] contracts)
+```
+
+Returns contract names that can call this contract.
+
+_The contact name listed in this method is also needed to be listed `requiredContracts` method._
 
 ### getBeaconProxyAddress
 

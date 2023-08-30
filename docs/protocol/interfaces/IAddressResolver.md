@@ -2,6 +2,12 @@
 
 ## IAddressResolver
 
+### UnmatchedInputs
+
+```solidity
+error UnmatchedInputs()
+```
+
 ### AddressImported
 
 ```solidity

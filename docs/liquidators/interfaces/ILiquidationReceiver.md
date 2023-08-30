@@ -2,6 +2,12 @@
 
 ## ILiquidationReceiver
 
+### InvalidOperationExecution
+
+```solidity
+error InvalidOperationExecution()
+```
+
 ### OperationExecuteForCollateral
 
 ```solidity

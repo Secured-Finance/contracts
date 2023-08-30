@@ -1,11 +1,11 @@
 # Solidity API
 
-## Currency
+## PriceFeed
 
 ```solidity
-struct Currency {
-  bool isSupported;
-  string name;
+struct PriceFeed {
+  contract AggregatorV3Interface[] instances;
+  uint256 heartbeat;
 }
 ```
 
@@ -21,11 +21,10 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  bytes32 baseCurrency;
   struct EnumerableSet.Bytes32Set currencies;
   mapping(bytes32 => uint256) haircuts;
-  mapping(bytes32 => contract AggregatorV3Interface[]) priceFeeds;
   mapping(bytes32 => uint8) decimalsCaches;
+  mapping(bytes32 => struct PriceFeed) priceFeeds;
 }
 ```
 

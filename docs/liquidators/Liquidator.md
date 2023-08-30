@@ -2,10 +2,10 @@
 
 ## Liquidator
 
-### baseCurrency
+### nativeToken
 
 ```solidity
-bytes32 baseCurrency
+bytes32 nativeToken
 ```
 
 ### lendingMarketController
@@ -47,7 +47,7 @@ uint256[] collateralMaturities
 ### constructor
 
 ```solidity
-constructor(bytes32 _baseCurrency, address _lendingMarketController, address _tokenVault, address _uniswapRouter, address _uniswapQuoter) public
+constructor(bytes32 _nativeToken, address _lendingMarketController, address _tokenVault, address _uniswapRouter, address _uniswapQuoter) public
 ```
 
 ### receive
@@ -109,6 +109,6 @@ _Withdraws funds by the caller from the token vault._
 ### _executeSwap
 
 ```solidity
-function _executeSwap(address _ccyFrom, address _ccyTo, uint256 _amountIn, uint256 _amountOutMinimum, uint24 _poolFee, bool _isBaseCurrency) internal returns (uint256)
+function _executeSwap(address _ccyFrom, address _ccyTo, uint256 _amountIn, uint256 _amountOutMinimum, uint24 _poolFee, bool _isNativeCurrency) internal returns (uint256)
 ```
 

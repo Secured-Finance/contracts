@@ -2,6 +2,42 @@
 
 ## FundManagementLogic
 
+### NotRedemptionPeriod
+
+```solidity
+error NotRedemptionPeriod()
+```
+
+### NotRepaymentPeriod
+
+```solidity
+error NotRepaymentPeriod()
+```
+
+### NoRedemptionAmount
+
+```solidity
+error NoRedemptionAmount()
+```
+
+### NoRepaymentAmount
+
+```solidity
+error NoRepaymentAmount()
+```
+
+### AlreadyRedeemed
+
+```solidity
+error AlreadyRedeemed()
+```
+
+### InsufficientCollateral
+
+```solidity
+error InsufficientCollateral()
+```
+
 ### CalculatedTotalFundInBaseCurrencyVars
 
 ```solidity
@@ -276,12 +312,6 @@ function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue
 
 ```solidity
 function calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) public pure returns (int256)
-```
-
-### calculateOrderFeeAmount
-
-```solidity
-function calculateOrderFeeAmount(uint256 _maturity, uint256 _amount, uint256 _orderFeeRate) public view returns (uint256 orderFeeAmount)
 ```
 
 ### _convertToBaseCurrencyAtMarketTerminationPrice

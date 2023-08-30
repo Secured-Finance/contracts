@@ -21,7 +21,6 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  bytes32 baseCurrency;
   uint256 marketBasePeriod;
   uint256 marketTerminationDate;
   mapping(bytes32 => int256) marketTerminationPrices;
