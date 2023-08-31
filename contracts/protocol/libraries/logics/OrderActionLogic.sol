@@ -8,6 +8,8 @@ import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage} from "../../storages/LendingMarketStorage.sol";
 import {OrderReaderLogic} from "./OrderReaderLogic.sol";
 
+import "hardhat/console.sol";
+
 library OrderActionLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
     using RoundingUint256 for uint256;
@@ -196,6 +198,8 @@ library OrderActionLogic {
             uint256 feeInFV
         )
     {
+        console.log("executeOrder====================", _user);
+
         if (_amount == 0) revert InvalidAmount();
 
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
@@ -204,6 +208,7 @@ library OrderActionLogic {
         ExecuteOrderVars memory vars;
         vars.maturity = orderBook.maturity;
 
+        console.log("  -> 1");
         (
             vars.conditions.isFilled,
             vars.conditions.executedUnitPrice,
@@ -216,6 +221,7 @@ library OrderActionLogic {
         );
 
         if (vars.conditions.isFilled) {
+            console.log("  -> 2-1");
             (
                 filledOrder,
                 partiallyFilledOrder,
@@ -234,6 +240,7 @@ library OrderActionLogic {
                 filledOrder.futureValue
             );
         } else {
+            console.log("  -> 2-2");
             if (!vars.conditions.ignoreRemainingAmount) {
                 vars.placedOrder = PlacedOrder(
                     orderBook.placeOrder(_side, _user, _amount, vars.conditions.executedUnitPrice),
@@ -246,6 +253,8 @@ library OrderActionLogic {
                 ? vars.conditions.orderExists
                 : _unitPrice != vars.conditions.executedUnitPrice;
         }
+
+        console.log("  -> 3");
 
         emit OrderExecuted(
             _user,
@@ -263,6 +272,8 @@ library OrderActionLogic {
             vars.placedOrder.unitPrice,
             vars.isCircuitBreakerTriggered
         );
+
+        console.log("  -> OrderExecuted!!");
     }
 
     function executePreOrder(

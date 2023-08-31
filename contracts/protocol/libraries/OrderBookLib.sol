@@ -6,6 +6,8 @@ import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {OrderStatisticsTreeLib, PartiallyRemovedOrder} from "./OrderStatisticsTreeLib.sol";
 import {RoundingUint256} from "./math/RoundingUint256.sol";
 
+import "hardhat/console.sol";
+
 struct PlacedOrder {
     ProtocolTypes.Side side;
     uint256 unitPrice;
@@ -461,6 +463,7 @@ library OrderBookLib {
             bool orderExists
         )
     {
+        console.log("getAndUpdateOrderExecutionConditions=====================");
         uint256 cbThresholdUnitPrice;
         bool isFirstOrderInBlock;
 
@@ -473,11 +476,14 @@ library OrderBookLib {
             isFirstOrderInBlock
         ) = getOrderExecutionConditions(self, _side, _unitPrice, _circuitBreakerLimitRange);
 
+        console.log("  -> 1");
         if (_unitPrice == 0 && !orderExists) revert EmptyOrderBook();
 
         if (isFirstOrderInBlock) {
             self.circuitBreakerThresholdUnitPrices[block.number][_side] = cbThresholdUnitPrice;
         }
+
+        console.log("  -> 2");
     }
 
     function getOrderExecutionConditions(
@@ -497,11 +503,13 @@ library OrderBookLib {
             bool isFirstOrderInBlock
         )
     {
+        console.log("getOrderExecutionConditions=====================");
         cbThresholdUnitPrice = self.circuitBreakerThresholdUnitPrices[block.number][_side];
         bool isLend = _side == ProtocolTypes.Side.LEND;
         uint256 bestUnitPrice;
 
         if (isLend) {
+            console.log("  -> 1-1");
             bestUnitPrice = self.borrowOrders[self.maturity].first();
             orderExists = bestUnitPrice != 0;
 
@@ -513,6 +521,7 @@ library OrderBookLib {
                 isFirstOrderInBlock = true;
             }
         } else {
+            console.log("  -> 1-2");
             bestUnitPrice = self.lendOrders[self.maturity].last();
             orderExists = bestUnitPrice != 0;
 
@@ -524,6 +533,8 @@ library OrderBookLib {
                 isFirstOrderInBlock = true;
             }
         }
+
+        console.log("  -> 2");
 
         if (
             _unitPrice == 0 ||
@@ -538,6 +549,7 @@ library OrderBookLib {
             ignoreRemainingAmount = false;
         }
 
+        console.log("  -> 3");
         if (orderExists) {
             isFilled = isLend
                 ? bestUnitPrice <= executedUnitPrice
