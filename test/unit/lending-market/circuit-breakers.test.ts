@@ -9,7 +9,7 @@ import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
 
 import { deployContracts } from './utils';
 
-describe.only('LendingMarket - Circuit Breakers', () => {
+describe('LendingMarket - Circuit Breakers', () => {
   const CIRCUIT_BREAKER_BORROW_THRESHOLD = 8374;
   const CIRCUIT_BREAKER_LEND_THRESHOLD = 8629;
   const MAX_DIFFERENCE = 200;
@@ -294,9 +294,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
             0,
             false,
           );
-
-        // await ethers.provider.send('evm_mine', []);
-        // await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(carolTx)
           .to.emit(orderActionLogic, 'OrderExecuted')

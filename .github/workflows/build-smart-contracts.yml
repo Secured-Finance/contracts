@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - develop
-      - SF-723-unknown-circuit-breaker-test-bug
   pull_request:
     types:
       - opened
