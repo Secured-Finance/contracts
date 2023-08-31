@@ -43,6 +43,10 @@ describe.only('LendingMarket - Circuit Breakers', () => {
     [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
+    console.log('alice:', alice.address);
+    console.log('bob:', bob.address);
+    console.log('carol:', carol.address);
+
     ({ lendingMarketCaller, lendingMarket, orderActionLogic } =
       await deployContracts(owner, targetCurrency));
   });
@@ -69,6 +73,8 @@ describe.only('LendingMarket - Circuit Breakers', () => {
     side: number,
     unitPrice: number,
   ): Promise<number> => {
+    console.log('createInitialOrders==================== start');
+
     const offsetUnitPrice =
       side === Side.LEND
         ? CIRCUIT_BREAKER_BORROW_THRESHOLD - 1
@@ -93,6 +99,8 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         '100000000000000',
         offsetUnitPrice,
       );
+
+    console.log('createInitialOrders==================== end');
 
     return offsetUnitPrice;
   };
@@ -206,7 +214,9 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
+        console.log('bobTx.wait()====================');
         await bobTx.wait();
+        console.log('carolTx.wait()====================');
         await carolTx.wait();
 
         await expect(bobTx)
@@ -279,7 +289,9 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
+        console.log('bobTx.wait()====================');
         await bobTx.wait();
+        console.log('carolTx.wait()====================');
         await carolTx.wait();
 
         await expect(bobTx)
@@ -403,9 +415,13 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
+        console.log('bobTx.wait()====================');
         await bobTx.wait();
+        console.log('carolTx1.wait()====================');
         await carolTx1.wait();
+        console.log('aliceTx.wait()====================');
         await aliceTx.wait();
+        console.log('carolTx2.wait()====================');
         await carolTx2.wait();
 
         await expect(carolTx1)
@@ -475,7 +491,9 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
+        console.log('bobTx.wait()====================');
         await bobTx.wait();
+        console.log('carolTx.wait()====================');
         await carolTx.wait();
 
         await expect(bobTx)
@@ -548,7 +566,9 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
+        console.log('bobTx.wait()====================');
         await bobTx.wait();
+        console.log('carolTx.wait()====================');
         await carolTx.wait();
 
         await expect(bobTx)
@@ -642,7 +662,9 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
+        console.log('bobTx.wait()====================');
         await bobTx.wait();
+        console.log('carolTx.wait()====================');
         await carolTx.wait();
 
         await expect(bobTx)
@@ -736,7 +758,9 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
+        console.log('bobTx.wait()====================');
         await bobTx.wait();
+        console.log('carolTx.wait()====================');
         await carolTx.wait();
 
         await expect(bobTx)
