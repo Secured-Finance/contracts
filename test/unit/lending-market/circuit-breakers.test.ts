@@ -206,9 +206,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
-        await bobTx.wait();
-        await carolTx.wait();
-
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
@@ -278,9 +275,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
 
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
-
-        await bobTx.wait();
-        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -360,7 +354,7 @@ describe.only('LendingMarket - Circuit Breakers', () => {
 
         await ethers.provider.send('evm_setAutomine', [false]);
 
-        const bobTx = await lendingMarketCaller
+        await lendingMarketCaller
           .connect(bob)
           .executeOrder(
             targetCurrency,
@@ -380,7 +374,7 @@ describe.only('LendingMarket - Circuit Breakers', () => {
             0,
           );
 
-        const aliceTx = await lendingMarketCaller
+        await lendingMarketCaller
           .connect(alice)
           .executeOrder(
             targetCurrency,
@@ -402,11 +396,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
 
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
-
-        await bobTx.wait();
-        await carolTx1.wait();
-        await aliceTx.wait();
-        await carolTx2.wait();
 
         await expect(carolTx1)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -474,9 +463,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
 
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
-
-        await bobTx.wait();
-        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -547,9 +533,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
 
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
-
-        await bobTx.wait();
-        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -642,9 +625,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
 
-        await bobTx.wait();
-        await carolTx.wait();
-
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
@@ -735,9 +715,6 @@ describe.only('LendingMarket - Circuit Breakers', () => {
 
         await ethers.provider.send('evm_mine', []);
         await ethers.provider.send('evm_setAutomine', [true]);
-
-        await bobTx.wait();
-        await carolTx.wait();
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
