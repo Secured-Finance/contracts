@@ -2,6 +2,18 @@
 
 ## IBeaconProxyController
 
+### NoBeaconProxyContract
+
+```solidity
+error NoBeaconProxyContract()
+```
+
+### InvalidProxyContract
+
+```solidity
+error InvalidProxyContract()
+```
+
 ### BeaconProxyCreated
 
 ```solidity

@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { time } from '@openzeppelin/test-helpers';
+import BigNumberJS from 'bignumber.js';
 import { expect } from 'chai';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
@@ -10,9 +11,12 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
-  usdcToETHRate,
-  wFilToETHRate,
 } from '../common/constants';
+import {
+  usdcToETHRate,
+  usdcToUSDRate,
+  wFilToETHRate,
+} from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { calculateFutureValue, getAmountWithOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
@@ -204,7 +208,7 @@ describe('Integration Test: Liquidations', async () => {
     );
 
     await wFilToETHPriceFeed.updateAnswer(wFilToETHRate);
-    await usdcToUSDPriceFeed.updateAnswer(usdcToETHRate);
+    await usdcToUSDPriceFeed.updateAnswer(usdcToUSDRate);
 
     liquidator = await ethers
       .getContractFactory('Liquidator')
@@ -430,8 +434,13 @@ describe('Integration Test: Liquidations', async () => {
         expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to
           .true;
         expect(
-          lendingInfoAfter.pvs[0].sub(lendingInfoBefore.pvs[0].div(2)).abs(),
-        ).to.lt(ERROR_RANGE);
+          BigNumberJS(lendingInfoAfter.pvs[0].toString())
+            .times(100)
+            .div(lendingInfoBefore.pvs[0].toString())
+            .abs()
+            .dp(0)
+            .toString(),
+        ).to.equal('50');
 
         await expect(
           liquidator
@@ -484,7 +493,15 @@ describe('Integration Test: Liquidations', async () => {
           )
           .abs();
 
-        expect(receivedDebtAmount).to.equal(filledOrderAmount.div(2));
+        expect(
+          BigNumberJS(receivedDebtAmount.toString())
+            .times(100)
+            .div(filledOrderAmount.toString())
+            .abs()
+            .dp(0)
+            .toString(),
+        ).to.equal('50');
+
         expect(
           liquidatorBalanceWFIL
             .add(unwindFee)
@@ -666,12 +683,24 @@ describe('Integration Test: Liquidations', async () => {
           .true;
         expect(lendingInfoAfter2.coverage.lt(lendingInfoAfter1.coverage)).to
           .true;
+
         expect(
-          lendingInfoAfter1.pvs[0].sub(lendingInfoBefore.pvs[0].div(2)).abs(),
-        ).to.lt(ERROR_RANGE);
+          BigNumberJS(lendingInfoAfter1.pvs[0].toString())
+            .times(100)
+            .div(lendingInfoBefore.pvs[0].toString())
+            .abs()
+            .dp(0)
+            .toString(),
+        ).to.equal('50');
+
         expect(
-          lendingInfoAfter2.pvs[0].sub(lendingInfoAfter1.pvs[0].div(2)).abs(),
-        ).to.lt(ERROR_RANGE);
+          BigNumberJS(lendingInfoAfter2.pvs[0].toString())
+            .times(100)
+            .div(lendingInfoAfter1.pvs[0].toString())
+            .abs()
+            .dp(0)
+            .toString(),
+        ).to.equal('50');
 
         await expect(
           liquidator.executeLiquidationCall(
@@ -825,8 +854,13 @@ describe('Integration Test: Liquidations', async () => {
         expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to
           .true;
         expect(
-          lendingInfoAfter.pvs[0].sub(lendingInfoBefore.pvs[0].div(2)).abs(),
-        ).to.lt(ERROR_RANGE);
+          BigNumberJS(lendingInfoAfter.pvs[0].toString())
+            .times(100)
+            .div(lendingInfoBefore.pvs[0].toString())
+            .abs()
+            .dp(0)
+            .toString(),
+        ).to.equal('50');
       });
     });
 
@@ -1322,10 +1356,13 @@ describe('Integration Test: Liquidations', async () => {
         expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to
           .true;
         expect(
-          lendingInfoAfter.pvs[0]
+          BigNumberJS(lendingInfoAfter.pvs[0].toString())
+            .times(100)
+            .div(lendingInfoBefore.pvs[0].toString())
             .abs()
-            .gt(lendingInfoBefore.pvs[0].div(2).abs()),
-        ).to.true;
+            .dp(0)
+            .toString(),
+        ).to.equal('50');
 
         const liquidatorLendingInfo = new LendingInfo(liquidator.address);
         await liquidatorLendingInfo.load('Liquidator', {
@@ -1774,11 +1811,15 @@ describe('Integration Test: Liquidations', async () => {
 
         expect(lendingInfoAfter.coverage.lt(lendingInfoBefore.coverage)).to
           .true;
+
         expect(
-          lendingInfoAfter.pvs[0]
+          BigNumberJS(lendingInfoAfter.pvs[0].toString())
+            .times(100)
+            .div(lendingInfoBefore.pvs[0].toString())
             .abs()
-            .gt(lendingInfoBefore.pvs[0].div(2).abs()),
-        ).to.true;
+            .dp(0)
+            .toString(),
+        ).to.equal('50');
 
         const liquidatorLendingInfo = new LendingInfo(liquidator.address);
         await liquidatorLendingInfo.load('Liquidator', {
@@ -1799,7 +1840,7 @@ describe('Integration Test: Liquidations', async () => {
 
     const filledOrderAmountInFIL = BigNumber.from('200000000000000000000');
     const filledOrderAmountInUSDC = BigNumber.from('600000000');
-    const depositAmountInETH = BigNumber.from('1500000000000000000');
+    const depositAmountInETH = BigNumber.from('1750000000000000000');
 
     beforeEach(async () => {
       [alice, bob] = await getUsers(2);

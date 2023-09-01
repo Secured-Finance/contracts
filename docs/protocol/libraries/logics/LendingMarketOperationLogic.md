@@ -8,6 +8,42 @@
 uint256 OBSERVATION_PERIOD
 ```
 
+### InvalidCompoundFactor
+
+```solidity
+error InvalidCompoundFactor()
+```
+
+### InvalidCurrency
+
+```solidity
+error InvalidCurrency()
+```
+
+### InvalidOpeningDate
+
+```solidity
+error InvalidOpeningDate()
+```
+
+### InvalidTimestamp
+
+```solidity
+error InvalidTimestamp()
+```
+
+### LendingMarketNotInitialized
+
+```solidity
+error LendingMarketNotInitialized()
+```
+
+### NotEnoughOrderBooks
+
+```solidity
+error NotEnoughOrderBooks()
+```
+
 ### LendingMarketInitialized
 
 ```solidity
@@ -71,7 +107,7 @@ function executeItayoseCall(bytes32 _ccy, uint256 _maturity) external returns (s
 ### rotateOrderBooks
 
 ```solidity
-function rotateOrderBooks(bytes32 _ccy, uint256 _orderFeeRate) external returns (uint256 newMaturity)
+function rotateOrderBooks(bytes32 _ccy) external returns (uint256 newMaturity)
 ```
 
 ### executeEmergencyTermination

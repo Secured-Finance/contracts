@@ -8,6 +8,18 @@
 event CacheUpdated(bytes32 name, address destination)
 ```
 
+### OnlyAcceptedContracts
+
+```solidity
+error OnlyAcceptedContracts()
+```
+
+### ResolverAlreadyRegistered
+
+```solidity
+error ResolverAlreadyRegistered()
+```
+
 ### onlyAcceptedContracts
 
 ```solidity
@@ -39,14 +51,6 @@ _The contact name listed in this method is also needed to be listed `requiredCon
 ```solidity
 function buildCache() public
 ```
-
-### afterBuildCache
-
-```solidity
-function afterBuildCache() internal virtual
-```
-
-Executes after the cache is built.
 
 ### isResolverCached
 

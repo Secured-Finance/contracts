@@ -57,14 +57,6 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _resolver | address | The address of the Address Resolver contract |
 | _marketBasePeriod | uint256 | The base period for market maturity |
 
-### afterBuildCache
-
-```solidity
-function afterBuildCache() internal
-```
-
-Executes after the cache is built.
-
 ### requiredContracts
 
 ```solidity

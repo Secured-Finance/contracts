@@ -12,7 +12,7 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
-  address baseCurrency;
+  address nativeToken;
 }
 ```
 

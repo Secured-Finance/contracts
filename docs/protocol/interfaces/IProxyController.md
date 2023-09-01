@@ -2,6 +2,12 @@
 
 ## IProxyController
 
+### InvalidProxyContract
+
+```solidity
+error InvalidProxyContract()
+```
+
 ### ProxyCreated
 
 ```solidity

@@ -29,7 +29,7 @@ Modifier to check if currency hasn't been registered yet
 ### initialize
 
 ```solidity
-function initialize(address _owner, address _resolver, uint256 _liquidationThresholdRate, uint256 _liquidationProtocolFeeRate, uint256 _liquidatorFeeRate, address _WETH9) public
+function initialize(address _owner, address _resolver, uint256 _liquidationThresholdRate, uint256 _liquidationProtocolFeeRate, uint256 _liquidatorFeeRate, address _nativeToken) public
 ```
 
 Initializes the contract.
@@ -43,7 +43,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | _liquidationThresholdRate | uint256 | The liquidation threshold rate |
 | _liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
 | _liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
-| _WETH9 | address | The address of the wrapped token to use as base currency |
+| _nativeToken | address | The address of wrapped token of native currency |
 
 ### requiredContracts
 

@@ -11,9 +11,9 @@ import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.s
 contract MockUniswapRouter is MixinAddressResolver {
     mapping(address => bytes32) private currencies;
 
-    constructor(address _resolver, address _WETH9) {
+    constructor(address _resolver, address _nativeToken) {
         registerAddressResolver(_resolver);
-        ERC20Handler.initialize(_WETH9);
+        ERC20Handler.initialize(_nativeToken);
 
         buildCache();
     }
@@ -58,7 +58,7 @@ contract MockUniswapRouter is MixinAddressResolver {
 
         require(amountOut >= params.amountOutMinimum, "Too little received");
 
-        if (ERC20Handler.baseCurrency() != params.tokenIn) {
+        if (!ERC20Handler.isNative(params.tokenIn)) {
             ERC20Handler.safeTransferFrom(
                 params.tokenIn,
                 msg.sender,
@@ -67,7 +67,7 @@ contract MockUniswapRouter is MixinAddressResolver {
             );
         }
 
-        if (ERC20Handler.baseCurrency() != params.tokenOut) {
+        if (!ERC20Handler.isNative(params.tokenOut)) {
             ERC20Handler.safeTransfer(params.tokenOut, msg.sender, amountOut);
         } else {
             ERC20Handler.safeTransferETH(msg.sender, amountOut);

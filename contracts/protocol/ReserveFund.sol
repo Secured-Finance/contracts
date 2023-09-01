@@ -25,17 +25,17 @@ contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyab
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
      * @param _owner The address of the contract owner
      * @param _resolver The address of the Address Resolver contract
-     * @param _WETH9 The address of WETH
+     * @param _nativeToken The address of wrapped token of native currency
      */
     function initialize(
         address _owner,
         address _resolver,
-        address _WETH9
+        address _nativeToken
     ) public initializer onlyProxy {
         Storage.slot().paused = false;
 
         registerAddressResolver(_resolver);
-        MixinWallet._initialize(_owner, _WETH9);
+        MixinWallet._initialize(_owner, _nativeToken);
     }
 
     // @inheritdoc MixinAddressResolver

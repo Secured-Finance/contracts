@@ -13,7 +13,7 @@ receive() external payable
 ### initialize
 
 ```solidity
-function initialize(address _owner, address _resolver, address _WETH9) public
+function initialize(address _owner, address _resolver, address _nativeToken) public
 ```
 
 Initializes the contract.
@@ -24,7 +24,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | ---- | ---- | ----------- |
 | _owner | address | The address of the contract owner |
 | _resolver | address | The address of the Address Resolver contract |
-| _WETH9 | address | The address of WETH |
+| _nativeToken | address | The address of wrapped token of native currency |
 
 ### requiredContracts
 

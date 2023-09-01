@@ -2,6 +2,30 @@
 
 ## LendingMarketUserLogic
 
+### InvalidAmount
+
+```solidity
+error InvalidAmount()
+```
+
+### FutureValueIsZero
+
+```solidity
+error FutureValueIsZero()
+```
+
+### TooManyActiveOrders
+
+```solidity
+error TooManyActiveOrders()
+```
+
+### NotEnoughCollateral
+
+```solidity
+error NotEnoughCollateral()
+```
+
 ### getOrderEstimation
 
 ```solidity

@@ -3,7 +3,6 @@ import { expect } from 'chai';
 import { MockContract } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
-import { hexETH } from '../../utils/strings';
 
 const AddressResolver = artifacts.require('AddressResolver');
 const CurrencyController = artifacts.require('CurrencyController');
@@ -37,7 +36,7 @@ describe('CurrencyController', () => {
     await proxyController.setAddressResolverImpl(addressResolver.address);
 
     const currencyControllerAddress = await proxyController
-      .setCurrencyControllerImpl(currencyController.address, hexETH)
+      .setCurrencyControllerImpl(currencyController.address)
       .then((tx) => tx.wait())
       .then(
         ({ events }) =>
@@ -52,51 +51,6 @@ describe('CurrencyController', () => {
   });
 
   describe('Initialize', async () => {
-    it('Add ETH as a supported currency', async () => {
-      const currency = ethers.utils.formatBytes32String('ETH');
-
-      // Set up for the mocks
-      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, 0, 0);
-      await mockPriceFeed.mock.decimals.returns(18);
-
-      const tx = await currencyControllerProxy.addCurrency(
-        currency,
-        18,
-        9000,
-        [],
-        0,
-      );
-      await expect(tx).to.emit(currencyControllerProxy, 'CurrencyAdded');
-      await expect(tx).to.not.emit(currencyControllerProxy, 'PriceFeedUpdated');
-
-      await currencyControllerProxy.currencyExists(currency).then((exists) => {
-        expect(exists).to.true;
-      });
-
-      await currencyControllerProxy
-        .currencyExists(ethers.utils.formatBytes32String('TEST'))
-        .then((exists) => expect(exists).to.equal(false));
-
-      await currencyControllerProxy
-        .getDecimals(currency)
-        .then((decimals) => expect(decimals).to.equal(0));
-
-      await currencyControllerProxy
-        .getBaseCurrency()
-        .then((baseCurrency) => expect(baseCurrency).to.equal(hexETH));
-
-      await currencyControllerProxy
-        .getHaircut(currency)
-        .then((haircut) => expect(haircut).to.equal(9000));
-
-      await currencyControllerProxy
-        .getPriceFeed(currency)
-        .then(({ instances, heartbeat }) => {
-          expect(instances.length).to.equal(0);
-          expect(heartbeat).to.equal(0);
-        });
-    });
-
     it('Add a currency except for ETH as a supported currency', async () => {
       const currency = ethers.utils.formatBytes32String('WFIL');
 
@@ -114,9 +68,21 @@ describe('CurrencyController', () => {
       await expect(tx).to.emit(currencyControllerProxy, 'CurrencyAdded');
       await expect(tx).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
+      await currencyControllerProxy.currencyExists(currency).then((exists) => {
+        expect(exists).to.true;
+      });
+
+      await currencyControllerProxy
+        .currencyExists(ethers.utils.formatBytes32String('TEST'))
+        .then((exists) => expect(exists).to.equal(false));
+
       await currencyControllerProxy
         .getDecimals(currency)
         .then((decimals) => expect(decimals).to.equal(18));
+
+      await currencyControllerProxy
+        .getHaircut(currency)
+        .then((haircut) => expect(haircut).to.equal(9000));
 
       await currencyControllerProxy
         .getPriceFeed(currency)
@@ -127,7 +93,7 @@ describe('CurrencyController', () => {
         });
     });
 
-    it('Fail to add ETH as a supported currency due to the invalid price feed', async () => {
+    it('Fail to add a currency due to the invalid price', async () => {
       const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
@@ -142,10 +108,10 @@ describe('CurrencyController', () => {
           [mockPriceFeed.address],
           86400,
         ),
-      ).to.be.revertedWith('InvalidPriceFeed');
+      ).to.be.revertedWith('InvalidPrice');
     });
 
-    it('Fail to add ETH as a supported currency due to the invalid decimals', async () => {
+    it('Fail to add a currency due to the invalid decimals', async () => {
       const currency = ethers.utils.formatBytes32String('ETH');
 
       // Set up for the mocks
@@ -161,6 +127,14 @@ describe('CurrencyController', () => {
           86400,
         ),
       ).to.be.revertedWith('InvalidDecimals');
+    });
+
+    it('Fail to add a currency due to the invalid price feed', async () => {
+      const currency = ethers.utils.formatBytes32String('ETH');
+
+      await expect(
+        currencyControllerProxy.addCurrency(currency, 18, 9000, [], 0),
+      ).revertedWith('InvalidPriceFeed');
     });
   });
 
@@ -255,7 +229,7 @@ describe('CurrencyController', () => {
         ),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
-      expect(await currencyControllerProxy.getDecimals(currency)).to.equal(24);
+      expect(await currencyControllerProxy.getDecimals(currency)).to.equal(18);
       expect(await currencyControllerProxy.getLastPrice(currency)).to.equal(
         80000,
       );
@@ -300,21 +274,6 @@ describe('CurrencyController', () => {
           10001,
         ),
       ).to.be.revertedWith('InvalidCurrency');
-    });
-
-    it('Fail to remove a price feed due to invalid PriceFeed', async () => {
-      const { timestamp: now } = await ethers.provider.getBlock('latest');
-      const dummyCurrency = ethers.utils.formatBytes32String('Dummy1');
-
-      // Set up for the mocks
-      await mockPriceFeed.mock.latestRoundData.returns(0, 100, 0, now, 0);
-      await mockPriceFeed.mock.decimals.returns(18);
-
-      await currencyControllerProxy.addCurrency(dummyCurrency, 18, 9000, [], 0);
-
-      await expect(
-        currencyControllerProxy.removePriceFeed(dummyCurrency),
-      ).to.be.revertedWith('NoPriceFeedExists');
     });
   });
 

@@ -5,13 +5,17 @@ import {IWETH9} from "../interfaces/IWETH9.sol";
 import {ERC20HandlerStorage as Storage} from "../storages/libraries/ERC20HandlerStorage.sol";
 
 library ERC20Handler {
-    function initialize(address _baseCurrency) internal {
-        require(Storage.slot().baseCurrency == address(0), "TransferHelper: Already initialized");
-        Storage.slot().baseCurrency = _baseCurrency;
+    function initialize(address _nativeToken) internal {
+        require(Storage.slot().nativeToken == address(0), "TransferHelper: Already initialized");
+        Storage.slot().nativeToken = _nativeToken;
     }
 
-    function baseCurrency() internal view returns (address) {
-        return Storage.slot().baseCurrency;
+    function nativeToken() internal view returns (address) {
+        return Storage.slot().nativeToken;
+    }
+
+    function isNative(address _token) internal view returns (bool) {
+        return _token == Storage.slot().nativeToken;
     }
 
     function depositAssets(
@@ -20,7 +24,7 @@ library ERC20Handler {
         address _receiver,
         uint256 _amount
     ) internal {
-        if (address(_token) == Storage.slot().baseCurrency) {
+        if (address(_token) == Storage.slot().nativeToken) {
             convertToWrappedToken(_receiver, _amount);
         } else {
             safeTransferFrom(_token, _payer, _receiver, _amount);
@@ -32,7 +36,7 @@ library ERC20Handler {
         address _receiver,
         uint256 _amount
     ) internal {
-        if (address(_token) == Storage.slot().baseCurrency) {
+        if (address(_token) == Storage.slot().nativeToken) {
             convertFromWrappedToken(_receiver, _amount);
         } else {
             safeTransfer(_token, _receiver, _amount);
@@ -42,16 +46,16 @@ library ERC20Handler {
     function convertToWrappedToken(address _receiver, uint256 _amount) internal {
         require(address(this).balance >= _amount, "TransferHelper: Insufficient balance");
 
-        IWETH9(Storage.slot().baseCurrency).deposit{value: _amount}();
-        IWETH9(Storage.slot().baseCurrency).transfer(_receiver, _amount);
+        IWETH9(Storage.slot().nativeToken).deposit{value: _amount}();
+        IWETH9(Storage.slot().nativeToken).transfer(_receiver, _amount);
     }
 
     function convertFromWrappedToken(address _receiver, uint256 _amount) internal {
-        uint256 balance = IWETH9(Storage.slot().baseCurrency).balanceOf(address(this));
+        uint256 balance = IWETH9(Storage.slot().nativeToken).balanceOf(address(this));
         require(balance >= _amount, "TransferHelper: Insufficient balance");
 
         if (balance > 0) {
-            IWETH9(Storage.slot().baseCurrency).withdraw(_amount);
+            IWETH9(Storage.slot().nativeToken).withdraw(_amount);
             safeTransferETH(_receiver, _amount);
         }
     }

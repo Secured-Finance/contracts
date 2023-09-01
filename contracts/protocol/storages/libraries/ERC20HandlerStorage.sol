@@ -5,7 +5,7 @@ library ERC20HandlerStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.erc20Handler");
 
     struct Storage {
-        address baseCurrency;
+        address nativeToken;
     }
 
     function slot() internal pure returns (Storage storage r) {

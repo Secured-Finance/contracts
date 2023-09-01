@@ -366,6 +366,36 @@ describe('LendingMarketController - Calculations', () => {
           coverage: '1000',
         },
       },
+      {
+        title: 'Get an borrowing order estimation on the empty order book',
+        orders: [],
+        input: {
+          side: Side.BORROW,
+          amount: '100000000000000000',
+          unitPrice: '0',
+        },
+        result: {
+          lastUnitPrice: '0',
+          filledAmount: '0',
+          filledAmountInFV: '0',
+          coverage: '1000',
+        },
+      },
+      {
+        title: 'Get an lending order estimation on the empty order book',
+        orders: [],
+        input: {
+          side: Side.LEND,
+          amount: '100000000000000000',
+          unitPrice: '0',
+        },
+        result: {
+          lastUnitPrice: '0',
+          filledAmount: '0',
+          filledAmountInFV: '0',
+          coverage: '1000',
+        },
+      },
     ];
 
     for (const condition of conditions) {

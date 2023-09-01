@@ -22,7 +22,7 @@ Modifier to check if the currency is supported.
 ### initialize
 
 ```solidity
-function initialize(address _owner, bytes32 _baseCcy) public
+function initialize(address _owner) public
 ```
 
 Initializes the contract.
@@ -32,19 +32,6 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _owner | address | The address of the contract owner |
-| _baseCcy | bytes32 | The base currency name in bytes32 |
-
-### getBaseCurrency
-
-```solidity
-function getBaseCurrency() external view returns (bytes32)
-```
-
-Gets the base currency name.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bytes32 | Currency name in bytes32 |
 
 ### getDecimals
 
@@ -83,6 +70,18 @@ Haircut is used in bilateral netting cross-calculation.
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 
+### getPriceFeed
+
+```solidity
+function getPriceFeed(bytes32 _ccy) external view returns (struct PriceFeed)
+```
+
+Gets price feed for the selected currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
 ### currencyExists
 
 ```solidity
@@ -102,7 +101,7 @@ Gets if the selected currency is supported.
 ### addCurrency
 
 ```solidity
-function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds) public
+function addCurrency(bytes32 _ccy, uint8 _decimals, uint256 _haircut, address[] _priceFeeds, uint256 _heartbeat) public
 ```
 
 Adds new currency into the protocol and links with existing price feed.
@@ -113,6 +112,7 @@ Adds new currency into the protocol and links with existing price feed.
 | _decimals | uint8 | Currency decimals |
 | _haircut | uint256 | Remaining ratio after haircut |
 | _priceFeeds | address[] | Array with the contract address of price feed |
+| _heartbeat | uint256 |  |
 
 ### removeCurrency
 
@@ -142,7 +142,7 @@ Updates the haircut ratio for supported currency
 ### updatePriceFeed
 
 ```solidity
-function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) public
+function updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256 _heartbeat) public
 ```
 
 Update the price feed contract addresses.
@@ -152,6 +152,7 @@ Update the price feed contract addresses.
 | _ccy | bytes32 | Currency name in bytes32 |
 | _decimals | uint8 | Currency decimals |
 | _priceFeeds | address[] | Array with the contract address of price feed |
+| _heartbeat | uint256 |  |
 
 ### removePriceFeed
 
@@ -302,12 +303,6 @@ Gets the converted amounts to the selected currency from the base currency.
 | ---- | ---- | ----------- |
 | amounts | uint256[] | The converted amounts |
 
-### _isBaseCurrency
-
-```solidity
-function _isBaseCurrency(bytes32 _ccy) internal view returns (bool)
-```
-
 ### _getLastPrice
 
 ```solidity
@@ -323,6 +318,6 @@ function _updateHaircut(bytes32 _ccy, uint256 _haircut) internal
 ### _updatePriceFeed
 
 ```solidity
-function _updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds) internal
+function _updatePriceFeed(bytes32 _ccy, uint8 _decimals, address[] _priceFeeds, uint256 _heartbeat) internal
 ```
 

@@ -6,6 +6,18 @@ Implements functions to make a contract a wallet, i.e. withdraw and deposit fund
 
 The _initialize function of this contract is expected to be called in an inheriting contract's intializer or constructor.
 
+### TransactionFailed
+
+```solidity
+error TransactionFailed(uint256 index)
+```
+
+### WrongArrayLengths
+
+```solidity
+error WrongArrayLengths()
+```
+
 ### TransactionExecuted
 
 ```solidity
@@ -21,7 +33,7 @@ event TransactionsExecuted(address from, address[] targets, uint256[] values, by
 ### _initialize
 
 ```solidity
-function _initialize(address _owner, address _baseCurrencyAddr) internal
+function _initialize(address _owner, address _nativeToken) internal
 ```
 
 ### executeTransaction
