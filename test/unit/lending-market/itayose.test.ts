@@ -203,9 +203,15 @@ describe('LendingMarket - Itayose', () => {
       expect(openingUnitPrice).to.equal(test.openingPrice);
 
       const itayoseLog = await lendingMarket.getItayoseLog(maturity);
+      const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
+        currentOrderBookId,
+      );
 
       expect(itayoseLog.lastLendUnitPrice).to.equal(test.lastLendUnitPrice);
       expect(itayoseLog.lastBorrowUnitPrice).to.equal(test.lastBorrowUnitPrice);
+      expect(marketUnitPrice).to.equal(
+        test.shouldItayoseExecuted ? test.openingPrice : 0,
+      );
     });
   }
 

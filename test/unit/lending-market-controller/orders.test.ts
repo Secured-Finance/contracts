@@ -535,9 +535,6 @@ describe('LendingMarketController - Orders', () => {
       );
       expect(lendUnitPrice.toString()).to.equal('8720');
 
-      const midUnitPrice = await lendingMarket.getMidUnitPrice(orderBookIds[0]);
-      expect(midUnitPrice.toString()).to.equal('8800');
-
       const showLendingInfo = async (checkValues = false) => {
         const totalPVs = await Promise.all(
           accounts.map((account) =>
@@ -671,9 +668,6 @@ describe('LendingMarketController - Orders', () => {
         await lendingMarketControllerProxy.getBestBorrowUnitPrices(
           targetCurrency,
         );
-      const midUnitPrices = await lendingMarketControllerProxy.getMidUnitPrices(
-        targetCurrency,
-      );
       const market = await lendingMarket.getOrderBookDetail(orderBookIds[0]);
 
       const { blockNumber } =
@@ -698,8 +692,6 @@ describe('LendingMarketController - Orders', () => {
         await lendingMarketControllerProxy.getBestBorrowUnitPrices(
           targetCurrency,
         );
-      const rotatedMidRates =
-        await lendingMarketControllerProxy.getMidUnitPrices(targetCurrency);
       const rotatedMaturities =
         await lendingMarketControllerProxy.getMaturities(targetCurrency);
       const rotatedMarket = await lendingMarket.getOrderBookDetail(
@@ -723,15 +715,6 @@ describe('LendingMarketController - Orders', () => {
         lendingRates[2].toString(),
       );
       expect(rotatedLendingRates[2].toString()).to.equal('0');
-
-      // Check mid rates
-      expect(rotatedMidRates[0].toString()).to.equal(
-        midUnitPrices[1].toString(),
-      );
-      expect(rotatedMidRates[1].toString()).to.equal(
-        midUnitPrices[2].toString(),
-      );
-      expect(rotatedMidRates[2].toString()).to.equal('5000');
 
       // Check maturities
       expect(rotatedMaturities[0].toString()).to.equal(
@@ -757,7 +740,7 @@ describe('LendingMarketController - Orders', () => {
       expect(market.openingDate).to.equal(genesisDate);
       expect(market.borrowUnitPrice.toString()).to.equal('8880');
       expect(market.lendUnitPrice.toString()).to.equal('8720');
-      expect(market.midUnitPrice.toString()).to.equal('8800');
+      expect(market.marketUnitPrice.toString()).to.equal('8720');
 
       expect(rotatedMarket.ccy).to.equal(targetCurrency);
       expect(rotatedMarket.maturity.toString()).to.equal(
@@ -766,7 +749,7 @@ describe('LendingMarketController - Orders', () => {
       expect(rotatedMarket.openingDate).to.equal(maturities[1]);
       expect(rotatedMarket.borrowUnitPrice.toString()).to.equal('10000');
       expect(rotatedMarket.lendUnitPrice.toString()).to.equal('0');
-      expect(rotatedMarket.midUnitPrice.toString()).to.equal('5000');
+      expect(rotatedMarket.marketUnitPrice.toString()).to.equal('0');
 
       const cleanUpFunds = async () => {
         for (const account of accounts) {
@@ -1106,16 +1089,6 @@ describe('LendingMarketController - Orders', () => {
         .connect(alice)
         .executeOrder(
           targetCurrency,
-          maturities[1],
-          Side.BORROW,
-          '100000000000000000',
-          '5000',
-        );
-
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .executeOrder(
-          targetCurrency,
           maturities[0],
           Side.LEND,
           '100000000000000000',
@@ -1143,7 +1116,7 @@ describe('LendingMarketController - Orders', () => {
       expect(positions[0].ccy).to.equal(targetCurrency);
       expect(positions[0].maturity).to.equal(maturities[0]);
       expect(positions[0].futureValue).to.equal('125000000000000000');
-      expect(positions[0].presentValue).to.equal('62500000000000000');
+      expect(positions[0].presentValue).to.equal('100000000000000000');
     });
 
     it('Get active positions of a user who has both side position', async () => {
@@ -1260,7 +1233,7 @@ describe('LendingMarketController - Orders', () => {
       expect(positions[1].ccy).to.equal(targetCurrency);
       expect(positions[1].maturity).to.equal(maturities[1]);
       expect(positions[1].futureValue).to.equal('-125000000000000000');
-      expect(positions[1].presentValue).to.equal('-62500000000000000');
+      expect(positions[1].presentValue).to.equal('-100000000000000000');
     });
 
     it('Get active positions from multiple currencies', async () => {
@@ -1315,7 +1288,7 @@ describe('LendingMarketController - Orders', () => {
       expect(positions[0].ccy).to.equal(targetCurrency);
       expect(positions[0].maturity).to.equal(maturities[0]);
       expect(positions[0].futureValue).to.equal('-250000000000000000');
-      expect(positions[0].presentValue).to.equal('-125000000000000000');
+      expect(positions[0].presentValue).to.equal('-200000000000000000');
 
       expect(positions[1].ccy).to.equal(targetCurrency2);
       expect(positions[1].maturity).to.equal(maturities[0]);

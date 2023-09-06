@@ -406,7 +406,9 @@ describe('LendingMarketController - Terminations', () => {
     });
 
     it('Execute an emergency termination with orders after auto-rolls', async () => {
-      await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
+      await mockTokenVault.mock.executeForcedReset.returns(
+        '100000000000000000',
+      );
       await mockTokenVault.mock.isCollateral.returns(true);
 
       await lendingMarketControllerProxy

@@ -37,7 +37,7 @@ library OrderBookLogic {
             uint256 openingDate,
             uint256 borrowUnitPrice,
             uint256 lendUnitPrice,
-            uint256 midUnitPrice,
+            uint256 marketUnitPrice,
             uint256 openingUnitPrice,
             bool isReady
         )
@@ -49,7 +49,7 @@ library OrderBookLogic {
         openingDate = orderBook.openingDate;
         borrowUnitPrice = orderBook.getBestLendUnitPrice();
         lendUnitPrice = orderBook.getBestBorrowUnitPrice();
-        midUnitPrice = getMidUnitPrice(_orderBookId);
+        marketUnitPrice = orderBook.getMarketUnitPrice();
         openingUnitPrice = Storage.slot().itayoseLogs[orderBook.maturity].openingUnitPrice;
         isReady = Storage.slot().isReady[maturity];
     }
@@ -94,25 +94,6 @@ library OrderBookLogic {
 
         for (uint256 i; i < _orderBookIds.length; i++) {
             unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestBorrowUnitPrice();
-        }
-    }
-
-    function getMidUnitPrice(uint8 _orderBookId) public view returns (uint256) {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        uint256 borrowUnitPrice = orderBook.getBestLendUnitPrice();
-        uint256 lendUnitPrice = orderBook.getBestBorrowUnitPrice();
-        return (borrowUnitPrice + lendUnitPrice).div(2);
-    }
-
-    function getMidUnitPrices(uint8[] memory _orderBookIds)
-        external
-        view
-        returns (uint256[] memory unitPrices)
-    {
-        unitPrices = new uint256[](_orderBookIds.length);
-
-        for (uint256 i; i < _orderBookIds.length; i++) {
-            unitPrices[i] = getMidUnitPrice(_orderBookIds[i]);
         }
     }
 
@@ -200,6 +181,34 @@ library OrderBookLogic {
         Storage.slot().isReady[_newMaturity] = orderBook.initialize(_newMaturity, _openingDate);
     }
 
+    function executeAutoRoll(
+        uint8 _maturedOrderBookId,
+        uint8 _destinationOrderBookId,
+        uint256 _newMaturity,
+        uint256 _openingDate,
+        uint256 _autoRollUnitPrice
+    ) external {
+        OrderBookLib.OrderBook storage maturedOrderBook = Storage.slot().orderBooks[
+            _maturedOrderBookId
+        ];
+        if (!maturedOrderBook.isMatured()) revert OrderBookNotMatured();
+
+        Storage.slot().isReady[_newMaturity] = maturedOrderBook.initialize(
+            _newMaturity,
+            _openingDate
+        );
+
+        OrderBookLib.OrderBook storage destinationOrderBook = Storage.slot().orderBooks[
+            _destinationOrderBookId
+        ];
+
+        // NOTE: The auto-roll destination order book has no market unit price if the order has never been filled before.
+        // In this case, the market unit price is updated with the unit price of the auto-roll.
+        if (destinationOrderBook.getMarketUnitPrice() == 0) {
+            destinationOrderBook.setInitialBlockUnitPrice(_autoRollUnitPrice);
+        }
+    }
+
     function executeItayoseCall(uint8 _orderBookId)
         external
         returns (
@@ -226,12 +235,17 @@ library OrderBookLogic {
             for (uint256 i; i < sides.length; i++) {
                 ProtocolTypes.Side partiallyFilledOrderSide;
                 PartiallyFilledOrder memory partiallyFilledOrder;
-                (, partiallyFilledOrder, , ) = orderBook.fillOrders(
+                FilledOrder memory filledOrder;
+                (filledOrder, partiallyFilledOrder, , ) = orderBook.fillOrders(
                     sides[i],
                     totalOffsetAmount,
                     0,
                     0
                 );
+
+                if (filledOrder.futureValue > 0) {
+                    orderBook.setInitialBlockUnitPrice(openingUnitPrice);
+                }
 
                 if (partiallyFilledOrder.futureValue > 0) {
                     if (sides[i] == ProtocolTypes.Side.LEND) {

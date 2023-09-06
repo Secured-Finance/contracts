@@ -475,7 +475,7 @@ library FundManagementLogic {
 
             int256 presentValue = calculatePVFromFV(
                 futureValue,
-                vars.market.getMidUnitPrice(vars.defaultOrderBookId)
+                vars.market.getMarketUnitPrice(vars.defaultOrderBookId)
             );
 
             actualFunds.presentValue += presentValue;
@@ -993,7 +993,7 @@ library FundManagementLogic {
         uint256 _fromMaturity,
         int256 _futureValueInMaturity
     ) internal view returns (int256 presentValue, int256 futureValue) {
-        uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMidUnitPrice(
+        uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMarketUnitPrice(
             Storage.slot().orderBookIdLists[_ccy][0]
         );
 
@@ -1002,9 +1002,7 @@ library FundManagementLogic {
             0
         ) {
             presentValue = calculatePVFromFV(_ccy, _fromMaturity, _futureValueInMaturity);
-            futureValue = (presentValue * Constants.PRICE_DIGIT.toInt256()).div(
-                unitPrice.toInt256()
-            );
+            futureValue = calculateFVFromPV(presentValue, unitPrice);
         } else {
             futureValue = AddressResolverLib.genesisValueVault().calculateFVFromFV(
                 _ccy,
@@ -1021,32 +1019,21 @@ library FundManagementLogic {
         uint256 _maturity,
         int256 _futureValue
     ) public view returns (int256 presentValue) {
-        uint256 unitPriceInBasisMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getMidUnitPrice(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
-        presentValue = calculatePVFromFV(_futureValue, unitPriceInBasisMaturity);
-    }
-
-    function calculatePVFromFV(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _futureValue
-    ) public view returns (uint256 presentValue) {
-        uint256 unitPriceInBasisMaturity = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getMidUnitPrice(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
-        presentValue = (_futureValue * unitPriceInBasisMaturity).div(Constants.PRICE_DIGIT);
+        uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMarketUnitPrice(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+        );
+        presentValue = calculatePVFromFV(_futureValue, unitPrice);
     }
 
     function calculateFVFromPV(
         bytes32 _ccy,
         uint256 _maturity,
         int256 _presentValue
-    ) public view returns (int256) {
-        int256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getMidUnitPrice(Storage.slot().maturityOrderBookIds[_ccy][_maturity])
-            .toInt256();
-
-        // NOTE: The formula is: futureValue = presentValue / unitPrice.
-        return (_presentValue * Constants.PRICE_DIGIT.toInt256()).div(unitPrice);
+    ) public view returns (int256 futureValue) {
+        uint256 unitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMarketUnitPrice(
+            Storage.slot().maturityOrderBookIds[_ccy][_maturity]
+        );
+        futureValue = calculateFVFromPV(_presentValue, unitPrice);
     }
 
     function calculatePVFromFV(int256 _futureValue, uint256 _unitPrice)
@@ -1054,8 +1041,19 @@ library FundManagementLogic {
         pure
         returns (int256)
     {
+        uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
         // NOTE: The formula is: presentValue = futureValue * unitPrice.
-        return (_futureValue * _unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
+        return (_futureValue * unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
+    }
+
+    function calculateFVFromPV(int256 _presentValue, uint256 _unitPrice)
+        public
+        pure
+        returns (int256)
+    {
+        uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
+        // NOTE: The formula is: futureValue = presentValue / unitPrice.
+        return (_presentValue * Constants.PRICE_DIGIT.toInt256()).div(unitPrice.toInt256());
     }
 
     function _convertToBaseCurrencyAtMarketTerminationPrice(bytes32 _ccy, int256 _amount)

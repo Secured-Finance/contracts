@@ -119,7 +119,7 @@ describe('LendingMarketController - Operations', () => {
 
       expect(detail.bestLendUnitPrice).to.equal('10000');
       expect(detail.bestBorrowUnitPrice).to.equal('0');
-      expect(detail.midUnitPrice).to.equal('5000');
+      expect(detail.marketUnitPrice).to.equal('0');
       expect(detail.maxLendUnitPrice).to.equal('10000');
       expect(detail.minBorrowUnitPrice).to.equal('1');
       expect(detail.openingUnitPrice).to.equal('0');
@@ -154,7 +154,7 @@ describe('LendingMarketController - Operations', () => {
 
       expect(detail.bestLendUnitPrice).to.equal('9950');
       expect(detail.bestBorrowUnitPrice).to.equal('5000');
-      expect(detail.midUnitPrice).to.equal('7475');
+      expect(detail.marketUnitPrice).to.equal('0');
       expect(detail.maxLendUnitPrice).to.equal('9960');
       expect(detail.minBorrowUnitPrice).to.equal('4800');
       expect(detail.openingUnitPrice).to.equal('0');
@@ -189,7 +189,7 @@ describe('LendingMarketController - Operations', () => {
       expect(details.length).to.equal(5);
       expect(details[0].bestLendUnitPrice).to.equal('9950');
       expect(details[0].bestBorrowUnitPrice).to.equal('5000');
-      expect(details[0].midUnitPrice).to.equal('7475');
+      expect(details[0].marketUnitPrice).to.equal('0');
       expect(details[0].maxLendUnitPrice).to.equal('9960');
       expect(details[0].minBorrowUnitPrice).to.equal('4800');
       expect(details[0].openingUnitPrice).to.equal('0');
@@ -711,8 +711,10 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.LEND,
           '500000000000000000',
-          '7499',
+          '7500',
         );
+
+      await ethers.provider.send('evm_mine', []);
 
       const aliceFunds = await lendingMarketControllerProxy.calculateFunds(
         targetCurrency,
@@ -769,8 +771,10 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.LEND,
           '500000000000000000',
-          '8149',
+          '8150',
         );
+
+      await ethers.provider.send('evm_mine', []);
 
       const aliceFunds = await lendingMarketControllerProxy.calculateFunds(
         targetCurrency,

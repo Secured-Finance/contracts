@@ -33,7 +33,7 @@ interface ILendingMarketController {
         uint256 maturity;
         uint256 bestLendUnitPrice;
         uint256 bestBorrowUnitPrice;
-        uint256 midUnitPrice;
+        uint256 marketUnitPrice;
         uint256 maxLendUnitPrice;
         uint256 minBorrowUnitPrice;
         uint256 openingUnitPrice;
@@ -80,7 +80,7 @@ interface ILendingMarketController {
         returns (
             uint256 bestLendUnitPrice,
             uint256 bestBorrowUnitPrice,
-            uint256 midUnitPrice,
+            uint256 marketUnitPrice,
             uint256 maxLendUnitPrice,
             uint256 minBorrowUnitPrice,
             uint256 openingUnitPrice,
@@ -99,8 +99,6 @@ interface ILendingMarketController {
         external
         view
         returns (uint256[] memory unitPrices);
-
-    function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] memory unitPrices);
 
     function getOrderEstimation(GetOrderEstimationParams calldata params)
         external

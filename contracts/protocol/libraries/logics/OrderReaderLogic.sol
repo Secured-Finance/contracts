@@ -54,6 +54,18 @@ library OrderReaderLogic {
         }
     }
 
+    function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256) {
+        return _getOrderBook(_orderBookId).getMarketUnitPrice();
+    }
+
+    function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count)
+        external
+        view
+        returns (uint256)
+    {
+        return _getOrderBook(_orderBookId).getBlockUnitPriceAverage(_count);
+    }
+
     function getTotalAmountFromLendOrders(uint8 _orderBookId, address _user)
         external
         view

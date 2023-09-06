@@ -130,7 +130,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             market.openingDate,
             market.borrowUnitPrice,
             market.lendUnitPrice,
-            market.midUnitPrice,
+            market.marketUnitPrice,
             market.openingUnitPrice,
             market.isReady
         ) = OrderBookLogic.getOrderBookDetail(_orderBookId);
@@ -195,26 +195,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return OrderBookLogic.getBestBorrowUnitPrices(_orderBookIds);
     }
 
-    /**
-     * @notice Gets the mid price per future value.
-     * @param _orderBookId The order book id
-     * @return The mid price per future value
-     */
-    function getMidUnitPrice(uint8 _orderBookId) public view override returns (uint256) {
-        return OrderBookLogic.getMidUnitPrice(_orderBookId);
+    function getMarketUnitPrice(uint8 _orderBookId) external view override returns (uint256) {
+        return OrderReaderLogic.getMarketUnitPrice(_orderBookId);
     }
 
-    /**
-     * @notice Gets the the prices per future value.
-     * @return The array of the the price per future value
-     */
-    function getMidUnitPrices(uint8[] calldata _orderBookIds)
-        public
+    function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 count)
+        external
         view
-        override
-        returns (uint256[] memory)
+        returns (uint256)
     {
-        return OrderBookLogic.getMidUnitPrices(_orderBookIds);
+        return OrderReaderLogic.getBlockUnitPriceAverage(_orderBookId, count);
     }
 
     /**
@@ -527,6 +517,22 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         uint256 _openingDate
     ) external override onlyAcceptedContracts {
         OrderBookLogic.reopenOrderBook(_orderBookId, _newMaturity, _openingDate);
+    }
+
+    function executeAutoRoll(
+        uint8 _maturedOrderBookId,
+        uint8 _newNearestOrderBookId,
+        uint256 _newMaturity,
+        uint256 _openingDate,
+        uint256 _autoRollUnitPrice
+    ) external override onlyAcceptedContracts {
+        OrderBookLogic.executeAutoRoll(
+            _maturedOrderBookId,
+            _newNearestOrderBookId,
+            _newMaturity,
+            _openingDate,
+            _autoRollUnitPrice
+        );
     }
 
     /**

@@ -18,7 +18,7 @@ interface ILendingMarket {
         uint256 openingDate;
         uint256 borrowUnitPrice;
         uint256 lendUnitPrice;
-        uint256 midUnitPrice;
+        uint256 marketUnitPrice;
         uint256 openingUnitPrice;
         bool isReady;
     }
@@ -32,24 +32,24 @@ interface ILendingMarket {
 
     function getBestLendUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestLendUnitPrices(uint8[] calldata _orderBookIds)
+    function getBestLendUnitPrices(uint8[] calldata orderBookIds)
         external
         view
         returns (uint256[] memory);
 
     function getBestBorrowUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestBorrowUnitPrices(uint8[] calldata _orderBookIds)
+    function getBestBorrowUnitPrices(uint8[] calldata orderBookIds)
         external
         view
         returns (uint256[] memory);
 
-    function getMidUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
+    function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256);
 
-    function getMidUnitPrices(uint8[] calldata _orderBookIds)
+    function getBlockUnitPriceAverage(uint8 orderBookId, uint256 count)
         external
         view
-        returns (uint256[] memory);
+        returns (uint256);
 
     function getBorrowOrderBook(uint8 orderBookId, uint256 limit)
         external
@@ -71,7 +71,7 @@ interface ILendingMarket {
 
     function getMaturity(uint8 orderBookId) external view returns (uint256);
 
-    function getMaturities(uint8[] calldata _orderBookIds)
+    function getMaturities(uint8[] calldata orderBookIds)
         external
         view
         returns (uint256[] memory maturities);
@@ -155,14 +155,22 @@ interface ILendingMarket {
             uint256 placedAmount
         );
 
-    function createOrderBook(uint256 maturity, uint256 _openingDate)
+    function createOrderBook(uint256 maturity, uint256 openingDate)
         external
         returns (uint8 orderBookId);
 
     function reopenOrderBook(
-        uint8 _orderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate
+        uint8 orderBookId,
+        uint256 newMaturity,
+        uint256 openingDate
+    ) external;
+
+    function executeAutoRoll(
+        uint8 maturedOrderBookId,
+        uint8 newNearestOrderBookId,
+        uint256 newMaturity,
+        uint256 openingDate,
+        uint256 autoRollUnitPrice
     ) external;
 
     function cancelOrder(

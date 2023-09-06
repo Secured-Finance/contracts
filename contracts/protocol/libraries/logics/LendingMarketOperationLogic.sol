@@ -95,7 +95,7 @@ library LendingMarketOperationLogic {
             (
                 uint256 bestLendUnitPrice,
                 uint256 bestBorrowUnitPrice,
-                uint256 midUnitPrice,
+                uint256 marketUnitPrice,
                 uint256 maxLendUnitPrice,
                 uint256 minBorrowUnitPrice,
                 uint256 openingUnitPrice,
@@ -108,7 +108,7 @@ library LendingMarketOperationLogic {
                 maturity,
                 bestLendUnitPrice,
                 bestBorrowUnitPrice,
-                midUnitPrice,
+                marketUnitPrice,
                 maxLendUnitPrice,
                 minBorrowUnitPrice,
                 openingUnitPrice,
@@ -124,7 +124,7 @@ library LendingMarketOperationLogic {
         returns (
             uint256 bestLendUnitPrice,
             uint256 bestBorrowUnitPrice,
-            uint256 midUnitPrice,
+            uint256 marketUnitPrice,
             uint256 maxLendUnitPrice,
             uint256 minBorrowUnitPrice,
             uint256 openingUnitPrice,
@@ -138,7 +138,7 @@ library LendingMarketOperationLogic {
 
         bestLendUnitPrice = orderBook.borrowUnitPrice;
         bestBorrowUnitPrice = orderBook.lendUnitPrice;
-        midUnitPrice = orderBook.midUnitPrice;
+        marketUnitPrice = orderBook.marketUnitPrice;
         openingUnitPrice = orderBook.openingUnitPrice;
         openingDate = orderBook.openingDate;
         isReady = orderBook.isReady;
@@ -282,15 +282,15 @@ library LendingMarketOperationLogic {
 
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         uint256[] memory maturities = market.getMaturities(orderBookIds);
+
         uint8 maturedOrderBookId = orderBookIds[0];
-        uint256 newOpeningDate = maturities[1];
+        uint8 destinationOrderBookId = orderBookIds[1];
+        uint256 destinationOrderBookMaturity = maturities[1];
+
         newMaturity = calculateNextMaturity(
             maturities[maturities.length - 1],
             Storage.slot().marketBasePeriod
         );
-
-        // Reopen the market matured with new maturity
-        market.reopenOrderBook(maturedOrderBookId, newMaturity, newOpeningDate);
 
         // Rotate the order of the market
         for (uint256 i; i < orderBookIds.length; i++) {
@@ -300,11 +300,21 @@ library LendingMarketOperationLogic {
             orderBookIds[i] = orderBookId;
         }
 
+        uint256 autoRollUnitPrice = _calculateAutoRollUnitPrice(_ccy, destinationOrderBookMaturity);
+
+        market.executeAutoRoll(
+            maturedOrderBookId,
+            destinationOrderBookId,
+            newMaturity,
+            destinationOrderBookMaturity,
+            autoRollUnitPrice
+        );
+
         AddressResolverLib.genesisValueVault().executeAutoRoll(
             _ccy,
             maturities[0],
             maturities[1],
-            _calculateAutoRollUnitPrice(_ccy, maturities[1]),
+            autoRollUnitPrice,
             market.getOrderFeeRate()
         );
 

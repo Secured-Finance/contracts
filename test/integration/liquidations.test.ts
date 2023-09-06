@@ -1446,7 +1446,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.LEND,
             orderAmountInUSDC,
-            '7999',
+            '8000',
           );
 
         expect(
@@ -1501,7 +1501,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.LEND,
             orderAmountInFIL,
-            '7999',
+            '8000',
           );
 
         expect(
@@ -1557,7 +1557,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmountInFIL,
-            '9999',
+            '10000',
           );
       });
 

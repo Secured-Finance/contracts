@@ -447,6 +447,7 @@ library OrderActionLogic {
 
         (filledOrder, partiallyFilledOrder, vars.remainingAmount, vars.orderExists) = orderBook
             .fillOrders(_side, _amount, 0, _unitPrice);
+        orderBook.updateBlockUnitPriceHistory(filledOrder.amount, filledOrder.futureValue);
 
         filledOrder.amount = _amount - vars.remainingAmount;
 
@@ -520,6 +521,7 @@ library OrderActionLogic {
             futureValueWithFee,
             _unitPrice
         );
+        orderBook.updateBlockUnitPriceHistory(filledOrder.amount, filledOrder.futureValue);
 
         isCircuitBreakerTriggered = orderExists && _futureValue != filledOrder.futureValue;
     }
