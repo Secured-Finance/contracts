@@ -284,11 +284,13 @@ describe('LendingMarket - Itayose', () => {
       .add(48, 'h')
       .unix();
 
-    await lendingMarketCaller.reopenOrderBook(
+    await lendingMarketCaller.executeAutoRoll(
       targetCurrency,
+      currentOrderBookId,
       currentOrderBookId,
       newMaturity,
       newOpeningDate,
+      10000,
     );
 
     await expect(

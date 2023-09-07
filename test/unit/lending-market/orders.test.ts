@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
@@ -10,6 +11,7 @@ import { calculateFutureValue } from '../../common/orders';
 import { deployContracts } from './utils';
 
 describe('LendingMarket - Orders', () => {
+  let mockCurrencyController: MockContract;
   let lendingMarketCaller: Contract;
   let lendingMarket: Contract;
 
@@ -37,8 +39,16 @@ describe('LendingMarket - Orders', () => {
     [owner, alice, bob, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
-    ({ lendingMarketCaller, lendingMarket, orderActionLogic } =
-      await deployContracts(owner, targetCurrency));
+    ({
+      mockCurrencyController,
+      lendingMarketCaller,
+      lendingMarket,
+      orderActionLogic,
+    } = await deployContracts(owner, targetCurrency));
+
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('100000');
   });
 
   describe('Check the block unit price', async () => {
@@ -138,39 +148,17 @@ describe('LendingMarket - Orders', () => {
       await checkBlockUnitPrice('8400', '8200');
     });
 
-    it('Check with 10 orders in the different block', async () => {
+    it('Check with over 5 orders in the different block', async () => {
       await fillOrder('100000000000000', '8000');
       await fillOrder('200000000000000', '8100');
       await fillOrder('300000000000000', '8200');
       await fillOrder('400000000000000', '8300');
       await fillOrder('500000000000000', '8400');
       await fillOrder('600000000000000', '8500');
-      await fillOrder('700000000000000', '8600');
-      await fillOrder('800000000000000', '8700');
-      await fillOrder('900000000000000', '8800');
-      await fillOrder('100000000000000', '8900');
 
-      await checkBlockUnitPrice('8800', '8600');
+      await checkBlockUnitPrice('8400', '8200');
       await ethers.provider.send('evm_mine', []);
-      await checkBlockUnitPrice('8900', '8700');
-    });
-
-    it('Check with over 10 orders in the different block', async () => {
-      await fillOrder('100000000000000', '8000');
-      await fillOrder('200000000000000', '8100');
-      await fillOrder('300000000000000', '8200');
-      await fillOrder('400000000000000', '8300');
-      await fillOrder('500000000000000', '8400');
-      await fillOrder('600000000000000', '8500');
-      await fillOrder('700000000000000', '8600');
-      await fillOrder('800000000000000', '8700');
-      await fillOrder('900000000000000', '8800');
-      await fillOrder('100000000000000', '8900');
-      await fillOrder('110000000000000', '9000');
-
-      await checkBlockUnitPrice('8900', '8700');
-      await ethers.provider.send('evm_mine', []);
-      await checkBlockUnitPrice('9000', '8800');
+      await checkBlockUnitPrice('8500', '8300');
     });
 
     it('Check with unwinding', async () => {
@@ -201,6 +189,40 @@ describe('LendingMarket - Orders', () => {
       await checkBlockUnitPrice('8000', '8000');
       await ethers.provider.send('evm_mine', []);
       await checkBlockUnitPrice('9000', '8500');
+    });
+
+    it('Check with an order less than the reliable amount', async () => {
+      await fillOrder('99999', '8000');
+
+      await checkBlockUnitPrice('8000', '0');
+      await ethers.provider.send('evm_mine', []);
+      await checkBlockUnitPrice('8000', '8000');
+
+      await fillOrder('99999', '8100');
+
+      await checkBlockUnitPrice('8000', '8000');
+      await ethers.provider.send('evm_mine', []);
+      await checkBlockUnitPrice('8000', '8000');
+
+      await fillOrder('99999', '8200');
+
+      await checkBlockUnitPrice('8000', '8000');
+      await ethers.provider.send('evm_mine', []);
+      await checkBlockUnitPrice('8000', '8000');
+    });
+
+    it('Check with an order equal to the reliable amount', async () => {
+      await fillOrder('99999', '8000');
+
+      await checkBlockUnitPrice('8000', '0');
+      await ethers.provider.send('evm_mine', []);
+      await checkBlockUnitPrice('8000', '8000');
+
+      await fillOrder('100000', '8300');
+
+      await checkBlockUnitPrice('8000', '8000');
+      await ethers.provider.send('evm_mine', []);
+      await checkBlockUnitPrice('8300', '8150');
     });
   });
 

@@ -81,6 +81,9 @@ describe('LendingMarketController - Orders', () => {
     );
 
     await mockCurrencyController.mock.getHaircut.returns(8000);
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
@@ -104,6 +107,7 @@ describe('LendingMarketController - Orders', () => {
           INITIAL_COMPOUND_FACTOR,
           ORDER_FEE_RATE,
           CIRCUIT_BREAKER_LIMIT_RANGE,
+
           () => true,
           () => true,
         );

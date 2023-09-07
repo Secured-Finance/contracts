@@ -92,7 +92,10 @@ describe('LendingMarketController - Terminations', () => {
     );
     await mockCurrencyController.mock[
       'convertToBaseCurrency(bytes32,uint256)'
-    ].returns(20000000000);
+    ].returns('20000000000');
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('10');
     await mockTokenVault.mock.isCovered.returns(true);
     await mockTokenVault.mock.getCollateralCurrencies.returns([targetCurrency]);
     await mockTokenVault.mock.getTokenAddress.returns(mockERC20.address);

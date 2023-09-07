@@ -19,6 +19,7 @@ import {
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   MARKET_BASE_PERIOD,
+  MINIMUM_RELIABLE_AMOUNT,
   ORDER_FEE_RATE,
 } from './constants';
 import {
@@ -304,7 +305,7 @@ const deployContracts = async () => {
         OrderBookLogic: orderBookLogic.address,
       },
     })
-    .then((factory) => factory.deploy());
+    .then((factory) => factory.deploy(MINIMUM_RELIABLE_AMOUNT));
   const futureValueVault = await ethers
     .getContractFactory('FutureValueVault')
     .then((factory) => factory.deploy());

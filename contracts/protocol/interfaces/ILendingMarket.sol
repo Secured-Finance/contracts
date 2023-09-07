@@ -159,12 +159,6 @@ interface ILendingMarket {
         external
         returns (uint8 orderBookId);
 
-    function reopenOrderBook(
-        uint8 orderBookId,
-        uint256 newMaturity,
-        uint256 openingDate
-    ) external;
-
     function executeAutoRoll(
         uint8 maturedOrderBookId,
         uint8 newNearestOrderBookId,

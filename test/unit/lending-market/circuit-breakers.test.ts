@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
@@ -16,6 +17,7 @@ describe('LendingMarket - Circuit Breakers', () => {
   const MIN_DIFFERENCE = 10;
 
   let lendingMarketCaller: Contract;
+  let mockCurrencyController: MockContract;
 
   let targetCurrency: string;
   let maturity: number;
@@ -43,8 +45,16 @@ describe('LendingMarket - Circuit Breakers', () => {
     [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
-    ({ lendingMarketCaller, lendingMarket, orderActionLogic } =
-      await deployContracts(owner, targetCurrency));
+    ({
+      mockCurrencyController,
+      lendingMarketCaller,
+      lendingMarket,
+      orderActionLogic,
+    } = await deployContracts(owner, targetCurrency));
+
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('10');
   });
 
   beforeEach(async () => {

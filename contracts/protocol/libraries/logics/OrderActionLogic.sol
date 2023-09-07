@@ -2,10 +2,12 @@
 pragma solidity ^0.8.9;
 
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
-import {Constants} from "../Constants.sol";
-import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage} from "../../storages/LendingMarketStorage.sol";
+// libraries
+import {Constants} from "../Constants.sol";
+import {AddressResolverLib} from "../AddressResolverLib.sol";
+import {RoundingUint256} from "../math/RoundingUint256.sol";
 import {OrderReaderLogic} from "./OrderReaderLogic.sol";
 
 library OrderActionLogic {
@@ -187,7 +189,8 @@ library OrderActionLogic {
         ProtocolTypes.Side _side,
         address _user,
         uint256 _amount,
-        uint256 _unitPrice
+        uint256 _unitPrice,
+        uint256 _minimumReliableAmount
     )
         external
         returns (
@@ -232,6 +235,11 @@ library OrderActionLogic {
             feeInFV = OrderReaderLogic.calculateOrderFeeAmount(
                 vars.maturity,
                 filledOrder.futureValue
+            );
+            orderBook.updateBlockUnitPriceHistory(
+                filledOrder.amount,
+                filledOrder.futureValue,
+                _minimumReliableAmount
             );
         } else {
             if (!vars.conditions.ignoreRemainingAmount) {
@@ -302,7 +310,8 @@ library OrderActionLogic {
         uint8 _orderBookId,
         ProtocolTypes.Side _side,
         address _user,
-        uint256 _futureValue
+        uint256 _futureValue,
+        uint256 _minimumReliableAmount
     )
         external
         returns (
@@ -337,6 +346,11 @@ library OrderActionLogic {
                 conditions.executedUnitPrice
             );
             feeInFV = OrderReaderLogic.calculateOrderFeeAmount(maturity, filledOrder.futureValue);
+            orderBook.updateBlockUnitPriceHistory(
+                filledOrder.amount,
+                filledOrder.futureValue,
+                _minimumReliableAmount
+            );
         } else {
             isCircuitBreakerTriggered = conditions.orderExists;
         }
@@ -447,8 +461,6 @@ library OrderActionLogic {
 
         (filledOrder, partiallyFilledOrder, vars.remainingAmount, vars.orderExists) = orderBook
             .fillOrders(_side, _amount, 0, _unitPrice);
-        orderBook.updateBlockUnitPriceHistory(filledOrder.amount, filledOrder.futureValue);
-
         filledOrder.amount = _amount - vars.remainingAmount;
 
         if (vars.remainingAmount > 0) {
@@ -521,7 +533,6 @@ library OrderActionLogic {
             futureValueWithFee,
             _unitPrice
         );
-        orderBook.updateBlockUnitPriceHistory(filledOrder.amount, filledOrder.futureValue);
 
         isCircuitBreakerTriggered = orderExists && _futureValue != filledOrder.futureValue;
     }

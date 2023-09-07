@@ -29,6 +29,6 @@ interface IBeaconProxyController {
     function deployLendingMarket(
         bytes32 ccy,
         uint256 orderFeeRate,
-        uint256 limitRange
+        uint256 cbLimitRange
     ) external returns (address market);
 }

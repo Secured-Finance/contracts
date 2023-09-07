@@ -26,7 +26,7 @@ library LendingMarketOperationLogic {
     using SafeCast for uint256;
     using RoundingInt256 for int256;
 
-    uint256 private constant OBSERVATION_PERIOD = 6 hours;
+    uint256 public constant OBSERVATION_PERIOD = 6 hours;
 
     error InvalidCompoundFactor();
     error InvalidCurrency();

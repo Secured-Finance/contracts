@@ -31,8 +31,8 @@ library OrderBookLib {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
-    uint256 private constant PRE_ORDER_PERIOD = 7 days;
-    uint256 private constant ITAYOSE_PERIOD = 1 hours;
+    uint256 public constant PRE_ORDER_PERIOD = 7 days;
+    uint256 public constant ITAYOSE_PERIOD = 1 hours;
 
     error EmptyOrderBook();
     error PastMaturityOrderExists();
@@ -40,12 +40,13 @@ library OrderBookLib {
     struct OrderBook {
         uint48 lastOrderId;
         uint48 lastOrderBlockNumber;
+        bool isReliableBlock;
         // Micro slots for block unit price history
-        uint160 blockUnitPriceHistory;
-        uint256 openingDate;
-        uint256 maturity;
+        uint80 blockUnitPriceHistory;
         uint256 blockTotalAmount;
         uint256 blockTotalFutureValue;
+        uint256 openingDate;
+        uint256 maturity;
         // Mapping from user to active lend order ids
         mapping(address => uint48[]) activeLendOrderIds;
         // Mapping from user to active borrow order ids
@@ -77,6 +78,7 @@ library OrderBookLib {
         self.blockTotalAmount = 0;
         self.blockTotalFutureValue = 0;
         self.blockUnitPriceHistory = 0;
+        self.isReliableBlock = false;
 
         if (block.timestamp >= (_openingDate - ITAYOSE_PERIOD)) {
             isReady = true;
@@ -119,16 +121,12 @@ library OrderBookLib {
     }
 
     function getMarketUnitPrice(OrderBook storage self) internal view returns (uint256 unitPrice) {
-        uint256[] memory unitPrices = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory);
-        unitPrice = unitPrices[0];
+        unitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
 
         // NOTE: If an order is in the first block of the order book, the block unit price history is empty.
         // In this case, the market unit price is calculated from the current block total amount and total future value
         // to avoid unwinding or liquidation the order in the same block using 0 as the market unit price.
-        if (
-            (self.lastOrderBlockNumber != block.number || unitPrice == 0) &&
-            self.blockTotalFutureValue > 0
-        ) {
+        if ((self.lastOrderBlockNumber != block.number || unitPrice == 0) && self.isReliableBlock) {
             unitPrice = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
                 self.blockTotalFutureValue
             );
@@ -145,7 +143,7 @@ library OrderBookLib {
         uint256 sum;
         uint256 count;
 
-        if (self.lastOrderBlockNumber != block.number && self.blockTotalFutureValue > 0) {
+        if (self.lastOrderBlockNumber != block.number && self.isReliableBlock) {
             sum = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(self.blockTotalFutureValue);
             count = 1;
             _maxCount--;
@@ -432,24 +430,38 @@ library OrderBookLib {
     function updateBlockUnitPriceHistory(
         OrderBook storage self,
         uint256 _filledAmount,
-        uint256 _filledFutureValue
+        uint256 _filledFutureValue,
+        uint256 _minimumReliableAmount
     ) internal {
+        uint256 latestBlockUnitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
+
         if (self.lastOrderBlockNumber != block.number) {
-            if (self.blockTotalFutureValue > 0) {
-                uint16 blockUnitPrice = uint16(
-                    (self.blockTotalAmount * Constants.PRICE_DIGIT).div(self.blockTotalFutureValue)
+            if (self.isReliableBlock) {
+                latestBlockUnitPrice = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
+                    self.blockTotalFutureValue
                 );
+
                 // Remove the oldest block unit price and add the latest block unit price
-                self.blockUnitPriceHistory = blockUnitPrice | (self.blockUnitPriceHistory << 16);
+                self.blockUnitPriceHistory =
+                    uint16(latestBlockUnitPrice) |
+                    (self.blockUnitPriceHistory << 16);
             }
 
             self.lastOrderBlockNumber = uint48(block.number);
-            self.blockTotalAmount = 0;
-            self.blockTotalFutureValue = 0;
+            self.blockTotalAmount = _filledAmount;
+            self.blockTotalFutureValue = _filledFutureValue;
+            self.isReliableBlock = false;
+        } else {
+            self.blockTotalAmount += _filledAmount;
+            self.blockTotalFutureValue += _filledFutureValue;
         }
 
-        self.blockTotalAmount += _filledAmount;
-        self.blockTotalFutureValue += _filledFutureValue;
+        if (
+            self.blockTotalAmount >= _minimumReliableAmount ||
+            (self.blockTotalAmount > 0 && latestBlockUnitPrice == 0)
+        ) {
+            self.isReliableBlock = true;
+        }
     }
 
     function removeOrder(
@@ -749,22 +761,17 @@ library OrderBookLib {
         timestamp = uint64(_order >> 88);
     }
 
-    function _unpackBlockUnitPriceHistory(uint160 _blockUnitPriceHistory)
+    function _unpackBlockUnitPriceHistory(uint80 _blockUnitPriceHistory)
         private
         pure
         returns (uint256[] memory prices)
     {
-        prices = new uint256[](10);
+        prices = new uint256[](5);
 
         prices[0] = uint16(_blockUnitPriceHistory);
         prices[1] = uint16(_blockUnitPriceHistory >> 16);
         prices[2] = uint16(_blockUnitPriceHistory >> 32);
         prices[3] = uint16(_blockUnitPriceHistory >> 48);
         prices[4] = uint16(_blockUnitPriceHistory >> 64);
-        prices[5] = uint16(_blockUnitPriceHistory >> 80);
-        prices[6] = uint16(_blockUnitPriceHistory >> 96);
-        prices[7] = uint16(_blockUnitPriceHistory >> 112);
-        prices[8] = uint16(_blockUnitPriceHistory >> 128);
-        prices[9] = uint16(_blockUnitPriceHistory >> 144);
     }
 }

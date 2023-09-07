@@ -12,6 +12,7 @@ import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_THRESHOLD_RATE,
+  MINIMUM_RELIABLE_AMOUNT,
   ORDER_FEE_RATE,
 } from '../../common/constants';
 import { deployContracts } from './utils';
@@ -82,6 +83,9 @@ describe('LendingMarketController - Operations', () => {
 
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getHaircut.returns(8000);
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
@@ -446,7 +450,7 @@ describe('LendingMarketController - Operations', () => {
             OrderBookLogic: orderBookLogic.address,
           },
         })
-        .then((factory) => factory.deploy());
+        .then((factory) => factory.deploy(MINIMUM_RELIABLE_AMOUNT));
       await beaconProxyControllerProxy.setLendingMarketImpl(
         lendingMarket.address,
       );

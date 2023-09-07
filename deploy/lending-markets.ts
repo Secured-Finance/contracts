@@ -11,6 +11,7 @@ import { toBytes32 } from '../utils/strings';
 // NOTE: Active markets are 8.
 // The last market is a inactive market for Itayose.
 const MARKET_COUNT = 9;
+const MINIMUM_RELIABLE_AMOUNT = '100000000000';
 
 const func: DeployFunction = async function ({
   getNamedAccounts,
@@ -30,6 +31,7 @@ const func: DeployFunction = async function ({
 
   const deployResult = await deploy('LendingMarket', {
     from: deployer,
+    args: [MINIMUM_RELIABLE_AMOUNT],
     libraries: {
       OrderActionLogic: orderActionLogic.address,
       OrderReaderLogic: orderReaderLogic.address,

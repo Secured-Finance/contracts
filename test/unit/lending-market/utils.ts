@@ -4,6 +4,7 @@ import { artifacts, ethers, waffle } from 'hardhat';
 
 import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
+  MINIMUM_RELIABLE_AMOUNT,
   ORDER_FEE_RATE,
 } from '../../common/constants';
 
@@ -13,12 +14,13 @@ const BeaconProxyController = artifacts.require('BeaconProxyController');
 const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 const LendingMarketCaller = artifacts.require('LendingMarketCaller');
+const CurrencyController = artifacts.require('CurrencyController');
 
 // libraries
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const OrderReaderLogic = artifacts.require('OrderReaderLogic');
 
-const { deployContract } = waffle;
+const { deployContract, deployMockContract } = waffle;
 
 const deployOrderBook = async (
   currency: string,
@@ -32,6 +34,11 @@ const deployOrderBook = async (
 };
 
 const deployContracts = async (owner: SignerWithAddress, currency: string) => {
+  // Set up for the mocks
+  const mockCurrencyController = await deployMockContract(
+    owner,
+    CurrencyController.abi,
+  );
   // Deploy contracts
   const addressResolver = await deployContract(owner, AddressResolver);
   const proxyController = await deployContract(owner, ProxyController, [
@@ -78,6 +85,7 @@ const deployContracts = async (owner: SignerWithAddress, currency: string) => {
   // Set up for AddressResolver and build caches using MigrationAddressResolver
   const migrationTargets: [string, Contract][] = [
     ['BeaconProxyController', beaconProxyControllerProxy],
+    ['CurrencyController', mockCurrencyController],
     ['LendingMarketController', lendingMarketCaller],
   ];
 
@@ -117,7 +125,7 @@ const deployContracts = async (owner: SignerWithAddress, currency: string) => {
         OrderBookLogic: orderBookLogic.address,
       },
     })
-    .then((factory) => factory.deploy());
+    .then((factory) => factory.deploy(MINIMUM_RELIABLE_AMOUNT));
 
   await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);
 
@@ -132,6 +140,7 @@ const deployContracts = async (owner: SignerWithAddress, currency: string) => {
     .then((address) => ethers.getContractAt('LendingMarket', address));
 
   return {
+    mockCurrencyController,
     lendingMarketCaller,
     lendingMarket: lendingMarketProxy,
     orderActionLogic: orderActionLogic.attach(lendingMarketProxy.address),

@@ -33,8 +33,8 @@ import {LendingMarketStorage as Storage, ItayoseLog} from "./storages/LendingMar
 contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
     using RoundingUint256 for uint256;
 
-    uint256 private constant PRE_ORDER_PERIOD = 7 days;
-    uint256 private constant ITAYOSE_PERIOD = 1 hours;
+    /// @dev Used for minimum reliable amount in base currency for block unit price
+    uint256 immutable MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY;
 
     /**
      * @notice Modifier to make a function callable only by order maker.
@@ -80,6 +80,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         _;
     }
 
+    constructor(uint256 _minimumReliableAmount) {
+        MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY = _minimumReliableAmount;
+    }
+
     /**
      * @notice Initializes the contract.
      * @dev Function is invoked by the proxy contract when the contract is added to the ProxyController.
@@ -103,14 +107,60 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     // @inheritdoc MixinAddressResolver
     function requiredContracts() public pure override returns (bytes32[] memory contracts) {
-        contracts = new bytes32[](1);
-        contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+        contracts = new bytes32[](2);
+        contracts[0] = Contracts.CURRENCY_CONTROLLER;
+        contracts[1] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
     // @inheritdoc MixinAddressResolver
     function acceptedContracts() public pure override returns (bytes32[] memory contracts) {
         contracts = new bytes32[](1);
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
+    }
+
+    /**
+     * @notice Gets if the market is ready.
+     * @param _orderBookId The order book id
+     * @return The boolean if the market is ready or not
+     */
+    function isReady(uint8 _orderBookId) public view override returns (bool) {
+        return OrderBookLogic.isReady(_orderBookId);
+    }
+
+    /**
+     * @notice Gets if the market is matured.
+     * @param _orderBookId The order book id
+     * @return The boolean if the market is matured or not
+     */
+    function isMatured(uint8 _orderBookId) public view override returns (bool) {
+        return OrderBookLogic.isMatured(_orderBookId);
+    }
+
+    /**
+     * @notice Gets if the market is opened.
+     * @param _orderBookId The order book id
+     * @return The boolean if the market is opened or not
+     */
+    function isOpened(uint8 _orderBookId) public view override returns (bool) {
+        return OrderBookLogic.isOpened(_orderBookId);
+    }
+
+    /**
+     * @notice Gets if the market is under the Itayose period.
+     * @param _orderBookId The order book id
+     * @return The boolean if the market is under the Itayose period.
+     */
+    function isItayosePeriod(uint8 _orderBookId) public view returns (bool) {
+        return OrderBookLogic.isItayosePeriod(_orderBookId);
+    }
+
+    /**
+     * @notice Gets if the market is under the pre-order period.
+     * @param _orderBookId The order book id
+     * @return The boolean if the market is under the pre-order period.
+     */
+    function isPreOrderPeriod(uint8 _orderBookId) public view override returns (bool) {
+        return OrderBookLogic.isPreOrderPeriod(_orderBookId);
     }
 
     /**
@@ -124,16 +174,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         override
         returns (OrderBook memory market)
     {
-        (
-            market.ccy,
-            market.maturity,
-            market.openingDate,
-            market.borrowUnitPrice,
-            market.lendUnitPrice,
-            market.marketUnitPrice,
-            market.openingUnitPrice,
-            market.isReady
-        ) = OrderBookLogic.getOrderBookDetail(_orderBookId);
+        return OrderBookLogic.getOrderBookDetail(_orderBookId);
     }
 
     /**
@@ -196,15 +237,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     function getMarketUnitPrice(uint8 _orderBookId) external view override returns (uint256) {
-        return OrderReaderLogic.getMarketUnitPrice(_orderBookId);
+        return OrderBookLogic.getMarketUnitPrice(_orderBookId);
     }
 
     function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 count)
         external
         view
+        override
         returns (uint256)
     {
-        return OrderReaderLogic.getBlockUnitPriceAverage(_orderBookId, count);
+        return OrderBookLogic.getBlockUnitPriceAverage(_orderBookId, count);
     }
 
     /**
@@ -279,15 +321,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @notice Gets the order fee rate
      * @return The order fee rate received by protocol
      */
-    function getOrderFeeRate() external view returns (uint256) {
+    function getOrderFeeRate() external view override returns (uint256) {
         return Storage.slot().orderFeeRate;
     }
 
     /**
      * @notice Gets the limit range in unit price for the circuit breaker
-     * @return The auto-roll fee rate received by protocol
+     * @return The limit range in unit price for the circuit breaker
      */
-    function getCircuitBreakerLimitRange() external view returns (uint256) {
+    function getCircuitBreakerLimitRange() external view override returns (uint256) {
         return Storage.slot().circuitBreakerLimitRange;
     }
 
@@ -298,59 +340,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      */
     function getOpeningDate(uint8 _orderBookId) public view override returns (uint256 openingDate) {
         return Storage.slot().orderBooks[_orderBookId].openingDate;
-    }
-
-    /**
-     * @notice Gets if the market is ready.
-     * @param _orderBookId The order book id
-     * @return The boolean if the market is ready or not
-     */
-    function isReady(uint8 _orderBookId) public view override returns (bool) {
-        return Storage.slot().isReady[getMaturity(_orderBookId)];
-    }
-
-    /**
-     * @notice Gets if the market is matured.
-     * @param _orderBookId The order book id
-     * @return The boolean if the market is matured or not
-     */
-    function isMatured(uint8 _orderBookId) public view override returns (bool) {
-        return OrderReaderLogic.isMatured(_orderBookId);
-    }
-
-    /**
-     * @notice Gets if the market is opened.
-     * @param _orderBookId The order book id
-     * @return The boolean if the market is opened or not
-     */
-    function isOpened(uint8 _orderBookId) public view override returns (bool) {
-        return
-            isReady(_orderBookId) &&
-            !isMatured(_orderBookId) &&
-            block.timestamp >= getOpeningDate(_orderBookId);
-    }
-
-    /**
-     * @notice Gets if the market is under the Itayose period.
-     * @param _orderBookId The order book id
-     * @return The boolean if the market is under the Itayose period.
-     */
-    function isItayosePeriod(uint8 _orderBookId) public view returns (bool) {
-        return
-            block.timestamp >= (getOpeningDate(_orderBookId) - ITAYOSE_PERIOD) &&
-            !isReady(_orderBookId);
-    }
-
-    /**
-     * @notice Gets if the market is under the pre-order period.
-     * @param _orderBookId The order book id
-     * @return The boolean if the market is under the pre-order period.
-     */
-    function isPreOrderPeriod(uint8 _orderBookId) public view override returns (bool) {
-        uint256 openingDate = getOpeningDate(_orderBookId);
-        return
-            block.timestamp >= (openingDate - PRE_ORDER_PERIOD) &&
-            block.timestamp < (openingDate - ITAYOSE_PERIOD);
     }
 
     /**
@@ -511,14 +500,6 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return OrderBookLogic.createOrderBook(_maturity, _openingDate);
     }
 
-    function reopenOrderBook(
-        uint8 _orderBookId,
-        uint256 _newMaturity,
-        uint256 _openingDate
-    ) external override onlyAcceptedContracts {
-        OrderBookLogic.reopenOrderBook(_orderBookId, _newMaturity, _openingDate);
-    }
-
     function executeAutoRoll(
         uint8 _maturedOrderBookId,
         uint8 _newNearestOrderBookId,
@@ -615,7 +596,18 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 feeInFV
         )
     {
-        return OrderActionLogic.executeOrder(_orderBookId, _side, _user, _amount, _unitPrice);
+        return
+            OrderActionLogic.executeOrder(
+                _orderBookId,
+                _side,
+                _user,
+                _amount,
+                _unitPrice,
+                currencyController().convertFromBaseCurrency(
+                    Storage.slot().ccy,
+                    MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY
+                )
+            );
     }
 
     /**
@@ -663,7 +655,17 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 feeInFV
         )
     {
-        return OrderActionLogic.unwindPosition(_orderBookId, _side, _user, _futureValue);
+        return
+            OrderActionLogic.unwindPosition(
+                _orderBookId,
+                _side,
+                _user,
+                _futureValue,
+                currencyController().convertFromBaseCurrency(
+                    Storage.slot().ccy,
+                    MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY
+                )
+            );
     }
 
     /**
