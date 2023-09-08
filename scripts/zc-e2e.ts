@@ -64,6 +64,28 @@ describe('ZC e2e test', async function () {
       .executeItayoseCalls([hexETH], maturities[maturities.length - 1]);
   };
 
+  const getOrderUnitPrice = async (
+    currency: string,
+    maturity: BigNumber,
+  ): Promise<BigNumber> => {
+    const marketDetail = await lendingMarketController.getOrderBookDetail(
+      currency,
+      maturity,
+    );
+
+    const midUnitPrice = marketDetail.bestLendUnitPrice
+      .add(marketDetail.bestBorrowUnitPrice)
+      .div(2);
+
+    if (midUnitPrice.gt(marketDetail.maxLendUnitPrice)) {
+      return marketDetail.maxLendUnitPrice;
+    } else if (midUnitPrice.lt(marketDetail.minBorrowUnitPrice)) {
+      return marketDetail.minBorrowUnitPrice;
+    } else {
+      return midUnitPrice;
+    }
+  };
+
   before('Set up for testing', async function () {
     const blockNumber = await ethers.provider.getBlockNumber();
     const network = await ethers.provider.getNetwork();
@@ -218,10 +240,7 @@ describe('ZC e2e test', async function () {
       })
       .then((tx) => tx.wait());
 
-    const marketDetail = await lendingMarketController.getOrderBookDetail(
-      hexETH,
-      maturities[0],
-    );
+    const orderUnitPrice = await getOrderUnitPrice(hexETH, maturities[0]);
 
     const lendingMarket = await lendingMarketController
       .getLendingMarket(hexETH)
@@ -241,7 +260,7 @@ describe('ZC e2e test', async function () {
         maturities[0],
         Side.LEND,
         depositAmountInETH,
-        marketDetail.midUnitPrice,
+        orderUnitPrice,
       )
       .then((tx) => tx.wait());
 
@@ -252,7 +271,7 @@ describe('ZC e2e test', async function () {
         maturities[0],
         Side.BORROW,
         depositAmountInETH,
-        marketDetail.midUnitPrice,
+        orderUnitPrice,
       )
       .then((tx) => tx.wait());
 
@@ -264,7 +283,7 @@ describe('ZC e2e test', async function () {
         maturities[0],
         Side.LEND,
         depositAmountInETH,
-        marketDetail.midUnitPrice,
+        orderUnitPrice,
       );
 
     const { futureValue: aliceFVBefore } =
@@ -336,7 +355,7 @@ describe('ZC e2e test', async function () {
       futureValueVaultAddresses,
     );
 
-    const marketDetail = await lendingMarketController.getOrderBookDetail(
+    const orderUnitPrice = await getOrderUnitPrice(
       targetCurrency,
       maturities[0],
     );
@@ -370,7 +389,7 @@ describe('ZC e2e test', async function () {
         maturities[0],
         Side.LEND,
         orderAmountInFIL,
-        marketDetail.midUnitPrice,
+        orderUnitPrice,
       )
       .then((tx) => tx.wait());
 
@@ -382,7 +401,7 @@ describe('ZC e2e test', async function () {
         maturities[0],
         Side.BORROW,
         orderAmountInFIL,
-        marketDetail.midUnitPrice,
+        orderUnitPrice,
       )
       .then((tx) => tx.wait());
 
@@ -390,7 +409,7 @@ describe('ZC e2e test', async function () {
     // NOTE: The formula is: futureValue = amount / unitPrice.
     const calculatedFV = BigNumberJS(orderAmountInFIL)
       .times(BP)
-      .div(marketDetail.midUnitPrice.toNumber())
+      .div(orderUnitPrice.toNumber())
       .dp(0)
       .toFixed();
 
@@ -414,6 +433,7 @@ describe('ZC e2e test', async function () {
       aliceSigner.address,
     );
     const [aliceFVInFutureValue] = await futureValueVault.getBalance(
+      orderBookIds[0],
       aliceSigner.address,
     );
 
@@ -463,10 +483,7 @@ describe('ZC e2e test', async function () {
   });
 
   it('Execute auto-roll', async function () {
-    const marketDetail = await lendingMarketController.getOrderBookDetail(
-      hexETH,
-      maturities[0],
-    );
+    const orderUnitPrice = await getOrderUnitPrice(hexETH, maturities[0]);
 
     const lendingMarket = await lendingMarketController
       .getLendingMarket(hexETH)
@@ -486,7 +503,7 @@ describe('ZC e2e test', async function () {
         maturities[0],
         Side.LEND,
         '100000000000000000',
-        marketDetail.midUnitPrice,
+        orderUnitPrice,
       );
     await lendingMarketController
       .connect(bobSigner)
@@ -495,7 +512,7 @@ describe('ZC e2e test', async function () {
         maturities[0],
         Side.BORROW,
         '100000000000000000',
-        marketDetail.midUnitPrice,
+        orderUnitPrice,
       );
 
     const { futureValue: aliceFVBefore } =
@@ -505,7 +522,7 @@ describe('ZC e2e test', async function () {
         aliceSigner.address,
       );
 
-    await executeAutoRoll(marketDetail.midUnitPrice);
+    await executeAutoRoll(orderUnitPrice.toString());
 
     const positions = await lendingMarketController.getPositions(
       [hexETH],
