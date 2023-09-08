@@ -184,7 +184,7 @@ library OrderReaderLogic {
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
-        (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, , , ) = orderBook
+        (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, ) = orderBook
             .getOrderExecutionConditions(
                 _side,
                 _unitPrice,

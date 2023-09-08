@@ -33,7 +33,7 @@ const currencies: Currency[] = [
     env: process.env.TOKEN_WFIL,
     haircut: 0,
     orderFeeRate: 100,
-    circuitBreakerLimitRange: 1000,
+    circuitBreakerLimitRange: 500,
     isCollateral: false,
     args: ['250000000000000000000000000'], // 250,000,000 wFIL
     priceFeed: {
@@ -48,7 +48,7 @@ const currencies: Currency[] = [
     env: process.env.TOKEN_USDC,
     haircut: 0,
     orderFeeRate: 100,
-    circuitBreakerLimitRange: 1000,
+    circuitBreakerLimitRange: 500,
     isCollateral: true,
     args: ['1000000000000000'], // 1,000,000,000 USDC,
     priceFeed: {
@@ -63,7 +63,7 @@ const currencies: Currency[] = [
     env: process.env.TOKEN_WBTC,
     haircut: 0,
     orderFeeRate: 100,
-    circuitBreakerLimitRange: 1000,
+    circuitBreakerLimitRange: 500,
     isCollateral: true,
     args: ['4000000000000'], // 40,000 BTC,
     priceFeed: {
@@ -78,7 +78,7 @@ const currencies: Currency[] = [
     env: process.env.TOKEN_WETH,
     haircut: 0,
     orderFeeRate: 100,
-    circuitBreakerLimitRange: 1000,
+    circuitBreakerLimitRange: 500,
     isCollateral: true,
     args: [],
     priceFeed: {

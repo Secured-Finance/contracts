@@ -173,7 +173,7 @@ describe('Integration Test: Itayose', async () => {
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
-          8490,
+          8300,
           {
             value: orderAmount.mul(2),
           },
@@ -185,11 +185,10 @@ describe('Integration Test: Itayose', async () => {
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          8510,
+          8300,
         );
 
       // Auto-roll
-      await createSampleETHOrders(owner, maturities[1], '8000');
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateOrderBooks(hexETH),

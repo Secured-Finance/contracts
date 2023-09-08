@@ -353,6 +353,11 @@ describe('LendingMarketController - Calculations', () => {
           },
           {
             side: Side.LEND,
+            amount: '200000000000000000',
+            unitPrice: '9000',
+          },
+          {
+            side: Side.BORROW,
             amount: '100000000000000000',
             unitPrice: '9000',
           },
@@ -413,6 +418,7 @@ describe('LendingMarketController - Calculations', () => {
               order.amount,
               order.unitPrice,
             );
+          await ethers.provider.send('evm_mine', []);
         }
 
         const estimation = await lendingMarketControllerProxy

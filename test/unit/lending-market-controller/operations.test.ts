@@ -148,19 +148,41 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '9950',
+          '9000',
         );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+
+      await ethers.provider.send('evm_mine', []);
 
       const detail = await lendingMarketControllerProxy.getOrderBookDetail(
         targetCurrency,
         maturities[0],
       );
 
-      expect(detail.bestLendUnitPrice).to.equal('9950');
+      expect(detail.bestLendUnitPrice).to.equal('9000');
       expect(detail.bestBorrowUnitPrice).to.equal('5000');
-      expect(detail.marketUnitPrice).to.equal('0');
-      expect(detail.maxLendUnitPrice).to.equal('9960');
-      expect(detail.minBorrowUnitPrice).to.equal('4800');
+      expect(detail.marketUnitPrice).to.equal('8000');
+      expect(detail.maxLendUnitPrice).to.equal('8800');
+      expect(detail.minBorrowUnitPrice).to.equal('7600');
       expect(detail.openingUnitPrice).to.equal('0');
       expect(detail.isReady).to.equal(true);
     });
@@ -183,19 +205,41 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '9950',
+          '9000',
         );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '8000',
+        );
+
+      await ethers.provider.send('evm_mine', []);
 
       const details = await lendingMarketControllerProxy.getOrderBookDetails([
         targetCurrency,
       ]);
 
       expect(details.length).to.equal(5);
-      expect(details[0].bestLendUnitPrice).to.equal('9950');
+      expect(details[0].bestLendUnitPrice).to.equal('9000');
       expect(details[0].bestBorrowUnitPrice).to.equal('5000');
-      expect(details[0].marketUnitPrice).to.equal('0');
-      expect(details[0].maxLendUnitPrice).to.equal('9960');
-      expect(details[0].minBorrowUnitPrice).to.equal('4800');
+      expect(details[0].marketUnitPrice).to.equal('8000');
+      expect(details[0].maxLendUnitPrice).to.equal('8800');
+      expect(details[0].minBorrowUnitPrice).to.equal('7600');
       expect(details[0].openingUnitPrice).to.equal('0');
       expect(details[0].isReady).to.equal(true);
     });

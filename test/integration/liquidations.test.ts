@@ -1539,30 +1539,10 @@ describe('Integration Test: Liquidations', async () => {
             orderAmountInUSDC.mul(2),
             '8000',
           );
-
-        await lendingMarketController
-          .connect(owner)
-          .executeOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.BORROW,
-            orderAmountInFIL,
-            '10000',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .depositAndExecuteOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.LEND,
-            orderAmountInFIL,
-            '10000',
-          );
       });
 
       it('Execute liquidation', async () => {
-        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul(6).div(5));
+        await wFilToETHPriceFeed.updateAnswer(wFilToETHRate.mul(7).div(5));
 
         await usdcToken
           .connect(carol)
@@ -1611,7 +1591,7 @@ describe('Integration Test: Liquidations', async () => {
         expect(liquidatorInfoAfter.pvs[1]).gt(0);
 
         const pv0InUSDC = liquidatorInfoAfter.pvs[0]
-          .mul(wFilToETHRate.mul(6).div(5))
+          .mul(wFilToETHRate.mul(7).div(5))
           .div(BigNumber.from(10).pow(12))
           .div(usdcToETHRate);
 

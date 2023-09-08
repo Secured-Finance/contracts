@@ -96,10 +96,12 @@ library OrderBookLogic {
         view
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
-        return
-            _getOrderBook(_orderBookId).getCircuitBreakerThresholds(
-                Storage.slot().circuitBreakerLimitRange
-            );
+        maxLendUnitPrice = _getOrderBook(_orderBookId).getLendCircuitBreakerThreshold(
+            Storage.slot().circuitBreakerLimitRange
+        );
+        minBorrowUnitPrice = _getOrderBook(_orderBookId).getBorrowCircuitBreakerThreshold(
+            Storage.slot().circuitBreakerLimitRange
+        );
     }
 
     function getBestLendUnitPrice(uint8 _orderBookId) public view returns (uint256) {

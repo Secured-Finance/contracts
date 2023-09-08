@@ -1131,7 +1131,7 @@ describe('LendingMarketController - Orders', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '5000',
+          '7500',
         );
       await expect(
         lendingMarketControllerProxy
@@ -1141,7 +1141,7 @@ describe('LendingMarketController - Orders', () => {
             maturities[0],
             Side.BORROW,
             '100000000000000000',
-            '5000',
+            '7500',
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
@@ -1175,8 +1175,8 @@ describe('LendingMarketController - Orders', () => {
 
       expect(positions[0].ccy).to.equal(targetCurrency);
       expect(positions[0].maturity).to.equal(maturities[0]);
-      expect(positions[0].futureValue).to.equal('75000000000000000');
-      expect(positions[0].presentValue).to.equal('37500000000000000');
+      expect(positions[0].futureValue).to.equal('8333333333333333');
+      expect(positions[0].presentValue).to.equal('6250000000000000');
     });
 
     it('Get active positions from multiple markets', async () => {

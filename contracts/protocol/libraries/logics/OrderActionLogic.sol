@@ -16,6 +16,7 @@ library OrderActionLogic {
 
     error InvalidAmount();
     error InvalidFutureValue();
+    error EmptyOrderBook();
     error OppositeSideOrderExists();
 
     struct OrderExecutionConditions {
@@ -212,11 +213,13 @@ library OrderActionLogic {
             vars.conditions.executedUnitPrice,
             vars.conditions.ignoreRemainingAmount,
             vars.conditions.orderExists
-        ) = orderBook.getAndUpdateOrderExecutionConditions(
+        ) = orderBook.getOrderExecutionConditions(
             _side,
             _unitPrice,
             Storage.slot().circuitBreakerLimitRange
         );
+
+        if (_unitPrice == 0 && !vars.conditions.orderExists) revert EmptyOrderBook();
 
         if (vars.conditions.isFilled) {
             (
@@ -332,11 +335,13 @@ library OrderActionLogic {
             conditions.executedUnitPrice,
             conditions.ignoreRemainingAmount,
             conditions.orderExists
-        ) = orderBook.getAndUpdateOrderExecutionConditions(
+        ) = orderBook.getOrderExecutionConditions(
             _side,
             0,
             Storage.slot().circuitBreakerLimitRange
         );
+
+        if (!conditions.orderExists) revert EmptyOrderBook();
 
         if (conditions.isFilled) {
             (filledOrder, partiallyFilledOrder, isCircuitBreakerTriggered) = _unwindPosition(
