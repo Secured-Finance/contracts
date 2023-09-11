@@ -63,6 +63,9 @@ describe('LendingMarketController - Calculations', () => {
 
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getHaircut.returns(8000);
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('10');
     await mockTokenVault.mock.addDepositAmount.returns();
     await mockTokenVault.mock.removeDepositAmount.returns();
     await mockTokenVault.mock.depositFrom.returns();
@@ -350,6 +353,11 @@ describe('LendingMarketController - Calculations', () => {
           },
           {
             side: Side.LEND,
+            amount: '200000000000000000',
+            unitPrice: '9000',
+          },
+          {
+            side: Side.BORROW,
             amount: '100000000000000000',
             unitPrice: '9000',
           },
@@ -410,6 +418,7 @@ describe('LendingMarketController - Calculations', () => {
               order.amount,
               order.unitPrice,
             );
+          await ethers.provider.send('evm_mine', []);
         }
 
         const estimation = await lendingMarketControllerProxy

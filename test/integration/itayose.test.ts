@@ -173,7 +173,7 @@ describe('Integration Test: Itayose', async () => {
           maturities[1],
           Side.LEND,
           orderAmount.mul(2),
-          8490,
+          8300,
           {
             value: orderAmount.mul(2),
           },
@@ -185,11 +185,10 @@ describe('Integration Test: Itayose', async () => {
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          8510,
+          8300,
         );
 
       // Auto-roll
-      await createSampleETHOrders(owner, maturities[1], '8000');
       await time.increaseTo(maturities[0].toString());
       await expect(
         lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
@@ -212,7 +211,7 @@ describe('Integration Test: Itayose', async () => {
       expect(marketInfo.openingDate).to.equal(maturities[0]);
       expect(marketInfo.borrowUnitPrice).to.equal('10000');
       expect(marketInfo.lendUnitPrice).to.equal('0');
-      expect(marketInfo.midUnitPrice).to.equal('5000');
+      expect(marketInfo.marketUnitPrice).to.equal('0');
       expect(marketInfo.openingUnitPrice).to.equal('5000');
     });
   });
@@ -359,7 +358,7 @@ describe('Integration Test: Itayose', async () => {
       expect(marketInfo.openingDate).to.equal(maturities[0]);
       expect(marketInfo.borrowUnitPrice).to.equal('7300');
       expect(marketInfo.lendUnitPrice).to.equal('7200');
-      expect(marketInfo.midUnitPrice).to.equal('7250');
+      expect(marketInfo.marketUnitPrice).to.equal('7300');
       expect(openingUnitPrice).to.equal('7300');
       expect(marketInfo.openingUnitPrice).to.equal('7300');
     });

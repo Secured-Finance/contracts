@@ -158,9 +158,9 @@ contract LendingMarketController is
      * @notice Gets detailed information on the order book.
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the market
-     * @return bestLendUnitPrice The best lend price per future value
-     * @return bestBorrowUnitPrice The best borrow price per future value
-     * @return midUnitPrice The mid price per future value
+     * @return bestLendUnitPrice The best lend price
+     * @return bestBorrowUnitPrice The best borrow price
+     * @return marketUnitPrice The market unit price
      * @return maxLendUnitPrice The maximum unit price for lending
      * @return minBorrowUnitPrice The minimum unit price for borrowing
      * @return openingUnitPrice The opening price when Itayose is executed
@@ -174,7 +174,7 @@ contract LendingMarketController is
         returns (
             uint256 bestLendUnitPrice,
             uint256 bestBorrowUnitPrice,
-            uint256 midUnitPrice,
+            uint256 marketUnitPrice,
             uint256 maxLendUnitPrice,
             uint256 minBorrowUnitPrice,
             uint256 openingUnitPrice,
@@ -233,18 +233,6 @@ contract LendingMarketController is
     {
         return
             ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestBorrowUnitPrices(
-                Storage.slot().orderBookIdLists[_ccy]
-            );
-    }
-
-    /**
-     * @notice Gets mid prices per future value for the selected currency.
-     * @param _ccy Currency name in bytes32
-     * @return Array with the mid prices per future value of the lending market
-     */
-    function getMidUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
-        return
-            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getMidUnitPrices(
                 Storage.slot().orderBookIdLists[_ccy]
             );
     }

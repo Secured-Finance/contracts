@@ -14,9 +14,6 @@ library Constants {
     /// @dev Used for maximum order count per currency
     uint256 internal constant MAXIMUM_ORDER_COUNT = 20;
 
-    /// @dev Used for minimum threshold for circuit breaker unit price threshold
-    uint256 internal constant MINIMUM_CIRCUIT_BREAKER_THRESHOLD = 10;
-
-    /// @dev Used for maximum threshold for circuit breaker unit price threshold
-    uint256 internal constant MAXIMUM_CIRCUIT_BREAKER_THRESHOLD = 200;
+    /// @dev Used for minimum range for circuit breaker unit price
+    uint256 internal constant MINIMUM_CIRCUIT_BREAKER_RANGE = 100;
 }

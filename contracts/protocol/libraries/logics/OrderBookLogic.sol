@@ -6,6 +6,7 @@ import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.s
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 import {LendingMarketStorage as Storage, ItayoseLog} from "../../storages/LendingMarketStorage.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
+import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 
 library OrderBookLogic {
     using OrderBookLib for OrderBookLib.OrderBook;
@@ -28,30 +29,66 @@ library OrderBookLogic {
         uint256 offsetAmount
     );
 
+    function isReady(uint8 _orderBookId) public view returns (bool) {
+        return Storage.slot().isReady[_getOrderBook(_orderBookId).maturity];
+    }
+
+    function isMatured(uint8 _orderBookId) public view returns (bool) {
+        return _getOrderBook(_orderBookId).isMatured();
+    }
+
+    function isOpened(uint8 _orderBookId) public view returns (bool) {
+        return
+            isReady(_orderBookId) &&
+            !isMatured(_orderBookId) &&
+            block.timestamp >= _getOrderBook(_orderBookId).openingDate;
+    }
+
+    function isItayosePeriod(uint8 _orderBookId) public view returns (bool) {
+        return
+            block.timestamp >=
+            (_getOrderBook(_orderBookId).openingDate - OrderBookLib.ITAYOSE_PERIOD) &&
+            !isReady(_orderBookId);
+    }
+
+    function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool) {
+        uint256 openingDate = _getOrderBook(_orderBookId).openingDate;
+        return
+            block.timestamp >= (openingDate - OrderBookLib.PRE_ORDER_PERIOD) &&
+            block.timestamp < (openingDate - OrderBookLib.ITAYOSE_PERIOD);
+    }
+
     function getOrderBookDetail(uint8 _orderBookId)
         public
         view
-        returns (
-            bytes32 ccy,
-            uint256 maturity,
-            uint256 openingDate,
-            uint256 borrowUnitPrice,
-            uint256 lendUnitPrice,
-            uint256 midUnitPrice,
-            uint256 openingUnitPrice,
-            bool isReady
-        )
+        returns (ILendingMarket.OrderBook memory)
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
+        uint256 maturity = orderBook.maturity;
 
-        ccy = Storage.slot().ccy;
-        maturity = orderBook.maturity;
-        openingDate = orderBook.openingDate;
-        borrowUnitPrice = orderBook.getBestLendUnitPrice();
-        lendUnitPrice = orderBook.getBestBorrowUnitPrice();
-        midUnitPrice = getMidUnitPrice(_orderBookId);
-        openingUnitPrice = Storage.slot().itayoseLogs[orderBook.maturity].openingUnitPrice;
-        isReady = Storage.slot().isReady[maturity];
+        return
+            ILendingMarket.OrderBook({
+                ccy: Storage.slot().ccy,
+                maturity: maturity,
+                openingDate: orderBook.openingDate,
+                borrowUnitPrice: orderBook.getBestLendUnitPrice(),
+                lendUnitPrice: orderBook.getBestBorrowUnitPrice(),
+                marketUnitPrice: orderBook.getMarketUnitPrice(),
+                openingUnitPrice: Storage.slot().itayoseLogs[orderBook.maturity].openingUnitPrice,
+                isReady: Storage.slot().isReady[maturity]
+            });
+    }
+
+    function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256) {
+        return _getOrderBook(_orderBookId).getMarketUnitPrice();
+    }
+
+    function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count)
+        external
+        view
+        returns (uint256)
+    {
+        return _getOrderBook(_orderBookId).getBlockUnitPriceAverage(_count);
     }
 
     function getCircuitBreakerThresholds(uint8 _orderBookId)
@@ -59,10 +96,12 @@ library OrderBookLogic {
         view
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
-        return
-            _getOrderBook(_orderBookId).getCircuitBreakerThresholds(
-                Storage.slot().circuitBreakerLimitRange
-            );
+        maxLendUnitPrice = _getOrderBook(_orderBookId).getLendCircuitBreakerThreshold(
+            Storage.slot().circuitBreakerLimitRange
+        );
+        minBorrowUnitPrice = _getOrderBook(_orderBookId).getBorrowCircuitBreakerThreshold(
+            Storage.slot().circuitBreakerLimitRange
+        );
     }
 
     function getBestLendUnitPrice(uint8 _orderBookId) public view returns (uint256) {
@@ -94,25 +133,6 @@ library OrderBookLogic {
 
         for (uint256 i; i < _orderBookIds.length; i++) {
             unitPrices[i] = _getOrderBook(_orderBookIds[i]).getBestBorrowUnitPrice();
-        }
-    }
-
-    function getMidUnitPrice(uint8 _orderBookId) public view returns (uint256) {
-        OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        uint256 borrowUnitPrice = orderBook.getBestLendUnitPrice();
-        uint256 lendUnitPrice = orderBook.getBestBorrowUnitPrice();
-        return (borrowUnitPrice + lendUnitPrice).div(2);
-    }
-
-    function getMidUnitPrices(uint8[] memory _orderBookIds)
-        external
-        view
-        returns (uint256[] memory unitPrices)
-    {
-        unitPrices = new uint256[](_orderBookIds.length);
-
-        for (uint256 i; i < _orderBookIds.length; i++) {
-            unitPrices[i] = getMidUnitPrice(_orderBookIds[i]);
         }
     }
 
@@ -190,14 +210,32 @@ library OrderBookLogic {
         emit OrderBookCreated(orderBookId, _maturity, _openingDate);
     }
 
-    function reopenOrderBook(
-        uint8 _orderBookId,
+    function executeAutoRoll(
+        uint8 _maturedOrderBookId,
+        uint8 _destinationOrderBookId,
         uint256 _newMaturity,
-        uint256 _openingDate
+        uint256 _openingDate,
+        uint256 _autoRollUnitPrice
     ) external {
-        OrderBookLib.OrderBook storage orderBook = Storage.slot().orderBooks[_orderBookId];
-        if (!orderBook.isMatured()) revert OrderBookNotMatured();
-        Storage.slot().isReady[_newMaturity] = orderBook.initialize(_newMaturity, _openingDate);
+        OrderBookLib.OrderBook storage maturedOrderBook = Storage.slot().orderBooks[
+            _maturedOrderBookId
+        ];
+        if (!maturedOrderBook.isMatured()) revert OrderBookNotMatured();
+
+        Storage.slot().isReady[_newMaturity] = maturedOrderBook.initialize(
+            _newMaturity,
+            _openingDate
+        );
+
+        OrderBookLib.OrderBook storage destinationOrderBook = Storage.slot().orderBooks[
+            _destinationOrderBookId
+        ];
+
+        // NOTE: The auto-roll destination order book has no market unit price if the order has never been filled before.
+        // In this case, the market unit price is updated with the unit price of the auto-roll.
+        if (destinationOrderBook.getMarketUnitPrice() == 0) {
+            destinationOrderBook.setInitialBlockUnitPrice(_autoRollUnitPrice);
+        }
     }
 
     function executeItayoseCall(uint8 _orderBookId)
@@ -226,12 +264,17 @@ library OrderBookLogic {
             for (uint256 i; i < sides.length; i++) {
                 ProtocolTypes.Side partiallyFilledOrderSide;
                 PartiallyFilledOrder memory partiallyFilledOrder;
-                (, partiallyFilledOrder, , ) = orderBook.fillOrders(
+                FilledOrder memory filledOrder;
+                (filledOrder, partiallyFilledOrder, , ) = orderBook.fillOrders(
                     sides[i],
                     totalOffsetAmount,
                     0,
                     0
                 );
+
+                if (filledOrder.futureValue > 0) {
+                    orderBook.setInitialBlockUnitPrice(openingUnitPrice);
+                }
 
                 if (partiallyFilledOrder.futureValue > 0) {
                     if (sides[i] == ProtocolTypes.Side.LEND) {

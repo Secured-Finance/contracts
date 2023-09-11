@@ -2,7 +2,10 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract } from 'ethers';
 import { artifacts, ethers, waffle } from 'hardhat';
 
-import { MARKET_BASE_PERIOD } from '../../common/constants';
+import {
+  MARKET_BASE_PERIOD,
+  MINIMUM_RELIABLE_AMOUNT,
+} from '../../common/constants';
 
 // contracts
 const AddressResolver = artifacts.require('AddressResolver');
@@ -186,7 +189,7 @@ const deployContracts = async (owner: SignerWithAddress) => {
         OrderBookLogic: orderBookLogic.address,
       },
     })
-    .then((factory) => factory.deploy());
+    .then((factory) => factory.deploy(MINIMUM_RELIABLE_AMOUNT));
   const futureValueVault = await deployContract(owner, FutureValueVault);
 
   await beaconProxyControllerProxy.setLendingMarketImpl(lendingMarket.address);

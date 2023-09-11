@@ -13,10 +13,6 @@ library OrderReaderLogic {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
-    function isMatured(uint8 _orderBookId) external view returns (bool) {
-        return _getOrderBook(_orderBookId).isMatured();
-    }
-
     function getOrder(uint8 _orderBookId, uint48 _orderId)
         external
         view
@@ -188,7 +184,7 @@ library OrderReaderLogic {
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
-        (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, , , ) = orderBook
+        (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, ) = orderBook
             .getOrderExecutionConditions(
                 _side,
                 _unitPrice,

@@ -46,16 +46,20 @@ contract LendingMarketCaller {
         );
     }
 
-    function reopenOrderBook(
+    function executeAutoRoll(
         bytes32 _ccy,
-        uint8 _orderBookId,
+        uint8 _maturedOrderBookId,
+        uint8 _destinationOrderBookId,
         uint256 _newMaturity,
-        uint256 _openingDate
+        uint256 _openingDate,
+        uint256 _autoRollUnitPrice
     ) external {
-        ILendingMarket(lendingMarkets[_ccy]).reopenOrderBook(
-            _orderBookId,
+        ILendingMarket(lendingMarkets[_ccy]).executeAutoRoll(
+            _maturedOrderBookId,
+            _destinationOrderBookId,
             _newMaturity,
-            _openingDate
+            _openingDate,
+            _autoRollUnitPrice
         );
     }
 

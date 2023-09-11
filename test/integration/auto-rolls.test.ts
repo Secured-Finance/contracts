@@ -229,13 +229,15 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(aliceFVAfter).to.equal(aliceActualFV.abs());
 
       // Check present value
-      const midUnitPrice = await lendingMarket.getMidUnitPrice(orderBookIds[0]);
+      const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
+        orderBookIds[0],
+      );
       const alicePV = await lendingMarketController.getTotalPresentValue(
         hexETH,
         alice.address,
       );
 
-      expect(alicePV).to.equal(aliceActualFV.mul(midUnitPrice).div(BP));
+      expect(alicePV).to.equal(aliceActualFV.mul(marketUnitPrice).div(BP));
     });
 
     it('Execute auto-roll (1st time)', async () => {
@@ -818,13 +820,17 @@ describe('Integration Test: Auto-rolls', async () => {
           dave.address,
         );
 
-      const midUnitPrice = await lendingMarket.getMidUnitPrice(orderBookIds[0]);
+      const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
+        orderBookIds[0],
+      );
       const davePV = await lendingMarketController.getTotalPresentValue(
         hexETH,
         dave.address,
       );
 
-      expect(davePV.sub(daveActualFV.mul(midUnitPrice).div(BP)).abs()).lte(1);
+      expect(davePV.sub(daveActualFV.mul(marketUnitPrice).div(BP)).abs()).lte(
+        1,
+      );
     });
 
     it('Check future values', async () => {

@@ -58,11 +58,12 @@ library LendingMarketUserLogic {
             input.unitPrice
         );
 
-        (coverage, isInsufficientDepositAmount) = _calculateCollateralCoverage(
+        (coverage, isInsufficientDepositAmount) = _estimateCollateralCoverage(
             input.ccy,
             input.maturity,
             input.user,
             input.side,
+            input.unitPrice,
             input.additionalDepositAmount,
             input.ignoreBorrowedAmount,
             filledAmount,
@@ -448,11 +449,12 @@ library LendingMarketUserLogic {
         );
     }
 
-    function _calculateCollateralCoverage(
+    function _estimateCollateralCoverage(
         bytes32 _ccy,
         uint256 _maturity,
         address _user,
         ProtocolTypes.Side _side,
+        uint256 _unitPrice,
         uint256 _additionalDepositAmount,
         bool _ignoreBorrowedAmount,
         uint256 _filledAmount,
@@ -468,10 +470,11 @@ library LendingMarketUserLogic {
             filledAmountWithFeeInFV += _orderFeeInFV;
         }
 
-        uint256 filledAmountWithFeeInPV = FundManagementLogic.calculatePVFromFV(
+        uint256 filledAmountWithFeeInPV = _estimatePVFromFV(
             _ccy,
             _maturity,
-            filledAmountWithFeeInFV
+            filledAmountWithFeeInFV,
+            _unitPrice
         );
 
         ILendingMarketController.AdditionalFunds memory funds;
@@ -504,6 +507,22 @@ library LendingMarketUserLogic {
             _user,
             funds
         );
+    }
+
+    function _estimatePVFromFV(
+        bytes32 _ccy,
+        uint256 _maturity,
+        uint256 _amount,
+        uint256 _unitPrice
+    ) internal view returns (uint256) {
+        uint256 marketUnitPrice = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
+            .getMarketUnitPrice(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
+
+        if (marketUnitPrice == 0) {
+            marketUnitPrice = _unitPrice;
+        }
+
+        return (_amount * marketUnitPrice).div(Constants.PRICE_DIGIT);
     }
 
     function _flattenOrders(ILendingMarketController.Order[][] memory orders, uint256 totalLength)

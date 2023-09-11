@@ -31,14 +31,20 @@ library OrderBookLib {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
-    uint256 private constant PRE_ORDER_PERIOD = 7 days;
-    uint256 private constant ITAYOSE_PERIOD = 1 hours;
+    uint256 public constant PRE_ORDER_PERIOD = 7 days;
+    uint256 public constant ITAYOSE_PERIOD = 1 hours;
 
     error EmptyOrderBook();
     error PastMaturityOrderExists();
 
     struct OrderBook {
         uint48 lastOrderId;
+        uint48 lastOrderBlockNumber;
+        bool isReliableBlock;
+        // Micro slots for block unit price history
+        uint80 blockUnitPriceHistory;
+        uint256 blockTotalAmount;
+        uint256 blockTotalFutureValue;
         uint256 openingDate;
         uint256 maturity;
         // Mapping from user to active lend order ids
@@ -55,8 +61,6 @@ library OrderBookLib {
         mapping(uint256 => OrderStatisticsTreeLib.Tree) lendOrders;
         // Mapping from maturity to borrowing orders
         mapping(uint256 => OrderStatisticsTreeLib.Tree) borrowOrders;
-        // Mapping from order side to threshold unit price of circuit breaker per block
-        mapping(uint256 => mapping(ProtocolTypes.Side => uint256)) circuitBreakerThresholdUnitPrices;
     }
 
     function initialize(
@@ -66,6 +70,13 @@ library OrderBookLib {
     ) internal returns (bool isReady) {
         self.maturity = _maturity;
         self.openingDate = _openingDate;
+
+        self.lastOrderId = 0;
+        self.lastOrderBlockNumber = 0;
+        self.blockTotalAmount = 0;
+        self.blockTotalFutureValue = 0;
+        self.blockUnitPriceHistory = 0;
+        self.isReliableBlock = false;
 
         if (block.timestamp >= (_openingDate - ITAYOSE_PERIOD)) {
             isReady = true;
@@ -105,6 +116,47 @@ library OrderBookLib {
             uint256 timestamp
         ) = _unpackOrder(self.orders[_orderId]);
         order = PlacedOrder(side, unitPrice, maturity, timestamp);
+    }
+
+    function getMarketUnitPrice(OrderBook storage self) internal view returns (uint256 unitPrice) {
+        unitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
+
+        // NOTE: If an order is in the first block of the order book, the block unit price history is empty.
+        // In this case, the market unit price is calculated from the current block total amount and total future value
+        // to avoid unwinding or liquidation the order in the same block using 0 as the market unit price.
+        if ((self.lastOrderBlockNumber != block.number || unitPrice == 0) && self.isReliableBlock) {
+            unitPrice = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
+                self.blockTotalFutureValue
+            );
+        }
+    }
+
+    function getBlockUnitPriceAverage(OrderBook storage self, uint256 _maxCount)
+        internal
+        view
+        returns (uint256 unitPrice)
+    {
+        uint256[] memory unitPrices = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory);
+        uint256 length = unitPrices.length;
+        uint256 sum;
+        uint256 count;
+
+        if (self.lastOrderBlockNumber != block.number && self.isReliableBlock) {
+            sum = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(self.blockTotalFutureValue);
+            count = 1;
+            _maxCount--;
+        }
+
+        for (uint256 i; i < _maxCount; i++) {
+            if (i >= length || unitPrices[i] == 0) {
+                break;
+            }
+
+            sum += unitPrices[i];
+            count++;
+        }
+
+        unitPrice = count > 0 ? sum.div(count) : 0;
     }
 
     function getLendOrderBook(OrderBook storage self, uint256 _limit)
@@ -368,6 +420,48 @@ library OrderBookLib {
         );
     }
 
+    function setInitialBlockUnitPrice(OrderBook storage self, uint256 _unitPrice) internal {
+        self.blockUnitPriceHistory = uint16(_unitPrice);
+        self.lastOrderBlockNumber = uint48(block.number);
+    }
+
+    function updateBlockUnitPriceHistory(
+        OrderBook storage self,
+        uint256 _filledAmount,
+        uint256 _filledFutureValue,
+        uint256 _minimumReliableAmount
+    ) internal {
+        uint256 latestBlockUnitPrice = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory)[0];
+
+        if (self.lastOrderBlockNumber != block.number) {
+            if (self.isReliableBlock) {
+                latestBlockUnitPrice = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
+                    self.blockTotalFutureValue
+                );
+
+                // Remove the oldest block unit price and add the latest block unit price
+                self.blockUnitPriceHistory =
+                    uint16(latestBlockUnitPrice) |
+                    (self.blockUnitPriceHistory << 16);
+            }
+
+            self.lastOrderBlockNumber = uint48(block.number);
+            self.blockTotalAmount = _filledAmount;
+            self.blockTotalFutureValue = _filledFutureValue;
+            self.isReliableBlock = false;
+        } else {
+            self.blockTotalAmount += _filledAmount;
+            self.blockTotalFutureValue += _filledFutureValue;
+        }
+
+        if (
+            self.blockTotalAmount >= _minimumReliableAmount ||
+            (self.blockTotalAmount > 0 && latestBlockUnitPrice == 0)
+        ) {
+            self.isReliableBlock = true;
+        }
+    }
+
     function removeOrder(
         OrderBook storage self,
         address _user,
@@ -447,39 +541,6 @@ library OrderBookLib {
         }
     }
 
-    function getAndUpdateOrderExecutionConditions(
-        OrderBook storage self,
-        ProtocolTypes.Side _side,
-        uint256 _unitPrice,
-        uint256 _circuitBreakerLimitRange
-    )
-        internal
-        returns (
-            bool isFilled,
-            uint256 executedUnitPrice,
-            bool ignoreRemainingAmount,
-            bool orderExists
-        )
-    {
-        uint256 cbThresholdUnitPrice;
-        bool isFirstOrderInBlock;
-
-        (
-            isFilled,
-            executedUnitPrice,
-            ignoreRemainingAmount,
-            orderExists,
-            cbThresholdUnitPrice,
-            isFirstOrderInBlock
-        ) = getOrderExecutionConditions(self, _side, _unitPrice, _circuitBreakerLimitRange);
-
-        if (_unitPrice == 0 && !orderExists) revert EmptyOrderBook();
-
-        if (isFirstOrderInBlock) {
-            self.circuitBreakerThresholdUnitPrices[block.number][_side] = cbThresholdUnitPrice;
-        }
-    }
-
     function getOrderExecutionConditions(
         OrderBook storage self,
         ProtocolTypes.Side _side,
@@ -492,42 +553,30 @@ library OrderBookLib {
             bool isFilled,
             uint256 executedUnitPrice,
             bool ignoreRemainingAmount,
-            bool orderExists,
-            uint256 cbThresholdUnitPrice,
-            bool isFirstOrderInBlock
+            bool orderExists
         )
     {
-        cbThresholdUnitPrice = self.circuitBreakerThresholdUnitPrices[block.number][_side];
         bool isLend = _side == ProtocolTypes.Side.LEND;
+        uint256 cbThresholdUnitPrice;
         uint256 bestUnitPrice;
 
         if (isLend) {
             bestUnitPrice = self.borrowOrders[self.maturity].first();
-            orderExists = bestUnitPrice != 0;
-
-            if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = _getLendCircuitBreakerThreshold(
-                    _circuitBreakerLimitRange,
-                    bestUnitPrice
-                );
-                isFirstOrderInBlock = true;
-            }
+            cbThresholdUnitPrice = getLendCircuitBreakerThreshold(self, _circuitBreakerLimitRange);
         } else {
             bestUnitPrice = self.lendOrders[self.maturity].last();
-            orderExists = bestUnitPrice != 0;
-
-            if (orderExists && cbThresholdUnitPrice == 0) {
-                cbThresholdUnitPrice = _getBorrowCircuitBreakerThreshold(
-                    _circuitBreakerLimitRange,
-                    bestUnitPrice
-                );
-                isFirstOrderInBlock = true;
-            }
+            cbThresholdUnitPrice = getBorrowCircuitBreakerThreshold(
+                self,
+                _circuitBreakerLimitRange
+            );
         }
+
+        orderExists = bestUnitPrice != 0;
 
         if (
             _unitPrice == 0 ||
             (orderExists &&
+                cbThresholdUnitPrice != 0 &&
                 ((isLend && _unitPrice > cbThresholdUnitPrice) ||
                     (!isLend && _unitPrice < cbThresholdUnitPrice)))
         ) {
@@ -545,68 +594,41 @@ library OrderBookLib {
         }
     }
 
-    function getCircuitBreakerThresholds(OrderBook storage self, uint256 _circuitBreakerLimitRange)
-        internal
-        view
-        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
-    {
-        maxLendUnitPrice = _getLendCircuitBreakerThreshold(
-            _circuitBreakerLimitRange,
-            getBestLendUnitPrice(self)
-        );
-        minBorrowUnitPrice = _getBorrowCircuitBreakerThreshold(
-            _circuitBreakerLimitRange,
-            getBestBorrowUnitPrice(self)
-        );
-    }
+    function getLendCircuitBreakerThreshold(
+        OrderBook storage self,
+        uint256 _circuitBreakerLimitRange
+    ) internal view returns (uint256 cbThresholdUnitPrice) {
+        uint256 blockUnitPriceAverage = getBlockUnitPriceAverage(self, 3);
+        cbThresholdUnitPrice = (blockUnitPriceAverage *
+            (Constants.PCT_DIGIT + _circuitBreakerLimitRange * 2)).div(Constants.PCT_DIGIT);
 
-    function _getBorrowCircuitBreakerThreshold(
-        uint256 _circuitBreakerLimitRange,
-        uint256 _unitPrice
-    ) private pure returns (uint256 cbThresholdUnitPrice) {
-        // NOTE: Formula of circuit breaker threshold for borrow orders:
-        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 + range))
-        uint256 numerator = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 denominator = _unitPrice *
-            Constants.PCT_DIGIT +
-            (Constants.PRICE_DIGIT - _unitPrice) *
-            (Constants.PCT_DIGIT + _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = numerator.div(denominator);
-
-        if (_unitPrice > cbThresholdUnitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
-            cbThresholdUnitPrice = _unitPrice - Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
+        if (cbThresholdUnitPrice > Constants.PRICE_DIGIT || blockUnitPriceAverage == 0) {
+            cbThresholdUnitPrice = Constants.PRICE_DIGIT;
         } else if (
-            _unitPrice < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+            cbThresholdUnitPrice < blockUnitPriceAverage + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
         ) {
-            cbThresholdUnitPrice = _unitPrice > Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                ? _unitPrice - Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                : 1;
+            cbThresholdUnitPrice = blockUnitPriceAverage + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE;
         }
     }
 
-    function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice)
-        private
-        pure
-        returns (uint256 cbThresholdUnitPrice)
-    {
-        // NOTE: Formula of circuit breaker threshold for lend orders:
-        // cbThreshold = 100 / (1 + (100 / price - 1) * (1 - range))
-        uint256 num = _unitPrice * Constants.PRICE_DIGIT * Constants.PCT_DIGIT;
-        uint256 den = _unitPrice *
-            Constants.PCT_DIGIT +
-            (Constants.PRICE_DIGIT - _unitPrice) *
-            (Constants.PCT_DIGIT - _circuitBreakerLimitRange);
-        cbThresholdUnitPrice = num.div(den);
+    function getBorrowCircuitBreakerThreshold(
+        OrderBook storage self,
+        uint256 _circuitBreakerLimitRange
+    ) internal view returns (uint256 cbThresholdUnitPrice) {
+        uint256 blockUnitPriceAverage = getBlockUnitPriceAverage(self, 5);
+        cbThresholdUnitPrice = (blockUnitPriceAverage *
+            (Constants.PCT_DIGIT - _circuitBreakerLimitRange)).div(Constants.PCT_DIGIT);
 
-        if (cbThresholdUnitPrice > _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD) {
-            cbThresholdUnitPrice = _unitPrice + Constants.MAXIMUM_CIRCUIT_BREAKER_THRESHOLD;
-        } else if (
-            cbThresholdUnitPrice < _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
+        if (
+            cbThresholdUnitPrice == 0 ||
+            blockUnitPriceAverage == 0 ||
+            blockUnitPriceAverage <= Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
         ) {
-            cbThresholdUnitPrice = _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD <=
-                Constants.PRICE_DIGIT
-                ? _unitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_THRESHOLD
-                : Constants.PRICE_DIGIT;
+            cbThresholdUnitPrice = 1;
+        } else if (
+            blockUnitPriceAverage < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
+        ) {
+            cbThresholdUnitPrice = blockUnitPriceAverage - Constants.MINIMUM_CIRCUIT_BREAKER_RANGE;
         }
     }
 
@@ -663,5 +685,19 @@ library OrderBookLib {
         unitPrice = uint16(_order >> 8);
         maturity = uint64(_order >> 24);
         timestamp = uint64(_order >> 88);
+    }
+
+    function _unpackBlockUnitPriceHistory(uint80 _blockUnitPriceHistory)
+        private
+        pure
+        returns (uint256[] memory prices)
+    {
+        prices = new uint256[](5);
+
+        prices[0] = uint16(_blockUnitPriceHistory);
+        prices[1] = uint16(_blockUnitPriceHistory >> 16);
+        prices[2] = uint16(_blockUnitPriceHistory >> 32);
+        prices[3] = uint16(_blockUnitPriceHistory >> 48);
+        prices[4] = uint16(_blockUnitPriceHistory >> 64);
     }
 }

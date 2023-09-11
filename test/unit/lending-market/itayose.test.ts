@@ -203,9 +203,15 @@ describe('LendingMarket - Itayose', () => {
       expect(openingUnitPrice).to.equal(test.openingPrice);
 
       const itayoseLog = await lendingMarket.getItayoseLog(maturity);
+      const marketUnitPrice = await lendingMarket.getMarketUnitPrice(
+        currentOrderBookId,
+      );
 
       expect(itayoseLog.lastLendUnitPrice).to.equal(test.lastLendUnitPrice);
       expect(itayoseLog.lastBorrowUnitPrice).to.equal(test.lastBorrowUnitPrice);
+      expect(marketUnitPrice).to.equal(
+        test.shouldItayoseExecuted ? test.openingPrice : 0,
+      );
     });
   }
 
@@ -278,11 +284,13 @@ describe('LendingMarket - Itayose', () => {
       .add(48, 'h')
       .unix();
 
-    await lendingMarketCaller.reopenOrderBook(
+    await lendingMarketCaller.executeAutoRoll(
       targetCurrency,
+      currentOrderBookId,
       currentOrderBookId,
       newMaturity,
       newOpeningDate,
+      10000,
     );
 
     await expect(

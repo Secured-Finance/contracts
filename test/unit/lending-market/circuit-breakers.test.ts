@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
@@ -10,12 +11,8 @@ import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
 import { deployContracts } from './utils';
 
 describe('LendingMarket - Circuit Breakers', () => {
-  const CIRCUIT_BREAKER_BORROW_THRESHOLD = 8374;
-  const CIRCUIT_BREAKER_LEND_THRESHOLD = 8629;
-  const MAX_DIFFERENCE = 200;
-  const MIN_DIFFERENCE = 10;
-
   let lendingMarketCaller: Contract;
+  let mockCurrencyController: MockContract;
 
   let targetCurrency: string;
   let maturity: number;
@@ -43,8 +40,16 @@ describe('LendingMarket - Circuit Breakers', () => {
     [owner, alice, bob, carol, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
-    ({ lendingMarketCaller, lendingMarket, orderActionLogic } =
-      await deployContracts(owner, targetCurrency));
+    ({
+      mockCurrencyController,
+      lendingMarketCaller,
+      lendingMarket,
+      orderActionLogic,
+    } = await deployContracts(owner, targetCurrency));
+
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('10');
   });
 
   beforeEach(async () => {
@@ -65,14 +70,33 @@ describe('LendingMarket - Circuit Breakers', () => {
     }
   });
 
-  const createInitialOrders = async (
-    side: number,
-    unitPrice: number,
-  ): Promise<number> => {
+  const fillOrder = async (unitPrice: number) => {
+    await lendingMarketCaller
+      .connect(owner)
+      .executeOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.LEND,
+        '100000000000000',
+        unitPrice,
+      );
+
+    await lendingMarketCaller
+      .connect(owner)
+      .executeOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.BORROW,
+        '100000000000000',
+        unitPrice,
+      );
+  };
+
+  const createInitialOrders = async (side: number, unitPrice: number) => {
     const offsetUnitPrice =
-      side === Side.LEND
-        ? CIRCUIT_BREAKER_BORROW_THRESHOLD - 1
-        : CIRCUIT_BREAKER_LEND_THRESHOLD + 1;
+      side === Side.LEND ? unitPrice * 0.95 - 1 : unitPrice * 1.1 + 1;
+
+    await fillOrder(unitPrice);
 
     await lendingMarketCaller
       .connect(alice)
@@ -98,7 +122,7 @@ describe('LendingMarket - Circuit Breakers', () => {
   };
 
   describe('Get circuit breaker thresholds', async () => {
-    it('Get circuit breaker thresholds on the empty order book', async () => {
+    it('Get circuit breaker thresholds without the last block price', async () => {
       const { maxLendUnitPrice, minBorrowUnitPrice } =
         await lendingMarket.getCircuitBreakerThresholds(currentOrderBookId);
 
@@ -106,32 +130,16 @@ describe('LendingMarket - Circuit Breakers', () => {
       expect(minBorrowUnitPrice).to.equal('1');
     });
 
-    it('Get circuit breaker thresholds on the non-empty order book', async () => {
-      await lendingMarketCaller
-        .connect(alice)
-        .executeOrder(
-          targetCurrency,
-          currentOrderBookId,
-          Side.LEND,
-          '100000000000000',
-          '5000',
-        );
+    it('Get circuit breaker thresholds with the last block price', async () => {
+      await fillOrder(8000);
 
-      await lendingMarketCaller
-        .connect(alice)
-        .executeOrder(
-          targetCurrency,
-          currentOrderBookId,
-          Side.BORROW,
-          '100000000000000',
-          '9950',
-        );
+      await ethers.provider.send('evm_mine', []);
 
       const { maxLendUnitPrice, minBorrowUnitPrice } =
         await lendingMarket.getCircuitBreakerThresholds(currentOrderBookId);
 
-      expect(maxLendUnitPrice).to.equal('9960');
-      expect(minBorrowUnitPrice).to.equal('4800');
+      expect(maxLendUnitPrice).to.equal('8800');
+      expect(minBorrowUnitPrice).to.equal('7600');
     });
   });
 
@@ -143,10 +151,15 @@ describe('LendingMarket - Circuit Breakers', () => {
 
       for (const orderType of ['market', 'limit']) {
         it(`Fill an order partially until the circuit breaker threshold using the ${orderType} order`, async () => {
-          await createInitialOrders(isBorrow ? Side.LEND : Side.BORROW, 8500);
+          let unitPrice = await createInitialOrders(
+            isBorrow ? Side.LEND : Side.BORROW,
+            8500,
+          );
 
-          const unitPrice =
-            orderType === 'market' ? 0 : 8500 + (isBorrow ? -500 : 500);
+          if (orderType == 'market') {
+            unitPrice = 0;
+          }
+
           await expect(
             lendingMarketCaller
               .connect(bob)
@@ -313,6 +326,10 @@ describe('LendingMarket - Circuit Breakers', () => {
             0,
             true,
           );
+
+        await fillOrder(isBorrow ? offsetUnitPrice + 1 : offsetUnitPrice - 1);
+
+        await ethers.provider.send('evm_mine', []);
 
         await expect(
           lendingMarketCaller
@@ -570,201 +587,11 @@ describe('LendingMarket - Circuit Breakers', () => {
           );
       });
 
-      it('Maximum difference between threshold and unitPrice can be max_difference', async () => {
-        const unitPrice = 5000;
-        const offsetUnitPrice =
-          side === Side.LEND
-            ? unitPrice + MAX_DIFFERENCE + 1
-            : unitPrice - MAX_DIFFERENCE - 1;
+      it(`Fill an order within the circuit breaker that has under the minimum rage`, async () => {
+        const unitPrice = 800;
+        const unitPrice2 = isBorrow ? 700 : 900;
 
-        await lendingMarketCaller
-          .connect(alice)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            isBorrow ? Side.LEND : Side.BORROW,
-            '100000000000000',
-            unitPrice,
-          );
-
-        await lendingMarketCaller
-          .connect(alice)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            isBorrow ? Side.LEND : Side.BORROW,
-            '100000000000000',
-            offsetUnitPrice,
-          );
-
-        await ethers.provider.send('evm_setAutomine', [false]);
-
-        const bobTx = await lendingMarketCaller
-          .connect(bob)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            side,
-            '100000000000000',
-            '0',
-          );
-
-        const carolTx = await lendingMarketCaller
-          .connect(carol)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            side,
-            '50000000000000',
-            offsetUnitPrice,
-          );
-
-        await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
-
-        await expect(bobTx)
-          .to.emit(orderActionLogic, 'OrderExecuted')
-          .withArgs(
-            bob.address,
-            side,
-            targetCurrency,
-            maturity,
-            '100000000000000',
-            '0',
-            '100000000000000',
-            unitPrice,
-            () => true,
-            () => true,
-            0,
-            0,
-            0,
-            false,
-          );
-
-        await expect(carolTx)
-          .to.emit(orderActionLogic, 'OrderExecuted')
-          .withArgs(
-            carol.address,
-            side,
-            targetCurrency,
-            maturity,
-            '50000000000000',
-            offsetUnitPrice,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            true,
-          );
-      });
-
-      it('Minimum difference between threshold and unitPrice should be min_difference', async () => {
-        const unitPrice = 9950;
-        const offsetUnitPrice =
-          side === Side.LEND
-            ? unitPrice + MIN_DIFFERENCE + 1
-            : unitPrice - MIN_DIFFERENCE - 1;
-
-        await lendingMarketCaller
-          .connect(alice)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            isBorrow ? Side.LEND : Side.BORROW,
-            '100000000000000',
-            unitPrice,
-          );
-
-        await lendingMarketCaller
-          .connect(alice)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            isBorrow ? Side.LEND : Side.BORROW,
-            '100000000000000',
-            offsetUnitPrice,
-          );
-
-        await ethers.provider.send('evm_setAutomine', [false]);
-
-        const bobTx = await lendingMarketCaller
-          .connect(bob)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            side,
-            '100000000000000',
-            '0',
-          );
-
-        const carolTx = await lendingMarketCaller
-          .connect(carol)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            side,
-            '50000000000000',
-            offsetUnitPrice,
-          );
-
-        await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
-
-        await expect(bobTx)
-          .to.emit(orderActionLogic, 'OrderExecuted')
-          .withArgs(
-            bob.address,
-            side,
-            targetCurrency,
-            maturity,
-            '100000000000000',
-            '0',
-            '100000000000000',
-            unitPrice,
-            () => true,
-            () => true,
-            0,
-            0,
-            0,
-            false,
-          );
-
-        await expect(carolTx)
-          .to.emit(orderActionLogic, 'OrderExecuted')
-          .withArgs(
-            carol.address,
-            side,
-            targetCurrency,
-            maturity,
-            '50000000000000',
-            offsetUnitPrice,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            true,
-          );
-      });
-
-      it('Threshold should not cross the range', async () => {
-        const unitPrice = isBorrow ? 9 : 9991;
-        const unitPrice2 = isBorrow ? 4 : 9996;
-
-        await lendingMarketCaller
-          .connect(alice)
-          .executeOrder(
-            targetCurrency,
-            currentOrderBookId,
-            isBorrow ? Side.LEND : Side.BORROW,
-            '100000000000000',
-            unitPrice,
-          );
+        await fillOrder(unitPrice);
 
         await lendingMarketCaller
           .connect(alice)
@@ -796,13 +623,32 @@ describe('LendingMarket - Circuit Breakers', () => {
             '100000000000000',
             '0',
             '100000000000000',
-            unitPrice,
+            unitPrice2,
             () => true,
             () => true,
             0,
             0,
             0,
             false,
+          );
+      });
+
+      it(`Fill an order within the circuit breaker that has reached ${
+        isBorrow ? 'min' : 'max'
+      } unit price`, async () => {
+        const unitPrice = isBorrow ? 99 : 9500;
+        const unitPrice2 = isBorrow ? 1 : 10000;
+
+        await fillOrder(unitPrice);
+
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
+            isBorrow ? Side.LEND : Side.BORROW,
+            '100000000000000',
+            unitPrice2,
           );
 
         await expect(
@@ -813,7 +659,7 @@ describe('LendingMarket - Circuit Breakers', () => {
               currentOrderBookId,
               side,
               '100000000000000',
-              isBorrow ? 1 : 10000,
+              '0',
             ),
         )
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -823,7 +669,7 @@ describe('LendingMarket - Circuit Breakers', () => {
             targetCurrency,
             maturity,
             '100000000000000',
-            isBorrow ? 1 : 10000,
+            '0',
             '100000000000000',
             unitPrice2,
             () => true,

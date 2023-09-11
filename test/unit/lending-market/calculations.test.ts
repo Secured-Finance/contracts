@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
+import { MockContract } from 'ethereum-waffle';
 import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
@@ -9,12 +10,14 @@ import { Side } from '../../../utils/constants';
 import { deployContracts } from './utils';
 
 describe('LendingMarket - Calculations', () => {
+  let mockCurrencyController: MockContract;
   let lendingMarketCaller: Contract;
 
   let targetCurrency: string;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
+  let bob: SignerWithAddress;
   let signers: SignerWithAddress[];
 
   let lendingMarket: Contract;
@@ -30,13 +33,15 @@ describe('LendingMarket - Calculations', () => {
   };
 
   before(async () => {
-    [owner, alice, ...signers] = await ethers.getSigners();
+    [owner, alice, bob, ...signers] = await ethers.getSigners();
     targetCurrency = ethers.utils.formatBytes32String('Test');
 
-    ({ lendingMarketCaller, lendingMarket } = await deployContracts(
-      owner,
-      targetCurrency,
-    ));
+    ({ mockCurrencyController, lendingMarketCaller, lendingMarket } =
+      await deployContracts(owner, targetCurrency));
+
+    await mockCurrencyController.mock[
+      'convertFromBaseCurrency(bytes32,uint256)'
+    ].returns('10');
   });
 
   beforeEach(async () => {
@@ -255,6 +260,16 @@ describe('LendingMarket - Calculations', () => {
         targetCurrency,
         currentOrderBookId,
         Side.LEND,
+        '200000000000000',
+        '8000',
+      );
+
+    await lendingMarketCaller
+      .connect(bob)
+      .executeOrder(
+        targetCurrency,
+        currentOrderBookId,
+        Side.BORROW,
         '100000000000000',
         '8000',
       );
