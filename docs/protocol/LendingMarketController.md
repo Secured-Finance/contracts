@@ -153,7 +153,7 @@ Gets the lending market contract address for the selected currency and maturity.
 ### getOrderBookDetail
 
 ```solidity
-function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 marketUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
 ```
 
 Gets detailed information on the order book.
@@ -165,9 +165,9 @@ Gets detailed information on the order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| bestLendUnitPrice | uint256 | The best lend price per future value |
-| bestBorrowUnitPrice | uint256 | The best borrow price per future value |
-| midUnitPrice | uint256 | The mid price per future value |
+| bestLendUnitPrice | uint256 | The best lend price |
+| bestBorrowUnitPrice | uint256 | The best borrow price |
+| marketUnitPrice | uint256 | The market unit price |
 | maxLendUnitPrice | uint256 | The maximum unit price for lending |
 | minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
 | openingUnitPrice | uint256 | The opening price when Itayose is executed |
@@ -237,22 +237,6 @@ Gets the best prices for borrowing in the selected currency.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | uint256[] | Array with the best prices for borrowing |
-
-### getMidUnitPrices
-
-```solidity
-function getMidUnitPrices(bytes32 _ccy) external view returns (uint256[])
-```
-
-Gets mid prices per future value for the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256[] | Array with the mid prices per future value of the lending market |
 
 ### getOrderEstimation
 

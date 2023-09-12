@@ -92,10 +92,16 @@ function _getOrder(bytes32 _ccy, contract ILendingMarket _market, uint8 _orderBo
 function _calculateFilledAmount(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _unitPrice) internal view returns (uint256 lastUnitPrice, uint256 filledAmount, uint256 filledAmountInFV, uint256 orderFeeInFV, uint256 placedAmount)
 ```
 
-### _calculateCollateralCoverage
+### _estimateCollateralCoverage
 
 ```solidity
-function _calculateCollateralCoverage(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _additionalDepositAmount, bool _ignoreBorrowedAmount, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _orderFeeInFV, uint256 _placedAmount) internal view returns (uint256 coverage, bool isInsufficientDepositAmount)
+function _estimateCollateralCoverage(bytes32 _ccy, uint256 _maturity, address _user, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _additionalDepositAmount, bool _ignoreBorrowedAmount, uint256 _filledAmount, uint256 _filledAmountInFV, uint256 _orderFeeInFV, uint256 _placedAmount) internal view returns (uint256 coverage, bool isInsufficientDepositAmount)
+```
+
+### _estimatePVFromFV
+
+```solidity
+function _estimatePVFromFV(bytes32 _ccy, uint256 _maturity, uint256 _amount, uint256 _unitPrice) internal view returns (uint256)
 ```
 
 ### _flattenOrders

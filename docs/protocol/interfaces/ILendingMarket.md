@@ -41,7 +41,7 @@ struct OrderBook {
   uint256 openingDate;
   uint256 borrowUnitPrice;
   uint256 lendUnitPrice;
-  uint256 midUnitPrice;
+  uint256 marketUnitPrice;
   uint256 openingUnitPrice;
   bool isReady;
 }
@@ -68,7 +68,7 @@ function getBestLendUnitPrice(uint8 orderBookId) external view returns (uint256 
 ### getBestLendUnitPrices
 
 ```solidity
-function getBestLendUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
+function getBestLendUnitPrices(uint8[] orderBookIds) external view returns (uint256[])
 ```
 
 ### getBestBorrowUnitPrice
@@ -80,19 +80,19 @@ function getBestBorrowUnitPrice(uint8 orderBookId) external view returns (uint25
 ### getBestBorrowUnitPrices
 
 ```solidity
-function getBestBorrowUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
+function getBestBorrowUnitPrices(uint8[] orderBookIds) external view returns (uint256[])
 ```
 
-### getMidUnitPrice
+### getMarketUnitPrice
 
 ```solidity
-function getMidUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice)
+function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256)
 ```
 
-### getMidUnitPrices
+### getBlockUnitPriceAverage
 
 ```solidity
-function getMidUnitPrices(uint8[] _orderBookIds) external view returns (uint256[])
+function getBlockUnitPriceAverage(uint8 orderBookId, uint256 count) external view returns (uint256)
 ```
 
 ### getBorrowOrderBook
@@ -116,7 +116,7 @@ function getMaturity(uint8 orderBookId) external view returns (uint256)
 ### getMaturities
 
 ```solidity
-function getMaturities(uint8[] _orderBookIds) external view returns (uint256[] maturities)
+function getMaturities(uint8[] orderBookIds) external view returns (uint256[] maturities)
 ```
 
 ### getCurrency
@@ -218,13 +218,13 @@ function calculateFilledAmount(uint8 orderBookId, enum ProtocolTypes.Side side, 
 ### createOrderBook
 
 ```solidity
-function createOrderBook(uint256 maturity, uint256 _openingDate) external returns (uint8 orderBookId)
+function createOrderBook(uint256 maturity, uint256 openingDate) external returns (uint8 orderBookId)
 ```
 
-### reopenOrderBook
+### executeAutoRoll
 
 ```solidity
-function reopenOrderBook(uint8 _orderBookId, uint256 _newMaturity, uint256 _openingDate) external
+function executeAutoRoll(uint8 maturedOrderBookId, uint8 newNearestOrderBookId, uint256 newMaturity, uint256 openingDate, uint256 autoRollUnitPrice) external
 ```
 
 ### cancelOrder

@@ -296,22 +296,22 @@ function _calculatePVandFVInDefaultMarket(bytes32 _ccy, uint256 _fromMaturity, i
 function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue) public view returns (int256 presentValue)
 ```
 
-### calculatePVFromFV
-
-```solidity
-function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, uint256 _futureValue) public view returns (uint256 presentValue)
-```
-
 ### calculateFVFromPV
 
 ```solidity
-function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) public view returns (int256)
+function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) public view returns (int256 futureValue)
 ```
 
 ### calculatePVFromFV
 
 ```solidity
 function calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) public pure returns (int256)
+```
+
+### calculateFVFromPV
+
+```solidity
+function calculateFVFromPV(int256 _presentValue, uint256 _unitPrice) public pure returns (int256)
 ```
 
 ### _convertToBaseCurrencyAtMarketTerminationPrice

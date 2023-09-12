@@ -14,6 +14,12 @@ error InvalidAmount()
 error InvalidFutureValue()
 ```
 
+### EmptyOrderBook
+
+```solidity
+error EmptyOrderBook()
+```
+
 ### OppositeSideOrderExists
 
 ```solidity
@@ -107,7 +113,7 @@ function cleanUpOrders(uint8 _orderBookId, address _user) external returns (uint
 ### executeOrder
 
 ```solidity
-function executeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
+function executeOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _amount, uint256 _unitPrice, uint256 _minimumReliableAmount) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
 ```
 
 ### executePreOrder
@@ -119,7 +125,7 @@ function executePreOrder(uint8 _orderBookId, enum ProtocolTypes.Side _side, addr
 ### unwindPosition
 
 ```solidity
-function unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _futureValue) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
+function unwindPosition(uint8 _orderBookId, enum ProtocolTypes.Side _side, address _user, uint256 _futureValue, uint256 _minimumReliableAmount) external returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 feeInFV)
 ```
 
 ### _cleanLendOrders

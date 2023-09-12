@@ -66,7 +66,7 @@ struct OrderBookDetail {
   uint256 maturity;
   uint256 bestLendUnitPrice;
   uint256 bestBorrowUnitPrice;
-  uint256 midUnitPrice;
+  uint256 marketUnitPrice;
   uint256 maxLendUnitPrice;
   uint256 minBorrowUnitPrice;
   uint256 openingUnitPrice;
@@ -143,7 +143,7 @@ function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (
 ### getOrderBookDetail
 
 ```solidity
-function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 midUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
+function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 marketUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
 ```
 
 ### getOrderBookDetails
@@ -162,12 +162,6 @@ function getBestLendUnitPrices(bytes32 ccy) external view returns (uint256[] uni
 
 ```solidity
 function getBestBorrowUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
-```
-
-### getMidUnitPrices
-
-```solidity
-function getMidUnitPrices(bytes32 ccy) external view returns (uint256[] unitPrices)
 ```
 
 ### getOrderEstimation

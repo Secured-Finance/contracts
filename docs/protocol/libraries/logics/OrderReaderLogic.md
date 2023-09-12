@@ -2,12 +2,6 @@
 
 ## OrderReaderLogic
 
-### isMatured
-
-```solidity
-function isMatured(uint8 _orderBookId) external view returns (bool)
-```
-
 ### getOrder
 
 ```solidity

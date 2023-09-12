@@ -10,17 +10,13 @@ directly by the user.
 
 _The market orders is stored in structured red-black trees and doubly linked lists in each node._
 
-### PRE_ORDER_PERIOD
+### MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY
 
 ```solidity
-uint256 PRE_ORDER_PERIOD
+uint256 MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY
 ```
 
-### ITAYOSE_PERIOD
-
-```solidity
-uint256 ITAYOSE_PERIOD
-```
+_Used for minimum reliable amount in base currency for block unit price_
 
 ### onlyMaker
 
@@ -72,6 +68,12 @@ Modifier to check if the market is under the pre-order period.
 | ---- | ---- | ----------- |
 | _orderBookId | uint8 | The order book id |
 
+### constructor
+
+```solidity
+constructor(uint256 _minimumReliableAmount) public
+```
+
 ### initialize
 
 ```solidity
@@ -108,6 +110,86 @@ function acceptedContracts() public pure returns (bytes32[] contracts)
 Returns contract names that can call this contract.
 
 _The contact name listed in this method is also needed to be listed `requiredContracts` method._
+
+### isReady
+
+```solidity
+function isReady(uint8 _orderBookId) public view returns (bool)
+```
+
+Gets if the market is ready.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the market is ready or not |
+
+### isMatured
+
+```solidity
+function isMatured(uint8 _orderBookId) public view returns (bool)
+```
+
+Gets if the market is matured.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the market is matured or not |
+
+### isOpened
+
+```solidity
+function isOpened(uint8 _orderBookId) public view returns (bool)
+```
+
+Gets if the market is opened.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the market is opened or not |
+
+### isItayosePeriod
+
+```solidity
+function isItayosePeriod(uint8 _orderBookId) public view returns (bool)
+```
+
+Gets if the market is under the Itayose period.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the market is under the Itayose period. |
+
+### isPreOrderPeriod
+
+```solidity
+function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool)
+```
+
+Gets if the market is under the pre-order period.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | The boolean if the market is under the pre-order period. |
 
 ### getOrderBookDetail
 
@@ -198,33 +280,17 @@ Gets the best prices for borrowing.
 | ---- | ---- | ----------- |
 | [0] | uint256[] | The array of the best price for borrowing |
 
-### getMidUnitPrice
+### getMarketUnitPrice
 
 ```solidity
-function getMidUnitPrice(uint8 _orderBookId) public view returns (uint256)
+function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256)
 ```
 
-Gets the mid price per future value.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256 | The mid price per future value |
-
-### getMidUnitPrices
+### getBlockUnitPriceAverage
 
 ```solidity
-function getMidUnitPrices(uint8[] _orderBookIds) public view returns (uint256[])
+function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 count) external view returns (uint256)
 ```
-
-Gets the the prices per future value.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256[] | The array of the the price per future value |
 
 ### getBorrowOrderBook
 
@@ -326,7 +392,7 @@ Gets the limit range in unit price for the circuit breaker
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint256 | The auto-roll fee rate received by protocol |
+| [0] | uint256 | The limit range in unit price for the circuit breaker |
 
 ### getOpeningDate
 
@@ -343,86 +409,6 @@ Gets the market opening date.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | openingDate | uint256 | The market opening date |
-
-### isReady
-
-```solidity
-function isReady(uint8 _orderBookId) public view returns (bool)
-```
-
-Gets if the market is ready.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the market is ready or not |
-
-### isMatured
-
-```solidity
-function isMatured(uint8 _orderBookId) public view returns (bool)
-```
-
-Gets if the market is matured.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the market is matured or not |
-
-### isOpened
-
-```solidity
-function isOpened(uint8 _orderBookId) public view returns (bool)
-```
-
-Gets if the market is opened.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the market is opened or not |
-
-### isItayosePeriod
-
-```solidity
-function isItayosePeriod(uint8 _orderBookId) public view returns (bool)
-```
-
-Gets if the market is under the Itayose period.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the market is under the Itayose period. |
-
-### isPreOrderPeriod
-
-```solidity
-function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool)
-```
-
-Gets if the market is under the pre-order period.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _orderBookId | uint8 | The order book id |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | The boolean if the market is under the pre-order period. |
 
 ### getItayoseLog
 
@@ -565,10 +551,10 @@ Creates a new order book.
 | _maturity | uint256 | The initial maturity of the market |
 | _openingDate | uint256 | The timestamp when the market opens |
 
-### reopenOrderBook
+### executeAutoRoll
 
 ```solidity
-function reopenOrderBook(uint8 _orderBookId, uint256 _newMaturity, uint256 _openingDate) external
+function executeAutoRoll(uint8 _maturedOrderBookId, uint8 _newNearestOrderBookId, uint256 _newMaturity, uint256 _openingDate, uint256 _autoRollUnitPrice) external
 ```
 
 ### cancelOrder

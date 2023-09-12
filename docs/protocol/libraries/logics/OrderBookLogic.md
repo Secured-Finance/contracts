@@ -44,10 +44,52 @@ event OrderBookCreated(uint8 orderBookId, uint256 maturity, uint256 openingDate)
 event ItayoseExecuted(bytes32 ccy, uint256 maturity, uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 offsetAmount)
 ```
 
+### isReady
+
+```solidity
+function isReady(uint8 _orderBookId) public view returns (bool)
+```
+
+### isMatured
+
+```solidity
+function isMatured(uint8 _orderBookId) public view returns (bool)
+```
+
+### isOpened
+
+```solidity
+function isOpened(uint8 _orderBookId) public view returns (bool)
+```
+
+### isItayosePeriod
+
+```solidity
+function isItayosePeriod(uint8 _orderBookId) public view returns (bool)
+```
+
+### isPreOrderPeriod
+
+```solidity
+function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool)
+```
+
 ### getOrderBookDetail
 
 ```solidity
-function getOrderBookDetail(uint8 _orderBookId) public view returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 borrowUnitPrice, uint256 lendUnitPrice, uint256 midUnitPrice, uint256 openingUnitPrice, bool isReady)
+function getOrderBookDetail(uint8 _orderBookId) public view returns (struct ILendingMarket.OrderBook)
+```
+
+### getMarketUnitPrice
+
+```solidity
+function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256)
+```
+
+### getBlockUnitPriceAverage
+
+```solidity
+function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count) external view returns (uint256)
 ```
 
 ### getCircuitBreakerThresholds
@@ -78,18 +120,6 @@ function getBestBorrowUnitPrice(uint8 _orderBookId) public view returns (uint256
 
 ```solidity
 function getBestBorrowUnitPrices(uint8[] _orderBookIds) external view returns (uint256[] unitPrices)
-```
-
-### getMidUnitPrice
-
-```solidity
-function getMidUnitPrice(uint8 _orderBookId) public view returns (uint256)
-```
-
-### getMidUnitPrices
-
-```solidity
-function getMidUnitPrices(uint8[] _orderBookIds) external view returns (uint256[] unitPrices)
 ```
 
 ### getBorrowOrderBook
@@ -128,10 +158,10 @@ function updateCircuitBreakerLimitRange(uint256 _cbLimitRange) external
 function createOrderBook(uint256 _maturity, uint256 _openingDate) public returns (uint8 orderBookId)
 ```
 
-### reopenOrderBook
+### executeAutoRoll
 
 ```solidity
-function reopenOrderBook(uint8 _orderBookId, uint256 _newMaturity, uint256 _openingDate) external
+function executeAutoRoll(uint8 _maturedOrderBookId, uint8 _destinationOrderBookId, uint256 _newMaturity, uint256 _openingDate, uint256 _autoRollUnitPrice) external
 ```
 
 ### executeItayoseCall

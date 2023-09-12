@@ -64,6 +64,11 @@ error PastMaturityOrderExists()
 ```solidity
 struct OrderBook {
   uint48 lastOrderId;
+  uint48 lastOrderBlockNumber;
+  bool isReliableBlock;
+  uint80 blockUnitPriceHistory;
+  uint256 blockTotalAmount;
+  uint256 blockTotalFutureValue;
   uint256 openingDate;
   uint256 maturity;
   mapping(address => uint48[]) activeLendOrderIds;
@@ -73,7 +78,6 @@ struct OrderBook {
   mapping(uint256 => bool) isPreOrder;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) lendOrders;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) borrowOrders;
-  mapping(uint256 => mapping(enum ProtocolTypes.Side => uint256)) circuitBreakerThresholdUnitPrices;
 }
 ```
 
@@ -117,6 +121,18 @@ function hasLendOrder(struct OrderBookLib.OrderBook self, address _user) interna
 
 ```solidity
 function getOrder(struct OrderBookLib.OrderBook self, uint256 _orderId) internal view returns (struct PlacedOrder order)
+```
+
+### getMarketUnitPrice
+
+```solidity
+function getMarketUnitPrice(struct OrderBookLib.OrderBook self) internal view returns (uint256 unitPrice)
+```
+
+### getBlockUnitPriceAverage
+
+```solidity
+function getBlockUnitPriceAverage(struct OrderBookLib.OrderBook self, uint256 _maxCount) internal view returns (uint256 unitPrice)
 ```
 
 ### getLendOrderBook
@@ -167,6 +183,18 @@ function placeOrder(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side 
 function fillOrders(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _amount, uint256 _amountInFV, uint256 _unitPrice) internal returns (struct FilledOrder filledOrder, struct PartiallyFilledOrder partiallyFilledOrder, uint256 remainingAmount, bool orderExists)
 ```
 
+### setInitialBlockUnitPrice
+
+```solidity
+function setInitialBlockUnitPrice(struct OrderBookLib.OrderBook self, uint256 _unitPrice) internal
+```
+
+### updateBlockUnitPriceHistory
+
+```solidity
+function updateBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, uint256 _filledAmount, uint256 _filledFutureValue, uint256 _minimumReliableAmount) internal
+```
+
 ### removeOrder
 
 ```solidity
@@ -179,34 +207,22 @@ function removeOrder(struct OrderBookLib.OrderBook self, address _user, uint48 _
 function getOpeningUnitPrice(struct OrderBookLib.OrderBook self) internal view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
-### getAndUpdateOrderExecutionConditions
-
-```solidity
-function getAndUpdateOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
-```
-
 ### getOrderExecutionConditions
 
 ```solidity
-function getOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal view returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists, uint256 cbThresholdUnitPrice, bool isFirstOrderInBlock)
+function getOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal view returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
 ```
 
-### getCircuitBreakerThresholds
+### getLendCircuitBreakerThreshold
 
 ```solidity
-function getCircuitBreakerThresholds(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange) internal view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
+function getLendCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange) internal view returns (uint256 cbThresholdUnitPrice)
 ```
 
-### _getBorrowCircuitBreakerThreshold
+### getBorrowCircuitBreakerThreshold
 
 ```solidity
-function _getBorrowCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) private pure returns (uint256 cbThresholdUnitPrice)
-```
-
-### _getLendCircuitBreakerThreshold
-
-```solidity
-function _getLendCircuitBreakerThreshold(uint256 _circuitBreakerLimitRange, uint256 _unitPrice) private pure returns (uint256 cbThresholdUnitPrice)
+function getBorrowCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange) internal view returns (uint256 cbThresholdUnitPrice)
 ```
 
 ### _nextOrderId
@@ -242,4 +258,10 @@ function _unpackOrder(uint256 _order) private pure returns (enum ProtocolTypes.S
 ```
 
 Unpacks order parameters from uint256
+
+### _unpackBlockUnitPriceHistory
+
+```solidity
+function _unpackBlockUnitPriceHistory(uint80 _blockUnitPriceHistory) private pure returns (uint256[] prices)
+```
 
