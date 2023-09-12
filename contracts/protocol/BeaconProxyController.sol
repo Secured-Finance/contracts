@@ -59,6 +59,8 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
         returns (address beaconProxyAddress)
     {
         beaconProxyAddress = Storage.slot().registeredBeaconProxies[beaconName];
+        if (beaconProxyAddress == address(0)) revert NoBeaconProxyContract();
+
         UpgradeabilityBeaconProxy beaconProxy = UpgradeabilityBeaconProxy(
             payable(beaconProxyAddress)
         );

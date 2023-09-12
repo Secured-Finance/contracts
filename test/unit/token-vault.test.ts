@@ -34,6 +34,7 @@ describe('TokenVault', () => {
 
   let tokenVaultProxy: Contract;
   let tokenVaultCaller: Contract;
+  let depositManagementLogic: Contract;
 
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -106,7 +107,7 @@ describe('TokenVault', () => {
     );
 
     // Deploy libraries
-    const depositManagementLogic = await deployContract(
+    depositManagementLogic = await deployContract(
       owner,
       DepositManagementLogic,
     );
@@ -1121,7 +1122,9 @@ describe('TokenVault', () => {
 
     it('Fail to get liquidation amount due to no collateral', async () => {
       await expect(
-        tokenVaultProxy.getLiquidationAmount(owner.address, targetCurrency, 1),
+        depositManagementLogic
+          .attach(tokenVaultProxy.address)
+          .getLiquidationAmount(owner.address, targetCurrency, 1),
       ).to.be.revertedWith('CollateralIsZero');
     });
 

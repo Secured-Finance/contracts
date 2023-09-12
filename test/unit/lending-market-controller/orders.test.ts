@@ -167,7 +167,7 @@ describe('LendingMarketController - Orders', () => {
         beaconProxyControllerProxy.getBeaconProxyAddress(
           ethers.utils.formatBytes32String('Test'),
         ),
-      ).to.be.revertedWith('InvalidProxyContract');
+      ).to.be.revertedWith('NoBeaconProxyContract');
     });
 
     it('Create a order book', async () => {
