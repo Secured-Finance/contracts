@@ -149,6 +149,14 @@ describe('LendingMarket - Circuit Breakers', () => {
     describe(title, async () => {
       const isBorrow = side == Side.BORROW;
 
+      before(function () {
+        if (process.env.TEST_TYPE == 'coverage') {
+          // The test fails because `solidity-coverage` do not work nicely with `evm_setAutomine` and `evm_mine`.
+          // To avoid this, those tests are skipped when running coverage test.
+          this.skip();
+        }
+      });
+
       for (const orderType of ['market', 'limit']) {
         it(`Fill an order partially until the circuit breaker threshold using the ${orderType} order`, async () => {
           let unitPrice = await createInitialOrders(
@@ -217,7 +225,6 @@ describe('LendingMarket - Circuit Breakers', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -287,7 +294,6 @@ describe('LendingMarket - Circuit Breakers', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -330,6 +336,7 @@ describe('LendingMarket - Circuit Breakers', () => {
         await fillOrder(isBorrow ? offsetUnitPrice + 1 : offsetUnitPrice - 1);
 
         await ethers.provider.send('evm_mine', []);
+        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(
           lendingMarketCaller
@@ -409,7 +416,6 @@ describe('LendingMarket - Circuit Breakers', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(carolTx1)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -476,7 +482,6 @@ describe('LendingMarket - Circuit Breakers', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -546,7 +551,6 @@ describe('LendingMarket - Circuit Breakers', () => {
           );
 
         await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(bobTx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -732,7 +736,11 @@ describe('LendingMarket - Circuit Breakers', () => {
         );
     });
 
-    it('Unwind no position due to circuit breaker', async () => {
+    it('Unwind no position due to circuit breaker', async function () {
+      if (process.env.TEST_TYPE == 'coverage') {
+        this.skip();
+      }
+
       await createInitialOrders(Side.LEND, 8000);
 
       await expect(
@@ -771,7 +779,6 @@ describe('LendingMarket - Circuit Breakers', () => {
         );
 
       await ethers.provider.send('evm_mine', []);
-      await ethers.provider.send('evm_setAutomine', [true]);
 
       await expect(tx)
         .to.emit(orderActionLogic, 'PositionUnwound')

@@ -1062,7 +1062,6 @@ describe('Integration Test: Order Book', async () => {
           );
 
         await ethers.provider.send('evm_mine', []);
-        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(tx)
           .to.emit(orderActionLogic, 'OrderExecuted')
@@ -1082,6 +1081,8 @@ describe('Integration Test: Order Book', async () => {
             0,
             true,
           );
+
+        await ethers.provider.send('evm_setAutomine', [true]);
 
         await expect(
           lendingMarketController

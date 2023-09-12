@@ -120,8 +120,6 @@ describe('LendingMarket - Orders', () => {
       await fillOrder('200000000000000', '9000');
 
       await ethers.provider.send('evm_mine', []);
-      await ethers.provider.send('evm_setAutomine', [true]);
-
       await checkBlockUnitPrice('8640', '0');
       await ethers.provider.send('evm_mine', []);
       await checkBlockUnitPrice('8640', '8640');
