@@ -387,7 +387,7 @@ describe('CurrencyController', () => {
         0,
         10000000000,
         0,
-        now - 86401 + 60 * 60,
+        now - 86400 - 60 * 5,
         0,
       );
 

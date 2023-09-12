@@ -331,7 +331,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         for (uint256 i; i < priceFeeds.instances.length; i++) {
             (, int256 price, , uint256 updatedAt, ) = priceFeeds.instances[i].latestRoundData();
 
-            if (updatedAt < block.timestamp - priceFeeds.heartbeat + 1 hours) {
+            if (updatedAt < block.timestamp - priceFeeds.heartbeat - 5 minutes) {
                 revert StalePriceFeed(
                     address(priceFeeds.instances[i]),
                     priceFeeds.heartbeat,
