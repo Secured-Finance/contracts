@@ -86,6 +86,7 @@ describe('LendingMarketController - Itayose', () => {
         await lendingMarketControllerProxy.createOrderBook(
           currency,
           openingDate,
+          openingDate - 604800,
         );
       }
 

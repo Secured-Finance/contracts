@@ -30,6 +30,7 @@ describe('LendingMarket - Itayose', () => {
       targetCurrency,
       maturity,
       openingDate,
+      openingDate - 604800,
     );
     return lendingMarketCaller.getOrderBookId(targetCurrency);
   };
@@ -241,6 +242,7 @@ describe('LendingMarket - Itayose', () => {
       targetCurrency,
       maturity,
       openingDate,
+      openingDate - 604800,
     );
 
     await lendingMarketCaller

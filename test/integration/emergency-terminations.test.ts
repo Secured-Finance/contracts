@@ -150,8 +150,16 @@ describe('Integration Test: Emergency terminations', async () => {
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createOrderBook(hexETH, genesisDate);
-      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
+      await lendingMarketController.createOrderBook(
+        hexETH,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexWFIL,
+        genesisDate,
+        genesisDate,
+      );
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);

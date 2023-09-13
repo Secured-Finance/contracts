@@ -216,7 +216,11 @@ interface ILendingMarketController {
         uint256 circuitBreakerLimitRange
     ) external;
 
-    function createOrderBook(bytes32 ccy, uint256 marketOpeningDate) external;
+    function createOrderBook(
+        bytes32 ccy,
+        uint256 openingDate,
+        uint256 preOpeningDate
+    ) external;
 
     function executeOrder(
         bytes32 ccy,

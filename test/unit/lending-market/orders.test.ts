@@ -31,6 +31,7 @@ describe('LendingMarket - Orders', () => {
       targetCurrency,
       maturity,
       openingDate,
+      openingDate - 604800,
     );
     return lendingMarketCaller.getOrderBookId(targetCurrency);
   };

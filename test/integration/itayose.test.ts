@@ -104,13 +104,21 @@ describe('Integration Test: Itayose', async () => {
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createOrderBook(hexETH, genesisDate);
+      await lendingMarketController.createOrderBook(
+        hexETH,
+        genesisDate,
+        genesisDate,
+      );
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createOrderBook(hexETH, maturities[0]);
+    await lendingMarketController.createOrderBook(
+      hexETH,
+      maturities[0],
+      maturities[0].sub(604800),
+    );
   });
 
   describe('Execute Itayose on the single market without pre-order', async () => {

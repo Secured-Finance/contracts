@@ -38,11 +38,13 @@ contract LendingMarketCaller {
     function createOrderBook(
         bytes32 _ccy,
         uint256 _maturity,
-        uint256 _openingDate
+        uint256 _openingDate,
+        uint256 _preOpeningDate
     ) external {
         orderBookIdLists[_ccy] = ILendingMarket(lendingMarkets[_ccy]).createOrderBook(
             _maturity,
-            _openingDate
+            _openingDate,
+            _preOpeningDate
         );
     }
 

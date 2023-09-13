@@ -488,16 +488,16 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
 
     /**
      * @notice Creates a new order book.
-     * @param _maturity The initial maturity of the market
-     * @param _openingDate The timestamp when the market opens
+     * @param _maturity The initial maturity of the order book
+     * @param _openingDate The timestamp when the order book opens
+     * @param _preOpeningDate The timestamp when the order book pre-opens
      */
-    function createOrderBook(uint256 _maturity, uint256 _openingDate)
-        external
-        override
-        onlyAcceptedContracts
-        returns (uint8 orderBookId)
-    {
-        return OrderBookLogic.createOrderBook(_maturity, _openingDate);
+    function createOrderBook(
+        uint256 _maturity,
+        uint256 _openingDate,
+        uint256 _preOpeningDate
+    ) external override onlyAcceptedContracts returns (uint8 orderBookId) {
+        return OrderBookLogic.createOrderBook(_maturity, _openingDate, _preOpeningDate);
     }
 
     function executeAutoRoll(

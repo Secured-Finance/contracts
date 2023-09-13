@@ -131,15 +131,32 @@ describe('Integration Test: Auto-rolls', async () => {
 
     // Deploy active Lending Markets
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
-      await lendingMarketController.createOrderBook(hexETH, genesisDate);
+      await lendingMarketController.createOrderBook(
+        hexWFIL,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexETH,
+        genesisDate,
+        genesisDate,
+      );
     }
 
     maturities = await lendingMarketController.getMaturities(hexETH);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createOrderBook(hexWFIL, maturities[0]);
-    await lendingMarketController.createOrderBook(hexETH, maturities[0]);
+    const preOpeningDate = maturities[0].sub(604800);
+    await lendingMarketController.createOrderBook(
+      hexWFIL,
+      maturities[0],
+      preOpeningDate,
+    );
+    await lendingMarketController.createOrderBook(
+      hexETH,
+      maturities[0],
+      preOpeningDate,
+    );
   });
 
   beforeEach('Reset contract instances', async () => {

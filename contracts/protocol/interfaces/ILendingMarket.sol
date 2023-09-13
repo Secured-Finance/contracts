@@ -155,9 +155,11 @@ interface ILendingMarket {
             uint256 placedAmount
         );
 
-    function createOrderBook(uint256 maturity, uint256 openingDate)
-        external
-        returns (uint8 orderBookId);
+    function createOrderBook(
+        uint256 maturity,
+        uint256 openingDate,
+        uint256 preOpeningDate
+    ) external returns (uint8 orderBookId);
 
     function executeAutoRoll(
         uint8 maturedOrderBookId,

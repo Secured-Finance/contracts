@@ -28,7 +28,12 @@ const deployOrderBook = async (
   openingDate: number,
   lendingMarketCaller: Contract,
 ): Promise<BigNumber> => {
-  await lendingMarketCaller.createOrderBook(currency, maturity, openingDate);
+  await lendingMarketCaller.createOrderBook(
+    currency,
+    maturity,
+    openingDate,
+    openingDate - 604800,
+  );
 
   return lendingMarketCaller.getOrderBookId(currency);
 };
