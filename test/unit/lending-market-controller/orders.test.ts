@@ -181,6 +181,7 @@ describe('LendingMarketController - Orders', () => {
       await lendingMarketControllerProxy.createOrderBook(
         targetCurrency,
         genesisDate,
+        genesisDate,
       );
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
@@ -211,6 +212,7 @@ describe('LendingMarketController - Orders', () => {
       for (let i = 0; i < 9; i++) {
         await lendingMarketControllerProxy.createOrderBook(
           targetCurrency,
+          genesisDate,
           genesisDate,
         );
       }
@@ -252,6 +254,7 @@ describe('LendingMarketController - Orders', () => {
         lendingMarketControllerProxy.createOrderBook(
           targetCurrency,
           genesisDate,
+          genesisDate,
         ),
       ).revertedWith('LendingMarketNotInitialized');
     });
@@ -271,8 +274,27 @@ describe('LendingMarketController - Orders', () => {
         lendingMarketControllerProxy.createOrderBook(
           targetCurrency,
           genesisDate,
+          genesisDate,
         ),
       ).revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to create a order book due to invalid pre-opening date', async () => {
+      await lendingMarketControllerProxy.initializeLendingMarket(
+        targetCurrency,
+        genesisDate,
+        INITIAL_COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      await expect(
+        lendingMarketControllerProxy.createOrderBook(
+          targetCurrency,
+          genesisDate,
+          genesisDate + 1,
+        ),
+      ).revertedWith('InvalidPreOpeningDate');
     });
   });
 
@@ -294,6 +316,7 @@ describe('LendingMarketController - Orders', () => {
         await lendingMarketControllerProxy.createOrderBook(
           currency,
           genesisDate,
+          genesisDate - 604800,
         );
       }
 

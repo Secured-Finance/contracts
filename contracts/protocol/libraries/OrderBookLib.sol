@@ -31,7 +31,7 @@ library OrderBookLib {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
-    uint256 public constant PRE_ORDER_PERIOD = 7 days;
+    uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
     uint256 public constant ITAYOSE_PERIOD = 1 hours;
 
     error EmptyOrderBook();
@@ -46,6 +46,7 @@ library OrderBookLib {
         uint256 blockTotalAmount;
         uint256 blockTotalFutureValue;
         uint256 openingDate;
+        uint256 preOpeningDate;
         uint256 maturity;
         // Mapping from user to active lend order ids
         mapping(address => uint48[]) activeLendOrderIds;
@@ -66,10 +67,12 @@ library OrderBookLib {
     function initialize(
         OrderBook storage self,
         uint256 _maturity,
-        uint256 _openingDate
+        uint256 _openingDate,
+        uint256 _preOpeningDate
     ) internal returns (bool isReady) {
         self.maturity = _maturity;
         self.openingDate = _openingDate;
+        self.preOpeningDate = _preOpeningDate;
 
         self.lastOrderId = 0;
         self.lastOrderBlockNumber = 0;

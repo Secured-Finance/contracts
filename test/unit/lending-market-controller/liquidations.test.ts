@@ -60,7 +60,11 @@ describe('LendingMarketController - Liquidations', () => {
     );
 
     for (let i = 0; i < 5; i++) {
-      await lendingMarketControllerProxy.createOrderBook(currency, genesisDate);
+      await lendingMarketControllerProxy.createOrderBook(
+        currency,
+        genesisDate,
+        genesisDate,
+      );
     }
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);

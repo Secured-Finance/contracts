@@ -98,10 +98,26 @@ describe('Integration Test: Deposit', async () => {
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
-      await lendingMarketController.createOrderBook(hexETH, genesisDate);
-      await lendingMarketController.createOrderBook(hexWBTC, genesisDate);
-      await lendingMarketController.createOrderBook(hexUSDC, genesisDate);
+      await lendingMarketController.createOrderBook(
+        hexWFIL,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexETH,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexWBTC,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexUSDC,
+        genesisDate,
+        genesisDate,
+      );
     }
   });
 

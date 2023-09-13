@@ -578,15 +578,15 @@ contract LendingMarketController is
     /**
      * @notice Creates new order book.
      * @param _ccy Main currency for new lending market
-     * @param _openingDate Timestamp when the lending market opens
+     * @param _openingDate The timestamp when the order book opens
+     * @param _preOpeningDate The timestamp when the order book pre-opens
      */
-    function createOrderBook(bytes32 _ccy, uint256 _openingDate)
-        external
-        override
-        ifActive
-        onlyOwner
-    {
-        LendingMarketOperationLogic.createOrderBook(_ccy, _openingDate);
+    function createOrderBook(
+        bytes32 _ccy,
+        uint256 _openingDate,
+        uint256 _preOpeningDate
+    ) external override ifActive onlyOwner {
+        LendingMarketOperationLogic.createOrderBook(_ccy, _openingDate, _preOpeningDate);
     }
 
     /**

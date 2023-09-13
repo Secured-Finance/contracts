@@ -1,4 +1,4 @@
-import { Contract } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
@@ -22,8 +22,8 @@ const func: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
   const genesisDate =
     Number(process.env.MARKET_BASE_PERIOD) === 0
-      ? process.env.INITIAL_MARKET_OPENING_DATE || moment().unix()
-      : getGenesisDate().toString();
+      ? Number(process.env.INITIAL_MARKET_OPENING_DATE || moment().unix())
+      : getGenesisDate();
 
   const orderActionLogic = await deployments.get('OrderActionLogic');
   const orderReaderLogic = await deployments.get('OrderReaderLogic');
@@ -112,18 +112,21 @@ const func: DeployFunction = async function ({
 
     if (orderBookIds.length < MARKET_COUNT) {
       const count = MARKET_COUNT - orderBookIds.length;
-      let nearestMaturity = orderBookIds[0]
+      let nearestMaturity: BigNumber = orderBookIds[0]
         ? await lendingMarket.getMaturity(orderBookIds[0])
         : undefined;
 
       for (let i = 0; i < count; i++) {
-        let openingDate =
+        const openingDate =
           i === count - 1
-            ? nearestMaturity?.toString()
-            : process.env.INITIAL_MARKET_OPENING_DATE || genesisDate;
+            ? nearestMaturity.toNumber()
+            : Number(process.env.INITIAL_MARKET_OPENING_DATE || genesisDate);
+        const preOpeningDate = Number(
+          process.env.INITIAL_MARKET_PRE_ORDER_DATE || openingDate - 604800,
+        );
 
         const receipt = await lendingMarketController
-          .createOrderBook(currency.key, openingDate)
+          .createOrderBook(currency.key, openingDate, preOpeningDate)
           .then((tx) => tx.wait());
 
         const events = await lendingMarketOperationLogic.queryFilter(

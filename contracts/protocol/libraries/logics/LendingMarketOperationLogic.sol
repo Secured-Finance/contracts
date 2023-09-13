@@ -31,6 +31,7 @@ library LendingMarketOperationLogic {
     error InvalidCompoundFactor();
     error InvalidCurrency();
     error InvalidOpeningDate();
+    error InvalidPreOpeningDate();
     error InvalidTimestamp();
     error LendingMarketNotInitialized();
     error NotEnoughOrderBooks();
@@ -191,13 +192,18 @@ library LendingMarketOperationLogic {
         );
     }
 
-    function createOrderBook(bytes32 _ccy, uint256 _openingDate) external {
+    function createOrderBook(
+        bytes32 _ccy,
+        uint256 _openingDate,
+        uint256 _preOpeningDate
+    ) external {
         if (!AddressResolverLib.genesisValueVault().isInitialized(_ccy)) {
             revert LendingMarketNotInitialized();
         }
         if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
             revert InvalidCurrency();
         }
+        if (_preOpeningDate > _openingDate) revert InvalidPreOpeningDate();
 
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
 
@@ -213,7 +219,7 @@ library LendingMarketOperationLogic {
 
         if (_openingDate >= newMaturity) revert InvalidOpeningDate();
 
-        uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate);
+        uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate, _preOpeningDate);
 
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;

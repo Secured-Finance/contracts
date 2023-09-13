@@ -290,13 +290,13 @@ describe('Integration Test: Liquidations', async () => {
     // Deploy Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createOrderBook(hexWFIL, genesisDate)
+        .createOrderBook(hexWFIL, genesisDate, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createOrderBook(hexUSDC, genesisDate)
+        .createOrderBook(hexUSDC, genesisDate, genesisDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createOrderBook(hexETH, genesisDate)
+        .createOrderBook(hexETH, genesisDate, genesisDate)
         .then((tx) => tx.wait());
     }
 
