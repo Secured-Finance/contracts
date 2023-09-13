@@ -8,7 +8,7 @@ import {ILendingMarketController} from "../../interfaces/ILendingMarketControlle
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {CollateralParametersHandler as Params} from "../CollateralParametersHandler.sol";
-import {ERC20Handler} from "../ERC20Handler.sol";
+import {TransferHelper} from "../TransferHelper.sol";
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 // storages
@@ -297,7 +297,7 @@ library DepositManagementLogic {
         bytes32 _ccy,
         uint256 _amount
     ) public {
-        ERC20Handler.depositAssets(
+        TransferHelper.depositAssets(
             Storage.slot().tokenAddresses[_ccy],
             _user,
             address(this),
@@ -323,7 +323,11 @@ library DepositManagementLogic {
         Storage.slot().totalDepositAmount[_ccy] -= withdrawableAmount;
         removeDepositAmount(_user, _ccy, withdrawableAmount);
 
-        ERC20Handler.withdrawAssets(Storage.slot().tokenAddresses[_ccy], _user, withdrawableAmount);
+        TransferHelper.withdrawAssets(
+            Storage.slot().tokenAddresses[_ccy],
+            _user,
+            withdrawableAmount
+        );
 
         return withdrawableAmount;
     }

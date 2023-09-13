@@ -8,6 +8,8 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
+import {ILiquidationReceiver} from "../../interfaces/ILiquidationReceiver.sol";
+
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {QuickSort} from "../QuickSort.sol";
@@ -18,8 +20,6 @@ import {RoundingInt256} from "../math/RoundingInt256.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
-// liquidation
-import {ILiquidationReceiver} from "../../../liquidators/interfaces/ILiquidationReceiver.sol";
 
 library FundManagementLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;

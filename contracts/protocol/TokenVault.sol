@@ -7,7 +7,7 @@ import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/Enumerab
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
 import {CollateralParametersHandler as Params} from "./libraries/CollateralParametersHandler.sol";
-import {ERC20Handler} from "./libraries/ERC20Handler.sol";
+import {TransferHelper} from "./libraries/TransferHelper.sol";
 import {DepositManagementLogic} from "./libraries/logics/DepositManagementLogic.sol";
 // interfaces
 import {ITokenVault} from "./interfaces/ITokenVault.sol";
@@ -69,7 +69,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
 
-        ERC20Handler.initialize(_nativeToken);
+        TransferHelper.initialize(_nativeToken);
         Params.setCollateralParameters(
             _liquidationThresholdRate,
             _liquidationProtocolFeeRate,
@@ -93,7 +93,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     receive() external payable {
-        if (!ERC20Handler.isNative(msg.sender)) {
+        if (!TransferHelper.isNative(msg.sender)) {
             revert CallerNotBaseCurrency({caller: msg.sender});
         }
     }
@@ -536,7 +536,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     ) internal {
         if (
             _amount == 0 ||
-            (ERC20Handler.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
+            (TransferHelper.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
         ) {
             revert InvalidAmount();
         }

@@ -5,12 +5,12 @@ import {ISwapRouter} from "../dependencies/uniswap/ISwapRouter.sol";
 import {IQuoter} from "../dependencies/uniswap/IQuoter.sol";
 import {IERC20} from "../dependencies/openzeppelin/token/ERC20/IERC20.sol";
 
-import {ILiquidationReceiver} from "./interfaces/ILiquidationReceiver.sol";
 // libraries
-import {ERC20Handler} from "../protocol/libraries/ERC20Handler.sol";
+import {TransferHelper} from "../protocol/libraries/TransferHelper.sol";
 // interfaces
 import {ILendingMarketController} from "../protocol/interfaces/ILendingMarketController.sol";
 import {ITokenVault} from "../protocol/interfaces/ITokenVault.sol";
+import {ILiquidationReceiver} from "../protocol/interfaces/ILiquidationReceiver.sol";
 // mixins
 import {MixinWallet} from "../protocol/mixins/MixinWallet.sol";
 
@@ -140,7 +140,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
             debtTokenBalance = address(this).balance;
         } else {
             debtTokenBalance = IERC20(debtCcyAddr).balanceOf(address(this));
-            ERC20Handler.safeApprove(debtCcyAddr, address(tokenVault), debtTokenBalance);
+            TransferHelper.safeApprove(debtCcyAddr, address(tokenVault), debtTokenBalance);
         }
 
         if (debtTokenBalance != 0) {
@@ -196,7 +196,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         if (_isNativeCurrency) {
             ethAmount = _amountIn;
         } else {
-            ERC20Handler.safeApprove(_ccyFrom, address(uniswapRouter), _amountIn);
+            TransferHelper.safeApprove(_ccyFrom, address(uniswapRouter), _amountIn);
         }
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({

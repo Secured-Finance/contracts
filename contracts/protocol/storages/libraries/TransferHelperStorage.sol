@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-library ERC20HandlerStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.erc20Handler");
+library TransferHelperStorage {
+    bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.transferHelper");
 
     struct Storage {
         address nativeToken;
