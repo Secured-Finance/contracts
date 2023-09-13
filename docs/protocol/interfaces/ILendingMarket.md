@@ -218,7 +218,7 @@ function calculateFilledAmount(uint8 orderBookId, enum ProtocolTypes.Side side, 
 ### createOrderBook
 
 ```solidity
-function createOrderBook(uint256 maturity, uint256 openingDate) external returns (uint8 orderBookId)
+function createOrderBook(uint256 maturity, uint256 openingDate, uint256 preOpeningDate) external returns (uint8 orderBookId)
 ```
 
 ### executeAutoRoll

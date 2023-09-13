@@ -263,7 +263,7 @@ function initializeLendingMarket(bytes32 ccy, uint256 genesisDate, uint256 compo
 ### createOrderBook
 
 ```solidity
-function createOrderBook(bytes32 ccy, uint256 marketOpeningDate) external
+function createOrderBook(bytes32 ccy, uint256 openingDate, uint256 preOpeningDate) external
 ```
 
 ### executeOrder

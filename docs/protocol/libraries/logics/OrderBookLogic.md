@@ -155,7 +155,7 @@ function updateCircuitBreakerLimitRange(uint256 _cbLimitRange) external
 ### createOrderBook
 
 ```solidity
-function createOrderBook(uint256 _maturity, uint256 _openingDate) public returns (uint8 orderBookId)
+function createOrderBook(uint256 _maturity, uint256 _openingDate, uint256 _preOpeningDate) public returns (uint8 orderBookId)
 ```
 
 ### executeAutoRoll

@@ -26,6 +26,12 @@ error InvalidCurrency()
 error InvalidOpeningDate()
 ```
 
+### InvalidPreOpeningDate
+
+```solidity
+error InvalidPreOpeningDate()
+```
+
 ### InvalidTimestamp
 
 ```solidity
@@ -95,7 +101,7 @@ function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _co
 ### createOrderBook
 
 ```solidity
-function createOrderBook(bytes32 _ccy, uint256 _openingDate) external
+function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) external
 ```
 
 ### executeItayoseCall

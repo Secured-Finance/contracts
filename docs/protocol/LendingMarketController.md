@@ -527,7 +527,7 @@ Initialize the lending market to set a genesis date and compound factor
 ### createOrderBook
 
 ```solidity
-function createOrderBook(bytes32 _ccy, uint256 _openingDate) external
+function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) external
 ```
 
 Creates new order book.
@@ -535,7 +535,8 @@ Creates new order book.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Main currency for new lending market |
-| _openingDate | uint256 | Timestamp when the lending market opens |
+| _openingDate | uint256 | The timestamp when the order book opens |
+| _preOpeningDate | uint256 | The timestamp when the order book pre-opens |
 
 ### executeOrder
 
