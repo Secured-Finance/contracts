@@ -74,7 +74,6 @@ library OrderBookLib {
         self.openingDate = _openingDate;
         self.preOpeningDate = _preOpeningDate;
 
-        self.lastOrderId = 0;
         self.lastOrderBlockNumber = 0;
         self.blockTotalAmount = 0;
         self.blockTotalFutureValue = 0;
