@@ -74,21 +74,6 @@ interface ITokenVault {
         view
         returns (uint256 protocolFee, uint256 liquidatorFee);
 
-    function getCollateralParameters()
-        external
-        view
-        returns (
-            uint256 liquidationThresholdRate,
-            uint256 liquidationProtocolFeeRate,
-            uint256 liquidatorFeeRate
-        );
-
-    function setCollateralParameters(
-        uint256 liquidationThresholdRate,
-        uint256 liquidationProtocolFeeRate,
-        uint256 liquidatorFeeRate
-    ) external;
-
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
     function depositFrom(

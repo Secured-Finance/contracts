@@ -41,7 +41,7 @@ describe('Integration Test: Order Estimations', async () => {
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
 
-    await tokenVault.setCollateralParameters(
+    await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,

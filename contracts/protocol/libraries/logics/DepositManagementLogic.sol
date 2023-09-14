@@ -7,7 +7,6 @@ import {EnumerableSet} from "../../../dependencies/openzeppelin/utils/structs/En
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
-import {CollateralParametersHandler as Params} from "../CollateralParametersHandler.sol";
 import {TransferHelper} from "../TransferHelper.sol";
 import {Constants} from "../Constants.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
@@ -39,7 +38,7 @@ library DepositManagementLogic {
         return
             totalUsedCollateral == 0 ||
             (totalCollateral * Constants.PCT_DIGIT >=
-                totalUsedCollateral * Params.liquidationThresholdRate());
+                totalUsedCollateral * Storage.slot().liquidationThresholdRate);
     }
 
     function getUsedCurrencies(address _user) public view returns (bytes32[] memory) {
@@ -68,7 +67,7 @@ library DepositManagementLogic {
         ) = AddressResolverLib.lendingMarketController().calculateFunds(
                 _ccy,
                 _user,
-                Params.liquidationThresholdRate()
+                Storage.slot().liquidationThresholdRate
             );
 
         return
@@ -110,7 +109,7 @@ library DepositManagementLogic {
         ) = AddressResolverLib.lendingMarketController().calculateFunds(
                 _ccy,
                 _user,
-                Params.liquidationThresholdRate()
+                Storage.slot().liquidationThresholdRate
             );
 
         uint256 plusDeposit = Storage.slot().depositAmounts[_user][_ccy] + borrowedAmount;
@@ -192,7 +191,7 @@ library DepositManagementLogic {
         ) = AddressResolverLib.lendingMarketController().calculateTotalFundsInBaseCurrency(
             _user,
             _funds,
-            Params.liquidationThresholdRate()
+            Storage.slot().liquidationThresholdRate
         );
 
         // Check if the user has enough deposit amount for lending in the selected currency.
@@ -227,14 +226,14 @@ library DepositManagementLogic {
             return totalDeposit;
         } else if (
             totalCollateral * Constants.PRICE_DIGIT >
-            totalUsedCollateral * Params.liquidationThresholdRate()
+            totalUsedCollateral * Storage.slot().liquidationThresholdRate
         ) {
             // NOTE: The formula is:
             // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
             uint256 maxWithdraw = (totalCollateral *
                 Constants.PRICE_DIGIT -
                 (totalUsedCollateral) *
-                Params.liquidationThresholdRate()).div(Constants.PRICE_DIGIT);
+                Storage.slot().liquidationThresholdRate).div(Constants.PRICE_DIGIT);
             return maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw;
         } else {
             return 0;
@@ -356,7 +355,7 @@ library DepositManagementLogic {
         if (collateralAmount == 0) revert CollateralIsZero({ccy: _liquidationCcy});
 
         uint256 liquidationAmountInBaseCcy = totalCollateralInBaseCcy * Constants.PCT_DIGIT >=
-            totalUsedCollateralInBaseCcy * Params.liquidationThresholdRate()
+            totalUsedCollateralInBaseCcy * Storage.slot().liquidationThresholdRate
             ? 0
             : totalUsedCollateralInBaseCcy.div(2);
 
@@ -385,15 +384,14 @@ library DepositManagementLogic {
         // Therefore, we need to keep the total liquidation amount within the maximum amount.
         if (liquidationTotalAmount > collateralAmount && totalCollateralAmount > collateralAmount) {
             liquidationTotalAmount = collateralAmount;
-            protocolFee = (liquidationTotalAmount * Params.liquidationProtocolFeeRate()).div(
-                Constants.PCT_DIGIT +
-                    Params.liquidatorFeeRate() +
-                    Params.liquidationProtocolFeeRate()
+            uint256 liquidatorFeeRate = Storage.slot().liquidatorFeeRate;
+            uint256 liquidationProtocolFeeRate = Storage.slot().liquidationProtocolFeeRate;
+
+            protocolFee = (liquidationTotalAmount * liquidationProtocolFeeRate).div(
+                Constants.PCT_DIGIT + liquidatorFeeRate + liquidationProtocolFeeRate
             );
-            liquidatorFee = (liquidationTotalAmount * Params.liquidatorFeeRate()).div(
-                Constants.PCT_DIGIT +
-                    Params.liquidatorFeeRate() +
-                    Params.liquidationProtocolFeeRate()
+            liquidatorFee = (liquidationTotalAmount * liquidatorFeeRate).div(
+                Constants.PCT_DIGIT + liquidatorFeeRate + liquidationProtocolFeeRate
             );
             liquidationAmount = liquidationTotalAmount - protocolFee - liquidatorFee;
         }
@@ -404,8 +402,10 @@ library DepositManagementLogic {
         view
         returns (uint256 protocolFee, uint256 liquidatorFee)
     {
-        protocolFee = (_amount * Params.liquidationProtocolFeeRate()).div(Constants.PCT_DIGIT);
-        liquidatorFee = (_amount * Params.liquidatorFeeRate()).div(Constants.PCT_DIGIT);
+        protocolFee = (_amount * Storage.slot().liquidationProtocolFeeRate).div(
+            Constants.PCT_DIGIT
+        );
+        liquidatorFee = (_amount * Storage.slot().liquidatorFeeRate).div(Constants.PCT_DIGIT);
     }
 
     function transferFrom(

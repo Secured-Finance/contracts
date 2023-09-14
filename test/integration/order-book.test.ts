@@ -119,7 +119,7 @@ describe('Integration Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
-    await tokenVault.setCollateralParameters(
+    await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
