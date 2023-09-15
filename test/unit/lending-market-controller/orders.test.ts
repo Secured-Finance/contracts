@@ -30,6 +30,7 @@ describe('LendingMarketController - Orders', () => {
   let mockReserveFund: MockContract;
   let beaconProxyControllerProxy: Contract;
   let lendingMarketControllerProxy: Contract;
+  let lendingMarketReader: Contract;
 
   let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
@@ -68,6 +69,7 @@ describe('LendingMarketController - Orders', () => {
       mockReserveFund,
       beaconProxyControllerProxy,
       lendingMarketControllerProxy,
+      lendingMarketReader,
       fundManagementLogic,
       lendingMarketOperationLogic,
       orderActionLogic,
@@ -181,6 +183,7 @@ describe('LendingMarketController - Orders', () => {
       await lendingMarketControllerProxy.createOrderBook(
         targetCurrency,
         genesisDate,
+        genesisDate,
       );
       const maturities = await lendingMarketControllerProxy.getMaturities(
         targetCurrency,
@@ -211,6 +214,7 @@ describe('LendingMarketController - Orders', () => {
       for (let i = 0; i < 9; i++) {
         await lendingMarketControllerProxy.createOrderBook(
           targetCurrency,
+          genesisDate,
           genesisDate,
         );
       }
@@ -252,6 +256,7 @@ describe('LendingMarketController - Orders', () => {
         lendingMarketControllerProxy.createOrderBook(
           targetCurrency,
           genesisDate,
+          genesisDate,
         ),
       ).revertedWith('LendingMarketNotInitialized');
     });
@@ -271,8 +276,27 @@ describe('LendingMarketController - Orders', () => {
         lendingMarketControllerProxy.createOrderBook(
           targetCurrency,
           genesisDate,
+          genesisDate,
         ),
       ).revertedWith('InvalidCurrency');
+    });
+
+    it('Fail to create a order book due to invalid pre-opening date', async () => {
+      await lendingMarketControllerProxy.initializeLendingMarket(
+        targetCurrency,
+        genesisDate,
+        INITIAL_COMPOUND_FACTOR,
+        ORDER_FEE_RATE,
+        CIRCUIT_BREAKER_LIMIT_RANGE,
+      );
+
+      await expect(
+        lendingMarketControllerProxy.createOrderBook(
+          targetCurrency,
+          genesisDate,
+          genesisDate + 1,
+        ),
+      ).revertedWith('InvalidPreOpeningDate');
     });
   });
 
@@ -294,6 +318,7 @@ describe('LendingMarketController - Orders', () => {
         await lendingMarketControllerProxy.createOrderBook(
           currency,
           genesisDate,
+          genesisDate - 604800,
         );
       }
 
@@ -415,12 +440,11 @@ describe('LendingMarketController - Orders', () => {
       expect(lendUnitPrices.quantities[2].toString()).to.equal('0');
       expect(lendUnitPrices.quantities.length).to.equal(10);
 
-      const borrowOrders =
-        await lendingMarketControllerProxy.getBorrowOrderBook(
-          targetCurrency,
-          maturities[3],
-          10,
-        );
+      const borrowOrders = await lendingMarketReader.getBorrowOrderBook(
+        targetCurrency,
+        maturities[3],
+        10,
+      );
 
       for (let i = 0; i < borrowOrders.unitPrices.length; i++) {
         expect(borrowUnitPrices.unitPrices[i].toString()).to.equal(
@@ -434,7 +458,7 @@ describe('LendingMarketController - Orders', () => {
         );
       }
 
-      const lendOrders = await lendingMarketControllerProxy.getLendOrderBook(
+      const lendOrders = await lendingMarketReader.getLendOrderBook(
         targetCurrency,
         maturities[3],
         10,
@@ -663,16 +687,18 @@ describe('LendingMarketController - Orders', () => {
 
       await showLendingInfo();
 
-      const borrowUnitPrices =
-        await lendingMarketControllerProxy.getBestLendUnitPrices(
-          targetCurrency,
-        );
+      const borrowUnitPrices = await lendingMarketReader.getBestLendUnitPrices(
+        targetCurrency,
+      );
 
-      const lendingRates =
-        await lendingMarketControllerProxy.getBestBorrowUnitPrices(
-          targetCurrency,
-        );
-      const market = await lendingMarket.getOrderBookDetail(orderBookIds[0]);
+      const lendingRates = await lendingMarketReader.getBestBorrowUnitPrices(
+        targetCurrency,
+      );
+
+      const market = await lendingMarketReader.getOrderBookDetail(
+        targetCurrency,
+        maturities[0],
+      );
 
       const { blockNumber } =
         await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
@@ -689,17 +715,14 @@ describe('LendingMarketController - Orders', () => {
       await showLendingInfo();
 
       const rotatedBorrowRates =
-        await lendingMarketControllerProxy.getBestLendUnitPrices(
-          targetCurrency,
-        );
+        await lendingMarketReader.getBestLendUnitPrices(targetCurrency);
       const rotatedLendingRates =
-        await lendingMarketControllerProxy.getBestBorrowUnitPrices(
-          targetCurrency,
-        );
+        await lendingMarketReader.getBestBorrowUnitPrices(targetCurrency);
       const rotatedMaturities =
         await lendingMarketControllerProxy.getMaturities(targetCurrency);
-      const rotatedMarket = await lendingMarket.getOrderBookDetail(
-        orderBookIds[0],
+      const rotatedMarket = await lendingMarketReader.getOrderBookDetail(
+        targetCurrency,
+        maturities[0],
       );
 
       // Check borrow rates
@@ -742,18 +765,20 @@ describe('LendingMarketController - Orders', () => {
         moment.unix(genesisDate).add(3, 'M').month(),
       );
       expect(market.openingDate).to.equal(genesisDate);
-      expect(market.borrowUnitPrice.toString()).to.equal('8880');
-      expect(market.lendUnitPrice.toString()).to.equal('8720');
+      expect(market.bestLendUnitPrice.toString()).to.equal('8880');
+      expect(market.bestBorrowUnitPrice.toString()).to.equal('8720');
       expect(market.marketUnitPrice.toString()).to.equal('8720');
+      expect(market.blockUnitPriceHistory[0].toString()).to.equal('8720');
 
       expect(rotatedMarket.ccy).to.equal(targetCurrency);
       expect(rotatedMarket.maturity.toString()).to.equal(
         newMaturity.toString(),
       );
       expect(rotatedMarket.openingDate).to.equal(maturities[1]);
-      expect(rotatedMarket.borrowUnitPrice.toString()).to.equal('10000');
-      expect(rotatedMarket.lendUnitPrice.toString()).to.equal('0');
+      expect(rotatedMarket.bestLendUnitPrice.toString()).to.equal('10000');
+      expect(rotatedMarket.bestBorrowUnitPrice.toString()).to.equal('0');
       expect(rotatedMarket.marketUnitPrice.toString()).to.equal('0');
+      expect(rotatedMarket.blockUnitPriceHistory[0].toString()).to.equal('0');
 
       const cleanUpFunds = async () => {
         for (const account of accounts) {
@@ -851,11 +876,9 @@ describe('LendingMarketController - Orders', () => {
           '50000000000000000',
           '9880',
         );
-      const { activeOrders, inactiveOrders } =
-        await lendingMarketControllerProxy.getOrders(
-          [targetCurrency],
-          alice.address,
-        );
+      const { activeOrders, inactiveOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(activeOrders.length).to.equal(1);
       expect(inactiveOrders.length).to.equal(0);
@@ -907,11 +930,9 @@ describe('LendingMarketController - Orders', () => {
           '9881',
         );
 
-      const { activeOrders, inactiveOrders } =
-        await lendingMarketControllerProxy.getOrders(
-          [targetCurrency],
-          alice.address,
-        );
+      const { activeOrders, inactiveOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(activeOrders.length).to.equal(4);
       expect(inactiveOrders.length).to.equal(0);
@@ -986,11 +1007,9 @@ describe('LendingMarketController - Orders', () => {
           '50000000000000003',
           '9882',
         );
-      const { activeOrders, inactiveOrders } =
-        await lendingMarketControllerProxy.getOrders(
-          [targetCurrency, targetCurrency2],
-          alice.address,
-        );
+      const { activeOrders, inactiveOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([targetCurrency, targetCurrency2], alice.address);
 
       expect(activeOrders.length).to.equal(4);
       expect(inactiveOrders.length).to.equal(0);
@@ -1053,11 +1072,9 @@ describe('LendingMarketController - Orders', () => {
           '0',
         );
 
-      const { activeOrders, inactiveOrders } =
-        await lendingMarketControllerProxy.getOrders(
-          [targetCurrency],
-          alice.address,
-        );
+      const { activeOrders, inactiveOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(activeOrders.length).to.equal(1);
       expect(inactiveOrders.length).to.equal(1);
@@ -1078,11 +1095,9 @@ describe('LendingMarketController - Orders', () => {
     });
 
     it('Get an empty order list', async () => {
-      const { activeOrders, inactiveOrders } =
-        await lendingMarketControllerProxy.getOrders(
-          [targetCurrency],
-          alice.address,
-        );
+      const { activeOrders, inactiveOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(activeOrders.length).to.equal(0);
       expect(inactiveOrders.length).to.equal(0);
@@ -1110,10 +1125,9 @@ describe('LendingMarketController - Orders', () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      const positions = await lendingMarketControllerProxy.getPositions(
-        [targetCurrency],
-        alice.address,
-      );
+      const positions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(positions.length).to.equal(1);
 
@@ -1166,10 +1180,9 @@ describe('LendingMarketController - Orders', () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      const positions = await lendingMarketControllerProxy.getPositions(
-        [targetCurrency],
-        alice.address,
-      );
+      const positions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(positions.length).to.equal(1);
 
@@ -1222,10 +1235,9 @@ describe('LendingMarketController - Orders', () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      const positions = await lendingMarketControllerProxy.getPositions(
-        [targetCurrency],
-        alice.address,
-      );
+      const positions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(positions.length).to.equal(2);
 
@@ -1282,10 +1294,9 @@ describe('LendingMarketController - Orders', () => {
           '5000',
         );
 
-      const positions = await lendingMarketControllerProxy.getPositions(
-        [targetCurrency, targetCurrency2],
-        alice.address,
-      );
+      const positions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency, targetCurrency2], alice.address);
 
       expect(positions.length).to.equal(2);
 
@@ -1325,10 +1336,9 @@ describe('LendingMarketController - Orders', () => {
       await time.increaseTo(maturities[0].toString());
       await lendingMarketControllerProxy.rotateOrderBooks(targetCurrency);
 
-      const positions = await lendingMarketControllerProxy.getPositions(
-        [targetCurrency],
-        alice.address,
-      );
+      const positions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(positions.length).to.equal(1);
 
@@ -1349,19 +1359,17 @@ describe('LendingMarketController - Orders', () => {
           '5000',
         );
 
-      const positions = await lendingMarketControllerProxy.getPositions(
-        [targetCurrency],
-        alice.address,
-      );
+      const positions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(positions.length).to.equal(0);
     });
 
     it('Get an empty position list of a user who has no open order', async () => {
-      const positions = await lendingMarketControllerProxy.getPositions(
-        [targetCurrency],
-        alice.address,
-      );
+      const positions = await lendingMarketReader[
+        'getPositions(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(positions.length).to.equal(0);
     });

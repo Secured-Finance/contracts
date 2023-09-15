@@ -541,15 +541,16 @@ Calculates the amount to be filled when executing an order in the order book.
 ### createOrderBook
 
 ```solidity
-function createOrderBook(uint256 _maturity, uint256 _openingDate) external returns (uint8 orderBookId)
+function createOrderBook(uint256 _maturity, uint256 _openingDate, uint256 _preOpeningDate) external returns (uint8 orderBookId)
 ```
 
 Creates a new order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _maturity | uint256 | The initial maturity of the market |
-| _openingDate | uint256 | The timestamp when the market opens |
+| _maturity | uint256 | The initial maturity of the order book |
+| _openingDate | uint256 | The timestamp when the order book opens |
+| _preOpeningDate | uint256 | The timestamp when the order book pre-opens |
 
 ### executeAutoRoll
 

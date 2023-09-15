@@ -5,7 +5,7 @@ pragma solidity ^0.8.9;
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
 import {ITokenVault} from "../interfaces/ITokenVault.sol";
 // libraries
-import {ERC20Handler} from "../libraries/ERC20Handler.sol";
+import {TransferHelper} from "../libraries/TransferHelper.sol";
 // utils
 import {Ownable} from "../utils/Ownable.sol";
 
@@ -24,7 +24,7 @@ abstract contract MixinWallet is Ownable {
 
     function _initialize(address _owner, address _nativeToken) internal {
         _transferOwnership(_owner);
-        ERC20Handler.initialize(_nativeToken);
+        TransferHelper.initialize(_nativeToken);
     }
 
     /**
@@ -74,9 +74,9 @@ abstract contract MixinWallet is Ownable {
         uint256 _amount
     ) internal {
         address tokenAddress = _tokenvault.getTokenAddress(_ccy);
-        if (!ERC20Handler.isNative(tokenAddress)) {
-            ERC20Handler.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
-            ERC20Handler.safeApprove(tokenAddress, address(_tokenvault), _amount);
+        if (!TransferHelper.isNative(tokenAddress)) {
+            TransferHelper.safeTransferFrom(tokenAddress, msg.sender, address(this), _amount);
+            TransferHelper.safeApprove(tokenAddress, address(_tokenvault), _amount);
         }
         _tokenvault.deposit{value: msg.value}(_ccy, _amount);
     }
@@ -95,10 +95,10 @@ abstract contract MixinWallet is Ownable {
         _tokenvault.withdraw(_ccy, _amount);
 
         address tokenAddress = _tokenvault.getTokenAddress(_ccy);
-        if (ERC20Handler.isNative(tokenAddress)) {
-            ERC20Handler.safeTransferETH(msg.sender, _amount);
+        if (TransferHelper.isNative(tokenAddress)) {
+            TransferHelper.safeTransferETH(msg.sender, _amount);
         } else {
-            ERC20Handler.safeTransfer(tokenAddress, msg.sender, _amount);
+            TransferHelper.safeTransfer(tokenAddress, msg.sender, _amount);
         }
     }
 }

@@ -86,7 +86,7 @@ describe('Integration Test: Deposit', async () => {
     await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
     await tokenVault.registerCurrency(hexWBTC, wBTCToken.address, false);
 
-    await tokenVault.setCollateralParameters(
+    await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -98,10 +98,26 @@ describe('Integration Test: Deposit', async () => {
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
-      await lendingMarketController.createOrderBook(hexETH, genesisDate);
-      await lendingMarketController.createOrderBook(hexWBTC, genesisDate);
-      await lendingMarketController.createOrderBook(hexUSDC, genesisDate);
+      await lendingMarketController.createOrderBook(
+        hexWFIL,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexETH,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexWBTC,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexUSDC,
+        genesisDate,
+        genesisDate,
+      );
     }
   });
 

@@ -50,7 +50,11 @@ describe('LendingMarketController - Terminations', () => {
     );
 
     for (let i = 0; i < 5; i++) {
-      await lendingMarketControllerProxy.createOrderBook(currency, openingDate);
+      await lendingMarketControllerProxy.createOrderBook(
+        currency,
+        openingDate,
+        openingDate,
+      );
     }
 
     maturities = await lendingMarketControllerProxy.getMaturities(currency);
@@ -117,7 +121,7 @@ describe('LendingMarketController - Terminations', () => {
       ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
 
       await expect(
-        lendingMarketControllerProxy.createOrderBook(targetCurrency, '1'),
+        lendingMarketControllerProxy.createOrderBook(targetCurrency, '1', '1'),
       ).to.revertedWith('AlreadyTerminated');
 
       await expect(

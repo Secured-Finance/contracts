@@ -30,6 +30,7 @@ describe('Integration Test: Order Book', async () => {
   let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
+  let lendingMarketReader: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
 
@@ -111,6 +112,7 @@ describe('Integration Test: Order Book', async () => {
       currencyController,
       tokenVault,
       lendingMarketController,
+      lendingMarketReader,
       wETHToken,
       wFILToken,
       orderActionLogic,
@@ -119,7 +121,7 @@ describe('Integration Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
-    await tokenVault.setCollateralParameters(
+    await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -129,8 +131,16 @@ describe('Integration Test: Order Book', async () => {
 
     // Deploy Lending Markets for FIL market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
-      await lendingMarketController.createOrderBook(hexETH, genesisDate);
+      await lendingMarketController.createOrderBook(
+        hexWFIL,
+        genesisDate,
+        genesisDate,
+      );
+      await lendingMarketController.createOrderBook(
+        hexETH,
+        genesisDate,
+        genesisDate,
+      );
     }
 
     filLendingMarket = await lendingMarketController
@@ -250,10 +260,9 @@ describe('Integration Test: Order Book', async () => {
       });
 
       after(async () => {
-        const { activeOrders } = await lendingMarketController.getOrders(
-          [hexETH],
-          carol.address,
-        );
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexETH, carol.address);
 
         for (const order of activeOrders) {
           await lendingMarketController
@@ -1112,10 +1121,9 @@ describe('Integration Test: Order Book', async () => {
       });
 
       after(async () => {
-        const { activeOrders } = await lendingMarketController.getOrders(
-          [hexWFIL],
-          carol.address,
-        );
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexWFIL, carol.address);
 
         for (const order of activeOrders) {
           await lendingMarketController

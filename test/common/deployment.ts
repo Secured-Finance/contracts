@@ -327,6 +327,11 @@ const deployContracts = async () => {
     );
   }
 
+  // Deploy external contracts
+  const lendingMarketReader = await ethers
+    .getContractFactory('LendingMarketReader')
+    .then((factory) => factory.deploy(addressResolverProxyAddress));
+
   return {
     genesisDate,
     // contracts
@@ -346,6 +351,8 @@ const deployContracts = async () => {
     wFilToETHPriceFeed: priceFeedContracts['WFIL/ETH'],
     btcToUSDPriceFeed: priceFeedContracts['BTC/USD'],
     usdcToUSDPriceFeed: priceFeedContracts['USDC/USD'],
+    // external contracts
+    lendingMarketReader,
     // libraries
     fundManagementLogic: fundManagementLogic.attach(
       lendingMarketControllerProxy.address,

@@ -5,14 +5,13 @@ pragma solidity ^0.8.9;
 import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.sol";
 // interfaces
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
+import {ILiquidationReceiver} from "../../interfaces/ILiquidationReceiver.sol";
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {FundManagementLogic} from "./FundManagementLogic.sol";
 import {RoundingUint256} from "../math/RoundingUint256.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
-// liquidation
-import {ILiquidationReceiver} from "../../../liquidators/interfaces/ILiquidationReceiver.sol";
 
 library LiquidationLogic {
     using RoundingUint256 for uint256;

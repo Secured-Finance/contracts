@@ -12,18 +12,15 @@ interface ILendingMarket {
     error NotItayosePeriod();
     error NotPreOrderPeriod();
 
-    struct OrderBook {
-        bytes32 ccy;
-        uint256 maturity;
-        uint256 openingDate;
-        uint256 borrowUnitPrice;
-        uint256 lendUnitPrice;
-        uint256 marketUnitPrice;
-        uint256 openingUnitPrice;
-        bool isReady;
-    }
-
-    function getOrderBookDetail(uint8 orderBookId) external view returns (OrderBook memory);
+    function getOrderBookDetail(uint8 orderBookId)
+        external
+        view
+        returns (
+            bytes32 ccy,
+            uint256 maturity,
+            uint256 openingDate,
+            uint256 preOpeningDate
+        );
 
     function getCircuitBreakerThresholds(uint8 orderBookId)
         external
@@ -45,6 +42,8 @@ interface ILendingMarket {
         returns (uint256[] memory);
 
     function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256);
+
+    function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] memory);
 
     function getBlockUnitPriceAverage(uint8 orderBookId, uint256 count)
         external
@@ -155,9 +154,11 @@ interface ILendingMarket {
             uint256 placedAmount
         );
 
-    function createOrderBook(uint256 maturity, uint256 openingDate)
-        external
-        returns (uint8 orderBookId);
+    function createOrderBook(
+        uint256 maturity,
+        uint256 openingDate,
+        uint256 preOpeningDate
+    ) external returns (uint8 orderBookId);
 
     function executeAutoRoll(
         uint8 maturedOrderBookId,

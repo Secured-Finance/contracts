@@ -5,7 +5,6 @@ pragma solidity ^0.8.9;
 import {IReserveFund} from "./interfaces/IReserveFund.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
-import {ERC20Handler} from "./libraries/ERC20Handler.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
 // utils

@@ -31,13 +31,16 @@ library OrderBookLib {
     using OrderStatisticsTreeLib for OrderStatisticsTreeLib.Tree;
     using RoundingUint256 for uint256;
 
-    uint256 public constant PRE_ORDER_PERIOD = 7 days;
+    uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
     uint256 public constant ITAYOSE_PERIOD = 1 hours;
 
     error EmptyOrderBook();
     error PastMaturityOrderExists();
 
     struct OrderBook {
+        uint256 maturity;
+        uint256 openingDate;
+        uint256 preOpeningDate;
         uint48 lastOrderId;
         uint48 lastOrderBlockNumber;
         bool isReliableBlock;
@@ -45,8 +48,6 @@ library OrderBookLib {
         uint80 blockUnitPriceHistory;
         uint256 blockTotalAmount;
         uint256 blockTotalFutureValue;
-        uint256 openingDate;
-        uint256 maturity;
         // Mapping from user to active lend order ids
         mapping(address => uint48[]) activeLendOrderIds;
         // Mapping from user to active borrow order ids
@@ -66,12 +67,13 @@ library OrderBookLib {
     function initialize(
         OrderBook storage self,
         uint256 _maturity,
-        uint256 _openingDate
+        uint256 _openingDate,
+        uint256 _preOpeningDate
     ) internal returns (bool isReady) {
         self.maturity = _maturity;
         self.openingDate = _openingDate;
+        self.preOpeningDate = _preOpeningDate;
 
-        self.lastOrderId = 0;
         self.lastOrderBlockNumber = 0;
         self.blockTotalAmount = 0;
         self.blockTotalFutureValue = 0;
@@ -116,6 +118,27 @@ library OrderBookLib {
             uint256 timestamp
         ) = _unpackOrder(self.orders[_orderId]);
         order = PlacedOrder(side, unitPrice, maturity, timestamp);
+    }
+
+    function getBlockUnitPriceHistory(OrderBook storage self)
+        internal
+        view
+        returns (uint256[] memory prices)
+    {
+        prices = _unpackBlockUnitPriceHistory(self.blockUnitPriceHistory);
+
+        // NOTE: If an order is in the first block of the order book, the block unit price history is empty.
+        // In this case, the first history record is calculated from the current block total amount and total future value
+        // along with the `getMarketUnitPrice` function logic.
+        if ((self.lastOrderBlockNumber != block.number || prices[0] == 0) && self.isReliableBlock) {
+            for (uint256 i = prices.length - 1; i > 0; i--) {
+                prices[i] = prices[i - 1];
+            }
+
+            prices[0] = (self.blockTotalAmount * Constants.PRICE_DIGIT).div(
+                self.blockTotalFutureValue
+            );
+        }
     }
 
     function getMarketUnitPrice(OrderBook storage self) internal view returns (uint256 unitPrice) {

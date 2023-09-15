@@ -31,6 +31,7 @@ library LendingMarketOperationLogic {
     error InvalidCompoundFactor();
     error InvalidCurrency();
     error InvalidOpeningDate();
+    error InvalidPreOpeningDate();
     error InvalidTimestamp();
     error LendingMarketNotInitialized();
     error NotEnoughOrderBooks();
@@ -54,98 +55,6 @@ library LendingMarketOperationLogic {
 
     event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity);
     event EmergencyTerminationExecuted(uint256 timestamp);
-
-    function getOrderBookDetails(bytes32[] memory _ccys)
-        external
-        view
-        returns (ILendingMarketController.OrderBookDetail[] memory orderBookDetails)
-    {
-        uint256 totalCount;
-
-        ILendingMarketController.OrderBookDetail[][]
-            memory detailLists = new ILendingMarketController.OrderBookDetail[][](_ccys.length);
-
-        for (uint256 i; i < _ccys.length; i++) {
-            detailLists[i] = getOrderBookDetailsPerCurrency(_ccys[i]);
-            totalCount += detailLists[i].length;
-        }
-
-        orderBookDetails = new ILendingMarketController.OrderBookDetail[](totalCount);
-        uint256 index;
-        for (uint256 i; i < detailLists.length; i++) {
-            for (uint256 j; j < detailLists[i].length; j++) {
-                orderBookDetails[index] = detailLists[i][j];
-                index++;
-            }
-        }
-    }
-
-    function getOrderBookDetailsPerCurrency(bytes32 _ccy)
-        public
-        view
-        returns (ILendingMarketController.OrderBookDetail[] memory orderBookDetail)
-    {
-        uint256[] memory maturities = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getMaturities(Storage.slot().orderBookIdLists[_ccy]);
-        orderBookDetail = new ILendingMarketController.OrderBookDetail[](maturities.length);
-
-        for (uint256 i; i < maturities.length; i++) {
-            uint256 maturity = maturities[i];
-
-            (
-                uint256 bestLendUnitPrice,
-                uint256 bestBorrowUnitPrice,
-                uint256 marketUnitPrice,
-                uint256 maxLendUnitPrice,
-                uint256 minBorrowUnitPrice,
-                uint256 openingUnitPrice,
-                uint256 openingDate,
-                bool isReady
-            ) = getOrderBookDetail(_ccy, maturity);
-
-            orderBookDetail[i] = ILendingMarketController.OrderBookDetail(
-                _ccy,
-                maturity,
-                bestLendUnitPrice,
-                bestBorrowUnitPrice,
-                marketUnitPrice,
-                maxLendUnitPrice,
-                minBorrowUnitPrice,
-                openingUnitPrice,
-                openingDate,
-                isReady
-            );
-        }
-    }
-
-    function getOrderBookDetail(bytes32 _ccy, uint256 _maturity)
-        public
-        view
-        returns (
-            uint256 bestLendUnitPrice,
-            uint256 bestBorrowUnitPrice,
-            uint256 marketUnitPrice,
-            uint256 maxLendUnitPrice,
-            uint256 minBorrowUnitPrice,
-            uint256 openingUnitPrice,
-            uint256 openingDate,
-            bool isReady
-        )
-    {
-        ILendingMarket.OrderBook memory orderBook = ILendingMarket(
-            Storage.slot().lendingMarkets[_ccy]
-        ).getOrderBookDetail(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
-
-        bestLendUnitPrice = orderBook.borrowUnitPrice;
-        bestBorrowUnitPrice = orderBook.lendUnitPrice;
-        marketUnitPrice = orderBook.marketUnitPrice;
-        openingUnitPrice = orderBook.openingUnitPrice;
-        openingDate = orderBook.openingDate;
-        isReady = orderBook.isReady;
-
-        (maxLendUnitPrice, minBorrowUnitPrice) = ILendingMarket(Storage.slot().lendingMarkets[_ccy])
-            .getCircuitBreakerThresholds(Storage.slot().maturityOrderBookIds[_ccy][_maturity]);
-    }
 
     function initializeLendingMarket(
         bytes32 _ccy,
@@ -191,13 +100,18 @@ library LendingMarketOperationLogic {
         );
     }
 
-    function createOrderBook(bytes32 _ccy, uint256 _openingDate) external {
+    function createOrderBook(
+        bytes32 _ccy,
+        uint256 _openingDate,
+        uint256 _preOpeningDate
+    ) external {
         if (!AddressResolverLib.genesisValueVault().isInitialized(_ccy)) {
             revert LendingMarketNotInitialized();
         }
         if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
             revert InvalidCurrency();
         }
+        if (_preOpeningDate > _openingDate) revert InvalidPreOpeningDate();
 
         ILendingMarket market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
 
@@ -213,7 +127,7 @@ library LendingMarketOperationLogic {
 
         if (_openingDate >= newMaturity) revert InvalidOpeningDate();
 
-        uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate);
+        uint8 orderBookId = market.createOrderBook(newMaturity, _openingDate, _preOpeningDate);
 
         Storage.slot().orderBookIdLists[_ccy].push(orderBookId);
         Storage.slot().maturityOrderBookIds[_ccy][newMaturity] = orderBookId;

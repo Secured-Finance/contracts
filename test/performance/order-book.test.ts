@@ -41,7 +41,7 @@ describe('Performance Test: Order Book', async () => {
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
     await tokenVault.registerCurrency(hexUSDC, usdcToken.address, false);
 
-    await tokenVault.setCollateralParameters(
+    await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -51,15 +51,16 @@ describe('Performance Test: Order Book', async () => {
     await tokenVault.updateCurrency(hexUSDC, true);
 
     // Deploy Lending Markets
+    const preOpeningDate = genesisDate - 604800;
     for (let i = 0; i < 8; i++) {
       await lendingMarketController
-        .createOrderBook(hexWFIL, genesisDate)
+        .createOrderBook(hexWFIL, genesisDate, preOpeningDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createOrderBook(hexETH, genesisDate)
+        .createOrderBook(hexETH, genesisDate, preOpeningDate)
         .then((tx) => tx.wait());
       await lendingMarketController
-        .createOrderBook(hexUSDC, genesisDate)
+        .createOrderBook(hexUSDC, genesisDate, preOpeningDate)
         .then((tx) => tx.wait());
     }
   };

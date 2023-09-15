@@ -8,6 +8,8 @@ import {SafeCast} from "../../../dependencies/openzeppelin/utils/math/SafeCast.s
 import {ILendingMarket} from "../../interfaces/ILendingMarket.sol";
 import {ILendingMarketController} from "../../interfaces/ILendingMarketController.sol";
 import {IFutureValueVault} from "../../interfaces/IFutureValueVault.sol";
+import {ILiquidationReceiver} from "../../interfaces/ILiquidationReceiver.sol";
+
 // libraries
 import {AddressResolverLib} from "../AddressResolverLib.sol";
 import {QuickSort} from "../QuickSort.sol";
@@ -18,8 +20,6 @@ import {RoundingInt256} from "../math/RoundingInt256.sol";
 import {ProtocolTypes} from "../../types/ProtocolTypes.sol";
 // storages
 import {LendingMarketControllerStorage as Storage} from "../../storages/LendingMarketControllerStorage.sol";
-// liquidation
-import {ILiquidationReceiver} from "../../../liquidators/interfaces/ILiquidationReceiver.sol";
 
 library FundManagementLogic {
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -668,63 +668,6 @@ library FundManagementLogic {
         maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         if (maturities.length > 0) {
             maturities = QuickSort.sort(maturities);
-        }
-    }
-
-    function getPositions(bytes32[] memory _ccys, address _user)
-        external
-        view
-        returns (ILendingMarketController.Position[] memory positions)
-    {
-        uint256 totalPositionCount;
-
-        ILendingMarketController.Position[][]
-            memory positionLists = new ILendingMarketController.Position[][](_ccys.length);
-
-        for (uint256 i; i < _ccys.length; i++) {
-            positionLists[i] = getPositionsPerCurrency(_ccys[i], _user);
-            totalPositionCount += positionLists[i].length;
-        }
-
-        positions = new ILendingMarketController.Position[](totalPositionCount);
-        uint256 index;
-        for (uint256 i; i < positionLists.length; i++) {
-            for (uint256 j; j < positionLists[i].length; j++) {
-                positions[index] = positionLists[i][j];
-                index++;
-            }
-        }
-    }
-
-    function getPositionsPerCurrency(bytes32 _ccy, address _user)
-        public
-        view
-        returns (ILendingMarketController.Position[] memory positions)
-    {
-        ILendingMarket lendingMarket = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        uint256[] memory maturities = lendingMarket.getMaturities(
-            Storage.slot().orderBookIdLists[_ccy]
-        );
-        positions = new ILendingMarketController.Position[](maturities.length);
-        uint256 positionIdx;
-
-        for (uint256 i; i < maturities.length; i++) {
-            uint256 maturity = maturities[i];
-            (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturity, _user);
-
-            if (futureValue == 0) {
-                assembly {
-                    mstore(positions, sub(mload(positions), 1))
-                }
-            } else {
-                positions[positionIdx] = ILendingMarketController.Position(
-                    _ccy,
-                    maturity,
-                    presentValue,
-                    futureValue
-                );
-                positionIdx++;
-            }
         }
     }
 

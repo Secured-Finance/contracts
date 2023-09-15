@@ -31,6 +31,7 @@ describe('LendingMarket - Orders', () => {
       targetCurrency,
       maturity,
       openingDate,
+      openingDate - 604800,
     );
     return lendingMarketCaller.getOrderBookId(targetCurrency);
   };
@@ -105,12 +106,28 @@ describe('LendingMarket - Orders', () => {
       ).to.equal(blockUnitPriceAverage);
     };
 
+    const checkBlockUnitPriceHistory = async (unitPrices: string[]) => {
+      const blockUnitPriceHistory =
+        await lendingMarket.getBlockUnitPriceHistory(currentOrderBookId);
+
+      expect(blockUnitPriceHistory.length).to.equal(5);
+      expect(blockUnitPriceHistory[0]).to.equal(unitPrices[0] || '0');
+      expect(blockUnitPriceHistory[1]).to.equal(unitPrices[1] || '0');
+      expect(blockUnitPriceHistory[2]).to.equal(unitPrices[2] || '0');
+      expect(blockUnitPriceHistory[3]).to.equal(unitPrices[3] || '0');
+      expect(blockUnitPriceHistory[4]).to.equal(unitPrices[4] || '0');
+    };
+
     it('Check with a single order', async () => {
       await fillOrder('100000000000000', '8000');
 
       await checkBlockUnitPrice('8000', '0');
+      await checkBlockUnitPriceHistory(['8000']);
+
       await ethers.provider.send('evm_mine', []);
+
       await checkBlockUnitPrice('8000', '8000');
+      await checkBlockUnitPriceHistory(['8000']);
     });
 
     it('Check with multiple orders in the same block', async () => {
@@ -121,8 +138,11 @@ describe('LendingMarket - Orders', () => {
 
       await ethers.provider.send('evm_mine', []);
       await checkBlockUnitPrice('8640', '0');
+      await checkBlockUnitPriceHistory(['8640']);
+
       await ethers.provider.send('evm_mine', []);
       await checkBlockUnitPrice('8640', '8640');
+      await checkBlockUnitPriceHistory(['8640']);
     });
 
     it('Check with multiple orders in the different block', async () => {
@@ -130,8 +150,12 @@ describe('LendingMarket - Orders', () => {
       await fillOrder('200000000000000', '9000');
 
       await checkBlockUnitPrice('8000', '8000');
+      await checkBlockUnitPriceHistory(['8000']);
+
       await ethers.provider.send('evm_mine', []);
+
       await checkBlockUnitPrice('9000', '8500');
+      await checkBlockUnitPriceHistory(['9000', '8000']);
     });
 
     it('Check with 5 orders in the different block', async () => {
@@ -142,8 +166,18 @@ describe('LendingMarket - Orders', () => {
       await fillOrder('500000000000000', '8400');
 
       await checkBlockUnitPrice('8300', '8150');
+      await checkBlockUnitPriceHistory(['8300', '8200', '8100', '8000']);
+
       await ethers.provider.send('evm_mine', []);
+
       await checkBlockUnitPrice('8400', '8200');
+      await checkBlockUnitPriceHistory([
+        '8400',
+        '8300',
+        '8200',
+        '8100',
+        '8000',
+      ]);
     });
 
     it('Check with over 5 orders in the different block', async () => {
@@ -155,8 +189,24 @@ describe('LendingMarket - Orders', () => {
       await fillOrder('600000000000000', '8500');
 
       await checkBlockUnitPrice('8400', '8200');
+      await checkBlockUnitPriceHistory([
+        '8400',
+        '8300',
+        '8200',
+        '8100',
+        '8000',
+      ]);
+
       await ethers.provider.send('evm_mine', []);
+
       await checkBlockUnitPrice('8500', '8300');
+      await checkBlockUnitPriceHistory([
+        '8500',
+        '8400',
+        '8300',
+        '8200',
+        '8100',
+      ]);
     });
 
     it('Check with unwinding', async () => {

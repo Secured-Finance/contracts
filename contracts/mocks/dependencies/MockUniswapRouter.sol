@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {ISwapRouter} from "../../dependencies/uniswap/ISwapRouter.sol";
 // libraries
 import {Contracts} from "../../protocol/libraries/Contracts.sol";
-import {ERC20Handler} from "../../protocol/libraries/ERC20Handler.sol";
+import {TransferHelper} from "../../protocol/libraries/TransferHelper.sol";
 // mixins
 import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.sol";
 
@@ -13,7 +13,7 @@ contract MockUniswapRouter is MixinAddressResolver {
 
     constructor(address _resolver, address _nativeToken) {
         registerAddressResolver(_resolver);
-        ERC20Handler.initialize(_nativeToken);
+        TransferHelper.initialize(_nativeToken);
 
         buildCache();
     }
@@ -41,8 +41,8 @@ contract MockUniswapRouter is MixinAddressResolver {
 
         require(amountIn <= params.amountInMaximum, "Too much requested");
 
-        ERC20Handler.safeTransferFrom(params.tokenIn, msg.sender, address(this), amountIn);
-        ERC20Handler.safeTransfer(params.tokenOut, msg.sender, params.amountOut);
+        TransferHelper.safeTransferFrom(params.tokenIn, msg.sender, address(this), amountIn);
+        TransferHelper.safeTransfer(params.tokenOut, msg.sender, params.amountOut);
     }
 
     function exactInputSingle(ISwapRouter.ExactInputSingleParams calldata params)
@@ -58,8 +58,8 @@ contract MockUniswapRouter is MixinAddressResolver {
 
         require(amountOut >= params.amountOutMinimum, "Too little received");
 
-        if (!ERC20Handler.isNative(params.tokenIn)) {
-            ERC20Handler.safeTransferFrom(
+        if (!TransferHelper.isNative(params.tokenIn)) {
+            TransferHelper.safeTransferFrom(
                 params.tokenIn,
                 msg.sender,
                 address(this),
@@ -67,10 +67,10 @@ contract MockUniswapRouter is MixinAddressResolver {
             );
         }
 
-        if (!ERC20Handler.isNative(params.tokenOut)) {
-            ERC20Handler.safeTransfer(params.tokenOut, msg.sender, amountOut);
+        if (!TransferHelper.isNative(params.tokenOut)) {
+            TransferHelper.safeTransfer(params.tokenOut, msg.sender, amountOut);
         } else {
-            ERC20Handler.safeTransferETH(msg.sender, amountOut);
+            TransferHelper.safeTransferETH(msg.sender, amountOut);
         }
     }
 }

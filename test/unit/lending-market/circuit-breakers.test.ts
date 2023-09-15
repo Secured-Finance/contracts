@@ -32,6 +32,7 @@ describe('LendingMarket - Circuit Breakers', () => {
       targetCurrency,
       maturity,
       openingDate,
+      openingDate,
     );
     return lendingMarketCaller.getOrderBookId(targetCurrency);
   };

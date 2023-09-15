@@ -35,10 +35,10 @@ struct PartiallyFilledOrder {
 
 ## OrderBookLib
 
-### PRE_ORDER_PERIOD
+### PRE_ORDER_BASE_PERIOD
 
 ```solidity
-uint256 PRE_ORDER_PERIOD
+uint256 PRE_ORDER_BASE_PERIOD
 ```
 
 ### ITAYOSE_PERIOD
@@ -70,6 +70,7 @@ struct OrderBook {
   uint256 blockTotalAmount;
   uint256 blockTotalFutureValue;
   uint256 openingDate;
+  uint256 preOpeningDate;
   uint256 maturity;
   mapping(address => uint48[]) activeLendOrderIds;
   mapping(address => uint48[]) activeBorrowOrderIds;
@@ -84,7 +85,7 @@ struct OrderBook {
 ### initialize
 
 ```solidity
-function initialize(struct OrderBookLib.OrderBook self, uint256 _maturity, uint256 _openingDate) internal returns (bool isReady)
+function initialize(struct OrderBookLib.OrderBook self, uint256 _maturity, uint256 _openingDate, uint256 _preOpeningDate) internal returns (bool isReady)
 ```
 
 ### isMatured

@@ -22,6 +22,7 @@ describe('LendingMarketController - Itayose', () => {
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
   let lendingMarketProxy: Contract;
+  let lendingMarketReader: Contract;
 
   let fundManagementLogic: Contract;
   let orderBookLogic: Contract;
@@ -56,6 +57,7 @@ describe('LendingMarketController - Itayose', () => {
       mockTokenVault,
       lendingMarketControllerProxy,
       genesisValueVaultProxy,
+      lendingMarketReader,
       fundManagementLogic,
       orderBookLogic,
     } = await deployContracts(owner));
@@ -86,6 +88,7 @@ describe('LendingMarketController - Itayose', () => {
         await lendingMarketControllerProxy.createOrderBook(
           currency,
           openingDate,
+          openingDate - 604800,
         );
       }
 
@@ -967,10 +970,9 @@ describe('LendingMarketController - Itayose', () => {
       expect(lastLendUnitPrice).to.equal(expectedLastLendUnitPrice);
       expect(lastBorrowUnitPrice).to.equal(expectedLastBorrowUnitPrice);
 
-      const aliceOrders = await lendingMarketControllerProxy.getOrders(
-        [targetCurrency],
-        alice.address,
-      );
+      const aliceOrders = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([targetCurrency], alice.address);
 
       expect(aliceOrders.activeOrders.length).to.equal(1);
       expect(aliceOrders.inactiveOrders.length).to.equal(1);
@@ -991,7 +993,7 @@ describe('LendingMarketController - Itayose', () => {
       expect(aliceOrders.inactiveOrders[0].amount).to.equal('200000000000000');
       expect(aliceOrders.inactiveOrders[0].isPreOrder).to.equal(true);
 
-      let bobOrders = await lendingMarketControllerProxy.getOrders(
+      let bobOrders = await lendingMarketReader['getOrders(bytes32[],address)'](
         [targetCurrency],
         bob.address,
       );
@@ -1025,7 +1027,7 @@ describe('LendingMarketController - Itayose', () => {
           ),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      bobOrders = await lendingMarketControllerProxy.getOrders(
+      bobOrders = await lendingMarketReader['getOrders(bytes32[],address)'](
         [targetCurrency],
         bob.address,
       );

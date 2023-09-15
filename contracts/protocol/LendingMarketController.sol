@@ -155,86 +155,12 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets detailed information on the order book.
-     * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the market
-     * @return bestLendUnitPrice The best lend price
-     * @return bestBorrowUnitPrice The best borrow price
-     * @return marketUnitPrice The market unit price
-     * @return maxLendUnitPrice The maximum unit price for lending
-     * @return minBorrowUnitPrice The minimum unit price for borrowing
-     * @return openingUnitPrice The opening price when Itayose is executed
-     * @return openingDate The timestamp when the market opens
-     * @return isReady The boolean if the market is ready or not
-     */
-    function getOrderBookDetail(bytes32 _ccy, uint256 _maturity)
-        external
-        view
-        override
-        returns (
-            uint256 bestLendUnitPrice,
-            uint256 bestBorrowUnitPrice,
-            uint256 marketUnitPrice,
-            uint256 maxLendUnitPrice,
-            uint256 minBorrowUnitPrice,
-            uint256 openingUnitPrice,
-            uint256 openingDate,
-            bool isReady
-        )
-    {
-        return LendingMarketOperationLogic.getOrderBookDetail(_ccy, _maturity);
-    }
-
-    /**
-     * @notice Gets the array of detailed information on the order book
-     * @param _ccys Currency name list in bytes32
-     * @return orderBookDetails The array of Detailed information on the order book.
-     */
-    function getOrderBookDetails(bytes32[] calldata _ccys)
-        external
-        view
-        override
-        returns (OrderBookDetail[] memory orderBookDetails)
-    {
-        return LendingMarketOperationLogic.getOrderBookDetails(_ccys);
-    }
-
-    /**
      * @notice Gets the future value contract address for the selected currency and maturity.
      * @param _ccy Currency name in bytes32
      * @return The future value vault address
      */
     function getFutureValueVault(bytes32 _ccy) public view override returns (address) {
         return Storage.slot().futureValueVaults[_ccy];
-    }
-
-    /**
-     * @notice Gets the best prices for lending in the selected currency.
-     * @param _ccy Currency name in bytes32
-     * @return Array with the best prices for lending
-     */
-    function getBestLendUnitPrices(bytes32 _ccy) external view override returns (uint256[] memory) {
-        return
-            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestLendUnitPrices(
-                Storage.slot().orderBookIdLists[_ccy]
-            );
-    }
-
-    /**
-     * @notice Gets the best prices for borrowing in the selected currency.
-     * @param _ccy Currency name in bytes32
-     * @return Array with the best prices for borrowing
-     */
-    function getBestBorrowUnitPrices(bytes32 _ccy)
-        external
-        view
-        override
-        returns (uint256[] memory)
-    {
-        return
-            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBestBorrowUnitPrices(
-                Storage.slot().orderBookIdLists[_ccy]
-            );
     }
 
     /**
@@ -271,66 +197,6 @@ contract LendingMarketController is
         )
     {
         return LendingMarketUserLogic.getOrderEstimation(_params);
-    }
-
-    /**
-     * @notice Gets the order book of borrow.
-     * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the market
-     * @param _limit The limit number to get
-     * @return unitPrices The array of borrow unit prices
-     * @return amounts The array of borrow order amounts
-     * @return quantities The array of borrow order quantities
-     */
-    function getBorrowOrderBook(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _limit
-    )
-        external
-        view
-        override
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
-    {
-        return
-            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getBorrowOrderBook(
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-                _limit
-            );
-    }
-
-    /**
-     * @notice Gets the order book of lend.
-     * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the market
-     * @param _limit The limit number to get
-     * @return unitPrices The array of borrow unit prices
-     * @return amounts The array of lend order amounts
-     * @return quantities The array of lend order quantities
-     */
-    function getLendOrderBook(
-        bytes32 _ccy,
-        uint256 _maturity,
-        uint256 _limit
-    )
-        external
-        view
-        override
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
-    {
-        return
-            ILendingMarket(Storage.slot().lendingMarkets[_ccy]).getLendOrderBook(
-                Storage.slot().maturityOrderBookIds[_ccy][_maturity],
-                _limit
-            );
     }
 
     /**
@@ -414,22 +280,6 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets user's active and inactive orders in the order book
-     * @param _ccys Currency name list in bytes32
-     * @param _user User's address
-     * @return activeOrders The array of active orders in the order book
-     * @return inactiveOrders The array of inactive orders
-     */
-    function getOrders(bytes32[] calldata _ccys, address _user)
-        external
-        view
-        override
-        returns (Order[] memory activeOrders, Order[] memory inactiveOrders)
-    {
-        (activeOrders, inactiveOrders) = LendingMarketUserLogic.getOrders(_ccys, _user);
-    }
-
-    /**
      * @notice Gets user's active position from the future value vault
      * @param _ccy Currency name in bytes32
      * @param _maturity The maturity of the selected market
@@ -443,21 +293,6 @@ contract LendingMarketController is
         address _user
     ) external view override returns (int256 presentValue, int256 futureValue) {
         (presentValue, futureValue) = FundManagementLogic.getPosition(_ccy, _maturity, _user);
-    }
-
-    /**
-     * @notice Gets user's active positions from the future value vaults
-     * @param _ccys Currency name list in bytes32
-     * @param _user User's address
-     * @return positions The array of active positions
-     */
-    function getPositions(bytes32[] calldata _ccys, address _user)
-        external
-        view
-        override
-        returns (Position[] memory positions)
-    {
-        positions = FundManagementLogic.getPositions(_ccys, _user);
     }
 
     /**
@@ -578,15 +413,15 @@ contract LendingMarketController is
     /**
      * @notice Creates new order book.
      * @param _ccy Main currency for new lending market
-     * @param _openingDate Timestamp when the lending market opens
+     * @param _openingDate The timestamp when the order book opens
+     * @param _preOpeningDate The timestamp when the order book pre-opens
      */
-    function createOrderBook(bytes32 _ccy, uint256 _openingDate)
-        external
-        override
-        ifActive
-        onlyOwner
-    {
-        LendingMarketOperationLogic.createOrderBook(_ccy, _openingDate);
+    function createOrderBook(
+        bytes32 _ccy,
+        uint256 _openingDate,
+        uint256 _preOpeningDate
+    ) external override ifActive onlyOwner {
+        LendingMarketOperationLogic.createOrderBook(_ccy, _openingDate, _preOpeningDate);
     }
 
     /**

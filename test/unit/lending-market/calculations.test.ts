@@ -28,6 +28,7 @@ describe('LendingMarket - Calculations', () => {
       targetCurrency,
       maturity,
       openingDate,
+      openingDate,
     );
     return lendingMarketCaller.getOrderBookId(targetCurrency);
   };

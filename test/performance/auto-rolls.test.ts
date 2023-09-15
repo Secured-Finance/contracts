@@ -89,7 +89,7 @@ describe('Performance Test: Auto-rolls', async () => {
 
     await tokenVault.registerCurrency(hexWFIL, wFILToken.address, false);
 
-    await tokenVault.setCollateralParameters(
+    await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -99,12 +99,20 @@ describe('Performance Test: Auto-rolls', async () => {
 
     // Deploy active Lending Markets for ETH market
     for (let i = 0; i < 8; i++) {
-      await lendingMarketController.createOrderBook(hexWFIL, genesisDate);
+      await lendingMarketController.createOrderBook(
+        hexWFIL,
+        genesisDate,
+        genesisDate - 604800,
+      );
     }
     maturities = await lendingMarketController.getMaturities(hexWFIL);
 
     // Deploy inactive Lending Markets for Itayose
-    await lendingMarketController.createOrderBook(hexWFIL, maturities[0]);
+    await lendingMarketController.createOrderBook(
+      hexWFIL,
+      maturities[0],
+      maturities[0].sub(604800),
+    );
   });
 
   beforeEach('Reset contract instances', async () => {

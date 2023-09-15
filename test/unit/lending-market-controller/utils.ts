@@ -18,6 +18,9 @@ const MigrationAddressResolver = artifacts.require('MigrationAddressResolver');
 const ProxyController = artifacts.require('ProxyController');
 const ReserveFund = artifacts.require('ReserveFund');
 
+// external contracts
+const LendingMarketReader = artifacts.require('LendingMarketReader');
+
 // libraries
 const OrderBookLogic = artifacts.require('OrderBookLogic');
 const OrderReaderLogic = artifacts.require('OrderReaderLogic');
@@ -197,6 +200,11 @@ const deployContracts = async (owner: SignerWithAddress) => {
     futureValueVault.address,
   );
 
+  // Deploy external contracts
+  const lendingMarketReader = await deployContract(owner, LendingMarketReader, [
+    addressResolverProxy.address,
+  ]);
+
   return {
     // mocks
     mockCurrencyController,
@@ -206,6 +214,8 @@ const deployContracts = async (owner: SignerWithAddress) => {
     beaconProxyControllerProxy,
     lendingMarketControllerProxy,
     genesisValueVaultProxy,
+    // external contracts
+    lendingMarketReader,
     // logics
     fundManagementLogic,
     lendingMarketOperationLogic,
