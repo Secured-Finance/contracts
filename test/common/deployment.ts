@@ -2,7 +2,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencyIterator, mockPriceFeeds } from '../../utils/currencies';
+import { currencyIterator } from '../../utils/currencies';
 import {
   hexEFIL,
   hexETH,
@@ -236,7 +236,7 @@ const deployContracts = async () => {
     let heartbeat = 0;
     let decimals = 0;
 
-    for (const priceFeed of mockPriceFeeds[currency.key]) {
+    for (const priceFeed of currency.mockPriceFeed) {
       priceFeedContracts[priceFeed.name] = await MockV3Aggregator.deploy(
         priceFeed.decimals,
         currency.key,
@@ -246,8 +246,7 @@ const deployContracts = async () => {
       decimals +=
         priceFeedAddresses.length === 0
           ? await tokens[currency.symbol].decimals()
-          : mockPriceFeeds[currency.key][priceFeedAddresses.length - 1]
-              .decimals;
+          : currency.mockPriceFeed[priceFeedAddresses.length - 1].decimals;
 
       priceFeedAddresses.push(priceFeedContracts[priceFeed.name].address);
 

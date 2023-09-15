@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencyIterator, mockPriceFeeds } from '../utils/currencies';
+import { currencyIterator } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -46,7 +46,7 @@ const func: DeployFunction = async function ({
         let decimals = 0;
 
         if (priceFeedAddresses.length === 0) {
-          for (const priceFeed of mockPriceFeeds[currency.key]) {
+          for (const priceFeed of currency.mockPriceFeed) {
             const priceFeedContract = await deploy('MockV3Aggregator', {
               from: deployer,
               args: [priceFeed.decimals, currency.key, priceFeed.mockRate],

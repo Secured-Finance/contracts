@@ -1,11 +1,4 @@
-import {
-  hexWETH,
-  hexETH,
-  hexUSDC,
-  hexWBTC,
-  hexWFIL,
-  toBytes32,
-} from './strings';
+import { hexUSDC, hexWBTC, hexWETH, hexWFIL, toBytes32 } from './strings';
 
 export interface Currency {
   symbol: string;
@@ -18,6 +11,7 @@ export interface Currency {
   isCollateral: boolean;
   args: string[];
   priceFeed: PriceFeed;
+  mockPriceFeed: MockPriceFeed[];
 }
 
 export interface PriceFeed {
@@ -31,6 +25,54 @@ export interface MockPriceFeed {
   heartbeat: number;
   mockRate?: string;
 }
+
+const wfilMockPriceFeeds = [
+  {
+    name: 'WFIL/ETH',
+    decimals: 18,
+    heartbeat: 86400,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_WFIL_TO_ETH,
+  },
+  {
+    name: 'ETH/USD',
+    decimals: 8,
+    heartbeat: 3600,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
+  },
+];
+
+const wbtcMockPriceFeeds = [
+  {
+    name: 'WBTC/BTC',
+    decimals: 8,
+    heartbeat: 86400,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_WBTC_TO_BTC,
+  },
+  {
+    name: 'BTC/USD',
+    decimals: 8,
+    heartbeat: 3600,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_BTC_TO_USD,
+  },
+];
+
+const usdcMockPriceFeeds = [
+  {
+    name: 'USDC/USD',
+    decimals: 8,
+    heartbeat: 86400,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_USDC_TO_USD,
+  },
+];
+
+const wethMockPriceFeeds = [
+  {
+    name: 'ETH/USD',
+    decimals: 8,
+    heartbeat: 3600,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
+  },
+];
 
 // Market Currencies
 // Set the wrapped token for the target blockchain's native token:i.e., WETH for Ethereum
@@ -49,6 +91,7 @@ const currencies: Currency[] = [
       addresses: process.env.PRICE_FEED_ADDRESSES_WFIL?.split(',') || [],
       heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WFIL),
     },
+    mockPriceFeed: wfilMockPriceFeeds,
   },
   {
     symbol: 'USDC',
@@ -64,6 +107,7 @@ const currencies: Currency[] = [
       addresses: process.env.PRICE_FEED_ADDRESSES_USDC?.split(',') || [],
       heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_USDC),
     },
+    mockPriceFeed: usdcMockPriceFeeds,
   },
   {
     symbol: 'WBTC',
@@ -79,6 +123,7 @@ const currencies: Currency[] = [
       addresses: process.env.PRICE_FEED_ADDRESSES_WBTC?.split(',') || [],
       heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WBTC),
     },
+    mockPriceFeed: wbtcMockPriceFeeds,
   },
   {
     symbol: 'WETH',
@@ -94,6 +139,7 @@ const currencies: Currency[] = [
       addresses: process.env.PRICE_FEED_ADDRESSES_WETH?.split(',') || [],
       heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WETH),
     },
+    mockPriceFeed: wethMockPriceFeeds,
   },
 ];
 
@@ -103,60 +149,9 @@ const currencies: Currency[] = [
 const currencyIterator = (): Currency[] =>
   currencies.map((currency) => {
     if (currency.key === toBytes32(process.env.NATIVE_WRAPPED_TOKEN_SYMBOL))
-      currency.key = toBytes32(process.env.NATIVE_TOKEN_SYMBOL);
+      currency.key = toBytes32(process.env.NATIVE_CURRENCY_SYMBOL);
     return currency;
   });
-const computedHexEthTokenKey =
-  toBytes32(process.env.NATIVE_WRAPPED_TOKEN_SYMBOL) === hexWETH
-    ? hexETH
-    : hexWETH;
-
-const mockPriceFeeds: Record<string, MockPriceFeed[]> = {
-  [hexWFIL]: [
-    {
-      name: 'WFIL/ETH',
-      decimals: 18,
-      heartbeat: 86400,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_WFIL_TO_ETH,
-    },
-    {
-      name: 'ETH/USD',
-      decimals: 8,
-      heartbeat: 3600,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
-    },
-  ],
-  [hexWBTC]: [
-    {
-      name: 'WBTC/BTC',
-      decimals: 8,
-      heartbeat: 86400,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_WBTC_TO_BTC,
-    },
-    {
-      name: 'BTC/USD',
-      decimals: 8,
-      heartbeat: 3600,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_BTC_TO_USD,
-    },
-  ],
-  [hexUSDC]: [
-    {
-      name: 'USDC/USD',
-      decimals: 8,
-      heartbeat: 86400,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_USDC_TO_USD,
-    },
-  ],
-  [computedHexEthTokenKey]: [
-    {
-      name: 'ETH/USD',
-      decimals: 8,
-      heartbeat: 3600,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
-    },
-  ],
-};
 
 // Note: Don't use the currencies array directly, instead, use the iterator to loop over the currencies array.
-export { currencyIterator, mockPriceFeeds };
+export { currencyIterator };

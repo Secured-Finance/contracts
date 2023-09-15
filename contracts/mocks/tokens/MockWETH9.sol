@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../../protocol/interfaces/IWETH9.sol";
+import "../../protocol/interfaces/INativeToken.sol";
 
-contract MockWETH9 is IWETH9 {
+contract MockWETH9 is INativeToken {
     string public name = "Wrapped Ether";
     string public symbol = "WETH";
     uint8 public decimals = 18;
