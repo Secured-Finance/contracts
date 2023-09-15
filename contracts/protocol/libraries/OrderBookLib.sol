@@ -38,6 +38,9 @@ library OrderBookLib {
     error PastMaturityOrderExists();
 
     struct OrderBook {
+        uint256 maturity;
+        uint256 openingDate;
+        uint256 preOpeningDate;
         uint48 lastOrderId;
         uint48 lastOrderBlockNumber;
         bool isReliableBlock;
@@ -45,9 +48,6 @@ library OrderBookLib {
         uint80 blockUnitPriceHistory;
         uint256 blockTotalAmount;
         uint256 blockTotalFutureValue;
-        uint256 openingDate;
-        uint256 preOpeningDate;
-        uint256 maturity;
         // Mapping from user to active lend order ids
         mapping(address => uint48[]) activeLendOrderIds;
         // Mapping from user to active borrow order ids

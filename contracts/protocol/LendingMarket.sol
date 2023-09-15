@@ -164,15 +164,23 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the order book data.
+     * @notice Gets the order book detail.
      * @param _orderBookId The order book id
-     * @return market The market data
+     * @return ccy The currency of the order book
+     * @return maturity The maturity of the order book
+     * @return openingDate The opening date of the order book
+     * @return preOpeningDate The pre-opening date of the order book
      */
     function getOrderBookDetail(uint8 _orderBookId)
         public
         view
         override
-        returns (OrderBook memory market)
+        returns (
+            bytes32 ccy,
+            uint256 maturity,
+            uint256 openingDate,
+            uint256 preOpeningDate
+        )
     {
         return OrderBookLogic.getOrderBookDetail(_orderBookId);
     }

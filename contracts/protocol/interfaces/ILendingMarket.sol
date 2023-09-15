@@ -12,18 +12,15 @@ interface ILendingMarket {
     error NotItayosePeriod();
     error NotPreOrderPeriod();
 
-    struct OrderBook {
-        bytes32 ccy;
-        uint256 maturity;
-        uint256 openingDate;
-        uint256 borrowUnitPrice;
-        uint256 lendUnitPrice;
-        uint256 marketUnitPrice;
-        uint256 openingUnitPrice;
-        bool isReady;
-    }
-
-    function getOrderBookDetail(uint8 orderBookId) external view returns (OrderBook memory);
+    function getOrderBookDetail(uint8 orderBookId)
+        external
+        view
+        returns (
+            bytes32 ccy,
+            uint256 maturity,
+            uint256 openingDate,
+            uint256 preOpeningDate
+        );
 
     function getCircuitBreakerThresholds(uint8 orderBookId)
         external

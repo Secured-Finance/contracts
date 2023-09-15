@@ -31,6 +31,7 @@ describe('LendingMarketController - Operations', () => {
   let lendingMarketControllerProxy: Contract;
   let genesisValueVaultProxy: Contract;
   let futureValueVaultProxy: Contract;
+  let lendingMarketReader: Contract;
 
   let fundManagementLogic: Contract;
   let lendingMarketOperationLogic: Contract;
@@ -70,6 +71,7 @@ describe('LendingMarketController - Operations', () => {
       beaconProxyControllerProxy,
       lendingMarketControllerProxy,
       genesisValueVaultProxy,
+      lendingMarketReader,
       fundManagementLogic,
       lendingMarketOperationLogic,
     } = await deployContracts(owner));
@@ -120,7 +122,7 @@ describe('LendingMarketController - Operations', () => {
 
   describe('Operations', async () => {
     it('Get the lending market detail with empty order book', async () => {
-      const detail = await lendingMarketControllerProxy.getOrderBookDetail(
+      const detail = await lendingMarketReader.getOrderBookDetail(
         targetCurrency,
         maturities[0],
       );
@@ -177,7 +179,7 @@ describe('LendingMarketController - Operations', () => {
 
       await ethers.provider.send('evm_mine', []);
 
-      const detail = await lendingMarketControllerProxy.getOrderBookDetail(
+      const detail = await lendingMarketReader.getOrderBookDetail(
         targetCurrency,
         maturities[0],
       );
@@ -234,9 +236,9 @@ describe('LendingMarketController - Operations', () => {
 
       await ethers.provider.send('evm_mine', []);
 
-      const details = await lendingMarketControllerProxy.getOrderBookDetails([
-        targetCurrency,
-      ]);
+      const details = await lendingMarketReader[
+        'getOrderBookDetails(bytes32[])'
+      ]([targetCurrency]);
 
       expect(details.length).to.equal(5);
       expect(details[0].bestLendUnitPrice).to.equal('9000');

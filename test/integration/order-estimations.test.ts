@@ -21,6 +21,7 @@ describe('Integration Test: Order Estimations', async () => {
 
   let tokenVault: Contract;
   let lendingMarketController: Contract;
+  let lendingMarketReader: Contract;
   let wETHToken: Contract;
 
   let genesisDate: number;
@@ -36,8 +37,13 @@ describe('Integration Test: Order Estimations', async () => {
     signers = new Signers(await ethers.getSigners());
     [owner] = await signers.get(1);
 
-    ({ genesisDate, tokenVault, lendingMarketController, wETHToken } =
-      await deployContracts());
+    ({
+      genesisDate,
+      tokenVault,
+      lendingMarketController,
+      lendingMarketReader,
+      wETHToken,
+    } = await deployContracts());
 
     await tokenVault.registerCurrency(hexETH, wETHToken.address, false);
 
@@ -69,10 +75,9 @@ describe('Integration Test: Order Estimations', async () => {
     });
 
     after(async () => {
-      const { activeOrders } = await lendingMarketController.getOrders(
-        [hexETH],
-        bob.address,
-      );
+      const { activeOrders } = await lendingMarketReader[
+        'getOrders(bytes32,address)'
+      ](hexETH, bob.address);
 
       for (const order of activeOrders) {
         await lendingMarketController
@@ -180,10 +185,9 @@ describe('Integration Test: Order Estimations', async () => {
     });
 
     after(async () => {
-      const { activeOrders } = await lendingMarketController.getOrders(
-        [hexETH],
-        bob.address,
-      );
+      const { activeOrders } = await lendingMarketReader[
+        'getOrders(bytes32,address)'
+      ](hexETH, bob.address);
 
       for (const order of activeOrders) {
         await lendingMarketController
@@ -288,10 +292,9 @@ describe('Integration Test: Order Estimations', async () => {
     });
 
     after(async () => {
-      const { activeOrders } = await lendingMarketController.getOrders(
-        [hexETH],
-        alice.address,
-      );
+      const { activeOrders } = await lendingMarketReader[
+        'getOrders(bytes32,address)'
+      ](hexETH, alice.address);
 
       for (const order of activeOrders) {
         await lendingMarketController
@@ -372,10 +375,9 @@ describe('Integration Test: Order Estimations', async () => {
     });
 
     after(async () => {
-      const { activeOrders } = await lendingMarketController.getOrders(
-        [hexETH],
-        alice.address,
-      );
+      const { activeOrders } = await lendingMarketReader[
+        'getOrders(bytes32,address)'
+      ](hexETH, alice.address);
 
       for (const order of activeOrders) {
         await lendingMarketController

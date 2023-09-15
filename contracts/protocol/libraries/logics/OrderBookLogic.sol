@@ -61,22 +61,19 @@ library OrderBookLogic {
     function getOrderBookDetail(uint8 _orderBookId)
         public
         view
-        returns (ILendingMarket.OrderBook memory)
+        returns (
+            bytes32 ccy,
+            uint256 maturity,
+            uint256 openingDate,
+            uint256 preOpeningDate
+        )
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
-        uint256 maturity = orderBook.maturity;
 
-        return
-            ILendingMarket.OrderBook({
-                ccy: Storage.slot().ccy,
-                maturity: maturity,
-                openingDate: orderBook.openingDate,
-                borrowUnitPrice: orderBook.getBestLendUnitPrice(),
-                lendUnitPrice: orderBook.getBestBorrowUnitPrice(),
-                marketUnitPrice: orderBook.getMarketUnitPrice(),
-                openingUnitPrice: Storage.slot().itayoseLogs[orderBook.maturity].openingUnitPrice,
-                isReady: Storage.slot().isReady[maturity]
-            });
+        ccy = Storage.slot().ccy;
+        maturity = orderBook.maturity;
+        openingDate = orderBook.openingDate;
+        preOpeningDate = orderBook.preOpeningDate;
     }
 
     function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256) {
