@@ -28,6 +28,7 @@ describe('ZC e2e test', async function () {
   let reserveFund: Contract;
   let wFILToken: Contract;
   let orderActionLogic: Contract;
+  let lendingMarketReader: Contract;
 
   let maturities: BigNumber[];
   let orderBookIds: BigNumber[];
@@ -68,7 +69,7 @@ describe('ZC e2e test', async function () {
     currency: string,
     maturity: BigNumber,
   ): Promise<BigNumber> => {
-    const marketDetail = await lendingMarketController.getOrderBookDetail(
+    const marketDetail = await lendingMarketReader.getOrderBookDetail(
       currency,
       maturity,
     );
@@ -121,6 +122,13 @@ describe('ZC e2e test', async function () {
       await ethers.provider.send('tenderly_addBalance', params);
     }
 
+    // Get external contracts
+    lendingMarketReader = await deployments
+      .get('LendingMarketReader')
+      .then(({ address }) =>
+        ethers.getContractAt('LendingMarketReader', address),
+      );
+
     // Get contracts
     const getProxy = (key: string) =>
       proxyController
@@ -150,6 +158,7 @@ describe('ZC e2e test', async function () {
         tokenVault,
         lendingMarketController,
         reserveFund,
+        lendingMarketReader,
       },
       ['address'],
     );
@@ -330,10 +339,9 @@ describe('ZC e2e test', async function () {
       )
       .then((tx) => tx.wait());
 
-    const { activeOrders } = await lendingMarketController.getOrders(
-      [targetCurrency],
-      aliceSigner.address,
-    );
+    const { activeOrders } = await lendingMarketReader[
+      'getOrders(bytes32,address)'
+    ](targetCurrency, aliceSigner.address);
 
     await expect(
       lendingMarketController
@@ -524,8 +532,9 @@ describe('ZC e2e test', async function () {
 
     await executeAutoRoll(orderUnitPrice.toString());
 
-    const positions = await lendingMarketController.getPositions(
-      [hexETH],
+    const position = await lendingMarketController.getPosition(
+      hexETH,
+      maturities[1],
       aliceSigner.address,
     );
 
@@ -538,11 +547,8 @@ describe('ZC e2e test', async function () {
 
     expect(aliceActualFV).to.equal('0');
 
-    expect(positions.length).to.equal(1);
-    expect(positions[0].ccy).to.equal(hexETH);
-    expect(positions[0].maturity).to.equal(maturities[1]);
-    expect(positions[0].futureValue).not.to.equal('0');
-    expect(positions[0].presentValue).not.to.equal('0');
-    expect(aliceFVBefore.gt(positions[0].futureValue));
+    expect(position.futureValue).not.to.equal('0');
+    expect(position.presentValue).not.to.equal('0');
+    expect(aliceFVBefore.gt(position.futureValue));
   });
 });
