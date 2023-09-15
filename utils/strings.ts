@@ -9,7 +9,17 @@ const fromBytes32 = (key) => utils.parseBytes32String(key);
 const hexWFIL = toBytes32('WFIL');
 const hexEFIL = toBytes32('EFIL');
 const hexETH = toBytes32('ETH');
+const hexWETH = toBytes32('WETH');
 const hexWBTC = toBytes32('WBTC');
 const hexUSDC = toBytes32('USDC');
 
-export { toBytes32, fromBytes32, hexWFIL, hexEFIL, hexWBTC, hexETH, hexUSDC };
+export {
+  toBytes32,
+  fromBytes32,
+  hexWFIL,
+  hexEFIL,
+  hexWBTC,
+  hexETH,
+  hexWETH,
+  hexUSDC,
+};

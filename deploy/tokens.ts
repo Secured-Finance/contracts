@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies } from '../utils/currencies';
+import { currencyIterator } from '../utils/currencies';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 
 const func: DeployFunction = async function ({
@@ -15,7 +15,7 @@ const func: DeployFunction = async function ({
   const log = {};
   const logHeader = 'Contract Addresses';
 
-  for (const currency of currencies) {
+  for (const currency of currencyIterator()) {
     if (currency.env) {
       console.log(`${currency.symbol} uses the existing address`);
       log[currency.symbol] = { [logHeader]: currency.env };
@@ -46,7 +46,7 @@ const func: DeployFunction = async function ({
           faucetDeployResult.address,
         );
 
-        for (const currency of currencies) {
+        for (const currency of currencyIterator()) {
           const mockToken =
             currency.env || (await deployments.get(currency.mock)).address;
 

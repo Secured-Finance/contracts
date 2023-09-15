@@ -3,7 +3,7 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import moment from 'moment';
 
-import { currencies } from '../utils/currencies';
+import { currencyIterator } from '../utils/currencies';
 import { getGenesisDate } from '../utils/dates';
 import { executeIfNewlyDeployment } from '../utils/deployment';
 import { toBytes32 } from '../utils/strings';
@@ -65,7 +65,7 @@ const func: DeployFunction = async function ({
       .then((tx) => tx.wait());
   });
 
-  for (const currency of currencies) {
+  for (const currency of currencyIterator()) {
     const isInitialized =
       await lendingMarketController.isInitializedLendingMarket(currency.key);
 

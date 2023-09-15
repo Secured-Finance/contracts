@@ -14,8 +14,9 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const WETH =
-    process.env.TOKEN_WETH || (await deployments.get('MockWETH9')).address;
+  const nativeToken =
+    process.env.NATIVE_WRAPPED_TOKEN_ADDRESS ||
+    (await deployments.get('MockWETH9')).address;
   const depositManagementLogic = await deployments.get(
     'DepositManagementLogic',
   );
@@ -37,7 +38,7 @@ const func: DeployFunction = async function ({
         LIQUIDATION_THRESHOLD_RATE,
         LIQUIDATION_PROTOCOL_FEE_RATE,
         LIQUIDATOR_FEE_RATE,
-        WETH,
+        nativeToken,
       )
       .then((tx) => tx.wait());
   });

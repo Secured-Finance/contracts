@@ -2,7 +2,7 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencies, mockPriceFeeds } from '../../utils/currencies';
+import { currencyIterator, mockPriceFeeds } from '../../utils/currencies';
 import {
   hexEFIL,
   hexETH,
@@ -122,7 +122,7 @@ const deployContracts = async () => {
   ]);
 
   const tokens: Record<string, Contract> = {};
-  for (const currency of currencies) {
+  for (const currency of currencyIterator()) {
     const args = currency.args;
 
     // Increase initial mint amount for testing
@@ -231,7 +231,7 @@ const deployContracts = async () => {
     ['USDC/USD']: usdcToUSDRate,
   };
 
-  for (const currency of currencies) {
+  for (const currency of currencyIterator()) {
     const priceFeedAddresses: string[] = [];
     let heartbeat = 0;
     let decimals = 0;

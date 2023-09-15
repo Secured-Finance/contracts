@@ -248,10 +248,10 @@ library DepositManagementLogic {
     {
         uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccy];
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
-            uint256 maxWithdrawETH = getWithdrawableCollateral(_user);
+            uint256 maxWithdrawInNativeToken = getWithdrawableCollateral(_user);
             uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromBaseCurrency(
                 _ccy,
-                maxWithdrawETH
+                maxWithdrawInNativeToken
             );
 
             withdrawableAmount = depositAmount >= maxWithdraw ? maxWithdraw : depositAmount;

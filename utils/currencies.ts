@@ -1,4 +1,11 @@
-import { hexETH, hexUSDC, hexWBTC, hexWFIL } from './strings';
+import {
+  hexWETH,
+  hexETH,
+  hexUSDC,
+  hexWBTC,
+  hexWFIL,
+  toBytes32,
+} from './strings';
 
 export interface Currency {
   symbol: string;
@@ -25,6 +32,8 @@ export interface MockPriceFeed {
   mockRate?: string;
 }
 
+// Market Currencies
+// Set the wrapped token for the target blockchain's native token:i.e., WETH for Ethereum
 const currencies: Currency[] = [
   {
     symbol: 'wFIL',
@@ -74,7 +83,7 @@ const currencies: Currency[] = [
   {
     symbol: 'WETH',
     mock: 'MockWETH9',
-    key: hexETH,
+    key: hexWETH,
     env: process.env.TOKEN_WETH,
     haircut: 0,
     orderFeeRate: 100,
@@ -82,11 +91,25 @@ const currencies: Currency[] = [
     isCollateral: true,
     args: [],
     priceFeed: {
-      addresses: process.env.PRICE_FEED_ADDRESSES_ETH?.split(',') || [],
-      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_ETH),
+      addresses: process.env.PRICE_FEED_ADDRESSES_WETH?.split(',') || [],
+      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WETH),
     },
   },
 ];
+
+// Replace the native token key of a target deploying blockchain with its native token symbol
+// In case of Ethereum deployment, replace the currency key(WETH) key with ETH. For other blockchains like Polygon, keep the currency key as the wrapped token symbol
+// The currency key is used to express the native token symbol of a target blockchain in our protocol
+const currencyIterator = (): Currency[] =>
+  currencies.map((currency) => {
+    if (currency.key === toBytes32(process.env.NATIVE_WRAPPED_TOKEN_SYMBOL))
+      currency.key = toBytes32(process.env.NATIVE_TOKEN_SYMBOL);
+    return currency;
+  });
+const computedHexEthTokenKey =
+  toBytes32(process.env.NATIVE_WRAPPED_TOKEN_SYMBOL) === hexWETH
+    ? hexETH
+    : hexWETH;
 
 const mockPriceFeeds: Record<string, MockPriceFeed[]> = {
   [hexWFIL]: [
@@ -125,7 +148,7 @@ const mockPriceFeeds: Record<string, MockPriceFeed[]> = {
       mockRate: process.env.PRICE_FEED_MOCK_RATE_USDC_TO_USD,
     },
   ],
-  [hexETH]: [
+  [computedHexEthTokenKey]: [
     {
       name: 'ETH/USD',
       decimals: 8,
@@ -135,4 +158,5 @@ const mockPriceFeeds: Record<string, MockPriceFeed[]> = {
   ],
 };
 
-export { currencies, mockPriceFeeds };
+// Note: Don't use the currencies array directly, instead, use the iterator to loop over the currencies array.
+export { currencyIterator, mockPriceFeeds };
