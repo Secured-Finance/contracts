@@ -18,6 +18,7 @@ contract LendingMarketReader is MixinAddressResolver {
         uint256 bestLendUnitPrice;
         uint256 bestBorrowUnitPrice;
         uint256 marketUnitPrice;
+        uint256[] blockUnitPriceHistory;
         uint256 maxLendUnitPrice;
         uint256 minBorrowUnitPrice;
         uint256 openingUnitPrice;
@@ -203,6 +204,7 @@ contract LendingMarketReader is MixinAddressResolver {
         orderBookDetail.bestLendUnitPrice = market.getBestLendUnitPrice(orderBookId);
         orderBookDetail.bestBorrowUnitPrice = market.getBestBorrowUnitPrice(orderBookId);
         orderBookDetail.marketUnitPrice = market.getMarketUnitPrice(orderBookId);
+        orderBookDetail.blockUnitPriceHistory = market.getBlockUnitPriceHistory(orderBookId);
         orderBookDetail.openingUnitPrice = market.getItayoseLog(_maturity).openingUnitPrice;
         orderBookDetail.isReady = market.isReady(orderBookId);
 

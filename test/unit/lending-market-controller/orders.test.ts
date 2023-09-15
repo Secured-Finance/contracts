@@ -768,6 +768,7 @@ describe('LendingMarketController - Orders', () => {
       expect(market.bestLendUnitPrice.toString()).to.equal('8880');
       expect(market.bestBorrowUnitPrice.toString()).to.equal('8720');
       expect(market.marketUnitPrice.toString()).to.equal('8720');
+      expect(market.blockUnitPriceHistory[0].toString()).to.equal('8720');
 
       expect(rotatedMarket.ccy).to.equal(targetCurrency);
       expect(rotatedMarket.maturity.toString()).to.equal(
@@ -777,6 +778,7 @@ describe('LendingMarketController - Orders', () => {
       expect(rotatedMarket.bestLendUnitPrice.toString()).to.equal('10000');
       expect(rotatedMarket.bestBorrowUnitPrice.toString()).to.equal('0');
       expect(rotatedMarket.marketUnitPrice.toString()).to.equal('0');
+      expect(rotatedMarket.blockUnitPriceHistory[0].toString()).to.equal('0');
 
       const cleanUpFunds = async () => {
         for (const account of accounts) {

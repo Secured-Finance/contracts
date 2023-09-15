@@ -76,6 +76,10 @@ library OrderBookLogic {
         preOpeningDate = orderBook.preOpeningDate;
     }
 
+    function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] memory) {
+        return _getOrderBook(_orderBookId).getBlockUnitPriceHistory();
+    }
+
     function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256) {
         return _getOrderBook(_orderBookId).getMarketUnitPrice();
     }

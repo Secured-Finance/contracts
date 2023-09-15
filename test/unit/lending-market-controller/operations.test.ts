@@ -130,6 +130,7 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.bestLendUnitPrice).to.equal('10000');
       expect(detail.bestBorrowUnitPrice).to.equal('0');
       expect(detail.marketUnitPrice).to.equal('0');
+      expect(detail.blockUnitPriceHistory[0]).to.equal('0');
       expect(detail.maxLendUnitPrice).to.equal('10000');
       expect(detail.minBorrowUnitPrice).to.equal('1');
       expect(detail.openingUnitPrice).to.equal('0');
@@ -187,6 +188,7 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.bestLendUnitPrice).to.equal('9000');
       expect(detail.bestBorrowUnitPrice).to.equal('5000');
       expect(detail.marketUnitPrice).to.equal('8000');
+      expect(detail.blockUnitPriceHistory[0]).to.equal('8000');
       expect(detail.maxLendUnitPrice).to.equal('8800');
       expect(detail.minBorrowUnitPrice).to.equal('7600');
       expect(detail.openingUnitPrice).to.equal('0');

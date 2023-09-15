@@ -223,6 +223,7 @@ describe('Integration Test: Itayose', async () => {
       expect(marketInfo.bestLendUnitPrice).to.equal('10000');
       expect(marketInfo.bestBorrowUnitPrice).to.equal('0');
       expect(marketInfo.marketUnitPrice).to.equal('0');
+      expect(marketInfo.blockUnitPriceHistory[0]).to.equal('0');
       expect(marketInfo.openingUnitPrice).to.equal('5000');
     });
   });
@@ -369,6 +370,8 @@ describe('Integration Test: Itayose', async () => {
       expect(marketInfo.bestLendUnitPrice).to.equal('7300');
       expect(marketInfo.bestBorrowUnitPrice).to.equal('7200');
       expect(marketInfo.marketUnitPrice).to.equal('7300');
+      expect(marketInfo.blockUnitPriceHistory[0]).to.equal('7300');
+      expect(marketInfo.blockUnitPriceHistory[1]).to.equal('0');
       expect(openingUnitPrice).to.equal('7300');
       expect(marketInfo.openingUnitPrice).to.equal('7300');
     });
