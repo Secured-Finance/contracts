@@ -195,24 +195,24 @@ describe('TokenVault', () => {
   });
 
   describe('Initialize', async () => {
-    it('Update CollateralParameters', async () => {
-      const setCollateralParameters = async (
+    it('Update the liquidation configuration', async () => {
+      const updateLiquidationConfiguration = async (
         liquidationThresholdRate: number,
       ) => {
-        await tokenVaultProxy.setCollateralParameters(
+        await tokenVaultProxy.updateLiquidationConfiguration(
           liquidationThresholdRate,
           LIQUIDATION_PROTOCOL_FEE_RATE,
           LIQUIDATOR_FEE_RATE,
         );
-        const params = await tokenVaultProxy.getCollateralParameters();
+        const params = await tokenVaultProxy.getLiquidationConfiguration();
 
         expect(params.liquidationThresholdRate).to.equal(
           liquidationThresholdRate.toString(),
         );
       };
 
-      await setCollateralParameters(1000);
-      await setCollateralParameters(LIQUIDATION_THRESHOLD_RATE);
+      await updateLiquidationConfiguration(1000);
+      await updateLiquidationConfiguration(LIQUIDATION_THRESHOLD_RATE);
     });
 
     it('Register a currency', async () => {
@@ -235,15 +235,15 @@ describe('TokenVault', () => {
       expect(collateralCurrencies[0]).to.equal(targetCurrency);
     });
 
-    it('Fail to call setCollateralParameters due to invalid rate', async () => {
+    it('Fail to call updateLiquidationConfiguration due to invalid rate', async () => {
       await expect(
-        tokenVaultProxy.setCollateralParameters('0', '1', '1'),
+        tokenVaultProxy.updateLiquidationConfiguration('0', '1', '1'),
       ).to.be.revertedWith('InvalidLiquidationThresholdRate');
       await expect(
-        tokenVaultProxy.setCollateralParameters('1', '10001', '1'),
+        tokenVaultProxy.updateLiquidationConfiguration('1', '10001', '1'),
       ).to.be.revertedWith('InvalidLiquidationProtocolFeeRate');
       await expect(
-        tokenVaultProxy.setCollateralParameters('1', '1', '10001'),
+        tokenVaultProxy.updateLiquidationConfiguration('1', '1', '10001'),
       ).to.be.revertedWith('InvalidLiquidatorFeeRate');
     });
   });

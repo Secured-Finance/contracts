@@ -9,6 +9,12 @@ library TokenVaultStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("sf.storage.tokenVault");
 
     struct Storage {
+        // Liquidation threshold rate (in basis point)
+        uint256 liquidationThresholdRate;
+        // Liquidation fee rate received by protocol (in basis point)
+        uint256 liquidationProtocolFeeRate;
+        // Liquidation fee rate received by liquidators (in basis point)
+        uint256 liquidatorFeeRate;
         // Currencies accepted as collateral
         EnumerableSet.Bytes32Set collateralCurrencies;
         // Mapping from currency name to token address

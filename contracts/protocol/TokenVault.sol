@@ -6,14 +6,14 @@ import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/Enumerab
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
-import {CollateralParametersHandler as Params} from "./libraries/CollateralParametersHandler.sol";
-import {ERC20Handler} from "./libraries/ERC20Handler.sol";
+import {TransferHelper} from "./libraries/TransferHelper.sol";
 import {DepositManagementLogic} from "./libraries/logics/DepositManagementLogic.sol";
 // interfaces
 import {ITokenVault} from "./interfaces/ITokenVault.sol";
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 // mixins
 import {MixinAddressResolver} from "./mixins/MixinAddressResolver.sol";
+import {MixinLiquidationConfiguration} from "./mixins/MixinLiquidationConfiguration.sol";
 // types
 import {ProtocolTypes} from "./types/ProtocolTypes.sol";
 // utils
@@ -28,15 +28,20 @@ import {TokenVaultStorage as Storage} from "./storages/TokenVaultStorage.sol";
  *
  * This contract manages the following data related to tokens.
  * - Deposited token amount as the collateral
- * - Parameters related to the collateral
- *   - Margin Call Threshold Rate
- *   - Auto Liquidation Threshold Rate
- *   - Liquidation Price Rate
- *   - Min Collateral Rate
+ * - Parameters related to the liquidation
+ *   - Liquidation threshold rate
+ *   - Liquidation fee rate received by protocol
+ *   - Liquidation fee rate received by liquidators
  *
  * To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
  */
-contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Proxyable {
+contract TokenVault is
+    ITokenVault,
+    MixinLiquidationConfiguration,
+    MixinAddressResolver,
+    Pausable,
+    Proxyable
+{
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**
@@ -69,8 +74,9 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
         _transferOwnership(_owner);
         registerAddressResolver(_resolver);
 
-        ERC20Handler.initialize(_nativeToken);
-        Params.setCollateralParameters(
+        TransferHelper.initialize(_nativeToken);
+        MixinLiquidationConfiguration._initialize(
+            _owner,
             _liquidationThresholdRate,
             _liquidationProtocolFeeRate,
             _liquidatorFeeRate
@@ -93,7 +99,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     receive() external payable {
-        if (!ERC20Handler.isNative(msg.sender)) {
+        if (!TransferHelper.isNative(msg.sender)) {
             revert CallerNotBaseCurrency({caller: msg.sender});
         }
     }
@@ -324,27 +330,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     /**
-     * @notice Gets the collateral parameters
-     * @return liquidationThresholdRate Auto liquidation threshold rate
-     * @return liquidationProtocolFeeRate Liquidation fee rate received by protocol
-     * @return liquidatorFeeRate Liquidation fee rate received by liquidators
-     */
-    function getCollateralParameters()
-        external
-        view
-        override
-        returns (
-            uint256 liquidationThresholdRate,
-            uint256 liquidationProtocolFeeRate,
-            uint256 liquidatorFeeRate
-        )
-    {
-        liquidationThresholdRate = Params.liquidationThresholdRate();
-        liquidationProtocolFeeRate = Params.liquidationProtocolFeeRate();
-        liquidatorFeeRate = Params.liquidatorFeeRate();
-    }
-
-    /**
      * @notice Registers new currency and sets if it is acceptable as collateral.
      * @param _ccy Currency name in bytes32
      * @param _tokenAddress Token contract address of the selected currency
@@ -495,27 +480,6 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     }
 
     /**
-     * @notice Sets main collateral parameters this function
-     * solves the issue of frontrunning during parameters tuning.
-     *
-     * @param _liquidationThresholdRate The auto liquidation threshold rate
-     * @param _liquidationProtocolFeeRate The liquidation fee rate received by protocol
-     * @param _liquidatorFeeRate The liquidation fee rate received by liquidators
-     * @notice Triggers only be contract owner
-     */
-    function setCollateralParameters(
-        uint256 _liquidationThresholdRate,
-        uint256 _liquidationProtocolFeeRate,
-        uint256 _liquidatorFeeRate
-    ) external override onlyOwner {
-        Params.setCollateralParameters(
-            _liquidationThresholdRate,
-            _liquidationProtocolFeeRate,
-            _liquidatorFeeRate
-        );
-    }
-
-    /**
      * @notice Pauses the token vault.
      */
     function pauseVault() external override onlyOwner {
@@ -536,7 +500,7 @@ contract TokenVault is ITokenVault, MixinAddressResolver, Ownable, Pausable, Pro
     ) internal {
         if (
             _amount == 0 ||
-            (ERC20Handler.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
+            (TransferHelper.isNative(Storage.slot().tokenAddresses[_ccy]) && _amount != msg.value)
         ) {
             revert InvalidAmount();
         }

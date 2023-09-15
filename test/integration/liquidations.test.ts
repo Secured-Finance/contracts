@@ -264,7 +264,7 @@ describe('Integration Test: Liquidations', async () => {
     await mockUniswapQuoter.setToken(hexWFIL, wFILToken.address);
     await mockUniswapQuoter.setToken(hexUSDC, usdcToken.address);
 
-    await tokenVault.setCollateralParameters(
+    await tokenVault.updateLiquidationConfiguration(
       LIQUIDATION_THRESHOLD_RATE,
       LIQUIDATION_PROTOCOL_FEE_RATE,
       LIQUIDATOR_FEE_RATE,
@@ -305,7 +305,7 @@ describe('Integration Test: Liquidations', async () => {
     });
 
     ({ liquidatorFeeRate, liquidationProtocolFeeRate } =
-      await tokenVault.getCollateralParameters());
+      await tokenVault.getLiquidationConfiguration());
   });
 
   describe('Liquidations on FIL(non-collateral currency) market by ETH', async () => {

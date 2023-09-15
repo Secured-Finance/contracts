@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 // libraries
 import {Contracts} from "../../protocol/libraries/Contracts.sol";
-import {ERC20Handler} from "../../protocol/libraries/ERC20Handler.sol";
+import {TransferHelper} from "../../protocol/libraries/TransferHelper.sol";
 // mixins
 import {MixinAddressResolver} from "../../protocol/mixins/MixinAddressResolver.sol";
 
@@ -12,7 +12,7 @@ contract MockUniswapQuoter is MixinAddressResolver {
 
     constructor(address _resolver, address _nativeToken) {
         registerAddressResolver(_resolver);
-        ERC20Handler.initialize(_nativeToken);
+        TransferHelper.initialize(_nativeToken);
 
         buildCache();
     }

@@ -2,9 +2,9 @@
 pragma solidity ^0.8.9;
 
 import {IWETH9} from "../interfaces/IWETH9.sol";
-import {ERC20HandlerStorage as Storage} from "../storages/libraries/ERC20HandlerStorage.sol";
+import {TransferHelperStorage as Storage} from "../storages/libraries/TransferHelperStorage.sol";
 
-library ERC20Handler {
+library TransferHelper {
     function initialize(address _nativeToken) internal {
         require(Storage.slot().nativeToken == address(0), "TransferHelper: Already initialized");
         Storage.slot().nativeToken = _nativeToken;
