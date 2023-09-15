@@ -164,15 +164,23 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
-     * @notice Gets the order book data.
+     * @notice Gets the order book detail.
      * @param _orderBookId The order book id
-     * @return market The market data
+     * @return ccy The currency of the order book
+     * @return maturity The maturity of the order book
+     * @return openingDate The opening date of the order book
+     * @return preOpeningDate The pre-opening date of the order book
      */
     function getOrderBookDetail(uint8 _orderBookId)
         public
         view
         override
-        returns (OrderBook memory market)
+        returns (
+            bytes32 ccy,
+            uint256 maturity,
+            uint256 openingDate,
+            uint256 preOpeningDate
+        )
     {
         return OrderBookLogic.getOrderBookDetail(_orderBookId);
     }
@@ -236,17 +244,42 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         return OrderBookLogic.getBestBorrowUnitPrices(_orderBookIds);
     }
 
+    /**
+     * @notice Gets the market unit price
+     * @param _orderBookId The order book id
+     * @return The market unit price
+     */
     function getMarketUnitPrice(uint8 _orderBookId) external view override returns (uint256) {
         return OrderBookLogic.getMarketUnitPrice(_orderBookId);
     }
 
-    function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 count)
+    /**
+     * @notice Gets the block unit price history
+     * @param _orderBookId The order book id
+     * @return The array of the block unit price
+     */
+    function getBlockUnitPriceHistory(uint8 _orderBookId)
+        external
+        view
+        override
+        returns (uint256[] memory)
+    {
+        return OrderBookLogic.getBlockUnitPriceHistory(_orderBookId);
+    }
+
+    /**
+     * @notice Gets the block unit price average.
+     * @param _orderBookId The order book id
+     * @param _count Count of data used for averaging
+     * @return The block unit price average
+     */
+    function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count)
         external
         view
         override
         returns (uint256)
     {
-        return OrderBookLogic.getBlockUnitPriceAverage(_orderBookId, count);
+        return OrderBookLogic.getBlockUnitPriceAverage(_orderBookId, _count);
     }
 
     /**

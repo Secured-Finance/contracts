@@ -54,6 +54,12 @@ task('register-orders', 'Registers order data into the selected lending market')
           ethers.getContractAt('ProxyController', address),
         );
 
+      const lendingMarketReader = await deployments
+        .get('LendingMarketReader')
+        .then(({ address }) =>
+          ethers.getContractAt('LendingMarketReader', address),
+        );
+
       const contracts = [
         'LendingMarketController',
         'TokenVault',
@@ -263,12 +269,12 @@ task('register-orders', 'Registers order data into the selected lending market')
       console.log('Successfully registered orders');
 
       // Show orders in the market
-      const borrowUnitPrices = await lendingMarketController.getBorrowOrderBook(
+      const borrowUnitPrices = await lendingMarketReader.getBorrowOrderBook(
         marketCurrencyName,
         maturity,
         10,
       );
-      const lendUnitPrices = await lendingMarketController.getLendOrderBook(
+      const lendUnitPrices = await lendingMarketReader.getLendOrderBook(
         marketCurrencyName,
         maturity,
         10,

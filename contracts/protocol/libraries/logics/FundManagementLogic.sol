@@ -671,63 +671,6 @@ library FundManagementLogic {
         }
     }
 
-    function getPositions(bytes32[] memory _ccys, address _user)
-        external
-        view
-        returns (ILendingMarketController.Position[] memory positions)
-    {
-        uint256 totalPositionCount;
-
-        ILendingMarketController.Position[][]
-            memory positionLists = new ILendingMarketController.Position[][](_ccys.length);
-
-        for (uint256 i; i < _ccys.length; i++) {
-            positionLists[i] = getPositionsPerCurrency(_ccys[i], _user);
-            totalPositionCount += positionLists[i].length;
-        }
-
-        positions = new ILendingMarketController.Position[](totalPositionCount);
-        uint256 index;
-        for (uint256 i; i < positionLists.length; i++) {
-            for (uint256 j; j < positionLists[i].length; j++) {
-                positions[index] = positionLists[i][j];
-                index++;
-            }
-        }
-    }
-
-    function getPositionsPerCurrency(bytes32 _ccy, address _user)
-        public
-        view
-        returns (ILendingMarketController.Position[] memory positions)
-    {
-        ILendingMarket lendingMarket = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
-        uint256[] memory maturities = lendingMarket.getMaturities(
-            Storage.slot().orderBookIdLists[_ccy]
-        );
-        positions = new ILendingMarketController.Position[](maturities.length);
-        uint256 positionIdx;
-
-        for (uint256 i; i < maturities.length; i++) {
-            uint256 maturity = maturities[i];
-            (int256 presentValue, int256 futureValue) = getPosition(_ccy, maturity, _user);
-
-            if (futureValue == 0) {
-                assembly {
-                    mstore(positions, sub(mload(positions), 1))
-                }
-            } else {
-                positions[positionIdx] = ILendingMarketController.Position(
-                    _ccy,
-                    maturity,
-                    presentValue,
-                    futureValue
-                );
-                positionIdx++;
-            }
-        }
-    }
-
     function getPosition(
         bytes32 _ccy,
         uint256 _maturity,
