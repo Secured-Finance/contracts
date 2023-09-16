@@ -148,7 +148,7 @@ const currencies: Currency[] = [
 // The currency key is used to express the native token symbol of a target blockchain in our protocol
 const currencyIterator = (): Currency[] =>
   currencies.map((currency) => {
-    if (currency.key === toBytes32(process.env.NATIVE_TOKEN_SYMBOL))
+    if (process.env.NATIVE_TOKEN_SYMBOL && currency.key === toBytes32(process.env.NATIVE_TOKEN_SYMBOL))
       currency.key = toBytes32(process.env.NATIVE_CURRENCY_SYMBOL);
     return currency;
   });
