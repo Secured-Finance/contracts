@@ -33,6 +33,9 @@ jobs:
           echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "INITIAL_MARKET_PRE_ORDER_DATE=${{ vars.INITIAL_MARKET_PRE_ORDER_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
+          echo "NATIVE_CURRENCY_SYMBOL=${{ vars.NATIVE_CURRENCY_SYMBOL }}" >> $GITHUB_ENV
+          echo "NATIVE_TOKEN_ADDRESS=${{ vars.NATIVE_TOKEN_ADDRESS }}" >> $GITHUB_ENV
+          echo "NATIVE_TOKEN_SYMBOL=${{ vars.NATIVE_TOKEN_SYMBOL }}" >> $GITHUB_ENV
           echo "TOKEN_WFIL=${{ vars.TOKEN_WFIL }}" >> $GITHUB_ENV
           echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV
@@ -119,6 +122,9 @@ jobs:
           echo "INITIAL_COMPOUND_FACTOR=${{ vars.INITIAL_COMPOUND_FACTOR }}" >> $GITHUB_ENV
           echo "INITIAL_MARKET_OPENING_DATE=${{ vars.INITIAL_MARKET_OPENING_DATE }}" >> $GITHUB_ENV
           echo "MARKET_BASE_PERIOD=${{ vars.MARKET_BASE_PERIOD }}" >> $GITHUB_ENV
+          echo "NATIVE_CURRENCY_SYMBOL=${{ vars.NATIVE_CURRENCY_SYMBOL }}" >> $GITHUB_ENV
+          echo "NATIVE_TOKEN_ADDRESS=${{ vars.NATIVE_TOKEN_ADDRESS }}" >> $GITHUB_ENV
+          echo "NATIVE_TOKEN_SYMBOL=${{ vars.NATIVE_TOKEN_SYMBOL }}" >> $GITHUB_ENV
           echo "TOKEN_WFIL=${{ vars.TOKEN_WFIL }}" >> $GITHUB_ENV
           echo "TOKEN_USDC=${{ vars.TOKEN_USDC }}" >> $GITHUB_ENV
           echo "TOKEN_WBTC=${{ vars.TOKEN_WBTC }}" >> $GITHUB_ENV

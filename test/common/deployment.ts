@@ -2,10 +2,11 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
 
-import { currencyIterator } from '../../utils/currencies';
+import { Currency, currencyIterator } from '../../utils/currencies';
 import {
   hexEFIL,
   hexETH,
+  hexWETH,
   hexUSDC,
   hexWBTC,
   hexWFIL,
@@ -220,6 +221,9 @@ const deployContracts = async () => {
   );
 
   // Set up for CurrencyController
+  const setTestCurrencyKey = (currency: Currency) => {
+    if (currency.key === hexWETH) currency.key = hexETH;
+  };
   const priceFeedContracts: Record<string, Contract> = {};
   const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator');
 
@@ -232,6 +236,7 @@ const deployContracts = async () => {
   };
 
   for (const currency of currencyIterator()) {
+    setTestCurrencyKey(currency);
     const priceFeedAddresses: string[] = [];
     let heartbeat = 0;
     let decimals = 0;
