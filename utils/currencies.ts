@@ -146,13 +146,13 @@ const currencies: Currency[] = [
 // Replace the native token key of a target deploying blockchain with its native token symbol
 // In case of Ethereum deployment, replace the currency key(WETH) key with ETH. For other blockchains like Polygon, keep the currency key as the wrapped token symbol
 // The currency key is used to express the native token symbol of a target blockchain in our protocol
+
+const nativeTokenSymbol = process.env.NATIVE_TOKEN_SYMBOL || 'WETH';
+const nativeCurrencySymbol = process.env.NATIVE_CURRENCY_SYMBOL || 'ETH';
 const currencyIterator = (): Currency[] =>
   currencies.map((currency) => {
-    if (
-      process.env.NATIVE_TOKEN_SYMBOL &&
-      currency.key === toBytes32(process.env.NATIVE_TOKEN_SYMBOL)
-    )
-      currency.key = toBytes32(process.env.NATIVE_CURRENCY_SYMBOL);
+    if (currency.key === toBytes32(nativeTokenSymbol))
+      currency.key = toBytes32(nativeCurrencySymbol);
     return currency;
   });
 
