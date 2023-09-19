@@ -1,6 +1,6 @@
 # Solidity API
 
-## ERC20HandlerStorage
+## TransferHelperStorage
 
 ### STORAGE_SLOT
 
@@ -19,6 +19,6 @@ struct Storage {
 ### slot
 
 ```solidity
-function slot() internal pure returns (struct ERC20HandlerStorage.Storage r)
+function slot() internal pure returns (struct TransferHelperStorage.Storage r)
 ```
 

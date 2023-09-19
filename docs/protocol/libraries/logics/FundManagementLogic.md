@@ -2,6 +2,12 @@
 
 ## FundManagementLogic
 
+### BASE_MIN_DEBT_UNIT_PRICE
+
+```solidity
+uint256 BASE_MIN_DEBT_UNIT_PRICE
+```
+
 ### NotRedemptionPeriod
 
 ```solidity
@@ -57,6 +63,7 @@ struct ActualFunds {
   int256 presentValue;
   uint256 claimableAmount;
   uint256 debtAmount;
+  uint256 minDebtAmount;
   int256 futureValue;
   uint256 workingLendOrdersAmount;
   uint256 lentAmount;
@@ -78,6 +85,7 @@ struct CalculateActualFundsVars {
   int256 presentValueOfDefaultMarket;
   contract ILendingMarket market;
   contract IFutureValueVault futureValueVault;
+  uint256 minDebtUnitPrice;
 }
 ```
 
@@ -206,40 +214,34 @@ function executeRepayment(bytes32 _ccy, uint256 _maturity, address _user, uint25
 function executeEmergencySettlement(address _user) external
 ```
 
-### calculateActualFunds
+### getActualFunds
 
 ```solidity
-function calculateActualFunds(bytes32 _ccy, uint256 _maturity, address _user) public view returns (struct FundManagementLogic.ActualFunds actualFunds)
+function getActualFunds(bytes32 _ccy, uint256 _maturity, address _user) public view returns (struct FundManagementLogic.ActualFunds actualFunds)
+```
+
+### getCurrentMinDebtUnitPrice
+
+```solidity
+function getCurrentMinDebtUnitPrice(uint256 _maturity, uint256 _minDebtUnitPrice) public view returns (uint256)
 ```
 
 ### calculateFunds
 
 ```solidity
-function calculateFunds(bytes32 _ccy, address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) public view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+function calculateFunds(bytes32 _ccy, address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) public view returns (struct ILendingMarketController.CalculatedFunds funds)
 ```
 
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (uint256 plusDepositAmountInAdditionalFundsCcy, uint256 minusDepositAmountInAdditionalFundsCcy, uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
+function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (struct ILendingMarketController.CalculatedTotalFunds totalFunds)
 ```
 
 ### getUsedMaturities
 
 ```solidity
 function getUsedMaturities(bytes32 _ccy, address _user) public view returns (uint256[] maturities)
-```
-
-### getPositions
-
-```solidity
-function getPositions(bytes32[] _ccys, address _user) external view returns (struct ILendingMarketController.Position[] positions)
-```
-
-### getPositionsPerCurrency
-
-```solidity
-function getPositionsPerCurrency(bytes32 _ccy, address _user) public view returns (struct ILendingMarketController.Position[] positions)
 ```
 
 ### getPosition

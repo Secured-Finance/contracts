@@ -12,6 +12,9 @@ bytes32 STORAGE_SLOT
 
 ```solidity
 struct Storage {
+  uint256 liquidationThresholdRate;
+  uint256 liquidationProtocolFeeRate;
+  uint256 liquidatorFeeRate;
   struct EnumerableSet.Bytes32Set collateralCurrencies;
   mapping(bytes32 => address) tokenAddresses;
   mapping(address => struct EnumerableSet.Bytes32Set) usedCurrencies;

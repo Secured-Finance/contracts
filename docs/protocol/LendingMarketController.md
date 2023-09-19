@@ -2,12 +2,15 @@
 
 ## LendingMarketController
 
-Implements the module to manage separated lending order-book markets per maturity.
+Implements the module to manage separated lending market contracts per currency.
 
-This contract also works as a factory contract that can deploy (start) a new lending market
-for selected currency and maturity and has the calculation logic for the Genesis value in addition.
+This contract also works as a factory contract that can deploy (start) a new lending market & order book
+for selected currency and maturity and has the calculation logic for the following user's funds in addition.
+- Present Value(PV)
+- Future Value(FV)
+- Genesis Value(GV)
 
-Deployed Lending Markets are rotated and reused as it reaches the maturity date. At the time of rotation,
+Once the order book is created, it will be rotated and reused once it reaches its maturity date. At the time of rotation,
 a new maturity date is set and the compound factor is updated.
 
 The users mainly call this contract to execute orders to lend or borrow funds.
@@ -18,12 +21,12 @@ The users mainly call this contract to execute orders to lend or borrow funds.
 modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity)
 ```
 
-Modifier to check if there is a market in the maturity.
+Modifier to check if there is an order book in the maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the market |
+| _maturity | uint256 | The maturity of the order book |
 
 ### ifActive
 
@@ -101,6 +104,41 @@ Gets if the user needs to redeem the funds.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the user needs to redeem the funds |
 
+### getMinDebtUnitPrice
+
+```solidity
+function getMinDebtUnitPrice(bytes32 _ccy) external view returns (uint256)
+```
+
+Gets the min debt unit price for the selected currency.
+This price is based on a one-year maturity.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The genesis date |
+
+### getCurrentMinDebtUnitPrice
+
+```solidity
+function getCurrentMinDebtUnitPrice(bytes32 _ccy, uint256 _maturity) external view returns (uint256)
+```
+
+Gets the current min debt unit price.
+This price fluctuates depending on the current maturity.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The current min debt unit price |
+
 ### getGenesisDate
 
 ```solidity
@@ -139,56 +177,16 @@ Gets the lending market contract address for the selected currency.
 function getOrderBookId(bytes32 _ccy, uint256 _maturity) external view returns (uint8)
 ```
 
-Gets the lending market contract address for the selected currency and maturity.
+Gets the order book id for the selected currency and maturity.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the market |
+| _maturity | uint256 | The maturity of the order book |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| [0] | uint8 | The lending market address |
-
-### getOrderBookDetail
-
-```solidity
-function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) external view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 marketUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
-```
-
-Gets detailed information on the order book.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the market |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| bestLendUnitPrice | uint256 | The best lend price |
-| bestBorrowUnitPrice | uint256 | The best borrow price |
-| marketUnitPrice | uint256 | The market unit price |
-| maxLendUnitPrice | uint256 | The maximum unit price for lending |
-| minBorrowUnitPrice | uint256 | The minimum unit price for borrowing |
-| openingUnitPrice | uint256 | The opening price when Itayose is executed |
-| openingDate | uint256 | The timestamp when the market opens |
-| isReady | bool | The boolean if the market is ready or not |
-
-### getOrderBookDetails
-
-```solidity
-function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
-```
-
-Gets the array of detailed information on the order book
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccys | bytes32[] | Currency name list in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| orderBookDetails | struct ILendingMarketController.OrderBookDetail[] | The array of Detailed information on the order book. |
+| [0] | uint8 | The order book id |
 
 ### getFutureValueVault
 
@@ -205,38 +203,6 @@ Gets the future value contract address for the selected currency and maturity.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | [0] | address | The future value vault address |
-
-### getBestLendUnitPrices
-
-```solidity
-function getBestLendUnitPrices(bytes32 _ccy) external view returns (uint256[])
-```
-
-Gets the best prices for lending in the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256[] | Array with the best prices for lending |
-
-### getBestBorrowUnitPrices
-
-```solidity
-function getBestBorrowUnitPrices(bytes32 _ccy) external view returns (uint256[])
-```
-
-Gets the best prices for borrowing in the selected currency.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | uint256[] | Array with the best prices for borrowing |
 
 ### getOrderEstimation
 
@@ -259,46 +225,6 @@ Gets the estimated order result by the calculation of the amount to be filled wh
 | placedAmount | uint256 | The amount that is placed to the order book |
 | coverage | uint256 | The rate of collateral used |
 | isInsufficientDepositAmount | bool | The boolean if the order amount for lending in the selected currency is insufficient for the deposit amount or not |
-
-### getBorrowOrderBook
-
-```solidity
-function getBorrowOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
-```
-
-Gets the order book of borrow.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the market |
-| _limit | uint256 | The limit number to get |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| unitPrices | uint256[] | The array of borrow unit prices |
-| amounts | uint256[] | The array of borrow order amounts |
-| quantities | uint256[] | The array of borrow order quantities |
-
-### getLendOrderBook
-
-```solidity
-function getLendOrderBook(bytes32 _ccy, uint256 _maturity, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
-```
-
-Gets the order book of lend.
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the market |
-| _limit | uint256 | The limit number to get |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| unitPrices | uint256[] | The array of borrow unit prices |
-| amounts | uint256[] | The array of lend order amounts |
-| quantities | uint256[] | The array of lend order quantities |
 
 ### getMaturities
 
@@ -398,24 +324,6 @@ Gets the genesis value of the account.
 | ---- | ---- | ----------- |
 | genesisValue | int256 | The genesis value |
 
-### getOrders
-
-```solidity
-function getOrders(bytes32[] _ccys, address _user) external view returns (struct ILendingMarketController.Order[] activeOrders, struct ILendingMarketController.Order[] inactiveOrders)
-```
-
-Gets user's active and inactive orders in the order book
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccys | bytes32[] | Currency name list in bytes32 |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| activeOrders | struct ILendingMarketController.Order[] | The array of active orders in the order book |
-| inactiveOrders | struct ILendingMarketController.Order[] | The array of inactive orders |
-
 ### getPosition
 
 ```solidity
@@ -427,7 +335,7 @@ Gets user's active position from the future value vault
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
-| _maturity | uint256 | The maturity of the selected market |
+| _maturity | uint256 | The maturity of the selected order book |
 | _user | address | User's address |
 
 | Name | Type | Description |
@@ -435,27 +343,10 @@ Gets user's active position from the future value vault
 | presentValue | int256 | The present value of the position |
 | futureValue | int256 | The future value of the position |
 
-### getPositions
-
-```solidity
-function getPositions(bytes32[] _ccys, address _user) external view returns (struct ILendingMarketController.Position[] positions)
-```
-
-Gets user's active positions from the future value vaults
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _ccys | bytes32[] | Currency name list in bytes32 |
-| _user | address | User's address |
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| positions | struct ILendingMarketController.Position[] | The array of active positions |
-
 ### calculateFunds
 
 ```solidity
-function calculateFunds(bytes32 _ccy, address _user, uint256 _liquidationThresholdRate) external view returns (uint256 workingLendOrdersAmount, uint256 claimableAmount, uint256 collateralAmount, uint256 lentAmount, uint256 workingBorrowOrdersAmount, uint256 debtAmount, uint256 borrowedAmount)
+function calculateFunds(bytes32 _ccy, address _user, uint256 _liquidationThresholdRate) external view returns (struct ILendingMarketController.CalculatedFunds funds)
 ```
 
 Gets the funds that are calculated from the user's lending and borrowing order list
@@ -469,18 +360,12 @@ for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| workingLendOrdersAmount | uint256 | The working orders amount on the lend order book |
-| claimableAmount | uint256 | The claimable amount due to the lending orders being filled on the order book |
-| collateralAmount | uint256 | The actual collateral amount that is calculated by netting using the haircut. |
-| lentAmount | uint256 | The lent amount due to the lend orders being filled on the order book |
-| workingBorrowOrdersAmount | uint256 | The working orders amount on the borrow order book |
-| debtAmount | uint256 | The debt amount due to the borrow orders being filled on the order book |
-| borrowedAmount | uint256 | The borrowed amount due to the borrow orders being filled on the order book |
+| funds | struct ILendingMarketController.CalculatedFunds | The funds calculated from the user's lending and borrowing order list |
 
 ### calculateTotalFundsInBaseCurrency
 
 ```solidity
-function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (uint256 plusDepositAmountInAdditionalFundsCcy, uint256 minusDepositAmountInAdditionalFundsCcy, uint256 totalWorkingLendOrdersAmount, uint256 totalClaimableAmount, uint256 totalCollateralAmount, uint256 totalLentAmount, uint256 totalWorkingBorrowOrdersAmount, uint256 totalDebtAmount, uint256 totalBorrowedAmount)
+function calculateTotalFundsInBaseCurrency(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds, uint256 _liquidationThresholdRate) external view returns (struct ILendingMarketController.CalculatedTotalFunds funds)
 ```
 
 Gets the funds that are calculated from the user's lending and borrowing order list
@@ -491,6 +376,10 @@ for all currencies in base currency.
 | _user | address | User's address |
 | _additionalFunds | struct ILendingMarketController.AdditionalFunds | The funds to be added for calculating the total funds |
 | _liquidationThresholdRate | uint256 | The liquidation threshold rate |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| funds | struct ILendingMarketController.CalculatedTotalFunds | The total funds calculated from the user's lending and borrowing order list |
 
 ### isInitializedLendingMarket
 
@@ -511,7 +400,7 @@ Gets if the lending market is initialized.
 ### initializeLendingMarket
 
 ```solidity
-function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _circuitBreakerLimitRange) external
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _circuitBreakerLimitRange, uint256 _minDebtUnitPrice) external
 ```
 
 Initialize the lending market to set a genesis date and compound factor
@@ -523,6 +412,7 @@ Initialize the lending market to set a genesis date and compound factor
 | _compoundFactor | uint256 | The initial compound factor when the initial market is opened |
 | _orderFeeRate | uint256 | The order fee rate received by protocol |
 | _circuitBreakerLimitRange | uint256 | The circuit breaker limit range |
+| _minDebtUnitPrice | uint256 |  |
 
 ### createOrderBook
 
@@ -534,7 +424,7 @@ Creates new order book.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Main currency for new lending market |
+| _ccy | bytes32 | Main currency for new order book |
 | _openingDate | uint256 | The timestamp when the order book opens |
 | _preOpeningDate | uint256 | The timestamp when the order book pre-opens |
 
@@ -552,8 +442,8 @@ before the execution of order creation.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
@@ -572,8 +462,8 @@ Deposits funds and executes an order at the same time.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
@@ -589,12 +479,12 @@ function executePreOrder(bytes32 _ccy, uint256 _maturity, enum ProtocolTypes.Sid
 ```
 
 Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
-before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
+before the order book opens (Pre-order period). At the end of this period, Itayose will be executed.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
@@ -613,8 +503,8 @@ Deposits funds and executes a pre-order at the same time.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 | _side | enum ProtocolTypes.Side | Order position type, Borrow or Lend |
 | _amount | uint256 | Amount of funds the maker wants to borrow/lend |
 | _unitPrice | uint256 | Amount of unit price taker wish to borrow/lend |
@@ -633,8 +523,8 @@ Unwinds user's lending or borrowing positions by creating an opposite position o
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 
 ### executeRedemption
 
@@ -643,12 +533,12 @@ function executeRedemption(bytes32 _ccy, uint256 _maturity) external returns (bo
 ```
 
 Redeem user's lending positions.
-Redemption can only be executed once the market has matured after the currency has been delisted.
+Redemption can only be executed once the order book has matured after the currency has been delisted.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 
 ### executeRepayment
 
@@ -657,12 +547,12 @@ function executeRepayment(bytes32 _ccy, uint256 _maturity) external returns (boo
 ```
 
 Repay user's borrowing positions.
-Repayment can only be executed once the market has matured after the currency has been delisted.
+Repayment can only be executed once the order book has matured after the currency has been delisted.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 
 ### executeEmergencySettlement
 
@@ -688,7 +578,7 @@ Executes Itayose calls per selected currencies.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _currencies | bytes32[] | Currency name list in bytes32 |
-| _maturity | uint256 | The maturity of the selected market |
+| _maturity | uint256 | The maturity of the selected order book |
 
 ### cancelOrder
 
@@ -700,8 +590,8 @@ Cancels the own order.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
-| _maturity | uint256 | The maturity of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
+| _maturity | uint256 | The maturity of the selected order book |
 | _orderId | uint48 | Market order id |
 
 ### executeLiquidationCall
@@ -716,7 +606,7 @@ Liquidates a lending or borrowing position if the user's coverage is hight.
 | ---- | ---- | ----------- |
 | _collateralCcy | bytes32 | Currency name to be used as collateral |
 | _debtCcy | bytes32 | Currency name to be used as debt |
-| _debtMaturity | uint256 | The market maturity of the debt |
+| _debtMaturity | uint256 | The order book maturity of the debt |
 | _user | address | User's address |
 
 | Name | Type | Description |
@@ -735,7 +625,7 @@ Execute forced repayment for a borrowing position if repayment date is over.
 | ---- | ---- | ----------- |
 | _collateralCcy | bytes32 | Currency name to be used as collateral |
 | _debtCcy | bytes32 | Currency name to be used as debt |
-| _debtMaturity | uint256 | The market maturity of the debt |
+| _debtMaturity | uint256 | The order book maturity of the debt |
 | _user | address | User's address |
 
 | Name | Type | Description |
@@ -748,15 +638,15 @@ Execute forced repayment for a borrowing position if repayment date is over.
 function rotateOrderBooks(bytes32 _ccy) external
 ```
 
-Rotates the lending markets. In this rotation, the following actions are happened.
-- Updates the maturity at the beginning of the market array.
-- Moves the beginning of the market array to the end of it (Market rotation).
-- Update the compound factor in this contract using the next market unit price. (Auto-rolls)
+Rotates the order books. In this rotation, the following actions are happened.
+- Updates the maturity at the beginning of the order book array.
+- Moves the beginning of the order book array to the end of it (Market rotation).
+- Update the compound factor in this contract using the next order book unit price. (Auto-rolls)
 - Convert the future value held by reserve funds into the genesis value
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _ccy | bytes32 | Currency name in bytes32 of the selected market |
+| _ccy | bytes32 | Currency name in bytes32 of the selected order book |
 
 ### executeEmergencyTermination
 
@@ -825,4 +715,17 @@ Clean up user funds used for lazy evaluation by the following actions:
 | ---- | ---- | ----------- |
 | _ccy | bytes32 | Currency name in bytes32 |
 | _user | address | User's address |
+
+### updateMinDebtUnitPrice
+
+```solidity
+function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external
+```
+
+Updates the min debt unit price for the selected currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _minDebtUnitPrice | uint256 | The min debt unit price |
 

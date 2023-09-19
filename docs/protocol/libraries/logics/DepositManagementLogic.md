@@ -32,6 +32,7 @@ struct CalculatedFundVars {
   uint256 workingBorrowOrdersAmount;
   uint256 debtAmount;
   uint256 borrowedAmount;
+  uint256 minDebtAmount;
 }
 ```
 
@@ -53,10 +54,10 @@ function getUsedCurrencies(address _user) public view returns (bytes32[])
 function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint256)
 ```
 
-### getCollateralAmount
+### getTotalCollateralAmount
 
 ```solidity
-function getCollateralAmount(address _user) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
+function getTotalCollateralAmount(address _user) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, uint256 minRequiredCollateral)
 ```
 
 ### getCollateralAmount
@@ -77,16 +78,10 @@ function getCoverage(address _user) external view returns (uint256 coverage)
 function calculateCoverage(address _user, struct ILendingMarketController.AdditionalFunds _additionalFunds) public view returns (uint256 coverage, bool isInsufficientDepositAmount)
 ```
 
-### _getCollateral
-
-```solidity
-function _getCollateral(address _user) internal view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
-```
-
 ### _calculateCollateral
 
 ```solidity
-function _calculateCollateral(address _user, struct ILendingMarketController.AdditionalFunds _funds) internal view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, bool isInsufficientDepositAmount)
+function _calculateCollateral(address _user, struct ILendingMarketController.AdditionalFunds _funds) internal view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, uint256 minRequiredCollateral, bool isInsufficientDepositAmount)
 ```
 
 ### getWithdrawableCollateral

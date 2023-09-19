@@ -63,15 +63,15 @@ error PastMaturityOrderExists()
 
 ```solidity
 struct OrderBook {
+  uint256 maturity;
+  uint256 openingDate;
+  uint256 preOpeningDate;
   uint48 lastOrderId;
   uint48 lastOrderBlockNumber;
   bool isReliableBlock;
   uint80 blockUnitPriceHistory;
   uint256 blockTotalAmount;
   uint256 blockTotalFutureValue;
-  uint256 openingDate;
-  uint256 preOpeningDate;
-  uint256 maturity;
   mapping(address => uint48[]) activeLendOrderIds;
   mapping(address => uint48[]) activeBorrowOrderIds;
   mapping(address => uint256) userCurrentMaturities;
@@ -122,6 +122,12 @@ function hasLendOrder(struct OrderBookLib.OrderBook self, address _user) interna
 
 ```solidity
 function getOrder(struct OrderBookLib.OrderBook self, uint256 _orderId) internal view returns (struct PlacedOrder order)
+```
+
+### getBlockUnitPriceHistory
+
+```solidity
+function getBlockUnitPriceHistory(struct OrderBookLib.OrderBook self) internal view returns (uint256[] prices)
 ```
 
 ### getMarketUnitPrice

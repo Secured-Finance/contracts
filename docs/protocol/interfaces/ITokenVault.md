@@ -176,18 +176,6 @@ function calculateCoverage(address user, struct ILendingMarketController.Additio
 function calculateLiquidationFees(uint256 liquidationAmount) external view returns (uint256 protocolFee, uint256 liquidatorFee)
 ```
 
-### getCollateralParameters
-
-```solidity
-function getCollateralParameters() external view returns (uint256 liquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate)
-```
-
-### setCollateralParameters
-
-```solidity
-function setCollateralParameters(uint256 liquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate) external
-```
-
 ### deposit
 
 ```solidity

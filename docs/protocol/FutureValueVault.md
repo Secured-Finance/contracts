@@ -2,7 +2,7 @@
 
 ## FutureValueVault
 
-Implements the management of the future value as an amount for Lending deals in each currency.
+Implements the management of the future value as an amount for Lending positions in each currency.
 
 ### initialize
 

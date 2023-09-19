@@ -56,6 +56,12 @@ error NotEnoughOrderBooks()
 event LendingMarketInitialized(bytes32 ccy, uint256 genesisDate, uint256 compoundFactor, uint256 orderFeeRate, uint256 circuitBreakerLimitRange, address lendingMarket, address futureValueVault)
 ```
 
+### MinDebtUnitPriceUpdated
+
+```solidity
+event MinDebtUnitPriceUpdated(bytes32 ccy, uint256 minDebtUnitPrice)
+```
+
 ### OrderBookCreated
 
 ```solidity
@@ -74,28 +80,16 @@ event OrderBooksRotated(bytes32 ccy, uint256 oldMaturity, uint256 newMaturity)
 event EmergencyTerminationExecuted(uint256 timestamp)
 ```
 
-### getOrderBookDetails
-
-```solidity
-function getOrderBookDetails(bytes32[] _ccys) external view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetails)
-```
-
-### getOrderBookDetailsPerCurrency
-
-```solidity
-function getOrderBookDetailsPerCurrency(bytes32 _ccy) public view returns (struct ILendingMarketController.OrderBookDetail[] orderBookDetail)
-```
-
-### getOrderBookDetail
-
-```solidity
-function getOrderBookDetail(bytes32 _ccy, uint256 _maturity) public view returns (uint256 bestLendUnitPrice, uint256 bestBorrowUnitPrice, uint256 marketUnitPrice, uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice, uint256 openingUnitPrice, uint256 openingDate, bool isReady)
-```
-
 ### initializeLendingMarket
 
 ```solidity
-function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _circuitBreakerLimitRange) external
+function initializeLendingMarket(bytes32 _ccy, uint256 _genesisDate, uint256 _compoundFactor, uint256 _orderFeeRate, uint256 _circuitBreakerLimitRange, uint256 _minDebtUnitPrice) external
+```
+
+### updateMinDebtUnitPrice
+
+```solidity
+function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) public
 ```
 
 ### createOrderBook

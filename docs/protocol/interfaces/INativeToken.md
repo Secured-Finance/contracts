@@ -1,6 +1,6 @@
 # Solidity API
 
-## IWETH9
+## INativeToken
 
 ### Deposit
 

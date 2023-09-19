@@ -4,6 +4,8 @@
 
 Implements managing of the reserve fund.
 
+This contract receives the fees from the lending market and uses them to cover to avoid the protocol insolvency.
+
 ### receive
 
 ```solidity

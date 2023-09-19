@@ -32,25 +32,10 @@ error NotItayosePeriod()
 error NotPreOrderPeriod()
 ```
 
-### OrderBook
-
-```solidity
-struct OrderBook {
-  bytes32 ccy;
-  uint256 maturity;
-  uint256 openingDate;
-  uint256 borrowUnitPrice;
-  uint256 lendUnitPrice;
-  uint256 marketUnitPrice;
-  uint256 openingUnitPrice;
-  bool isReady;
-}
-```
-
 ### getOrderBookDetail
 
 ```solidity
-function getOrderBookDetail(uint8 orderBookId) external view returns (struct ILendingMarket.OrderBook)
+function getOrderBookDetail(uint8 orderBookId) external view returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
 ```
 
 ### getCircuitBreakerThresholds
@@ -87,6 +72,12 @@ function getBestBorrowUnitPrices(uint8[] orderBookIds) external view returns (ui
 
 ```solidity
 function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256)
+```
+
+### getBlockUnitPriceHistory
+
+```solidity
+function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[])
 ```
 
 ### getBlockUnitPriceAverage

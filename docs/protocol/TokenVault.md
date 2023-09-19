@@ -6,11 +6,10 @@ Implements the management of the token in each currency for users.
 
 This contract manages the following data related to tokens.
 - Deposited token amount as the collateral
-- Parameters related to the collateral
-  - Margin Call Threshold Rate
-  - Auto Liquidation Threshold Rate
-  - Liquidation Price Rate
-  - Min Collateral Rate
+- Parameters related to the liquidation
+  - Liquidation threshold rate
+  - Liquidation fee rate received by protocol
+  - Liquidation fee rate received by liquidators
 
 To address a currency as collateral, it must be registered using `registerCurrency` method in this contract.
 
@@ -365,20 +364,6 @@ Gets the actual fee amounts calculated by rates.
 | protocolFee | uint256 | Liquidation fee amount received by protocol |
 | liquidatorFee | uint256 | Liquidation fee amount received by liquidators |
 
-### getCollateralParameters
-
-```solidity
-function getCollateralParameters() external view returns (uint256 liquidationThresholdRate, uint256 liquidationProtocolFeeRate, uint256 liquidatorFeeRate)
-```
-
-Gets the collateral parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| liquidationThresholdRate | uint256 | Auto liquidation threshold rate |
-| liquidationProtocolFeeRate | uint256 | Liquidation fee rate received by protocol |
-| liquidatorFeeRate | uint256 | Liquidation fee rate received by liquidators |
-
 ### registerCurrency
 
 ```solidity
@@ -501,23 +486,6 @@ Transfers the token from sender to receiver.
 | _from | address | Sender's address |
 | _to | address | Receiver's address |
 | _amount | uint256 | Amount of funds to sent |
-
-### setCollateralParameters
-
-```solidity
-function setCollateralParameters(uint256 _liquidationThresholdRate, uint256 _liquidationProtocolFeeRate, uint256 _liquidatorFeeRate) external
-```
-
-Sets main collateral parameters this function
-solves the issue of frontrunning during parameters tuning.
-
-Triggers only be contract owner
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _liquidationThresholdRate | uint256 | The auto liquidation threshold rate |
-| _liquidationProtocolFeeRate | uint256 | The liquidation fee rate received by protocol |
-| _liquidatorFeeRate | uint256 | The liquidation fee rate received by liquidators |
 
 ### pauseVault
 

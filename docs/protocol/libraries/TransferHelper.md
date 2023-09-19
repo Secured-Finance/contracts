@@ -1,6 +1,6 @@
 # Solidity API
 
-## ERC20Handler
+## TransferHelper
 
 ### initialize
 

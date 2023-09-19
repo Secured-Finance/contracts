@@ -77,7 +77,13 @@ function isPreOrderPeriod(uint8 _orderBookId) public view returns (bool)
 ### getOrderBookDetail
 
 ```solidity
-function getOrderBookDetail(uint8 _orderBookId) public view returns (struct ILendingMarket.OrderBook)
+function getOrderBookDetail(uint8 _orderBookId) public view returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
+```
+
+### getBlockUnitPriceHistory
+
+```solidity
+function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[])
 ```
 
 ### getMarketUnitPrice

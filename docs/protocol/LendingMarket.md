@@ -2,13 +2,12 @@
 
 ## LendingMarket
 
-Implements the module that allows lending market participants to create/cancel market orders,
-and also provides a future value calculation module.
+Implements the module that allows order book participants to execute/cancel/unwind orders.
 
-For updates, this contract is basically called from `LendingMarketController.sol`instead of being called \
+For updates, this contract is basically called from `LendingMarketController.sol`instead of being called
 directly by the user.
 
-_The market orders is stored in structured red-black trees and doubly linked lists in each node._
+_Open orders is stored in structured red-black trees and doubly linked lists in each node._
 
 ### MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY
 
@@ -73,6 +72,12 @@ Modifier to check if the market is under the pre-order period.
 ```solidity
 constructor(uint256 _minimumReliableAmount) public
 ```
+
+Contract constructor function.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _minimumReliableAmount | uint256 | The minimum reliable amount the base currency for calculating block unit price |
 
 ### initialize
 
@@ -194,10 +199,10 @@ Gets if the market is under the pre-order period.
 ### getOrderBookDetail
 
 ```solidity
-function getOrderBookDetail(uint8 _orderBookId) public view returns (struct ILendingMarket.OrderBook market)
+function getOrderBookDetail(uint8 _orderBookId) public view returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
 ```
 
-Gets the order book data.
+Gets the order book detail.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -205,7 +210,10 @@ Gets the order book data.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| market | struct ILendingMarket.OrderBook | The market data |
+| ccy | bytes32 | The currency of the order book |
+| maturity | uint256 | The maturity of the order book |
+| openingDate | uint256 | The opening date of the order book |
+| preOpeningDate | uint256 | The pre-opening date of the order book |
 
 ### getCircuitBreakerThresholds
 
@@ -286,11 +294,48 @@ Gets the best prices for borrowing.
 function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256)
 ```
 
+Gets the market unit price
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The market unit price |
+
+### getBlockUnitPriceHistory
+
+```solidity
+function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[])
+```
+
+Gets the block unit price history
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256[] | The array of the block unit price |
+
 ### getBlockUnitPriceAverage
 
 ```solidity
-function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 count) external view returns (uint256)
+function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count) external view returns (uint256)
 ```
+
+Gets the block unit price average.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+| _count | uint256 | Count of data used for averaging |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The block unit price average |
 
 ### getBorrowOrderBook
 
