@@ -15,6 +15,8 @@ import {ReserveFundStorage as Storage} from "./storages/ReserveFundStorage.sol";
 
 /**
  * @notice Implements managing of the reserve fund.
+ *
+ * This contract receives the fees from the lending market and uses them to cover to avoid the protocol insolvency.
  */
 contract ReserveFund is IReserveFund, MixinAddressResolver, MixinWallet, Proxyable {
     receive() external payable {}
