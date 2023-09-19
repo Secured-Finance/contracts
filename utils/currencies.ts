@@ -74,8 +74,6 @@ const wethMockPriceFeeds = [
   },
 ];
 
-// Market Currencies
-// Set the wrapped token for the target blockchain's native token:i.e., WETH for Ethereum
 const currencies: Currency[] = [
   {
     symbol: 'wFIL',
@@ -146,7 +144,6 @@ const currencies: Currency[] = [
 // Replace the native token key of a target deploying blockchain with its native token symbol
 // In case of Ethereum deployment, replace the currency key(WETH) key with ETH. For other blockchains like Polygon, keep the currency key as the wrapped token symbol
 // The currency key is used to express the native token symbol of a target blockchain in our protocol
-
 const nativeTokenSymbol = process.env.NATIVE_TOKEN_SYMBOL || 'WETH';
 const nativeCurrencySymbol = process.env.NATIVE_CURRENCY_SYMBOL || 'ETH';
 const currencyIterator = (): Currency[] =>
@@ -156,5 +153,4 @@ const currencyIterator = (): Currency[] =>
     return currency;
   });
 
-// Note: Don't use the currencies array directly, instead, use the iterator to loop over the currencies array.
 export { currencyIterator };
