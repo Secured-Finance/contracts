@@ -14,7 +14,9 @@ Contracts written in Solidity are stored in `./contracts` directory.
 ## Environment variables
 
 Please refer to `.env.sample` and create `.env` to provide secret info such as private keys, Infura ID.
-Private keys are used in order to deploy smart contracts on one of the Ethereum networks.
+Private keys are used in order to deploy smart contracts on one of the Ethereum networks. 
+In addition, depending on your target chain, the native token symbol, the native wrapped token symbol, and the native wrapped token address have to be set.
+
 
 ## Compile
 

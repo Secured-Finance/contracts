@@ -1,7 +1,7 @@
 import { Contract } from 'ethers';
 import { task } from 'hardhat/config';
 import moment from 'moment';
-import { currencies } from '../utils/currencies';
+import { currencyIterator } from '../utils/currencies';
 import { toBytes32 } from '../utils/strings';
 
 task(
@@ -22,7 +22,7 @@ task(
     ),
   );
 
-  for (const currency of currencies) {
+  for (const currency of currencyIterator()) {
     const lendingMarket = await lendingMarketController
       .getLendingMarket(currency.key)
       .then((address) => ethers.getContractAt('LendingMarket', address));
@@ -58,7 +58,7 @@ task(
     }
   }
 
-  for (const currency of currencies) {
+  for (const currency of currencyIterator()) {
     const marketLog: Record<string, string | undefined>[] = [];
     const lendingMarket = await lendingMarketController
       .getLendingMarket(currency.key)

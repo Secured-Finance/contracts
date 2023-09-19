@@ -2,7 +2,7 @@ import BigNumberJS from 'bignumber.js';
 import { BigNumber } from 'ethers';
 import { task, types } from 'hardhat/config';
 import { Side } from '../utils/constants';
-import { currencies } from '../utils/currencies';
+import { currencyIterator } from '../utils/currencies';
 import { toBytes32 } from '../utils/strings';
 
 const ERC20_ABI = [
@@ -150,7 +150,7 @@ task('register-orders', 'Registers order data into the selected lending market')
       ](owner.address);
 
       if (marketCurrency !== 'ETH') {
-        const currency = currencies.find(
+        const currency = currencyIterator().find(
           ({ key }) => key === marketCurrencyName,
         );
 
@@ -172,7 +172,7 @@ task('register-orders', 'Registers order data into the selected lending market')
       }
 
       if (collateralCurrency !== 'ETH') {
-        const currency = currencies.find(
+        const currency = currencyIterator().find(
           ({ key }) => key === collateralCurrencyName,
         );
 

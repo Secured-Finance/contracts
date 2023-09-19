@@ -1,4 +1,4 @@
-import { hexETH, hexUSDC, hexWBTC, hexWFIL } from './strings';
+import { hexUSDC, hexWBTC, hexWETH, hexWFIL, toBytes32 } from './strings';
 
 export interface Currency {
   symbol: string;
@@ -12,6 +12,7 @@ export interface Currency {
   minDebtUnitPrice: number;
   args: string[];
   priceFeed: PriceFeed;
+  mockPriceFeed: MockPriceFeed[];
 }
 
 export interface PriceFeed {
@@ -25,6 +26,54 @@ export interface MockPriceFeed {
   heartbeat: number;
   mockRate?: string;
 }
+
+const wfilMockPriceFeeds = [
+  {
+    name: 'WFIL/ETH',
+    decimals: 18,
+    heartbeat: 86400,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_WFIL_TO_ETH,
+  },
+  {
+    name: 'ETH/USD',
+    decimals: 8,
+    heartbeat: 3600,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
+  },
+];
+
+const wbtcMockPriceFeeds = [
+  {
+    name: 'WBTC/BTC',
+    decimals: 8,
+    heartbeat: 86400,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_WBTC_TO_BTC,
+  },
+  {
+    name: 'BTC/USD',
+    decimals: 8,
+    heartbeat: 3600,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_BTC_TO_USD,
+  },
+];
+
+const usdcMockPriceFeeds = [
+  {
+    name: 'USDC/USD',
+    decimals: 8,
+    heartbeat: 86400,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_USDC_TO_USD,
+  },
+];
+
+const wethMockPriceFeeds = [
+  {
+    name: 'ETH/USD',
+    decimals: 8,
+    heartbeat: 3600,
+    mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
+  },
+];
 
 const currencies: Currency[] = [
   {
@@ -42,6 +91,7 @@ const currencies: Currency[] = [
       addresses: process.env.PRICE_FEED_ADDRESSES_WFIL?.split(',') || [],
       heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WFIL),
     },
+    mockPriceFeed: wfilMockPriceFeeds,
   },
   {
     symbol: 'USDC',
@@ -58,6 +108,7 @@ const currencies: Currency[] = [
       addresses: process.env.PRICE_FEED_ADDRESSES_USDC?.split(',') || [],
       heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_USDC),
     },
+    mockPriceFeed: usdcMockPriceFeeds,
   },
   {
     symbol: 'WBTC',
@@ -74,11 +125,12 @@ const currencies: Currency[] = [
       addresses: process.env.PRICE_FEED_ADDRESSES_WBTC?.split(',') || [],
       heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WBTC),
     },
+    mockPriceFeed: wbtcMockPriceFeeds,
   },
   {
     symbol: 'WETH',
     mock: 'MockWETH9',
-    key: hexETH,
+    key: hexWETH,
     env: process.env.TOKEN_WETH,
     haircut: 0,
     orderFeeRate: 100,
@@ -87,57 +139,23 @@ const currencies: Currency[] = [
     isCollateral: true,
     args: [],
     priceFeed: {
-      addresses: process.env.PRICE_FEED_ADDRESSES_ETH?.split(',') || [],
-      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_ETH),
+      addresses: process.env.PRICE_FEED_ADDRESSES_WETH?.split(',') || [],
+      heartbeat: Number(process.env.PRICE_FEED_MAX_HEARTBEAT_WETH),
     },
+    mockPriceFeed: wethMockPriceFeeds,
   },
 ];
 
-const mockPriceFeeds: Record<string, MockPriceFeed[]> = {
-  [hexWFIL]: [
-    {
-      name: 'WFIL/ETH',
-      decimals: 18,
-      heartbeat: 86400,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_WFIL_TO_ETH,
-    },
-    {
-      name: 'ETH/USD',
-      decimals: 8,
-      heartbeat: 3600,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
-    },
-  ],
-  [hexWBTC]: [
-    {
-      name: 'WBTC/BTC',
-      decimals: 8,
-      heartbeat: 86400,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_WBTC_TO_BTC,
-    },
-    {
-      name: 'BTC/USD',
-      decimals: 8,
-      heartbeat: 3600,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_BTC_TO_USD,
-    },
-  ],
-  [hexUSDC]: [
-    {
-      name: 'USDC/USD',
-      decimals: 8,
-      heartbeat: 86400,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_USDC_TO_USD,
-    },
-  ],
-  [hexETH]: [
-    {
-      name: 'ETH/USD',
-      decimals: 8,
-      heartbeat: 3600,
-      mockRate: process.env.PRICE_FEED_MOCK_RATE_ETH_TO_USD,
-    },
-  ],
-};
+// Replace the native token key of a target deploying blockchain with its native token symbol
+// In case of Ethereum deployment, replace the currency key(WETH) key with ETH. For other blockchains like Polygon, keep the currency key as the wrapped token symbol
+// The currency key is used to express the native token symbol of a target blockchain in our protocol
+const nativeTokenSymbol = process.env.NATIVE_TOKEN_SYMBOL || 'WETH';
+const nativeCurrencySymbol = process.env.NATIVE_CURRENCY_SYMBOL || 'ETH';
+const currencyIterator = (): Currency[] =>
+  currencies.map((currency) => {
+    if (currency.key === toBytes32(nativeTokenSymbol))
+      currency.key = toBytes32(nativeCurrencySymbol);
+    return currency;
+  });
 
-export { currencies, mockPriceFeeds };
+export { currencyIterator };

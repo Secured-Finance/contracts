@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IWETH9} from "../interfaces/IWETH9.sol";
+import {INativeToken} from "../interfaces/INativeToken.sol";
 import {TransferHelperStorage as Storage} from "../storages/libraries/TransferHelperStorage.sol";
 
 library TransferHelper {
@@ -46,16 +46,16 @@ library TransferHelper {
     function convertToWrappedToken(address _receiver, uint256 _amount) internal {
         require(address(this).balance >= _amount, "TransferHelper: Insufficient balance");
 
-        IWETH9(Storage.slot().nativeToken).deposit{value: _amount}();
-        IWETH9(Storage.slot().nativeToken).transfer(_receiver, _amount);
+        INativeToken(Storage.slot().nativeToken).deposit{value: _amount}();
+        INativeToken(Storage.slot().nativeToken).transfer(_receiver, _amount);
     }
 
     function convertFromWrappedToken(address _receiver, uint256 _amount) internal {
-        uint256 balance = IWETH9(Storage.slot().nativeToken).balanceOf(address(this));
+        uint256 balance = INativeToken(Storage.slot().nativeToken).balanceOf(address(this));
         require(balance >= _amount, "TransferHelper: Insufficient balance");
 
         if (balance > 0) {
-            IWETH9(Storage.slot().nativeToken).withdraw(_amount);
+            INativeToken(Storage.slot().nativeToken).withdraw(_amount);
             safeTransferETH(_receiver, _amount);
         }
     }

@@ -1,6 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { currencies } from '../utils/currencies';
+import { currencyIterator } from '../utils/currencies';
 import { toBytes32 } from '../utils/strings';
 
 const func: DeployFunction = async function ({
@@ -135,7 +135,7 @@ const func: DeployFunction = async function ({
   }
 
   // Set up for TokenVault
-  for (const currency of currencies) {
+  for (const currency of currencyIterator()) {
     const isRegistered = await tokenVault.isRegisteredCurrency(currency.key);
     if (isRegistered) {
       console.log(

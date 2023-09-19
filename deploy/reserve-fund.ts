@@ -10,8 +10,9 @@ const func: DeployFunction = async function ({
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const WETH =
-    process.env.TOKEN_WETH || (await deployments.get('MockWETH9')).address;
+  const nativeToken =
+    process.env.NATIVE_TOKEN_ADDRESS ||
+    (await deployments.get('MockWETH9')).address;
   const deployResult = await deploy('ReserveFund', {
     from: deployer,
   });
@@ -22,7 +23,7 @@ const func: DeployFunction = async function ({
       .then(({ address }) => ethers.getContractAt('ProxyController', address));
 
     await proxyController
-      .setReserveFundImpl(deployResult.address, WETH)
+      .setReserveFundImpl(deployResult.address, nativeToken)
       .then((tx) => tx.wait());
   });
 };
