@@ -12,6 +12,7 @@ const func: DeployFunction = async function ({
 
   const nativeToken =
     process.env.NATIVE_TOKEN_ADDRESS ||
+    process.env.TOKEN_WETH ||
     (await deployments.get('MockWETH9')).address;
   const deployResult = await deploy('ReserveFund', {
     from: deployer,
