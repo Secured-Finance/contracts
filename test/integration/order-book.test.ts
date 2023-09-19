@@ -55,53 +55,6 @@ describe('Integration Test: Order Book', async () => {
         .transfer(signer.address, initialFILBalance);
     });
 
-  const createSampleETHOrders = async (
-    user: SignerWithAddress,
-    maturityIdx = 0,
-  ) => {
-    await tokenVault.connect(user).deposit(hexETH, initialETHBalance.div(3), {
-      value: initialETHBalance.div(3),
-    });
-
-    await lendingMarketController
-      .connect(user)
-      .executeOrder(
-        hexETH,
-        ethMaturities[maturityIdx],
-        Side.BORROW,
-        '1000',
-        '8200',
-      );
-
-    await lendingMarketController
-      .connect(user)
-      .executeOrder(
-        hexETH,
-        ethMaturities[maturityIdx],
-        Side.LEND,
-        '1000',
-        '7800',
-      );
-  };
-
-  const createSampleFILOrders = async (user: SignerWithAddress) => {
-    await wFILToken
-      .connect(user)
-      .approve(tokenVault.address, initialFILBalance);
-    await tokenVault.connect(user).deposit(hexWFIL, initialFILBalance);
-    await tokenVault.connect(user).deposit(hexETH, initialETHBalance.div(3), {
-      value: initialETHBalance.div(3),
-    });
-
-    await lendingMarketController
-      .connect(user)
-      .executeOrder(hexWFIL, filMaturities[0], Side.BORROW, '1000', '8200');
-
-    await lendingMarketController
-      .connect(user)
-      .executeOrder(hexWFIL, filMaturities[0], Side.LEND, '1000', '7800');
-  };
-
   before('Deploy Contracts', async () => {
     signers = new Signers(await ethers.getSigners());
     [owner] = await signers.get(1);
@@ -160,7 +113,22 @@ describe('Integration Test: Order Book', async () => {
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
         ethMaturities = await lendingMarketController.getMaturities(hexETH);
-        await createSampleETHOrders(carol);
+      });
+
+      it('Create orders', async () => {
+        await tokenVault
+          .connect(carol)
+          .deposit(hexETH, initialETHBalance.div(3), {
+            value: initialETHBalance.div(3),
+          });
+
+        await lendingMarketController
+          .connect(carol)
+          .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
+
+        await lendingMarketController
+          .connect(carol)
+          .executeOrder(hexETH, ethMaturities[0], Side.LEND, '1000', '7800');
       });
 
       it('Deposit ETH', async () => {
@@ -283,7 +251,18 @@ describe('Integration Test: Order Book', async () => {
       before(async () => {
         [alice, bob, carol, dave] = await getUsers(4);
         filMaturities = await lendingMarketController.getMaturities(hexWFIL);
-        await createSampleFILOrders(carol);
+      });
+
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexWFIL, dave.address);
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(dave)
+            .cancelOrder(hexWFIL, order.maturity, order.orderId);
+        }
       });
 
       it('Deposit ETH ', async () => {
@@ -398,12 +377,6 @@ describe('Integration Test: Order Book', async () => {
           );
 
         expect(aliceFV).to.equal(0);
-      });
-
-      after(async () => {
-        await lendingMarketController
-          .connect(dave)
-          .cancelOrder(hexWFIL, filMaturities[0], '4');
       });
     });
 
@@ -549,8 +522,6 @@ describe('Integration Test: Order Book', async () => {
         [alice, bob, carol, dave] = await getUsers(4);
         filMaturities = await lendingMarketController.getMaturities(hexWFIL);
         ethMaturities = await lendingMarketController.getMaturities(hexETH);
-        await createSampleFILOrders(carol);
-        await createSampleETHOrders(carol);
       });
 
       it('Deposit ETH ', async () => {
@@ -746,8 +717,6 @@ describe('Integration Test: Order Book', async () => {
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
         ethMaturities = await lendingMarketController.getMaturities(hexETH);
-        await createSampleETHOrders(carol, 0);
-        await createSampleETHOrders(carol, 1);
       });
 
       it('Deposit ETH ', async () => {
@@ -1563,7 +1532,6 @@ describe('Integration Test: Order Book', async () => {
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
         filMaturities = await lendingMarketController.getMaturities(hexWFIL);
-        await createSampleFILOrders(carol);
       });
 
       it('Deposit ETH', async () => {
@@ -1646,7 +1614,6 @@ describe('Integration Test: Order Book', async () => {
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
         filMaturities = await lendingMarketController.getMaturities(hexWFIL);
-        await createSampleFILOrders(carol);
       });
 
       it('Deposit ETH', async () => {

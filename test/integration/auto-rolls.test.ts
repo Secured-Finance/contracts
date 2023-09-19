@@ -78,7 +78,6 @@ describe('Integration Test: Auto-rolls', async () => {
     if (unitPrice) {
       // Move to 6 hours (21600 sec) before maturity.
       await time.increaseTo(maturities[0].sub('21600').toString());
-      // await createSampleETHOrders(carol, maturities[1], unitPrice);
       await createSampleETHOrders(owner, maturities[1], unitPrice);
     }
     await time.increaseTo(maturities[0].toString());
@@ -204,12 +203,6 @@ describe('Integration Test: Auto-rolls', async () => {
             orderAmount.mul(3),
             8000,
           ),
-      ).to.not.emit(fundManagementLogic, 'OrderFilled');
-
-      await expect(
-        lendingMarketController
-          .connect(carol)
-          .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 8010),
       ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
       await expect(

@@ -56,6 +56,38 @@ describe('TokenVault', () => {
     return signer;
   };
 
+  const updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock = async (
+    inputs: {
+      plusDepositAmountInAdditionalFundsCcy?: number | BigNumber | string;
+      minusDepositAmountInAdditionalFundsCcy?: number | BigNumber | string;
+      workingLendOrdersAmount?: number | BigNumber | string;
+      claimableAmount?: number | BigNumber | string;
+      collateralAmount?: number | BigNumber | string;
+      lentAmount?: number | BigNumber | string;
+      workingBorrowOrdersAmount?: number | BigNumber | string;
+      debtAmount?: number | BigNumber | string;
+      borrowedAmount?: number | BigNumber | string;
+      minDebtAmount?: number | BigNumber | string;
+    } = {},
+  ) => {
+    return mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
+      {
+        plusDepositAmountInAdditionalFundsCcy:
+          inputs.plusDepositAmountInAdditionalFundsCcy || 0,
+        minusDepositAmountInAdditionalFundsCcy:
+          inputs.minusDepositAmountInAdditionalFundsCcy || 0,
+        workingLendOrdersAmount: inputs.workingLendOrdersAmount || 0,
+        claimableAmount: inputs.claimableAmount || 0,
+        collateralAmount: inputs.collateralAmount || 0,
+        lentAmount: inputs.lentAmount || 0,
+        workingBorrowOrdersAmount: inputs.workingBorrowOrdersAmount || 0,
+        debtAmount: inputs.debtAmount || 0,
+        borrowedAmount: inputs.borrowedAmount || 0,
+        minDebtAmount: inputs.minDebtAmount || 0,
+      },
+    );
+  };
+
   before(async () => {
     [owner, alice, bob, carol, dave, ellen, ...signers] =
       await ethers.getSigners();
@@ -85,20 +117,6 @@ describe('TokenVault', () => {
     await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
       0,
     );
-    await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-      {
-        plusDepositAmountInAdditionalFundsCcy: 0,
-        minusDepositAmountInAdditionalFundsCcy: 0,
-        workingLendOrdersAmount: 0,
-        claimableAmount: 0,
-        collateralAmount: 0,
-        lentAmount: 0,
-        workingBorrowOrdersAmount: 0,
-        debtAmount: 0,
-        borrowedAmount: 0,
-        minDebtAmount: 0,
-      },
-    );
     await mockLendingMarketController.mock.calculateFunds.returns({
       workingLendOrdersAmount: 0,
       claimableAmount: 0,
@@ -109,6 +127,8 @@ describe('TokenVault', () => {
       borrowedAmount: 0,
       minDebtAmount: 0,
     });
+
+    await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
     // Deploy libraries
     depositManagementLogic = await deployContract(
@@ -264,37 +284,6 @@ describe('TokenVault', () => {
       borrowedAmount: 0,
     };
 
-    const updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock =
-      async (inputs: {
-        plusDepositAmountInAdditionalFundsCcy?: number | BigNumber | string;
-        minusDepositAmountInAdditionalFundsCcy?: number | BigNumber | string;
-        workingLendOrdersAmount?: number | BigNumber | string;
-        claimableAmount?: number | BigNumber | string;
-        collateralAmount?: number | BigNumber | string;
-        lentAmount?: number | BigNumber | string;
-        workingBorrowOrdersAmount?: number | BigNumber | string;
-        debtAmount?: number | BigNumber | string;
-        borrowedAmount?: number | BigNumber | string;
-        minDebtAmount?: number | BigNumber | string;
-      }) => {
-        return mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-          {
-            plusDepositAmountInAdditionalFundsCcy:
-              inputs.plusDepositAmountInAdditionalFundsCcy || 0,
-            minusDepositAmountInAdditionalFundsCcy:
-              inputs.minusDepositAmountInAdditionalFundsCcy || 0,
-            workingLendOrdersAmount: inputs.workingLendOrdersAmount || 0,
-            claimableAmount: inputs.claimableAmount || 0,
-            collateralAmount: inputs.collateralAmount || 0,
-            lentAmount: inputs.lentAmount || 0,
-            workingBorrowOrdersAmount: inputs.workingBorrowOrdersAmount || 0,
-            debtAmount: inputs.debtAmount || 0,
-            borrowedAmount: inputs.borrowedAmount || 0,
-            minDebtAmount: inputs.minDebtAmount || 0,
-          },
-        );
-      };
-
     before(async () => {
       await mockLendingMarketController.mock.isTerminated.returns(false);
     });
@@ -308,20 +297,8 @@ describe('TokenVault', () => {
         true,
       );
 
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount: 0,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
+
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256)'
       ].returns(0);
@@ -533,20 +510,7 @@ describe('TokenVault', () => {
         totalPresentValue,
       );
 
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount: 0,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('0');
       expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
@@ -562,20 +526,9 @@ describe('TokenVault', () => {
         true,
       );
 
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: usedValue,
-          debtAmount: 0,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        workingBorrowOrdersAmount: usedValue,
+      });
 
       expect(await tokenVaultProxy['isCovered(address)'](bob.address)).to.equal(
         true,
@@ -626,20 +579,10 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount: 0,
-          borrowedAmount,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        borrowedAmount,
+      });
 
       await tokenVaultProxy.connect(carol).deposit(targetCurrency, value);
 
@@ -670,20 +613,10 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount,
+      });
 
       await tokenVaultProxy.connect(dave).deposit(targetCurrency, value);
 
@@ -724,20 +657,11 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount,
-          borrowedAmount: 0,
-          minDebtAmount,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount,
+        minDebtAmount,
+      });
 
       await tokenVaultProxy.connect(ellen).deposit(targetCurrency, value);
 
@@ -775,20 +699,8 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount: 0,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
       await tokenVaultCaller
         .connect(signer)
@@ -833,20 +745,8 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
         totalPresentValue,
       );
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount: 0,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
       await tokenVaultCaller
         .connect(signer)
@@ -877,20 +777,10 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount,
+      });
 
       const nonCollateralCurrency = ethers.utils.formatBytes32String(
         `Test${currencyIdx}`,
@@ -942,20 +832,8 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount: 0,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
 
@@ -1002,20 +880,10 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount,
+      });
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
 
@@ -1054,20 +922,10 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,int256)'
       ].returns(valueInETH);
-      await mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
-        {
-          plusDepositAmountInAdditionalFundsCcy: 0,
-          minusDepositAmountInAdditionalFundsCcy: 0,
-          workingLendOrdersAmount: 0,
-          claimableAmount: 0,
-          collateralAmount: 0,
-          lentAmount: 0,
-          workingBorrowOrdersAmount: 0,
-          debtAmount,
-          borrowedAmount: 0,
-          minDebtAmount: 0,
-        },
-      );
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        debtAmount,
+      });
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
 

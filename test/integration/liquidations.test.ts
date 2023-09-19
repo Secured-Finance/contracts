@@ -813,26 +813,6 @@ describe('Integration Test: Liquidations', async () => {
             hexWFIL,
             filMaturities[1],
             Side.BORROW,
-            '1000000000',
-            '8001',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .depositAndExecuteOrder(
-            hexWFIL,
-            filMaturities[1],
-            Side.LEND,
-            '1000000000',
-            '7999',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .executeOrder(
-            hexWFIL,
-            filMaturities[1],
-            Side.BORROW,
             filledOrderAmount.mul(2),
             '8000',
           );
@@ -922,16 +902,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.BORROW,
             filledOrderAmount.mul(2),
             '8000',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .depositAndExecuteOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.LEND,
-            '10000000000000000000',
-            '7999',
           );
 
         expect(
@@ -1084,16 +1054,6 @@ describe('Integration Test: Liquidations', async () => {
             '8000',
           );
 
-        await lendingMarketController
-          .connect(owner)
-          .depositAndExecuteOrder(
-            hexWFIL,
-            filMaturities[1],
-            Side.LEND,
-            '10000000000000000000',
-            '7999',
-          );
-
         expect(
           await tokenVault.getDepositAmount(alice.address, hexWFIL),
         ).to.equal(filledOrderAmount);
@@ -1233,22 +1193,12 @@ describe('Integration Test: Liquidations', async () => {
 
         await lendingMarketController
           .connect(owner)
-          .executeOrder(
-            hexUSDC,
-            filMaturities[0],
-            Side.BORROW,
-            orderAmountInUSDC.mul(2),
-            '8000',
-          );
-
-        await lendingMarketController
-          .connect(owner)
           .depositAndExecuteOrder(
             hexUSDC,
             filMaturities[0],
             Side.LEND,
             orderAmountInUSDC,
-            '7999',
+            '8000',
           );
 
         expect(
@@ -1294,16 +1244,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.BORROW,
             orderAmountInFIL,
             '8000',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .depositAndExecuteOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.LEND,
-            orderAmountInFIL,
-            '7999',
           );
 
         expect(
@@ -1668,22 +1608,12 @@ describe('Integration Test: Liquidations', async () => {
 
           await lendingMarketController
             .connect(owner)
-            .executeOrder(
-              hexUSDC,
-              filMaturities[i],
-              Side.BORROW,
-              orderAmountInUSDC.mul(2),
-              '8000',
-            );
-
-          await lendingMarketController
-            .connect(owner)
             .depositAndExecuteOrder(
               hexUSDC,
               filMaturities[i],
               Side.LEND,
               orderAmountInUSDC,
-              '7999',
+              '8000',
             );
         }
 
@@ -1730,16 +1660,6 @@ describe('Integration Test: Liquidations', async () => {
             Side.BORROW,
             orderAmountInFIL,
             '8000',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .depositAndExecuteOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.LEND,
-            orderAmountInFIL,
-            '7999',
           );
 
         expect(
@@ -2541,31 +2461,11 @@ describe('Integration Test: Liquidations', async () => {
             hexWFIL,
             filMaturities[1],
             Side.BORROW,
-            '1000000000',
-            '8001',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .depositAndExecuteOrder(
-            hexWFIL,
-            filMaturities[1],
-            Side.LEND,
-            '1000000000',
-            '7999',
-          );
-
-        await lendingMarketController
-          .connect(owner)
-          .executeOrder(
-            hexWFIL,
-            filMaturities[1],
-            Side.BORROW,
             filledOrderAmount.mul(2),
             '8000',
           );
 
-        const lendingInfoBefore = await lendingInfo.load('Before', {
+        await lendingInfo.load('Before', {
           WFIL: filMaturities[1],
         });
 
