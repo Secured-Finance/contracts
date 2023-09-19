@@ -14,3 +14,6 @@ export const wbtcToETHRate = wBtcToBTCRate
 export const usdcToETHRate = usdcToUSDRate
   .mul(BigNumber.from(10).pow(18))
   .div(ethToUSDRate);
+export const wbtcToUSDRate = wbtcToETHRate
+  .mul(ethToUSDRate)
+  .div(BigNumber.from(10).pow(18));

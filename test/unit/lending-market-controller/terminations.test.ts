@@ -10,6 +10,7 @@ import { getGenesisDate } from '../../../utils/dates';
 import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
+  MIN_DEBT_UNIT_PRICE,
   ORDER_FEE_RATE,
 } from '../../common/constants';
 import { deployContracts } from './utils';
@@ -47,6 +48,7 @@ describe('LendingMarketController - Terminations', () => {
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
+      MIN_DEBT_UNIT_PRICE,
     );
 
     for (let i = 0; i < 5; i++) {
@@ -602,6 +604,7 @@ describe('LendingMarketController - Terminations', () => {
           INITIAL_COMPOUND_FACTOR,
           ORDER_FEE_RATE,
           CIRCUIT_BREAKER_LIMIT_RANGE,
+          MIN_DEBT_UNIT_PRICE,
         ),
       ).to.revertedWith('AlreadyInitialized');
     });

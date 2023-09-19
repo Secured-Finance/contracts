@@ -29,6 +29,8 @@ library FundManagementLogic {
     using RoundingUint256 for uint256;
     using RoundingInt256 for int256;
 
+    uint256 public constant BASE_MIN_DEBT_UNIT_PRICE = 9600;
+
     error NotRedemptionPeriod();
     error NotRepaymentPeriod();
     error NoRedemptionAmount();
@@ -48,6 +50,7 @@ library FundManagementLogic {
         int256 presentValue;
         uint256 claimableAmount;
         uint256 debtAmount;
+        uint256 minDebtAmount;
         int256 futureValue;
         uint256 workingLendOrdersAmount;
         uint256 lentAmount;
@@ -65,6 +68,7 @@ library FundManagementLogic {
         int256 presentValueOfDefaultMarket;
         ILendingMarket market;
         IFutureValueVault futureValueVault;
+        uint256 minDebtUnitPrice;
     }
 
     struct FutureValueVaultFunds {
@@ -253,7 +257,7 @@ library FundManagementLogic {
 
         cleanUpFunds(_ccy, _user);
 
-        int256 amount = calculateActualFunds(_ccy, _maturity, _user).futureValue;
+        int256 amount = getActualFunds(_ccy, _maturity, _user).futureValue;
         if (amount <= 0) revert NoRedemptionAmount();
 
         uint256 redemptionAmount = _resetFundsPerMaturity(_ccy, _maturity, _user, amount)
@@ -277,7 +281,7 @@ library FundManagementLogic {
         cleanUpFunds(_ccy, _user);
 
         int256 resetAmount = _amount == 0
-            ? calculateActualFunds(_ccy, _maturity, _user).futureValue
+            ? getActualFunds(_ccy, _maturity, _user).futureValue
             : -_amount.toInt256();
 
         if (resetAmount >= 0) revert NoRepaymentAmount();
@@ -352,7 +356,7 @@ library FundManagementLogic {
         emit EmergencySettlementExecuted(_user, redemptionAmountInBaseCurrency.toUint256());
     }
 
-    function calculateActualFunds(
+    function getActualFunds(
         bytes32 _ccy,
         uint256 _maturity,
         address _user
@@ -361,6 +365,7 @@ library FundManagementLogic {
         vars.market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         vars.futureValueVault = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]);
         vars.defaultOrderBookId = Storage.slot().orderBookIdLists[_ccy][0];
+        vars.minDebtUnitPrice = Storage.slot().minDebtUnitPrices[_ccy];
 
         if (_maturity == 0) {
             vars.isTotal = true;
@@ -422,6 +427,9 @@ library FundManagementLogic {
                 int256 presentValue = futureValueVaultFunds.presentValue -
                     borrowOrdersFunds.presentValue +
                     lendOrdersFunds.presentValue;
+                int256 futureValue = futureValueVaultFunds.futureValue -
+                    borrowOrdersFunds.futureValue +
+                    lendOrdersFunds.futureValue;
 
                 actualFunds.presentValue += presentValue;
 
@@ -435,13 +443,20 @@ library FundManagementLogic {
                     actualFunds.debtAmount += (-presentValue).toUint256();
                 }
 
+                if (futureValue < 0) {
+                    uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
+                        vars.maturities[i],
+                        vars.minDebtUnitPrice
+                    );
+
+                    actualFunds.minDebtAmount += ((-futureValue).toUint256() *
+                        currentMinDebtUnitPrice).div(Constants.PRICE_DIGIT);
+                }
+
                 // Set future value.
                 // Note: When calculating total funds, total future value will be 0 because different maturities can not be added.
                 if (!vars.isTotal) {
-                    actualFunds.futureValue +=
-                        futureValueVaultFunds.futureValue -
-                        borrowOrdersFunds.futureValue +
-                        lendOrdersFunds.futureValue;
+                    actualFunds.futureValue += futureValue;
                 }
 
                 actualFunds.workingBorrowOrdersAmount += borrowOrdersFunds.workingOrdersAmount;
@@ -451,7 +466,7 @@ library FundManagementLogic {
 
                 // Get balance fluctuation amount by auto-rolls
                 if (actualFunds.genesisValue < 0) {
-                    int256 fluctuation = AddressResolverLib
+                    actualFunds.genesisValue += AddressResolverLib
                         .genesisValueVault()
                         .calculateBalanceFluctuationByAutoRolls(
                             _ccy,
@@ -459,8 +474,6 @@ library FundManagementLogic {
                             vars.maturities[i],
                             i == vars.maturities.length - 1 ? 0 : vars.maturities[i + 1]
                         );
-
-                    actualFunds.genesisValue += fluctuation;
                 }
             }
         }
@@ -511,55 +524,60 @@ library FundManagementLogic {
         }
     }
 
+    function getCurrentMinDebtUnitPrice(uint256 _maturity, uint256 _minDebtUnitPrice)
+        public
+        view
+        returns (uint256)
+    {
+        return
+            _maturity > block.timestamp
+                ? BASE_MIN_DEBT_UNIT_PRICE -
+                    ((BASE_MIN_DEBT_UNIT_PRICE - _minDebtUnitPrice) *
+                        (_maturity - block.timestamp)) /
+                    Constants.SECONDS_IN_YEAR
+                : BASE_MIN_DEBT_UNIT_PRICE;
+    }
+
     function calculateFunds(
         bytes32 _ccy,
         address _user,
         ILendingMarketController.AdditionalFunds memory _additionalFunds,
         uint256 _liquidationThresholdRate
-    )
-        public
-        view
-        returns (
-            uint256 workingLendOrdersAmount,
-            uint256 claimableAmount,
-            uint256 collateralAmount,
-            uint256 lentAmount,
-            uint256 workingBorrowOrdersAmount,
-            uint256 debtAmount,
-            uint256 borrowedAmount
-        )
-    {
-        ActualFunds memory funds = calculateActualFunds(_ccy, 0, _user);
+    ) public view returns (ILendingMarketController.CalculatedFunds memory funds) {
+        ActualFunds memory actualFunds = getActualFunds(_ccy, 0, _user);
 
-        workingLendOrdersAmount =
-            funds.workingLendOrdersAmount +
+        funds.workingLendOrdersAmount =
+            actualFunds.workingLendOrdersAmount +
             _additionalFunds.workingLendOrdersAmount;
-        claimableAmount = funds.claimableAmount + _additionalFunds.claimableAmount;
-        lentAmount = funds.lentAmount + _additionalFunds.lentAmount;
-        workingBorrowOrdersAmount =
-            funds.workingBorrowOrdersAmount +
+        funds.claimableAmount = actualFunds.claimableAmount + _additionalFunds.claimableAmount;
+        funds.lentAmount = actualFunds.lentAmount + _additionalFunds.lentAmount;
+        funds.workingBorrowOrdersAmount =
+            actualFunds.workingBorrowOrdersAmount +
             _additionalFunds.workingBorrowOrdersAmount;
-        debtAmount = funds.debtAmount + _additionalFunds.debtAmount;
-        borrowedAmount = funds.borrowedAmount + _additionalFunds.borrowedAmount;
+        funds.debtAmount = actualFunds.debtAmount + _additionalFunds.debtAmount;
+        funds.borrowedAmount = actualFunds.borrowedAmount + _additionalFunds.borrowedAmount;
+        funds.minDebtAmount = actualFunds.minDebtAmount;
 
-        if (claimableAmount > 0) {
+        if (funds.claimableAmount > 0) {
             // If the debt and claimable amount are in the same currency, the claimable amount can be allocated
             // as collateral up to the amount that the liquidation threshold is reached.
             // For calculation purposes, the working amount for borrowing orders is treated as potential debt in addition.
-            uint256 maxAllocableCollateralAmountInSameCcy = ((debtAmount +
-                workingBorrowOrdersAmount) * _liquidationThresholdRate).div(Constants.PCT_DIGIT);
+            uint256 maxAllocableCollateralAmountInSameCcy = ((funds.debtAmount +
+                funds.workingBorrowOrdersAmount) * _liquidationThresholdRate).div(
+                    Constants.PCT_DIGIT
+                );
 
             // If the claimable amount is over the allocable amount as collateral, the over amount is used as collateral
             // for the other currency after being multiplied by a haircut.
-            if (claimableAmount > maxAllocableCollateralAmountInSameCcy) {
+            if (funds.claimableAmount > maxAllocableCollateralAmountInSameCcy) {
                 uint256 haircut = AddressResolverLib.currencyController().getHaircut(_ccy);
-                collateralAmount =
+                funds.collateralAmount =
                     maxAllocableCollateralAmountInSameCcy +
-                    (haircut * (claimableAmount - maxAllocableCollateralAmountInSameCcy)).div(
+                    (haircut * (funds.claimableAmount - maxAllocableCollateralAmountInSameCcy)).div(
                         Constants.PCT_DIGIT
                     );
             } else {
-                collateralAmount = claimableAmount;
+                funds.collateralAmount = funds.claimableAmount;
             }
         }
     }
@@ -568,21 +586,7 @@ library FundManagementLogic {
         address _user,
         ILendingMarketController.AdditionalFunds calldata _additionalFunds,
         uint256 _liquidationThresholdRate
-    )
-        external
-        view
-        returns (
-            uint256 plusDepositAmountInAdditionalFundsCcy,
-            uint256 minusDepositAmountInAdditionalFundsCcy,
-            uint256 totalWorkingLendOrdersAmount,
-            uint256 totalClaimableAmount,
-            uint256 totalCollateralAmount,
-            uint256 totalLentAmount,
-            uint256 totalWorkingBorrowOrdersAmount,
-            uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
-        )
-    {
+    ) external view returns (ILendingMarketController.CalculatedTotalFunds memory totalFunds) {
         EnumerableSet.Bytes32Set storage currencySet = Storage.slot().usedCurrencies[_user];
         CalculatedTotalFundInBaseCurrencyVars memory vars;
 
@@ -607,14 +611,14 @@ library FundManagementLogic {
 
         // Calculate total funds from the user's order list
         for (uint256 i; i < vars.ccys.length; i++) {
-            bytes32 ccy = vars.ccys[i];
-            uint256[] memory amounts = new uint256[](7);
-
+            // bytes32 ccy = vars.ccys[i];
             ILendingMarketController.AdditionalFunds memory additionalFunds;
 
-            if (ccy == vars.additionalFunds.ccy) {
+            if (vars.ccys[i] == vars.additionalFunds.ccy) {
                 additionalFunds = vars.additionalFunds;
             }
+
+            uint256[] memory amounts = new uint256[](8);
 
             // 0: workingLendOrdersAmount
             // 1: claimableAmount
@@ -623,39 +627,47 @@ library FundManagementLogic {
             // 4: workingBorrowOrdersAmount
             // 5: debtAmount
             // 6: borrowedAmount
-            (
-                amounts[0],
-                amounts[1],
-                amounts[2],
-                amounts[3],
-                amounts[4],
-                amounts[5],
-                amounts[6]
-            ) = calculateFunds(ccy, vars.user, additionalFunds, vars.liquidationThresholdRate);
+            // 7: minDebtAmount
+            ILendingMarketController.CalculatedFunds memory funds = calculateFunds(
+                vars.ccys[i],
+                vars.user,
+                additionalFunds,
+                vars.liquidationThresholdRate
+            );
 
-            if (ccy == vars.additionalFunds.ccy) {
+            amounts[0] = funds.workingLendOrdersAmount;
+            amounts[1] = funds.claimableAmount;
+            amounts[2] = funds.collateralAmount;
+            amounts[3] = funds.lentAmount;
+            amounts[4] = funds.workingBorrowOrdersAmount;
+            amounts[5] = funds.debtAmount;
+            amounts[6] = funds.borrowedAmount;
+            amounts[7] = funds.minDebtAmount;
+
+            if (vars.ccys[i] == vars.additionalFunds.ccy) {
                 // plusDepositAmount: borrowedAmount
                 // minusDepositAmount: workingLendOrdersAmount + lentAmount
-                plusDepositAmountInAdditionalFundsCcy += amounts[6];
-                minusDepositAmountInAdditionalFundsCcy += amounts[0] + amounts[3];
+                totalFunds.plusDepositAmountInAdditionalFundsCcy += amounts[6];
+                totalFunds.minusDepositAmountInAdditionalFundsCcy += amounts[0] + amounts[3];
             }
 
             uint256[] memory amountsInBaseCurrency = AddressResolverLib
                 .currencyController()
-                .convertToBaseCurrency(ccy, amounts);
+                .convertToBaseCurrency(vars.ccys[i], amounts);
 
-            totalClaimableAmount += amountsInBaseCurrency[1];
-            totalCollateralAmount += amountsInBaseCurrency[2];
-            totalWorkingBorrowOrdersAmount += amountsInBaseCurrency[4];
-            totalDebtAmount += amountsInBaseCurrency[5];
+            totalFunds.claimableAmount += amountsInBaseCurrency[1];
+            totalFunds.collateralAmount += amountsInBaseCurrency[2];
+            totalFunds.workingBorrowOrdersAmount += amountsInBaseCurrency[4];
+            totalFunds.debtAmount += amountsInBaseCurrency[5];
+            totalFunds.minDebtAmount += amountsInBaseCurrency[7];
 
             // NOTE: Lent amount and working lend orders amount are excluded here as they are not used
             // for the collateral calculation.
             // Those amounts need only to check whether there is enough deposit amount in the selected currency.
             if (vars.isCollateral[i]) {
-                totalWorkingLendOrdersAmount += amountsInBaseCurrency[0];
-                totalLentAmount += amountsInBaseCurrency[3];
-                totalBorrowedAmount += amountsInBaseCurrency[6];
+                totalFunds.workingLendOrdersAmount += amountsInBaseCurrency[0];
+                totalFunds.lentAmount += amountsInBaseCurrency[3];
+                totalFunds.borrowedAmount += amountsInBaseCurrency[6];
             }
         }
     }
@@ -676,7 +688,7 @@ library FundManagementLogic {
         uint256 _maturity,
         address _user
     ) public view returns (int256 presentValue, int256 futureValue) {
-        FundManagementLogic.ActualFunds memory funds = calculateActualFunds(_ccy, _maturity, _user);
+        FundManagementLogic.ActualFunds memory funds = getActualFunds(_ccy, _maturity, _user);
         presentValue = funds.presentValue;
         futureValue = funds.futureValue;
     }
@@ -1020,7 +1032,7 @@ library FundManagementLogic {
     }
 
     function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {
-        amount = calculateActualFunds(_ccy, 0, _user).presentValue;
+        amount = getActualFunds(_ccy, 0, _user).presentValue;
 
         uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         for (uint256 j; j < maturities.length; j++) {

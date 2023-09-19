@@ -25,18 +25,20 @@ library LendingMarketControllerStorage {
         mapping(bytes32 => address) lendingMarkets;
         // Mapping from currency to future value vault contract address
         mapping(bytes32 => address) futureValueVaults;
-        // Mapping from maturity to order book id per currency
-        mapping(bytes32 => mapping(uint256 => uint8)) maturityOrderBookIds;
+        // Mapping from currency to minimum withdrawal unit price
+        mapping(bytes32 => uint256) minDebtUnitPrices;
         // Mapping from currency to genesis date in the lending market
         mapping(bytes32 => uint256) genesisDates;
-        // Mapping from user to used currency
-        mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
+        // Mapping from maturity to order book id per currency
+        mapping(bytes32 => mapping(uint256 => uint8)) maturityOrderBookIds;
         // Mapping from user to used market maturity per currency
         mapping(bytes32 => mapping(address => EnumerableSet.UintSet)) usedMaturities;
         // Mapping from maturity to observation period log per currency
         mapping(bytes32 => mapping(uint256 => ObservationPeriodLog)) observationPeriodLogs;
         // Mapping from maturity to latest estimated auto roll unit price per currency
         mapping(bytes32 => mapping(uint256 => uint256)) estimatedAutoRollUnitPrice;
+        // Mapping from user to used currency
+        mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
         // Mapping from user to redeemed flag
         mapping(address => bool) isRedeemed;
     }

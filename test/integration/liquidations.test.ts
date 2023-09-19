@@ -133,7 +133,7 @@ describe('Integration Test: Liquidations', async () => {
         .approve(tokenVault.address, ethers.constants.MaxUint256);
     });
 
-  const rotateAllMarkets = async () => {
+  const rotateAllMarkets = async (unitPrice = '8000') => {
     const { timestamp } = await ethers.provider.getBlock('latest');
 
     if (usdcMaturities[0].gt(timestamp)) {
@@ -147,7 +147,7 @@ describe('Integration Test: Liquidations', async () => {
         filMaturities[1],
         Side.BORROW,
         '100000000',
-        '8000',
+        unitPrice,
       );
 
     await lendingMarketController
@@ -157,12 +157,18 @@ describe('Integration Test: Liquidations', async () => {
         filMaturities[1],
         Side.LEND,
         '100000000',
-        '8000',
+        unitPrice,
       );
 
     await lendingMarketController
       .connect(owner)
-      .executeOrder(hexUSDC, usdcMaturities[1], Side.BORROW, '100000', '8000');
+      .executeOrder(
+        hexUSDC,
+        usdcMaturities[1],
+        Side.BORROW,
+        '100000',
+        unitPrice,
+      );
 
     await lendingMarketController
       .connect(owner)
@@ -171,7 +177,7 @@ describe('Integration Test: Liquidations', async () => {
         usdcMaturities[1],
         Side.LEND,
         '100000',
-        '8000',
+        unitPrice,
       );
 
     if (usdcMaturities[0].gt(timestamp)) {
@@ -197,9 +203,9 @@ describe('Integration Test: Liquidations', async () => {
     );
   };
 
-  const resetContractInstances = async () => {
+  const resetContractInstances = async (unitPrice?: string) => {
     await resetMaturities();
-    await rotateAllMarkets();
+    await rotateAllMarkets(unitPrice);
 
     [ethMaturities, filMaturities, usdcMaturities] = await Promise.all(
       [hexETH, hexWFIL, hexUSDC].map((hexCcy) =>
@@ -1824,7 +1830,7 @@ describe('Integration Test: Liquidations', async () => {
 
     beforeEach(async () => {
       [alice, bob] = await getUsers(2);
-      await resetContractInstances();
+      await resetContractInstances('9500');
       lendingInfo = new LendingInfo(alice.address);
 
       const aliceFILBalanceBefore = await wFILToken.balanceOf(alice.address);
@@ -1848,7 +1854,7 @@ describe('Integration Test: Liquidations', async () => {
           filMaturities[0],
           Side.BORROW,
           filledOrderAmountInFIL,
-          '8000',
+          '9500',
         );
 
       await lendingMarketController
@@ -1858,7 +1864,7 @@ describe('Integration Test: Liquidations', async () => {
           filMaturities[0],
           Side.BORROW,
           filledOrderAmountInFIL.mul(2),
-          '8000',
+          '9500',
         );
 
       await expect(
@@ -1880,7 +1886,7 @@ describe('Integration Test: Liquidations', async () => {
           filMaturities[0],
           Side.LEND,
           '10000000000000000000',
-          '7999',
+          '9499',
         );
 
       expect(
@@ -1902,7 +1908,7 @@ describe('Integration Test: Liquidations', async () => {
           usdcMaturities[0],
           Side.BORROW,
           filledOrderAmountInUSDC,
-          '8000',
+          '9500',
         );
       await lendingMarketController
         .connect(owner)
@@ -1911,7 +1917,7 @@ describe('Integration Test: Liquidations', async () => {
           usdcMaturities[0],
           Side.BORROW,
           filledOrderAmountInUSDC.mul(2),
-          '8000',
+          '9500',
         );
 
       await expect(
@@ -1933,7 +1939,7 @@ describe('Integration Test: Liquidations', async () => {
           usdcMaturities[0],
           Side.LEND,
           '10000000000000',
-          '7999',
+          '9499',
         );
 
       expect(
