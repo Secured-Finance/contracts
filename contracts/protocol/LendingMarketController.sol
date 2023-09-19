@@ -26,12 +26,15 @@ import {LockAndMsgSender} from "./utils/LockAndMsgSender.sol";
 import {LendingMarketControllerStorage as Storage} from "./storages/LendingMarketControllerStorage.sol";
 
 /**
- * @notice Implements the module to manage separated lending order-book markets per maturity.
+ * @notice Implements the module to manage separated lending market contracts per currency.
  *
- * This contract also works as a factory contract that can deploy (start) a new lending market
- * for selected currency and maturity and has the calculation logic for the Genesis value in addition.
+ * This contract also works as a factory contract that can deploy (start) a new lending market & order book
+ * for selected currency and maturity and has the calculation logic for the following user's funds in addition.
+ * - Present Value(PV)
+ * - Future Value(FV)
+ * - Genesis Value(GV)
  *
- * Deployed Lending Markets are rotated and reused as it reaches the maturity date. At the time of rotation,
+ * Once the order book is created, it will be rotated and reused once it reaches its maturity date. At the time of rotation,
  * a new maturity date is set and the compound factor is updated.
  *
  * The users mainly call this contract to execute orders to lend or borrow funds.
@@ -47,9 +50,9 @@ contract LendingMarketController is
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /**
-     * @notice Modifier to check if there is a market in the maturity.
+     * @notice Modifier to check if there is an order book in the maturity.
      * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the market
+     * @param _maturity The maturity of the order book
      */
     modifier ifValidMaturity(bytes32 _ccy, uint256 _maturity) {
         if (Storage.slot().maturityOrderBookIds[_ccy][_maturity] == 0) revert InvalidMaturity();
@@ -123,6 +126,7 @@ contract LendingMarketController is
 
     /**
      * @notice Gets the min debt unit price for the selected currency.
+     * This price is based on a one-year maturity.
      * @param _ccy Currency name in bytes32
      * @return The genesis date
      */
@@ -130,6 +134,13 @@ contract LendingMarketController is
         return Storage.slot().minDebtUnitPrices[_ccy];
     }
 
+    /**
+     * @notice Gets the current min debt unit price.
+     * This price fluctuates depending on the current maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the order book
+     * @return The current min debt unit price
+     */
     function getCurrentMinDebtUnitPrice(bytes32 _ccy, uint256 _maturity)
         external
         view
@@ -162,10 +173,10 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Gets the lending market contract address for the selected currency and maturity.
+     * @notice Gets the order book id for the selected currency and maturity.
      * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the market
-     * @return The lending market address
+     * @param _maturity The maturity of the order book
+     * @return The order book id
      */
     function getOrderBookId(bytes32 _ccy, uint256 _maturity)
         external
@@ -304,7 +315,7 @@ contract LendingMarketController is
     /**
      * @notice Gets user's active position from the future value vault
      * @param _ccy Currency name in bytes32
-     * @param _maturity The maturity of the selected market
+     * @param _maturity The maturity of the selected order book
      * @param _user User's address
      * @return presentValue The present value of the position
      * @return futureValue The future value of the position
@@ -403,7 +414,7 @@ contract LendingMarketController is
 
     /**
      * @notice Creates new order book.
-     * @param _ccy Main currency for new lending market
+     * @param _ccy Main currency for new order book
      * @param _openingDate The timestamp when the order book opens
      * @param _preOpeningDate The timestamp when the order book pre-opens
      */
@@ -422,8 +433,8 @@ contract LendingMarketController is
      * In addition, converts the future value to the genesis value if there is future value in past maturity
      * before the execution of order creation.
      *
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
@@ -450,8 +461,8 @@ contract LendingMarketController is
     /**
      * @notice Deposits funds and executes an order at the same time.
      *
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
@@ -486,10 +497,10 @@ contract LendingMarketController is
 
     /**
      * @notice Executes a pre-order. A pre-order will only be accepted from 168 hours (7 days) to 1 hour
-     * before the market opens (Pre-order period). At the end of this period, Itayose will be executed.
+     * before the order book opens (Pre-order period). At the end of this period, Itayose will be executed.
      *
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
@@ -517,8 +528,8 @@ contract LendingMarketController is
     /**
      * @notice Deposits funds and executes a pre-order at the same time.
      *
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      * @param _side Order position type, Borrow or Lend
      * @param _amount Amount of funds the maker wants to borrow/lend
      * @param _unitPrice Amount of unit price taker wish to borrow/lend
@@ -554,8 +565,8 @@ contract LendingMarketController is
 
     /**
      * @notice Unwinds user's lending or borrowing positions by creating an opposite position order.
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      */
     function unwindPosition(bytes32 _ccy, uint256 _maturity)
         external
@@ -571,9 +582,9 @@ contract LendingMarketController is
 
     /**
      * @notice Redeem user's lending positions.
-     * Redemption can only be executed once the market has matured after the currency has been delisted.
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * Redemption can only be executed once the order book has matured after the currency has been delisted.
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      */
     function executeRedemption(bytes32 _ccy, uint256 _maturity)
         external
@@ -589,9 +600,9 @@ contract LendingMarketController is
 
     /**
      * @notice Repay user's borrowing positions.
-     * Repayment can only be executed once the market has matured after the currency has been delisted.
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * Repayment can only be executed once the order book has matured after the currency has been delisted.
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      */
     function executeRepayment(bytes32 _ccy, uint256 _maturity)
         external
@@ -619,7 +630,7 @@ contract LendingMarketController is
     /**
      * @notice Executes Itayose calls per selected currencies.
      * @param _currencies Currency name list in bytes32
-     * @param _maturity The maturity of the selected market
+     * @param _maturity The maturity of the selected order book
      */
     function executeItayoseCalls(bytes32[] calldata _currencies, uint256 _maturity)
         external
@@ -655,8 +666,8 @@ contract LendingMarketController is
 
     /**
      * @notice Cancels the own order.
-     * @param _ccy Currency name in bytes32 of the selected market
-     * @param _maturity The maturity of the selected market
+     * @param _ccy Currency name in bytes32 of the selected order book
+     * @param _maturity The maturity of the selected order book
      * @param _orderId Market order id
      */
     function cancelOrder(
@@ -677,7 +688,7 @@ contract LendingMarketController is
      * @notice Liquidates a lending or borrowing position if the user's coverage is hight.
      * @param _collateralCcy Currency name to be used as collateral
      * @param _debtCcy Currency name to be used as debt
-     * @param _debtMaturity The market maturity of the debt
+     * @param _debtMaturity The order book maturity of the debt
      * @param _user User's address
      * @return True if the execution of the operation succeeds
      */
@@ -709,7 +720,7 @@ contract LendingMarketController is
      * @notice Execute forced repayment for a borrowing position if repayment date is over.
      * @param _collateralCcy Currency name to be used as collateral
      * @param _debtCcy Currency name to be used as debt
-     * @param _debtMaturity The market maturity of the debt
+     * @param _debtMaturity The order book maturity of the debt
      * @param _user User's address
      * @return True if the execution of the operation succeeds
      */
@@ -738,13 +749,13 @@ contract LendingMarketController is
     }
 
     /**
-     * @notice Rotates the lending markets. In this rotation, the following actions are happened.
-     * - Updates the maturity at the beginning of the market array.
-     * - Moves the beginning of the market array to the end of it (Market rotation).
-     * - Update the compound factor in this contract using the next market unit price. (Auto-rolls)
+     * @notice Rotates the order books. In this rotation, the following actions are happened.
+     * - Updates the maturity at the beginning of the order book array.
+     * - Moves the beginning of the order book array to the end of it (Market rotation).
+     * - Update the compound factor in this contract using the next order book unit price. (Auto-rolls)
      * - Convert the future value held by reserve funds into the genesis value
      *
-     * @param _ccy Currency name in bytes32 of the selected market
+     * @param _ccy Currency name in bytes32 of the selected order book
      */
     function rotateOrderBooks(bytes32 _ccy) external override nonReentrant ifActive {
         uint256 newMaturity = LendingMarketOperationLogic.rotateOrderBooks(_ccy);

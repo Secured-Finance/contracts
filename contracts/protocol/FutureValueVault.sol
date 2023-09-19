@@ -17,7 +17,7 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {FutureValueVaultStorage as Storage} from "./storages/FutureValueVaultStorage.sol";
 
 /**
- * @notice Implements the management of the future value as an amount for Lending deals in each currency.
+ * @notice Implements the management of the future value as an amount for Lending positions in each currency.
  */
 contract FutureValueVault is IFutureValueVault, MixinAddressResolver, Proxyable {
     using SafeCast for uint256;

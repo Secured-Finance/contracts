@@ -22,13 +22,12 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {LendingMarketStorage as Storage, ItayoseLog} from "./storages/LendingMarketStorage.sol";
 
 /**
- * @notice Implements the module that allows lending market participants to create/cancel market orders,
- * and also provides a future value calculation module.
+ * @notice Implements the module that allows order book participants to execute/cancel/unwind orders.
  *
- * For updates, this contract is basically called from `LendingMarketController.sol`instead of being called \
+ * For updates, this contract is basically called from `LendingMarketController.sol`instead of being called
  * directly by the user.
  *
- * @dev The market orders is stored in structured red-black trees and doubly linked lists in each node.
+ * @dev Open orders is stored in structured red-black trees and doubly linked lists in each node.
  */
 contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxyable {
     using RoundingUint256 for uint256;
@@ -80,6 +79,10 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
         _;
     }
 
+    /**
+     * @notice Contract constructor function.
+     * @param _minimumReliableAmount The minimum reliable amount the base currency for calculating block unit price
+     */
     constructor(uint256 _minimumReliableAmount) {
         MINIMUM_RELIABLE_AMOUNT_IN_BASE_CURRENCY = _minimumReliableAmount;
     }

@@ -19,7 +19,7 @@ import {Proxyable} from "./utils/Proxyable.sol";
 import {GenesisValueVaultStorage as Storage, AutoRollLog} from "./storages/GenesisValueVaultStorage.sol";
 
 /**
- * @notice Implements the management of the genesis value as an amount for Lending deals.
+ * @notice Implements the management of the genesis value as an amount for Lending positions.
  */
 contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyable {
     using SafeCast for uint256;
@@ -49,22 +49,48 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         contracts[0] = Contracts.LENDING_MARKET_CONTROLLER;
     }
 
+    /**
+     * @notice Gets if the currency is initialized.
+     * @param _ccy Currency name in bytes32
+     * @return The boolean if the currency is initialized or not
+     */
     function isInitialized(bytes32 _ccy) public view override returns (bool) {
         return Storage.slot().isInitialized[_ccy];
     }
 
+    /**
+     * @notice Gets if the decimals of the genesis value.
+     * @param _ccy Currency name in bytes32
+     * @return The decimals of the genesis value.
+     */
     function decimals(bytes32 _ccy) public view override returns (uint8) {
         return Storage.slot().decimals[_ccy];
     }
 
+    /**
+     * @notice Gets the total supply of lending
+     * @param _ccy Currency name in bytes32
+     * @return The total supply of lending
+     */
     function getTotalLendingSupply(bytes32 _ccy) external view override returns (uint256) {
         return Storage.slot().totalLendingSupplies[_ccy];
     }
 
+    /**
+     * @notice Gets the total supply of borrowing
+     * @param _ccy Currency name in bytes32
+     * @return The total supply of borrowing
+     */
     function getTotalBorrowingSupply(bytes32 _ccy) external view override returns (uint256) {
         return Storage.slot().totalBorrowingSupplies[_ccy];
     }
 
+    /**
+     * @notice Gets the user balance.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return The user balance
+     */
     function getBalance(bytes32 _ccy, address _user) public view override returns (int256) {
         (int256 balance, int256 fluctuation) = _getActualBalance(
             _ccy,
@@ -74,6 +100,12 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return balance + fluctuation;
     }
 
+    /**
+     * @notice Gets the future value of the user balance.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @return The future value of the user balance
+     */
     function getBalanceInFutureValue(bytes32 _ccy, address _user)
         external
         view
@@ -88,6 +120,12 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
             );
     }
 
+    /**
+     * @notice Gets the current total supply per maturity
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity
+     * @return The current total supply
+     */
     function getMaturityGenesisValue(bytes32 _ccy, uint256 _maturity)
         external
         view
@@ -97,18 +135,39 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return Storage.slot().maturityBalances[_ccy][_maturity];
     }
 
+    /**
+     * @notice Gets the current maturity
+     * @param _ccy Currency name in bytes32
+     * @return The current maturity
+     */
     function getCurrentMaturity(bytes32 _ccy) public view override returns (uint256) {
         return Storage.slot().currentMaturity[_ccy];
     }
 
+    /**
+     * @notice Gets the lending compound factor
+     * @param _ccy Currency name in bytes32
+     * @return The lending compound factor
+     */
     function getLendingCompoundFactor(bytes32 _ccy) public view override returns (uint256) {
         return Storage.slot().lendingCompoundFactors[_ccy];
     }
 
+    /**
+     * @notice Gets the borrowing compound factor
+     * @param _ccy Currency name in bytes32
+     * @return The lending compound factor
+     */
     function getBorrowingCompoundFactor(bytes32 _ccy) public view override returns (uint256) {
         return Storage.slot().borrowingCompoundFactors[_ccy];
     }
 
+    /**
+     * @notice Gets the auto-roll log
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity
+     * @return The auto-roll log
+     */
     function getAutoRollLog(bytes32 _ccy, uint256 _maturity)
         external
         view
@@ -118,6 +177,11 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return Storage.slot().autoRollLogs[_ccy][_maturity];
     }
 
+    /**
+     * @notice Gets the latest auto-roll log
+     * @param _ccy Currency name in bytes32
+     * @return The auto-roll log
+     */
     function getLatestAutoRollLog(bytes32 _ccy)
         external
         view
@@ -127,6 +191,11 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return Storage.slot().autoRollLogs[_ccy][Storage.slot().currentMaturity[_ccy]];
     }
 
+    /**
+     * @notice Calculates the future value from the basis maturity to the destination maturity using the compound factor.
+     * @param _ccy Currency name in bytes32
+     * @return The future value at the destination maturity
+     */
     function calculateFVFromFV(
         bytes32 _ccy,
         uint256 _basisMaturity,
@@ -148,6 +217,11 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         }
     }
 
+    /**
+     * @notice Calculates the genesis value from the future value at the basis maturity using the compound factor.
+     * @param _ccy Currency name in bytes32
+     * @return The genesis value
+     */
     function calculateGVFromFV(
         bytes32 _ccy,
         uint256 _basisMaturity,
@@ -167,6 +241,11 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return isPlus ? absGv.toInt256() : -(absGv.toInt256());
     }
 
+    /**
+     * @notice Calculates the future value at the basis maturity from the genesis value using the compound factor.
+     * @param _ccy Currency name in bytes32
+     * @return The future value
+     */
     function calculateFVFromGV(
         bytes32 _ccy,
         uint256 _basisMaturity,
@@ -186,6 +265,13 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         return isPlus ? absFv.toInt256() : -(absFv.toInt256());
     }
 
+    /**
+     * @notice Initializes the currency setting.
+     * @param _ccy Currency name in bytes32
+     * @param _decimals Compound factor decimals
+     * @param _compoundFactor Initial compound factor
+     * @param _maturity Initial maturity
+     */
     function initializeCurrencySetting(
         bytes32 _ccy,
         uint8 _decimals,
@@ -214,6 +300,12 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         });
     }
 
+    /**
+     * @notice Update the currency setting.
+     * @dev This function is allowed to be called only before the initial compound factor is finalized.
+     * @param _ccy Currency name in bytes32
+     * @param _unitPrice The unit price used to calculate the compound factor
+     */
     function updateInitialCompoundFactor(bytes32 _ccy, uint256 _unitPrice)
         external
         override
@@ -235,6 +327,14 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         });
     }
 
+    /**
+     * @notice Executes the auto-roll.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity Current maturity
+     * @param _nextMaturity Next maturity to be rolled
+     * @param _unitPrice Unit price of auto-roll
+     * @param _orderFeeRate Order fee rate used to calculate the auto-roll fee
+     */
     function executeAutoRoll(
         bytes32 _ccy,
         uint256 _maturity,
@@ -290,6 +390,13 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         });
     }
 
+    /**
+     * @notice Updates the user's balance of the genesis value with the input future value.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _basisMaturity The basis maturity
+     * @param _fvAmount The amount in the future value
+     */
     function updateGenesisValueWithFutureValue(
         bytes32 _ccy,
         address _user,
@@ -301,6 +408,14 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         _updateBalance(_ccy, _user, _basisMaturity, amount);
     }
 
+    /**
+     * @notice Updates the user's balance of the genesis value without the input future value.
+     * @dev This function is used only in the case that the user is the last person who updates the genesis value at maturity,
+     * and called only one time per maturity.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _basisMaturity The basis maturity
+     */
     function updateGenesisValueWithResidualAmount(
         bytes32 _ccy,
         address _user,
@@ -315,6 +430,13 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         }
     }
 
+    /**
+     * @notice Transfers the genesis value from sender to receiver.
+     * @param _ccy Currency name in bytes32
+     * @param _sender Sender's address
+     * @param _receiver Receiver's address
+     * @param _amount Amount of funds to sent
+     */
     function transferFrom(
         bytes32 _ccy,
         address _sender,
@@ -327,6 +449,14 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         emit Transfer(_ccy, _sender, _receiver, _amount);
     }
 
+    /**
+     * @notice Clean up balance of the user per maturity.
+     * @dev The genesis value of borrowing fluctuates when it is auto-rolled, but it is not updated in real-time.
+     * This function removes the fluctuation amount calculated by lazy evaluation to reduce gas costs.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _maturity The maturity
+     */
     function cleanUpBalance(
         bytes32 _ccy,
         address _user,
@@ -403,6 +533,12 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         balance = Storage.slot().balances[_ccy][_user];
     }
 
+    /**
+     * @notice Gets the fluctuation amount of genesis value caused by auto-rolls.
+     * @param _ccy Currency name in bytes32
+     * @param _user User's address
+     * @param _maturity The maturity
+     */
     function getBalanceFluctuationByAutoRolls(
         bytes32 _ccy,
         address _user,
@@ -412,6 +548,13 @@ contract GenesisValueVault is IGenesisValueVault, MixinAddressResolver, Proxyabl
         fluctuation = _getBalanceFluctuationByAutoRolls(_ccy, _user, maturity);
     }
 
+    /**
+     * @notice Calculates the fluctuation amount of genesis value caused by auto-rolls at a certain maturity
+     * @param _ccy Currency name in bytes32
+     * @param _balance User's balance
+     * @param _fromMaturity The maturity at start
+     * @param _toMaturity The maturity at end
+     */
     function calculateBalanceFluctuationByAutoRolls(
         bytes32 _ccy,
         int256 _balance,
