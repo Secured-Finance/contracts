@@ -13,6 +13,7 @@ import {
   HAIRCUT,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_THRESHOLD_RATE,
+  MIN_DEBT_UNIT_PRICE,
   ORDER_FEE_RATE,
   PCT_DIGIT,
 } from '../../common/constants';
@@ -100,6 +101,7 @@ describe('LendingMarketController - Orders', () => {
           INITIAL_COMPOUND_FACTOR,
           ORDER_FEE_RATE,
           CIRCUIT_BREAKER_LIMIT_RANGE,
+          MIN_DEBT_UNIT_PRICE,
         ),
       )
         .to.emit(lendingMarketOperationLogic, 'LendingMarketInitialized')
@@ -125,6 +127,7 @@ describe('LendingMarketController - Orders', () => {
           INITIAL_COMPOUND_FACTOR,
           ORDER_FEE_RATE,
           CIRCUIT_BREAKER_LIMIT_RANGE,
+          MIN_DEBT_UNIT_PRICE,
         ),
       ).to.be.revertedWith('InvalidCurrency');
     });
@@ -142,6 +145,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
       );
       const res = await lendingMarketControllerProxy.getGenesisDate(
         targetCurrency,
@@ -179,6 +183,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
       );
       await lendingMarketControllerProxy.createOrderBook(
         targetCurrency,
@@ -209,6 +214,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
       );
 
       for (let i = 0; i < 9; i++) {
@@ -268,6 +274,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
       );
 
       await mockCurrencyController.mock.currencyExists.returns(false);
@@ -288,6 +295,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
       );
 
       await expect(
@@ -313,6 +321,7 @@ describe('LendingMarketController - Orders', () => {
         INITIAL_COMPOUND_FACTOR,
         ORDER_FEE_RATE,
         CIRCUIT_BREAKER_LIMIT_RANGE,
+        MIN_DEBT_UNIT_PRICE,
       );
       for (let i = 0; i < 5; i++) {
         await lendingMarketControllerProxy.createOrderBook(

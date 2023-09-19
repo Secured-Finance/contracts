@@ -322,28 +322,6 @@ describe('Integration Test: Itayose', async () => {
     });
 
     it('Execute auto-roll', async () => {
-      await lendingMarketController
-        .connect(carol)
-        .depositAndExecuteOrder(
-          hexETH,
-          maturities[1],
-          Side.LEND,
-          orderAmount.mul(2),
-          8490,
-          {
-            value: orderAmount.mul(2),
-          },
-        );
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(
-          hexETH,
-          maturities[1],
-          Side.BORROW,
-          orderAmount.mul(2),
-          8510,
-        );
-
       // Auto-roll
       await createSampleETHOrders(owner, maturities[1], '8000');
       await time.increaseTo(maturities[0].toString());

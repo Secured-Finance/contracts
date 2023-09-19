@@ -58,21 +58,7 @@ contract TokenVaultCaller {
         address _user,
         ILendingMarketController.AdditionalFunds calldata _additionalFunds,
         uint256 _liquidationThresholdRate
-    )
-        public
-        view
-        returns (
-            uint256 plusDepositAmountInAdditionalFundsCcy,
-            uint256 minusDepositAmountInAdditionalFundsCcy,
-            uint256 totalWorkingLendOrdersAmount,
-            uint256 totalClaimableAmount,
-            uint256 totalCollateralAmount,
-            uint256 totalLentAmount,
-            uint256 totalWorkingBorrowOrdersAmount,
-            uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
-        )
-    {
+    ) public view returns (ILendingMarketController.CalculatedTotalFunds memory calculatedFunds) {
         return
             lendingMarketController.calculateTotalFundsInBaseCurrency(
                 _user,
@@ -85,19 +71,7 @@ contract TokenVaultCaller {
         bytes32 _ccy,
         address _user,
         uint256 _liquidationThresholdRate
-    )
-        public
-        view
-        returns (
-            uint256 workingLendOrdersAmount,
-            uint256 claimableAmount,
-            uint256 collateralAmount,
-            uint256 lentAmount,
-            uint256 workingBorrowOrdersAmount,
-            uint256 debtAmount,
-            uint256 borrowedAmount
-        )
-    {
+    ) public view returns (ILendingMarketController.CalculatedFunds memory funds) {
         return lendingMarketController.calculateFunds(_ccy, _user, _liquidationThresholdRate);
     }
 

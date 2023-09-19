@@ -9,9 +9,15 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  PCT_DIGIT,
   PRICE_DIGIT,
 } from '../common/constants';
-import { wFilToETHRate, wbtcToETHRate } from '../common/currencies';
+import {
+  ethToUSDRate,
+  wFilToETHRate,
+  wbtcToETHRate,
+  wbtcToUSDRate,
+} from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
@@ -21,11 +27,13 @@ describe('Integration Test: Deposit', async () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
+  let dave: SignerWithAddress;
 
   let currencyController: Contract;
   let tokenVault: Contract;
   let reserveFund: Contract;
   let lendingMarketController: Contract;
+  let lendingMarketReader: Contract;
   let wETHToken: Contract;
   let usdcToken: Contract;
   let wFILToken: Contract;
@@ -45,10 +53,10 @@ describe('Integration Test: Deposit', async () => {
 
   let signers: Signers;
 
-  const initialETHBalance = BigNumber.from('10000000000000000');
-  const initialUSDCBalance = BigNumber.from('100000000000');
-  const initialFILBalance = BigNumber.from('100000000000000000000');
-  const initialWBTCBalance = BigNumber.from('10000000000');
+  const initialETHBalance = BigNumber.from('10000000000000000000');
+  const initialUSDCBalance = BigNumber.from('10000000000000');
+  const initialFILBalance = BigNumber.from('10000000000000000000000');
+  const initialWBTCBalance = BigNumber.from('100000000000');
 
   const getUsers = async (count: number) =>
     signers.get(count, async (signer) => {
@@ -74,6 +82,7 @@ describe('Integration Test: Deposit', async () => {
       tokenVault,
       reserveFund,
       lendingMarketController,
+      lendingMarketReader,
       wETHToken,
       usdcToken,
       wFILToken,
@@ -643,22 +652,6 @@ describe('Integration Test: Deposit', async () => {
       await tokenVault.connect(carol).deposit(hexETH, initialETHBalance, {
         value: initialETHBalance,
       });
-
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(hexWFIL, filMaturities[0], Side.BORROW, '1000', '8200');
-
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(hexWFIL, filMaturities[0], Side.LEND, '1000', '7800');
-
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(hexWBTC, wBTCMaturities[0], Side.BORROW, '1000', '8200');
-
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(hexWBTC, wBTCMaturities[0], Side.LEND, '1000', '7800');
     });
 
     it('Fill an order(WBTC)', async () => {
@@ -679,7 +672,7 @@ describe('Integration Test: Deposit', async () => {
           wBTCMaturities[0],
           Side.BORROW,
           orderAmountInWBTC,
-          '8000',
+          '9500',
         );
       const tx = await lendingMarketController
         .connect(bob)
@@ -708,7 +701,7 @@ describe('Integration Test: Deposit', async () => {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
       const fee = calculateOrderFee(
         orderAmountInWBTC,
-        8000,
+        9500,
         wBTCMaturities[0].sub(timestamp),
       );
 
@@ -716,7 +709,7 @@ describe('Integration Test: Deposit', async () => {
       expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
     });
 
-    it('Fill an order', async () => {
+    it('Fill an order(WFIL)', async () => {
       await tokenVault
         .connect(alice)
         .deposit(hexETH, initialETHBalance.div(2), {
@@ -734,7 +727,7 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.BORROW,
           orderAmountInFIL,
-          '8000',
+          '9500',
         );
       const tx = await lendingMarketController
         .connect(bob)
@@ -762,7 +755,7 @@ describe('Integration Test: Deposit', async () => {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
       const fee = calculateOrderFee(
         orderAmountInFIL,
-        8000,
+        9500,
         filMaturities[0].sub(timestamp),
       );
 
@@ -820,14 +813,6 @@ describe('Integration Test: Deposit', async () => {
         .deposit(hexETH, initialETHBalance.div(2), {
           value: initialETHBalance.div(2),
         });
-
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(hexWFIL, filMaturities[0], Side.BORROW, '1000', '8200');
-
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(hexWFIL, filMaturities[0], Side.LEND, '1000', '7800');
     });
 
     it('Fill an order', async () => {
@@ -848,7 +833,7 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.LEND,
           orderAmount,
-          '8000',
+          '9500',
         );
 
       const tx = await lendingMarketController
@@ -871,7 +856,7 @@ describe('Integration Test: Deposit', async () => {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
       const fee = calculateOrderFee(
         orderAmount,
-        8000,
+        9500,
         filMaturities[0].sub(timestamp),
       );
 
@@ -938,15 +923,15 @@ describe('Integration Test: Deposit', async () => {
 
       await lendingMarketController
         .connect(carol)
-        .executeOrder(hexWFIL, filMaturities[0], Side.BORROW, '1000', '8200');
+        .executeOrder(hexWFIL, filMaturities[0], Side.BORROW, '1000', '9700');
 
       await lendingMarketController
         .connect(carol)
-        .executeOrder(hexWFIL, filMaturities[0], Side.LEND, '1000', '7800');
+        .executeOrder(hexWFIL, filMaturities[0], Side.LEND, '1000', '9300');
 
       await lendingMarketController
         .connect(carol)
-        .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
+        .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '9700');
 
       await lendingMarketController
         .connect(carol)
@@ -955,7 +940,7 @@ describe('Integration Test: Deposit', async () => {
           ethMaturities[0],
           Side.LEND,
           '1000',
-          '7800',
+          '9300',
           { value: '1000' },
         );
     });
@@ -978,7 +963,7 @@ describe('Integration Test: Deposit', async () => {
           filMaturities[0],
           Side.BORROW,
           orderAmountInFIL,
-          '8000',
+          '9500',
         );
 
       const tx = await lendingMarketController
@@ -1007,7 +992,7 @@ describe('Integration Test: Deposit', async () => {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
       const fee = calculateOrderFee(
         orderAmountInFIL,
-        8000,
+        '9500',
         filMaturities[0].sub(timestamp),
       );
 
@@ -1038,7 +1023,7 @@ describe('Integration Test: Deposit', async () => {
           ethMaturities[0],
           Side.BORROW,
           orderAmount,
-          '8000',
+          '9500',
         );
 
       const tx = await lendingMarketController
@@ -1060,7 +1045,7 @@ describe('Integration Test: Deposit', async () => {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
       const fee = calculateOrderFee(
         orderAmount,
-        8000,
+        '9500',
         ethMaturities[0].sub(timestamp),
       );
 
@@ -1087,6 +1072,18 @@ describe('Integration Test: Deposit', async () => {
       wBTCMaturities = await lendingMarketController.getMaturities(hexWBTC);
     });
 
+    after(async () => {
+      const { activeOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([hexWFIL, hexWBTC], bob.address);
+
+      for (const order of activeOrders) {
+        await lendingMarketController
+          .connect(bob)
+          .cancelOrder(order.ccy, order.maturity, order.orderId);
+      }
+    });
+
     it('Place lending orders for non-collateral currencies, WFIL and WBTC', async () => {
       const filOrderAmount = initialFILBalance.div(2);
       const wbtcOrderAmount = initialWBTCBalance.div(10);
@@ -1100,7 +1097,7 @@ describe('Integration Test: Deposit', async () => {
             filMaturities[0],
             Side.LEND,
             filOrderAmount,
-            '8000',
+            '9500',
           ),
       ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -1114,7 +1111,7 @@ describe('Integration Test: Deposit', async () => {
             wBTCMaturities[0],
             Side.LEND,
             wbtcOrderAmount,
-            '8000',
+            '9500',
           ),
       ).to.not.emit(fundManagementLogic, 'OrderFilled');
     });
@@ -1164,6 +1161,7 @@ describe('Integration Test: Deposit', async () => {
           ),
         );
     });
+
     it('Deposit wFIL on ReserveFund contract', async () => {
       const depositAmount = initialFILBalance.div(5);
       await wFILToken
@@ -1372,6 +1370,178 @@ describe('Integration Test: Deposit', async () => {
         hexWFIL,
       );
       expect(depositAmountAfter).to.equal(0);
+    });
+  });
+
+  describe('Fill an orders under min debt unit price, Withdraw collateral', async () => {
+    const orderAmountInETH = initialETHBalance.div(2);
+    const orderAmountInWBTC = orderAmountInETH
+      .mul(BigNumber.from(10).pow(8))
+      .div(wbtcToETHRate);
+    const orderAmountInUSD = orderAmountInETH
+      .mul(ethToUSDRate)
+      .div(BigNumber.from(10).pow(18));
+
+    before(async () => {
+      [alice, bob, carol, dave] = await getUsers(4);
+      wBTCMaturities = await lendingMarketController.getMaturities(hexWBTC);
+
+      await wBTCToken
+        .connect(carol)
+        .approve(tokenVault.address, initialWBTCBalance);
+      await tokenVault.connect(carol).deposit(hexWBTC, initialWBTCBalance);
+      await tokenVault.connect(carol).deposit(hexETH, initialETHBalance, {
+        value: initialETHBalance,
+      });
+    });
+
+    it('Fill an order with amount with over the min debt unit price', async () => {
+      await tokenVault
+        .connect(carol)
+        .deposit(hexETH, initialETHBalance.div(2), {
+          value: initialETHBalance.div(2),
+        });
+      await wBTCToken
+        .connect(dave)
+        .approve(tokenVault.address, initialWBTCBalance);
+      await tokenVault.connect(dave).deposit(hexWBTC, orderAmountInWBTC);
+
+      await lendingMarketController
+        .connect(carol)
+        .executeOrder(
+          hexWBTC,
+          wBTCMaturities[0],
+          Side.BORROW,
+          orderAmountInWBTC,
+          '9000',
+        );
+      await lendingMarketController
+        .connect(dave)
+        .executeOrder(
+          hexWBTC,
+          wBTCMaturities[0],
+          Side.LEND,
+          orderAmountInWBTC,
+          '0',
+        );
+
+      await ethers.provider.send('evm_mine', []);
+
+      const { marketUnitPrice } = await lendingMarketReader.getOrderBookDetail(
+        hexWBTC,
+        wBTCMaturities[0],
+      );
+
+      expect(marketUnitPrice).to.equal('9000');
+    });
+
+    it('Fill an order with amount with under the min debt unit price', async () => {
+      await tokenVault
+        .connect(alice)
+        .deposit(hexETH, orderAmountInETH.mul(5).div(4), {
+          value: orderAmountInETH.mul(5).div(4),
+        });
+      await wBTCToken
+        .connect(bob)
+        .approve(tokenVault.address, initialWBTCBalance);
+      await tokenVault.connect(bob).deposit(hexWBTC, orderAmountInWBTC);
+
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexWBTC,
+          wBTCMaturities[0],
+          Side.BORROW,
+          orderAmountInWBTC,
+          '9000',
+        );
+      const tx = await lendingMarketController
+        .connect(bob)
+        .executeOrder(
+          hexWBTC,
+          wBTCMaturities[0],
+          Side.LEND,
+          orderAmountInWBTC,
+          '0',
+        );
+
+      await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
+
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexWBTC,
+          wBTCMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
+        hexWBTC,
+        wBTCMaturities[0],
+        bob.address,
+      );
+
+      const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
+      const fee = calculateOrderFee(
+        orderAmountInWBTC,
+        9000,
+        wBTCMaturities[0].sub(timestamp),
+      );
+
+      expect(bobFV.add(aliceFV).add(fee).abs()).to.lte(1);
+    });
+
+    it('Check the withdrawable collateral amount of borrower', async () => {
+      const withdrawableCollateral = await tokenVault[
+        'getWithdrawableCollateral(address)'
+      ](alice.address);
+
+      expect(withdrawableCollateral).lt(orderAmountInUSD);
+    });
+
+    it('Withdraw by borrower', async () => {
+      const coverageBefore = await tokenVault.getCoverage(alice.address);
+      const balanceBefore = await wBTCToken.balanceOf(alice.address);
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexWBTC,
+          wBTCMaturities[0],
+          alice.address,
+        );
+
+      await tokenVault.connect(alice).withdraw(hexWBTC, orderAmountInWBTC);
+
+      const coverageAfter = await tokenVault.getCoverage(alice.address);
+      const balanceAfter = await wBTCToken.balanceOf(alice.address);
+
+      expect(coverageBefore).to.not.equal(coverageAfter);
+      expect(coverageAfter).to.not.equal('8000');
+      expect(balanceAfter.sub(balanceBefore)).lt(orderAmountInWBTC);
+
+      const currentMinDebtUnitPrice =
+        await lendingMarketController.getCurrentMinDebtUnitPrice(
+          hexWBTC,
+          wBTCMaturities[0],
+        );
+
+      const aliceFVInUSD = aliceFV
+        .mul(wbtcToUSDRate)
+        .div(BigNumber.from(10).pow(8));
+
+      const minDebtAmount = aliceFVInUSD
+        .mul(currentMinDebtUnitPrice)
+        .div(PRICE_DIGIT)
+        .abs();
+
+      const aliceCollateral = await tokenVault.getTotalCollateralAmount(
+        alice.address,
+      );
+
+      expect(
+        aliceCollateral
+          .mul(PCT_DIGIT)
+          .div(minDebtAmount)
+          .sub(LIQUIDATION_THRESHOLD_RATE)
+          .abs(),
+      ).to.lte(1);
     });
   });
 });

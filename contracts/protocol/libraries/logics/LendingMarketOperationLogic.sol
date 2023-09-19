@@ -46,6 +46,8 @@ library LendingMarketOperationLogic {
         address futureValueVault
     );
 
+    event MinDebtUnitPriceUpdated(bytes32 indexed ccy, uint256 minDebtUnitPrice);
+
     event OrderBookCreated(
         bytes32 indexed ccy,
         uint8 indexed orderBookId,
@@ -61,7 +63,8 @@ library LendingMarketOperationLogic {
         uint256 _genesisDate,
         uint256 _compoundFactor,
         uint256 _orderFeeRate,
-        uint256 _circuitBreakerLimitRange
+        uint256 _circuitBreakerLimitRange,
+        uint256 _minDebtUnitPrice
     ) external {
         if (!AddressResolverLib.currencyController().currencyExists(_ccy)) {
             revert InvalidCurrency();
@@ -89,6 +92,8 @@ library LendingMarketOperationLogic {
         Storage.slot().lendingMarkets[_ccy] = lendingMarket;
         Storage.slot().futureValueVaults[_ccy] = futureValueVault;
 
+        updateMinDebtUnitPrice(_ccy, _minDebtUnitPrice);
+
         emit LendingMarketInitialized(
             _ccy,
             _genesisDate,
@@ -98,6 +103,11 @@ library LendingMarketOperationLogic {
             lendingMarket,
             futureValueVault
         );
+    }
+
+    function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) public {
+        Storage.slot().minDebtUnitPrices[_ccy] = _minDebtUnitPrice;
+        emit MinDebtUnitPriceUpdated(_ccy, _minDebtUnitPrice);
     }
 
     function createOrderBook(

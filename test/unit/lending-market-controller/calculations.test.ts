@@ -10,6 +10,7 @@ import {
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_THRESHOLD_RATE,
+  MIN_DEBT_UNIT_PRICE,
   ORDER_FEE_RATE,
 } from '../../common/constants';
 import { calculateFutureValue, calculateOrderFee } from '../../common/orders';
@@ -81,6 +82,7 @@ describe('LendingMarketController - Calculations', () => {
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
+      MIN_DEBT_UNIT_PRICE,
     );
     for (let i = 0; i < 5; i++) {
       await lendingMarketControllerProxy.createOrderBook(
@@ -102,6 +104,7 @@ describe('LendingMarketController - Calculations', () => {
       workingBorrowOrdersAmount?: string | number | BigNumber;
       debtAmount?: string | number | BigNumber;
       borrowedAmount?: string | number | BigNumber;
+      minDebtAmount?: string | number | BigNumber;
     }) => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256[])'
@@ -113,6 +116,7 @@ describe('LendingMarketController - Calculations', () => {
         inputs?.workingBorrowOrdersAmount ?? 0,
         inputs?.debtAmount ?? 0,
         inputs?.borrowedAmount ?? 0,
+        inputs?.minDebtAmount ?? 0,
       ]);
     };
 
@@ -125,6 +129,7 @@ describe('LendingMarketController - Calculations', () => {
         workingBorrowOrdersAmount: '5000000000',
         debtAmount: '6000000000',
         borrowedAmount: '7000000000',
+        minDebtAmount: '6000000000',
       });
 
       const totalFunds =
@@ -142,13 +147,14 @@ describe('LendingMarketController - Calculations', () => {
           LIQUIDATION_THRESHOLD_RATE,
         );
 
-      expect(totalFunds.totalWorkingLendOrdersAmount).to.equal('1000000000');
-      expect(totalFunds.totalClaimableAmount).to.equal('2000000000');
-      expect(totalFunds.totalCollateralAmount).to.equal('3000000000');
-      expect(totalFunds.totalLentAmount).to.equal('4000000000');
-      expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('5000000000');
-      expect(totalFunds.totalDebtAmount).to.equal('6000000000');
-      expect(totalFunds.totalBorrowedAmount).to.equal('7000000000');
+      expect(totalFunds.workingLendOrdersAmount).to.equal('1000000000');
+      expect(totalFunds.claimableAmount).to.equal('2000000000');
+      expect(totalFunds.collateralAmount).to.equal('3000000000');
+      expect(totalFunds.lentAmount).to.equal('4000000000');
+      expect(totalFunds.workingBorrowOrdersAmount).to.equal('5000000000');
+      expect(totalFunds.debtAmount).to.equal('6000000000');
+      expect(totalFunds.borrowedAmount).to.equal('7000000000');
+      expect(totalFunds.minDebtAmount).to.equal('6000000000');
       expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal('0');
       expect(totalFunds.minusDepositAmountInAdditionalFundsCcy).to.equal('0');
     });
@@ -162,6 +168,7 @@ describe('LendingMarketController - Calculations', () => {
         workingBorrowOrdersAmount: '3000000000',
         debtAmount: '2000000000',
         borrowedAmount: '1000000000',
+        minDebtAmount: '2000000000',
       });
 
       await lendingMarketControllerProxy
@@ -219,13 +226,14 @@ describe('LendingMarketController - Calculations', () => {
           LIQUIDATION_THRESHOLD_RATE,
         );
 
-      expect(totalFunds.totalWorkingLendOrdersAmount).to.equal('7000000000');
-      expect(totalFunds.totalClaimableAmount).to.equal('6000000000');
-      expect(totalFunds.totalCollateralAmount).to.equal('5000000000');
-      expect(totalFunds.totalLentAmount).to.equal('4000000000');
-      expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('3000000000');
-      expect(totalFunds.totalDebtAmount).to.equal('2000000000');
-      expect(totalFunds.totalBorrowedAmount).to.equal('1000000000');
+      expect(totalFunds.workingLendOrdersAmount).to.equal('7000000000');
+      expect(totalFunds.claimableAmount).to.equal('6000000000');
+      expect(totalFunds.collateralAmount).to.equal('5000000000');
+      expect(totalFunds.lentAmount).to.equal('4000000000');
+      expect(totalFunds.workingBorrowOrdersAmount).to.equal('3000000000');
+      expect(totalFunds.debtAmount).to.equal('2000000000');
+      expect(totalFunds.borrowedAmount).to.equal('1000000000');
+      expect(totalFunds.minDebtAmount).to.equal('2000000000');
       expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal(
         '2000000000',
       );
@@ -241,6 +249,7 @@ describe('LendingMarketController - Calculations', () => {
         workingBorrowOrdersAmount: '3000000000',
         debtAmount: '2000000000',
         borrowedAmount: '1000000000',
+        minDebtAmount: '2000000000',
       });
 
       const totalFunds =
@@ -258,13 +267,14 @@ describe('LendingMarketController - Calculations', () => {
           LIQUIDATION_THRESHOLD_RATE,
         );
 
-      expect(totalFunds.totalWorkingLendOrdersAmount).to.equal('7000000000');
-      expect(totalFunds.totalClaimableAmount).to.equal('6000000000');
-      expect(totalFunds.totalCollateralAmount).to.equal('5000000000');
-      expect(totalFunds.totalLentAmount).to.equal('4000000000');
-      expect(totalFunds.totalWorkingBorrowOrdersAmount).to.equal('3000000000');
-      expect(totalFunds.totalDebtAmount).to.equal('2000000000');
-      expect(totalFunds.totalBorrowedAmount).to.equal('1000000000');
+      expect(totalFunds.workingLendOrdersAmount).to.equal('7000000000');
+      expect(totalFunds.claimableAmount).to.equal('6000000000');
+      expect(totalFunds.collateralAmount).to.equal('5000000000');
+      expect(totalFunds.lentAmount).to.equal('4000000000');
+      expect(totalFunds.workingBorrowOrdersAmount).to.equal('3000000000');
+      expect(totalFunds.debtAmount).to.equal('2000000000');
+      expect(totalFunds.borrowedAmount).to.equal('1000000000');
+      expect(totalFunds.minDebtAmount).to.equal('2000000000');
       expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal('0');
       expect(totalFunds.minusDepositAmountInAdditionalFundsCcy).to.equal(
         '3000000000',

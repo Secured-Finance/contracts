@@ -20,6 +20,7 @@ import {
   LIQUIDATOR_FEE_RATE,
   MARKET_BASE_PERIOD,
   MINIMUM_RELIABLE_AMOUNT,
+  MIN_DEBT_UNIT_PRICE,
   ORDER_FEE_RATE,
 } from './constants';
 import {
@@ -325,6 +326,7 @@ const deployContracts = async () => {
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
+      MIN_DEBT_UNIT_PRICE,
     );
   }
 

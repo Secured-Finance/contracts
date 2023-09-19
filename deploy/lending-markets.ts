@@ -77,6 +77,7 @@ const func: DeployFunction = async function ({
           process.env.INITIAL_COMPOUND_FACTOR,
           currency.orderFeeRate,
           currency.circuitBreakerLimitRange,
+          currency.minDebtUnitPrice,
         )
         .then((tx) => tx.wait());
     }

@@ -9,11 +9,14 @@ import { artifacts, ethers, waffle } from 'hardhat';
 import { Side } from '../../../utils/constants';
 import { getGenesisDate } from '../../../utils/dates';
 import {
+  BASE_MIN_DEBT_UNIT_PRICE,
   CIRCUIT_BREAKER_LIMIT_RANGE,
   INITIAL_COMPOUND_FACTOR,
   LIQUIDATION_THRESHOLD_RATE,
   MINIMUM_RELIABLE_AMOUNT,
+  MIN_DEBT_UNIT_PRICE,
   ORDER_FEE_RATE,
+  SECONDS_IN_YEAR,
 } from '../../common/constants';
 import { deployContracts } from './utils';
 
@@ -101,6 +104,7 @@ describe('LendingMarketController - Operations', () => {
       INITIAL_COMPOUND_FACTOR,
       ORDER_FEE_RATE,
       CIRCUIT_BREAKER_LIMIT_RANGE,
+      MIN_DEBT_UNIT_PRICE,
     );
     for (let i = 0; i < 5; i++) {
       await lendingMarketControllerProxy.createOrderBook(
@@ -121,6 +125,46 @@ describe('LendingMarketController - Operations', () => {
   };
 
   describe('Operations', async () => {
+    it('Get the min debt unit price', async () => {
+      const minDebtUnitPrice =
+        await lendingMarketControllerProxy.getMinDebtUnitPrice(targetCurrency);
+
+      expect(minDebtUnitPrice).to.equal('8100');
+    });
+
+    it('Update the min debt unit price', async () => {
+      const newMinDebtUnitPrice = '8400';
+
+      await lendingMarketControllerProxy.updateMinDebtUnitPrice(
+        targetCurrency,
+        newMinDebtUnitPrice,
+      );
+
+      expect(
+        await lendingMarketControllerProxy.getMinDebtUnitPrice(targetCurrency),
+      ).to.equal(newMinDebtUnitPrice);
+    });
+
+    it('Get the current min debt unit price', async () => {
+      const currentMinDebtUnitPrice =
+        await lendingMarketControllerProxy.getCurrentMinDebtUnitPrice(
+          targetCurrency,
+          maturities[0],
+        );
+      const minDebtUnitPrice =
+        await lendingMarketControllerProxy.getMinDebtUnitPrice(targetCurrency);
+      const { timestamp } = await ethers.provider.getBlock('latest');
+
+      expect(currentMinDebtUnitPrice).to.equal(
+        BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE).sub(
+          BigNumber.from(BASE_MIN_DEBT_UNIT_PRICE)
+            .sub(minDebtUnitPrice)
+            .mul(maturities[0].sub(timestamp))
+            .div(SECONDS_IN_YEAR),
+        ),
+      );
+    });
+
     it('Get the lending market detail with empty order book', async () => {
       const detail = await lendingMarketReader.getOrderBookDetail(
         targetCurrency,

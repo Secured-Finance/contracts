@@ -20,6 +20,30 @@ interface ILendingMarketController {
         uint256 borrowedAmount;
     }
 
+    struct CalculatedTotalFunds {
+        uint256 plusDepositAmountInAdditionalFundsCcy;
+        uint256 minusDepositAmountInAdditionalFundsCcy;
+        uint256 workingLendOrdersAmount;
+        uint256 claimableAmount;
+        uint256 collateralAmount;
+        uint256 lentAmount;
+        uint256 workingBorrowOrdersAmount;
+        uint256 debtAmount;
+        uint256 borrowedAmount;
+        uint256 minDebtAmount;
+    }
+
+    struct CalculatedFunds {
+        uint256 workingLendOrdersAmount;
+        uint256 claimableAmount;
+        uint256 collateralAmount;
+        uint256 lentAmount;
+        uint256 workingBorrowOrdersAmount;
+        uint256 debtAmount;
+        uint256 borrowedAmount;
+        uint256 minDebtAmount;
+    }
+
     struct GetOrderEstimationParams {
         bytes32 ccy;
         uint256 maturity;
@@ -34,6 +58,13 @@ interface ILendingMarketController {
     function isTerminated() external view returns (bool);
 
     function isRedemptionRequired(address _user) external view returns (bool);
+
+    function getMinDebtUnitPrice(bytes32 _ccy) external view returns (uint256);
+
+    function getCurrentMinDebtUnitPrice(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        returns (uint256);
 
     function getGenesisDate(bytes32 ccy) external view returns (uint256);
 
@@ -81,37 +112,13 @@ interface ILendingMarketController {
         bytes32 ccy,
         address user,
         uint256 liquidationThresholdRate
-    )
-        external
-        view
-        returns (
-            uint256 workingLendOrdersAmount,
-            uint256 claimableAmount,
-            uint256 collateralAmount,
-            uint256 lentAmount,
-            uint256 workingBorrowOrdersAmount,
-            uint256 debtAmount,
-            uint256 borrowedAmount
-        );
+    ) external view returns (CalculatedFunds memory funds);
 
     function calculateTotalFundsInBaseCurrency(
         address user,
         AdditionalFunds calldata _additionalFunds,
         uint256 liquidationThresholdRate
-    )
-        external
-        view
-        returns (
-            uint256 plusDepositAmountInAdditionalFundsCcy,
-            uint256 minusDepositAmountInAdditionalFundsCcy,
-            uint256 totalWorkingLendOrdersAmount,
-            uint256 totalClaimableAmount,
-            uint256 totalCollateralAmount,
-            uint256 totalLentAmount,
-            uint256 totalWorkingBorrowOrdersAmount,
-            uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
-        );
+    ) external view returns (CalculatedTotalFunds memory calculatedFunds);
 
     function isInitializedLendingMarket(bytes32 ccy) external view returns (bool);
 
@@ -120,7 +127,8 @@ interface ILendingMarketController {
         uint256 genesisDate,
         uint256 compoundFactor,
         uint256 orderFeeRate,
-        uint256 circuitBreakerLimitRange
+        uint256 circuitBreakerLimitRange,
+        uint256 minDebtUnitPrice
     ) external;
 
     function createOrderBook(
@@ -204,4 +212,6 @@ interface ILendingMarketController {
     function cleanUpAllFunds(address user) external returns (bool);
 
     function cleanUpFunds(bytes32 ccy, address user) external returns (uint256 activeOrderCount);
+
+    function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice) external;
 }

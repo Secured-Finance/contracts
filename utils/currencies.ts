@@ -9,6 +9,7 @@ export interface Currency {
   orderFeeRate: number;
   circuitBreakerLimitRange: number;
   isCollateral: boolean;
+  minDebtUnitPrice: number;
   args: string[];
   priceFeed: PriceFeed;
 }
@@ -34,6 +35,7 @@ const currencies: Currency[] = [
     haircut: 0,
     orderFeeRate: 100,
     circuitBreakerLimitRange: 500,
+    minDebtUnitPrice: 8100,
     isCollateral: false,
     args: ['250000000000000000000000000'], // 250,000,000 wFIL
     priceFeed: {
@@ -49,6 +51,7 @@ const currencies: Currency[] = [
     haircut: 0,
     orderFeeRate: 100,
     circuitBreakerLimitRange: 500,
+    minDebtUnitPrice: 9100,
     isCollateral: true,
     args: ['1000000000000000'], // 1,000,000,000 USDC,
     priceFeed: {
@@ -64,6 +67,7 @@ const currencies: Currency[] = [
     haircut: 0,
     orderFeeRate: 100,
     circuitBreakerLimitRange: 500,
+    minDebtUnitPrice: 9300,
     isCollateral: true,
     args: ['4000000000000'], // 40,000 BTC,
     priceFeed: {
@@ -79,6 +83,7 @@ const currencies: Currency[] = [
     haircut: 0,
     orderFeeRate: 100,
     circuitBreakerLimitRange: 500,
+    minDebtUnitPrice: 9100,
     isCollateral: true,
     args: [],
     priceFeed: {

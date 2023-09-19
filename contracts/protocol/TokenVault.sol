@@ -205,8 +205,8 @@ contract TokenVault is
      * @return The total amount of unused collateral
      */
     function getUnusedCollateral(address _user) external view override returns (uint256) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = DepositManagementLogic
-            .getCollateralAmount(_user);
+        (uint256 totalCollateral, uint256 totalUsedCollateral, , ) = DepositManagementLogic
+            .getTotalCollateralAmount(_user);
 
         return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
     }
@@ -222,7 +222,7 @@ contract TokenVault is
         override
         returns (uint256 totalCollateralAmount)
     {
-        (totalCollateralAmount, , ) = DepositManagementLogic.getCollateralAmount(_user);
+        (totalCollateralAmount, , , ) = DepositManagementLogic.getTotalCollateralAmount(_user);
     }
 
     /**

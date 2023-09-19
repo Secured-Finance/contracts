@@ -122,6 +122,28 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the min debt unit price for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @return The genesis date
+     */
+    function getMinDebtUnitPrice(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().minDebtUnitPrices[_ccy];
+    }
+
+    function getCurrentMinDebtUnitPrice(bytes32 _ccy, uint256 _maturity)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return
+            FundManagementLogic.getCurrentMinDebtUnitPrice(
+                _maturity,
+                Storage.slot().minDebtUnitPrices[_ccy]
+            );
+    }
+
+    /**
      * @notice Gets the genesis date when the first market opens for the selected currency.
      * @param _ccy Currency name in bytes32
      * @return The genesis date
@@ -241,7 +263,7 @@ contract LendingMarketController is
         override
         returns (int256 totalPresentValue)
     {
-        totalPresentValue = FundManagementLogic.calculateActualFunds(_ccy, 0, _user).presentValue;
+        totalPresentValue = FundManagementLogic.getActualFunds(_ccy, 0, _user).presentValue;
     }
 
     /**
@@ -259,7 +281,7 @@ contract LendingMarketController is
 
         for (uint256 i; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
-            int256 amount = FundManagementLogic.calculateActualFunds(ccy, 0, _user).presentValue;
+            int256 amount = FundManagementLogic.getActualFunds(ccy, 0, _user).presentValue;
             totalPresentValue += currencyController().convertToBaseCurrency(ccy, amount);
         }
     }
@@ -276,7 +298,7 @@ contract LendingMarketController is
         override
         returns (int256 genesisValue)
     {
-        genesisValue = FundManagementLogic.calculateActualFunds(_ccy, 0, _user).genesisValue;
+        genesisValue = FundManagementLogic.getActualFunds(_ccy, 0, _user).genesisValue;
     }
 
     /**
@@ -301,32 +323,13 @@ contract LendingMarketController is
      * @param _ccy Currency name in bytes32
      * @param _user User's address
      * @param _liquidationThresholdRate The liquidation threshold rate
-     * @return workingLendOrdersAmount The working orders amount on the lend order book
-     * @return claimableAmount The claimable amount due to the lending orders being filled on the order book
-     * @return collateralAmount The actual collateral amount that is calculated by netting using the haircut.
-     * @return lentAmount The lent amount due to the lend orders being filled on the order book
-     * @return workingBorrowOrdersAmount The working orders amount on the borrow order book
-     * @return debtAmount The debt amount due to the borrow orders being filled on the order book
-     * @return borrowedAmount The borrowed amount due to the borrow orders being filled on the order book
+     * @return funds The funds calculated from the user's lending and borrowing order list
      */
     function calculateFunds(
         bytes32 _ccy,
         address _user,
         uint256 _liquidationThresholdRate
-    )
-        external
-        view
-        override
-        returns (
-            uint256 workingLendOrdersAmount,
-            uint256 claimableAmount,
-            uint256 collateralAmount,
-            uint256 lentAmount,
-            uint256 workingBorrowOrdersAmount,
-            uint256 debtAmount,
-            uint256 borrowedAmount
-        )
-    {
+    ) external view override returns (CalculatedFunds memory funds) {
         if (Storage.slot().usedCurrencies[_user].contains(_ccy)) {
             AdditionalFunds memory emptyAdditionalFunds;
 
@@ -346,27 +349,13 @@ contract LendingMarketController is
      * @param _user User's address
      * @param _additionalFunds The funds to be added for calculating the total funds
      * @param _liquidationThresholdRate The liquidation threshold rate
+     * @return funds The total funds calculated from the user's lending and borrowing order list
      */
     function calculateTotalFundsInBaseCurrency(
         address _user,
         AdditionalFunds calldata _additionalFunds,
         uint256 _liquidationThresholdRate
-    )
-        external
-        view
-        override
-        returns (
-            uint256 plusDepositAmountInAdditionalFundsCcy,
-            uint256 minusDepositAmountInAdditionalFundsCcy,
-            uint256 totalWorkingLendOrdersAmount,
-            uint256 totalClaimableAmount,
-            uint256 totalCollateralAmount,
-            uint256 totalLentAmount,
-            uint256 totalWorkingBorrowOrdersAmount,
-            uint256 totalDebtAmount,
-            uint256 totalBorrowedAmount
-        )
-    {
+    ) external view override returns (CalculatedTotalFunds memory funds) {
         return
             FundManagementLogic.calculateTotalFundsInBaseCurrency(
                 _user,
@@ -397,7 +386,8 @@ contract LendingMarketController is
         uint256 _genesisDate,
         uint256 _compoundFactor,
         uint256 _orderFeeRate,
-        uint256 _circuitBreakerLimitRange
+        uint256 _circuitBreakerLimitRange,
+        uint256 _minDebtUnitPrice
     ) external override onlyOwner {
         if (isInitializedLendingMarket(_ccy)) revert AlreadyInitialized();
 
@@ -406,7 +396,8 @@ contract LendingMarketController is
             _genesisDate,
             _compoundFactor,
             _orderFeeRate,
-            _circuitBreakerLimitRange
+            _circuitBreakerLimitRange,
+            _minDebtUnitPrice
         );
     }
 
@@ -823,5 +814,19 @@ contract LendingMarketController is
         returns (uint256 totalActiveOrderCount)
     {
         return FundManagementLogic.cleanUpFunds(_ccy, _user);
+    }
+
+    /**
+     * @notice Updates the min debt unit price for the selected currency.
+     * @param _ccy Currency name in bytes32
+     * @param _minDebtUnitPrice The min debt unit price
+     */
+    function updateMinDebtUnitPrice(bytes32 _ccy, uint256 _minDebtUnitPrice)
+        external
+        override
+        ifActive
+        onlyOwner
+    {
+        LendingMarketOperationLogic.updateMinDebtUnitPrice(_ccy, _minDebtUnitPrice);
     }
 }
