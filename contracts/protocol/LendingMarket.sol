@@ -257,6 +257,15 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Gets the block number of the last filled order.
+     * @param _orderBookId The order book id
+     * @return The block number
+     */
+    function getLastOrderBlockNumber(uint8 _orderBookId) external view override returns (uint256) {
+        return OrderBookLogic.getLastOrderBlockNumber(_orderBookId);
+    }
+
+    /**
      * @notice Gets the block unit price history
      * @param _orderBookId The order book id
      * @return The array of the block unit price

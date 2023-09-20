@@ -43,6 +43,8 @@ interface ILendingMarket {
 
     function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256);
 
+    function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256);
+
     function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] memory);
 
     function getBlockUnitPriceAverage(uint8 orderBookId, uint256 count)

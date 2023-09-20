@@ -188,7 +188,8 @@ library OrderReaderLogic {
             .getOrderExecutionConditions(
                 _side,
                 _unitPrice,
-                Storage.slot().circuitBreakerLimitRange
+                Storage.slot().circuitBreakerLimitRange,
+                true
             );
 
         if (isFilled) {
