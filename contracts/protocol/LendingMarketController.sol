@@ -125,6 +125,32 @@ contract LendingMarketController is
     }
 
     /**
+     * @notice Gets the date when the market terminated.
+     * @return The termination date
+     */
+    function getMarketTerminationDate() external view override returns (uint256) {
+        return Storage.slot().marketTerminationDate;
+    }
+
+    /**
+     * @notice Gets the price cached at the market termination.
+     * @param _ccy Currency name in bytes32
+     * @return The price cached
+     */
+    function getMarketTerminationPrice(bytes32 _ccy) external view override returns (int256) {
+        return Storage.slot().marketTerminationPrices[_ccy];
+    }
+
+    /**
+     * @notice Gets the ratio of each token in TokenVault at the market termination.
+     * @param _ccy Currency name in bytes32
+     * @return The ratio
+     */
+    function getMarketTerminationRatio(bytes32 _ccy) external view override returns (uint256) {
+        return Storage.slot().marketTerminationRatios[_ccy];
+    }
+
+    /**
      * @notice Gets the min debt unit price for the selected currency.
      * This price is based on a one-year maturity.
      * @param _ccy Currency name in bytes32
