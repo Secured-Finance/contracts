@@ -74,6 +74,14 @@ interface ITokenVault {
         view
         returns (uint256 protocolFee, uint256 liquidatorFee);
 
+    function registerCurrency(
+        bytes32 ccy,
+        address tokenAddress,
+        bool isCollateral
+    ) external;
+
+    function updateCurrency(bytes32 ccy, bool isCollateral) external;
+
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
     function depositFrom(

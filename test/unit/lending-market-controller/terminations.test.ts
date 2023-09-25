@@ -114,6 +114,25 @@ describe('LendingMarketController - Terminations', () => {
   });
 
   describe('Terminations', async () => {
+    it('Get the termination status', async () => {
+      const [
+        isTerminated,
+        marketTerminationDate,
+        marketTerminationPrice,
+        marketTerminationRatio,
+      ] = await Promise.all([
+        lendingMarketControllerProxy.isTerminated(),
+        lendingMarketControllerProxy.getMarketTerminationDate(),
+        lendingMarketControllerProxy.getMarketTerminationPrice(targetCurrency),
+        lendingMarketControllerProxy.getMarketTerminationRatio(targetCurrency),
+      ]);
+
+      expect(isTerminated).to.equal(false);
+      expect(marketTerminationDate).to.equal(0);
+      expect(marketTerminationPrice).to.equal(0);
+      expect(marketTerminationRatio).to.equal(0);
+    });
+
     it('Execute an emergency termination without an order', async () => {
       await mockTokenVault.mock.executeForcedReset.returns('50000000000000000');
       await mockTokenVault.mock.isCollateral.returns(true);
@@ -257,9 +276,13 @@ describe('LendingMarketController - Terminations', () => {
           expect(presentValue).to.equal('-50000000000000000');
         });
 
-      await expect(
-        lendingMarketControllerProxy.executeEmergencyTermination(),
-      ).to.emit(lendingMarketOperationLogic, 'EmergencyTerminationExecuted');
+      const tx =
+        await lendingMarketControllerProxy.executeEmergencyTermination();
+
+      await expect(tx).to.emit(
+        lendingMarketOperationLogic,
+        'EmergencyTerminationExecuted',
+      );
 
       for (const user of [alice, bob]) {
         await expect(
@@ -278,6 +301,25 @@ describe('LendingMarketController - Terminations', () => {
         expect(futureValue).to.equal('0');
         expect(presentValue).to.equal('0');
       }
+
+      const [
+        isTerminated,
+        marketTerminationDate,
+        marketTerminationPrice,
+        marketTerminationRatio,
+      ] = await Promise.all([
+        lendingMarketControllerProxy.isTerminated(),
+        lendingMarketControllerProxy.getMarketTerminationDate(),
+        lendingMarketControllerProxy.getMarketTerminationPrice(targetCurrency),
+        lendingMarketControllerProxy.getMarketTerminationRatio(targetCurrency),
+      ]);
+
+      const { timestamp } = await ethers.provider.getBlock(tx.blockNumber);
+
+      expect(isTerminated).to.equal(true);
+      expect(marketTerminationDate).to.equal(timestamp);
+      expect(marketTerminationPrice).to.equal('1000000000000000000');
+      expect(marketTerminationRatio).to.equal('20000000000');
     });
 
     it('Execute an emergency termination with orders of multiple markets', async () => {

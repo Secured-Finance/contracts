@@ -339,7 +339,7 @@ contract TokenVault is
         bytes32 _ccy,
         address _tokenAddress,
         bool _isCollateral
-    ) external onlyOwner {
+    ) external override onlyOwner {
         if (!currencyController().currencyExists(_ccy)) revert InvalidCurrency();
 
         Storage.slot().tokenAddresses[_ccy] = _tokenAddress;
@@ -357,6 +357,7 @@ contract TokenVault is
      */
     function updateCurrency(bytes32 _ccy, bool _isCollateral)
         external
+        override
         onlyOwner
         onlyRegisteredCurrency(_ccy)
     {
