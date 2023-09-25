@@ -216,7 +216,8 @@ library OrderActionLogic {
         ) = orderBook.getOrderExecutionConditions(
             _side,
             _unitPrice,
-            Storage.slot().circuitBreakerLimitRange
+            Storage.slot().circuitBreakerLimitRange,
+            false
         );
 
         if (_unitPrice == 0 && !vars.conditions.orderExists) revert EmptyOrderBook();
@@ -338,7 +339,8 @@ library OrderActionLogic {
         ) = orderBook.getOrderExecutionConditions(
             _side,
             0,
-            Storage.slot().circuitBreakerLimitRange
+            Storage.slot().circuitBreakerLimitRange,
+            false
         );
 
         if (!conditions.orderExists) revert EmptyOrderBook();

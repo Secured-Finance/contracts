@@ -1198,7 +1198,7 @@ describe('LendingMarketController - Orders', () => {
       expect(positions[0].ccy).to.equal(targetCurrency);
       expect(positions[0].maturity).to.equal(maturities[0]);
       expect(positions[0].futureValue).to.equal('8333333333333333');
-      expect(positions[0].presentValue).to.equal('6250000000000000');
+      expect(positions[0].presentValue).to.equal('6666666666666666');
     });
 
     it('Get active positions from multiple markets', async () => {

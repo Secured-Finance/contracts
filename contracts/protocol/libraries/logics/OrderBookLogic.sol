@@ -76,12 +76,16 @@ library OrderBookLogic {
         preOpeningDate = orderBook.preOpeningDate;
     }
 
+    function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256) {
+        return _getOrderBook(_orderBookId).lastOrderBlockNumber;
+    }
+
     function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] memory) {
-        return _getOrderBook(_orderBookId).getBlockUnitPriceHistory();
+        return _getOrderBook(_orderBookId).getBlockUnitPriceHistory(true);
     }
 
     function getMarketUnitPrice(uint8 _orderBookId) external view returns (uint256) {
-        return _getOrderBook(_orderBookId).getMarketUnitPrice();
+        return _getOrderBook(_orderBookId).getMarketUnitPrice(true);
     }
 
     function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count)
@@ -89,7 +93,7 @@ library OrderBookLogic {
         view
         returns (uint256)
     {
-        return _getOrderBook(_orderBookId).getBlockUnitPriceAverage(_count);
+        return _getOrderBook(_orderBookId).getBlockUnitPriceAverage(_count, true);
     }
 
     function getCircuitBreakerThresholds(uint8 _orderBookId)
@@ -98,10 +102,12 @@ library OrderBookLogic {
         returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
     {
         maxLendUnitPrice = _getOrderBook(_orderBookId).getLendCircuitBreakerThreshold(
-            Storage.slot().circuitBreakerLimitRange
+            Storage.slot().circuitBreakerLimitRange,
+            true
         );
         minBorrowUnitPrice = _getOrderBook(_orderBookId).getBorrowCircuitBreakerThreshold(
-            Storage.slot().circuitBreakerLimitRange
+            Storage.slot().circuitBreakerLimitRange,
+            true
         );
     }
 
@@ -237,7 +243,7 @@ library OrderBookLogic {
 
         // NOTE: The auto-roll destination order book has no market unit price if the order has never been filled before.
         // In this case, the market unit price is updated with the unit price of the auto-roll.
-        if (destinationOrderBook.getMarketUnitPrice() == 0) {
+        if (destinationOrderBook.getMarketUnitPrice(false) == 0) {
             destinationOrderBook.setInitialBlockUnitPrice(_autoRollUnitPrice);
         }
     }

@@ -174,6 +174,7 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.bestLendUnitPrice).to.equal('10000');
       expect(detail.bestBorrowUnitPrice).to.equal('0');
       expect(detail.marketUnitPrice).to.equal('0');
+      expect(detail.lastOrderBlockNumber).to.equal('0');
       expect(detail.blockUnitPriceHistory[0]).to.equal('0');
       expect(detail.maxLendUnitPrice).to.equal('10000');
       expect(detail.minBorrowUnitPrice).to.equal('1');
@@ -212,7 +213,7 @@ describe('LendingMarketController - Operations', () => {
           '8000',
         );
 
-      await lendingMarketControllerProxy
+      const tx = await lendingMarketControllerProxy
         .connect(bob)
         .executeOrder(
           targetCurrency,
@@ -232,6 +233,7 @@ describe('LendingMarketController - Operations', () => {
       expect(detail.bestLendUnitPrice).to.equal('9000');
       expect(detail.bestBorrowUnitPrice).to.equal('5000');
       expect(detail.marketUnitPrice).to.equal('8000');
+      expect(detail.lastOrderBlockNumber).to.equal(tx.blockNumber);
       expect(detail.blockUnitPriceHistory[0]).to.equal('8000');
       expect(detail.maxLendUnitPrice).to.equal('8800');
       expect(detail.minBorrowUnitPrice).to.equal('7600');
