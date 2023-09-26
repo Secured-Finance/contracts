@@ -333,6 +333,27 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
     }
 
     /**
+     * @notice Gets the estimation of the Itayose process.
+     * @param _orderBookId The order book id
+     * @return openingUnitPrice The opening price when Itayose is executed
+     * @return lastLendUnitPrice The price of the last lend order filled by Itayose.
+     * @return lastBorrowUnitPrice The price of the last borrow order filled by Itayose.
+     * @return totalOffsetAmount The total amount of the orders filled by Itayose.
+     */
+    function getItayoseEstimation(uint8 _orderBookId)
+        external
+        view
+        returns (
+            uint256 openingUnitPrice,
+            uint256 lastLendUnitPrice,
+            uint256 lastBorrowUnitPrice,
+            uint256 totalOffsetAmount
+        )
+    {
+        return OrderBookLogic.getItayoseEstimation(_orderBookId);
+    }
+
+    /**
      * @notice Gets the current market maturity.
      * @param _orderBookId The order book id
      * @return maturity The market maturity

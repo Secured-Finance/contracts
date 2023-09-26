@@ -304,7 +304,7 @@ describe('CurrencyController', () => {
       );
     });
 
-    it('Get the converted amount(int256) in ETH', async () => {
+    it('Get the converted amount(int256) in the base currency', async () => {
       const amount = await currencyControllerProxy[
         'convertToBaseCurrency(bytes32,int256)'
       ](currency, 10000000000);
@@ -312,7 +312,7 @@ describe('CurrencyController', () => {
       expect(amount).to.equal('100');
     });
 
-    it('Get the converted amount(uint256) in ETH', async () => {
+    it('Get the converted amount(uint256) in the base currency', async () => {
       const amount = await currencyControllerProxy[
         'convertToBaseCurrency(bytes32,uint256)'
       ](currency, 10000000000);
@@ -320,7 +320,7 @@ describe('CurrencyController', () => {
       expect(amount).to.equal('100');
     });
 
-    it('Get the array of converted amounts(uint256[]) in ETH', async () => {
+    it('Get the array of converted amounts(uint256[]) in the base currency', async () => {
       const amounts = await currencyControllerProxy[
         'convertToBaseCurrency(bytes32,uint256[])'
       ](currency, [10000000000]);

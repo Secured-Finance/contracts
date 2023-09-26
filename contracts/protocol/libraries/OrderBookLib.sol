@@ -523,7 +523,7 @@ library OrderBookLib {
         return (side, removedAmount, unitPrice);
     }
 
-    function getOpeningUnitPrice(OrderBook storage self)
+    function calculateItayoseResult(OrderBook storage self)
         internal
         view
         returns (
@@ -533,18 +533,18 @@ library OrderBookLib {
             uint256 totalOffsetAmount
         )
     {
-        uint256 lendUnitPrice = getBestBorrowUnitPrice(self);
-        uint256 borrowUnitPrice = getBestLendUnitPrice(self);
+        uint256 lendUnitPrice = self.lendOrders[self.maturity].last();
+        uint256 borrowUnitPrice = self.borrowOrders[self.maturity].first();
         uint256 lendAmount = self.lendOrders[self.maturity].getNodeTotalAmount(lendUnitPrice);
         uint256 borrowAmount = self.borrowOrders[self.maturity].getNodeTotalAmount(borrowUnitPrice);
 
         OrderStatisticsTreeLib.Tree storage borrowOrders = self.borrowOrders[self.maturity];
         OrderStatisticsTreeLib.Tree storage lendOrders = self.lendOrders[self.maturity];
 
-        // return mid price when no lending and borrowing orders overwrap
-        if (borrowUnitPrice > lendUnitPrice) {
+        // Return 0 if no orders is filled
+        if (borrowUnitPrice > lendUnitPrice || borrowUnitPrice == 0 || lendUnitPrice == 0) {
             openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
-            return (openingUnitPrice, 0, 0, 0);
+            return (0, 0, 0, 0);
         }
 
         while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {

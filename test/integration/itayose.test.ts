@@ -205,6 +205,20 @@ describe('Integration Test: Itayose', async () => {
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
     });
 
+    it('Check the expected result before Itayose execution', async () => {
+      const marketInfo = await lendingMarketReader.getOrderBookDetail(
+        hexETH,
+        maturities[maturities.length - 1],
+      );
+
+      expect(marketInfo.openingDate).to.equal(maturities[0]);
+      expect(marketInfo.bestLendUnitPrice).to.equal('10000');
+      expect(marketInfo.bestBorrowUnitPrice).to.equal('0');
+      expect(marketInfo.marketUnitPrice).to.equal('0');
+      expect(marketInfo.blockUnitPriceHistory[0]).to.equal('0');
+      expect(marketInfo.openingUnitPrice).to.equal('0');
+    });
+
     it('Execute Itayose without pre-order', async () => {
       const orderBookId = orderBookIds[orderBookIds.length - 1];
       const maturity = maturities[maturities.length - 1];
@@ -224,7 +238,7 @@ describe('Integration Test: Itayose', async () => {
       expect(marketInfo.bestBorrowUnitPrice).to.equal('0');
       expect(marketInfo.marketUnitPrice).to.equal('0');
       expect(marketInfo.blockUnitPriceHistory[0]).to.equal('0');
-      expect(marketInfo.openingUnitPrice).to.equal('5000');
+      expect(marketInfo.openingUnitPrice).to.equal('0');
     });
   });
 
@@ -328,6 +342,21 @@ describe('Integration Test: Itayose', async () => {
       await expect(
         lendingMarketController.connect(owner).rotateOrderBooks(hexETH),
       ).to.emit(lendingMarketOperationLogic, 'OrderBooksRotated');
+    });
+
+    it('Check the expected result before Itayose execution', async () => {
+      const marketInfo = await lendingMarketReader.getOrderBookDetail(
+        hexETH,
+        maturities[maturities.length - 1],
+      );
+
+      expect(marketInfo.openingDate).to.equal(maturities[0]);
+      expect(marketInfo.bestLendUnitPrice).to.equal('7300');
+      expect(marketInfo.bestBorrowUnitPrice).to.equal('7400');
+      expect(marketInfo.marketUnitPrice).to.equal('0');
+      expect(marketInfo.blockUnitPriceHistory[0]).to.equal('0');
+      expect(marketInfo.blockUnitPriceHistory[1]).to.equal('0');
+      expect(marketInfo.openingUnitPrice).to.equal('7300');
     });
 
     it('Execute Itayose with pre-order', async () => {
