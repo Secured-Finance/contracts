@@ -11,6 +11,7 @@ struct OrderBookDetail {
   uint256 bestLendUnitPrice;
   uint256 bestBorrowUnitPrice;
   uint256 marketUnitPrice;
+  uint256 lastOrderBlockNumber;
   uint256[] blockUnitPriceHistory;
   uint256 maxLendUnitPrice;
   uint256 minBorrowUnitPrice;

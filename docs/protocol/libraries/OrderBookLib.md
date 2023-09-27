@@ -127,19 +127,19 @@ function getOrder(struct OrderBookLib.OrderBook self, uint256 _orderId) internal
 ### getBlockUnitPriceHistory
 
 ```solidity
-function getBlockUnitPriceHistory(struct OrderBookLib.OrderBook self) internal view returns (uint256[] prices)
+function getBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, bool _isReadOnly) internal view returns (uint256[] prices)
 ```
 
 ### getMarketUnitPrice
 
 ```solidity
-function getMarketUnitPrice(struct OrderBookLib.OrderBook self) internal view returns (uint256 unitPrice)
+function getMarketUnitPrice(struct OrderBookLib.OrderBook self, bool _isReadOnly) internal view returns (uint256 unitPrice)
 ```
 
 ### getBlockUnitPriceAverage
 
 ```solidity
-function getBlockUnitPriceAverage(struct OrderBookLib.OrderBook self, uint256 _maxCount) internal view returns (uint256 unitPrice)
+function getBlockUnitPriceAverage(struct OrderBookLib.OrderBook self, uint256 maxCount, bool _isReadOnly) internal view returns (uint256 unitPrice)
 ```
 
 ### getLendOrderBook
@@ -217,19 +217,19 @@ function getOpeningUnitPrice(struct OrderBookLib.OrderBook self) internal view r
 ### getOrderExecutionConditions
 
 ```solidity
-function getOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange) internal view returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
+function getOrderExecutionConditions(struct OrderBookLib.OrderBook self, enum ProtocolTypes.Side _side, uint256 _unitPrice, uint256 _circuitBreakerLimitRange, bool _isReadOnly) internal view returns (bool isFilled, uint256 executedUnitPrice, bool ignoreRemainingAmount, bool orderExists)
 ```
 
 ### getLendCircuitBreakerThreshold
 
 ```solidity
-function getLendCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange) internal view returns (uint256 cbThresholdUnitPrice)
+function getLendCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange, bool _isReadOnly) internal view returns (uint256 cbThresholdUnitPrice)
 ```
 
 ### getBorrowCircuitBreakerThreshold
 
 ```solidity
-function getBorrowCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange) internal view returns (uint256 cbThresholdUnitPrice)
+function getBorrowCircuitBreakerThreshold(struct OrderBookLib.OrderBook self, uint256 _circuitBreakerLimitRange, bool _isReadOnly) internal view returns (uint256 cbThresholdUnitPrice)
 ```
 
 ### _nextOrderId

@@ -105,6 +105,24 @@ function isTerminated() external view returns (bool)
 function isRedemptionRequired(address _user) external view returns (bool)
 ```
 
+### getMarketTerminationDate
+
+```solidity
+function getMarketTerminationDate() external view returns (uint256)
+```
+
+### getMarketTerminationPrice
+
+```solidity
+function getMarketTerminationPrice(bytes32 _ccy) external view returns (int256)
+```
+
+### getMarketTerminationRatio
+
+```solidity
+function getMarketTerminationRatio(bytes32 _ccy) external view returns (uint256)
+```
+
 ### getMinDebtUnitPrice
 
 ```solidity

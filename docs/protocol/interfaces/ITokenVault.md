@@ -176,6 +176,18 @@ function calculateCoverage(address user, struct ILendingMarketController.Additio
 function calculateLiquidationFees(uint256 liquidationAmount) external view returns (uint256 protocolFee, uint256 liquidatorFee)
 ```
 
+### registerCurrency
+
+```solidity
+function registerCurrency(bytes32 ccy, address tokenAddress, bool isCollateral) external
+```
+
+### updateCurrency
+
+```solidity
+function updateCurrency(bytes32 ccy, bool isCollateral) external
+```
+
 ### deposit
 
 ```solidity

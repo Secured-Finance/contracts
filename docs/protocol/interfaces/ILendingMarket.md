@@ -74,6 +74,12 @@ function getBestBorrowUnitPrices(uint8[] orderBookIds) external view returns (ui
 function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256)
 ```
 
+### getLastOrderBlockNumber
+
+```solidity
+function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256)
+```
+
 ### getBlockUnitPriceHistory
 
 ```solidity

@@ -304,6 +304,22 @@ Gets the market unit price
 | ---- | ---- | ----------- |
 | [0] | uint256 | The market unit price |
 
+### getLastOrderBlockNumber
+
+```solidity
+function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256)
+```
+
+Gets the block number of the last filled order.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _orderBookId | uint8 | The order book id |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The block number |
+
 ### getBlockUnitPriceHistory
 
 ```solidity

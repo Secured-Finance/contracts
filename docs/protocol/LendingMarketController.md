@@ -104,6 +104,50 @@ Gets if the user needs to redeem the funds.
 | ---- | ---- | ----------- |
 | [0] | bool | The boolean if the user needs to redeem the funds |
 
+### getMarketTerminationDate
+
+```solidity
+function getMarketTerminationDate() external view returns (uint256)
+```
+
+Gets the date when the market terminated.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The termination date |
+
+### getMarketTerminationPrice
+
+```solidity
+function getMarketTerminationPrice(bytes32 _ccy) external view returns (int256)
+```
+
+Gets the price cached at the market termination.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | int256 | The price cached |
+
+### getMarketTerminationRatio
+
+```solidity
+function getMarketTerminationRatio(bytes32 _ccy) external view returns (uint256)
+```
+
+Gets the ratio of each token in TokenVault at the market termination.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | The ratio |
+
 ### getMinDebtUnitPrice
 
 ```solidity
