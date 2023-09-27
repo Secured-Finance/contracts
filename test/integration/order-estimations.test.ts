@@ -4,13 +4,15 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexETH } from '../../utils/strings';
+import { hexETH, hexWFIL } from '../../utils/strings';
 import {
+  HAIRCUT,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
   PCT_DIGIT,
 } from '../common/constants';
+import { wFilToETHRate } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
@@ -19,6 +21,7 @@ describe('Integration Test: Order Estimations', async () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
 
+  let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
   let lendingMarketReader: Contract;
@@ -39,6 +42,7 @@ describe('Integration Test: Order Estimations', async () => {
 
     ({
       genesisDate,
+      currencyController,
       tokenVault,
       lendingMarketController,
       lendingMarketReader,
@@ -65,367 +69,620 @@ describe('Integration Test: Order Estimations', async () => {
     }
   });
 
-  describe('Estimate a borrowing order result to be filled', async () => {
-    const orderAmount = initialETHBalance.div(5);
-    const depositAmount = orderAmount.mul(3).div(2);
+  describe('Order Estimations', async () => {
+    describe('Estimate a borrowing order result to be filled', async () => {
+      const orderAmount = initialETHBalance.div(5);
+      const depositAmount = orderAmount.mul(3).div(2);
 
-    before(async () => {
-      [alice, bob] = await getUsers(2);
-      ethMaturities = await lendingMarketController.getMaturities(hexETH);
-    });
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      });
 
-    after(async () => {
-      const { activeOrders } = await lendingMarketReader[
-        'getOrders(bytes32,address)'
-      ](hexETH, bob.address);
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexETH, bob.address);
 
-      for (const order of activeOrders) {
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(bob)
+            .cancelOrder(hexETH, order.maturity, order.orderId);
+        }
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Place a lending order on the ETH market', async () => {
         await lendingMarketController
           .connect(bob)
-          .cancelOrder(hexETH, order.maturity, order.orderId);
-      }
-    });
-
-    it('Deposit ETH', async () => {
-      await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
-        value: depositAmount,
+          .depositAndExecuteOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.LEND,
+            orderAmount.mul(2),
+            '8000',
+            { value: orderAmount.mul(2) },
+          );
       });
 
-      const aliceDepositAmount = await tokenVault.getDepositAmount(
-        alice.address,
-        hexETH,
-      );
+      it('Estimate a borrowing order result', async () => {
+        const estimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.BORROW,
+            amount: orderAmount,
+            unitPrice: '8000',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
 
-      expect(aliceDepositAmount).to.equal(depositAmount);
-    });
+        const estimation2 = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.BORROW,
+            amount: orderAmount,
+            unitPrice: '8000',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: true,
+          });
 
-    it('Place a lending order on the ETH market', async () => {
-      await lendingMarketController
-        .connect(bob)
-        .depositAndExecuteOrder(
-          hexETH,
-          ethMaturities[0],
-          Side.LEND,
-          orderAmount.mul(2),
-          '8000',
-          { value: orderAmount.mul(2) },
+        await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '8000',
+          );
+
+        const { futureValue: aliceFV, presentValue: alicePV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            ethMaturities[0],
+            alice.address,
+          );
+
+        const aliceCoverage = await tokenVault.getCoverage(alice.address);
+
+        expect(estimation.filledAmount).to.equal(orderAmount);
+        expect(
+          aliceFV
+            .mul(PCT_DIGIT)
+            .div(estimation.filledAmountInFV.add(estimation.orderFeeInFV))
+            .abs(),
+        ).gte(BigNumber.from(PCT_DIGIT).sub(1));
+        expect(estimation.coverage).to.equal(aliceCoverage);
+        expect(estimation.coverage).to.equal(
+          alicePV.abs().mul(PCT_DIGIT).div(depositAmount.add(orderAmount)),
         );
+        expect(estimation2.coverage).to.equal(
+          alicePV.abs().mul(PCT_DIGIT).div(depositAmount),
+        );
+      });
     });
 
-    it('Estimate a borrowing order result', async () => {
-      const estimation = await lendingMarketController
-        .connect(alice)
-        .getOrderEstimation({
-          ccy: hexETH,
-          maturity: ethMaturities[0],
-          user: alice.address,
-          side: Side.BORROW,
-          amount: orderAmount,
-          unitPrice: '8000',
-          additionalDepositAmount: '0',
-          ignoreBorrowedAmount: false,
+    describe('Estimate a lending order result to be filled', async () => {
+      const orderAmount = initialETHBalance.div(5);
+      const depositAmount = orderAmount.mul(3).div(2);
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      });
+
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexETH, bob.address);
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(bob)
+            .cancelOrder(hexETH, order.maturity, order.orderId);
+        }
+      });
+
+      it('Place a borrowing order on the ETH market', async () => {
+        await tokenVault.connect(bob).deposit(hexETH, depositAmount.mul(2), {
+          value: depositAmount.mul(2),
         });
 
-      const estimation2 = await lendingMarketController
-        .connect(alice)
-        .getOrderEstimation({
-          ccy: hexETH,
-          maturity: ethMaturities[0],
-          user: alice.address,
-          side: Side.BORROW,
-          amount: orderAmount,
-          unitPrice: '8000',
-          additionalDepositAmount: '0',
-          ignoreBorrowedAmount: true,
-        });
-
-      await lendingMarketController
-        .connect(alice)
-        .executeOrder(
-          hexETH,
-          ethMaturities[0],
-          Side.BORROW,
-          orderAmount,
-          '8000',
-        );
-
-      const { futureValue: aliceFV, presentValue: alicePV } =
-        await lendingMarketController.getPosition(
-          hexETH,
-          ethMaturities[0],
-          alice.address,
-        );
-
-      const aliceCoverage = await tokenVault.getCoverage(alice.address);
-
-      expect(estimation.filledAmount).to.equal(orderAmount);
-      expect(
-        aliceFV
-          .mul(PCT_DIGIT)
-          .div(estimation.filledAmountInFV.add(estimation.orderFeeInFV))
-          .abs(),
-      ).gte(BigNumber.from(PCT_DIGIT).sub(1));
-      expect(estimation.coverage).to.equal(aliceCoverage);
-      expect(estimation.coverage).to.equal(
-        alicePV.abs().mul(PCT_DIGIT).div(depositAmount.add(orderAmount)),
-      );
-      expect(estimation2.coverage).to.equal(
-        alicePV.abs().mul(PCT_DIGIT).div(depositAmount),
-      );
-    });
-  });
-
-  describe('Estimate a lending order result to be filled', async () => {
-    const orderAmount = initialETHBalance.div(5);
-    const depositAmount = orderAmount.mul(3).div(2);
-
-    before(async () => {
-      [alice, bob] = await getUsers(2);
-      ethMaturities = await lendingMarketController.getMaturities(hexETH);
-    });
-
-    after(async () => {
-      const { activeOrders } = await lendingMarketReader[
-        'getOrders(bytes32,address)'
-      ](hexETH, bob.address);
-
-      for (const order of activeOrders) {
         await lendingMarketController
           .connect(bob)
-          .cancelOrder(hexETH, order.maturity, order.orderId);
-      }
-    });
-
-    it('Place a borrowing order on the ETH market', async () => {
-      await tokenVault.connect(bob).deposit(hexETH, depositAmount.mul(2), {
-        value: depositAmount.mul(2),
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount.mul(2),
+            '8000',
+          );
       });
 
-      await lendingMarketController
-        .connect(bob)
-        .executeOrder(
-          hexETH,
-          ethMaturities[0],
-          Side.BORROW,
-          orderAmount.mul(2),
-          '8000',
-        );
-    });
-
-    it('Deposit ETH', async () => {
-      await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
-        value: depositAmount,
-      });
-
-      const aliceDepositAmount = await tokenVault.getDepositAmount(
-        alice.address,
-        hexETH,
-      );
-
-      expect(aliceDepositAmount).to.equal(depositAmount);
-    });
-
-    it('Estimate a lending order result', async () => {
-      const estimation = await lendingMarketController
-        .connect(alice)
-        .getOrderEstimation({
-          ccy: hexETH,
-          maturity: ethMaturities[0],
-          user: alice.address,
-          side: Side.LEND,
-          amount: orderAmount,
-          unitPrice: '8000',
-          additionalDepositAmount: '0',
-          ignoreBorrowedAmount: false,
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
         });
 
-      const estimation2 = await lendingMarketController
-        .connect(alice)
-        .getOrderEstimation({
-          ccy: hexETH,
-          maturity: ethMaturities[0],
-          user: alice.address,
-          side: Side.LEND,
-          amount: orderAmount.mul(2),
-          unitPrice: '8000',
-          additionalDepositAmount: '0',
-          ignoreBorrowedAmount: false,
-        });
-
-      await lendingMarketController
-        .connect(alice)
-        .executeOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '8000');
-
-      const { futureValue: aliceFV } =
-        await lendingMarketController.getPosition(
-          hexETH,
-          ethMaturities[0],
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
           alice.address,
-        );
-
-      const aliceCoverage = await tokenVault.getCoverage(alice.address);
-
-      expect(estimation.filledAmount).to.equal(orderAmount);
-      expect(
-        aliceFV
-          .mul(PCT_DIGIT)
-          .div(estimation.filledAmountInFV.sub(estimation.orderFeeInFV))
-          .abs(),
-      ).gte(BigNumber.from(PCT_DIGIT).sub(1));
-      expect(estimation.coverage).to.equal('0');
-      expect(estimation.isInsufficientDepositAmount).to.equal(false);
-      expect(orderAmount).to.equal(estimation.filledAmount);
-      expect(estimation.coverage).to.equal(aliceCoverage);
-
-      expect(estimation2.filledAmount).to.equal(orderAmount.mul(2));
-      expect(estimation2.isInsufficientDepositAmount).to.equal(true);
-    });
-  });
-
-  describe('Estimate a borrowing order result to be placed', async () => {
-    const orderAmount = initialETHBalance.div(5);
-    const depositAmount = orderAmount.mul(3).div(2);
-
-    before(async () => {
-      [alice] = await getUsers(1);
-      ethMaturities = await lendingMarketController.getMaturities(hexETH);
-    });
-
-    after(async () => {
-      const { activeOrders } = await lendingMarketReader[
-        'getOrders(bytes32,address)'
-      ](hexETH, alice.address);
-
-      for (const order of activeOrders) {
-        await lendingMarketController
-          .connect(alice)
-          .cancelOrder(hexETH, order.maturity, order.orderId);
-      }
-    });
-
-    it('Deposit ETH', async () => {
-      await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
-        value: depositAmount,
-      });
-
-      const aliceDepositAmount = await tokenVault.getDepositAmount(
-        alice.address,
-        hexETH,
-      );
-
-      expect(aliceDepositAmount).to.equal(depositAmount);
-    });
-
-    it('Estimate a borrowing order result', async () => {
-      const estimation = await lendingMarketController
-        .connect(alice)
-        .getOrderEstimation({
-          ccy: hexETH,
-          maturity: ethMaturities[0],
-          user: alice.address,
-          side: Side.BORROW,
-          amount: orderAmount,
-          unitPrice: '8000',
-          additionalDepositAmount: '0',
-          ignoreBorrowedAmount: false,
-        });
-
-      const estimation2 = await lendingMarketController
-        .connect(alice)
-        .getOrderEstimation({
-          ccy: hexETH,
-          maturity: ethMaturities[0],
-          user: alice.address,
-          side: Side.BORROW,
-          amount: orderAmount,
-          unitPrice: '8000',
-          additionalDepositAmount: '0',
-          ignoreBorrowedAmount: true,
-        });
-
-      await lendingMarketController
-        .connect(alice)
-        .executeOrder(
           hexETH,
-          ethMaturities[0],
-          Side.BORROW,
-          orderAmount,
-          '8000',
         );
 
-      const aliceCoverage = await tokenVault.getCoverage(alice.address);
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
 
-      expect(estimation.filledAmount).to.equal(0);
-      expect(estimation.placedAmount).to.equal(orderAmount);
-      expect(estimation.coverage).to.equal(aliceCoverage);
-      expect(estimation.coverage).to.equal(
-        orderAmount.abs().mul(PCT_DIGIT).div(depositAmount),
-      );
-      expect(estimation.coverage).to.equal(estimation2.coverage);
+      it('Estimate a lending order result', async () => {
+        const estimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.LEND,
+            amount: orderAmount,
+            unitPrice: '8000',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        const estimation2 = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.LEND,
+            amount: orderAmount.mul(2),
+            unitPrice: '8000',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '8000',
+          );
+
+        const { futureValue: aliceFV } =
+          await lendingMarketController.getPosition(
+            hexETH,
+            ethMaturities[0],
+            alice.address,
+          );
+
+        const aliceCoverage = await tokenVault.getCoverage(alice.address);
+
+        expect(estimation.filledAmount).to.equal(orderAmount);
+        expect(
+          aliceFV
+            .mul(PCT_DIGIT)
+            .div(estimation.filledAmountInFV.sub(estimation.orderFeeInFV))
+            .abs(),
+        ).gte(BigNumber.from(PCT_DIGIT).sub(1));
+        expect(estimation.coverage).to.equal('0');
+        expect(estimation.isInsufficientDepositAmount).to.equal(false);
+        expect(orderAmount).to.equal(estimation.filledAmount);
+        expect(estimation.coverage).to.equal(aliceCoverage);
+
+        expect(estimation2.filledAmount).to.equal(orderAmount.mul(2));
+        expect(estimation2.isInsufficientDepositAmount).to.equal(true);
+      });
+    });
+
+    describe('Estimate a borrowing order result to be placed', async () => {
+      const orderAmount = initialETHBalance.div(5);
+      const depositAmount = orderAmount.mul(3).div(2);
+
+      before(async () => {
+        [alice] = await getUsers(1);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      });
+
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexETH, alice.address);
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(alice)
+            .cancelOrder(hexETH, order.maturity, order.orderId);
+        }
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Estimate a borrowing order result', async () => {
+        const estimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.BORROW,
+            amount: orderAmount,
+            unitPrice: '8000',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        const estimation2 = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.BORROW,
+            amount: orderAmount,
+            unitPrice: '8000',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: true,
+          });
+
+        await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '8000',
+          );
+
+        const aliceCoverage = await tokenVault.getCoverage(alice.address);
+
+        expect(estimation.filledAmount).to.equal(0);
+        expect(estimation.placedAmount).to.equal(orderAmount);
+        expect(estimation.coverage).to.equal(aliceCoverage);
+        expect(estimation.coverage).to.equal(
+          orderAmount.abs().mul(PCT_DIGIT).div(depositAmount),
+        );
+        expect(estimation.coverage).to.equal(estimation2.coverage);
+      });
+    });
+
+    describe('Estimate a lending order result to be placed', async () => {
+      const orderAmount = initialETHBalance.div(5);
+      const depositAmount = orderAmount.mul(3).div(2);
+
+      before(async () => {
+        [alice] = await getUsers(1);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      });
+
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexETH, alice.address);
+
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(alice)
+            .cancelOrder(hexETH, order.maturity, order.orderId);
+        }
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Estimate a lending order result', async () => {
+        const estimation = await lendingMarketController
+          .connect(alice)
+          .getOrderEstimation({
+            ccy: hexETH,
+            maturity: ethMaturities[0],
+            user: alice.address,
+            side: Side.LEND,
+            amount: orderAmount,
+            unitPrice: '8000',
+            additionalDepositAmount: '0',
+            ignoreBorrowedAmount: false,
+          });
+
+        await lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '8000',
+          );
+
+        const aliceCoverage = await tokenVault.getCoverage(alice.address);
+
+        expect(estimation.filledAmount).to.equal(0);
+        expect(estimation.filledAmountInFV).to.equal(0);
+        expect(estimation.coverage).to.equal('0');
+        expect(estimation.isInsufficientDepositAmount).to.equal(false);
+        expect(estimation.filledAmount).to.equal(0);
+        expect(estimation.placedAmount).to.equal(orderAmount);
+        expect(estimation.coverage).to.equal(aliceCoverage);
+      });
     });
   });
 
-  describe('Estimate a lending order result to be placed', async () => {
-    const orderAmount = initialETHBalance.div(5);
-    const depositAmount = orderAmount.mul(3).div(2);
+  describe('Borrowable Amount Calculations', async () => {
+    describe('Calculate the borrowable Amount with deposit', async () => {
+      const depositAmount = initialETHBalance.div(5);
 
-    before(async () => {
-      [alice] = await getUsers(1);
-      ethMaturities = await lendingMarketController.getMaturities(hexETH);
-    });
-
-    after(async () => {
-      const { activeOrders } = await lendingMarketReader[
-        'getOrders(bytes32,address)'
-      ](hexETH, alice.address);
-
-      for (const order of activeOrders) {
-        await lendingMarketController
-          .connect(alice)
-          .cancelOrder(hexETH, order.maturity, order.orderId);
-      }
-    });
-
-    it('Deposit ETH', async () => {
-      await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
-        value: depositAmount,
+      before(async () => {
+        [alice] = await getUsers(1);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
       });
 
-      const aliceDepositAmount = await tokenVault.getDepositAmount(
-        alice.address,
-        hexETH,
-      );
-
-      expect(aliceDepositAmount).to.equal(depositAmount);
-    });
-
-    it('Estimate a lending order result', async () => {
-      const estimation = await lendingMarketController
-        .connect(alice)
-        .getOrderEstimation({
-          ccy: hexETH,
-          maturity: ethMaturities[0],
-          user: alice.address,
-          side: Side.LEND,
-          amount: orderAmount,
-          unitPrice: '8000',
-          additionalDepositAmount: '0',
-          ignoreBorrowedAmount: false,
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
         });
 
-      await lendingMarketController
-        .connect(alice)
-        .executeOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '8000');
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
 
-      const aliceCoverage = await tokenVault.getCoverage(alice.address);
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
 
-      expect(estimation.filledAmount).to.equal(0);
-      expect(estimation.filledAmountInFV).to.equal(0);
-      expect(estimation.coverage).to.equal('0');
-      expect(estimation.isInsufficientDepositAmount).to.equal(false);
-      expect(estimation.filledAmount).to.equal(0);
-      expect(estimation.placedAmount).to.equal(orderAmount);
-      expect(estimation.coverage).to.equal(aliceCoverage);
+      it('Calculate the borrowable amount in ETH', async () => {
+        const amount = await tokenVault.getBorrowableAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(amount).to.equal(depositAmount.mul(HAIRCUT).div(PCT_DIGIT));
+      });
+
+      it('Calculate the borrowable amount in WFIL', async () => {
+        const amount = await tokenVault.getBorrowableAmount(
+          alice.address,
+          hexWFIL,
+        );
+
+        const amountInETH = amount
+          .mul(wFilToETHRate)
+          .div(BigNumber.from(10).pow(18));
+
+        expect(
+          amountInETH.sub(depositAmount.mul(HAIRCUT).div(PCT_DIGIT)).abs(),
+        ).lte(1);
+      });
     });
+
+    for (const haircut of [0, 5000, 8000]) {
+      describe(`Calculate the borrowable Amount with borrowing position (Haircut: ${haircut})`, async () => {
+        const depositAmount = initialETHBalance.div(5);
+        const orderAmount = depositAmount.div(2);
+        const orderAmount2 = orderAmount
+          .mul(PCT_DIGIT)
+          .div(LIQUIDATION_THRESHOLD_RATE)
+          .div(2);
+
+        before(async () => {
+          [alice, bob] = await getUsers(2);
+          ethMaturities = await lendingMarketController.getMaturities(hexETH);
+          await currencyController.updateHaircut(hexETH, haircut);
+        });
+
+        after(async () => {
+          await currencyController.updateHaircut(hexETH, HAIRCUT);
+        });
+
+        it('Deposit ETH', async () => {
+          await tokenVault.connect(bob).deposit(hexETH, depositAmount, {
+            value: depositAmount,
+          });
+
+          const bobDepositAmount = await tokenVault.getDepositAmount(
+            bob.address,
+            hexETH,
+          );
+
+          expect(bobDepositAmount).to.equal(depositAmount);
+        });
+
+        it('Fill an order to get a borrowing position', async () => {
+          await lendingMarketController
+            .connect(alice)
+            .depositAndExecuteOrder(
+              hexETH,
+              ethMaturities[0],
+              Side.LEND,
+              orderAmount,
+              '8000',
+              { value: orderAmount },
+            );
+
+          await lendingMarketController
+            .connect(bob)
+            .executeOrder(
+              hexETH,
+              ethMaturities[0],
+              Side.BORROW,
+              orderAmount,
+              '8000',
+            );
+        });
+
+        it('Calculate the borrowable amount in ETH(1)', async () => {
+          const amount = await tokenVault.getBorrowableAmount(
+            alice.address,
+            hexETH,
+          );
+
+          expect(amount).to.equal(
+            orderAmount.mul(PCT_DIGIT).div(LIQUIDATION_THRESHOLD_RATE),
+          );
+        });
+
+        it('Calculate the borrowable amount in WFIL(1)', async () => {
+          const amount = await tokenVault.getBorrowableAmount(
+            alice.address,
+            hexWFIL,
+          );
+
+          const amountInETH = amount
+            .mul(wFilToETHRate)
+            .div(BigNumber.from(10).pow(18));
+
+          expect(
+            amountInETH
+              .sub(orderAmount.mul(haircut).div(LIQUIDATION_THRESHOLD_RATE))
+              .abs(),
+          ).lte(1);
+        });
+
+        it('Fill an order to partially use the borrowing position', async () => {
+          await lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexETH,
+              ethMaturities[2],
+              Side.BORROW,
+              orderAmount2,
+              '8000',
+            );
+
+          await lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexETH,
+              ethMaturities[1],
+              Side.LEND,
+              orderAmount2,
+              '8000',
+              { value: orderAmount2 },
+            );
+        });
+
+        it('Calculate the borrowable amount in ETH(2)', async () => {
+          const amount = await tokenVault.getBorrowableAmount(
+            alice.address,
+            hexETH,
+          );
+
+          expect(amount).to.equal(
+            orderAmount
+              .mul(PCT_DIGIT)
+              .div(LIQUIDATION_THRESHOLD_RATE)
+              .sub(orderAmount2),
+          );
+        });
+
+        it('Calculate the borrowable amount in WFIL(2)', async () => {
+          const amount = await tokenVault.getBorrowableAmount(
+            alice.address,
+            hexWFIL,
+          );
+
+          const amountInETH = amount
+            .mul(wFilToETHRate)
+            .div(BigNumber.from(10).pow(18));
+
+          expect(
+            amountInETH
+              .sub(
+                orderAmount
+                  .mul(PCT_DIGIT)
+                  .div(LIQUIDATION_THRESHOLD_RATE)
+                  .sub(orderAmount2)
+                  .mul(haircut)
+                  .div(PCT_DIGIT),
+              )
+              .abs(),
+          ).lte(1);
+        });
+
+        it('Fill an order to use the whole borrowing position', async () => {
+          await lendingMarketController
+            .connect(alice)
+            .executeOrder(
+              hexETH,
+              ethMaturities[2],
+              Side.BORROW,
+              orderAmount2,
+              '8000',
+            );
+
+          await lendingMarketController
+            .connect(bob)
+            .depositAndExecuteOrder(
+              hexETH,
+              ethMaturities[1],
+              Side.LEND,
+              orderAmount2,
+              '8000',
+              { value: orderAmount2 },
+            );
+        });
+
+        it('Calculate the borrowable amount in ETH(3)', async () => {
+          const amount = await tokenVault.getBorrowableAmount(
+            alice.address,
+            hexETH,
+          );
+
+          expect(amount).to.equal(0);
+        });
+
+        it('Calculate the borrowable amount in WFIL(3)', async () => {
+          const amount = await tokenVault.getBorrowableAmount(
+            alice.address,
+            hexWFIL,
+          );
+
+          const amountInETH = amount
+            .mul(wFilToETHRate)
+            .div(BigNumber.from(10).pow(18));
+
+          expect(amountInETH).to.equal(0);
+        });
+      });
+    }
   });
 });

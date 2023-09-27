@@ -1564,9 +1564,8 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             alice.address,
           );
-        const unusedCollateral = await tokenVault.getUnusedCollateral(
-          alice.address,
-        );
+        const unusedCollateral =
+          await tokenVault.getTotalUnusedCollateralAmount(alice.address);
         const unusedCollateralInETH = await currencyController[
           'convertFromBaseCurrency(bytes32,uint256)'
         ](hexETH, unusedCollateral);
@@ -1591,9 +1590,8 @@ describe('Integration Test: Order Book', async () => {
           .connect(alice)
           .cancelOrder(hexWFIL, filMaturities[0], orderId);
 
-        const unusedCollateral = await tokenVault.getUnusedCollateral(
-          alice.address,
-        );
+        const unusedCollateral =
+          await tokenVault.getTotalUnusedCollateralAmount(alice.address);
         const unusedCollateralInETH = await currencyController[
           'convertFromBaseCurrency(bytes32,uint256)'
         ](hexETH, unusedCollateral);
@@ -1665,9 +1663,8 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             alice.address,
           );
-        const unusedCollateral = await tokenVault.getUnusedCollateral(
-          alice.address,
-        );
+        const unusedCollateral =
+          await tokenVault.getTotalUnusedCollateralAmount(alice.address);
         const coverage = await tokenVault.getCoverage(alice.address);
 
         expect(totalCollateralAmountBefore).to.equal(

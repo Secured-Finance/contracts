@@ -546,9 +546,9 @@ describe('TokenVault', () => {
       );
 
       expect(await tokenVaultProxy.getCoverage(bob.address)).to.equal('2500');
-      expect(await tokenVaultProxy.getUnusedCollateral(bob.address)).to.equal(
-        valueInETH.mul(2).sub(usedValue),
-      );
+      expect(
+        await tokenVaultProxy.getTotalUnusedCollateralAmount(bob.address),
+      ).to.equal(valueInETH.mul(2).sub(usedValue));
 
       await expect(
         tokenVaultProxy.connect(bob).withdraw(targetCurrency, '10000000000000'),
@@ -586,9 +586,9 @@ describe('TokenVault', () => {
 
       await tokenVaultProxy.connect(carol).deposit(targetCurrency, value);
 
-      expect(await tokenVaultProxy.getUnusedCollateral(carol.address)).to.equal(
-        valueInETH.add(borrowedAmount),
-      );
+      expect(
+        await tokenVaultProxy.getTotalUnusedCollateralAmount(carol.address),
+      ).to.equal(valueInETH.add(borrowedAmount));
       expect(
         await tokenVaultProxy.getTotalCollateralAmount(carol.address),
       ).to.equal(value.add(borrowedAmount));
@@ -632,9 +632,9 @@ describe('TokenVault', () => {
       );
 
       expect(await tokenVaultProxy.getCoverage(dave.address)).to.equal('5000');
-      expect(await tokenVaultProxy.getUnusedCollateral(dave.address)).to.equal(
-        valueInETH.sub(debtAmount),
-      );
+      expect(
+        await tokenVaultProxy.getTotalUnusedCollateralAmount(dave.address),
+      ).to.equal(valueInETH.sub(debtAmount));
     });
 
     it('Get the withdrawable amount with the min debt amount', async () => {
@@ -707,7 +707,7 @@ describe('TokenVault', () => {
         .addDepositAmount(signer.address, targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getUnusedCollateral(signer.address),
+        await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal(value);
       expect(
         await tokenVaultProxy.getTotalCollateralAmount(signer.address),
@@ -718,7 +718,7 @@ describe('TokenVault', () => {
         .removeDepositAmount(signer.address, targetCurrency, value);
 
       expect(
-        await tokenVaultProxy.getUnusedCollateral(signer.address),
+        await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal('0');
       expect(
         await tokenVaultProxy.getTotalCollateralAmount(signer.address),
@@ -761,7 +761,7 @@ describe('TokenVault', () => {
         .executeForcedReset(signer.address, targetCurrency);
 
       expect(
-        await tokenVaultProxy.getUnusedCollateral(signer.address),
+        await tokenVaultProxy.getTotalUnusedCollateralAmount(signer.address),
       ).to.equal('0');
       expect(
         await tokenVaultProxy.getTotalCollateralAmount(signer.address),
@@ -1253,5 +1253,126 @@ describe('TokenVault', () => {
         ),
       ).to.be.not.reverted;
     });
+  });
+
+  describe('Borrowable amount calculations', async () => {
+    beforeEach(async () => {
+      await tokenVaultProxy.registerCurrency(
+        targetCurrency,
+        mockERC20.address,
+        true,
+      );
+    });
+
+    const conditions = [
+      {
+        title: 'Without collateral',
+        totalCollateralAmount: '0',
+        totalUsedCollateral: '0',
+        funds: {
+          claimableAmount: '0',
+          collateralAmount: '0',
+        },
+        result: '0',
+      },
+      {
+        title: 'With collateral, unused',
+        totalCollateralAmount: '10000000',
+        totalUsedCollateral: '0',
+        funds: {
+          claimableAmount: '0',
+          collateralAmount: '0',
+        },
+        result: '8000000',
+      },
+      {
+        title: 'With collateral, partially used',
+        totalCollateralAmount: '10000000',
+        totalUsedCollateral: '2000000',
+        funds: {
+          claimableAmount: '0',
+          collateralAmount: '0',
+        },
+        result: '6000000',
+      },
+      {
+        title: 'With collateral, totally used',
+        totalCollateralAmount: '10000000',
+        totalUsedCollateral: '8000000',
+        funds: {
+          claimableAmount: '0',
+          collateralAmount: '0',
+        },
+        result: '0',
+      },
+      {
+        title: 'Without collateral, has claimable amount',
+        totalCollateralAmount: '0',
+        totalUsedCollateral: '0',
+        funds: {
+          claimableAmount: '5000000',
+          collateralAmount: '0',
+        },
+        result: '4000000',
+      },
+      {
+        title: 'With collateral, has claimable amount',
+        totalCollateralAmount: '10000000',
+        totalUsedCollateral: '0',
+        funds: {
+          claimableAmount: '5000000',
+          collateralAmount: '0',
+        },
+        result: '12000000',
+      },
+      {
+        title: 'With collateral, has funds (claimable > collateral)',
+        totalCollateralAmount: '11000000',
+        totalUsedCollateral: '0',
+        funds: {
+          claimableAmount: '5000000',
+          collateralAmount: '1000000',
+        },
+        result: '12000000',
+      },
+      {
+        title: 'With collateral, has funds (claimable == collateral)',
+        totalCollateralAmount: '15000000',
+        totalUsedCollateral: '0',
+        funds: {
+          claimableAmount: '5000000',
+          collateralAmount: '5000000',
+        },
+        result: '12000000',
+      },
+    ];
+
+    for (const condition of conditions) {
+      it(condition.title, async () => {
+        await mockCurrencyController.mock[
+          'convertFromBaseCurrency(bytes32,uint256[])'
+        ].returns([
+          condition.totalCollateralAmount,
+          condition.totalUsedCollateral,
+        ]);
+        await mockLendingMarketController.mock.calculateFunds.returns({
+          workingLendOrdersAmount: '0',
+          claimableAmount: condition.funds.claimableAmount,
+          collateralAmount: condition.funds.collateralAmount,
+          lentAmount: '0',
+          workingBorrowOrdersAmount: '0',
+          debtAmount: '0',
+          borrowedAmount: '0',
+          minDebtAmount: '0',
+        });
+
+        const amount = await tokenVaultProxy.getBorrowableAmount(
+          alice.address,
+          targetCurrency,
+        );
+
+        expect(amount).to.equal(condition.result);
+      });
+    }
   });
 });
