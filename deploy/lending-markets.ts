@@ -10,7 +10,11 @@ import { toBytes32 } from '../utils/strings';
 
 // NOTE: Active markets are 8.
 // The last market is a inactive market for Itayose.
-const MARKET_COUNT = 9;
+const MARKET_COUNT = Number(process.env.TOTAL_MARKET_COUNT || 8) + 1;
+const INITIAL_MARKET_COUNT = Number(
+  process.env.INITIAL_MARKET_COUNT || MARKET_COUNT,
+);
+const OPENING_DATE_INTERVAL = Number(process.env.OPENING_DATE_INTERVAL || 0);
 const MINIMUM_RELIABLE_AMOUNT = '100000000000';
 
 const func: DeployFunction = async function ({
@@ -98,11 +102,14 @@ const func: DeployFunction = async function ({
     }
 
     for (let i = 0; i < orderBookIds.length; i++) {
-      const { maturity, openingDate } = await lendingMarket.getOrderBookDetail(
-        orderBookIds[i],
-      );
+      const { maturity, preOpeningDate, openingDate } =
+        await lendingMarket.getOrderBookDetail(orderBookIds[i]);
       marketLog.push({
         [`OrderBookID(${currency.symbol})`]: orderBookIds[i],
+        PreOpeningDate: moment
+          .unix(preOpeningDate.toString())
+          .format('LLL')
+          .toString(),
         OpeningDate: moment
           .unix(openingDate.toString())
           .format('LLL')
@@ -118,13 +125,25 @@ const func: DeployFunction = async function ({
         : undefined;
 
       for (let i = 0; i < count; i++) {
+        const openingDateDelay =
+          orderBookIds.length + i >= INITIAL_MARKET_COUNT
+            ? (orderBookIds.length + i + 1 - INITIAL_MARKET_COUNT) *
+              OPENING_DATE_INTERVAL
+            : 0;
+
         const openingDate =
           i === count - 1
             ? nearestMaturity.toNumber()
-            : Number(process.env.INITIAL_MARKET_OPENING_DATE || genesisDate);
-        const preOpeningDate = Number(
-          process.env.INITIAL_MARKET_PRE_ORDER_DATE || openingDate - 604800,
-        );
+            : Number(process.env.INITIAL_MARKET_OPENING_DATE || genesisDate) +
+              openingDateDelay;
+
+        const preOpeningDate =
+          openingDateDelay === 0
+            ? Number(
+                process.env.INITIAL_MARKET_PRE_ORDER_DATE ||
+                  openingDate - 604800,
+              )
+            : openingDate - 604800;
 
         const receipt = await lendingMarketController
           .createOrderBook(currency.key, openingDate, preOpeningDate)
@@ -148,6 +167,7 @@ const func: DeployFunction = async function ({
 
         marketLog.push({
           [`OrderBookID`]: orderBookId,
+          PreOpeningDate: moment.unix(preOpeningDate).format('LLL').toString(),
           OpeningDate: moment
             .unix(Number(openingDate))
             .format('LLL')
