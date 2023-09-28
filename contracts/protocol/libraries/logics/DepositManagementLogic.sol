@@ -128,8 +128,8 @@ library DepositManagementLogic {
     function getBorrowableAmount(address _user, bytes32 _ccy) external view returns (uint256) {
         uint256[] memory amounts = new uint256[](2);
         (amounts[0], amounts[1], , ) = getTotalCollateralAmount(_user);
-
         amounts = AddressResolverLib.currencyController().convertFromBaseCurrency(_ccy, amounts);
+
         uint256 totalCollateralAmount = amounts[0];
         uint256 totalUsedCollateral = amounts[1];
         uint256 liquidationThresholdRate = Storage.slot().liquidationThresholdRate;
@@ -142,13 +142,10 @@ library DepositManagementLogic {
             ? funds.claimableAmount - funds.collateralAmount
             : 0;
 
-        uint256 availableCollateralAmount = ((totalCollateralAmount + unallocatedCollateralAmount) *
+        uint256 borrowableAmount = ((totalCollateralAmount + unallocatedCollateralAmount) *
             Constants.PCT_DIGIT).div(liquidationThresholdRate);
 
-        return
-            availableCollateralAmount > totalUsedCollateral
-                ? availableCollateralAmount - totalUsedCollateral
-                : 0;
+        return borrowableAmount > totalUsedCollateral ? borrowableAmount - totalUsedCollateral : 0;
     }
 
     function calculateCoverage(
