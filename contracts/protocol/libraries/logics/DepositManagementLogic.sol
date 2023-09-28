@@ -413,7 +413,7 @@ library DepositManagementLogic {
      * @notice Gets the total of amount deposited in the user's collateral of all currencies
      *  in this contract by converting it to ETH.
      * @param _user Address of collateral user
-     * @return totalDepositAmount The total deposited amount in ETH
+     * @return totalDepositAmount The total deposited amount in the base currency
      */
     function _getTotalInternalDepositAmountInBaseCurrency(address _user)
         internal

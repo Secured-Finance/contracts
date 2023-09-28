@@ -140,6 +140,35 @@ contract LendingMarketReader is MixinAddressResolver {
     }
 
     /**
+     * @notice Gets the estimation of the Itayose process.
+     * @param _ccy Currency name in bytes32
+     * @param _maturity The maturity of the order book
+     * @return openingUnitPrice The opening price when Itayose is executed
+     * @return lastLendUnitPrice The price of the last lend order filled by Itayose.
+     * @return lastBorrowUnitPrice The price of the last borrow order filled by Itayose.
+     * @return totalOffsetAmount The total amount of the orders filled by Itayose.
+     */
+    function getItayoseEstimation(bytes32 _ccy, uint256 _maturity)
+        public
+        view
+        returns (
+            uint256 openingUnitPrice,
+            uint256 lastLendUnitPrice,
+            uint256 lastBorrowUnitPrice,
+            uint256 totalOffsetAmount
+        )
+    {
+        (
+            openingUnitPrice,
+            lastLendUnitPrice,
+            lastBorrowUnitPrice,
+            totalOffsetAmount
+        ) = _getLendingMarket(_ccy).getItayoseEstimation(
+            lendingMarketController().getOrderBookId(_ccy, _maturity)
+        );
+    }
+
+    /**
      * @notice Gets the array of detailed information on the order book
      * @param _ccys Currency name list in bytes32
      * @return orderBookDetails The array of detailed information on the order book.
@@ -207,13 +236,18 @@ contract LendingMarketReader is MixinAddressResolver {
         orderBookDetail.marketUnitPrice = market.getMarketUnitPrice(orderBookId);
         orderBookDetail.lastOrderBlockNumber = market.getLastOrderBlockNumber(orderBookId);
         orderBookDetail.blockUnitPriceHistory = market.getBlockUnitPriceHistory(orderBookId);
-        orderBookDetail.openingUnitPrice = market.getItayoseLog(_maturity).openingUnitPrice;
         orderBookDetail.isReady = market.isReady(orderBookId);
 
         (, , orderBookDetail.openingDate, orderBookDetail.preOpeningDate) = market
             .getOrderBookDetail(orderBookId);
         (orderBookDetail.maxLendUnitPrice, orderBookDetail.minBorrowUnitPrice) = market
             .getCircuitBreakerThresholds(orderBookId);
+
+        if (orderBookDetail.isReady) {
+            orderBookDetail.openingUnitPrice = market.getItayoseLog(_maturity).openingUnitPrice;
+        } else {
+            (orderBookDetail.openingUnitPrice, , , ) = market.getItayoseEstimation(orderBookId);
+        }
     }
 
     /**

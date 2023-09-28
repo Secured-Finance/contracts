@@ -167,6 +167,19 @@ library OrderBookLogic {
         return _getOrderBook(_orderBookId).getLendOrderBook(_limit);
     }
 
+    function getItayoseEstimation(uint8 _orderBookId)
+        external
+        view
+        returns (
+            uint256 openingUnitPrice,
+            uint256 lastLendUnitPrice,
+            uint256 lastBorrowUnitPrice,
+            uint256 totalOffsetAmount
+        )
+    {
+        return _getOrderBook(_orderBookId).calculateItayoseResult();
+    }
+
     function getMaturities(uint8[] memory _orderBookIds)
         public
         view
@@ -263,7 +276,7 @@ library OrderBookLogic {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
         (openingUnitPrice, lastLendUnitPrice, lastBorrowUnitPrice, totalOffsetAmount) = orderBook
-            .getOpeningUnitPrice();
+            .calculateItayoseResult();
 
         if (totalOffsetAmount > 0) {
             ProtocolTypes.Side[2] memory sides = [
