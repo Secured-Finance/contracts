@@ -117,6 +117,37 @@ library DepositManagementLogic {
         (coverage, ) = calculateCoverage(_user, _emptyAdditionalFunds);
     }
 
+    function getTotalUnusedCollateralAmount(address _user) public view returns (uint256) {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, , ) = getTotalCollateralAmount(
+            _user
+        );
+
+        return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
+    }
+
+    function getBorrowableAmount(address _user, bytes32 _ccy) external view returns (uint256) {
+        uint256[] memory amounts = new uint256[](2);
+        (amounts[0], amounts[1], , ) = getTotalCollateralAmount(_user);
+        amounts = AddressResolverLib.currencyController().convertFromBaseCurrency(_ccy, amounts);
+
+        uint256 totalCollateralAmount = amounts[0];
+        uint256 totalUsedCollateral = amounts[1];
+        uint256 liquidationThresholdRate = Storage.slot().liquidationThresholdRate;
+
+        ILendingMarketController.CalculatedFunds memory funds = AddressResolverLib
+            .lendingMarketController()
+            .calculateFunds(_ccy, _user, liquidationThresholdRate);
+
+        uint256 unallocatedCollateralAmount = funds.claimableAmount > funds.collateralAmount
+            ? funds.claimableAmount - funds.collateralAmount
+            : 0;
+
+        uint256 borrowableAmount = ((totalCollateralAmount + unallocatedCollateralAmount) *
+            Constants.PCT_DIGIT).div(liquidationThresholdRate);
+
+        return borrowableAmount > totalUsedCollateral ? borrowableAmount - totalUsedCollateral : 0;
+    }
+
     function calculateCoverage(
         address _user,
         ILendingMarketController.AdditionalFunds memory _additionalFunds
@@ -233,10 +264,10 @@ library DepositManagementLogic {
     {
         uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccy];
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
-            uint256 maxWithdrawInNativeToken = getWithdrawableCollateral(_user);
+            uint256 maxWithdrawInBaseCurrency = getWithdrawableCollateral(_user);
             uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromBaseCurrency(
                 _ccy,
-                maxWithdrawInNativeToken
+                maxWithdrawInBaseCurrency
             );
 
             withdrawableAmount = depositAmount >= maxWithdraw ? maxWithdraw : depositAmount;

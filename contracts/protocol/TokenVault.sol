@@ -167,7 +167,7 @@ contract TokenVault is
     }
 
     /**
-     * @notice Gets the maximum amount of ETH that can be withdrawn from user collateral.
+     * @notice Gets the maximum amount of the base currency that can be withdrawn from user collateral.
      * @param _user User's address
      * @return Maximum amount of ETH that can be withdrawn
      */
@@ -193,22 +193,24 @@ contract TokenVault is
     /**
      * @notice Gets the rate of collateral used.
      * @param _user User's address
-     * @return coverage The rate of collateral used
+     * @return The rate of collateral used
      */
-    function getCoverage(address _user) external view override returns (uint256 coverage) {
+    function getCoverage(address _user) external view override returns (uint256) {
         return DepositManagementLogic.getCoverage(_user);
     }
 
     /**
-     * @notice Gets the total amount of the unused collateral
+     * @notice Gets the total amount of the unused collateral in the base currency
      * @param _user User's address
      * @return The total amount of unused collateral
      */
-    function getUnusedCollateral(address _user) external view override returns (uint256) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, , ) = DepositManagementLogic
-            .getTotalCollateralAmount(_user);
-
-        return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
+    function getTotalUnusedCollateralAmount(address _user)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return DepositManagementLogic.getTotalUnusedCollateralAmount(_user);
     }
 
     /**
@@ -238,6 +240,21 @@ contract TokenVault is
         returns (uint256 amount)
     {
         (amount, , ) = DepositManagementLogic.getCollateralAmount(_user, _ccy);
+    }
+
+    /**
+     * @notice Gets the borrowable amount in the selected currency.
+     * @param _user User's address
+     * @param _ccy Currency name in bytes32
+     * @return amount The borrowable amount
+     */
+    function getBorrowableAmount(address _user, bytes32 _ccy)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return DepositManagementLogic.getBorrowableAmount(_user, _ccy);
     }
 
     /**
