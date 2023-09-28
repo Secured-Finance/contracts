@@ -193,7 +193,7 @@ contract TokenVault is
     /**
      * @notice Gets the rate of collateral used.
      * @param _user User's address
-     * @return coverage The rate of collateral used
+     * @return The rate of collateral used
      */
     function getCoverage(address _user) external view override returns (uint256) {
         return DepositManagementLogic.getCoverage(_user);
@@ -202,7 +202,7 @@ contract TokenVault is
     /**
      * @notice Gets the total amount of the unused collateral in the base currency
      * @param _user User's address
-     * @return amount The total amount of unused collateral
+     * @return The total amount of unused collateral
      */
     function getTotalUnusedCollateralAmount(address _user)
         external

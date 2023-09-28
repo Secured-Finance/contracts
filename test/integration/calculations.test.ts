@@ -16,7 +16,7 @@ import { wFilToETHRate } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { Signers } from '../common/signers';
 
-describe('Integration Test: Order Estimations', async () => {
+describe('Integration Test: Calculations', async () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -448,7 +448,7 @@ describe('Integration Test: Order Estimations', async () => {
   });
 
   describe('Borrowable Amount Calculations', async () => {
-    describe('Calculate the borrowable Amount with deposit', async () => {
+    describe('Calculate the borrowable amount with deposit', async () => {
       const depositAmount = initialETHBalance.div(5);
 
       before(async () => {
@@ -495,7 +495,7 @@ describe('Integration Test: Order Estimations', async () => {
     });
 
     for (const haircut of [0, 5000, 8000]) {
-      describe(`Calculate the borrowable Amount with borrowing position (Haircut: ${haircut})`, async () => {
+      describe(`Calculate the borrowable amount with borrowing position (Haircut: ${haircut})`, async () => {
         const depositAmount = initialETHBalance.div(5);
         const orderAmount = depositAmount.div(2);
         const orderAmount2 = orderAmount
@@ -684,5 +684,91 @@ describe('Integration Test: Order Estimations', async () => {
         });
       });
     }
+
+    describe('Calculate the borrowable amount with deposit & borrowing position', async () => {
+      const depositAmount = initialETHBalance.div(5);
+      const orderAmount = depositAmount.div(2);
+
+      before(async () => {
+        [alice, bob] = await getUsers(2);
+        ethMaturities = await lendingMarketController.getMaturities(hexETH);
+      });
+
+      it('Deposit ETH', async () => {
+        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const aliceDepositAmount = await tokenVault.getDepositAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(aliceDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill an order to get a borrowing position', async () => {
+        await lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.LEND,
+            orderAmount,
+            '8000',
+            { value: orderAmount },
+          );
+
+        await tokenVault.connect(bob).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        await lendingMarketController
+          .connect(bob)
+          .executeOrder(
+            hexETH,
+            ethMaturities[0],
+            Side.BORROW,
+            orderAmount,
+            '8000',
+          );
+      });
+
+      it('Calculate the borrowable amount in ETH', async () => {
+        const amount = await tokenVault.getBorrowableAmount(
+          alice.address,
+          hexETH,
+        );
+
+        expect(amount).to.equal(
+          orderAmount
+            .mul(PCT_DIGIT)
+            .div(LIQUIDATION_THRESHOLD_RATE)
+            .add(depositAmount.mul(HAIRCUT).div(PCT_DIGIT)),
+        );
+      });
+
+      it('Calculate the borrowable amount in WFIL', async () => {
+        const amount = await tokenVault.getBorrowableAmount(
+          alice.address,
+          hexWFIL,
+        );
+
+        const amountInETH = amount
+          .mul(wFilToETHRate)
+          .div(BigNumber.from(10).pow(18));
+
+        expect(
+          amountInETH
+            .sub(
+              orderAmount
+                .mul(HAIRCUT)
+                .div(LIQUIDATION_THRESHOLD_RATE)
+                .add(depositAmount.mul(HAIRCUT).div(PCT_DIGIT)),
+            )
+            .abs(),
+        ).lte(1);
+      });
+    });
   });
 });
