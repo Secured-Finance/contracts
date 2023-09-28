@@ -77,13 +77,13 @@ function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256)
 ### getLastOrderBlockNumber
 
 ```solidity
-function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256)
+function getLastOrderBlockNumber(uint8 orderBookId) external view returns (uint256)
 ```
 
 ### getBlockUnitPriceHistory
 
 ```solidity
-function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[])
+function getBlockUnitPriceHistory(uint8 orderBookId) external view returns (uint256[])
 ```
 
 ### getBlockUnitPriceAverage
@@ -102,6 +102,12 @@ function getBorrowOrderBook(uint8 orderBookId, uint256 limit) external view retu
 
 ```solidity
 function getLendOrderBook(uint8 orderBookId, uint256 limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
+```
+
+### getItayoseEstimation
+
+```solidity
+function getItayoseEstimation(uint8 orderBookId) external view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
 ### getMaturity
@@ -263,13 +269,13 @@ function cleanUpOrders(uint8 orderBookId, address user) external returns (uint25
 ### updateOrderFeeRate
 
 ```solidity
-function updateOrderFeeRate(uint256 _orderFeeRate) external
+function updateOrderFeeRate(uint256 orderFeeRate) external
 ```
 
 ### updateCircuitBreakerLimitRange
 
 ```solidity
-function updateCircuitBreakerLimitRange(uint256 _limitRange) external
+function updateCircuitBreakerLimitRange(uint256 limitRange) external
 ```
 
 ### pauseMarket

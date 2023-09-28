@@ -146,6 +146,12 @@ function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit) external view re
 function getLendOrderBook(uint8 _orderBookId, uint256 _limit) external view returns (uint256[] unitPrices, uint256[] amounts, uint256[] quantities)
 ```
 
+### getItayoseEstimation
+
+```solidity
+function getItayoseEstimation(uint8 _orderBookId) external view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
+```
+
 ### getMaturities
 
 ```solidity

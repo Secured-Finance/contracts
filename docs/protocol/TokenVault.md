@@ -168,7 +168,7 @@ Gets the currencies accepted as collateral
 function getWithdrawableCollateral(address _user) external view returns (uint256)
 ```
 
-Gets the maximum amount of ETH that can be withdrawn from user collateral.
+Gets the maximum amount of the base currency that can be withdrawn from user collateral.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -198,7 +198,7 @@ Gets the maximum amount of the selected currency that can be withdrawn from user
 ### getCoverage
 
 ```solidity
-function getCoverage(address _user) external view returns (uint256 coverage)
+function getCoverage(address _user) external view returns (uint256)
 ```
 
 Gets the rate of collateral used.
@@ -209,15 +209,15 @@ Gets the rate of collateral used.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| coverage | uint256 | The rate of collateral used |
+| [0] | uint256 | The rate of collateral used |
 
-### getUnusedCollateral
+### getTotalUnusedCollateralAmount
 
 ```solidity
-function getUnusedCollateral(address _user) external view returns (uint256)
+function getTotalUnusedCollateralAmount(address _user) external view returns (uint256)
 ```
 
-Gets the total amount of the unused collateral
+Gets the total amount of the unused collateral in the base currency
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -241,7 +241,7 @@ Gets the total collateral amount.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| totalCollateralAmount | uint256 | The total collateral amount in ETH |
+| totalCollateralAmount | uint256 | The total collateral amount in the base currency |
 
 ### getCollateralAmount
 
@@ -259,6 +259,23 @@ Gets the total collateral amount of the selected currency.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | amount | uint256 | The collateral amount |
+
+### getBorrowableAmount
+
+```solidity
+function getBorrowableAmount(address _user, bytes32 _ccy) external view returns (uint256)
+```
+
+Gets the borrowable amount in the selected currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _user | address | User's address |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint256 | amount The borrowable amount |
 
 ### getLiquidationAmount
 

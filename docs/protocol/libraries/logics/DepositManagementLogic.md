@@ -72,6 +72,18 @@ function getCollateralAmount(address _user, bytes32 _ccy) public view returns (u
 function getCoverage(address _user) external view returns (uint256 coverage)
 ```
 
+### getTotalUnusedCollateralAmount
+
+```solidity
+function getTotalUnusedCollateralAmount(address _user) public view returns (uint256)
+```
+
+### getBorrowableAmount
+
+```solidity
+function getBorrowableAmount(address _user, bytes32 _ccy) external view returns (uint256)
+```
+
 ### calculateCoverage
 
 ```solidity
@@ -159,7 +171,7 @@ Gets the total of amount deposited in the user's collateral of all currencies
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| totalDepositAmount | uint256 | The total deposited amount in ETH |
+| totalDepositAmount | uint256 | The total deposited amount in the base currency |
 
 ### _updateUsedCurrencies
 

@@ -83,7 +83,7 @@ function isCollateral(bytes32 ccy) external view returns (bool)
 ### isCollateral
 
 ```solidity
-function isCollateral(bytes32[] ccys) external view returns (bool[] isCollateralCurrencies)
+function isCollateral(bytes32[] ccys) external view returns (bool[])
 ```
 
 ### isRegisteredCurrency
@@ -107,7 +107,7 @@ function getCollateralCurrencies() external view returns (bytes32[])
 ### getWithdrawableCollateral
 
 ```solidity
-function getWithdrawableCollateral(address user) external view returns (uint256 maxWithdraw)
+function getWithdrawableCollateral(address user) external view returns (uint256)
 ```
 
 ### getWithdrawableCollateral
@@ -119,13 +119,13 @@ function getWithdrawableCollateral(bytes32 ccy, address user) external view retu
 ### getCoverage
 
 ```solidity
-function getCoverage(address user) external view returns (uint256 coverage)
+function getCoverage(address user) external view returns (uint256)
 ```
 
-### getUnusedCollateral
+### getTotalUnusedCollateralAmount
 
 ```solidity
-function getUnusedCollateral(address user) external view returns (uint256)
+function getTotalUnusedCollateralAmount(address user) external view returns (uint256)
 ```
 
 ### getTotalCollateralAmount
@@ -138,6 +138,12 @@ function getTotalCollateralAmount(address user) external view returns (uint256)
 
 ```solidity
 function getCollateralAmount(address user, bytes32 ccy) external view returns (uint256)
+```
+
+### getBorrowableAmount
+
+```solidity
+function getBorrowableAmount(address user, bytes32 ccy) external view returns (uint256)
 ```
 
 ### getLiquidationAmount

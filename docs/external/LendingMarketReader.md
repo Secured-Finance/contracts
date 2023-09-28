@@ -136,6 +136,26 @@ Gets the order book of lend.
 | amounts | uint256[] | The array of lend order amounts |
 | quantities | uint256[] | The array of lend order quantities |
 
+### getItayoseEstimation
+
+```solidity
+function getItayoseEstimation(bytes32 _ccy, uint256 _maturity) public view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
+```
+
+Gets the estimation of the Itayose process.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+| _maturity | uint256 | The maturity of the order book |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| openingUnitPrice | uint256 | The opening price when Itayose is executed |
+| lastLendUnitPrice | uint256 | The price of the last lend order filled by Itayose. |
+| lastBorrowUnitPrice | uint256 | The price of the last borrow order filled by Itayose. |
+| totalOffsetAmount | uint256 | The total amount of the orders filled by Itayose. |
+
 ### getOrderBookDetails
 
 ```solidity
