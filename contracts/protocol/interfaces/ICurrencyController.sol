@@ -77,7 +77,9 @@ interface ICurrencyController {
 
     function getPriceFeed(bytes32 _ccy) external view returns (PriceFeed memory);
 
-    function getLastPrice(bytes32 _ccy) external view returns (int256);
+    function getLastPrice(bytes32 _ccy) external view returns (int256 price);
+
+    function getAggregatedLastPrice(bytes32 _ccy) external view returns (int256);
 
     function currencyExists(bytes32 _ccy) external view returns (bool);
 

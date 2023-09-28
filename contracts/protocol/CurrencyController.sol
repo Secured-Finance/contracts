@@ -48,7 +48,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets cached decimal of the price feed for the selected currency.
+     * @notice Gets aggregated and cached decimals of the price feeds for the selected currency.
      * @param _ccy Currency name in bytes32
      */
     function getDecimals(bytes32 _ccy) external view override returns (uint8) {
@@ -164,12 +164,28 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     }
 
     /**
-     * @notice Gets the last price for the selected currency.
+     * @notice Gets the last price of the selected currency in the base currency.
      * @param _ccy Currency name in bytes32
      * @return price The last price
      */
     function getLastPrice(bytes32 _ccy) public view override returns (int256 price) {
-        price = _getLastPrice(_ccy);
+        price = _getAggregatedLastPrice(_ccy);
+        PriceFeed memory priceFeeds = Storage.slot().priceFeeds[_ccy];
+
+        for (uint256 i; i < priceFeeds.instances.length - 1; i++) {
+            uint8 decimals = priceFeeds.instances[i].decimals();
+            price = price.div((10**decimals).toInt256());
+        }
+    }
+
+    /**
+     * @notice Gets the last price of the selected currency in the base currency.
+     * This price is returned in the aggregated decimals of all price feeds.
+     * @param _ccy Currency name in bytes32
+     * @return price The last price
+     */
+    function getAggregatedLastPrice(bytes32 _ccy) public view override returns (int256 price) {
+        price = _getAggregatedLastPrice(_ccy);
     }
 
     /**
@@ -187,8 +203,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         if (_fromCcy == _toCcy) return _amount;
         if (_amount == 0) return 0;
 
-        int256 fromPrice = _getLastPrice(_fromCcy);
-        int256 toPrice = _getLastPrice(_toCcy);
+        int256 fromPrice = _getAggregatedLastPrice(_fromCcy);
+        int256 toPrice = _getAggregatedLastPrice(_toCcy);
 
         amount = (_amount * uint256(fromPrice) * 10**Storage.slot().decimalsCaches[_toCcy]).div(
             10**Storage.slot().decimalsCaches[_fromCcy] * uint256(toPrice)
@@ -209,8 +225,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     ) external view override returns (uint256[] memory amounts) {
         if (_fromCcy == _toCcy) return _amounts;
 
-        int256 fromPrice = _getLastPrice(_fromCcy);
-        int256 toPrice = _getLastPrice(_toCcy);
+        int256 fromPrice = _getAggregatedLastPrice(_fromCcy);
+        int256 toPrice = _getAggregatedLastPrice(_toCcy);
         uint256 toDecimals = Storage.slot().decimalsCaches[_toCcy];
         uint256 fromDecimals = Storage.slot().decimalsCaches[_fromCcy];
         amounts = new uint256[](_amounts.length);
@@ -238,7 +254,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     {
         if (_amount == 0) return 0;
 
-        amount = (_amount * _getLastPrice(_ccy).toUint256()).div(
+        amount = (_amount * _getAggregatedLastPrice(_ccy).toUint256()).div(
             10**Storage.slot().decimalsCaches[_ccy]
         );
     }
@@ -257,7 +273,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
     {
         if (_amount == 0) return 0;
 
-        amount = (_amount * _getLastPrice(_ccy)).div(
+        amount = (_amount * _getAggregatedLastPrice(_ccy)).div(
             (10**Storage.slot().decimalsCaches[_ccy]).toInt256()
         );
     }
@@ -275,7 +291,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         returns (uint256[] memory amounts)
     {
         amounts = new uint256[](_amounts.length);
-        uint256 price = _getLastPrice(_ccy).toUint256();
+        uint256 price = _getAggregatedLastPrice(_ccy).toUint256();
         uint256 decimals = Storage.slot().decimalsCaches[_ccy];
 
         for (uint256 i; i < _amounts.length; i++) {
@@ -297,7 +313,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         returns (uint256 amount)
     {
         amount = (_amount * 10**Storage.slot().decimalsCaches[_ccy]).div(
-            _getLastPrice(_ccy).toUint256()
+            _getAggregatedLastPrice(_ccy).toUint256()
         );
     }
 
@@ -314,7 +330,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         returns (uint256[] memory amounts)
     {
         amounts = new uint256[](_amounts.length);
-        uint256 price = _getLastPrice(_ccy).toUint256();
+        uint256 price = _getAggregatedLastPrice(_ccy).toUint256();
         uint256 decimals = Storage.slot().decimalsCaches[_ccy];
 
         for (uint256 i; i < _amounts.length; i++) {
@@ -324,7 +340,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         }
     }
 
-    function _getLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice) {
+    function _getAggregatedLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice) {
         PriceFeed memory priceFeeds = Storage.slot().priceFeeds[_ccy];
         totalPrice = 1;
 

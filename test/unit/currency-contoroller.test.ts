@@ -196,6 +196,9 @@ describe('CurrencyController', () => {
         ),
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
+      expect(
+        await currencyControllerProxy.getAggregatedLastPrice(currency),
+      ).to.equal(200);
       expect(await currencyControllerProxy.getLastPrice(currency)).to.equal(
         200,
       );
@@ -213,10 +216,22 @@ describe('CurrencyController', () => {
         owner,
         MockV3Aggregator.abi,
       );
-      await newMockPriceFeed1.mock.latestRoundData.returns(0, 200, 0, now, 0);
+      await newMockPriceFeed1.mock.latestRoundData.returns(
+        0,
+        '2000000',
+        0,
+        now,
+        0,
+      );
       await newMockPriceFeed1.mock.getRoundData.returns(0, 200, 0, 2000, 0);
       await newMockPriceFeed1.mock.decimals.returns(6);
-      await newMockPriceFeed2.mock.latestRoundData.returns(0, 400, 0, now, 0);
+      await newMockPriceFeed2.mock.latestRoundData.returns(
+        0,
+        '4000000000000000000',
+        0,
+        now,
+        0,
+      );
       await newMockPriceFeed2.mock.getRoundData.returns(0, 500, 0, 1000, 0);
       await newMockPriceFeed2.mock.decimals.returns(18);
 
@@ -230,8 +245,11 @@ describe('CurrencyController', () => {
       ).to.emit(currencyControllerProxy, 'PriceFeedUpdated');
 
       expect(await currencyControllerProxy.getDecimals(currency)).to.equal(18);
+      expect(
+        await currencyControllerProxy.getAggregatedLastPrice(currency),
+      ).to.equal('8000000000000000000000000');
       expect(await currencyControllerProxy.getLastPrice(currency)).to.equal(
-        80000,
+        '8000000000000000000',
       );
     });
 
