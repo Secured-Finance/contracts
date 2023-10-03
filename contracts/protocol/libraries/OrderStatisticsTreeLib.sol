@@ -103,19 +103,19 @@ library OrderStatisticsTreeLib {
     }
 
     function exists(Tree storage self, uint256 value) internal view returns (bool _exists) {
-        if (value == EMPTY) return false;
         if (value == self.root) return true;
-        // if (self.nodes[value].parent != EMPTY) return true;
+
         uint256 cursor = value;
         while (self.nodes[cursor].parent != EMPTY) {
             uint256 parent = self.nodes[cursor].parent;
-            if (self.nodes[parent].left != cursor && self.nodes[parent].right != cursor) {
+            Node storage gn = self.nodes[parent];
+            if (gn.left != cursor && gn.right != cursor) {
                 return false;
             }
             if (parent == self.root) {
                 return true;
             }
-            cursor = self.nodes[cursor].parent;
+            cursor = parent;
         }
         return false;
     }

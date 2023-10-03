@@ -27,7 +27,7 @@ library LendingMarketStorage {
         mapping(uint8 => OrderBookLib.OrderBook) orderBooks;
         // Mapping from maturity to boolean if the market is ready or not per maturity
         mapping(uint256 => bool) isReady;
-        // // Mapping from maturity to Itayose log
+        // Mapping from maturity to Itayose log
         mapping(uint256 => ItayoseLog) itayoseLogs;
     }
 
