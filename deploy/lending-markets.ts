@@ -15,6 +15,7 @@ const INITIAL_MARKET_COUNT = Number(
   process.env.INITIAL_MARKET_COUNT || MARKET_COUNT,
 );
 const OPENING_DATE_INTERVAL = Number(process.env.OPENING_DATE_INTERVAL || 0);
+const DEFAULT_PRE_ORDER_PERIOD = 604800;
 const MINIMUM_RELIABLE_AMOUNT = '100000000000';
 
 const func: DeployFunction = async function ({
@@ -141,9 +142,9 @@ const func: DeployFunction = async function ({
           openingDateDelay === 0
             ? Number(
                 process.env.INITIAL_MARKET_PRE_ORDER_DATE ||
-                  openingDate - 604800,
+                  openingDate - DEFAULT_PRE_ORDER_PERIOD,
               )
-            : openingDate - 604800;
+            : openingDate - DEFAULT_PRE_ORDER_PERIOD;
 
         const receipt = await lendingMarketController
           .createOrderBook(currency.key, openingDate, preOpeningDate)
