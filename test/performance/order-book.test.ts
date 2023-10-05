@@ -234,10 +234,10 @@ describe('Performance Test: Order Book', async () => {
             const receipt = await tx.wait();
 
             const headerName = `GasCosts(${name})`;
-            if (!log[headerName]) {
-              log[headerName] = {};
+            if (!log[test]) {
+              log[test] = {};
             }
-            log[headerName][test] = receipt.gasUsed.toString();
+            log[test][headerName] = receipt.gasUsed.toNumber();
           });
         }
       });
@@ -342,11 +342,80 @@ describe('Performance Test: Order Book', async () => {
 
           const receipt = await tx.wait();
 
-          const headerName = `GasCosts`;
-          if (!log[headerName]) {
-            log[headerName] = {};
+          const headerName = 'GasCosts';
+          if (!log[test]) {
+            log[test] = {};
           }
-          log[headerName][test] = receipt.gasUsed.toString();
+          log[test][headerName] = receipt.gasUsed.toNumber();
+        });
+      }
+    });
+
+    describe('Show results', async () => {
+      it('Gas Costs', () => {
+        console.table(log);
+      });
+    });
+  });
+
+  describe('Place an order with active orders', async () => {
+    const log: Record<string, number>[] = [];
+    const orderAmount = BigNumber.from('500000');
+
+    before(async () => {
+      await initializeContracts();
+    });
+
+    describe(`USDC market`, async () => {
+      before('Set lending markets', async () => {
+        signerIdx++;
+      });
+
+      it('Deposit', async () => {
+        await usdcToken
+          .connect(signers[0])
+          .transfer(signers[signerIdx].address, orderAmount.mul(20))
+          .then((tx) => tx.wait());
+
+        await usdcToken
+          .connect(signers[signerIdx])
+          .approve(tokenVault.address, ethers.constants.MaxUint256)
+          .then((tx) => tx.wait());
+
+        await tokenVault
+          .connect(signers[signerIdx])
+          .deposit(hexUSDC, orderAmount.mul(20))
+          .then((tx) => tx.wait());
+      });
+
+      for (let i = 0; i < 20; i++) {
+        it(`Active orders: ${i}`, async () => {
+          let unitPrice = 8000 - i - 1;
+
+          if (i != 0) {
+            await lendingMarketController
+              .connect(signers[signerIdx])
+              .executeOrder(
+                hexUSDC,
+                maturities[0],
+                Side.LEND,
+                orderAmount,
+                unitPrice,
+              )
+              .then((tx) => tx.wait());
+          }
+
+          const estimateGas = await lendingMarketController
+            .connect(signers[signerIdx])
+            .estimateGas.executeOrder(
+              hexUSDC,
+              maturities[0],
+              Side.LEND,
+              orderAmount,
+              unitPrice - 1,
+            );
+
+          log.push({ 'GasCosts(USDC)': estimateGas.toNumber() });
         });
       }
     });
