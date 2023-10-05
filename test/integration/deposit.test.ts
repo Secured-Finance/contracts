@@ -1005,8 +1005,6 @@ describe('Integration Test: Deposit', async () => {
       await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH, {
         value: orderAmountInETH,
       });
-      const totalCollateralAmountBefore =
-        await tokenVault.getTotalCollateralAmount(alice.address);
 
       await wFILToken
         .connect(alice)
@@ -1062,6 +1060,91 @@ describe('Integration Test: Deposit', async () => {
 
       expect(coverage.sub('8000').abs()).lte(1);
       expect(balanceAfter.sub(balanceBefore)).to.lte(orderAmountInETH);
+    });
+  });
+
+  describe('Place orders, Withdraw collateral', async () => {
+    const orderAmount = initialETHBalance.div(5);
+    const depositAmount = orderAmount.mul(2);
+
+    before(async () => {
+      [alice, bob] = await getUsers(2);
+      ethMaturities = await lendingMarketController.getMaturities(hexETH);
+    });
+
+    it('Deposit ETH', async () => {
+      await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+        value: depositAmount,
+      });
+      await tokenVault.connect(bob).deposit(hexETH, depositAmount, {
+        value: depositAmount,
+      });
+    });
+
+    it('Place orders', async () => {
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          ethMaturities[0],
+          Side.BORROW,
+          orderAmount,
+          '9500',
+        );
+
+      await lendingMarketController
+        .connect(bob)
+        .executeOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '9400');
+
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          ethMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
+        hexETH,
+        ethMaturities[0],
+        bob.address,
+      );
+
+      expect(bobFV).to.equal(0);
+      expect(aliceFV).to.equal(0);
+    });
+
+    it('Check withdrawable amount', async () => {
+      expect(
+        await tokenVault['getWithdrawableCollateral(bytes32,address)'](
+          hexETH,
+          alice.address,
+        ),
+      ).to.equal(
+        depositAmount.sub(
+          orderAmount.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+        ),
+      );
+      expect(
+        await tokenVault['getWithdrawableCollateral(bytes32,address)'](
+          hexETH,
+          bob.address,
+        ),
+      ).to.equal(depositAmount.sub(orderAmount));
+    });
+
+    it('Withdraw ETH', async () => {
+      await expect(tokenVault.connect(alice).withdraw(hexETH, depositAmount))
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(
+          alice.address,
+          hexETH,
+          depositAmount.sub(
+            orderAmount.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+          ),
+        );
+
+      await expect(tokenVault.connect(bob).withdraw(hexETH, depositAmount))
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(bob.address, hexETH, depositAmount.sub(orderAmount));
     });
   });
 

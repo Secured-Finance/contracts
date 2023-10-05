@@ -245,7 +245,7 @@ library DepositManagementLogic {
             usedCollateral * Storage.slot().liquidationThresholdRate
         ) {
             // NOTE: The formula is:
-            // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
+            // maxWithdraw = (totalCollateral / liquidationThresholdRate) - totalUsedCollateral.
             uint256 maxWithdraw = (totalCollateral *
                 Constants.PRICE_DIGIT -
                 (usedCollateral) *
@@ -262,7 +262,7 @@ library DepositManagementLogic {
         view
         returns (uint256 withdrawableAmount)
     {
-        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccy];
+        uint256 depositAmount = getDepositAmount(_user, _ccy);
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
             uint256 maxWithdrawInBaseCurrency = getWithdrawableCollateral(_user);
             uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromBaseCurrency(
@@ -272,7 +272,7 @@ library DepositManagementLogic {
 
             withdrawableAmount = depositAmount >= maxWithdraw ? maxWithdraw : depositAmount;
         } else {
-            withdrawableAmount = getDepositAmount(_user, _ccy);
+            withdrawableAmount = depositAmount;
         }
     }
 

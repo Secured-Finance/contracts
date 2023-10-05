@@ -417,6 +417,16 @@ describe('TokenVault', () => {
       await mockLendingMarketController.mock.isRedemptionRequired.returns(
         false,
       );
+      await mockLendingMarketController.mock.calculateFunds.returns({
+        workingLendOrdersAmount: 0,
+        claimableAmount: 0,
+        collateralAmount: 0,
+        lentAmount: 0,
+        workingBorrowOrdersAmount: 0,
+        debtAmount: 0,
+        borrowedAmount: 0,
+        minDebtAmount: 0,
+      });
 
       await tokenVaultProxy.registerCurrency(
         targetCurrency,
@@ -829,9 +839,6 @@ describe('TokenVault', () => {
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256)'
       ].returns(value);
-      await mockCurrencyController.mock[
-        'convertToBaseCurrency(bytes32,int256)'
-      ].returns(valueInETH);
 
       await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
 
@@ -848,6 +855,106 @@ describe('TokenVault', () => {
           signer.address,
         ),
       ).to.equal(value);
+
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ].returns(valueInETH);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(valueInETH);
+    });
+
+    it('Get the withdrawable amount per currency with the borrowing working orders', async () => {
+      const signer = getUser();
+      const value = ethers.BigNumber.from('30000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const usedValue = ethers.BigNumber.from('10000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ].returns(value);
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        workingBorrowOrdersAmount: usedValue,
+      });
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
+      ).to.equal(
+        valueInETH.sub(usedValue.mul(LIQUIDATION_THRESHOLD_RATE).div('10000')),
+      );
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(value);
+
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ].returns(valueInETH);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(valueInETH);
+    });
+
+    it('Get the withdrawable amount per currency with the lending working orders', async () => {
+      const signer = getUser();
+      const value = ethers.BigNumber.from('40000000000000');
+      const valueInETH = ethers.BigNumber.from('20000000000000');
+      const usedValue = ethers.BigNumber.from('10000000000000');
+
+      // Set up for the mocks
+      await mockCurrencyController.mock[
+        'convertToBaseCurrency(bytes32,uint256)'
+      ].returns(valueInETH);
+      await mockCurrencyController.mock[
+        'convertFromBaseCurrency(bytes32,uint256)'
+      ].returns(value);
+
+      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
+        workingLendOrdersAmount: usedValue,
+      });
+      await mockLendingMarketController.mock.calculateFunds.returns({
+        workingLendOrdersAmount: usedValue,
+        claimableAmount: 0,
+        collateralAmount: 0,
+        lentAmount: 0,
+        workingBorrowOrdersAmount: 0,
+        debtAmount: 0,
+        borrowedAmount: 0,
+        minDebtAmount: 0,
+      });
+
+      await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
+
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(address)'](
+          signer.address,
+        ),
+      ).to.equal(valueInETH.sub(usedValue));
+      expect(
+        await tokenVaultProxy['getWithdrawableCollateral(bytes32,address)'](
+          targetCurrency,
+          signer.address,
+        ),
+      ).to.equal(value.sub(usedValue));
 
       await mockCurrencyController.mock[
         'convertFromBaseCurrency(bytes32,uint256)'
