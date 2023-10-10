@@ -50,7 +50,6 @@ library FundManagementLogic {
         int256 presentValue;
         uint256 claimableAmount;
         uint256 debtAmount;
-        uint256 minDebtAmount;
         int256 futureValue;
         uint256 workingLendOrdersAmount;
         uint256 lentAmount;
@@ -368,7 +367,6 @@ library FundManagementLogic {
         vars.market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         vars.futureValueVault = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]);
         vars.defaultOrderBookId = Storage.slot().orderBookIdLists[_ccy][0];
-        // vars.minDebtUnitPrice = Storage.slot().minDebtUnitPrices[_ccy];
         vars.minDebtUnitPrice = _minDebtUnitPrice;
 
         if (_maturity == 0) {
@@ -449,16 +447,6 @@ library FundManagementLogic {
                         actualFunds.claimableAmount += presentValue.toUint256();
                     } else if (presentValue < 0) {
                         actualFunds.debtAmount += (-presentValue).toUint256();
-                    }
-
-                    if (futureValue < 0) {
-                        uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
-                            vars.maturities[i],
-                            vars.minDebtUnitPrice
-                        );
-
-                        actualFunds.minDebtAmount += ((-futureValue).toUint256() *
-                            currentMinDebtUnitPrice).div(Constants.PRICE_DIGIT);
                     }
 
                     // Set future value.
@@ -577,7 +565,6 @@ library FundManagementLogic {
             _additionalFunds.workingBorrowOrdersAmount;
         funds.debtAmount = actualFunds.debtAmount + _additionalFunds.debtAmount;
         funds.borrowedAmount = actualFunds.borrowedAmount + _additionalFunds.borrowedAmount;
-        funds.minDebtAmount = actualFunds.minDebtAmount;
 
         if (funds.claimableAmount > 0) {
             // If the debt and claimable amount are in the same currency, the claimable amount can be allocated
@@ -648,7 +635,6 @@ library FundManagementLogic {
             // 4: workingBorrowOrdersAmount
             // 5: debtAmount
             // 6: borrowedAmount
-            // 7: minDebtAmount
             ILendingMarketController.CalculatedFunds memory funds = calculateFunds(
                 vars.ccys[i],
                 vars.user,
@@ -663,7 +649,6 @@ library FundManagementLogic {
             amounts[4] = funds.workingBorrowOrdersAmount;
             amounts[5] = funds.debtAmount;
             amounts[6] = funds.borrowedAmount;
-            amounts[7] = funds.minDebtAmount;
 
             if (vars.ccys[i] == vars.additionalFunds.ccy) {
                 // plusDepositAmount: borrowedAmount
@@ -680,7 +665,6 @@ library FundManagementLogic {
             totalFunds.collateralAmount += amountsInBaseCurrency[2];
             totalFunds.workingBorrowOrdersAmount += amountsInBaseCurrency[4];
             totalFunds.debtAmount += amountsInBaseCurrency[5];
-            totalFunds.minDebtAmount += amountsInBaseCurrency[7];
 
             // NOTE: Lent amount and working lend orders amount are excluded here as they are not used
             // for the collateral calculation.
@@ -901,6 +885,7 @@ library FundManagementLogic {
                     uint256 unitPrice = vars.market.getMarketUnitPrice(vars.orderBookId);
                     funds.futureValue = futureValueInMaturity;
 
+                    // Apply min debt unit price if the future value is negative (debt).
                     if (funds.futureValue < 0) {
                         uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
                             currentMaturity,

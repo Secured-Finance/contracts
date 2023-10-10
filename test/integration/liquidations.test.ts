@@ -11,6 +11,7 @@ import {
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
+  PCT_DIGIT,
 } from '../common/constants';
 import {
   usdcToETHRate,
@@ -34,6 +35,7 @@ describe('Integration Test: Liquidations', async () => {
   let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
+  let lendingMarketReader: Contract;
   let reserveFund: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
@@ -133,7 +135,7 @@ describe('Integration Test: Liquidations', async () => {
         .approve(tokenVault.address, ethers.constants.MaxUint256);
     });
 
-  const rotateAllMarkets = async (unitPrice = '8000') => {
+  const rotateAllMarkets = async (unitPrice = '9600') => {
     const { timestamp } = await ethers.provider.getBlock('latest');
 
     if (usdcMaturities[0].gt(timestamp)) {
@@ -240,6 +242,7 @@ describe('Integration Test: Liquidations', async () => {
       currencyController,
       tokenVault,
       lendingMarketController,
+      lendingMarketReader,
       reserveFund,
       wETHToken,
       wFILToken,
@@ -344,7 +347,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -366,7 +369,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         await lendingMarketController
@@ -376,7 +379,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.LEND,
             '10000000000000000000',
-            '7999',
+            '9599',
           );
 
         expect(
@@ -568,7 +571,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
-            '8000',
+            '9600',
           );
         await lendingMarketController
           .connect(owner)
@@ -577,7 +580,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -599,7 +602,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.LEND,
             filledOrderAmount,
-            '7999',
+            '9599',
           );
 
         expect(
@@ -724,7 +727,7 @@ describe('Integration Test: Liquidations', async () => {
     });
 
     describe('Execute auto-roll a borrowing position, Execute liquidation after auto-roll', async () => {
-      const filledOrderAmount = BigNumber.from('180000000000000000000');
+      const filledOrderAmount = BigNumber.from('210000000000000000000');
       const depositAmount = BigNumber.from('1000000000000000000');
       let lendingInfo: LendingInfo;
       let aliceInitialBalance: BigNumber;
@@ -752,7 +755,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
-            '8000',
+            '9600',
           );
         await lendingMarketController
           .connect(owner)
@@ -761,7 +764,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -783,7 +786,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.LEND,
             '10000000000000000000',
-            '7999',
+            '9599',
           );
 
         expect(
@@ -794,7 +797,7 @@ describe('Integration Test: Liquidations', async () => {
       it('Withdraw', async () => {
         await tokenVault
           .connect(alice)
-          .withdraw(hexWFIL, '200000000000000000000');
+          .withdraw(hexWFIL, '210000000000000000000');
 
         const aliceBalanceAfter = await wFILToken.balanceOf(alice.address);
         expect(aliceBalanceAfter.sub(aliceInitialBalance)).to.equal(
@@ -814,7 +817,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         const lendingInfoBefore = await lendingInfo.load('Before', {
@@ -879,7 +882,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -901,7 +904,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         expect(
@@ -1029,7 +1032,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -1051,7 +1054,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         expect(
@@ -1176,7 +1179,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmountInUSDC,
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -1198,7 +1201,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmountInUSDC,
-            '8000',
+            '9600',
           );
 
         expect(
@@ -1221,7 +1224,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL.div(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -1243,7 +1246,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL,
-            '8000',
+            '9600',
           );
 
         expect(
@@ -1360,7 +1363,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.BORROW,
             orderAmountInUSDC,
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -1382,7 +1385,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.BORROW,
             orderAmountInUSDC.mul(2),
-            '8000',
+            '9600',
           );
 
         await lendingMarketController
@@ -1392,7 +1395,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.LEND,
             orderAmountInUSDC,
-            '8000',
+            '9600',
           );
 
         expect(
@@ -1415,7 +1418,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.BORROW,
             orderAmountInFIL.div(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -1437,7 +1440,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.BORROW,
             orderAmountInFIL,
-            '8000',
+            '9600',
           );
 
         await lendingMarketController
@@ -1447,7 +1450,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.LEND,
             orderAmountInFIL,
-            '8000',
+            '9600',
           );
 
         expect(
@@ -1483,7 +1486,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmountInUSDC.mul(2),
-            '8000',
+            '9600',
           );
       });
 
@@ -1542,8 +1545,13 @@ describe('Integration Test: Liquidations', async () => {
           .div(usdcToETHRate);
 
         expect(
-          liquidatorInfoAfter.pvs[1].mul(100).div(pv0InUSDC).abs(),
-        ).to.equal(105);
+          BigNumberJS(liquidatorInfoAfter.pvs[1].toString())
+            .times(PCT_DIGIT)
+            .div(pv0InUSDC.toString())
+            .abs()
+            .dp(0)
+            .toString(),
+        ).to.equal('10500');
       });
     });
 
@@ -1591,7 +1599,7 @@ describe('Integration Test: Liquidations', async () => {
               filMaturities[i],
               Side.BORROW,
               orderAmountInUSDC.div(3).mul(1 + i),
-              '8000',
+              '9600',
             );
 
           await expect(
@@ -1613,7 +1621,7 @@ describe('Integration Test: Liquidations', async () => {
               filMaturities[i],
               Side.LEND,
               orderAmountInUSDC,
-              '8000',
+              '9600',
             );
         }
 
@@ -1637,7 +1645,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL.div(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -1659,7 +1667,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL,
-            '8000',
+            '9600',
           );
 
         expect(
@@ -1986,7 +1994,7 @@ describe('Integration Test: Liquidations', async () => {
     describe('Repay and redeem positions', async () => {
       const filledOrderAmount = BigNumber.from('200000000000000000000');
       const depositAmount = BigNumber.from('2000000000000000000');
-      const orderUnitPrice = '8000';
+      const orderUnitPrice = '9600';
 
       let lendingInfo: LendingInfo;
 
@@ -2054,7 +2062,10 @@ describe('Integration Test: Liquidations', async () => {
 
         await tokenVault
           .connect(alice)
-          .deposit(hexWFIL, filledOrderAmount.div(4));
+          .deposit(
+            hexWFIL,
+            filledOrderAmount.mul(PCT_DIGIT).div(9600).sub(filledOrderAmount),
+          );
         await lendingMarketController
           .connect(alice)
           .executeRepayment(hexWFIL, filMaturities[0]);
@@ -2080,7 +2091,7 @@ describe('Integration Test: Liquidations', async () => {
     describe('Force a repayment of a borrowing position', async () => {
       const filledOrderAmount = BigNumber.from('200000000000000000000');
       const depositAmount = BigNumber.from('2000000000000000000');
-      const orderUnitPrice = '8000';
+      const orderUnitPrice = '9600';
 
       let lendingInfo: LendingInfo;
       let aliceInitialBalance: BigNumber;
@@ -2224,7 +2235,7 @@ describe('Integration Test: Liquidations', async () => {
     describe('Force a repayment of a insolvent borrowing position', async () => {
       const filledOrderAmount = BigNumber.from('200000000000000000000');
       const depositAmount = BigNumber.from('2000000000000000000');
-      const orderUnitPrice = '8000';
+      const orderUnitPrice = '9600';
 
       let lendingInfo: LendingInfo;
       let aliceInitialBalance: BigNumber;
@@ -2400,7 +2411,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount,
-            '8000',
+            '9600',
           );
         await lendingMarketController
           .connect(owner)
@@ -2409,7 +2420,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -2431,7 +2442,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[0],
             Side.LEND,
             '10000000000000000000',
-            '7999',
+            '9599',
           );
 
         expect(
@@ -2462,7 +2473,7 @@ describe('Integration Test: Liquidations', async () => {
             filMaturities[1],
             Side.BORROW,
             filledOrderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         await lendingInfo.load('Before', {
@@ -2498,7 +2509,7 @@ describe('Integration Test: Liquidations', async () => {
     describe('Force a repayment of a insolvent borrowing position after auto-roll', async () => {
       const filledOrderAmount = BigNumber.from('200000000000000000000');
       const depositAmount = BigNumber.from('2000000000000000000');
-      const orderUnitPrice = '8000';
+      const orderUnitPrice = '9600';
 
       let lendingInfo: LendingInfo;
       let aliceInitialBalance: BigNumber;

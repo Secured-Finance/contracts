@@ -67,7 +67,6 @@ describe('TokenVault', () => {
       workingBorrowOrdersAmount?: number | BigNumber | string;
       debtAmount?: number | BigNumber | string;
       borrowedAmount?: number | BigNumber | string;
-      minDebtAmount?: number | BigNumber | string;
     } = {},
   ) => {
     return mockLendingMarketController.mock.calculateTotalFundsInBaseCurrency.returns(
@@ -83,7 +82,6 @@ describe('TokenVault', () => {
         workingBorrowOrdersAmount: inputs.workingBorrowOrdersAmount || 0,
         debtAmount: inputs.debtAmount || 0,
         borrowedAmount: inputs.borrowedAmount || 0,
-        minDebtAmount: inputs.minDebtAmount || 0,
       },
     );
   };
@@ -125,7 +123,6 @@ describe('TokenVault', () => {
       workingBorrowOrdersAmount: 0,
       debtAmount: 0,
       borrowedAmount: 0,
-      minDebtAmount: 0,
     });
 
     await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock();
@@ -425,7 +422,6 @@ describe('TokenVault', () => {
         workingBorrowOrdersAmount: 0,
         debtAmount: 0,
         borrowedAmount: 0,
-        minDebtAmount: 0,
       });
 
       await tokenVaultProxy.registerCurrency(
@@ -645,48 +641,6 @@ describe('TokenVault', () => {
       expect(
         await tokenVaultProxy.getTotalUnusedCollateralAmount(dave.address),
       ).to.equal(valueInETH.sub(debtAmount));
-    });
-
-    it('Get the withdrawable amount with the min debt amount', async () => {
-      const value = ethers.BigNumber.from('20000000000000');
-      const valueInETH = ethers.BigNumber.from('20000000000000');
-      const totalPresentValue = ethers.BigNumber.from('20000000000000');
-      const debtAmount = ethers.BigNumber.from('10000000000000');
-      const minDebtAmount = ethers.BigNumber.from('12000000000000');
-
-      // Set up for the mocks
-      await mockCurrencyController.mock[
-        'convertToBaseCurrency(bytes32,uint256)'
-      ].returns(valueInETH);
-      await mockCurrencyController.mock[
-        'convertFromBaseCurrency(bytes32,uint256)'
-      ].returns(valueInETH);
-      await mockCurrencyController.mock[
-        'convertToBaseCurrency(bytes32,int256)'
-      ].returns(valueInETH);
-      await mockLendingMarketController.mock.getTotalPresentValueInBaseCurrency.returns(
-        totalPresentValue,
-      );
-
-      await updateReturnValuesOfCalculateTotalFundsInBaseCurrencyMock({
-        debtAmount,
-        minDebtAmount,
-      });
-
-      await tokenVaultProxy.connect(ellen).deposit(targetCurrency, value);
-
-      expect(
-        await tokenVaultProxy['getWithdrawableCollateral(address)'](
-          ellen.address,
-        ),
-      ).to.equal(
-        valueInETH
-          .mul('10000')
-          .sub(minDebtAmount.mul(LIQUIDATION_THRESHOLD_RATE))
-          .div('10000'),
-      );
-
-      expect(await tokenVaultProxy.getCoverage(ellen.address)).to.equal('5000');
     });
 
     it('Add and remove the collateral amount', async () => {
@@ -939,7 +893,6 @@ describe('TokenVault', () => {
         workingBorrowOrdersAmount: 0,
         debtAmount: 0,
         borrowedAmount: 0,
-        minDebtAmount: 0,
       });
 
       await tokenVaultProxy.connect(signer).deposit(targetCurrency, value);
@@ -1470,7 +1423,6 @@ describe('TokenVault', () => {
           workingBorrowOrdersAmount: '0',
           debtAmount: '0',
           borrowedAmount: '0',
-          minDebtAmount: '0',
         });
 
         const amount = await tokenVaultProxy.getBorrowableAmount(

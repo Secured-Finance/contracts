@@ -21,7 +21,7 @@ import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
-describe.only('Integration Test: Deposit', async () => {
+describe('Integration Test: Deposit', async () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
