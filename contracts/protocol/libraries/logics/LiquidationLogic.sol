@@ -68,7 +68,7 @@ library LiquidationLogic {
         FundManagementLogic.cleanUpFunds(_debtCcy, _user);
 
         uint256 debtAmount = FundManagementLogic
-            .getActualFunds(_debtCcy, _debtMaturity, _user)
+            .getActualFunds(_debtCcy, _debtMaturity, _user, 0)
             .debtAmount;
 
         if (debtAmount == 0) revert NoDebt(_user, _debtCcy, _debtMaturity);
@@ -218,7 +218,8 @@ library LiquidationLogic {
         FundManagementLogic.ActualFunds memory funds = FundManagementLogic.getActualFunds(
             _debtCcy,
             _debtMaturity,
-            _user
+            _user,
+            0
         );
 
         if (funds.futureValue >= 0) revert NoDebt(_user, _debtCcy, _debtMaturity);

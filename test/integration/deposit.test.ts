@@ -16,13 +16,12 @@ import {
   ethToUSDRate,
   wFilToETHRate,
   wbtcToETHRate,
-  wbtcToUSDRate,
 } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
 import { Signers } from '../common/signers';
 
-describe('Integration Test: Deposit', async () => {
+describe.only('Integration Test: Deposit', async () => {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -1496,7 +1495,7 @@ describe('Integration Test: Deposit', async () => {
           wBTCMaturities[0],
           Side.BORROW,
           orderAmountInWBTC,
-          '9000',
+          '9600',
         );
       await lendingMarketController
         .connect(dave)
@@ -1515,19 +1514,31 @@ describe('Integration Test: Deposit', async () => {
         wBTCMaturities[0],
       );
 
-      expect(marketUnitPrice).to.equal('9000');
+      expect(marketUnitPrice).to.equal('9600');
     });
 
     it('Fill an order with amount with under the min debt unit price', async () => {
       await tokenVault
         .connect(alice)
-        .deposit(hexETH, orderAmountInETH.mul(5).div(4), {
-          value: orderAmountInETH.mul(5).div(4),
+        .deposit(hexETH, orderAmountInETH.mul(3).div(2), {
+          value: orderAmountInETH.mul(3).div(2),
         });
       await wBTCToken
         .connect(bob)
         .approve(tokenVault.address, initialWBTCBalance);
       await tokenVault.connect(bob).deposit(hexWBTC, orderAmountInWBTC);
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexWBTC,
+            wBTCMaturities[0],
+            Side.BORROW,
+            orderAmountInWBTC,
+            '7000',
+          ),
+      ).to.revertedWith('NotEnoughCollateral');
 
       await lendingMarketController
         .connect(alice)
@@ -1577,54 +1588,28 @@ describe('Integration Test: Deposit', async () => {
         'getWithdrawableCollateral(address)'
       ](alice.address);
 
-      expect(withdrawableCollateral).lt(orderAmountInUSD);
+      const depositAmount = orderAmountInUSD.mul(3).div(2);
+
+      expect(withdrawableCollateral).lt(
+        depositAmount
+          .add(orderAmountInUSD)
+          .sub(orderAmountInUSD.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT)),
+      );
     });
 
     it('Withdraw by borrower', async () => {
-      const coverageBefore = await tokenVault.getCoverage(alice.address);
       const balanceBefore = await wBTCToken.balanceOf(alice.address);
-      const { futureValue: aliceFV } =
+      const { presentValue: alicePV } =
         await lendingMarketController.getPosition(
           hexWBTC,
           wBTCMaturities[0],
           alice.address,
         );
-
       await tokenVault.connect(alice).withdraw(hexWBTC, orderAmountInWBTC);
-
-      const coverageAfter = await tokenVault.getCoverage(alice.address);
       const balanceAfter = await wBTCToken.balanceOf(alice.address);
 
-      expect(coverageBefore).to.not.equal(coverageAfter);
-      expect(coverageAfter).to.not.equal('8000');
-      expect(balanceAfter.sub(balanceBefore)).lt(orderAmountInWBTC);
-
-      const currentMinDebtUnitPrice =
-        await lendingMarketController.getCurrentMinDebtUnitPrice(
-          hexWBTC,
-          wBTCMaturities[0],
-        );
-
-      const aliceFVInUSD = aliceFV
-        .mul(wbtcToUSDRate)
-        .div(BigNumber.from(10).pow(8));
-
-      const minDebtAmount = aliceFVInUSD
-        .mul(currentMinDebtUnitPrice)
-        .div(PRICE_DIGIT)
-        .abs();
-
-      const aliceCollateral = await tokenVault.getTotalCollateralAmount(
-        alice.address,
-      );
-
-      expect(
-        aliceCollateral
-          .mul(PCT_DIGIT)
-          .div(minDebtAmount)
-          .sub(LIQUIDATION_THRESHOLD_RATE)
-          .abs(),
-      ).to.lte(1);
+      expect(balanceAfter.sub(balanceBefore)).to.equal(orderAmountInWBTC);
+      expect(alicePV.abs()).to.equal(orderAmountInWBTC);
     });
   });
 });

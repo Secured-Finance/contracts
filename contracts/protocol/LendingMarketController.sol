@@ -300,7 +300,7 @@ contract LendingMarketController is
         override
         returns (int256 totalPresentValue)
     {
-        totalPresentValue = FundManagementLogic.getActualFunds(_ccy, 0, _user).presentValue;
+        totalPresentValue = FundManagementLogic.getActualFunds(_ccy, 0, _user, 0).presentValue;
     }
 
     /**
@@ -318,7 +318,7 @@ contract LendingMarketController is
 
         for (uint256 i; i < currencySet.length(); i++) {
             bytes32 ccy = currencySet.at(i);
-            int256 amount = FundManagementLogic.getActualFunds(ccy, 0, _user).presentValue;
+            int256 amount = FundManagementLogic.getActualFunds(ccy, 0, _user, 0).presentValue;
             totalPresentValue += currencyController().convertToBaseCurrency(ccy, amount);
         }
     }
@@ -335,7 +335,7 @@ contract LendingMarketController is
         override
         returns (int256 genesisValue)
     {
-        genesisValue = FundManagementLogic.getActualFunds(_ccy, 0, _user).genesisValue;
+        genesisValue = FundManagementLogic.getActualFunds(_ccy, 0, _user, 0).genesisValue;
     }
 
     /**

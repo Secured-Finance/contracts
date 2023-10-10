@@ -17,6 +17,7 @@ import { deployContracts } from '../common/deployment';
 import { formatOrdinals } from '../common/format';
 import {
   calculateAutoRolledLendingCompoundFactor,
+  calculateFutureValue,
   calculateOrderFee,
 } from '../common/orders';
 import { Signers } from '../common/signers';
@@ -186,7 +187,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            8000,
+            9600,
             {
               value: orderAmount,
             },
@@ -201,7 +202,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount.mul(3),
-            8000,
+            9600,
           ),
       ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -253,24 +254,12 @@ describe('Integration Test: Auto-rolls', async () => {
     it('Execute auto-roll (1st time)', async () => {
       await lendingMarketController
         .connect(carol)
-        .depositAndExecuteOrder(
-          hexETH,
-          maturities[1],
-          Side.LEND,
-          orderAmount.mul(2),
-          8490,
-          {
-            value: orderAmount.mul(2),
-          },
-        );
-      await lendingMarketController
-        .connect(carol)
         .executeOrder(
           hexETH,
           maturities[1],
           Side.BORROW,
           orderAmount.mul(2),
-          8510,
+          9600,
         );
 
       const { futureValue: aliceFVBefore } =
@@ -281,7 +270,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       // Auto-roll
-      await executeAutoRoll('8500');
+      await executeAutoRoll('9600');
 
       // Check if the orders in previous market is canceled
       const carolCoverageAfter = await tokenVault.getCoverage(carol.address);
@@ -343,7 +332,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(autoRollLog1.prev).to.equal('0');
       expect(autoRollLog2.prev).to.equal(maturities[0]);
       expect(autoRollLog2.next).to.equal('0');
-      expect(autoRollLog2.unitPrice).to.equal('8500');
+      expect(autoRollLog2.unitPrice).to.equal('9600');
       expect(autoRollLog2.lendingCompoundFactor).to.equal(
         calculateAutoRolledLendingCompoundFactor(
           autoRollLog1.lendingCompoundFactor,
@@ -354,28 +343,6 @@ describe('Integration Test: Auto-rolls', async () => {
     });
 
     it('Execute auto-roll (2nd time)', async () => {
-      await lendingMarketController
-        .connect(carol)
-        .depositAndExecuteOrder(
-          hexETH,
-          maturities[1],
-          Side.LEND,
-          orderAmount.mul(2),
-          7900,
-          {
-            value: orderAmount.mul(2),
-          },
-        );
-      await lendingMarketController
-        .connect(carol)
-        .executeOrder(
-          hexETH,
-          maturities[1],
-          Side.BORROW,
-          orderAmount.mul(2),
-          8100,
-        );
-
       const { futureValue: aliceFVBefore } =
         await lendingMarketController.getPosition(
           hexETH,
@@ -384,7 +351,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       // Auto-roll
-      await executeAutoRoll('8000');
+      await executeAutoRoll('9600');
 
       // Check future value
       const { futureValue: aliceFVAfter } =
@@ -424,7 +391,7 @@ describe('Integration Test: Auto-rolls', async () => {
       expect(autoRollLog1.prev).not.to.equal('0');
       expect(autoRollLog2.prev).to.equal(maturities[0]);
       expect(autoRollLog2.next).to.equal('0');
-      expect(autoRollLog2.unitPrice).to.equal('8000');
+      expect(autoRollLog2.unitPrice).to.equal('9600');
       expect(autoRollLog2.lendingCompoundFactor).to.equal(
         calculateAutoRolledLendingCompoundFactor(
           autoRollLog1.lendingCompoundFactor,
@@ -455,7 +422,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            8000,
+            9600,
             {
               value: orderAmount,
             },
@@ -468,7 +435,7 @@ describe('Integration Test: Auto-rolls', async () => {
           .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await createSampleETHOrders(carol, maturities[0], '8000');
+      await createSampleETHOrders(carol, maturities[0], '9600');
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -478,7 +445,7 @@ describe('Integration Test: Auto-rolls', async () => {
           alice.address,
         );
 
-      expect(aliceActualFV).equal('125000000000000000');
+      expect(aliceActualFV).equal(calculateFutureValue(orderAmount, 9600));
     });
 
     it('Fill an order on the second closest maturity market', async () => {
@@ -494,7 +461,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[1],
             Side.LEND,
             orderAmount,
-            5000,
+            9800,
             {
               value: orderAmount,
             },
@@ -506,7 +473,7 @@ describe('Integration Test: Auto-rolls', async () => {
         .executeOrder(hexETH, maturities[1], Side.BORROW, orderAmount, 0);
       await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await createSampleETHOrders(carol, maturities[1], '5000');
+      await createSampleETHOrders(carol, maturities[1], '9800');
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -525,11 +492,11 @@ describe('Integration Test: Auto-rolls', async () => {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
       const fee = calculateOrderFee(
         orderAmount,
-        5000,
+        9800,
         maturities[1].sub(timestamp),
       );
 
-      expect(aliceActualFV).equal('200000000000000000');
+      expect(aliceActualFV).equal(calculateFutureValue(orderAmount, 9800));
       expect(bobActualFV.add(aliceActualFV).add(fee).abs()).to.lte(1);
     });
 
@@ -671,7 +638,7 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
-      await executeAutoRoll('8333');
+      await executeAutoRoll('9600');
     });
 
     it('Fill an order', async () => {
@@ -687,7 +654,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            '8333',
+            '9600',
             {
               value: orderAmount,
             },
@@ -700,7 +667,7 @@ describe('Integration Test: Auto-rolls', async () => {
           .executeOrder(hexETH, maturities[0], Side.BORROW, orderAmount, 0),
       ).to.emit(fundManagementLogic, 'OrderFilled');
 
-      await createSampleETHOrders(owner, maturities[1], '8333');
+      await createSampleETHOrders(owner, maturities[1], '9600');
 
       // Check future value
       const { futureValue: aliceActualFV } =
@@ -710,7 +677,7 @@ describe('Integration Test: Auto-rolls', async () => {
           alice.address,
         );
 
-      expect(aliceActualFV).to.equal('1200048001920076803072');
+      expect(aliceActualFV).to.equal(calculateFutureValue(orderAmount, 9600));
     });
 
     for (let i = 0; i <= 9; i++) {
@@ -782,7 +749,7 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob, carol, dave] = await getUsers(4);
       await resetContractInstances();
-      await executeAutoRoll('8000');
+      await executeAutoRoll('9800');
       await resetContractInstances();
       await executeAutoRoll();
       await resetContractInstances();
@@ -802,7 +769,7 @@ describe('Integration Test: Auto-rolls', async () => {
               maturities[0],
               Side.LEND,
               orderAmount,
-              8000 - i,
+              9800 - i,
               {
                 value: orderAmount,
               },
@@ -915,7 +882,7 @@ describe('Integration Test: Auto-rolls', async () => {
     before(async () => {
       [alice, bob, carol] = await getUsers(3);
       await resetContractInstances();
-      await executeAutoRoll('8000');
+      await executeAutoRoll('9600');
     });
 
     it('Fill an order', async () => {
@@ -931,7 +898,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
             {
               value: orderAmount,
             },
@@ -952,7 +919,7 @@ describe('Integration Test: Auto-rolls', async () => {
           alice.address,
         );
 
-      expect(aliceActualFV).to.equal('125000000000000000');
+      expect(aliceActualFV).to.equal(calculateFutureValue(orderAmount, 9600));
     });
 
     it('Advance time', async () => {
@@ -996,7 +963,7 @@ describe('Integration Test: Auto-rolls', async () => {
             maturities[0],
             Side.LEND,
             orderAmount,
-            8000,
+            9600,
             {
               value: orderAmount,
             },
@@ -1019,7 +986,7 @@ describe('Integration Test: Auto-rolls', async () => {
         );
 
       // Auto-roll
-      await createSampleETHOrders(carol, maturities[1], '8000');
+      await createSampleETHOrders(carol, maturities[1], '9600');
       await time.increaseTo(maturities[1].toString());
       await lendingMarketController.connect(owner).rotateOrderBooks(hexETH);
 

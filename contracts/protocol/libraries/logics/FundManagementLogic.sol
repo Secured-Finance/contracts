@@ -64,11 +64,13 @@ library FundManagementLogic {
         bool isDefaultMarket;
         uint8 orderBookId;
         uint8 defaultOrderBookId;
+        uint256 defaultOrderBookMarketUnitPrice;
         uint256[] maturities;
         int256 presentValueOfDefaultMarket;
         ILendingMarket market;
         IFutureValueVault futureValueVault;
         uint256 minDebtUnitPrice;
+        uint256 defaultOrderBookMinDebtUnitPrice;
     }
 
     struct FutureValueVaultFunds {
@@ -257,7 +259,7 @@ library FundManagementLogic {
 
         cleanUpFunds(_ccy, _user);
 
-        int256 amount = getActualFunds(_ccy, _maturity, _user).futureValue;
+        int256 amount = getActualFunds(_ccy, _maturity, _user, 0).futureValue;
         if (amount <= 0) revert NoRedemptionAmount();
 
         uint256 redemptionAmount = _resetFundsPerMaturity(_ccy, _maturity, _user, amount)
@@ -281,7 +283,7 @@ library FundManagementLogic {
         cleanUpFunds(_ccy, _user);
 
         int256 resetAmount = _amount == 0
-            ? getActualFunds(_ccy, _maturity, _user).futureValue
+            ? getActualFunds(_ccy, _maturity, _user, 0).futureValue
             : -_amount.toInt256();
 
         if (resetAmount >= 0) revert NoRepaymentAmount();
@@ -359,13 +361,15 @@ library FundManagementLogic {
     function getActualFunds(
         bytes32 _ccy,
         uint256 _maturity,
-        address _user
+        address _user,
+        uint256 _minDebtUnitPrice
     ) public view returns (ActualFunds memory actualFunds) {
         CalculateActualFundsVars memory vars;
         vars.market = ILendingMarket(Storage.slot().lendingMarkets[_ccy]);
         vars.futureValueVault = IFutureValueVault(Storage.slot().futureValueVaults[_ccy]);
         vars.defaultOrderBookId = Storage.slot().orderBookIdLists[_ccy][0];
-        vars.minDebtUnitPrice = Storage.slot().minDebtUnitPrices[_ccy];
+        // vars.minDebtUnitPrice = Storage.slot().minDebtUnitPrices[_ccy];
+        vars.minDebtUnitPrice = _minDebtUnitPrice;
 
         if (_maturity == 0) {
             vars.isTotal = true;
@@ -384,85 +388,90 @@ library FundManagementLogic {
             uint8 currentOrderBookId = Storage.slot().maturityOrderBookIds[_ccy][
                 vars.maturities[i]
             ];
-            uint256 currentMaturity = vars.market.getMaturity(currentOrderBookId);
-            bool isDefaultMarket = currentOrderBookId == vars.defaultOrderBookId;
 
             if (vars.isDefaultMarket || currentOrderBookId == vars.orderBookId) {
-                // Get current funds from Future Value Vault by lazy evaluations.
-                FutureValueVaultFunds memory futureValueVaultFunds = _getFundsFromFutureValueVault(
-                    _ccy,
-                    _user,
-                    vars,
-                    currentOrderBookId,
-                    currentMaturity,
-                    isDefaultMarket
-                );
-                // Get current funds from borrowing orders by lazy evaluations.
-                InactiveBorrowOrdersFunds
-                    memory borrowOrdersFunds = _getFundsFromInactiveBorrowOrders(
-                        _ccy,
-                        _user,
-                        vars,
-                        currentOrderBookId,
-                        currentMaturity,
-                        isDefaultMarket
-                    );
-                // Get current funds from lending orders by lazy evaluations.
-                InactiveLendOrdersFunds memory lendOrdersFunds = _getFundsFromInactiveLendOrders(
-                    _ccy,
-                    _user,
-                    vars,
-                    currentOrderBookId,
-                    currentMaturity,
-                    isDefaultMarket
-                );
+                {
+                    uint256 currentMaturity = vars.market.getMaturity(currentOrderBookId);
+                    bool isDefaultMarket = currentOrderBookId == vars.defaultOrderBookId;
 
-                // Set genesis value.
-                actualFunds.genesisValue +=
-                    futureValueVaultFunds.genesisValue -
-                    borrowOrdersFunds.genesisValue +
-                    lendOrdersFunds.genesisValue;
+                    // Get current funds from Future Value Vault by lazy evaluations.
+                    FutureValueVaultFunds
+                        memory futureValueVaultFunds = _getFundsFromFutureValueVault(
+                            _ccy,
+                            _user,
+                            vars,
+                            currentOrderBookId,
+                            currentMaturity,
+                            isDefaultMarket
+                        );
+                    // Get current funds from borrowing orders by lazy evaluations.
+                    InactiveBorrowOrdersFunds
+                        memory borrowOrdersFunds = _getFundsFromInactiveBorrowOrders(
+                            _ccy,
+                            _user,
+                            vars,
+                            currentOrderBookId,
+                            currentMaturity,
+                            isDefaultMarket
+                        );
+                    // Get current funds from lending orders by lazy evaluations.
+                    InactiveLendOrdersFunds
+                        memory lendOrdersFunds = _getFundsFromInactiveLendOrders(
+                            _ccy,
+                            _user,
+                            vars,
+                            currentOrderBookId,
+                            currentMaturity,
+                            isDefaultMarket
+                        );
 
-                // Set present value.
-                int256 presentValue = futureValueVaultFunds.presentValue -
-                    borrowOrdersFunds.presentValue +
-                    lendOrdersFunds.presentValue;
-                int256 futureValue = futureValueVaultFunds.futureValue -
-                    borrowOrdersFunds.futureValue +
-                    lendOrdersFunds.futureValue;
+                    // Set genesis value.
+                    actualFunds.genesisValue +=
+                        futureValueVaultFunds.genesisValue -
+                        borrowOrdersFunds.genesisValue +
+                        lendOrdersFunds.genesisValue;
 
-                actualFunds.presentValue += presentValue;
+                    // Set present value.
+                    int256 presentValue = futureValueVaultFunds.presentValue -
+                        borrowOrdersFunds.presentValue +
+                        lendOrdersFunds.presentValue;
+                    int256 futureValue = futureValueVaultFunds.futureValue -
+                        borrowOrdersFunds.futureValue +
+                        lendOrdersFunds.futureValue;
 
-                if (isDefaultMarket) {
-                    vars.presentValueOfDefaultMarket = presentValue;
+                    actualFunds.presentValue += presentValue;
+
+                    if (isDefaultMarket) {
+                        vars.presentValueOfDefaultMarket = presentValue;
+                    }
+
+                    if (presentValue > 0) {
+                        actualFunds.claimableAmount += presentValue.toUint256();
+                    } else if (presentValue < 0) {
+                        actualFunds.debtAmount += (-presentValue).toUint256();
+                    }
+
+                    if (futureValue < 0) {
+                        uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
+                            vars.maturities[i],
+                            vars.minDebtUnitPrice
+                        );
+
+                        actualFunds.minDebtAmount += ((-futureValue).toUint256() *
+                            currentMinDebtUnitPrice).div(Constants.PRICE_DIGIT);
+                    }
+
+                    // Set future value.
+                    // Note: When calculating total funds, total future value will be 0 because different maturities can not be added.
+                    if (!vars.isTotal) {
+                        actualFunds.futureValue += futureValue;
+                    }
+
+                    actualFunds.workingBorrowOrdersAmount += borrowOrdersFunds.workingOrdersAmount;
+                    actualFunds.workingLendOrdersAmount += lendOrdersFunds.workingOrdersAmount;
+                    actualFunds.borrowedAmount += borrowOrdersFunds.borrowedAmount;
+                    actualFunds.lentAmount += lendOrdersFunds.lentAmount;
                 }
-
-                if (presentValue > 0) {
-                    actualFunds.claimableAmount += presentValue.toUint256();
-                } else if (presentValue < 0) {
-                    actualFunds.debtAmount += (-presentValue).toUint256();
-                }
-
-                if (futureValue < 0) {
-                    uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
-                        vars.maturities[i],
-                        vars.minDebtUnitPrice
-                    );
-
-                    actualFunds.minDebtAmount += ((-futureValue).toUint256() *
-                        currentMinDebtUnitPrice).div(Constants.PRICE_DIGIT);
-                }
-
-                // Set future value.
-                // Note: When calculating total funds, total future value will be 0 because different maturities can not be added.
-                if (!vars.isTotal) {
-                    actualFunds.futureValue += futureValue;
-                }
-
-                actualFunds.workingBorrowOrdersAmount += borrowOrdersFunds.workingOrdersAmount;
-                actualFunds.workingLendOrdersAmount += lendOrdersFunds.workingOrdersAmount;
-                actualFunds.borrowedAmount += borrowOrdersFunds.borrowedAmount;
-                actualFunds.lentAmount += lendOrdersFunds.lentAmount;
 
                 // Get balance fluctuation amount by auto-rolls
                 if (actualFunds.genesisValue < 0) {
@@ -486,9 +495,14 @@ library FundManagementLogic {
                 actualFunds.genesisValue
             );
 
+            uint256 unitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
+            uint256 defaultOrderBookMinDebtUnitPrice = _getDefaultOrderBookMinDebtUnitPrice(vars);
+
             int256 presentValue = _calculatePVFromFV(
                 futureValue,
-                vars.market.getMarketUnitPrice(vars.defaultOrderBookId)
+                unitPrice >= defaultOrderBookMinDebtUnitPrice
+                    ? unitPrice
+                    : defaultOrderBookMinDebtUnitPrice
             );
 
             actualFunds.presentValue += presentValue;
@@ -529,6 +543,8 @@ library FundManagementLogic {
         view
         returns (uint256)
     {
+        if (_minDebtUnitPrice == 0) return 0;
+
         return
             _maturity > block.timestamp
                 ? BASE_MIN_DEBT_UNIT_PRICE -
@@ -544,7 +560,12 @@ library FundManagementLogic {
         ILendingMarketController.AdditionalFunds memory _additionalFunds,
         uint256 _liquidationThresholdRate
     ) public view returns (ILendingMarketController.CalculatedFunds memory funds) {
-        ActualFunds memory actualFunds = getActualFunds(_ccy, 0, _user);
+        ActualFunds memory actualFunds = getActualFunds(
+            _ccy,
+            0,
+            _user,
+            Storage.slot().minDebtUnitPrices[_ccy]
+        );
 
         funds.workingLendOrdersAmount =
             actualFunds.workingLendOrdersAmount +
@@ -688,7 +709,7 @@ library FundManagementLogic {
         uint256 _maturity,
         address _user
     ) public view returns (int256 presentValue, int256 futureValue) {
-        FundManagementLogic.ActualFunds memory funds = getActualFunds(_ccy, _maturity, _user);
+        FundManagementLogic.ActualFunds memory funds = getActualFunds(_ccy, _maturity, _user, 0);
         presentValue = funds.presentValue;
         futureValue = funds.futureValue;
     }
@@ -854,19 +875,47 @@ library FundManagementLogic {
                 }
             } else if (currentMaturity == fvMaturity) {
                 if (vars.isTotal && !isDefaultMarket) {
-                    (funds.presentValue, funds.futureValue) = _calculatePVandFVInDefaultMarket(
+                    uint256 unitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
+
+                    (funds.presentValue, funds.futureValue) = _convertFVtoOtherMaturity(
                         _ccy,
                         vars.market,
                         fvMaturity,
-                        futureValueInMaturity
+                        futureValueInMaturity,
+                        unitPrice
                     );
+
+                    if (funds.futureValue < 0) {
+                        uint256 defaultOrderBookMinDebtUnitPrice = _getDefaultOrderBookMinDebtUnitPrice(
+                                vars
+                            );
+
+                        if (unitPrice < defaultOrderBookMinDebtUnitPrice) {
+                            funds.presentValue = _calculatePVFromFV(
+                                funds.futureValue,
+                                defaultOrderBookMinDebtUnitPrice
+                            );
+                        }
+                    }
                 } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
+                    uint256 unitPrice = vars.market.getMarketUnitPrice(vars.orderBookId);
                     funds.futureValue = futureValueInMaturity;
-                    funds.presentValue = _calculatePVFromFV(
-                        vars.market,
-                        vars.orderBookId,
-                        futureValueInMaturity
-                    );
+
+                    if (funds.futureValue < 0) {
+                        uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
+                            currentMaturity,
+                            vars.minDebtUnitPrice
+                        );
+
+                        funds.presentValue = _calculatePVFromFV(
+                            futureValueInMaturity,
+                            unitPrice < currentMinDebtUnitPrice
+                                ? currentMinDebtUnitPrice
+                                : unitPrice
+                        );
+                    } else {
+                        funds.presentValue = _calculatePVFromFV(futureValueInMaturity, unitPrice);
+                    }
                 }
             }
         }
@@ -882,9 +931,14 @@ library FundManagementLogic {
     ) internal view returns (InactiveBorrowOrdersFunds memory funds) {
         uint256 filledFutureValue;
         uint256 orderMaturity;
+        uint256 currentMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
+            currentMaturity,
+            vars.minDebtUnitPrice
+        );
+
         (funds.workingOrdersAmount, funds.borrowedAmount, filledFutureValue, orderMaturity) = vars
             .market
-            .getTotalAmountFromBorrowOrders(currentOrderBookId, _user);
+            .getTotalAmountFromBorrowOrders(currentOrderBookId, _user, currentMinDebtUnitPrice);
 
         if (filledFutureValue != 0) {
             if (currentMaturity != orderMaturity) {
@@ -897,18 +951,33 @@ library FundManagementLogic {
                 }
             } else if (currentMaturity == orderMaturity) {
                 if (vars.isTotal && !isDefaultMarket) {
-                    (funds.presentValue, funds.futureValue) = _calculatePVandFVInDefaultMarket(
+                    uint256 unitPrice = _getDefaultOrderBookMarketUnitPrice(vars);
+
+                    (funds.presentValue, funds.futureValue) = _convertFVtoOtherMaturity(
                         _ccy,
                         vars.market,
                         orderMaturity,
-                        filledFutureValue.toInt256()
+                        filledFutureValue.toInt256(),
+                        unitPrice
                     );
+
+                    uint256 defaultOrderBookMinDebtUnitPrice = _getDefaultOrderBookMinDebtUnitPrice(
+                        vars
+                    );
+
+                    if (unitPrice < defaultOrderBookMinDebtUnitPrice) {
+                        funds.presentValue = _calculatePVFromFV(
+                            funds.futureValue,
+                            defaultOrderBookMinDebtUnitPrice
+                        );
+                    }
                 } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
+                    uint256 unitPrice = vars.market.getMarketUnitPrice(vars.orderBookId);
+
                     funds.futureValue = filledFutureValue.toInt256();
                     funds.presentValue = _calculatePVFromFV(
-                        vars.market,
-                        vars.orderBookId,
-                        funds.futureValue
+                        funds.futureValue,
+                        unitPrice < currentMinDebtUnitPrice ? currentMinDebtUnitPrice : unitPrice
                     );
                 }
             }
@@ -940,11 +1009,12 @@ library FundManagementLogic {
                 }
             } else if (currentMaturity == orderMaturity) {
                 if (vars.isTotal && !isDefaultMarket) {
-                    (funds.presentValue, funds.futureValue) = _calculatePVandFVInDefaultMarket(
+                    (funds.presentValue, funds.futureValue) = _convertFVtoOtherMaturity(
                         _ccy,
                         vars.market,
                         orderMaturity,
-                        filledFutureValue.toInt256()
+                        filledFutureValue.toInt256(),
+                        vars.market.getMarketUnitPrice(vars.defaultOrderBookId)
                     );
                 } else if (vars.isTotal || !vars.isDefaultMarket || isDefaultMarket) {
                     funds.futureValue = filledFutureValue.toInt256();
@@ -958,13 +1028,14 @@ library FundManagementLogic {
         }
     }
 
-    function _calculatePVandFVInDefaultMarket(
+    function _convertFVtoOtherMaturity(
         bytes32 _ccy,
         ILendingMarket _market,
         uint256 _fromMaturity,
-        int256 _futureValueInMaturity
+        int256 _fromFutureValue,
+        uint256 _toUnitPrice
     ) internal view returns (int256 presentValue, int256 futureValue) {
-        uint256 unitPrice = _market.getMarketUnitPrice(Storage.slot().orderBookIdLists[_ccy][0]);
+        // uint256 unitPrice = _market.getMarketUnitPrice(Storage.slot().orderBookIdLists[_ccy][0]);
 
         if (
             AddressResolverLib.genesisValueVault().getAutoRollLog(_ccy, _fromMaturity).unitPrice ==
@@ -973,17 +1044,17 @@ library FundManagementLogic {
             presentValue = _calculatePVFromFV(
                 _market,
                 Storage.slot().maturityOrderBookIds[_ccy][_fromMaturity],
-                _futureValueInMaturity
+                _fromFutureValue
             );
-            futureValue = _calculateFVFromPV(presentValue, unitPrice);
+            futureValue = _calculateFVFromPV(presentValue, _toUnitPrice);
         } else {
             futureValue = AddressResolverLib.genesisValueVault().calculateFVFromFV(
                 _ccy,
                 _fromMaturity,
                 0,
-                _futureValueInMaturity
+                _fromFutureValue
             );
-            presentValue = _calculatePVFromFV(futureValue, unitPrice);
+            presentValue = _calculatePVFromFV(futureValue, _toUnitPrice);
         }
     }
 
@@ -1031,7 +1102,7 @@ library FundManagementLogic {
     }
 
     function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (int256 amount) {
-        amount = getActualFunds(_ccy, 0, _user).presentValue;
+        amount = getActualFunds(_ccy, 0, _user, 0).presentValue;
 
         uint256[] memory maturities = Storage.slot().usedMaturities[_ccy][_user].values();
         for (uint256 j; j < maturities.length; j++) {
@@ -1081,6 +1152,35 @@ library FundManagementLogic {
         }
     }
 
+    function _getDefaultOrderBookMinDebtUnitPrice(CalculateActualFundsVars memory vars)
+        private
+        view
+        returns (uint256)
+    {
+        if (vars.defaultOrderBookMinDebtUnitPrice == 0 && vars.minDebtUnitPrice != 0) {
+            vars.defaultOrderBookMinDebtUnitPrice = getCurrentMinDebtUnitPrice(
+                vars.market.getMaturity(vars.defaultOrderBookId),
+                vars.minDebtUnitPrice
+            );
+        }
+
+        return vars.defaultOrderBookMinDebtUnitPrice;
+    }
+
+    function _getDefaultOrderBookMarketUnitPrice(CalculateActualFundsVars memory vars)
+        private
+        view
+        returns (uint256)
+    {
+        if (vars.defaultOrderBookMarketUnitPrice == 0) {
+            vars.defaultOrderBookMarketUnitPrice = vars.market.getMarketUnitPrice(
+                vars.defaultOrderBookId
+            );
+        }
+
+        return vars.defaultOrderBookMarketUnitPrice;
+    }
+
     function _calculatePVFromFV(
         ILendingMarket _market,
         uint8 _orderBookId,
@@ -1098,6 +1198,16 @@ library FundManagementLogic {
         uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
         // NOTE: The formula is: presentValue = futureValue * unitPrice.
         return (_futureValue * unitPrice.toInt256()).div(Constants.PRICE_DIGIT.toInt256());
+    }
+
+    function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 unitPrice = _unitPrice == 0 ? Constants.PRICE_DIGIT : _unitPrice;
+        // NOTE: The formula is: presentValue = futureValue * unitPrice.
+        return (_futureValue * unitPrice).div(Constants.PRICE_DIGIT);
     }
 
     function _calculateFVFromPV(int256 _presentValue, uint256 _unitPrice)
