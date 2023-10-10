@@ -805,5 +805,101 @@ describe('LendingMarketController - Operations', () => {
       expect(bobFunds.debtAmount).to.equal('30000000000000000');
       expect(bobFunds.borrowedAmount).to.equal('30000000000000000');
     });
+
+    it('Calculate the total funds with open orders less than min debt unit price', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '30000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '7900',
+        );
+
+      await time.increaseTo(maturities[0].toString());
+
+      const { workingLendOrdersAmount, workingBorrowOrdersAmount } =
+        await lendingMarketControllerProxy.calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+      expect(workingLendOrdersAmount).to.equal('100000000000000000');
+      expect(workingBorrowOrdersAmount).to.equal('36000000000000000');
+    });
+
+    it('Calculate the total funds with position less than min debt unit price', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '30000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '7900',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '30000000000000000',
+          '0',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '0',
+        );
+
+      await time.increaseTo(maturities[0].toString());
+
+      const aliceFunds = await lendingMarketControllerProxy.calculateFunds(
+        targetCurrency,
+        alice.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+
+      const bobFunds = await lendingMarketControllerProxy.calculateFunds(
+        targetCurrency,
+        bob.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+
+      expect(aliceFunds.debtAmount).to.equal('36000000000000000');
+      expect(aliceFunds.borrowedAmount).to.equal('30000000000000000');
+
+      expect(bobFunds.claimableAmount).to.equal('100000000000000000');
+      expect(bobFunds.lentAmount).to.equal('100000000000000000');
+    });
   });
 });
