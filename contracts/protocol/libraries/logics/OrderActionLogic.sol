@@ -427,7 +427,7 @@ library OrderActionLogic {
         orderIds = new uint48[](inactiveOrderCount);
 
         for (uint256 i; i < inactiveOrderCount; i++) {
-            (uint256 presentValue, uint256 futureValue) = OrderReaderLogic.getBorrowOrderAmounts(
+            (uint256 presentValue, uint256 futureValue, ) = OrderReaderLogic.getBorrowOrderAmounts(
                 orderBook,
                 inActiveBorrowOrderIds[i]
             );

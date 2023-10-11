@@ -130,7 +130,11 @@ interface ILendingMarket {
             uint256 maturity
         );
 
-    function getTotalAmountFromBorrowOrders(uint8 orderBookId, address user)
+    function getTotalAmountFromBorrowOrders(
+        uint8 orderBookId,
+        address user,
+        uint256 _minUnitPrice
+    )
         external
         view
         returns (

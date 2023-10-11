@@ -647,25 +647,6 @@ describe('LendingMarketController - Operations', () => {
         .connect(alice)
         .executeOrder(
           targetCurrency,
-          maturities[1],
-          Side.LEND,
-          '50000000000000000',
-          '7900',
-        );
-      await lendingMarketControllerProxy
-        .connect(bob)
-        .executeOrder(
-          targetCurrency,
-          maturities[1],
-          Side.BORROW,
-          '50000000000000000',
-          '8100',
-        );
-
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .executeOrder(
-          targetCurrency,
           maturities[0],
           Side.LEND,
           '100000000000000000',
@@ -694,24 +675,6 @@ describe('LendingMarketController - Operations', () => {
         .connect(carol)
         .executeOrder(
           targetCurrency,
-          maturities[1],
-          Side.LEND,
-          '80000000000000000',
-          '7900',
-        );
-      await lendingMarketControllerProxy
-        .connect(alice)
-        .executeOrder(
-          targetCurrency,
-          maturities[1],
-          Side.BORROW,
-          '80000000000000000',
-          '8100',
-        );
-      await lendingMarketControllerProxy
-        .connect(carol)
-        .executeOrder(
-          targetCurrency,
           maturities[0],
           Side.LEND,
           '100000000000000000',
@@ -730,25 +693,6 @@ describe('LendingMarketController - Operations', () => {
       await rotateOrderBooks();
       await cleanUpAllFunds();
       await checkGenesisValue();
-
-      await lendingMarketControllerProxy
-        .connect(bob)
-        .executeOrder(
-          targetCurrency,
-          maturities[1],
-          Side.LEND,
-          '200000000000000000',
-          '7900',
-        );
-      await lendingMarketControllerProxy
-        .connect(carol)
-        .executeOrder(
-          targetCurrency,
-          maturities[1],
-          Side.BORROW,
-          '200000000000000000',
-          '8100',
-        );
 
       await lendingMarketControllerProxy
         .connect(bob)
@@ -785,7 +729,7 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.LEND,
           '40000000000000000',
-          '8000',
+          '9600',
         );
       await lendingMarketControllerProxy
         .connect(bob)
@@ -794,26 +738,7 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.BORROW,
           '100000000000000000',
-          '8000',
-        );
-
-      await lendingMarketControllerProxy
-        .connect(carol)
-        .executeOrder(
-          targetCurrency,
-          maturities[0],
-          Side.BORROW,
-          '100000000000000000',
-          '7500',
-        );
-      await lendingMarketControllerProxy
-        .connect(dave)
-        .executeOrder(
-          targetCurrency,
-          maturities[0],
-          Side.LEND,
-          '500000000000000000',
-          '7500',
+          '9600',
         );
 
       await ethers.provider.send('evm_mine', []);
@@ -831,9 +756,9 @@ describe('LendingMarketController - Operations', () => {
       );
 
       expect(aliceFunds.workingLendOrdersAmount).to.equal('0');
-      expect(aliceFunds.claimableAmount).to.equal('37500000000000000');
+      expect(aliceFunds.claimableAmount).to.equal('40000000000000000');
       expect(bobFunds.workingBorrowOrdersAmount).to.equal('60000000000000000');
-      expect(bobFunds.debtAmount).gt('37500000000000000');
+      expect(bobFunds.debtAmount).gt('40000000000000000');
       expect(bobFunds.borrowedAmount).to.equal('0');
     });
 
@@ -845,7 +770,7 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.BORROW,
           '30000000000000000',
-          '8000',
+          '9600',
         );
       await lendingMarketControllerProxy
         .connect(alice)
@@ -854,26 +779,7 @@ describe('LendingMarketController - Operations', () => {
           maturities[0],
           Side.LEND,
           '100000000000000000',
-          '8000',
-        );
-
-      await lendingMarketControllerProxy
-        .connect(carol)
-        .executeOrder(
-          targetCurrency,
-          maturities[0],
-          Side.BORROW,
-          '500000000000000000',
-          '8150',
-        );
-      await lendingMarketControllerProxy
-        .connect(dave)
-        .executeOrder(
-          targetCurrency,
-          maturities[0],
-          Side.LEND,
-          '500000000000000000',
-          '8150',
+          '9600',
         );
 
       await ethers.provider.send('evm_mine', []);
@@ -896,8 +802,104 @@ describe('LendingMarketController - Operations', () => {
       );
       expect(aliceFunds.claimableAmount).to.lt(bobFunds.debtAmount);
       expect(bobFunds.workingBorrowOrdersAmount).to.equal('0');
-      expect(bobFunds.debtAmount).to.equal('30562500000000000');
+      expect(bobFunds.debtAmount).to.equal('30000000000000000');
       expect(bobFunds.borrowedAmount).to.equal('30000000000000000');
+    });
+
+    it('Calculate the total funds with open orders less than min debt unit price', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '30000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '7900',
+        );
+
+      await time.increaseTo(maturities[0].toString());
+
+      const { workingLendOrdersAmount, workingBorrowOrdersAmount } =
+        await lendingMarketControllerProxy.calculateFunds(
+          targetCurrency,
+          alice.address,
+          LIQUIDATION_THRESHOLD_RATE,
+        );
+
+      expect(workingLendOrdersAmount).to.equal('100000000000000000');
+      expect(workingBorrowOrdersAmount).to.equal('36000000000000000');
+    });
+
+    it('Calculate the total funds with position less than min debt unit price', async () => {
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '30000000000000000',
+          '8000',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(bob)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '100000000000000000',
+          '7900',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.LEND,
+          '30000000000000000',
+          '0',
+        );
+
+      await lendingMarketControllerProxy
+        .connect(carol)
+        .executeOrder(
+          targetCurrency,
+          maturities[0],
+          Side.BORROW,
+          '100000000000000000',
+          '0',
+        );
+
+      await time.increaseTo(maturities[0].toString());
+
+      const aliceFunds = await lendingMarketControllerProxy.calculateFunds(
+        targetCurrency,
+        alice.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+
+      const bobFunds = await lendingMarketControllerProxy.calculateFunds(
+        targetCurrency,
+        bob.address,
+        LIQUIDATION_THRESHOLD_RATE,
+      );
+
+      expect(aliceFunds.debtAmount).to.equal('36000000000000000');
+      expect(aliceFunds.borrowedAmount).to.equal('30000000000000000');
+
+      expect(bobFunds.claimableAmount).to.equal('100000000000000000');
+      expect(bobFunds.lentAmount).to.equal('100000000000000000');
     });
   });
 });

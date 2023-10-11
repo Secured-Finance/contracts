@@ -112,7 +112,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.LEND,
             orderAmount.mul(2),
-            '8000',
+            '9600',
             { value: orderAmount.mul(2) },
           );
       });
@@ -126,7 +126,7 @@ describe('Integration Test: Calculations', async () => {
             user: alice.address,
             side: Side.BORROW,
             amount: orderAmount,
-            unitPrice: '8000',
+            unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: false,
           });
@@ -139,7 +139,7 @@ describe('Integration Test: Calculations', async () => {
             user: alice.address,
             side: Side.BORROW,
             amount: orderAmount,
-            unitPrice: '8000',
+            unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: true,
           });
@@ -151,7 +151,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.BORROW,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const { futureValue: aliceFV, presentValue: alicePV } =
@@ -213,7 +213,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.BORROW,
             orderAmount.mul(2),
-            '8000',
+            '9600',
           );
       });
 
@@ -239,7 +239,7 @@ describe('Integration Test: Calculations', async () => {
             user: alice.address,
             side: Side.LEND,
             amount: orderAmount,
-            unitPrice: '8000',
+            unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: false,
           });
@@ -252,7 +252,7 @@ describe('Integration Test: Calculations', async () => {
             user: alice.address,
             side: Side.LEND,
             amount: orderAmount.mul(2),
-            unitPrice: '8000',
+            unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: false,
           });
@@ -264,7 +264,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const { futureValue: aliceFV } =
@@ -336,7 +336,7 @@ describe('Integration Test: Calculations', async () => {
             user: alice.address,
             side: Side.BORROW,
             amount: orderAmount,
-            unitPrice: '8000',
+            unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: false,
           });
@@ -349,7 +349,7 @@ describe('Integration Test: Calculations', async () => {
             user: alice.address,
             side: Side.BORROW,
             amount: orderAmount,
-            unitPrice: '8000',
+            unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: true,
           });
@@ -361,7 +361,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.BORROW,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const aliceCoverage = await tokenVault.getCoverage(alice.address);
@@ -419,7 +419,7 @@ describe('Integration Test: Calculations', async () => {
             user: alice.address,
             side: Side.LEND,
             amount: orderAmount,
-            unitPrice: '8000',
+            unitPrice: '9600',
             additionalDepositAmount: '0',
             ignoreBorrowedAmount: false,
           });
@@ -431,7 +431,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const aliceCoverage = await tokenVault.getCoverage(alice.address);
@@ -494,7 +494,7 @@ describe('Integration Test: Calculations', async () => {
       });
     });
 
-    for (const haircut of [0, 5000, 8000]) {
+    for (const haircut of [0, 5000, 9600]) {
       describe(`Calculate the borrowable amount with borrowing position (Haircut: ${haircut})`, async () => {
         const depositAmount = initialETHBalance.div(5);
         const orderAmount = depositAmount.div(2);
@@ -534,7 +534,7 @@ describe('Integration Test: Calculations', async () => {
               ethMaturities[0],
               Side.LEND,
               orderAmount,
-              '8000',
+              '9600',
               { value: orderAmount },
             );
 
@@ -545,7 +545,7 @@ describe('Integration Test: Calculations', async () => {
               ethMaturities[0],
               Side.BORROW,
               orderAmount,
-              '8000',
+              '9600',
             );
         });
 
@@ -585,7 +585,7 @@ describe('Integration Test: Calculations', async () => {
               ethMaturities[2],
               Side.BORROW,
               orderAmount2,
-              '8000',
+              '9600',
             );
 
           await lendingMarketController
@@ -595,7 +595,7 @@ describe('Integration Test: Calculations', async () => {
               ethMaturities[1],
               Side.LEND,
               orderAmount2,
-              '8000',
+              '9600',
               { value: orderAmount2 },
             );
         });
@@ -646,7 +646,7 @@ describe('Integration Test: Calculations', async () => {
               ethMaturities[2],
               Side.BORROW,
               orderAmount2,
-              '8000',
+              '9600',
             );
 
           await lendingMarketController
@@ -656,7 +656,7 @@ describe('Integration Test: Calculations', async () => {
               ethMaturities[1],
               Side.LEND,
               orderAmount2,
-              '8000',
+              '9600',
               { value: orderAmount2 },
             );
         });
@@ -715,7 +715,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
             { value: orderAmount },
           );
 
@@ -730,7 +730,7 @@ describe('Integration Test: Calculations', async () => {
             ethMaturities[0],
             Side.BORROW,
             orderAmount,
-            '8000',
+            '9600',
           );
       });
 

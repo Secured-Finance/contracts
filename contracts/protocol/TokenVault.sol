@@ -224,7 +224,7 @@ contract TokenVault is
         override
         returns (uint256 totalCollateralAmount)
     {
-        (totalCollateralAmount, , , ) = DepositManagementLogic.getTotalCollateralAmount(_user);
+        (totalCollateralAmount, , ) = DepositManagementLogic.getTotalCollateralAmount(_user);
     }
 
     /**

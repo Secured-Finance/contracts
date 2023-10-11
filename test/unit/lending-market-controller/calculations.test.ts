@@ -104,7 +104,6 @@ describe('LendingMarketController - Calculations', () => {
       workingBorrowOrdersAmount?: string | number | BigNumber;
       debtAmount?: string | number | BigNumber;
       borrowedAmount?: string | number | BigNumber;
-      minDebtAmount?: string | number | BigNumber;
     }) => {
       await mockCurrencyController.mock[
         'convertToBaseCurrency(bytes32,uint256[])'
@@ -116,7 +115,6 @@ describe('LendingMarketController - Calculations', () => {
         inputs?.workingBorrowOrdersAmount ?? 0,
         inputs?.debtAmount ?? 0,
         inputs?.borrowedAmount ?? 0,
-        inputs?.minDebtAmount ?? 0,
       ]);
     };
 
@@ -129,7 +127,6 @@ describe('LendingMarketController - Calculations', () => {
         workingBorrowOrdersAmount: '5000000000',
         debtAmount: '6000000000',
         borrowedAmount: '7000000000',
-        minDebtAmount: '6000000000',
       });
 
       const totalFunds =
@@ -154,7 +151,6 @@ describe('LendingMarketController - Calculations', () => {
       expect(totalFunds.workingBorrowOrdersAmount).to.equal('5000000000');
       expect(totalFunds.debtAmount).to.equal('6000000000');
       expect(totalFunds.borrowedAmount).to.equal('7000000000');
-      expect(totalFunds.minDebtAmount).to.equal('6000000000');
       expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal('0');
       expect(totalFunds.minusDepositAmountInAdditionalFundsCcy).to.equal('0');
     });
@@ -168,7 +164,6 @@ describe('LendingMarketController - Calculations', () => {
         workingBorrowOrdersAmount: '3000000000',
         debtAmount: '2000000000',
         borrowedAmount: '1000000000',
-        minDebtAmount: '2000000000',
       });
 
       await lendingMarketControllerProxy
@@ -233,7 +228,6 @@ describe('LendingMarketController - Calculations', () => {
       expect(totalFunds.workingBorrowOrdersAmount).to.equal('3000000000');
       expect(totalFunds.debtAmount).to.equal('2000000000');
       expect(totalFunds.borrowedAmount).to.equal('1000000000');
-      expect(totalFunds.minDebtAmount).to.equal('2000000000');
       expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal(
         '2000000000',
       );
@@ -249,7 +243,6 @@ describe('LendingMarketController - Calculations', () => {
         workingBorrowOrdersAmount: '3000000000',
         debtAmount: '2000000000',
         borrowedAmount: '1000000000',
-        minDebtAmount: '2000000000',
       });
 
       const totalFunds =
@@ -274,7 +267,6 @@ describe('LendingMarketController - Calculations', () => {
       expect(totalFunds.workingBorrowOrdersAmount).to.equal('3000000000');
       expect(totalFunds.debtAmount).to.equal('2000000000');
       expect(totalFunds.borrowedAmount).to.equal('1000000000');
-      expect(totalFunds.minDebtAmount).to.equal('2000000000');
       expect(totalFunds.plusDepositAmountInAdditionalFundsCcy).to.equal('0');
       expect(totalFunds.minusDepositAmountInAdditionalFundsCcy).to.equal(
         '3000000000',

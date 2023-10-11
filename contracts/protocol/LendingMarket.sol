@@ -478,7 +478,11 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
      * @return inactiveFutureValue The total future value amount of inactive orders filled on the order book
      * @return maturity The maturity of market that orders were placed.
      */
-    function getTotalAmountFromBorrowOrders(uint8 _orderBookId, address _user)
+    function getTotalAmountFromBorrowOrders(
+        uint8 _orderBookId,
+        address _user,
+        uint256 _minUnitPrice
+    )
         external
         view
         override
@@ -489,7 +493,7 @@ contract LendingMarket is ILendingMarket, MixinAddressResolver, Pausable, Proxya
             uint256 maturity
         )
     {
-        return OrderReaderLogic.getTotalAmountFromBorrowOrders(_orderBookId, _user);
+        return OrderReaderLogic.getTotalAmountFromBorrowOrders(_orderBookId, _user, _minUnitPrice);
     }
 
     /**
