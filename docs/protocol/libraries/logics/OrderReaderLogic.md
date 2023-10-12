@@ -17,7 +17,7 @@ function getTotalAmountFromLendOrders(uint8 _orderBookId, address _user) externa
 ### getTotalAmountFromBorrowOrders
 
 ```solidity
-function getTotalAmountFromBorrowOrders(uint8 _orderBookId, address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
+function getTotalAmountFromBorrowOrders(uint8 _orderBookId, address _user, uint256 _minUnitPrice) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
 ### getLendOrderIds
@@ -53,7 +53,7 @@ function getLendOrderAmounts(struct OrderBookLib.OrderBook orderBook, uint48 _or
 ### getBorrowOrderAmounts
 
 ```solidity
-function getBorrowOrderAmounts(struct OrderBookLib.OrderBook orderBook, uint48 _orderId) public view returns (uint256 presentValue, uint256 futureValue)
+function getBorrowOrderAmounts(struct OrderBookLib.OrderBook orderBook, uint48 _orderId) public view returns (uint256 presentValue, uint256 futureValue, uint256 unitPrice)
 ```
 
 ### _getOrderUnitPrice

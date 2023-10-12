@@ -552,7 +552,7 @@ Calculates and gets the active and inactive amounts from the user orders of lend
 ### getTotalAmountFromBorrowOrders
 
 ```solidity
-function getTotalAmountFromBorrowOrders(uint8 _orderBookId, address _user) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
+function getTotalAmountFromBorrowOrders(uint8 _orderBookId, address _user, uint256 _minUnitPrice) external view returns (uint256 activeAmount, uint256 inactiveAmount, uint256 inactiveFutureValue, uint256 maturity)
 ```
 
 Calculates and gets the active and inactive amounts from the user orders of borrowing deals.
@@ -561,6 +561,7 @@ Calculates and gets the active and inactive amounts from the user orders of borr
 | ---- | ---- | ----------- |
 | _orderBookId | uint8 | The order book id |
 | _user | address | User's address |
+| _minUnitPrice | uint256 |  |
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
