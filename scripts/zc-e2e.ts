@@ -33,36 +33,23 @@ describe('ZC e2e test', async function () {
   let maturities: BigNumber[];
   let orderBookIds: BigNumber[];
 
-  const createSampleETHOrders = async function (
+  const executeOrder = async (
     user: SignerWithAddress | Wallet,
+    currency: string,
     maturity: BigNumber,
-    unitPrice: string,
-  ) {
-    await tokenVault.connect(user).deposit(hexETH, '3000000', {
-      value: '3000000',
-    });
-
-    await lendingMarketController
+    side: number,
+    amount: string,
+    unitPrice: string | BigNumber,
+  ) => {
+    const estimatedGas = await lendingMarketController
       .connect(user)
-      .executeOrder(hexETH, maturity, Side.BORROW, '1000000', unitPrice);
+      .estimateGas.executeOrder(currency, maturity, side, amount, unitPrice);
 
-    await lendingMarketController
+    return lendingMarketController
       .connect(user)
-      .executeOrder(hexETH, maturity, Side.LEND, '1000000', unitPrice);
-  };
-
-  const executeAutoRoll = async function (unitPrice?: string) {
-    if (unitPrice) {
-      // Move to 6 hours (21600 sec) before maturity.
-      await time.increaseTo(maturities[0].sub('21600').toString());
-      await createSampleETHOrders(ownerSigner, maturities[1], unitPrice);
-    }
-    await time.increaseTo(maturities[0].toString());
-    await lendingMarketController.connect(ownerSigner).rotateOrderBooks(hexETH);
-
-    await lendingMarketController
-      .connect(ownerSigner)
-      .executeItayoseCalls([hexETH], maturities[maturities.length - 1]);
+      .executeOrder(currency, maturity, side, amount, unitPrice, {
+        gasLimit: estimatedGas.mul(11).div(10),
+      });
   };
 
   const getOrderUnitPrice = async (
@@ -262,38 +249,33 @@ describe('ZC e2e test', async function () {
       this.skip();
     }
 
-    await lendingMarketController
-      .connect(aliceSigner)
-      .executeOrder(
-        hexETH,
-        maturities[0],
-        Side.LEND,
-        depositAmountInETH,
-        orderUnitPrice,
-      )
-      .then((tx) => tx.wait());
+    await executeOrder(
+      aliceSigner,
+      hexETH,
+      maturities[0],
+      Side.LEND,
+      depositAmountInETH,
+      orderUnitPrice,
+    ).then((tx) => tx.wait());
 
-    await lendingMarketController
-      .connect(bobSigner)
-      .executeOrder(
-        hexETH,
-        maturities[0],
-        Side.BORROW,
-        depositAmountInETH,
-        orderUnitPrice,
-      )
-      .then((tx) => tx.wait());
+    await executeOrder(
+      bobSigner,
+      hexETH,
+      maturities[0],
+      Side.BORROW,
+      depositAmountInETH,
+      orderUnitPrice,
+    ).then((tx) => tx.wait());
 
     // Create one more LEND order since orderbook is empty and maker can't unwind
-    await lendingMarketController
-      .connect(carolSigner)
-      .executeOrder(
-        hexETH,
-        maturities[0],
-        Side.LEND,
-        depositAmountInETH,
-        orderUnitPrice,
-      );
+    await executeOrder(
+      carolSigner,
+      hexETH,
+      maturities[0],
+      Side.LEND,
+      depositAmountInETH,
+      orderUnitPrice,
+    );
 
     const { futureValue: aliceFVBefore } =
       await lendingMarketController.getPosition(
@@ -328,16 +310,14 @@ describe('ZC e2e test', async function () {
       this.skip();
     }
 
-    await lendingMarketController
-      .connect(aliceSigner)
-      .executeOrder(
-        targetCurrency,
-        maturities[0],
-        Side.LEND,
-        orderAmountInFIL,
-        orderUnitPrice,
-      )
-      .then((tx) => tx.wait());
+    await executeOrder(
+      aliceSigner,
+      targetCurrency,
+      maturities[0],
+      Side.LEND,
+      orderAmountInFIL,
+      orderUnitPrice,
+    ).then((tx) => tx.wait());
 
     const { activeOrders } = await lendingMarketReader[
       'getOrders(bytes32,address)'
@@ -390,28 +370,24 @@ describe('ZC e2e test', async function () {
       );
 
     // Make lend orders
-    await lendingMarketController
-      .connect(aliceSigner)
-      .executeOrder(
-        targetCurrency,
-        maturities[0],
-        Side.LEND,
-        orderAmountInFIL,
-        orderUnitPrice,
-      )
-      .then((tx) => tx.wait());
+    await executeOrder(
+      aliceSigner,
+      targetCurrency,
+      maturities[0],
+      Side.LEND,
+      orderAmountInFIL,
+      orderUnitPrice,
+    ).then((tx) => tx.wait());
 
     // Make borrow orders
-    await lendingMarketController
-      .connect(bobSigner)
-      .executeOrder(
-        targetCurrency,
-        maturities[0],
-        Side.BORROW,
-        orderAmountInFIL,
-        orderUnitPrice,
-      )
-      .then((tx) => tx.wait());
+    await executeOrder(
+      bobSigner,
+      targetCurrency,
+      maturities[0],
+      Side.BORROW,
+      orderAmountInFIL,
+      orderUnitPrice,
+    ).then((tx) => tx.wait());
 
     // Calculate the future value from order unitPrice & amount
     // NOTE: The formula is: futureValue = amount / unitPrice.
@@ -504,24 +480,22 @@ describe('ZC e2e test', async function () {
       this.skip();
     }
 
-    await lendingMarketController
-      .connect(aliceSigner)
-      .executeOrder(
-        hexETH,
-        maturities[0],
-        Side.LEND,
-        '100000000000000000',
-        orderUnitPrice,
-      );
-    await lendingMarketController
-      .connect(bobSigner)
-      .executeOrder(
-        hexETH,
-        maturities[0],
-        Side.BORROW,
-        '100000000000000000',
-        orderUnitPrice,
-      );
+    await executeOrder(
+      aliceSigner,
+      hexETH,
+      maturities[0],
+      Side.LEND,
+      '100000000000000000',
+      orderUnitPrice,
+    );
+    await executeOrder(
+      bobSigner,
+      hexETH,
+      maturities[0],
+      Side.BORROW,
+      '100000000000000000',
+      orderUnitPrice,
+    );
 
     const { futureValue: aliceFVBefore } =
       await lendingMarketController.getPosition(
@@ -530,7 +504,13 @@ describe('ZC e2e test', async function () {
         aliceSigner.address,
       );
 
-    await executeAutoRoll(orderUnitPrice.toString());
+    await time.increaseTo(maturities[0].toString());
+
+    await lendingMarketController.connect(ownerSigner).rotateOrderBooks(hexETH);
+
+    await lendingMarketController
+      .connect(ownerSigner)
+      .executeItayoseCalls([hexETH], maturities[maturities.length - 1]);
 
     const position = await lendingMarketController.getPosition(
       hexETH,
