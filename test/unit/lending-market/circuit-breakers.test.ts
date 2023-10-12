@@ -592,11 +592,21 @@ describe('LendingMarket - Circuit Breakers', () => {
           );
       });
 
-      it(`Fill an order within the circuit breaker that has under the minimum rage`, async () => {
-        const unitPrice = 800;
-        const unitPrice2 = isBorrow ? 700 : 900;
+      it(`Fill an order within the circuit breaker minimum rage`, async () => {
+        const unitPrice = 500;
+        const unitPrice2 = isBorrow ? 300 : 1200;
 
         await fillOrder(unitPrice);
+
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
+            isBorrow ? Side.LEND : Side.BORROW,
+            '100000000000000',
+            unitPrice,
+          );
 
         await lendingMarketCaller
           .connect(alice)
@@ -615,7 +625,7 @@ describe('LendingMarket - Circuit Breakers', () => {
               targetCurrency,
               currentOrderBookId,
               side,
-              '100000000000000',
+              '200000000000000',
               '0',
             ),
         )
@@ -625,9 +635,9 @@ describe('LendingMarket - Circuit Breakers', () => {
             side,
             targetCurrency,
             maturity,
-            '100000000000000',
+            '200000000000000',
             '0',
-            '100000000000000',
+            '200000000000000',
             unitPrice2,
             () => true,
             () => true,
@@ -635,6 +645,62 @@ describe('LendingMarket - Circuit Breakers', () => {
             0,
             0,
             false,
+          );
+      });
+
+      it(`Fill an order outside the circuit breaker minimum rage`, async () => {
+        const unitPrice = 500;
+        const unitPrice2 = isBorrow ? 299 : 1201;
+
+        await fillOrder(unitPrice);
+
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
+            isBorrow ? Side.LEND : Side.BORROW,
+            '100000000000000',
+            unitPrice,
+          );
+
+        await lendingMarketCaller
+          .connect(alice)
+          .executeOrder(
+            targetCurrency,
+            currentOrderBookId,
+            isBorrow ? Side.LEND : Side.BORROW,
+            '100000000000000',
+            unitPrice2,
+          );
+
+        await expect(
+          lendingMarketCaller
+            .connect(bob)
+            .executeOrder(
+              targetCurrency,
+              currentOrderBookId,
+              side,
+              '200000000000000',
+              '0',
+            ),
+        )
+          .to.emit(orderActionLogic, 'OrderExecuted')
+          .withArgs(
+            bob.address,
+            side,
+            targetCurrency,
+            maturity,
+            '200000000000000',
+            '0',
+            '100000000000000',
+            unitPrice,
+            () => true,
+            () => true,
+            0,
+            0,
+            0,
+            true,
           );
       });
 

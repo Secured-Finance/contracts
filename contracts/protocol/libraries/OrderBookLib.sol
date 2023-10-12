@@ -33,6 +33,8 @@ library OrderBookLib {
 
     uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
     uint256 public constant ITAYOSE_PERIOD = 1 hours;
+    uint256 public constant CIRCUIT_BREAKER_MINIMUM_LEND_RANGE = 700;
+    uint256 public constant CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE = 200;
 
     error EmptyOrderBook();
     error PastMaturityOrderExists();
@@ -645,9 +647,9 @@ library OrderBookLib {
         if (cbThresholdUnitPrice > Constants.PRICE_DIGIT || blockUnitPriceAverage == 0) {
             cbThresholdUnitPrice = Constants.PRICE_DIGIT;
         } else if (
-            cbThresholdUnitPrice < blockUnitPriceAverage + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
+            cbThresholdUnitPrice < blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE
         ) {
-            cbThresholdUnitPrice = blockUnitPriceAverage + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE;
+            cbThresholdUnitPrice = blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE;
         }
     }
 
@@ -663,13 +665,13 @@ library OrderBookLib {
         if (
             cbThresholdUnitPrice == 0 ||
             blockUnitPriceAverage == 0 ||
-            blockUnitPriceAverage <= Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
+            blockUnitPriceAverage <= CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
         ) {
             cbThresholdUnitPrice = 1;
         } else if (
-            blockUnitPriceAverage < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
+            blockUnitPriceAverage < cbThresholdUnitPrice + CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
         ) {
-            cbThresholdUnitPrice = blockUnitPriceAverage - Constants.MINIMUM_CIRCUIT_BREAKER_RANGE;
+            cbThresholdUnitPrice = blockUnitPriceAverage - CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE;
         }
     }
 
