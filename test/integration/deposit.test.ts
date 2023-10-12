@@ -4,8 +4,15 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexETH, hexUSDC, hexWBTC, hexWFIL } from '../../utils/strings';
 import {
+  hexETH,
+  hexUSDC,
+  hexWBTC,
+  hexWFIL,
+  toBytes32,
+} from '../../utils/strings';
+import {
+  HAIRCUT,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -623,6 +630,84 @@ describe('Integration Test: Deposit', async () => {
       );
 
       expect(tokenVaultBalanceBefore).to.equal(tokenVaultBalanceAfter);
+    });
+  });
+
+  describe('Deposit new currency as collateral', async () => {
+    const hexTestToken = toBytes32('TT');
+    const initialBalance = BigNumber.from('1000000000000000000000');
+    let testToken: Contract;
+
+    before(async () => {
+      [alice] = await getUsers(1);
+      ethMaturities = await lendingMarketController.getMaturities(hexETH);
+    });
+
+    after(async () => {
+      const { activeOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([hexETH], alice.address);
+
+      for (const order of activeOrders) {
+        await lendingMarketController
+          .connect(alice)
+          .cancelOrder(order.ccy, order.maturity, order.orderId);
+      }
+
+      await tokenVault.updateCurrency(hexTestToken, false);
+    });
+
+    it('Register new currency as collateral', async () => {
+      const priceFeedContract = await ethers
+        .getContractFactory('MockV3Aggregator')
+        .then((factory) =>
+          factory.deploy(18, hexTestToken, '2000000000000000000'),
+        );
+
+      testToken = await ethers
+        .getContractFactory('MockERC20')
+        .then((factory) => factory.deploy('TestToken', 'TT', initialBalance));
+
+      await currencyController.addCurrency(
+        hexTestToken,
+        18,
+        HAIRCUT,
+        [priceFeedContract.address],
+        86400,
+      );
+
+      await tokenVault.registerCurrency(hexTestToken, testToken.address, true);
+    });
+
+    it('Deposit TestToken', async () => {
+      await testToken.connect(owner).transfer(alice.address, initialBalance);
+
+      await testToken
+        .connect(alice)
+        .approve(tokenVault.address, initialBalance.div(5));
+
+      await tokenVault
+        .connect(alice)
+        .deposit(hexTestToken, initialBalance.div(5));
+
+      const aliceDepositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexTestToken,
+      );
+
+      expect(aliceDepositAmount).to.equal(initialBalance.div(5));
+    });
+
+    it('Place an order', async () => {
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          ethMaturities[0],
+          Side.BORROW,
+          '1000000000000000',
+          '9500',
+        );
     });
   });
 
