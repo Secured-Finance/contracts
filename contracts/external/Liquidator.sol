@@ -47,7 +47,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         uint256 _debtMaturity,
         address _user,
         uint24 _poolFee
-    ) external {
+    ) external onlyOwner {
         collateralMaturities = _collateralMaturities;
         poolFee = _poolFee;
         lendingMarketController.executeLiquidationCall(

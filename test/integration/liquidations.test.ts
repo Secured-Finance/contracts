@@ -414,7 +414,6 @@ describe('Integration Test: Liquidations', async () => {
         await reserveFund.pause();
 
         const receipt = await liquidator
-          .connect(carol)
           .executeLiquidationCall(
             hexETH,
             ethMaturities,
@@ -452,16 +451,14 @@ describe('Integration Test: Liquidations', async () => {
         ).to.equal('50');
 
         await expect(
-          liquidator
-            .connect(carol)
-            .executeLiquidationCall(
-              hexETH,
-              ethMaturities,
-              hexWFIL,
-              filMaturities[0],
-              alice.address,
-              10,
-            ),
+          liquidator.executeLiquidationCall(
+            hexETH,
+            ethMaturities,
+            hexWFIL,
+            filMaturities[0],
+            alice.address,
+            10,
+          ),
         ).to.be.revertedWith(
           `NoLiquidationAmount("${alice.address}", "${hexETH}")`,
         );
@@ -931,7 +928,6 @@ describe('Integration Test: Liquidations', async () => {
         });
 
         const receipt = await liquidator
-          .connect(carol)
           .executeLiquidationCall(
             hexETH,
             ethMaturities,
@@ -1087,7 +1083,6 @@ describe('Integration Test: Liquidations', async () => {
         await reserveFund.pause();
 
         const receipt = await liquidator
-          .connect(carol)
           .executeLiquidationCall(
             hexETH,
             ethMaturities,
@@ -1275,7 +1270,6 @@ describe('Integration Test: Liquidations', async () => {
         });
 
         const receipt = await liquidator
-          .connect(carol)
           .executeLiquidationCall(
             hexUSDC,
             usdcMaturities,
@@ -1503,14 +1497,13 @@ describe('Integration Test: Liquidations', async () => {
           USDC: usdcMaturities[0],
         });
 
-        const liquidatorLendingInfo = new LendingInfo(carol.address);
+        const liquidatorLendingInfo = new LendingInfo(owner.address);
         await liquidatorLendingInfo.load('Liquidator(Before)', {
           WFIL: filMaturities[0],
           USDC: usdcMaturities[0],
         });
 
         await lendingMarketController
-          .connect(carol)
           .executeLiquidationCall(
             hexUSDC,
             hexWFIL,
@@ -1695,7 +1688,6 @@ describe('Integration Test: Liquidations', async () => {
         });
 
         const receipt = await liquidator
-          .connect(carol)
           .executeLiquidationCall(
             hexUSDC,
             usdcMaturities,

@@ -47,7 +47,7 @@ library TransferHelper {
         require(address(this).balance >= _amount, "TransferHelper: Insufficient balance");
 
         INativeToken(Storage.slot().nativeToken).deposit{value: _amount}();
-        INativeToken(Storage.slot().nativeToken).transfer(_receiver, _amount);
+        safeTransfer(Storage.slot().nativeToken, _receiver, _amount);
     }
 
     function convertFromWrappedToken(address _receiver, uint256 _amount) internal {
