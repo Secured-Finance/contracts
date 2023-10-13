@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {Constants} from "../Constants.sol";
 import {OrderBookLib, FilledOrder, PartiallyFilledOrder} from "../OrderBookLib.sol";
@@ -58,15 +58,12 @@ library OrderBookLogic {
             block.timestamp < (orderBook.openingDate - OrderBookLib.ITAYOSE_PERIOD);
     }
 
-    function getOrderBookDetail(uint8 _orderBookId)
+    function getOrderBookDetail(
+        uint8 _orderBookId
+    )
         public
         view
-        returns (
-            bytes32 ccy,
-            uint256 maturity,
-            uint256 openingDate,
-            uint256 preOpeningDate
-        )
+        returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate)
     {
         OrderBookLib.OrderBook storage orderBook = _getOrderBook(_orderBookId);
 
@@ -88,19 +85,16 @@ library OrderBookLogic {
         return _getOrderBook(_orderBookId).getMarketUnitPrice(true);
     }
 
-    function getBlockUnitPriceAverage(uint8 _orderBookId, uint256 _count)
-        external
-        view
-        returns (uint256)
-    {
+    function getBlockUnitPriceAverage(
+        uint8 _orderBookId,
+        uint256 _count
+    ) external view returns (uint256) {
         return _getOrderBook(_orderBookId).getBlockUnitPriceAverage(_count, true);
     }
 
-    function getCircuitBreakerThresholds(uint8 _orderBookId)
-        external
-        view
-        returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice)
-    {
+    function getCircuitBreakerThresholds(
+        uint8 _orderBookId
+    ) external view returns (uint256 maxLendUnitPrice, uint256 minBorrowUnitPrice) {
         maxLendUnitPrice = _getOrderBook(_orderBookId).getLendCircuitBreakerThreshold(
             Storage.slot().circuitBreakerLimitRange,
             true
@@ -115,11 +109,9 @@ library OrderBookLogic {
         return _getOrderBook(_orderBookId).getBestLendUnitPrice();
     }
 
-    function getBestLendUnitPrices(uint8[] memory _orderBookIds)
-        external
-        view
-        returns (uint256[] memory unitPrices)
-    {
+    function getBestLendUnitPrices(
+        uint8[] memory _orderBookIds
+    ) external view returns (uint256[] memory unitPrices) {
         unitPrices = new uint256[](_orderBookIds.length);
 
         for (uint256 i; i < _orderBookIds.length; i++) {
@@ -131,11 +123,9 @@ library OrderBookLogic {
         return _getOrderBook(_orderBookId).getBestBorrowUnitPrice();
     }
 
-    function getBestBorrowUnitPrices(uint8[] memory _orderBookIds)
-        external
-        view
-        returns (uint256[] memory unitPrices)
-    {
+    function getBestBorrowUnitPrices(
+        uint8[] memory _orderBookIds
+    ) external view returns (uint256[] memory unitPrices) {
         unitPrices = new uint256[](_orderBookIds.length);
 
         for (uint256 i; i < _orderBookIds.length; i++) {
@@ -143,31 +133,31 @@ library OrderBookLogic {
         }
     }
 
-    function getBorrowOrderBook(uint8 _orderBookId, uint256 _limit)
+    function getBorrowOrderBook(
+        uint8 _orderBookId,
+        uint256 _limit
+    )
         external
         view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         return _getOrderBook(_orderBookId).getBorrowOrderBook(_limit);
     }
 
-    function getLendOrderBook(uint8 _orderBookId, uint256 _limit)
+    function getLendOrderBook(
+        uint8 _orderBookId,
+        uint256 _limit
+    )
         external
         view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        )
+        returns (uint256[] memory unitPrices, uint256[] memory amounts, uint256[] memory quantities)
     {
         return _getOrderBook(_orderBookId).getLendOrderBook(_limit);
     }
 
-    function getItayoseEstimation(uint8 _orderBookId)
+    function getItayoseEstimation(
+        uint8 _orderBookId
+    )
         external
         view
         returns (
@@ -180,11 +170,9 @@ library OrderBookLogic {
         return _getOrderBook(_orderBookId).calculateItayoseResult();
     }
 
-    function getMaturities(uint8[] memory _orderBookIds)
-        public
-        view
-        returns (uint256[] memory maturities)
-    {
+    function getMaturities(
+        uint8[] memory _orderBookIds
+    ) public view returns (uint256[] memory maturities) {
         maturities = new uint256[](_orderBookIds.length);
 
         for (uint256 i; i < _orderBookIds.length; i++) {
@@ -261,7 +249,9 @@ library OrderBookLogic {
         }
     }
 
-    function executeItayoseCall(uint8 _orderBookId)
+    function executeItayoseCall(
+        uint8 _orderBookId
+    )
         external
         returns (
             uint256 openingUnitPrice,
@@ -334,11 +324,9 @@ library OrderBookLogic {
         return Storage.slot().lastOrderBookId;
     }
 
-    function _getOrderBook(uint8 _orderBookId)
-        private
-        view
-        returns (OrderBookLib.OrderBook storage)
-    {
+    function _getOrderBook(
+        uint8 _orderBookId
+    ) private view returns (OrderBookLib.OrderBook storage) {
         return Storage.slot().orderBooks[_orderBookId];
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import "../../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
 
@@ -17,30 +17,23 @@ library LendingMarketControllerStorage {
     struct Storage {
         uint256 marketBasePeriod;
         uint256 marketTerminationDate;
-        mapping(bytes32 => int256) marketTerminationPrices;
-        mapping(bytes32 => uint256) marketTerminationRatios;
-        // Mapping from currency to order book id list
-        mapping(bytes32 => uint8[]) orderBookIdLists;
-        // Mapping from currency to lending market contract address
-        mapping(bytes32 => address) lendingMarkets;
-        // Mapping from currency to future value vault contract address
-        mapping(bytes32 => address) futureValueVaults;
-        // Mapping from currency to minimum withdrawal unit price
-        mapping(bytes32 => uint256) minDebtUnitPrices;
-        // Mapping from currency to genesis date in the lending market
-        mapping(bytes32 => uint256) genesisDates;
-        // Mapping from maturity to order book id per currency
-        mapping(bytes32 => mapping(uint256 => uint8)) maturityOrderBookIds;
-        // Mapping from user to used market maturity per currency
-        mapping(bytes32 => mapping(address => EnumerableSet.UintSet)) usedMaturities;
-        // Mapping from maturity to observation period log per currency
-        mapping(bytes32 => mapping(uint256 => ObservationPeriodLog)) observationPeriodLogs;
-        // Mapping from maturity to latest estimated auto roll unit price per currency
-        mapping(bytes32 => mapping(uint256 => uint256)) estimatedAutoRollUnitPrice;
-        // Mapping from user to used currency
-        mapping(address => EnumerableSet.Bytes32Set) usedCurrencies;
-        // Mapping from user to redeemed flag
-        mapping(address => bool) isRedeemed;
+        mapping(bytes32 ccy => int256 price) marketTerminationPrices;
+        mapping(bytes32 ccy => uint256 ratio) marketTerminationRatios;
+        mapping(bytes32 ccy => uint8[] orderBookIds) orderBookIdLists;
+        mapping(bytes32 ccy => address lendingMarket) lendingMarkets;
+        mapping(bytes32 ccy => address futureValueVault) futureValueVaults;
+        mapping(bytes32 ccy => uint256 unitPrice) minDebtUnitPrices;
+        mapping(bytes32 ccy => uint256 genesisDate) genesisDates;
+        // Order book id history to get order book id from maturity
+        mapping(bytes32 ccy => mapping(uint256 maturity => uint8 orderBookIds)) maturityOrderBookIds;
+        // List of maturity that the user has open orders or positions
+        mapping(bytes32 ccy => mapping(address user => EnumerableSet.UintSet maturities)) usedMaturities;
+        // Observation period logs that is used for auto-rolls
+        mapping(bytes32 ccy => mapping(uint256 maturity => ObservationPeriodLog log)) observationPeriodLogs;
+        mapping(bytes32 ccy => mapping(uint256 maturity => uint256 unitPrice)) estimatedAutoRollUnitPrice;
+        // List of currency that the user has open orders or positions
+        mapping(address user => EnumerableSet.Bytes32Set currency) usedCurrencies;
+        mapping(address user => bool isRedeemed) isRedeemed;
     }
 
     function slot() internal pure returns (Storage storage r) {

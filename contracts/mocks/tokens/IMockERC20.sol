@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 interface IMockERC20 {
     event AddressImported(bytes32 name, address destination);

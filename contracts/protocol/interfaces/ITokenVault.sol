@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {ProtocolTypes} from "../types/ProtocolTypes.sol";
 import {ILendingMarketController} from "../interfaces/ILendingMarketController.sol";
@@ -48,14 +48,7 @@ interface ITokenVault {
         address user,
         bytes32 liquidationCcy,
         uint256 liquidationAmountMaximum
-    )
-        external
-        view
-        returns (
-            uint256 liquidationAmount,
-            uint256 protocolFee,
-            uint256 liquidatorFee
-        );
+    ) external view returns (uint256 liquidationAmount, uint256 protocolFee, uint256 liquidatorFee);
 
     function getTotalDepositAmount(bytes32 ccy) external view returns (uint256);
 
@@ -63,45 +56,28 @@ interface ITokenVault {
 
     function getUsedCurrencies(address user) external view returns (bytes32[] memory);
 
-    function calculateCoverage(address user, ILendingMarketController.AdditionalFunds memory funds)
-        external
-        view
-        returns (uint256 coverage, bool isInsufficientDepositAmount);
+    function calculateCoverage(
+        address user,
+        ILendingMarketController.AdditionalFunds memory funds
+    ) external view returns (uint256 coverage, bool isInsufficientDepositAmount);
 
-    function calculateLiquidationFees(uint256 liquidationAmount)
-        external
-        view
-        returns (uint256 protocolFee, uint256 liquidatorFee);
+    function calculateLiquidationFees(
+        uint256 liquidationAmount
+    ) external view returns (uint256 protocolFee, uint256 liquidatorFee);
 
-    function registerCurrency(
-        bytes32 ccy,
-        address tokenAddress,
-        bool isCollateral
-    ) external;
+    function registerCurrency(bytes32 ccy, address tokenAddress, bool isCollateral) external;
 
     function updateCurrency(bytes32 ccy, bool isCollateral) external;
 
     function deposit(bytes32 ccy, uint256 amount) external payable;
 
-    function depositFrom(
-        address user,
-        bytes32 ccy,
-        uint256 amount
-    ) external payable;
+    function depositFrom(address user, bytes32 ccy, uint256 amount) external payable;
 
     function withdraw(bytes32 ccy, uint256 amount) external;
 
-    function addDepositAmount(
-        address user,
-        bytes32 ccy,
-        uint256 amount
-    ) external;
+    function addDepositAmount(address user, bytes32 ccy, uint256 amount) external;
 
-    function removeDepositAmount(
-        address user,
-        bytes32 ccy,
-        uint256 amount
-    ) external;
+    function removeDepositAmount(address user, bytes32 ccy, uint256 amount) external;
 
     function executeForcedReset(address user, bytes32 ccy) external returns (uint256 removedAmount);
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // interfaces
 import {IBeaconProxyController} from "./interfaces/IBeaconProxyController.sol";
@@ -52,12 +52,9 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
      * @param beaconName The cache name of the beacon proxy
      * @return beaconProxyAddress The beacon proxy address
      */
-    function getBeaconProxyAddress(bytes32 beaconName)
-        external
-        view
-        override
-        returns (address beaconProxyAddress)
-    {
+    function getBeaconProxyAddress(
+        bytes32 beaconName
+    ) external view override returns (address beaconProxyAddress) {
         beaconProxyAddress = Storage.slot().registeredBeaconProxies[beaconName];
         if (beaconProxyAddress == address(0)) revert NoBeaconProxyContract();
 
@@ -127,10 +124,10 @@ contract BeaconProxyController is IBeaconProxyController, MixinAddressResolver, 
         return address(new UpgradeabilityBeaconProxy(beaconProxyAddress, data));
     }
 
-    function _updateBeaconImpl(bytes32 name, address newAddress)
-        internal
-        returns (address beaconProxyAddress)
-    {
+    function _updateBeaconImpl(
+        bytes32 name,
+        address newAddress
+    ) internal returns (address beaconProxyAddress) {
         beaconProxyAddress = Storage.slot().registeredBeaconProxies[name];
         UpgradeableBeacon beacon;
 

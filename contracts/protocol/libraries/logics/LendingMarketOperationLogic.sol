@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {IERC20} from "../../../dependencies/openzeppelin/token/ERC20/IERC20.sol";
@@ -110,11 +110,7 @@ library LendingMarketOperationLogic {
         emit MinDebtUnitPriceUpdated(_ccy, _minDebtUnitPrice);
     }
 
-    function createOrderBook(
-        bytes32 _ccy,
-        uint256 _openingDate,
-        uint256 _preOpeningDate
-    ) external {
+    function createOrderBook(bytes32 _ccy, uint256 _openingDate, uint256 _preOpeningDate) external {
         if (!AddressResolverLib.genesisValueVault().isInitialized(_ccy)) {
             revert LendingMarketNotInitialized();
         }
@@ -145,7 +141,10 @@ library LendingMarketOperationLogic {
         emit OrderBookCreated(_ccy, orderBookId, _openingDate, newMaturity);
     }
 
-    function executeItayoseCall(bytes32 _ccy, uint256 _maturity)
+    function executeItayoseCall(
+        bytes32 _ccy,
+        uint256 _maturity
+    )
         external
         returns (
             PartiallyFilledOrder memory partiallyFilledLendingOrder,
@@ -326,11 +325,10 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function calculateNextMaturity(uint256 _timestamp, uint256 _period)
-        public
-        pure
-        returns (uint256)
-    {
+    function calculateNextMaturity(
+        uint256 _timestamp,
+        uint256 _period
+    ) public pure returns (uint256) {
         if (_period == 0) {
             return TimeLibrary.addDays(_timestamp, 7);
         } else {
@@ -338,11 +336,10 @@ library LendingMarketOperationLogic {
         }
     }
 
-    function _getLastFridayAfterMonths(uint256 _timestamp, uint256 _months)
-        internal
-        pure
-        returns (uint256 lastFridayTimestamp)
-    {
+    function _getLastFridayAfterMonths(
+        uint256 _timestamp,
+        uint256 _months
+    ) internal pure returns (uint256 lastFridayTimestamp) {
         (uint256 year, uint256 month, ) = TimeLibrary.timestampToDate(
             TimeLibrary.addMonths(_timestamp, _months + 1)
         );
@@ -356,11 +353,10 @@ library LendingMarketOperationLogic {
         return lastFridayTimestamp;
     }
 
-    function _calculateAutoRollUnitPrice(bytes32 _ccy, uint256 _maturity)
-        internal
-        view
-        returns (uint256 autoRollUnitPrice)
-    {
+    function _calculateAutoRollUnitPrice(
+        bytes32 _ccy,
+        uint256 _maturity
+    ) internal view returns (uint256 autoRollUnitPrice) {
         ObservationPeriodLog memory log = Storage.slot().observationPeriodLogs[_ccy][_maturity];
 
         if (log.totalFutureValue != 0) {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 // dependencies
 import {AggregatorV3Interface} from "../dependencies/chainlink/AggregatorV3Interface.sol";
@@ -125,12 +125,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _ccy Currency name in bytes32
      * @param _haircut Remaining ratio after haircut
      */
-    function updateHaircut(bytes32 _ccy, uint256 _haircut)
-        public
-        override
-        onlyOwner
-        onlySupportedCurrency(_ccy)
-    {
+    function updateHaircut(
+        bytes32 _ccy,
+        uint256 _haircut
+    ) public override onlyOwner onlySupportedCurrency(_ccy) {
         _updateHaircut(_ccy, _haircut);
     }
 
@@ -174,7 +172,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
 
         for (uint256 i; i < priceFeeds.instances.length - 1; i++) {
             uint8 decimals = priceFeeds.instances[i].decimals();
-            price = price.div((10**decimals).toInt256());
+            price = price.div((10 ** decimals).toInt256());
         }
     }
 
@@ -206,8 +204,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         int256 fromPrice = _getAggregatedLastPrice(_fromCcy);
         int256 toPrice = _getAggregatedLastPrice(_toCcy);
 
-        amount = (_amount * uint256(fromPrice) * 10**Storage.slot().decimalsCaches[_toCcy]).div(
-            10**Storage.slot().decimalsCaches[_fromCcy] * uint256(toPrice)
+        amount = (_amount * uint256(fromPrice) * 10 ** Storage.slot().decimalsCaches[_toCcy]).div(
+            10 ** Storage.slot().decimalsCaches[_fromCcy] * uint256(toPrice)
         );
     }
 
@@ -234,8 +232,8 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         for (uint256 i; i < _amounts.length; i++) {
             if (_amounts[i] == 0) continue;
 
-            amounts[i] = (_amounts[i] * uint256(fromPrice) * 10**toDecimals).div(
-                10**fromDecimals * uint256(toPrice)
+            amounts[i] = (_amounts[i] * uint256(fromPrice) * 10 ** toDecimals).div(
+                10 ** fromDecimals * uint256(toPrice)
             );
         }
     }
@@ -246,16 +244,14 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _amount Amount to be converted
      * @return amount The converted amount
      */
-    function convertToBaseCurrency(bytes32 _ccy, uint256 _amount)
-        public
-        view
-        override
-        returns (uint256 amount)
-    {
+    function convertToBaseCurrency(
+        bytes32 _ccy,
+        uint256 _amount
+    ) public view override returns (uint256 amount) {
         if (_amount == 0) return 0;
 
         amount = (_amount * _getAggregatedLastPrice(_ccy).toUint256()).div(
-            10**Storage.slot().decimalsCaches[_ccy]
+            10 ** Storage.slot().decimalsCaches[_ccy]
         );
     }
 
@@ -265,16 +261,14 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _amount Amount to be converted
      * @return amount The converted amount
      */
-    function convertToBaseCurrency(bytes32 _ccy, int256 _amount)
-        external
-        view
-        override
-        returns (int256 amount)
-    {
+    function convertToBaseCurrency(
+        bytes32 _ccy,
+        int256 _amount
+    ) external view override returns (int256 amount) {
         if (_amount == 0) return 0;
 
         amount = (_amount * _getAggregatedLastPrice(_ccy)).div(
-            (10**Storage.slot().decimalsCaches[_ccy]).toInt256()
+            (10 ** Storage.slot().decimalsCaches[_ccy]).toInt256()
         );
     }
 
@@ -284,19 +278,17 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _amounts Amounts to be converted
      * @return amounts The converted amounts
      */
-    function convertToBaseCurrency(bytes32 _ccy, uint256[] calldata _amounts)
-        public
-        view
-        override
-        returns (uint256[] memory amounts)
-    {
+    function convertToBaseCurrency(
+        bytes32 _ccy,
+        uint256[] calldata _amounts
+    ) public view override returns (uint256[] memory amounts) {
         amounts = new uint256[](_amounts.length);
         uint256 price = _getAggregatedLastPrice(_ccy).toUint256();
         uint256 decimals = Storage.slot().decimalsCaches[_ccy];
 
         for (uint256 i; i < _amounts.length; i++) {
             if (_amounts[i] == 0) continue;
-            amounts[i] = (_amounts[i] * price).div(10**decimals);
+            amounts[i] = (_amounts[i] * price).div(10 ** decimals);
         }
     }
 
@@ -306,13 +298,11 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _amount Amount in the base currency to be converted
      * @return amount The converted amount
      */
-    function convertFromBaseCurrency(bytes32 _ccy, uint256 _amount)
-        public
-        view
-        override
-        returns (uint256 amount)
-    {
-        amount = (_amount * 10**Storage.slot().decimalsCaches[_ccy]).div(
+    function convertFromBaseCurrency(
+        bytes32 _ccy,
+        uint256 _amount
+    ) public view override returns (uint256 amount) {
+        amount = (_amount * 10 ** Storage.slot().decimalsCaches[_ccy]).div(
             _getAggregatedLastPrice(_ccy).toUint256()
         );
     }
@@ -323,12 +313,10 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
      * @param _amounts Amounts in the base currency to be converted
      * @return amounts The converted amounts
      */
-    function convertFromBaseCurrency(bytes32 _ccy, uint256[] calldata _amounts)
-        public
-        view
-        override
-        returns (uint256[] memory amounts)
-    {
+    function convertFromBaseCurrency(
+        bytes32 _ccy,
+        uint256[] calldata _amounts
+    ) public view override returns (uint256[] memory amounts) {
         amounts = new uint256[](_amounts.length);
         uint256 price = _getAggregatedLastPrice(_ccy).toUint256();
         uint256 decimals = Storage.slot().decimalsCaches[_ccy];
@@ -336,7 +324,7 @@ contract CurrencyController is ICurrencyController, Ownable, Proxyable {
         for (uint256 i; i < _amounts.length; i++) {
             if (_amounts[i] == 0) continue;
 
-            amounts[i] = (_amounts[i] * 10**decimals).div(price);
+            amounts[i] = (_amounts[i] * 10 ** decimals).div(price);
         }
     }
 

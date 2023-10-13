@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 library QuickSort {
     function sort(uint256[] memory data) public pure returns (uint256[] memory) {
@@ -7,11 +7,7 @@ library QuickSort {
         return data;
     }
 
-    function quickSort(
-        uint256[] memory arr,
-        int256 left,
-        int256 right
-    ) internal pure {
+    function quickSort(uint256[] memory arr, int256 left, int256 right) internal pure {
         int256 i = left;
         int256 j = right;
         if (i == j) return;

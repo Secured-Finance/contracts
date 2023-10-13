@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import "../types/ProtocolTypes.sol";
 import {ItayoseLog} from "../storages/LendingMarketStorage.sol";
@@ -12,34 +12,31 @@ interface ILendingMarket {
     error NotItayosePeriod();
     error NotPreOrderPeriod();
 
-    function getOrderBookDetail(uint8 orderBookId)
+    function getOrderBookDetail(
+        uint8 orderBookId
+    )
         external
         view
-        returns (
-            bytes32 ccy,
-            uint256 maturity,
-            uint256 openingDate,
-            uint256 preOpeningDate
-        );
+        returns (bytes32 ccy, uint256 maturity, uint256 openingDate, uint256 preOpeningDate);
 
-    function getCircuitBreakerThresholds(uint8 orderBookId)
+    function getCircuitBreakerThresholds(
+        uint8 orderBookId
+    )
         external
         view
         returns (uint256 lendCircuitBreakerThreshold, uint256 borrowCircuitBreakerThreshold);
 
     function getBestLendUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestLendUnitPrices(uint8[] calldata orderBookIds)
-        external
-        view
-        returns (uint256[] memory);
+    function getBestLendUnitPrices(
+        uint8[] calldata orderBookIds
+    ) external view returns (uint256[] memory);
 
     function getBestBorrowUnitPrice(uint8 orderBookId) external view returns (uint256 unitPrice);
 
-    function getBestBorrowUnitPrices(uint8[] calldata orderBookIds)
-        external
-        view
-        returns (uint256[] memory);
+    function getBestBorrowUnitPrices(
+        uint8[] calldata orderBookIds
+    ) external view returns (uint256[] memory);
 
     function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256);
 
@@ -47,21 +44,15 @@ interface ILendingMarket {
 
     function getBlockUnitPriceHistory(uint8 orderBookId) external view returns (uint256[] memory);
 
-    function getBlockUnitPriceAverage(uint8 orderBookId, uint256 count)
-        external
-        view
-        returns (uint256);
+    function getBlockUnitPriceAverage(
+        uint8 orderBookId,
+        uint256 count
+    ) external view returns (uint256);
 
-    function getBorrowOrderBook(uint8 orderBookId, uint256 limit)
-        external
-        view
-        returns (
-            uint256[] memory unitPrices,
-            uint256[] memory amounts,
-            uint256[] memory quantities
-        );
-
-    function getLendOrderBook(uint8 orderBookId, uint256 limit)
+    function getBorrowOrderBook(
+        uint8 orderBookId,
+        uint256 limit
+    )
         external
         view
         returns (
@@ -70,7 +61,21 @@ interface ILendingMarket {
             uint256[] memory quantities
         );
 
-    function getItayoseEstimation(uint8 orderBookId)
+    function getLendOrderBook(
+        uint8 orderBookId,
+        uint256 limit
+    )
+        external
+        view
+        returns (
+            uint256[] memory unitPrices,
+            uint256[] memory amounts,
+            uint256[] memory quantities
+        );
+
+    function getItayoseEstimation(
+        uint8 orderBookId
+    )
         external
         view
         returns (
@@ -82,10 +87,9 @@ interface ILendingMarket {
 
     function getMaturity(uint8 orderBookId) external view returns (uint256);
 
-    function getMaturities(uint8[] calldata orderBookIds)
-        external
-        view
-        returns (uint256[] memory maturities);
+    function getMaturities(
+        uint8[] calldata orderBookIds
+    ) external view returns (uint256[] memory maturities);
 
     function getCurrency() external view returns (bytes32);
 
@@ -107,7 +111,10 @@ interface ILendingMarket {
 
     function getItayoseLog(uint256 maturity) external view returns (ItayoseLog memory);
 
-    function getOrder(uint8 orderBookId, uint48 orderId)
+    function getOrder(
+        uint8 orderBookId,
+        uint48 orderId
+    )
         external
         view
         returns (
@@ -120,7 +127,10 @@ interface ILendingMarket {
             bool isPreOrder
         );
 
-    function getTotalAmountFromLendOrders(uint8 orderBookId, address user)
+    function getTotalAmountFromLendOrders(
+        uint8 orderBookId,
+        address user
+    )
         external
         view
         returns (
@@ -144,15 +154,15 @@ interface ILendingMarket {
             uint256 maturity
         );
 
-    function getLendOrderIds(uint8 orderBookId, address user)
-        external
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
+    function getLendOrderIds(
+        uint8 orderBookId,
+        address user
+    ) external view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
 
-    function getBorrowOrderIds(uint8 orderBookId, address user)
-        external
-        view
-        returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
+    function getBorrowOrderIds(
+        uint8 orderBookId,
+        address user
+    ) external view returns (uint48[] memory activeOrderIds, uint48[] memory inActiveOrderIds);
 
     function calculateFilledAmount(
         uint8 orderBookId,
@@ -184,11 +194,7 @@ interface ILendingMarket {
         uint256 autoRollUnitPrice
     ) external;
 
-    function cancelOrder(
-        uint8 orderBookId,
-        address user,
-        uint48 orderId
-    ) external;
+    function cancelOrder(uint8 orderBookId, address user, uint48 orderId) external;
 
     function executeOrder(
         uint8 orderBookId,
@@ -225,7 +231,9 @@ interface ILendingMarket {
             uint256 feeInFV
         );
 
-    function executeItayoseCall(uint8 orderBookId)
+    function executeItayoseCall(
+        uint8 orderBookId
+    )
         external
         returns (
             uint256 openingUnitPrice,
@@ -235,7 +243,10 @@ interface ILendingMarket {
             PartiallyFilledOrder memory partiallyFilledBorrowingOrder
         );
 
-    function cleanUpOrders(uint8 orderBookId, address user)
+    function cleanUpOrders(
+        uint8 orderBookId,
+        address user
+    )
         external
         returns (
             uint256 activeLendOrderCount,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import {Ownable} from "./utils/Ownable.sol";
 import {IAddressResolver} from "./interfaces/IAddressResolver.sol";
@@ -128,10 +128,10 @@ contract ProxyController is IProxyController, Ownable {
      * @param newImpl The address of implementation contract
      * @param marketBasePeriod The base period for market maturity
      */
-    function setLendingMarketControllerImpl(address newImpl, uint256 marketBasePeriod)
-        external
-        onlyOwner
-    {
+    function setLendingMarketControllerImpl(
+        address newImpl,
+        uint256 marketBasePeriod
+    ) external onlyOwner {
         bytes memory data = abi.encodeWithSignature(
             "initialize(address,address,uint256)",
             msg.sender,
@@ -161,10 +161,10 @@ contract ProxyController is IProxyController, Ownable {
      * @param newAdmin The address of new admin
      * @param destinations The destination contract addresses
      */
-    function changeProxyAdmins(address newAdmin, address[] calldata destinations)
-        external
-        onlyOwner
-    {
+    function changeProxyAdmins(
+        address newAdmin,
+        address[] calldata destinations
+    ) external onlyOwner {
         for (uint256 i; i < destinations.length; i++) {
             UpgradeabilityProxy proxy = UpgradeabilityProxy(payable(destinations[i]));
             proxy.changeAdmin(newAdmin);
