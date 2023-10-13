@@ -838,6 +838,41 @@ describe('LendingMarketController - Orders', () => {
         });
     });
 
+    it('Add multiple orders using multicall', async () => {
+      const inputs = [
+        [targetCurrency, maturities[0], Side.LEND, '100000000000000', '9880'],
+        [targetCurrency, maturities[1], Side.BORROW, '200000000000000', '9800'],
+      ];
+
+      await lendingMarketControllerProxy
+        .connect(alice)
+        .multicall(
+          inputs.map((input) =>
+            lendingMarketControllerProxy.interface.encodeFunctionData(
+              'executeOrder',
+              input,
+            ),
+          ),
+        );
+
+      const order1 = await lendingMarket.getOrder(orderBookIds[0], '1');
+      const order2 = await lendingMarket.getOrder(orderBookIds[1], '1');
+
+      expect(order1.side).to.equal(Side.LEND);
+      expect(order1.unitPrice).to.equal('9880');
+      expect(order1.maturity).to.equal(maturities[0]);
+      expect(order1.maker).to.equal(alice.address);
+      expect(order1.amount).to.equal('100000000000000');
+      expect(order1.isPreOrder).to.equal(false);
+
+      expect(order2.side).to.equal(Side.BORROW);
+      expect(order2.unitPrice).to.equal('9800');
+      expect(order2.maturity).to.equal(maturities[1]);
+      expect(order2.maker).to.equal(alice.address);
+      expect(order2.amount).to.equal('200000000000000');
+      expect(order2.isPreOrder).to.equal(false);
+    });
+
     it('Get an order', async () => {
       await lendingMarketControllerProxy
         .connect(alice)

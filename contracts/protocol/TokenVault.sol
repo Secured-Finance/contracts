@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 // dependencies
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // libraries
 import {Contracts} from "./libraries/Contracts.sol";
 import {Constants} from "./libraries/Constants.sol";
@@ -40,7 +41,8 @@ contract TokenVault is
     MixinLiquidationConfiguration,
     MixinAddressResolver,
     Pausable,
-    Proxyable
+    Proxyable,
+    Multicall
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
