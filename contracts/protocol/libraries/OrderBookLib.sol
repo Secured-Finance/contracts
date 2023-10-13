@@ -33,6 +33,8 @@ library OrderBookLib {
 
     uint256 public constant PRE_ORDER_BASE_PERIOD = 7 days;
     uint256 public constant ITAYOSE_PERIOD = 1 hours;
+    uint256 public constant CIRCUIT_BREAKER_MINIMUM_LEND_RANGE = 700;
+    uint256 public constant CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE = 200;
 
     error EmptyOrderBook();
     error PastMaturityOrderExists();
@@ -523,7 +525,7 @@ library OrderBookLib {
         return (side, removedAmount, unitPrice);
     }
 
-    function getOpeningUnitPrice(OrderBook storage self)
+    function calculateItayoseResult(OrderBook storage self)
         internal
         view
         returns (
@@ -533,18 +535,18 @@ library OrderBookLib {
             uint256 totalOffsetAmount
         )
     {
-        uint256 lendUnitPrice = getBestBorrowUnitPrice(self);
-        uint256 borrowUnitPrice = getBestLendUnitPrice(self);
+        uint256 lendUnitPrice = self.lendOrders[self.maturity].last();
+        uint256 borrowUnitPrice = self.borrowOrders[self.maturity].first();
         uint256 lendAmount = self.lendOrders[self.maturity].getNodeTotalAmount(lendUnitPrice);
         uint256 borrowAmount = self.borrowOrders[self.maturity].getNodeTotalAmount(borrowUnitPrice);
 
         OrderStatisticsTreeLib.Tree storage borrowOrders = self.borrowOrders[self.maturity];
         OrderStatisticsTreeLib.Tree storage lendOrders = self.lendOrders[self.maturity];
 
-        // return mid price when no lending and borrowing orders overwrap
-        if (borrowUnitPrice > lendUnitPrice) {
+        // Return 0 if no orders is filled
+        if (borrowUnitPrice > lendUnitPrice || borrowUnitPrice == 0 || lendUnitPrice == 0) {
             openingUnitPrice = (lendUnitPrice + borrowUnitPrice).div(2);
-            return (openingUnitPrice, 0, 0, 0);
+            return (0, 0, 0, 0);
         }
 
         while (borrowUnitPrice <= lendUnitPrice && borrowUnitPrice > 0 && lendUnitPrice > 0) {
@@ -645,9 +647,9 @@ library OrderBookLib {
         if (cbThresholdUnitPrice > Constants.PRICE_DIGIT || blockUnitPriceAverage == 0) {
             cbThresholdUnitPrice = Constants.PRICE_DIGIT;
         } else if (
-            cbThresholdUnitPrice < blockUnitPriceAverage + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
+            cbThresholdUnitPrice < blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE
         ) {
-            cbThresholdUnitPrice = blockUnitPriceAverage + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE;
+            cbThresholdUnitPrice = blockUnitPriceAverage + CIRCUIT_BREAKER_MINIMUM_LEND_RANGE;
         }
     }
 
@@ -663,13 +665,13 @@ library OrderBookLib {
         if (
             cbThresholdUnitPrice == 0 ||
             blockUnitPriceAverage == 0 ||
-            blockUnitPriceAverage <= Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
+            blockUnitPriceAverage <= CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
         ) {
             cbThresholdUnitPrice = 1;
         } else if (
-            blockUnitPriceAverage < cbThresholdUnitPrice + Constants.MINIMUM_CIRCUIT_BREAKER_RANGE
+            blockUnitPriceAverage < cbThresholdUnitPrice + CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
         ) {
-            cbThresholdUnitPrice = blockUnitPriceAverage - Constants.MINIMUM_CIRCUIT_BREAKER_RANGE;
+            cbThresholdUnitPrice = blockUnitPriceAverage - CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE;
         }
     }
 

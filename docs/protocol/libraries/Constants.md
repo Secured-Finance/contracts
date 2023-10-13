@@ -34,11 +34,3 @@ uint256 MAXIMUM_ORDER_COUNT
 
 _Used for maximum order count per currency_
 
-### MINIMUM_CIRCUIT_BREAKER_RANGE
-
-```solidity
-uint256 MINIMUM_CIRCUIT_BREAKER_RANGE
-```
-
-_Used for minimum range for circuit breaker unit price_
-

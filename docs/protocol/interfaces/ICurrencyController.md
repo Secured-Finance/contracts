@@ -149,7 +149,13 @@ function getPriceFeed(bytes32 _ccy) external view returns (struct PriceFeed)
 ### getLastPrice
 
 ```solidity
-function getLastPrice(bytes32 _ccy) external view returns (int256)
+function getLastPrice(bytes32 _ccy) external view returns (int256 price)
+```
+
+### getAggregatedLastPrice
+
+```solidity
+function getAggregatedLastPrice(bytes32 _ccy) external view returns (int256)
 ```
 
 ### currencyExists

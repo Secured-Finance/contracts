@@ -39,7 +39,7 @@ _Function is invoked by the proxy contract when the contract is added to the Pro
 function getDecimals(bytes32 _ccy) external view returns (uint8)
 ```
 
-Gets cached decimal of the price feed for the selected currency.
+Gets aggregated and cached decimals of the price feeds for the selected currency.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -172,7 +172,24 @@ Removes existing Chainlink price feed.
 function getLastPrice(bytes32 _ccy) public view returns (int256 price)
 ```
 
-Gets the last price for the selected currency.
+Gets the last price of the selected currency in the base currency.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _ccy | bytes32 | Currency name in bytes32 |
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| price | int256 | The last price |
+
+### getAggregatedLastPrice
+
+```solidity
+function getAggregatedLastPrice(bytes32 _ccy) public view returns (int256 price)
+```
+
+Gets the last price of the selected currency in the base currency.
+This price is returned in the aggregated decimals of all price feeds.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -303,10 +320,10 @@ Gets the converted amounts to the selected currency from the base currency.
 | ---- | ---- | ----------- |
 | amounts | uint256[] | The converted amounts |
 
-### _getLastPrice
+### _getAggregatedLastPrice
 
 ```solidity
-function _getLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice)
+function _getAggregatedLastPrice(bytes32 _ccy) internal view returns (int256 totalPrice)
 ```
 
 ### _updateHaircut

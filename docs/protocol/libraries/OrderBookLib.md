@@ -47,6 +47,18 @@ uint256 PRE_ORDER_BASE_PERIOD
 uint256 ITAYOSE_PERIOD
 ```
 
+### CIRCUIT_BREAKER_MINIMUM_LEND_RANGE
+
+```solidity
+uint256 CIRCUIT_BREAKER_MINIMUM_LEND_RANGE
+```
+
+### CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
+
+```solidity
+uint256 CIRCUIT_BREAKER_MINIMUM_BORROW_RANGE
+```
+
 ### EmptyOrderBook
 
 ```solidity
@@ -208,10 +220,10 @@ function updateBlockUnitPriceHistory(struct OrderBookLib.OrderBook self, uint256
 function removeOrder(struct OrderBookLib.OrderBook self, address _user, uint48 _orderId) internal returns (enum ProtocolTypes.Side, uint256, uint256)
 ```
 
-### getOpeningUnitPrice
+### calculateItayoseResult
 
 ```solidity
-function getOpeningUnitPrice(struct OrderBookLib.OrderBook self) internal view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
+function calculateItayoseResult(struct OrderBookLib.OrderBook self) internal view returns (uint256 openingUnitPrice, uint256 lastLendUnitPrice, uint256 lastBorrowUnitPrice, uint256 totalOffsetAmount)
 ```
 
 ### getOrderExecutionConditions

@@ -166,7 +166,11 @@ library LendingMarketUserLogic {
         uint256 _maturity,
         address _user
     ) external {
-        int256 futureValue = FundManagementLogic.getActualFunds(_ccy, _maturity, _user).futureValue;
+        FundManagementLogic.cleanUpFunds(_ccy, _user);
+
+        int256 futureValue = FundManagementLogic
+            .getActualFunds(_ccy, _maturity, _user, 0)
+            .futureValue;
 
         (
             FilledOrder memory filledOrder,

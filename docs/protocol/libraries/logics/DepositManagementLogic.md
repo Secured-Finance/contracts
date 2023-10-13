@@ -32,7 +32,6 @@ struct CalculatedFundVars {
   uint256 workingBorrowOrdersAmount;
   uint256 debtAmount;
   uint256 borrowedAmount;
-  uint256 minDebtAmount;
 }
 ```
 
@@ -57,7 +56,7 @@ function getDepositAmount(address _user, bytes32 _ccy) public view returns (uint
 ### getTotalCollateralAmount
 
 ```solidity
-function getTotalCollateralAmount(address _user) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, uint256 minRequiredCollateral)
+function getTotalCollateralAmount(address _user) public view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit)
 ```
 
 ### getCollateralAmount
@@ -72,6 +71,18 @@ function getCollateralAmount(address _user, bytes32 _ccy) public view returns (u
 function getCoverage(address _user) external view returns (uint256 coverage)
 ```
 
+### getTotalUnusedCollateralAmount
+
+```solidity
+function getTotalUnusedCollateralAmount(address _user) public view returns (uint256)
+```
+
+### getBorrowableAmount
+
+```solidity
+function getBorrowableAmount(address _user, bytes32 _ccy) external view returns (uint256)
+```
+
 ### calculateCoverage
 
 ```solidity
@@ -81,7 +92,7 @@ function calculateCoverage(address _user, struct ILendingMarketController.Additi
 ### _calculateCollateral
 
 ```solidity
-function _calculateCollateral(address _user, struct ILendingMarketController.AdditionalFunds _funds) internal view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, uint256 minRequiredCollateral, bool isInsufficientDepositAmount)
+function _calculateCollateral(address _user, struct ILendingMarketController.AdditionalFunds _funds) internal view returns (uint256 totalCollateral, uint256 totalUsedCollateral, uint256 totalDeposit, bool isInsufficientDepositAmount)
 ```
 
 ### getWithdrawableCollateral
@@ -159,7 +170,7 @@ Gets the total of amount deposited in the user's collateral of all currencies
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| totalDepositAmount | uint256 | The total deposited amount in ETH |
+| totalDepositAmount | uint256 | The total deposited amount in the base currency |
 
 ### _updateUsedCurrencies
 

@@ -120,10 +120,8 @@ describe('LendingMarket - Itayose', () => {
       lastBorrowUnitPrice: 8100,
     },
     {
-      openingPrice: '4000', // 0 + 8,000 = 4,000 / 2
+      openingPrice: '0',
       orders: [
-        { side: Side.BORROW, unitPrice: '8500', amount: '300000000000000' },
-        { side: Side.BORROW, unitPrice: '8100', amount: '100000000000000' },
         { side: Side.BORROW, unitPrice: '8000', amount: '50000000000000' },
       ],
       shouldItayoseExecuted: false,
@@ -131,18 +129,16 @@ describe('LendingMarket - Itayose', () => {
       lastBorrowUnitPrice: 0,
     },
     {
-      openingPrice: '9150', // 10,000 + 8,300 = 9,150 / 2
+      openingPrice: '0',
       orders: [
         { side: Side.LEND, unitPrice: '8300', amount: '100000000000000' },
-        { side: Side.LEND, unitPrice: '8200', amount: '200000000000000' },
-        { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },
       ],
       shouldItayoseExecuted: false,
       lastLendUnitPrice: 0,
       lastBorrowUnitPrice: 0,
     },
     {
-      openingPrice: '8150', // 7,800 + 8,500 / 2
+      openingPrice: '0',
       orders: [
         { side: Side.BORROW, unitPrice: '8500', amount: '300000000000000' },
         { side: Side.LEND, unitPrice: '7800', amount: '300000000000000' },

@@ -30,7 +30,6 @@ interface ILendingMarketController {
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
         uint256 borrowedAmount;
-        uint256 minDebtAmount;
     }
 
     struct CalculatedFunds {
@@ -41,7 +40,6 @@ interface ILendingMarketController {
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
         uint256 borrowedAmount;
-        uint256 minDebtAmount;
     }
 
     struct GetOrderEstimationParams {

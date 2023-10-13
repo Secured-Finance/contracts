@@ -43,9 +43,9 @@ interface ILendingMarket {
 
     function getMarketUnitPrice(uint8 orderBookId) external view returns (uint256);
 
-    function getLastOrderBlockNumber(uint8 _orderBookId) external view returns (uint256);
+    function getLastOrderBlockNumber(uint8 orderBookId) external view returns (uint256);
 
-    function getBlockUnitPriceHistory(uint8 _orderBookId) external view returns (uint256[] memory);
+    function getBlockUnitPriceHistory(uint8 orderBookId) external view returns (uint256[] memory);
 
     function getBlockUnitPriceAverage(uint8 orderBookId, uint256 count)
         external
@@ -68,6 +68,16 @@ interface ILendingMarket {
             uint256[] memory unitPrices,
             uint256[] memory amounts,
             uint256[] memory quantities
+        );
+
+    function getItayoseEstimation(uint8 orderBookId)
+        external
+        view
+        returns (
+            uint256 openingUnitPrice,
+            uint256 lastLendUnitPrice,
+            uint256 lastBorrowUnitPrice,
+            uint256 totalOffsetAmount
         );
 
     function getMaturity(uint8 orderBookId) external view returns (uint256);
@@ -120,7 +130,11 @@ interface ILendingMarket {
             uint256 maturity
         );
 
-    function getTotalAmountFromBorrowOrders(uint8 orderBookId, address user)
+    function getTotalAmountFromBorrowOrders(
+        uint8 orderBookId,
+        address user,
+        uint256 _minUnitPrice
+    )
         external
         view
         returns (
@@ -233,9 +247,9 @@ interface ILendingMarket {
             uint256 maturity
         );
 
-    function updateOrderFeeRate(uint256 _orderFeeRate) external;
+    function updateOrderFeeRate(uint256 orderFeeRate) external;
 
-    function updateCircuitBreakerLimitRange(uint256 _limitRange) external;
+    function updateCircuitBreakerLimitRange(uint256 limitRange) external;
 
     function pauseMarket() external;
 

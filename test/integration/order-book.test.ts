@@ -124,11 +124,11 @@ describe('Integration Test: Order Book', async () => {
 
         await lendingMarketController
           .connect(carol)
-          .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '8200');
+          .executeOrder(hexETH, ethMaturities[0], Side.BORROW, '1000', '9800');
 
         await lendingMarketController
           .connect(carol)
-          .executeOrder(hexETH, ethMaturities[0], Side.LEND, '1000', '7800');
+          .executeOrder(hexETH, ethMaturities[0], Side.LEND, '1000', '9400');
       });
 
       it('Deposit ETH', async () => {
@@ -152,7 +152,7 @@ describe('Integration Test: Order Book', async () => {
             ethMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
             { value: orderAmount },
           );
 
@@ -163,13 +163,13 @@ describe('Integration Test: Order Book', async () => {
             ethMaturities[0],
             Side.BORROW,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount,
-          '8000',
+          '9600',
           ethMaturities[0].sub(timestamp),
         );
 
@@ -207,7 +207,7 @@ describe('Integration Test: Order Book', async () => {
             ethMaturities[0],
             Side.BORROW,
             orderAmount.mul(2),
-            '8000',
+            '9600',
             { value: orderAmount.mul(2) },
           );
 
@@ -290,7 +290,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const { blockHash } = await lendingMarketController
@@ -306,7 +306,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount,
-          '8000',
+          '9600',
           filMaturities[0].sub(timestamp),
         );
 
@@ -348,7 +348,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmount.mul(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -418,7 +418,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const { blockHash } = await lendingMarketController
@@ -434,7 +434,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount,
-          '8000',
+          '9600',
           filMaturities[0].sub(timestamp),
         );
 
@@ -458,7 +458,7 @@ describe('Integration Test: Order Book', async () => {
             bob.address,
           );
 
-        expect(bobFV).to.equal(calculateFutureValue(orderAmount, '8000'));
+        expect(bobFV).to.equal(calculateFutureValue(orderAmount, '9600'));
       });
 
       it('Unwind a lending position', async () => {
@@ -473,7 +473,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const tx = await lendingMarketController
@@ -549,7 +549,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmountInFIL,
-            '8000',
+            '9600',
           );
 
         const { blockHash } = await lendingMarketController
@@ -565,7 +565,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmountInFIL,
-          '8000',
+          '9600',
           filMaturities[0].sub(timestamp),
         );
 
@@ -591,7 +591,7 @@ describe('Integration Test: Order Book', async () => {
             ethMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
             { value: orderAmount },
           );
 
@@ -608,7 +608,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount,
-          '8000',
+          '9600',
           ethMaturities[0].sub(timestamp),
         );
 
@@ -689,7 +689,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL.div(2),
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -740,7 +740,7 @@ describe('Integration Test: Order Book', async () => {
             ethMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
             { value: orderAmount },
           );
 
@@ -757,7 +757,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount,
-          '8000',
+          '9600',
           ethMaturities[0].sub(timestamp),
         );
 
@@ -783,7 +783,7 @@ describe('Integration Test: Order Book', async () => {
             ethMaturities[1],
             Side.BORROW,
             orderAmount2,
-            '8000',
+            '9600',
           );
 
         expect(await tokenVault.getCoverage(bob.address)).to.equal('8000');
@@ -815,7 +815,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount2,
-          '8000',
+          '9600',
           ethMaturities[1].sub(timestamp),
         );
 
@@ -854,60 +854,107 @@ describe('Integration Test: Order Book', async () => {
     describe('Fill orders, Trigger circuit breakers by one order', async () => {
       const depositAmount = initialETHBalance.div(5);
       const orderAmount = depositAmount
-        .mul(4)
+        .mul(3)
         .div(5)
         .mul(BigNumber.from(10).pow(18))
         .div(wFilToETHRate);
 
       before(async () => {
-        [alice, bob] = await getUsers(2);
+        [alice, bob, carol, dave] = await getUsers(4);
         filMaturities = await lendingMarketController.getMaturities(hexWFIL);
       });
 
-      it('Deposit ETH ', async () => {
-        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
-          value: depositAmount,
-        });
+      after(async () => {
+        const { activeOrders } = await lendingMarketReader[
+          'getOrders(bytes32,address)'
+        ](hexWFIL, alice.address);
 
-        const aliceDepositAmount = await tokenVault.getDepositAmount(
-          alice.address,
-          hexETH,
-        );
-
-        expect(aliceDepositAmount).to.equal(depositAmount);
+        for (const order of activeOrders) {
+          await lendingMarketController
+            .connect(alice)
+            .cancelOrder(hexWFIL, order.maturity, order.orderId);
+        }
       });
 
-      it('Fill orders on the FIL market', async () => {
-        await lendingMarketController
-          .connect(alice)
-          .executeOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.BORROW,
-            orderAmount.div(2),
-            '8000',
-          );
-
-        await lendingMarketController
-          .connect(alice)
-          .executeOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.BORROW,
-            orderAmount.div(2),
-            '9001',
-          );
-
+      it('Fill an order to determine the market unit price', async () => {
         await wFILToken
-          .connect(bob)
-          .approve(tokenVault.address, initialFILBalance);
+          .connect(dave)
+          .approve(tokenVault.address, orderAmount.mul(5).div(2));
+        await tokenVault.connect(carol).deposit(hexETH, depositAmount.mul(5), {
+          value: depositAmount.mul(5),
+        });
 
-        const { blockHash } = await lendingMarketController
-          .connect(bob)
+        await lendingMarketController
+          .connect(carol)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.BORROW,
+            orderAmount.div(2),
+            '9600',
+          );
+
+        await lendingMarketController
+          .connect(dave)
           .depositAndExecuteOrder(
             hexWFIL,
             filMaturities[0],
             Side.LEND,
+            orderAmount.div(2),
+            '9600',
+          );
+
+        const { marketUnitPrice } =
+          await lendingMarketReader.getOrderBookDetail(
+            hexWFIL,
+            filMaturities[0],
+          );
+
+        expect(marketUnitPrice).to.equal('9600');
+      });
+
+      it('Deposit ETH ', async () => {
+        await tokenVault.connect(bob).deposit(hexETH, depositAmount, {
+          value: depositAmount,
+        });
+
+        const bobDepositAmount = await tokenVault.getDepositAmount(
+          bob.address,
+          hexETH,
+        );
+
+        expect(bobDepositAmount).to.equal(depositAmount);
+      });
+
+      it('Fill orders on the FIL market', async () => {
+        await wFILToken.connect(alice).approve(tokenVault.address, orderAmount);
+
+        await lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount.div(2),
+            '9600',
+          );
+
+        await lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount.div(2),
+            '9119',
+          );
+
+        const { blockHash } = await lendingMarketController
+          .connect(bob)
+          .executeOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.BORROW,
             orderAmount,
             '0',
           );
@@ -915,7 +962,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount.div(2),
-          '8000',
+          '9600',
           filMaturities[0].sub(timestamp),
         );
 
@@ -929,7 +976,10 @@ describe('Integration Test: Order Book', async () => {
         calculateFutureValue(orderAmount.div(2), 8000);
 
         expect(
-          bobFV.add(fee).sub(calculateFutureValue(orderAmount.div(2), 8000)),
+          bobFV
+            .abs()
+            .add(fee)
+            .sub(calculateFutureValue(orderAmount.div(2), '9000')),
         ).lte(1);
       });
     });
@@ -937,7 +987,7 @@ describe('Integration Test: Order Book', async () => {
     describe('Fill orders, Trigger circuit breakers by multiple orders', async () => {
       const depositAmount = initialETHBalance.div(2);
       const orderAmount = depositAmount
-        .mul(4)
+        .mul(3)
         .div(5)
         .mul(BigNumber.from(10).pow(18))
         .div(wFilToETHRate);
@@ -954,19 +1004,14 @@ describe('Integration Test: Order Book', async () => {
             value: initialETHBalance.div(3),
           });
 
-        await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
-          value: depositAmount,
-        });
-
-        const aliceDepositAmount = await tokenVault.getDepositAmount(
-          alice.address,
-          hexETH,
-        );
-
-        expect(aliceDepositAmount).to.equal(depositAmount);
+        for (const user of [bob, carol, dave]) {
+          await tokenVault.connect(user).deposit(hexETH, depositAmount, {
+            value: depositAmount,
+          });
+        }
       });
 
-      it('Fill orders on the FIL market', async () => {
+      it('Fill an order to determine the market unit price', async () => {
         await wFILToken
           .connect(owner)
           .approve(tokenVault.address, initialFILBalance);
@@ -978,7 +1023,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.BORROW,
             '100000000000',
-            '8000',
+            '9600',
           );
 
         await lendingMarketController
@@ -988,53 +1033,51 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.LEND,
             '100000000000',
-            '8000',
+            '9600',
+          );
+      });
+
+      it('Fill orders on the FIL market', async () => {
+        await wFILToken.connect(alice).approve(tokenVault.address, orderAmount);
+
+        await lendingMarketController
+          .connect(alice)
+          .depositAndExecuteOrder(
+            hexWFIL,
+            filMaturities[0],
+            Side.LEND,
+            orderAmount.div(2),
+            '9119',
           );
 
         await lendingMarketController
           .connect(alice)
-          .executeOrder(
+          .depositAndExecuteOrder(
             hexWFIL,
             filMaturities[0],
-            Side.BORROW,
+            Side.LEND,
             orderAmount.div(2),
-            '8800',
+            '9120',
           );
-
-        await lendingMarketController
-          .connect(alice)
-          .executeOrder(
-            hexWFIL,
-            filMaturities[0],
-            Side.BORROW,
-            orderAmount.div(2),
-            '8801',
-          );
-
-        for (const user of [bob, carol, dave]) {
-          await wFILToken
-            .connect(user)
-            .approve(tokenVault.address, initialFILBalance);
-        }
 
         await ethers.provider.send('evm_setAutomine', [false]);
 
         await lendingMarketController
           .connect(bob)
-          .depositAndExecuteOrder(
+          .executeOrder(
             hexWFIL,
             filMaturities[0],
-            Side.LEND,
+            Side.BORROW,
             orderAmount.div(2),
             '0',
           );
 
         const tx = await lendingMarketController
           .connect(carol)
-          .depositAndExecuteOrder(
+          .executeOrder(
             hexWFIL,
             filMaturities[0],
-            Side.LEND,
+            Side.BORROW,
             orderAmount.div(2),
             '0',
           );
@@ -1045,7 +1088,7 @@ describe('Integration Test: Order Book', async () => {
           .to.emit(orderActionLogic, 'OrderExecuted')
           .withArgs(
             carol.address,
-            Side.LEND,
+            Side.BORROW,
             hexWFIL,
             filMaturities[0],
             orderAmount.div(2),
@@ -1065,10 +1108,10 @@ describe('Integration Test: Order Book', async () => {
         await expect(
           lendingMarketController
             .connect(dave)
-            .depositAndExecuteOrder(
+            .executeOrder(
               hexWFIL,
               filMaturities[0],
-              Side.LEND,
+              Side.BORROW,
               orderAmount.div(3),
               '0',
             ),
@@ -1124,7 +1167,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         const { blockHash } = await lendingMarketController
@@ -1140,7 +1183,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount,
-          '8000',
+          '9600',
           filMaturities[0].sub(timestamp),
         );
 
@@ -1166,7 +1209,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[1],
             Side.BORROW,
             orderAmount.div(2),
-            '8000',
+            '9600',
           );
 
         const { blockHash } = await lendingMarketController
@@ -1182,7 +1225,7 @@ describe('Integration Test: Order Book', async () => {
         const { timestamp } = await ethers.provider.getBlock(blockHash);
         const fee = calculateOrderFee(
           orderAmount.div(2),
-          '8000',
+          '9600',
           filMaturities[1].sub(timestamp),
         );
 
@@ -1208,7 +1251,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.LEND,
             orderAmount,
-            '8000',
+            '9600',
           );
 
         await expect(
@@ -1289,7 +1332,7 @@ describe('Integration Test: Order Book', async () => {
                 filMaturities[1],
                 input.side1,
                 collateralAmount,
-                '8001',
+                '9301',
               ),
           ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -1300,7 +1343,7 @@ describe('Integration Test: Order Book', async () => {
               filMaturities[1],
               input.side2,
               collateralAmount,
-              '8001',
+              '9301',
             );
 
           await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
@@ -1308,7 +1351,7 @@ describe('Integration Test: Order Book', async () => {
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(
             collateralAmount,
-            '8001',
+            '9301',
             filMaturities[1].sub(timestamp),
           );
         });
@@ -1368,7 +1411,7 @@ describe('Integration Test: Order Book', async () => {
                 filMaturities[1],
                 input.side1,
                 collateralAmount,
-                '8002',
+                '9302',
               ),
           ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -1379,7 +1422,7 @@ describe('Integration Test: Order Book', async () => {
               filMaturities[1],
               input.side2,
               collateralAmount.div(2),
-              '8002',
+              '9302',
             );
 
           await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
@@ -1387,7 +1430,7 @@ describe('Integration Test: Order Book', async () => {
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(
             collateralAmount.div(2),
-            '8002',
+            '9302',
             filMaturities[1].sub(timestamp),
           );
         });
@@ -1454,7 +1497,7 @@ describe('Integration Test: Order Book', async () => {
                 filMaturities[1],
                 input.side1,
                 collateralAmount.div(2),
-                '8003',
+                '9303',
               ),
           ).to.not.emit(fundManagementLogic, 'OrderFilled');
           await expect(
@@ -1465,7 +1508,7 @@ describe('Integration Test: Order Book', async () => {
                 filMaturities[1],
                 input.side1,
                 collateralAmount.div(2),
-                '8003',
+                '9303',
               ),
           ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -1476,7 +1519,7 @@ describe('Integration Test: Order Book', async () => {
               filMaturities[1],
               input.side2,
               collateralAmount.mul(2),
-              '8003',
+              '9303',
             );
 
           await expect(tx).to.emit(fundManagementLogic, 'OrderFilled');
@@ -1484,7 +1527,7 @@ describe('Integration Test: Order Book', async () => {
           const { timestamp } = await ethers.provider.getBlock(tx.blockHash);
           fee = calculateOrderFee(
             collateralAmount,
-            '8003',
+            '9303',
             filMaturities[1].sub(timestamp),
           );
         });
@@ -1555,7 +1598,7 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             Side.BORROW,
             orderAmountInFIL,
-            '8000',
+            '9600',
           );
 
         const { futureValue: aliceFV } =
@@ -1564,9 +1607,8 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             alice.address,
           );
-        const unusedCollateral = await tokenVault.getUnusedCollateral(
-          alice.address,
-        );
+        const unusedCollateral =
+          await tokenVault.getTotalUnusedCollateralAmount(alice.address);
         const unusedCollateralInETH = await currencyController[
           'convertFromBaseCurrency(bytes32,uint256)'
         ](hexETH, unusedCollateral);
@@ -1591,9 +1633,8 @@ describe('Integration Test: Order Book', async () => {
           .connect(alice)
           .cancelOrder(hexWFIL, filMaturities[0], orderId);
 
-        const unusedCollateral = await tokenVault.getUnusedCollateral(
-          alice.address,
-        );
+        const unusedCollateral =
+          await tokenVault.getTotalUnusedCollateralAmount(alice.address);
         const unusedCollateralInETH = await currencyController[
           'convertFromBaseCurrency(bytes32,uint256)'
         ](hexETH, unusedCollateral);
@@ -1649,7 +1690,7 @@ describe('Integration Test: Order Book', async () => {
               filMaturities[0],
               Side.LEND,
               orderAmountInFIL,
-              '8000',
+              '9600',
             ),
         ).to.not.emit(fundManagementLogic, 'OrderFilled');
 
@@ -1665,9 +1706,8 @@ describe('Integration Test: Order Book', async () => {
             filMaturities[0],
             alice.address,
           );
-        const unusedCollateral = await tokenVault.getUnusedCollateral(
-          alice.address,
-        );
+        const unusedCollateral =
+          await tokenVault.getTotalUnusedCollateralAmount(alice.address);
         const coverage = await tokenVault.getCoverage(alice.address);
 
         expect(totalCollateralAmountBefore).to.equal(

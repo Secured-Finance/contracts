@@ -103,6 +103,24 @@ describe('LendingMarketController - Itayose', () => {
       orderBookLogic = orderBookLogic.attach(lendingMarketProxy.address);
     };
 
+    it('Get Itayose estimation with no pre-orders', async () => {
+      const { timestamp } = await ethers.provider.getBlock('latest');
+      const openingDate = moment(timestamp * 1000)
+        .add(2, 'h')
+        .unix();
+
+      await initialize(targetCurrency, openingDate);
+
+      const estimation = await lendingMarketReader.getItayoseEstimation(
+        targetCurrency,
+        maturities[0],
+      );
+
+      expect(estimation.openingUnitPrice).to.equal('0');
+      expect(estimation.lastLendUnitPrice).to.equal('0');
+      expect(estimation.lastBorrowUnitPrice).to.equal('0');
+    });
+
     it('Execute Itayose call on the initial markets, the opening price become the same as the lending order', async () => {
       const { timestamp } = await ethers.provider.getBlock('latest');
       const openingDate = moment(timestamp * 1000)
@@ -182,6 +200,11 @@ describe('LendingMarketController - Itayose', () => {
 
       await time.increaseTo(openingDate);
 
+      const estimation = await lendingMarketReader.getItayoseEstimation(
+        targetCurrency,
+        maturities[0],
+      );
+
       // Execute Itayose call on the first market
       const tx = await lendingMarketControllerProxy.executeItayoseCalls(
         [targetCurrency],
@@ -205,6 +228,9 @@ describe('LendingMarketController - Itayose', () => {
       );
 
       expect(openingUnitPrice).to.equal(expectedOpeningPrice);
+      expect(estimation.openingUnitPrice).to.equal(expectedOpeningPrice);
+      expect(estimation.lastLendUnitPrice).to.equal('8300');
+      expect(estimation.lastBorrowUnitPrice).to.equal('8000');
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
         .getFutureValueVault(targetCurrency)
@@ -343,6 +369,11 @@ describe('LendingMarketController - Itayose', () => {
 
       await time.increaseTo(openingDate);
 
+      const estimation = await lendingMarketReader.getItayoseEstimation(
+        targetCurrency,
+        maturities[0],
+      );
+
       // Execute Itayose call on the first market
       const tx = await lendingMarketControllerProxy.executeItayoseCalls(
         [targetCurrency],
@@ -366,6 +397,9 @@ describe('LendingMarketController - Itayose', () => {
       );
 
       expect(openingUnitPrice).to.equal(expectedOpeningPrice);
+      expect(estimation.openingUnitPrice).to.equal(expectedOpeningPrice);
+      expect(estimation.lastLendUnitPrice).to.equal('8600');
+      expect(estimation.lastBorrowUnitPrice).to.equal('8500');
 
       const futureValueVaultProxy: Contract = await lendingMarketControllerProxy
         .getFutureValueVault(targetCurrency)

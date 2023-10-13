@@ -30,13 +30,10 @@ library DepositManagementLogic {
         uint256 workingBorrowOrdersAmount;
         uint256 debtAmount;
         uint256 borrowedAmount;
-        uint256 minDebtAmount;
     }
 
     function isCovered(address _user) public view returns (bool) {
-        (uint256 totalCollateral, uint256 totalUsedCollateral, , ) = getTotalCollateralAmount(
-            _user
-        );
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getTotalCollateralAmount(_user);
 
         return
             totalUsedCollateral == 0 ||
@@ -76,18 +73,14 @@ library DepositManagementLogic {
         returns (
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
-            uint256 totalDeposit,
-            uint256 minRequiredCollateral
+            uint256 totalDeposit
         )
     {
         ILendingMarketController.AdditionalFunds memory _funds;
-        (
-            totalCollateral,
-            totalUsedCollateral,
-            totalDeposit,
-            minRequiredCollateral,
-
-        ) = _calculateCollateral(_user, _funds);
+        (totalCollateral, totalUsedCollateral, totalDeposit, ) = _calculateCollateral(
+            _user,
+            _funds
+        );
     }
 
     function getCollateralAmount(address _user, bytes32 _ccy)
@@ -117,6 +110,35 @@ library DepositManagementLogic {
         (coverage, ) = calculateCoverage(_user, _emptyAdditionalFunds);
     }
 
+    function getTotalUnusedCollateralAmount(address _user) public view returns (uint256) {
+        (uint256 totalCollateral, uint256 totalUsedCollateral, ) = getTotalCollateralAmount(_user);
+
+        return totalCollateral > totalUsedCollateral ? totalCollateral - totalUsedCollateral : 0;
+    }
+
+    function getBorrowableAmount(address _user, bytes32 _ccy) external view returns (uint256) {
+        uint256[] memory amounts = new uint256[](2);
+        (amounts[0], amounts[1], ) = getTotalCollateralAmount(_user);
+        amounts = AddressResolverLib.currencyController().convertFromBaseCurrency(_ccy, amounts);
+
+        uint256 totalCollateralAmount = amounts[0];
+        uint256 totalUsedCollateral = amounts[1];
+        uint256 liquidationThresholdRate = Storage.slot().liquidationThresholdRate;
+
+        ILendingMarketController.CalculatedFunds memory funds = AddressResolverLib
+            .lendingMarketController()
+            .calculateFunds(_ccy, _user, liquidationThresholdRate);
+
+        uint256 unallocatedCollateralAmount = funds.claimableAmount > funds.collateralAmount
+            ? funds.claimableAmount - funds.collateralAmount
+            : 0;
+
+        uint256 borrowableAmount = ((totalCollateralAmount + unallocatedCollateralAmount) *
+            Constants.PCT_DIGIT).div(liquidationThresholdRate);
+
+        return borrowableAmount > totalUsedCollateral ? borrowableAmount - totalUsedCollateral : 0;
+    }
+
     function calculateCoverage(
         address _user,
         ILendingMarketController.AdditionalFunds memory _additionalFunds
@@ -127,7 +149,6 @@ library DepositManagementLogic {
         (
             totalCollateral,
             totalUsedCollateral,
-            ,
             ,
             isInsufficientDepositAmount
         ) = _calculateCollateral(_user, _additionalFunds);
@@ -149,7 +170,6 @@ library DepositManagementLogic {
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
             uint256 totalDeposit,
-            uint256 minRequiredCollateral,
             bool isInsufficientDepositAmount
         )
     {
@@ -171,7 +191,6 @@ library DepositManagementLogic {
         vars.workingBorrowOrdersAmount = funds.workingBorrowOrdersAmount;
         vars.debtAmount = funds.debtAmount;
         vars.borrowedAmount = funds.borrowedAmount;
-        vars.minDebtAmount = funds.minDebtAmount;
 
         // Check if the user has enough deposit amount for lending in the selected currency.
         if (
@@ -191,7 +210,6 @@ library DepositManagementLogic {
 
         totalCollateral = plusCollateral >= minusDeposit ? plusCollateral - minusDeposit : 0;
         totalUsedCollateral = vars.workingBorrowOrdersAmount + vars.debtAmount;
-        minRequiredCollateral = vars.workingBorrowOrdersAmount + vars.minDebtAmount;
         totalDeposit = plusDeposit >= minusDeposit ? plusDeposit - minusDeposit : 0;
     }
 
@@ -199,25 +217,20 @@ library DepositManagementLogic {
         (
             uint256 totalCollateral,
             uint256 totalUsedCollateral,
-            uint256 totalDeposit,
-            uint256 minRequiredCollateral
+            uint256 totalDeposit
         ) = getTotalCollateralAmount(_user);
 
-        uint256 usedCollateral = totalUsedCollateral >= minRequiredCollateral
-            ? totalUsedCollateral
-            : minRequiredCollateral;
-
-        if (usedCollateral == 0) {
+        if (totalUsedCollateral == 0) {
             return totalDeposit;
         } else if (
             totalCollateral * Constants.PRICE_DIGIT >
-            usedCollateral * Storage.slot().liquidationThresholdRate
+            totalUsedCollateral * Storage.slot().liquidationThresholdRate
         ) {
             // NOTE: The formula is:
-            // maxWithdraw = totalCollateral - ((totalUsedCollateral) * marginCallThresholdRate).
+            // maxWithdraw = (totalCollateral / liquidationThresholdRate) - totalUsedCollateral.
             uint256 maxWithdraw = (totalCollateral *
                 Constants.PRICE_DIGIT -
-                (usedCollateral) *
+                (totalUsedCollateral) *
                 Storage.slot().liquidationThresholdRate).div(Constants.PRICE_DIGIT);
 
             return maxWithdraw >= totalDeposit ? totalDeposit : maxWithdraw;
@@ -231,17 +244,17 @@ library DepositManagementLogic {
         view
         returns (uint256 withdrawableAmount)
     {
-        uint256 depositAmount = Storage.slot().depositAmounts[_user][_ccy];
+        uint256 depositAmount = getDepositAmount(_user, _ccy);
         if (Storage.slot().collateralCurrencies.contains(_ccy)) {
-            uint256 maxWithdrawInNativeToken = getWithdrawableCollateral(_user);
+            uint256 maxWithdrawInBaseCurrency = getWithdrawableCollateral(_user);
             uint256 maxWithdraw = AddressResolverLib.currencyController().convertFromBaseCurrency(
                 _ccy,
-                maxWithdrawInNativeToken
+                maxWithdrawInBaseCurrency
             );
 
             withdrawableAmount = depositAmount >= maxWithdraw ? maxWithdraw : depositAmount;
         } else {
-            withdrawableAmount = getDepositAmount(_user, _ccy);
+            withdrawableAmount = depositAmount;
         }
     }
 
@@ -333,7 +346,6 @@ library DepositManagementLogic {
         (
             uint256 totalCollateralInBaseCcy,
             uint256 totalUsedCollateralInBaseCcy,
-            ,
 
         ) = getTotalCollateralAmount(_user);
 
@@ -413,7 +425,7 @@ library DepositManagementLogic {
      * @notice Gets the total of amount deposited in the user's collateral of all currencies
      *  in this contract by converting it to ETH.
      * @param _user Address of collateral user
-     * @return totalDepositAmount The total deposited amount in ETH
+     * @return totalDepositAmount The total deposited amount in the base currency
      */
     function _getTotalInternalDepositAmountInBaseCurrency(address _user)
         internal

@@ -63,7 +63,6 @@ struct ActualFunds {
   int256 presentValue;
   uint256 claimableAmount;
   uint256 debtAmount;
-  uint256 minDebtAmount;
   int256 futureValue;
   uint256 workingLendOrdersAmount;
   uint256 lentAmount;
@@ -81,11 +80,13 @@ struct CalculateActualFundsVars {
   bool isDefaultMarket;
   uint8 orderBookId;
   uint8 defaultOrderBookId;
+  uint256 defaultOrderBookMarketUnitPrice;
   uint256[] maturities;
   int256 presentValueOfDefaultMarket;
   contract ILendingMarket market;
   contract IFutureValueVault futureValueVault;
   uint256 minDebtUnitPrice;
+  uint256 defaultOrderBookMinDebtUnitPrice;
 }
 ```
 
@@ -217,7 +218,7 @@ function executeEmergencySettlement(address _user) external
 ### getActualFunds
 
 ```solidity
-function getActualFunds(bytes32 _ccy, uint256 _maturity, address _user) public view returns (struct FundManagementLogic.ActualFunds actualFunds)
+function getActualFunds(bytes32 _ccy, uint256 _maturity, address _user, uint256 _minDebtUnitPrice) public view returns (struct FundManagementLogic.ActualFunds actualFunds)
 ```
 
 ### getCurrentMinDebtUnitPrice
@@ -286,10 +287,10 @@ function _getFundsFromInactiveBorrowOrders(bytes32 _ccy, address _user, struct F
 function _getFundsFromInactiveLendOrders(bytes32 _ccy, address _user, struct FundManagementLogic.CalculateActualFundsVars vars, uint8 currentOrderBookId, uint256 currentMaturity, bool isDefaultMarket) internal view returns (struct FundManagementLogic.InactiveLendOrdersFunds funds)
 ```
 
-### _calculatePVandFVInDefaultMarket
+### _convertFVtoOtherMaturity
 
 ```solidity
-function _calculatePVandFVInDefaultMarket(bytes32 _ccy, uint256 _fromMaturity, int256 _futureValueInMaturity) internal view returns (int256 presentValue, int256 futureValue)
+function _convertFVtoOtherMaturity(bytes32 _ccy, contract ILendingMarket _market, uint256 _fromMaturity, int256 _fromFutureValue, uint256 _toUnitPrice) internal view returns (int256 presentValue, int256 futureValue)
 ```
 
 ### calculatePVFromFV
@@ -302,18 +303,6 @@ function calculatePVFromFV(bytes32 _ccy, uint256 _maturity, int256 _futureValue)
 
 ```solidity
 function calculateFVFromPV(bytes32 _ccy, uint256 _maturity, int256 _presentValue) public view returns (int256 futureValue)
-```
-
-### calculatePVFromFV
-
-```solidity
-function calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) public pure returns (int256)
-```
-
-### calculateFVFromPV
-
-```solidity
-function calculateFVFromPV(int256 _presentValue, uint256 _unitPrice) public pure returns (int256)
 ```
 
 ### _convertToBaseCurrencyAtMarketTerminationPrice
@@ -338,5 +327,41 @@ function _resetFundsPerCurrency(bytes32 _ccy, address _user) internal returns (i
 
 ```solidity
 function _resetFundsPerMaturity(bytes32 _ccy, uint256 _maturity, address _user, int256 _amount) internal returns (int256 totalRemovedAmount)
+```
+
+### _getDefaultOrderBookMinDebtUnitPrice
+
+```solidity
+function _getDefaultOrderBookMinDebtUnitPrice(struct FundManagementLogic.CalculateActualFundsVars vars) private view returns (uint256)
+```
+
+### _getDefaultOrderBookMarketUnitPrice
+
+```solidity
+function _getDefaultOrderBookMarketUnitPrice(struct FundManagementLogic.CalculateActualFundsVars vars) private view returns (uint256)
+```
+
+### _calculatePVFromFV
+
+```solidity
+function _calculatePVFromFV(contract ILendingMarket _market, uint8 _orderBookId, int256 _futureValue) internal view returns (int256 presentValue)
+```
+
+### _calculatePVFromFV
+
+```solidity
+function _calculatePVFromFV(int256 _futureValue, uint256 _unitPrice) internal pure returns (int256)
+```
+
+### _calculatePVFromFV
+
+```solidity
+function _calculatePVFromFV(uint256 _futureValue, uint256 _unitPrice) internal pure returns (uint256)
+```
+
+### _calculateFVFromPV
+
+```solidity
+function _calculateFVFromPV(int256 _presentValue, uint256 _unitPrice) internal pure returns (int256)
 ```
 

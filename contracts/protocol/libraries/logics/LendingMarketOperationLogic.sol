@@ -264,7 +264,7 @@ library LendingMarketOperationLogic {
             pauseLendingMarkets(ccy);
             Storage.slot().marketTerminationPrices[ccy] = AddressResolverLib
                 .currencyController()
-                .getLastPrice(ccy);
+                .getAggregatedLastPrice(ccy);
         }
 
         for (uint256 i; i < collateralCurrencies.length; i++) {

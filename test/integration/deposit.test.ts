@@ -4,8 +4,15 @@ import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 
 import { Side } from '../../utils/constants';
-import { hexETH, hexUSDC, hexWBTC, hexWFIL } from '../../utils/strings';
 import {
+  hexETH,
+  hexUSDC,
+  hexWBTC,
+  hexWFIL,
+  toBytes32,
+} from '../../utils/strings';
+import {
+  HAIRCUT,
   LIQUIDATION_PROTOCOL_FEE_RATE,
   LIQUIDATION_THRESHOLD_RATE,
   LIQUIDATOR_FEE_RATE,
@@ -16,7 +23,6 @@ import {
   ethToUSDRate,
   wFilToETHRate,
   wbtcToETHRate,
-  wbtcToUSDRate,
 } from '../common/currencies';
 import { deployContracts } from '../common/deployment';
 import { calculateOrderFee } from '../common/orders';
@@ -627,6 +633,84 @@ describe('Integration Test: Deposit', async () => {
     });
   });
 
+  describe('Deposit new currency as collateral', async () => {
+    const hexTestToken = toBytes32('TT');
+    const initialBalance = BigNumber.from('1000000000000000000000');
+    let testToken: Contract;
+
+    before(async () => {
+      [alice] = await getUsers(1);
+      ethMaturities = await lendingMarketController.getMaturities(hexETH);
+    });
+
+    after(async () => {
+      const { activeOrders } = await lendingMarketReader[
+        'getOrders(bytes32[],address)'
+      ]([hexETH], alice.address);
+
+      for (const order of activeOrders) {
+        await lendingMarketController
+          .connect(alice)
+          .cancelOrder(order.ccy, order.maturity, order.orderId);
+      }
+
+      await tokenVault.updateCurrency(hexTestToken, false);
+    });
+
+    it('Register new currency as collateral', async () => {
+      const priceFeedContract = await ethers
+        .getContractFactory('MockV3Aggregator')
+        .then((factory) =>
+          factory.deploy(18, hexTestToken, '2000000000000000000'),
+        );
+
+      testToken = await ethers
+        .getContractFactory('MockERC20')
+        .then((factory) => factory.deploy('TestToken', 'TT', initialBalance));
+
+      await currencyController.addCurrency(
+        hexTestToken,
+        18,
+        HAIRCUT,
+        [priceFeedContract.address],
+        86400,
+      );
+
+      await tokenVault.registerCurrency(hexTestToken, testToken.address, true);
+    });
+
+    it('Deposit TestToken', async () => {
+      await testToken.connect(owner).transfer(alice.address, initialBalance);
+
+      await testToken
+        .connect(alice)
+        .approve(tokenVault.address, initialBalance.div(5));
+
+      await tokenVault
+        .connect(alice)
+        .deposit(hexTestToken, initialBalance.div(5));
+
+      const aliceDepositAmount = await tokenVault.getDepositAmount(
+        alice.address,
+        hexTestToken,
+      );
+
+      expect(aliceDepositAmount).to.equal(initialBalance.div(5));
+    });
+
+    it('Place an order', async () => {
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          ethMaturities[0],
+          Side.BORROW,
+          '1000000000000000',
+          '9500',
+        );
+    });
+  });
+
   describe('Fill an borrowing order, Withdraw collateral', async () => {
     const orderAmountInETH = initialETHBalance.div(5);
     const orderAmountInFIL = orderAmountInETH
@@ -1005,8 +1089,6 @@ describe('Integration Test: Deposit', async () => {
       await tokenVault.connect(bob).deposit(hexETH, orderAmountInETH, {
         value: orderAmountInETH,
       });
-      const totalCollateralAmountBefore =
-        await tokenVault.getTotalCollateralAmount(alice.address);
 
       await wFILToken
         .connect(alice)
@@ -1062,6 +1144,91 @@ describe('Integration Test: Deposit', async () => {
 
       expect(coverage.sub('8000').abs()).lte(1);
       expect(balanceAfter.sub(balanceBefore)).to.lte(orderAmountInETH);
+    });
+  });
+
+  describe('Place orders, Withdraw collateral', async () => {
+    const orderAmount = initialETHBalance.div(5);
+    const depositAmount = orderAmount.mul(2);
+
+    before(async () => {
+      [alice, bob] = await getUsers(2);
+      ethMaturities = await lendingMarketController.getMaturities(hexETH);
+    });
+
+    it('Deposit ETH', async () => {
+      await tokenVault.connect(alice).deposit(hexETH, depositAmount, {
+        value: depositAmount,
+      });
+      await tokenVault.connect(bob).deposit(hexETH, depositAmount, {
+        value: depositAmount,
+      });
+    });
+
+    it('Place orders', async () => {
+      await lendingMarketController
+        .connect(alice)
+        .executeOrder(
+          hexETH,
+          ethMaturities[0],
+          Side.BORROW,
+          orderAmount,
+          '9500',
+        );
+
+      await lendingMarketController
+        .connect(bob)
+        .executeOrder(hexETH, ethMaturities[0], Side.LEND, orderAmount, '9400');
+
+      const { futureValue: aliceFV } =
+        await lendingMarketController.getPosition(
+          hexETH,
+          ethMaturities[0],
+          alice.address,
+        );
+      const { futureValue: bobFV } = await lendingMarketController.getPosition(
+        hexETH,
+        ethMaturities[0],
+        bob.address,
+      );
+
+      expect(bobFV).to.equal(0);
+      expect(aliceFV).to.equal(0);
+    });
+
+    it('Check withdrawable amount', async () => {
+      expect(
+        await tokenVault['getWithdrawableCollateral(bytes32,address)'](
+          hexETH,
+          alice.address,
+        ),
+      ).to.equal(
+        depositAmount.sub(
+          orderAmount.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+        ),
+      );
+      expect(
+        await tokenVault['getWithdrawableCollateral(bytes32,address)'](
+          hexETH,
+          bob.address,
+        ),
+      ).to.equal(depositAmount.sub(orderAmount));
+    });
+
+    it('Withdraw ETH', async () => {
+      await expect(tokenVault.connect(alice).withdraw(hexETH, depositAmount))
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(
+          alice.address,
+          hexETH,
+          depositAmount.sub(
+            orderAmount.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT),
+          ),
+        );
+
+      await expect(tokenVault.connect(bob).withdraw(hexETH, depositAmount))
+        .to.emit(tokenVault, 'Withdraw')
+        .withArgs(bob.address, hexETH, depositAmount.sub(orderAmount));
     });
   });
 
@@ -1413,7 +1580,7 @@ describe('Integration Test: Deposit', async () => {
           wBTCMaturities[0],
           Side.BORROW,
           orderAmountInWBTC,
-          '9000',
+          '9600',
         );
       await lendingMarketController
         .connect(dave)
@@ -1432,19 +1599,31 @@ describe('Integration Test: Deposit', async () => {
         wBTCMaturities[0],
       );
 
-      expect(marketUnitPrice).to.equal('9000');
+      expect(marketUnitPrice).to.equal('9600');
     });
 
     it('Fill an order with amount with under the min debt unit price', async () => {
       await tokenVault
         .connect(alice)
-        .deposit(hexETH, orderAmountInETH.mul(5).div(4), {
-          value: orderAmountInETH.mul(5).div(4),
+        .deposit(hexETH, orderAmountInETH.mul(3).div(2), {
+          value: orderAmountInETH.mul(3).div(2),
         });
       await wBTCToken
         .connect(bob)
         .approve(tokenVault.address, initialWBTCBalance);
       await tokenVault.connect(bob).deposit(hexWBTC, orderAmountInWBTC);
+
+      await expect(
+        lendingMarketController
+          .connect(alice)
+          .executeOrder(
+            hexWBTC,
+            wBTCMaturities[0],
+            Side.BORROW,
+            orderAmountInWBTC,
+            '7000',
+          ),
+      ).to.revertedWith('NotEnoughCollateral');
 
       await lendingMarketController
         .connect(alice)
@@ -1494,54 +1673,28 @@ describe('Integration Test: Deposit', async () => {
         'getWithdrawableCollateral(address)'
       ](alice.address);
 
-      expect(withdrawableCollateral).lt(orderAmountInUSD);
+      const depositAmount = orderAmountInUSD.mul(3).div(2);
+
+      expect(withdrawableCollateral).lt(
+        depositAmount
+          .add(orderAmountInUSD)
+          .sub(orderAmountInUSD.mul(LIQUIDATION_THRESHOLD_RATE).div(PCT_DIGIT)),
+      );
     });
 
     it('Withdraw by borrower', async () => {
-      const coverageBefore = await tokenVault.getCoverage(alice.address);
       const balanceBefore = await wBTCToken.balanceOf(alice.address);
-      const { futureValue: aliceFV } =
+      const { presentValue: alicePV } =
         await lendingMarketController.getPosition(
           hexWBTC,
           wBTCMaturities[0],
           alice.address,
         );
-
       await tokenVault.connect(alice).withdraw(hexWBTC, orderAmountInWBTC);
-
-      const coverageAfter = await tokenVault.getCoverage(alice.address);
       const balanceAfter = await wBTCToken.balanceOf(alice.address);
 
-      expect(coverageBefore).to.not.equal(coverageAfter);
-      expect(coverageAfter).to.not.equal('8000');
-      expect(balanceAfter.sub(balanceBefore)).lt(orderAmountInWBTC);
-
-      const currentMinDebtUnitPrice =
-        await lendingMarketController.getCurrentMinDebtUnitPrice(
-          hexWBTC,
-          wBTCMaturities[0],
-        );
-
-      const aliceFVInUSD = aliceFV
-        .mul(wbtcToUSDRate)
-        .div(BigNumber.from(10).pow(8));
-
-      const minDebtAmount = aliceFVInUSD
-        .mul(currentMinDebtUnitPrice)
-        .div(PRICE_DIGIT)
-        .abs();
-
-      const aliceCollateral = await tokenVault.getTotalCollateralAmount(
-        alice.address,
-      );
-
-      expect(
-        aliceCollateral
-          .mul(PCT_DIGIT)
-          .div(minDebtAmount)
-          .sub(LIQUIDATION_THRESHOLD_RATE)
-          .abs(),
-      ).to.lte(1);
+      expect(balanceAfter.sub(balanceBefore)).to.equal(orderAmountInWBTC);
+      expect(alicePV.abs()).to.equal(orderAmountInWBTC);
     });
   });
 });

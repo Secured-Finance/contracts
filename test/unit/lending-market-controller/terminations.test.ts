@@ -93,7 +93,7 @@ describe('LendingMarketController - Terminations', () => {
     await mockCurrencyController.mock.getDecimals.returns(18);
     await mockCurrencyController.mock.currencyExists.returns(true);
     await mockCurrencyController.mock.getCurrencies.returns([targetCurrency]);
-    await mockCurrencyController.mock.getLastPrice.returns(
+    await mockCurrencyController.mock.getAggregatedLastPrice.returns(
       '1000000000000000000',
     );
     await mockCurrencyController.mock[
