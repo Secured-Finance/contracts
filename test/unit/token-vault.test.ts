@@ -493,6 +493,27 @@ describe('TokenVault', () => {
       expect(totalDepositAmount).to.equal(depositAmount);
     });
 
+    it('Deposit multiple tokens using multicall', async () => {
+      const inputs = [
+        [targetCurrency, '10000000000000'],
+        [targetCurrency, '20000000000000'],
+      ];
+
+      await tokenVaultProxy
+        .connect(alice)
+        .multicall(
+          inputs.map((input) =>
+            tokenVaultProxy.interface.encodeFunctionData('deposit', input),
+          ),
+        );
+
+      const depositAmount = await tokenVaultProxy.getDepositAmount(
+        alice.address,
+        targetCurrency,
+      );
+      expect(depositAmount).to.equal('30000000000000');
+    });
+
     it('Get the withdrawable amount with the working orders & Withdraw collateral', async () => {
       const value = ethers.BigNumber.from('20000000000000');
       const valueInETH = ethers.BigNumber.from('20000000000000');

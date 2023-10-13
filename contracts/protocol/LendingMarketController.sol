@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 // dependencies
 import {ReentrancyGuard} from "../dependencies/openzeppelin/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "../dependencies/openzeppelin/utils/structs/EnumerableSet.sol";
+import {Multicall} from "../dependencies/openzeppelin/utils/Multicall.sol";
 // interfaces
 import {ILendingMarketController} from "./interfaces/ILendingMarketController.sol";
 import {ILendingMarket} from "./interfaces/ILendingMarket.sol";
@@ -45,7 +46,8 @@ contract LendingMarketController is
     MixinAddressResolver,
     ReentrancyGuard,
     Proxyable,
-    LockAndMsgSender
+    LockAndMsgSender,
+    Multicall
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
