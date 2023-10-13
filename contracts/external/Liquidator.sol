@@ -23,6 +23,11 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
     uint24 internal poolFee;
     uint256[] internal collateralMaturities;
 
+    modifier onlyLendingMarketController() {
+        require(_msgSender() == address(lendingMarketController), "Invalid caller");
+        _;
+    }
+
     constructor(
         bytes32 _nativeToken,
         address _lendingMarketController,
@@ -47,7 +52,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         uint256 _debtMaturity,
         address _user,
         uint24 _poolFee
-    ) external {
+    ) external onlyOwner {
         collateralMaturities = _collateralMaturities;
         poolFee = _poolFee;
         lendingMarketController.executeLiquidationCall(
@@ -65,7 +70,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         uint256 _debtMaturity,
         address _user,
         uint24 _poolFee
-    ) external {
+    ) external onlyOwner {
         collateralMaturities = _collateralMaturities;
         poolFee = _poolFee;
         lendingMarketController.executeForcedRepayment(
@@ -81,7 +86,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         address _user,
         bytes32 _collateralCcy,
         uint256 _receivedCollateralAmount
-    ) external override returns (bool) {
+    ) external override onlyLendingMarketController returns (bool) {
         for (uint256 i; i < collateralMaturities.length; i++) {
             (, int256 fvAmount) = lendingMarketController.getPosition(
                 _collateralCcy,
@@ -114,7 +119,7 @@ contract Liquidator is ILiquidationReceiver, MixinWallet {
         bytes32 _debtCcy,
         uint256 _debtMaturity,
         uint256 _receivedDebtAmount
-    ) external override returns (bool) {
+    ) external override onlyLendingMarketController returns (bool) {
         address collateralCcyAddr = tokenVault.getTokenAddress(_collateralCcy);
         address debtCcyAddr = tokenVault.getTokenAddress(_debtCcy);
         bool isNativeCurrency = _collateralCcy == nativeToken;

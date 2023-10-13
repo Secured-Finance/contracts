@@ -35,7 +35,6 @@ describe('Integration Test: Liquidations', async () => {
   let currencyController: Contract;
   let tokenVault: Contract;
   let lendingMarketController: Contract;
-  let lendingMarketReader: Contract;
   let reserveFund: Contract;
   let wETHToken: Contract;
   let wFILToken: Contract;
@@ -205,7 +204,10 @@ describe('Integration Test: Liquidations', async () => {
     );
   };
 
-  const resetContractInstances = async (unitPrice?: string) => {
+  const resetContractInstances = async (
+    user: SignerWithAddress = owner,
+    unitPrice?: string,
+  ) => {
     await resetMaturities();
     await rotateAllMarkets(unitPrice);
 
@@ -221,13 +223,15 @@ describe('Integration Test: Liquidations', async () => {
     liquidator = await ethers
       .getContractFactory('Liquidator')
       .then((factory) =>
-        factory.deploy(
-          hexETH,
-          lendingMarketController.address,
-          tokenVault.address,
-          mockUniswapRouter.address,
-          mockUniswapQuoter.address,
-        ),
+        factory
+          .connect(user)
+          .deploy(
+            hexETH,
+            lendingMarketController.address,
+            tokenVault.address,
+            mockUniswapRouter.address,
+            mockUniswapQuoter.address,
+          ),
       );
   };
 
@@ -242,7 +246,6 @@ describe('Integration Test: Liquidations', async () => {
       currencyController,
       tokenVault,
       lendingMarketController,
-      lendingMarketReader,
       reserveFund,
       wETHToken,
       wFILToken,
@@ -326,7 +329,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
       });
 
       it('Create orders', async () => {
@@ -861,7 +864,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
       });
 
       it('Create orders', async () => {
@@ -992,7 +995,7 @@ describe('Integration Test: Liquidations', async () => {
 
         // owner withdraws fund on Liquidator contract
         await expect(
-          liquidator.connect(owner).withdraw(hexWFIL, beforeWithdrawal),
+          liquidator.connect(carol).withdraw(hexWFIL, beforeWithdrawal),
         ).to.emit(tokenVault, 'Withdraw');
 
         const afterWithdrawal = await tokenVault.getDepositAmount(
@@ -1011,7 +1014,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
       });
 
       it('Create orders', async () => {
@@ -1153,7 +1156,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(bob.address);
       });
@@ -1337,7 +1340,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(bob.address);
       });
@@ -1568,7 +1571,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(bob.address);
       });
@@ -1758,7 +1761,7 @@ describe('Integration Test: Liquidations', async () => {
 
     beforeEach(async () => {
       [alice, bob] = await getUsers(2);
-      await resetContractInstances('9500');
+      await resetContractInstances(owner, '9500');
       lendingInfo = new LendingInfo(alice.address);
 
       const aliceFILBalanceBefore = await wFILToken.balanceOf(alice.address);
@@ -2000,7 +2003,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
       });
@@ -2098,7 +2101,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
       });
@@ -2242,7 +2245,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
       });
@@ -2516,7 +2519,7 @@ describe('Integration Test: Liquidations', async () => {
 
       before(async () => {
         [alice, bob, carol] = await getUsers(3);
-        await resetContractInstances();
+        await resetContractInstances(carol);
 
         lendingInfo = new LendingInfo(alice.address);
       });
