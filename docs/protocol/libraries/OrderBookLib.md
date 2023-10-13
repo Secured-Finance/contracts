@@ -87,8 +87,8 @@ struct OrderBook {
   mapping(address => uint48[]) activeLendOrderIds;
   mapping(address => uint48[]) activeBorrowOrderIds;
   mapping(address => uint256) userCurrentMaturities;
-  mapping(uint256 => uint256) orders;
-  mapping(uint256 => bool) isPreOrder;
+  mapping(uint48 => uint256) orders;
+  mapping(uint48 => bool) isPreOrder;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) lendOrders;
   mapping(uint256 => struct OrderStatisticsTreeLib.Tree) borrowOrders;
 }
@@ -133,7 +133,7 @@ function hasLendOrder(struct OrderBookLib.OrderBook self, address _user) interna
 ### getOrder
 
 ```solidity
-function getOrder(struct OrderBookLib.OrderBook self, uint256 _orderId) internal view returns (struct PlacedOrder order)
+function getOrder(struct OrderBookLib.OrderBook self, uint48 _orderId) internal view returns (struct PlacedOrder order)
 ```
 
 ### getBlockUnitPriceHistory
