@@ -52,25 +52,23 @@ For example `npx hardhat --network development test "scripts/zc-e2e.ts"` will ex
 
 ### Security Tool testing
 
-As of Apr 23, we use Slither and Mythril for security testing.
-
 #### How to run Mythril locally
-
 1. Run `npm run flatten`
 2. Run `npm run security:mythril`
-3. Check the generated report named `secured-finance-mythril.json` in the project root
+3. Check the generated report named `secured-finance-mythril.md` in the project root
+
 *As of Oct 2023, Mythril version 0.23.22 is the latest working version for us*
 
 #### How to run Slither Analyzer locally
-
 1. Build the docker image `docker build -t sf-slither --platform linux/amd64 -f Dockerfile.slither .`
 2. Run `npm run flatten`
 3. Run `npm run security:slither`
-4. Check the generated report named `secured-finance-slither.txt` in the project root
+4. Check the generated report named `secured-finance-slither.txt` in the project root  
 
-As of now, Slither will refer to the flatten contracts rather than ones in `build`. This might affect the slither behavior: generating duplicated messages, etc.  
+Note: You can change the target python, solc, and slither analyzer version in the `Dockerfile.slither`.
 
-You can change the target python, solc, and slither analyzer version in the `Dockerfile.slither`.
+*As of Oct 2023, Slither will refer to the flatten contracts rather than ones in `build`. This might affect the slither behavior: generating duplicated messages, etc.*  
+
 
 ## Publishing
 
