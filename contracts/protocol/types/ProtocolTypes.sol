@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 /**
  * @dev ProtocolTypes is a base-level contract that holds common Secured Finance protocol types

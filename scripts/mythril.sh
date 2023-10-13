@@ -8,7 +8,7 @@ rm -f $REPORT_FILE
 
 for CONTRACT in $FLATTENED_FOLDER/*.sol; do
   printf "Processing $CONTRACT\n"
-  myth a $CONTRACT --solv v0.8.9 -o markdown --execution-timeout $TIMEOUT >> $REPORT_FILE
+  myth a $CONTRACT --solv v0.8.19 -o markdown --execution-timeout $TIMEOUT >> $REPORT_FILE
   printf "Done $CONTRACT\n"
 done
 

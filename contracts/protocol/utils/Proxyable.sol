@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.19;
 
 import "../../dependencies/openzeppelin/utils/StorageSlot.sol";
 import "../../dependencies/openzeppelin/proxy/utils/Initializable.sol";

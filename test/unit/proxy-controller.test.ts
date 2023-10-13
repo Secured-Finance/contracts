@@ -1,8 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { expectEvent, expectRevert } from '@openzeppelin/test-helpers';
 import { expect } from 'chai';
-import { Contract } from 'ethers';
-import { artifacts, ethers } from 'hardhat';
+import { Contract, ContractTransaction } from 'ethers';
+import { artifacts, ethers, waffle } from 'hardhat';
 import { hexETH, hexWBTC, toBytes32 } from '../../utils/strings';
 import { btcToUSDRate, wBtcToBTCRate } from '../common/currencies';
 
@@ -13,60 +12,75 @@ const MockV3Aggregator = artifacts.require('MockV3Aggregator');
 const ProxyController = artifacts.require('ProxyController');
 const UpgradeabilityProxy = artifacts.require('UpgradeabilityProxy');
 
-const getNewProxyAddress = ({ logs }) =>
-  logs.find(({ event }) => event === 'ProxyCreated').args.proxyAddress;
-const getUpdatedProxyAddress = ({ logs }) =>
-  logs.find(({ event }) => event === 'ProxyUpdated').args.proxyAddress;
+const { deployContract } = waffle;
+
+const getNewProxyAddress = async (tx: ContractTransaction) => {
+  const { events } = await tx.wait();
+
+  return events?.find(({ event }) => event === 'ProxyCreated')?.args
+    ?.proxyAddress;
+};
+const getUpdatedProxyAddress = async (tx: ContractTransaction) => {
+  const { events } = await tx.wait();
+
+  return events?.find(({ event }) => event === 'ProxyUpdated')?.args
+    ?.proxyAddress;
+};
 
 describe('ProxyController', () => {
-  let ownerSinger: SignerWithAddress;
-  let aliceSigner: SignerWithAddress;
+  let owner: SignerWithAddress;
+  let alice: SignerWithAddress;
   let addressResolver: Contract;
   let proxyController: Contract;
 
   beforeEach('deploy ProxyController', async () => {
-    [ownerSinger, aliceSigner] = await ethers.getSigners();
-    proxyController = await ProxyController.new(ethers.constants.AddressZero);
-    addressResolver = await AddressResolver.new()
+    [owner, alice] = await ethers.getSigners();
+    proxyController = await deployContract(owner, ProxyController, [
+      ethers.constants.AddressZero,
+    ]);
+    addressResolver = await deployContract(owner, AddressResolver)
       .then(({ address }) => proxyController.setAddressResolverImpl(address))
       .then(() => proxyController.getAddressResolverAddress())
-      .then((address) => AddressResolver.at(address));
+      .then((address) => ethers.getContractAt('AddressResolver', address));
   });
 
   describe('Register contracts', async () => {
     it('Successfully register a CurrencyController contract', async () => {
-      const currencyController = await CurrencyController.new(
-        addressResolver.address,
+      const currencyController = await deployContract(
+        owner,
+        CurrencyController,
       );
       const tx = await proxyController.setCurrencyControllerImpl(
         currencyController.address,
       );
 
-      const currencyControllerProxyAddress = getNewProxyAddress(tx);
+      await expect(tx).to.emit(proxyController, 'ProxyCreated');
+
+      const currencyControllerProxyAddress = await getNewProxyAddress(tx);
 
       expect(currencyControllerProxyAddress).not.to.equal(
         currencyController.address,
       );
-      expectEvent(tx, 'ProxyCreated');
     });
 
     it('Fail to set a contract due to invalid caller', async () => {
-      const currencyController = await CurrencyController.new(
-        addressResolver.address,
+      const currencyController = await deployContract(
+        owner,
+        CurrencyController,
       );
 
-      await expectRevert(
-        proxyController.setCurrencyControllerImpl(currencyController.address, {
-          from: aliceSigner.address,
-        }),
-        'Ownable: caller is not the owner',
-      );
+      await expect(
+        proxyController
+          .connect(alice)
+          .setCurrencyControllerImpl(currencyController.address),
+      ).revertedWith('Ownable: caller is not the owner');
     });
 
     it('Successfully update a CurrencyController contract', async () => {
       // register (fist time)
-      const currencyController1 = await CurrencyController.new(
-        addressResolver.address,
+      const currencyController1 = await deployContract(
+        owner,
+        CurrencyController,
       );
       const currencyControllerProxyAddress1 = await proxyController
         .setCurrencyControllerImpl(currencyController1.address)
@@ -78,35 +92,38 @@ describe('ProxyController', () => {
       );
 
       // update (second time)
-      const currencyController2 = await CurrencyController.new(
-        currencyController1.address,
+      const currencyController2 = await deployContract(
+        owner,
+        CurrencyController,
       );
-      const tx2 = await proxyController.setCurrencyControllerImpl(
+      const tx = await proxyController.setCurrencyControllerImpl(
         currencyController2.address,
       );
-      const currencyControllerProxyAddress2 = getUpdatedProxyAddress(tx2);
+
+      await expect(tx).to.emit(proxyController, 'ProxyUpdated');
+
+      const currencyControllerProxyAddress2 = await getUpdatedProxyAddress(tx);
 
       expect(currencyControllerProxyAddress1).to.equal(
         currencyControllerProxyAddress2,
       );
-      expectEvent(tx2, 'ProxyUpdated');
     });
 
     it('Fail to set a contract due to invalid input', async () => {
-      await expectRevert(
+      await expect(
         addressResolver.importAddresses(
           [toBytes32('Test1'), toBytes32('Test2')],
           [ethers.constants.AddressZero],
         ),
-        'UnmatchedInputs',
-      );
+      ).revertedWith('UnmatchedInputs');
     });
   });
 
   describe('Get contract address', async () => {
     it('Successfully get a proxy address', async () => {
-      const currencyController = await CurrencyController.new(
-        addressResolver.address,
+      const currencyController = await deployContract(
+        owner,
+        CurrencyController,
       );
       const currencyControllerProxyAddress = await proxyController
         .setCurrencyControllerImpl(currencyController.address)
@@ -127,16 +144,13 @@ describe('ProxyController', () => {
     });
 
     it('Fail to get a proxy address due to empty data', async () => {
-      await expectRevert(
-        proxyController.getAddress(toBytes32('Test')),
+      await expect(proxyController.getAddress(toBytes32('Test'))).revertedWith(
         'Address not found',
       );
     });
 
     it('Fail to call a contract due to missing address', async () => {
-      const genesisValueVault = await GenesisValueVault.new(
-        addressResolver.address,
-      );
+      const genesisValueVault = await deployContract(owner, GenesisValueVault);
 
       const genesisValueVaultProxyAddress = await proxyController
         .setGenesisValueVaultImpl(genesisValueVault.address)
@@ -145,10 +159,9 @@ describe('ProxyController', () => {
       const genesisValueVaultProxy = await GenesisValueVault.at(
         genesisValueVaultProxyAddress,
       );
-      await expectRevert(
+      await expect(
         genesisValueVaultProxy.updateInitialCompoundFactor(hexETH, '8000'),
-        'MissingAddress',
-      );
+      ).revertedWith('MissingAddress');
     });
   });
 
@@ -158,8 +171,9 @@ describe('ProxyController', () => {
       const HEARTBEAT = 3600;
 
       // register (fist time)
-      const currencyController1 = await CurrencyController.new(
-        addressResolver.address,
+      const currencyController1 = await deployContract(
+        owner,
+        CurrencyController,
       );
       const currencyControllerProxyAddress1 = await proxyController
         .setCurrencyControllerImpl(currencyController1.address)
@@ -174,16 +188,16 @@ describe('ProxyController', () => {
       );
 
       // Set up for CurrencyController
-      const btcToETHPriceFeed = await MockV3Aggregator.new(
+      const btcToETHPriceFeed = await deployContract(owner, MockV3Aggregator, [
         18,
         hexWBTC,
         btcToUSDRate,
-      );
-      const wBtcToBTCPriceFeed = await MockV3Aggregator.new(
+      ]);
+      const wBtcToBTCPriceFeed = await deployContract(owner, MockV3Aggregator, [
         6,
         hexWBTC,
         wBtcToBTCRate,
-      );
+      ]);
       await currencyControllerProxy1.addCurrency(
         hexWBTC,
         6,
@@ -196,8 +210,9 @@ describe('ProxyController', () => {
       expect(haircut1.toString()).to.equal(HAIRCUT.toString());
 
       // update (second time)
-      const currencyController2 = await CurrencyController.new(
-        currencyController1.address,
+      const currencyController2 = await deployContract(
+        owner,
+        CurrencyController,
       );
       const currencyControllerProxyAddress2 = await proxyController
         .setCurrencyControllerImpl(currencyController2.address)
@@ -211,12 +226,12 @@ describe('ProxyController', () => {
     });
 
     it('Fail to call a CurrencyController contract due to direct access', async () => {
-      const currencyController = await CurrencyController.new(
-        addressResolver.address,
+      const currencyController = await deployContract(
+        owner,
+        CurrencyController,
       );
 
-      await expectRevert(
-        currencyController.initialize(ownerSinger.address),
+      await expect(currencyController.initialize(owner.address)).revertedWith(
         'Must be called from proxy contract',
       );
     });
@@ -224,8 +239,9 @@ describe('ProxyController', () => {
 
   describe('Change Admin', async () => {
     it('Successfully change admins of a proxy contract', async () => {
-      const currencyController = await CurrencyController.new(
-        addressResolver.address,
+      const currencyController = await deployContract(
+        owner,
+        CurrencyController,
       );
 
       const currencyControllerProxyAddress = await proxyController
@@ -237,7 +253,7 @@ describe('ProxyController', () => {
         [currencyControllerProxyAddress],
       );
 
-      await proxyController.changeProxyAdmins(aliceSigner.address, [
+      await proxyController.changeProxyAdmins(alice.address, [
         currencyControllerProxyAddress,
       ]);
 
@@ -247,7 +263,7 @@ describe('ProxyController', () => {
 
       const currencyControllerAdmin = await currencyControllerProxy.admin();
 
-      expect(currencyControllerAdmin).to.equal(aliceSigner.address);
+      expect(currencyControllerAdmin).to.equal(alice.address);
     });
   });
 });
